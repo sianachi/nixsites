@@ -208,49 +208,6 @@ it('keeps the phone writing surface readable when full pane width was selected o
   expect(useTextWidthPreference.getState().width).toBe('full');
 });
 
-it('retains the body when a published local note changes editor identity during reconnect', async () => {
-  const localScope = { subject: 'person-1', workspaceId: 'workspace-1' };
-  const mounted = render(
-    <ApiClientProvider>
-      <NoteEditor itemId="local-note" offline localScope={localScope} />
-    </ApiClientProvider>,
-  );
-  const body = screen.getByRole('textbox', { name: 'Note body' });
-  body.focus();
-  await userEvent.type(body, 'Offline work to publish', { skipClick: true });
-  const document = captured;
-  mounted.rerender(
-    <ApiClientProvider>
-      <NoteEditor itemId="server-note" localScope={localScope} />
-    </ApiClientProvider>,
-  );
-  await waitFor(() => {
-    expect(screen.getByRole('textbox', { name: 'Note body' })).toHaveTextContent(
-      'Offline work to publish',
-    );
-  });
-  expect(captured).toBe(document);
-  expect(screen.getByRole('textbox', { name: 'Note body' })).toBe(body);
-  const fileItemId = 'published-note-file';
-  fileHarness.uploadAndCompleteFile.mockResolvedValue({
-    itemId: fileItemId,
-    current: { previewable: true },
-  });
-  fireEvent.paste(body, {
-    clipboardData: {
-      getData: () => '',
-      files: [new File(['image'], 'published.png', { type: 'image/png' })],
-    },
-  });
-  await waitFor(() => {
-    expect(fileHarness.beginUpload).toHaveBeenCalledWith(
-      expect.objectContaining({ parentId: 'server-note' }),
-    );
-    expect(document?.getXmlFragment('default').toJSON()).toContain(fileItemId);
-  });
-  mounted.unmount();
-});
-
 it.each(['body_access_unavailable', 'access_revoked'])(
   'hides the mounted body after %s while retaining the pending document for recovery',
   async (code) => {

@@ -15,6 +15,14 @@ follows semantic versioning (`0.x` pre-1.0).
   browser: the sidebar, notes, every view, structured items, My Day and the calendar. Nothing is
   sent to the server and a reload starts over; finances need a real server.
 
+### Removed
+
+- Offline notes. The installed app no longer downloads your notes, the "Keep notes on this
+  device" setting, Notes on this device page and Sync notes menu items are gone, and an
+  installed app without a connection shows the reconnect screen. Signing out deletes notes an
+  earlier version downloaded. Notes created offline that never synced are not published; open
+  Notes on this device in the current release and sync before updating to keep them.
+
 ## 0.4.0 - 2026-10-23
 
 ### Added

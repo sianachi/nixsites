@@ -7,12 +7,10 @@ import { useSessionStore } from '../auth/session-store';
 import { bodyCacheAccountEpoch } from '../editor/body-cache';
 import { flushLocalDraftsForAccount } from '../editor/collab-sync';
 import { listDraftScopes } from '../editor/draft-journal';
-import { getOfflineSnapshot, loadOfflineNotes, readOfflineAccount } from './offline-store';
 
 interface SignOutIntent {
   readonly subject: string;
   readonly epoch: string | null;
-  readonly markerSubject: string | null;
 }
 
 type Phase = 'idle' | 'checking' | 'confirming' | 'signing-out';
@@ -33,7 +31,6 @@ export function usePendingSignOut(beforeCheck?: () => Promise<void>): {
   function assertCurrent(intent: SignOutIntent): void {
     if (
       useSessionStore.getState().profile?.subject !== intent.subject ||
-      (readOfflineAccount()?.subject ?? null) !== intent.markerSubject ||
       bodyCacheAccountEpoch(intent.subject) !== intent.epoch
     ) {
       throw new Error('The account changed. Sign out from its current session.');
@@ -46,7 +43,6 @@ export function usePendingSignOut(beforeCheck?: () => Promise<void>): {
     const intent: SignOutIntent = {
       subject: profile.subject,
       epoch: bodyCacheAccountEpoch(profile.subject),
-      markerSubject: readOfflineAccount()?.subject ?? null,
     };
     intentRef.current = intent;
     running.current = true;
@@ -57,29 +53,12 @@ export function usePendingSignOut(beforeCheck?: () => Promise<void>): {
     });
     try {
       assertCurrent(intent);
-      if (intent.markerSubject !== null && intent.markerSubject !== intent.subject) {
-        throw new Error('The account changed. Sign out from its current session.');
-      }
       await beforeCheck?.();
       await flushLocalDraftsForAccount(intent.subject);
       assertCurrent(intent);
-      const [scopes] = await Promise.all([
-        listDraftScopes(intent.subject),
-        intent.markerSubject === intent.subject ? loadOfflineNotes() : Promise.resolve(),
-      ]);
+      const scopes = await listDraftScopes(intent.subject);
       assertCurrent(intent);
-      const snapshot = getOfflineSnapshot();
-      if (intent.markerSubject !== null && snapshot.account?.subject !== intent.subject) {
-        throw new Error('The account changed. Sign out from its current session.');
-      }
-      setHasPending(
-        scopes.length > 0 ||
-          (intent.markerSubject === intent.subject &&
-            (snapshot.pending > 0 ||
-              snapshot.notes.some(
-                (note) => note.publication.kind !== 'published' || note.pendingTitle !== null,
-              ))),
-      );
+      setHasPending(scopes.length > 0);
       // Other tabs can keep writing after this inventory. Removal always needs an explicit choice.
       setPhase('confirming');
     } catch (cause) {

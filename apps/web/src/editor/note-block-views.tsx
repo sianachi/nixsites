@@ -29,15 +29,7 @@ import { useAuth } from '../auth/auth-provider';
 import { useApiClient } from '../api/api-client-provider';
 import { useSelectedItem } from '../routing/selected-item';
 import { startCollabSync, FRAGMENT_NAME, type SyncState, type CollabSync } from './collab-sync';
-import {
-  bodyCacheAdmits,
-  discardBodyCache,
-  documentScope,
-  onBodyForgetting,
-  sealItemBodies,
-} from './body-cache';
-import { getOfflineSnapshot } from '../offline/offline-store';
-import { OfflineNoteAssetsProvider } from '../offline/offline-assets';
+import { discardBodyCache, documentScope, onBodyForgetting, sealItemBodies } from './body-cache';
 import {
   useReference,
   useRefreshReference,
@@ -63,7 +55,6 @@ interface SourceEntry {
   stop: () => void;
 }
 interface SourceOptions {
-  readonly offline?: boolean;
   readonly localScope?: { readonly subject: string; readonly workspaceId: string } | undefined;
 }
 const Sources = createContext<
@@ -71,7 +62,6 @@ const Sources = createContext<
 >(null);
 export function NoteSourcesProvider({
   children,
-  offline = false,
   localScope,
 }: SourceOptions & { readonly children: ReactNode }): ReactNode {
   const [entries] = useState(() => new Map<string, SourceEntry>());
@@ -81,13 +71,12 @@ export function NoteSourcesProvider({
     },
     [entries],
   );
-  return <Sources.Provider value={{ entries, offline, localScope }}>{children}</Sources.Provider>;
+  return <Sources.Provider value={{ entries, localScope }}>{children}</Sources.Provider>;
 }
 const unavailable: SourceState = { status: 'connecting', doc: null, notice: null };
 function useSource(targetId: string): SourceState {
   const options = useContext(Sources);
   const entries = options?.entries;
-  const offline = options?.offline ?? false;
   const subject = options?.localScope?.subject;
   const reference = useReference(targetId);
   const workspaceId =
@@ -95,9 +84,9 @@ function useSource(targetId: string): SourceState {
   const client = useApiClient();
   const { getAccessToken } = useAuth();
   const refreshReference = useRefreshReference();
-  // One subscription belongs to one account, source and connection mode.
+  // One subscription belongs to one account and source.
   const entry = useMemo<SourceEntry>(() => {
-    const entryKey = JSON.stringify([subject, workspaceId, targetId, offline]);
+    const entryKey = JSON.stringify([subject, workspaceId, targetId]);
     const existing = entries?.get(entryKey);
     if (existing !== undefined) return existing;
     let stop = (): void => {
@@ -118,29 +107,8 @@ function useSource(targetId: string): SourceState {
         let stopped = false;
         let retry: ReturnType<typeof setTimeout> | null = null;
         let sync: CollabSync | undefined;
-        let localCopy = false;
         const controller = new AbortController();
-        const local = getOfflineSnapshot();
-        const cachedNote =
-          local.account?.subject === subject
-            ? local.notes.find(
-                (note) =>
-                  note.id === targetId ||
-                  (note.publication.kind !== 'pending' && note.publication.serverId === targetId),
-              )
-            : undefined;
-        const cachedId =
-          cachedNote?.publication.kind === 'published'
-            ? cachedNote.publication.serverId
-            : cachedNote?.publication.kind === 'pending'
-              ? cachedNote.id
-              : undefined;
-        const scope = documentScope(
-          subject,
-          cachedNote?.workspaceId ?? workspaceId,
-          cachedId ?? targetId,
-          'note',
-        );
+        const scope = documentScope(subject, workspaceId, targetId, 'note');
         const trackLocalUpdate = (
           _update: Uint8Array,
           _origin: unknown,
@@ -152,9 +120,7 @@ function useSource(targetId: string): SourceState {
         doc.on('update', trackLocalUpdate);
         const publish = (): void => {
           const visible =
-            created.snapshot.status === 'live' ||
-            created.snapshot.status === 'readonly' ||
-            (offline && localCopy && scope !== undefined && bodyCacheAdmits(scope));
+            created.snapshot.status === 'live' || created.snapshot.status === 'readonly';
           created.snapshot = { ...created.snapshot, doc: visible ? doc : null };
           for (const listener of created.listeners) listener();
         };
@@ -165,13 +131,8 @@ function useSource(targetId: string): SourceState {
             doc,
             fragmentName: FRAGMENT_NAME,
             getAccessToken,
-            offline,
             cacheScope,
             ...(cacheScope === undefined ? {} : { draftScope: cacheScope }),
-            onLocalCopy: () => {
-              localCopy = true;
-              publish();
-            },
             onState: (status) => {
               created.snapshot = { status, doc: null, notice: null };
               publish();
@@ -188,9 +149,8 @@ function useSource(targetId: string): SourceState {
               } else if (code !== 'read_only') {
                 created.snapshot = {
                   ...created.snapshot,
-                  notice: offline
-                    ? 'This source note has not been downloaded for offline use.'
-                    : 'The latest source edit has not been saved. Keep this note open while it reconnects.',
+                  notice:
+                    'The latest source edit has not been saved. Keep this note open while it reconnects.',
                 };
                 publish();
               }
@@ -219,12 +179,12 @@ function useSource(targetId: string): SourceState {
               (subject !== forgetting.subject ||
                 workspaceId === undefined ||
                 !forgetting.reachableWorkspaceIds.has(workspaceId)));
-          if (!affected || (!offline && forgetting.kind === 'item')) return;
+          if (!affected || forgetting.kind === 'item') return;
           stop();
           created.snapshot = {
             status: 'offline',
             doc: null,
-            notice: 'This source note is no longer available offline.',
+            notice: 'This source note is no longer available.',
           };
           for (const listener of created.listeners) listener();
         });
@@ -234,7 +194,7 @@ function useSource(targetId: string): SourceState {
             stop();
             return;
           }
-          // Collapsing hides the editor, but its document remains the offline queue.
+          // Collapsing hides the editor, but its document still holds unsaved edits.
           // Release only after Core-backed persistence confirms the final local revision.
           if (created.snapshot.status !== 'live' || sync === undefined) return;
           confirming = true;
@@ -256,24 +216,7 @@ function useSource(targetId: string): SourceState {
             },
           );
         };
-        if (offline) {
-          if (
-            cachedNote?.bodyAvailable &&
-            cachedNote.publication.kind !== 'publishing' &&
-            cachedNote.blockedReason === null &&
-            scope !== undefined &&
-            bodyCacheAdmits(scope)
-          )
-            connect(scope);
-          else {
-            created.snapshot = {
-              status: 'offline',
-              doc: null,
-              notice: 'This source note has not been downloaded for offline use.',
-            };
-            publish();
-          }
-        } else if (scope === undefined) {
+        if (scope === undefined) {
           connect(undefined);
         } else {
           void client
@@ -308,7 +251,7 @@ function useSource(targetId: string): SourceState {
     };
     entries?.set(entryKey, created);
     return created;
-  }, [client, entries, getAccessToken, offline, refreshReference, subject, targetId, workspaceId]);
+  }, [client, entries, getAccessToken, refreshReference, subject, targetId, workspaceId]);
   // Subscription identity is required by useSyncExternalStore to avoid reconnecting on every update.
   const subscribe = useCallback(
     (listener: () => void) => {
@@ -361,13 +304,9 @@ const previewExtensions = nixEditingExtensions.map((extension) => {
 function SourceEditor({
   doc,
   editable,
-  offline,
-  scope,
 }: {
   readonly doc: Y.Doc;
   readonly editable: boolean;
-  readonly offline: boolean;
-  readonly scope: string | undefined;
 }): ReactNode {
   const editor = useEditor(
     {
@@ -392,36 +331,18 @@ function SourceEditor({
     editor.setEditable(editable);
   }, [editor, editable]);
   return (
-    <OfflineNoteAssetsProvider offline={offline} scope={scope}>
-      <ReferenceResolutionProvider offline={offline}>
-        {!editable ? (
-          <Text as="p" variant="caption" tone="muted">
-            {offline ? 'Offline preview. Open source to edit.' : 'Read-only source'}
-          </Text>
-        ) : null}
-        <EditorContent editor={editor} className="min-w-0 w-full max-w-full" />
-      </ReferenceResolutionProvider>
-    </OfflineNoteAssetsProvider>
+    <ReferenceResolutionProvider>
+      {!editable ? (
+        <Text as="p" variant="caption" tone="muted">
+          Read-only source
+        </Text>
+      ) : null}
+      <EditorContent editor={editor} className="min-w-0 w-full max-w-full" />
+    </ReferenceResolutionProvider>
   );
 }
 function SourcePreview({ targetId }: { readonly targetId: string }): ReactNode {
   const source = useSource(targetId);
-  const options = useContext(Sources);
-  const offline = options?.offline ?? false;
-  const local = getOfflineSnapshot();
-  const note = local.notes.find(
-    (candidate) =>
-      candidate.id === targetId ||
-      (candidate.publication.kind !== 'pending' && candidate.publication.serverId === targetId),
-  );
-  const id =
-    note?.publication.kind === 'published' ? note.publication.serverId : (note?.id ?? targetId);
-  const scope = documentScope(
-    options?.localScope?.subject,
-    note?.workspaceId ?? options?.localScope?.workspaceId,
-    id,
-    'note',
-  );
   if (source.doc === null)
     return (
       <Text as="p" variant="note" role="status">
@@ -438,12 +359,7 @@ function SourcePreview({ targetId }: { readonly targetId: string }): ReactNode {
           {source.notice}
         </Text>
       ) : null}
-      <SourceEditor
-        doc={source.doc}
-        editable={!offline && source.status === 'live'}
-        offline={offline}
-        scope={scope}
-      />
+      <SourceEditor doc={source.doc} editable={source.status === 'live'} />
     </div>
   );
 }

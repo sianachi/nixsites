@@ -35,17 +35,20 @@ describe('forgetting a locked body', () => {
     expect(seal).toHaveBeenCalledWith('person-1', 'workspace-1', 'item-1');
   });
 
-  it('keeps the copy of an unlocked item, and decides nothing while the lock is still loading', () => {
+  it('reopens a refused copy of an unlocked item, and decides nothing while the lock is still loading', () => {
     signedInTo('workspace-1');
     const seal = vi.spyOn(bodies, 'sealItemBodies').mockResolvedValue(undefined);
+    const reopen = vi.spyOn(bodies, 'reopenRefusedItemBodies').mockReturnValue(undefined);
 
-    renderHook(() => {
-      useForgetLockedBody('item-1', { status: 'ready', locked: false });
-    });
     renderHook(() => {
       useForgetLockedBody('item-1', { status: 'loading', locked: true });
     });
+    expect(reopen).not.toHaveBeenCalled();
+    renderHook(() => {
+      useForgetLockedBody('item-1', { status: 'ready', locked: false });
+    });
 
     expect(seal).not.toHaveBeenCalled();
+    expect(reopen).toHaveBeenCalledWith('person-1', 'workspace-1', 'item-1');
   });
 });

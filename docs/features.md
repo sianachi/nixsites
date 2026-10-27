@@ -128,9 +128,8 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
 - Uploads are inspected by the worker before they are published: size and expiry checks, SHA-256,
   media type from magic bytes, preview and thumbnail generation. Files are not malware-scanned.
 - An installable web app with manifest shortcuts (New note, Today, Search), a share target, a
-  Markdown file handler, an offline page, notes that can be edited offline and sync on reconnect,
-  interface settings synced across devices, last-location restore, right-click context menus and a
-  keyboard shortcuts dialog; light and dark themes.
+  Markdown file handler, an offline page, interface settings synced across devices, last-location
+  restore, right-click context menus and a keyboard shortcuts dialog; light and dark themes.
 - A one-line installer (`deploy/install.sh`) for Docker Compose or Kubernetes that generates
   secrets, bundles the identity provider behind Caddy with automatic HTTPS, migrates and prints the
   administrator sign-in; re-running it upgrades. CI-built multi-architecture images tagged by commit
