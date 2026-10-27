@@ -1,6 +1,5 @@
 import 'fake-indexeddb/auto';
 import { SCHEMA_VERSION } from '@nix/editor-schema';
-import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import * as syncProtocol from 'y-protocols/sync';
 import * as Y from 'yjs';
@@ -8,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BodyCacheRecord, BodyCacheStore } from '../../editor/body-cache';
 import {
-  flushLocalDraftsForScope,
   flushLocalDraftsForAccount,
   startCollabSync,
   type ProviderSocket,
@@ -19,8 +17,8 @@ import {
   bodyCacheAccountEpoch,
   clearBodyCache,
   indexedBodyCache,
-  openBodyCache,
   onBodyForgetting,
+  openBodyCache,
   readBodyCache,
   sealBodyCache,
   sealAccountBodies,
@@ -141,7 +139,6 @@ function start(
   doc = new Y.Doc(),
   options: {
     draftScope?: string;
-    offline?: boolean;
     getAccessToken?: (forceRefresh?: boolean) => Promise<string | null>;
   } = {},
 ) {
@@ -207,10 +204,10 @@ describe('durable offline notes', () => {
 
   it('drains every mounted provider belonging to the initiating account before draft inventory', async () => {
     const cache = memoryCache(recordOf(docWith('Saved')));
-    const first = start(cache, new Y.Doc(), { draftScope: SCOPE, offline: true });
-    const second = start(cache, new Y.Doc(), { draftScope: SCOPE, offline: true });
+    const first = start(cache, new Y.Doc(), { draftScope: SCOPE });
+    const second = start(cache, new Y.Doc(), { draftScope: SCOPE });
     const otherScope = JSON.stringify(['person-10', 'workspace-1', 'item-1', 'note']);
-    const other = start(cache, new Y.Doc(), { draftScope: otherScope, offline: true });
+    const other = start(cache, new Y.Doc(), { draftScope: otherScope });
     const unrelated = vi
       .spyOn(other.sync, 'flushLocal')
       .mockRejectedValue(new Error('Other account'));
@@ -227,7 +224,6 @@ describe('durable offline notes', () => {
   it('propagates an account provider flush failure before sign-out can inventory drafts', async () => {
     const run = start(memoryCache(recordOf(docWith('Saved'))), new Y.Doc(), {
       draftScope: SCOPE,
-      offline: true,
     });
     await run.sync.flushLocal();
     const failed = vi
@@ -253,14 +249,13 @@ describe('durable offline notes', () => {
       docId: 'doc-1',
       update: Y.encodeStateAsUpdate(first, before),
     });
-    const run = start(cache, confirmed, { draftScope: SCOPE, offline: true });
+    const run = start(cache, confirmed, { draftScope: SCOPE });
     await run.sync.flushLocal();
     expect(run.doc.getText('body').toJSON()).toBe('Saved offline');
-    expect(run.sockets).toHaveLength(0);
     run.doc.getText('body').insert(13, ' again');
     await run.sync.flushLocal();
     run.sync.destroy();
-    const reopened = start(cache, new Y.Doc(), { draftScope: SCOPE, offline: true });
+    const reopened = start(cache, new Y.Doc(), { draftScope: SCOPE });
     await reopened.sync.flushLocal();
     expect(reopened.doc.getText('body').toJSON()).toBe('Saved offline again');
     reopened.sync.destroy();
@@ -285,134 +280,6 @@ describe('durable offline notes', () => {
     expect(socket.binaryFrames()).toHaveLength(0);
     expect(run.notices).toContain('local_copy_stale');
     expect(await readDrafts(SCOPE)).toHaveLength(1);
-    run.sync.destroy();
-  });
-
-  it('keeps journaled edits until the confirmed cache write commits, and preserves them when it fails', async () => {
-    const original = docWith('Saved');
-    const cache = memoryCache(recordOf(original));
-    const run = start(cache, new Y.Doc(), { draftScope: SCOPE });
-    await vi.waitFor(() => {
-      expect(run.sockets).toHaveLength(1);
-    });
-    const socket = run.latest();
-    socket.open();
-    socket.ready();
-    socket.receiveStep2(original);
-    run.doc.getText('body').insert(5, ' edit');
-    await run.sync.flushLocal();
-    let rejectWrite: ((reason: Error) => void) | undefined;
-    cache.write = () =>
-      new Promise<void>((_, reject) => {
-        rejectWrite = reject;
-      });
-    const completion = run.sync.syncAndCache();
-    const rejected = expect(completion).rejects.toThrow('Quota exceeded');
-    await vi.waitFor(() => {
-      expect(socket.binaryFrames().some((frame) => frame[0] === 3)).toBe(true);
-    });
-    socket.acknowledgeBarrier();
-    await vi.waitFor(() => {
-      expect(rejectWrite).toBeDefined();
-    });
-    expect(await readDrafts(SCOPE)).toHaveLength(1);
-    rejectWrite?.(new Error('Quota exceeded'));
-    await rejected;
-    expect(await readDrafts(SCOPE)).toHaveLength(1);
-    run.sync.destroy();
-  });
-
-  it('confirms an edit made while the earlier journal snapshot is being read', async () => {
-    const original = docWith('Saved');
-    const cache = memoryCache(recordOf(original));
-    const run = start(cache, new Y.Doc(), { draftScope: SCOPE });
-    try {
-      await vi.waitFor(() => {
-        expect(run.sockets).toHaveLength(1);
-      });
-      const socket = run.latest();
-      socket.open();
-      socket.ready();
-      socket.receiveStep2(original);
-      run.doc.getText('body').insert(5, ' first');
-      await run.sync.flushLocal();
-      // eslint-disable-next-line @typescript-eslint/unbound-method -- Called below with the actual index receiver.
-      const getAll = IDBIndex.prototype.getAll;
-      let reads = 0;
-      vi.spyOn(IDBIndex.prototype, 'getAll').mockImplementation(function (
-        this: IDBIndex,
-        query?: IDBValidKey | IDBKeyRange | null,
-        count?: number,
-      ) {
-        const request = getAll.call(this, query, count);
-        if (this.name === 'scope' && ++reads === 2)
-          request.addEventListener('success', () => {
-            run.doc.getText('body').insert(run.doc.getText('body').length, ' later');
-          });
-        return request;
-      });
-      const send = socket.send.bind(socket);
-      vi.spyOn(socket, 'send').mockImplementation((data) => {
-        send(data);
-        if (typeof data !== 'string' && data[0] === 3)
-          queueMicrotask(() => {
-            socket.acknowledgeBarrier();
-          });
-      });
-
-      await run.sync.syncAndCache();
-
-      expect(await readDrafts(SCOPE)).toEqual([]);
-      const retained = cache.records.get(SCOPE);
-      if (retained === undefined) throw new Error('The confirmed note was not retained.');
-      const reopened = new Y.Doc();
-      try {
-        Y.applyUpdate(reopened, retained.update);
-        expect(reopened.getText('body').toJSON()).toBe('Saved first later');
-      } finally {
-        reopened.destroy();
-      }
-    } finally {
-      run.sync.destroy();
-      vi.restoreAllMocks();
-    }
-  });
-
-  it('downloads a read-only note without replying with local document bytes', async () => {
-    const cache = memoryCache();
-    const run = start(cache);
-    await flush();
-    const socket = run.latest();
-    socket.open();
-    socket.ready('doc-1', 'read');
-    const server = docWith('Read-only text');
-    const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, MESSAGE_SYNC);
-    syncProtocol.writeSyncStep1(encoder, server);
-    socket.onmessage?.({ data: encoding.toUint8Array(encoder) });
-    socket.receiveStep2(server);
-    const completion = run.sync.syncAndCache();
-    await vi.waitFor(() => {
-      expect(socket.binaryFrames().some((frame) => frame[0] === 3)).toBe(true);
-    });
-    socket.acknowledgeBarrier();
-    await completion;
-    const syncKinds = socket
-      .binaryFrames()
-      .filter((frame) => frame[0] === MESSAGE_SYNC)
-      .map((frame) => decoding.readVarUint(decoding.createDecoder(frame.subarray(1))));
-    expect(syncKinds).toEqual([syncProtocol.messageYjsSyncStep1]);
-    expect(cache.records.get(SCOPE)?.docId).toBe('doc-1');
-    run.sync.destroy();
-  });
-
-  it('cancels a download waiting for the initial server state', async () => {
-    const run = start(memoryCache());
-    const controller = new AbortController();
-    const completion = run.sync.syncAndCache(controller.signal);
-    const rejected = expect(completion).rejects.toThrow('cancelled');
-    controller.abort();
-    await rejected;
     run.sync.destroy();
   });
 
@@ -463,46 +330,17 @@ describe('durable offline notes', () => {
         };
       });
       expect(rawCopy).toBeUndefined();
-      const reopened = start(indexedBodyCache, new Y.Doc(), {
-        draftScope: SCOPE,
-        offline: true,
-      });
-      await expect(reopened.sync.flushLocal()).rejects.toThrow('Access to this note was refused');
-      expect(reopened.doc.getText('body').toJSON()).toBe('');
-      expect(reopened.localCopy).not.toHaveBeenCalled();
-      reopened.sync.destroy();
       if (code !== 4405) {
         reopenRefusedItemBodies('person-1', 'workspace-1', 'item-1');
         expect(bodyCacheAdmits(SCOPE)).toBe(true);
-        await expect(stale.sync.syncAndCache()).rejects.toThrow();
         expect(await readBodyCache(SCOPE)).toBeNull();
-        const restoredAccess = start(indexedBodyCache);
-        await vi.waitFor(() => {
-          expect(restoredAccess.sockets).toHaveLength(1);
-        });
-        restoredAccess.latest().open();
-        restoredAccess.latest().ready();
-        restoredAccess.latest().receiveStep2(saved);
-        const completion = restoredAccess.sync.syncAndCache();
-        await vi.waitFor(() => {
-          expect(
-            restoredAccess
-              .latest()
-              .binaryFrames()
-              .some((frame) => frame[0] === 3),
-          ).toBe(true);
-        });
-        restoredAccess.latest().acknowledgeBarrier();
-        await completion;
-        expect(await readBodyCache(SCOPE)).not.toBeNull();
-        restoredAccess.sync.destroy();
       }
       refused.sync.destroy();
       saved.destroy();
     },
   );
 
-  it('preserves confirmed bodies and pending edits through token expiry and resumes durable sync', async () => {
+  it('preserves confirmed bodies and pending edits through token expiry and resumes sync', async () => {
     const server = docWith('Saved');
     await writeBodyCache(recordOf(server));
     const getAccessToken = vi.fn((forceRefresh = false) =>
@@ -547,45 +385,6 @@ describe('durable offline notes', () => {
       renewed.onmessage?.({ data: encoding.toUint8Array(serverStep1) });
       renewed.receiveStep2(server);
 
-      const retainConfirmedEdits = async (): Promise<void> => {
-        const completion = run.sync.syncAndCache();
-        for (let barrier = 0; barrier < 2; barrier += 1) {
-          await vi.waitFor(() => {
-            expect(renewed.binaryFrames().some((frame) => frame[0] === 3)).toBe(true);
-          });
-          for (const frame of renewed.binaryFrames()) {
-            const decoder = decoding.createDecoder(frame);
-            if (decoding.readVarUint(decoder) !== MESSAGE_SYNC) continue;
-            const kind = decoding.readVarUint(decoder);
-            if (kind === syncProtocol.messageYjsSyncStep2 || kind === syncProtocol.messageYjsUpdate)
-              Y.applyUpdate(server, decoding.readVarUint8Array(decoder));
-          }
-          renewed.acknowledgeBarrier();
-        }
-        await completion;
-      };
-      await retainConfirmedEdits();
-      expect(server.getText('body').toJSON()).toBe('Saved pending');
-      expect(await readDrafts(SCOPE)).toEqual([]);
-      const resumed = await readBodyCache(SCOPE);
-      if (resumed === null) throw new Error('Missing confirmed body after renewal.');
-      const reopened = new Y.Doc();
-      Y.applyUpdate(reopened, resumed.update);
-      expect(reopened.getText('body').toJSON()).toBe('Saved pending');
-      reopened.destroy();
-
-      run.doc.getText('body').insert(run.doc.getText('body').length, ' later');
-      await run.sync.flushLocal();
-      expect(await readDrafts(SCOPE)).toHaveLength(1);
-      await retainConfirmedEdits();
-      expect(server.getText('body').toJSON()).toBe('Saved pending later');
-      expect(await readDrafts(SCOPE)).toEqual([]);
-      const savedLater = await readBodyCache(SCOPE);
-      if (savedLater === null) throw new Error('Missing later confirmed body after renewal.');
-      const reopenedLater = new Y.Doc();
-      Y.applyUpdate(reopenedLater, savedLater.update);
-      expect(reopenedLater.getText('body').toJSON()).toBe('Saved pending later');
-      reopenedLater.destroy();
       expect(bodyCacheAdmits(SCOPE)).toBe(true);
       expect(run.notices).not.toContain('access_revoked');
       expect(run.states.at(-1)).toBe('live');
@@ -594,25 +393,6 @@ describe('durable offline notes', () => {
       run.doc.destroy();
       server.destroy();
     }
-  });
-
-  it('ignores a delayed refusal event after fresh item authorization reopens its fence', async () => {
-    await sealBodyCache(SCOPE);
-    const key =
-      'nix.body-cache.sealed-item.' + JSON.stringify(['person-1', 'workspace-1', 'item-1']);
-    const refusedValue = localStorage.getItem(key);
-    reopenRefusedItemBodies('person-1', 'workspace-1', 'item-1');
-    await writeBodyCache(recordOf(docWith('Restored')));
-    const reopened = start(indexedBodyCache, new Y.Doc(), { offline: true });
-    await reopened.sync.flushLocal();
-    window.dispatchEvent(
-      new StorageEvent('storage', { key, oldValue: null, newValue: refusedValue }),
-    );
-    expect(bodyCacheAdmits(SCOPE)).toBe(true);
-    expect(reopened.notices).not.toContain('body_access_unavailable');
-    await reopened.sync.flushLocal();
-    expect(reopened.doc.getText('body').toJSON()).toBe('Restored');
-    reopened.sync.destroy();
   });
 
   it('closes mounted providers on account refusal while preserving pending owner edits', async () => {
@@ -640,87 +420,9 @@ describe('durable offline notes', () => {
     expect(await readDrafts(SCOPE)).toHaveLength(1);
     expect(await listDraftScopes('person-1')).toEqual([SCOPE]);
     expect(await readBodyCache(SCOPE)).toBeNull();
-    const reopenedDoc = new Y.Doc();
-    const reopened = startCollabSync({
-      itemId: 'item-1',
-      doc: reopenedDoc,
-      fragmentName: 'default',
-      draftScope: SCOPE,
-      offline: true,
-      getAccessToken: () => Promise.resolve(null),
-      onState: () => undefined,
-    });
-    await expect(reopened.flushLocal()).rejects.toThrow('Access to this note was refused');
-    expect(reopenedDoc.getText('body').toJSON()).toBe('');
-    reopened.destroy();
     editing.sync.destroy();
     otherTab.sync.destroy();
     saved.destroy();
-    reopenedDoc.destroy();
-  });
-
-  it('refuses an old provider acknowledgement when the same account lifecycle changes without an event', async () => {
-    const saved = docWith('Saved');
-    await writeBodyCache(recordOf(saved));
-    const stale = start(indexedBodyCache, new Y.Doc(), { draftScope: SCOPE });
-    await vi.waitFor(() => {
-      expect(stale.sockets).toHaveLength(1);
-    });
-    stale.latest().open();
-    stale.latest().ready();
-    stale.latest().receiveStep2(saved);
-    stale.doc.getText('body').insert(5, ' pending');
-    await stale.sync.flushLocal();
-    const completion = stale.sync.syncAndCache();
-    const refused = expect(completion).rejects.toThrow();
-    await vi.waitFor(() => {
-      expect(
-        stale
-          .latest()
-          .binaryFrames()
-          .some((frame) => frame[0] === 3),
-      ).toBe(true);
-    });
-    // Another tab reauthenticates before its storage event reaches this provider.
-    localStorage.setItem('nix.body-cache.epoch.' + JSON.stringify('person-1'), crypto.randomUUID());
-    stale.latest().acknowledgeBarrier();
-    await refused;
-    expect(stale.notices).toContain('body_access_unavailable');
-    expect(await readDrafts(SCOPE)).toHaveLength(1);
-    const copy = await readBodyCache(SCOPE);
-    const restored = new Y.Doc();
-    if (copy !== null) Y.applyUpdate(restored, copy.update);
-    expect(restored.getText('body').toJSON()).toBe('Saved');
-    stale.sync.destroy();
-    saved.destroy();
-    restored.destroy();
-  });
-
-  it('does not replay sealed recovery edits when confirmed-body caching is disabled', async () => {
-    await writeDraft({
-      id: 'recover-only',
-      scope: SCOPE,
-      revision: 1,
-      docId: 'doc-1',
-      update: Y.encodeStateAsUpdate(docWith('Recovery bytes')),
-    });
-    await sealBodyCache(SCOPE);
-    const doc = new Y.Doc();
-    const sync = startCollabSync({
-      itemId: 'item-1',
-      doc,
-      fragmentName: 'default',
-      draftScope: SCOPE,
-      offline: true,
-      getAccessToken: () => Promise.resolve(null),
-      onState: () => undefined,
-    });
-
-    await expect(sync.flushLocal()).rejects.toThrow('Access to this note was refused');
-    expect(doc.getText('body').toJSON()).toBe('');
-    expect(await listDraftScopes('person-1')).toEqual([SCOPE]);
-    sync.destroy();
-    doc.destroy();
   });
 
   it('refuses a cache write already dispatched by an old provider after fresh access reopens', async () => {
@@ -763,14 +465,14 @@ describe('durable offline notes', () => {
 
   it('awaits the final durable draft when sealing immediately unmounts its editor', async () => {
     await writeBodyCache(recordOf(docWith('Saved')));
-    const run = start(indexedBodyCache, new Y.Doc(), { draftScope: SCOPE, offline: true });
+    const run = start(indexedBodyCache, new Y.Doc(), { draftScope: SCOPE });
     await run.sync.flushLocal();
     run.doc.getText('body').insert(5, ' last edit');
     const stop = onBodyForgetting((forgetting) => {
       if (forgetting.kind === 'item' && SCOPE.startsWith(forgetting.prefix)) run.sync.destroy();
     });
     const sealing = sealBodyCache(SCOPE);
-    await flushLocalDraftsForScope(SCOPE);
+    await flushLocalDraftsForAccount('person-1');
     await sealing;
 
     expect(await readDrafts(SCOPE)).toHaveLength(1);

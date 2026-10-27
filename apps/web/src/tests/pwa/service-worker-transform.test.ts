@@ -92,7 +92,7 @@ describe('the PWA asset build transform', () => {
     expect(worker).toContain('.open(PUSH_KEY_CACHE)');
   });
 
-  it('precaches unopened Mermaid families, nested layouts and fonts while keeping canvas and PDF lazy', async () => {
+  it('precaches only the startup graph, leaving Mermaid, KaTeX, canvas and PDF chunks lazy', async () => {
     const mermaidRoot = '/node_modules/.pnpm/mermaid@11/node_modules/mermaid/dist/mermaid.core.mjs';
     const flow = '/node_modules/mermaid/dist/flow.mjs';
     const sequence = '/node_modules/mermaid/dist/sequence.mjs';
@@ -199,21 +199,11 @@ describe('the PWA asset build transform', () => {
 
     const worker = emitted['service-worker.js'];
     const shell = worker?.match(/const SHELL_ASSETS = (\[.*?\]);/u)?.[1];
-    const assets = worker?.match(/const ASSETS = (\[.*?\]);/u)?.[1];
     expect(shell).toBeDefined();
-    for (const file of [
-      'flow.js',
-      'sequence.js',
-      'layout.js',
-      'nested-layout.js',
-      'katex.js',
-      'katex.css',
-      'nunito.woff2',
-      'katex.ttf',
-    ]) {
+    for (const file of ['index-main.js', 'app-main.js', 'index-main.css', 'nunito.woff2'])
       expect(shell).toContain(`/assets/${file}`);
-      expect(assets).toContain(`/assets/${file}`);
-    }
+    for (const file of ['flow.js', 'sequence.js', 'layout.js', 'nested-layout.js', 'katex.js'])
+      expect(shell).not.toContain(`/assets/${file}`);
     expect(shell).not.toContain('/assets/canvas.js');
     expect(shell).not.toContain('/assets/pdf.js');
   });

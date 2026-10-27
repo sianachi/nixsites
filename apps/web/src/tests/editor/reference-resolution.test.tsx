@@ -1,29 +1,11 @@
 import 'fake-indexeddb/auto';
 import { render, screen, waitFor } from '@testing-library/react';
 import { StrictMode, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '../../api/api-client-provider';
 import { AuthProvider } from '../../auth/auth-provider';
 import { ReferenceResolutionProvider, useReference } from '../../editor/reference-resolution';
-import { bodyCacheAdmits, documentScope, openBodyCache } from '../../editor/body-cache';
-import type * as OfflineStore from '../../offline/offline-store';
-
-const local = vi.hoisted(() => {
-  const notes: OfflineStore.OfflineNote[] = [];
-  return { account: { subject: 'reference-reader' }, notes };
-});
-vi.mock('../../offline/offline-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof OfflineStore>();
-  return {
-    ...actual,
-    getOfflineSnapshot: () => local,
-    subscribeOfflineNotes: () => () => undefined,
-  };
-});
-beforeEach(() => {
-  local.notes = [];
-});
 
 /**
  * What a reference resolves to, and - the part that matters - what it refuses to resolve to.
@@ -177,72 +159,6 @@ describe('resolving what a document points at', () => {
     await waitFor(() => {
       expect(screen.getByTestId(REFUSED)).toHaveTextContent('refused');
     });
-  });
-
-  it('keeps a known refusal when the same note switches to offline reading', async () => {
-    const { calls } = stubReferences(coreAnswer);
-    function Reading({ offline = false }: { readonly offline?: boolean }): ReactNode {
-      return (
-        <AuthProvider>
-          <ApiClientProvider>
-            <ReferenceResolutionProvider offline={offline}>
-              <Probe targetId={REFUSED} />
-            </ReferenceResolutionProvider>
-          </ApiClientProvider>
-        </AuthProvider>
-      );
-    }
-    const view = render(<Reading />);
-    await waitFor(() => {
-      expect(screen.getByTestId(REFUSED)).toHaveTextContent('refused');
-    });
-    const before = calls.length;
-    view.rerender(<Reading offline />);
-    expect(screen.getByTestId(REFUSED)).toHaveTextContent('refused');
-    expect(calls).toHaveLength(before);
-  });
-
-  it('seals a downloaded referenced note in its own workspace after Core refuses it', async () => {
-    const values = new Map<string, string>();
-    vi.stubGlobal('localStorage', {
-      get length() {
-        return values.size;
-      },
-      clear: () => {
-        values.clear();
-      },
-      getItem: (key: string) => values.get(key) ?? null,
-      key: (index: number) => [...values.keys()][index] ?? null,
-      removeItem: (key: string) => {
-        values.delete(key);
-      },
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      },
-    } satisfies Storage);
-    await openBodyCache('reference-reader');
-    local.notes = [
-      {
-        id: 'local-note-alias',
-        workspaceId: 'other-workspace',
-        parentId: null,
-        title: 'Previously readable',
-        canWrite: true,
-        bodyAvailable: true,
-        blockedReason: null,
-        pendingTitle: null,
-        publication: { kind: 'published', serverId: REFUSED, docId: 'document' },
-      },
-    ];
-    const scope = documentScope('reference-reader', 'other-workspace', REFUSED, 'note');
-    if (scope === undefined) throw new Error('Missing source scope.');
-    expect(bodyCacheAdmits(scope)).toBe(true);
-    stubReferences(coreAnswer);
-    renderProbes(<Probe targetId={REFUSED} />);
-    await waitFor(() => {
-      expect(screen.getByTestId(REFUSED)).toHaveTextContent('refused');
-    });
-    expect(bodyCacheAdmits(scope)).toBe(false);
   });
 
   it('reports a failed lookup as unavailable rather than as refused', async () => {

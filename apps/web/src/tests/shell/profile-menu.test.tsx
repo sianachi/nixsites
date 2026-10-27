@@ -9,9 +9,6 @@ import { useSessionStore } from '../../auth/session-store';
 import * as bodies from '../../editor/body-cache';
 import * as collaboration from '../../editor/collab-sync';
 import * as drafts from '../../editor/draft-journal';
-import * as offline from '../../offline/offline-store';
-import * as runtime from '../../offline/offline-runtime';
-import { useOfflinePreference } from '../../offline/offline-preference';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 const profile = { subject: 'menu-person', name: 'Ada Person', email: 'ada@example.test' };
@@ -60,50 +57,15 @@ async function openMenu(): Promise<void> {
 }
 
 beforeEach(() => {
-  useOfflinePreference.setState({ enabled: true, saved: true });
-  vi.spyOn(runtime, 'requestOfflineSync').mockReturnValue(undefined);
   auth.accountUrl = null;
   auth.signOut.mockReset().mockResolvedValue(undefined);
   useSessionStore.setState({ status: 'authenticated', profile, error: null });
   vi.spyOn(bodies, 'bodyCacheAccountEpoch').mockReturnValue('menu-epoch');
   vi.spyOn(collaboration, 'flushLocalDraftsForAccount').mockResolvedValue(undefined);
   vi.spyOn(drafts, 'listDraftScopes').mockResolvedValue([]);
-  vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-  vi.spyOn(offline, 'loadOfflineNotes').mockResolvedValue(undefined);
-  vi.spyOn(offline, 'getOfflineSnapshot').mockReturnValue({
-    account: profile,
-    notes: [],
-    workspaces: [],
-    status: 'ready',
-    completed: 0,
-    total: 0,
-    pending: 0,
-    error: null,
-    lastSyncedAt: null,
-  });
 });
 
 describe('ProfileMenu', () => {
-  it('offers the sync status, saved notes and a manual sync', async () => {
-    await openMenu();
-    expect(screen.getByText('All unlocked notes are available offline.')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Notes on this device' })).toHaveAttribute(
-      'href',
-      '/offline',
-    );
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Sync notes' }));
-    expect(runtime.requestOfflineSync).toHaveBeenCalledOnce();
-  });
-
-  it('disables Sync notes while syncing', async () => {
-    vi.mocked(offline.getOfflineSnapshot).mockReturnValue({
-      ...offline.getOfflineSnapshot(),
-      status: 'syncing',
-    });
-    await openMenu();
-    expect(screen.getByRole('button', { name: 'Syncing notes…' })).toBeDisabled();
-  });
-
   it('offers Install Nix, with the steps when the browser gives no prompt', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
@@ -198,17 +160,15 @@ describe('ProfileMenu', () => {
     expect(auth.signOut).toHaveBeenCalledOnce();
   });
 
-  it.each(['local save', 'pending inventory', 'note metadata inventory'])(
+  it.each(['local save', 'pending inventory'])(
     'keeps the current session when %s fails',
     async (failure) => {
       if (failure === 'local save')
         vi.mocked(collaboration.flushLocalDraftsForAccount).mockRejectedValue(
           new Error('Local save failed.'),
         );
-      else if (failure === 'pending inventory')
-        vi.mocked(drafts.listDraftScopes).mockRejectedValue(new Error('Pending inventory failed.'));
       else
-        vi.mocked(offline.loadOfflineNotes).mockRejectedValue(new Error('Note inventory failed.'));
+        vi.mocked(drafts.listDraftScopes).mockRejectedValue(new Error('Pending inventory failed.'));
       await openMenu();
       await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
       expect(await screen.findByRole('alert')).toHaveTextContent('failed.');
@@ -263,20 +223,6 @@ describe('ProfileMenu', () => {
       expect(auth.signOut).not.toHaveBeenCalled();
     },
   );
-
-  it('lets an online account with unavailable offline storage deliberately sign out', async () => {
-    vi.mocked(offline.readOfflineAccount).mockReturnValue(null);
-    await openMenu();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(
-      await screen.findByRole('dialog', { name: 'Sign out and remove local notes?' }),
-    ).toBeVisible();
-    expect(offline.loadOfflineNotes).not.toHaveBeenCalled();
-    expect(auth.signOut).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Sign out and remove local notes' }));
-    expect(auth.signOut).toHaveBeenCalledOnce();
-  });
 
   it('confirms device-wide removal even when this tab found no pending edits', async () => {
     await openMenu();

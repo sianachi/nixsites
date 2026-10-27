@@ -26,16 +26,8 @@ import {
 } from 'react';
 import { z } from 'zod';
 
+import { browserStorage } from '../lib/browser-storage';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
-import { clearOfflineNoteAssets } from '../offline/offline-assets';
-import {
-  clearOfflineData,
-  forgetOfflineAccount,
-  readOfflineAccount,
-  rememberOfflineAccount,
-  setOfflineProgress,
-} from '../offline/offline-store';
-import { offlineEnabled } from '../offline/offline-preference';
 import { useSessionStore, type SessionProfile } from './session-store';
 
 /**
@@ -218,9 +210,18 @@ async function clearRetiredRecordings(): Promise<void> {
   });
 }
 
-function closeOfflineAccess(subject: string | undefined, epoch: string | null): void {
-  forgetOfflineAccount(subject, epoch);
-  if (subject !== undefined) void sealAccountBodies(subject, epoch).catch(() => undefined);
+// Downloaded notes from the retired offline mode: deleted, not cleared, since no tab opens them now.
+function clearRetiredOfflineNotes(): void {
+  if (typeof indexedDB !== 'undefined')
+    for (const name of ['nix-offline-notes', 'nix-offline-note-assets'])
+      indexedDB.deleteDatabase(name);
+  try {
+    const storage = browserStorage();
+    for (const key of Object.keys(storage ?? {}))
+      if (key.startsWith('nix.offline')) storage?.removeItem(key);
+  } catch {
+    /* Storage that cannot be read holds nothing to remove. */
+  }
 }
 
 export function AuthProvider({ children }: AuthProviderProps): ReactNode {
@@ -252,7 +253,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       if (useSessionStore.getState().profile?.subject !== subject) return;
       invalidateSessionRequests();
       accessTokenRef.current = null;
-      closeOfflineAccess(subject, bodyCacheAccountEpoch(subject));
+      void sealAccountBodies(subject).catch(() => undefined);
       signedOut(reason);
     },
     [invalidateSessionRequests, signedOut],
@@ -272,22 +273,6 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
     const isAborted = (): boolean =>
       controller.signal.aborted || generation !== sessionGeneration.current;
     let settled = false;
-    let admissionSubject = readOfflineAccount()?.subject ?? null;
-    let admissionEpoch = admissionSubject === null ? null : bodyCacheAccountEpoch(admissionSubject);
-    const admissionChanged = (): boolean => {
-      if (isAborted()) return true;
-      if (
-        (readOfflineAccount()?.subject ?? null) === admissionSubject &&
-        (admissionSubject === null || admissionEpochCurrent())
-      )
-        return false;
-      settled = true;
-      accessTokenRef.current = null;
-      signInFailed('The account changed in another tab. Reload to restore its session.');
-      return true;
-    };
-    const admissionEpochCurrent = (): boolean =>
-      admissionSubject !== null && bodyCacheAccountEpoch(admissionSubject) === admissionEpoch;
     signInStarted();
 
     void fetch('/auth/session', {
@@ -304,15 +289,10 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         throw controller.signal.aborted ? cause : new CoreUnreachable(networkCause());
       })
       .then(async (response) => {
-        if (admissionChanged()) return null;
+        if (isAborted()) return null;
         // Unavailable or rate-limited session responses cannot establish an account refusal.
         if (!response.ok && response.status !== 401 && response.status !== 403) {
           throw new CoreUnreachable('server');
-        }
-        if (response.status === 401 || response.status === 403) {
-          closeOfflineAccess(admissionSubject ?? undefined, admissionEpoch);
-          admissionSubject = null;
-          admissionEpoch = null;
         }
         if (!response.ok) {
           throw new Error('Core could not restore the browser session.');
@@ -321,7 +301,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         return browserSessionSchema.parse(await readJson(response));
       })
       .then(async (session) => {
-        if (session === null || admissionChanged()) {
+        if (session === null || isAborted()) {
           return;
         }
 
@@ -344,69 +324,30 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           // costs only the instant first paint.
           const opening = openBodyCache(profile.subject, { reauthorized: true });
           const openedEpoch = bodyCacheAccountEpoch(profile.subject);
-          if (admissionSubject === profile.subject) admissionEpoch = openedEpoch;
           await opening.catch(() => undefined);
-          if (admissionChanged()) return;
+          if (isAborted()) return;
           if (bodyCacheAccountEpoch(profile.subject) !== openedEpoch) {
             signInFailed('The account changed in another tab. Reload to restore its session.');
             return;
           }
-          const remembering = offlineEnabled()
-            ? rememberOfflineAccount(profile)
-            : Promise.resolve();
-          admissionSubject = profile.subject;
-          admissionEpoch = openedEpoch;
-          const superseded = await remembering.then(
-            () => false,
-            (error: unknown) => {
-              if (isAborted()) return true;
-              const storedSubject = readOfflineAccount()?.subject;
-              if (
-                (storedSubject !== undefined && storedSubject !== profile.subject) ||
-                bodyCacheAccountEpoch(profile.subject) !== openedEpoch
-              ) {
-                signInFailed('The account changed in another tab. Reload to restore its session.');
-                return true;
-              }
-              forgetOfflineAccount(profile.subject, openedEpoch);
-              admissionSubject = readOfflineAccount()?.subject ?? null;
-              admissionEpoch =
-                admissionSubject === null ? null : bodyCacheAccountEpoch(admissionSubject);
-              setOfflineProgress({
-                status: 'error',
-                error: error instanceof Error ? error.message : 'Offline storage is unavailable.',
-              });
-              return false;
-            },
-          );
-          if (superseded || admissionChanged()) return;
           signInSucceeded(profile);
           return;
         }
 
         accessTokenRef.current = null;
-        closeOfflineAccess(admissionSubject ?? undefined, admissionEpoch);
         signedOut();
       })
-      .catch(async (error: unknown) => {
-        if (admissionChanged()) {
+      .catch((error: unknown) => {
+        if (isAborted()) {
           return;
         }
 
         settled = true;
         accessTokenRef.current = null;
         if (error instanceof CoreUnreachable) {
-          const cached = readOfflineAccount();
-          if (cached !== null) {
-            const opening = openBodyCache(cached.subject);
-            admissionEpoch = bodyCacheAccountEpoch(cached.subject);
-            await opening.catch(() => undefined);
-          }
-          if (admissionChanged()) return;
-          sessionUnreachable(error.reason, cached);
+          sessionUnreachable(error.reason, null);
           return;
         }
-        closeOfflineAccess(admissionSubject ?? undefined, admissionEpoch);
         signInFailed(error instanceof Error ? error.message : 'Session could not be restored.');
       });
 
@@ -451,10 +392,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
               .safeParse(event.detail)
           : null;
       const notice = detail?.success ? detail.data : undefined;
-      const subject =
-        notice?.subject ??
-        useSessionStore.getState().profile?.subject ??
-        readOfflineAccount()?.subject;
+      const subject = notice?.subject ?? useSessionStore.getState().profile?.subject;
       const epoch =
         notice?.epoch ?? (subject === undefined ? null : bodyCacheAccountEpoch(subject));
       if (
@@ -464,7 +402,6 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       )
         return;
       invalidateSessionRequests();
-      forgetOfflineAccount(subject, epoch);
       accessTokenRef.current = null;
       refreshRef.current = null;
       signedOut();
@@ -481,11 +418,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       // tab's editors from writing a copy back after it did.
       if (typeof indexedDB !== 'undefined')
         void clearBodyCache(subject, epoch).catch(() => undefined);
-      if (typeof indexedDB !== 'undefined')
-        void clearOfflineData(subject, epoch).catch(() => undefined);
-      if (typeof indexedDB !== 'undefined')
-        void clearOfflineNoteAssets(subject, epoch).catch(() => undefined);
       void clearRetiredRecordings().catch(() => undefined);
+      clearRetiredOfflineNotes();
     };
     window.addEventListener('nix:signed-out-elsewhere', clearSession);
     return () => {
@@ -513,27 +447,24 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       },
 
       signOut: async () => {
-        const subject =
-          useSessionStore.getState().profile?.subject ?? readOfflineAccount()?.subject;
+        const subject = useSessionStore.getState().profile?.subject;
         const epoch = subject === undefined ? null : bodyCacheAccountEpoch(subject);
         signingOutRef.current = true;
         const pushToken = accessTokenRef.current?.value ?? null;
         invalidateSessionRequests();
         accessTokenRef.current = null;
-        forgetOfflineAccount(subject, epoch);
         const localClearing =
           typeof indexedDB === 'undefined'
             ? Promise.resolve(true)
             : Promise.all([
                 clearBodyCache(subject, epoch),
                 clearDrafts(subject, epoch),
-                clearOfflineData(subject, epoch),
-                clearOfflineNoteAssets(subject, epoch),
                 clearRetiredRecordings(),
               ]).then(
                 () => true,
                 () => false,
               );
+        clearRetiredOfflineNotes();
         clearInterruptedImport();
         clearFrecency();
         clearSuggestionDismissals();

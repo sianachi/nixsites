@@ -44,7 +44,6 @@ import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
 import { useSessionStore } from '../auth/session-store';
-import { OfflineNoteAssetsProvider } from '../offline/offline-assets';
 import { BubbleMenu } from './bubble-menu';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import { EditorToolbar } from './toolbar';
@@ -119,9 +118,6 @@ import { useTextWidthPreference } from './text-width-preference';
 
 export interface NoteEditorProps {
   readonly itemId: string;
-  readonly offline?: boolean;
-  readonly localScope?: { readonly subject: string; readonly workspaceId: string };
-  readonly localCanWrite?: boolean;
   readonly mobileActions?: ReactNode;
   /** The details panel's toggle, docked with the writing tools on a phone. */
   readonly mobileDetails?: MobileNoteDetails | undefined;
@@ -468,17 +464,13 @@ export function NoteEditor({
   cacheBody = false,
   hideToolbar = false,
   parentId,
-  offline = false,
-  localScope,
-  localCanWrite = true,
 }: NoteEditorProps): ReactNode {
   const narrow = useDrawerNavigation();
   const { getAccessToken } = useAuth();
   const client = useApiClient();
-  const { workspaceId: routeWorkspaceId } = useParams<{ workspaceId: string }>();
-  const workspaceId = localScope?.workspaceId ?? routeWorkspaceId;
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const profile = useSessionStore((state) => state.profile);
-  const subject = localScope?.subject ?? profile?.subject;
+  const subject = profile?.subject;
   const [draftState, setDraftState] = useState<DraftState | undefined>();
   const [syncState, setSyncState] = useState<SyncState>('connecting');
   const [readOnly, setReadOnly] = useState(false);
@@ -534,10 +526,10 @@ export function NoteEditor({
 
   // Mermaid capture uploads only from a live, synced, writable session (ADR-0063).
   const captureDiagram = useMemo<MermaidCaptureUpload | null>(() => {
-    if (offline || readOnly || stale || !synced || workspaceId === undefined) return null;
+    if (readOnly || stale || !synced || workspaceId === undefined) return null;
     return (svg, renderFileId) =>
       storeCapture(client, { workspaceId, pageItemId: itemId, svg, renderFileId });
-  }, [client, itemId, offline, readOnly, stale, synced, workspaceId]);
+  }, [client, itemId, readOnly, stale, synced, workspaceId]);
 
   const uploadDroppedFiles = useCallback(
     async (
@@ -828,8 +820,8 @@ export function NoteEditor({
 
   // The server's read-only mode and stale copies cannot save edits.
   useLayoutEffect(() => {
-    editor.setEditable(localCanWrite && !readOnly && !stale);
-  }, [editor, stale, readOnly, localCanWrite]);
+    editor.setEditable(!readOnly && !stale);
+  }, [editor, stale, readOnly]);
 
   // A daily note's template goes in once the server's copy is known to be empty.
   usePendingDailyTemplate({
@@ -837,11 +829,11 @@ export function NoteEditor({
     editor,
     fragment,
     synced,
-    writable: localCanWrite && !readOnly && !stale,
+    writable: !readOnly && !stale,
   });
 
   // The mention underlines' view of this note. The lookup goes through the client like every
-  // other request; read-only and offline are checked where it is called.
+  // other request; read-only is checked where it is called.
   useEffect(() => {
     setMentionContext(editor, {
       enabled: mentionSetting === 'on' && !stale,
@@ -993,7 +985,6 @@ export function NoteEditor({
     const scope = documentScope(subject, workspaceId, itemId, documentPath ?? 'note');
     const sync = startCollabSync({
       itemId,
-      offline,
       documentPath,
       cacheScope: cacheBody ? scope : undefined,
       ...(scope === undefined ? {} : { draftScope: scope, onDraftState: setDraftState }),
@@ -1047,7 +1038,6 @@ export function NoteEditor({
     itemId,
     onSync,
     subject,
-    offline,
     workspaceId,
   ]);
 
@@ -1078,7 +1068,7 @@ export function NoteEditor({
   }, [awareness, doc]);
 
   const formatting =
-    !localCanWrite || readOnly || stale ? null : (
+    readOnly || stale ? null : (
       <div className={narrow ? 'flex items-center' : 'min-w-0 shrink-0 px-8'}>
         <div
           className={
@@ -1157,111 +1147,105 @@ export function NoteEditor({
     // sends one request for all of them - which is the difference between opening a note with
     // forty links and opening forty connections.
     <NoteSourcesProvider
-      offline={offline}
       {...(subject !== undefined && workspaceId !== undefined
         ? { localScope: { subject, workspaceId } }
         : {})}
     >
-      <ReferenceResolutionProvider offline={offline}>
-        <OfflineNoteAssetsProvider
-          offline={offline}
-          scope={documentScope(subject, workspaceId, itemId, documentPath ?? 'note')}
-        >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              <Text id={vimDescriptionId} variant="note" className="sr-only">
-                Vim basics starts in Normal mode. Press i to insert text, Escape to return to
-                Normal, and v or V for Visual mode.
-              </Text>
-              {hideToolbar ? null : narrow ? (
-                <MobileNoteToolbar
-                  editor={editor}
-                  formatting={formatting}
-                  actions={mobileActions}
-                  details={mobileDetails}
-                />
-              ) : (
-                formatting
-              )}
+      <ReferenceResolutionProvider>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <Text id={vimDescriptionId} variant="note" className="sr-only">
+              Vim basics starts in Normal mode. Press i to insert text, Escape to return to Normal,
+              and v or V for Visual mode.
+            </Text>
+            {hideToolbar ? null : narrow ? (
+              <MobileNoteToolbar
+                editor={editor}
+                formatting={formatting}
+                actions={mobileActions}
+                details={mobileDetails}
+              />
+            ) : (
+              formatting
+            )}
 
-              <PendingReferenceNotice itemId={itemId} editor={editor} />
-              {writingMode === 'collaboration' && !hideToolbar ? (
-                <div
-                  aria-label="Collaboration status"
-                  className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 px-5 py-2 sm:px-8"
-                >
-                  <Text variant="caption" tone="muted">
-                    {
-                      {
-                        connecting: 'Connecting to collaborators',
-                        live: 'Live editing',
-                        pending: 'Saving shared changes',
-                        readonly: 'Shared note is read-only',
-                        degraded: 'Connection interrupted',
-                        offline: 'Working offline',
-                      }[syncState]
-                    }
-                  </Text>
-                  <PresenceList awareness={awareness} />
-                </div>
-              ) : null}
-              <PaneViewport
-                scrollKey={`${workspaceId ?? ''}:${itemId}:${documentPath ?? 'body'}`}
-                className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-24 pt-4 sm:px-8 sm:pt-6 lg:pb-6"
+            <PendingReferenceNotice itemId={itemId} editor={editor} />
+            {writingMode === 'collaboration' && !hideToolbar ? (
+              <div
+                aria-label="Collaboration status"
+                className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 px-5 py-2 sm:px-8"
               >
-                {dropActive ? (
-                  <Text
-                    variant="note"
-                    tone="accent"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                    className="mb-4 rounded-md border border-accent/40 bg-accent/10 px-3 py-2"
-                  >
-                    Drop to add files to this note. Images will appear here; other files become
-                    links.
-                  </Text>
-                ) : null}
-                {uploadingFiles > 0 ? (
-                  <Text
-                    variant="note"
-                    tone="muted"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                    className="mb-4"
-                  >
-                    Adding {uploadingFileName ?? 'file'} ({String(uploadingFileIndex)} of{' '}
-                    {String(uploadingFiles)})…
-                  </Text>
-                ) : null}
-                {!localCanWrite || readOnly || stale ? null : (
-                  <SlashMenu
-                    editor={editor}
-                    onInsertItem={(kind) => {
-                      if (uploadingFilesRef.current > 0) return;
-                      insertionRef.current = editor.state.selection.from;
-                      setItemRequest(kind);
-                    }}
-                    onPageBreak={() => {
-                      insertPageBreak(editor);
-                    }}
-                    onInsertImage={() => {
-                      insertionRef.current = editor.state.selection.from;
-                      setAddressRequest('image');
-                    }}
-                    onInlineAi={inlineAi.available ? inlineAi.start : undefined}
-                  />
-                )}
-                {!localCanWrite || readOnly || stale ? null : (
-                  <ReferenceMenu
-                    editor={editor}
-                    workspaceId={workspaceId}
-                    itemId={itemId}
-                    parentId={parentId}
-                  />
-                )}
-                {/*
+                <Text variant="caption" tone="muted">
+                  {
+                    {
+                      connecting: 'Connecting to collaborators',
+                      live: 'Live editing',
+                      pending: 'Saving shared changes',
+                      readonly: 'Shared note is read-only',
+                      degraded: 'Connection interrupted',
+                      offline: 'Working offline',
+                    }[syncState]
+                  }
+                </Text>
+                <PresenceList awareness={awareness} />
+              </div>
+            ) : null}
+            <PaneViewport
+              scrollKey={`${workspaceId ?? ''}:${itemId}:${documentPath ?? 'body'}`}
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-24 pt-4 sm:px-8 sm:pt-6 lg:pb-6"
+            >
+              {dropActive ? (
+                <Text
+                  variant="note"
+                  tone="accent"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="mb-4 rounded-md border border-accent/40 bg-accent/10 px-3 py-2"
+                >
+                  Drop to add files to this note. Images will appear here; other files become links.
+                </Text>
+              ) : null}
+              {uploadingFiles > 0 ? (
+                <Text
+                  variant="note"
+                  tone="muted"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="mb-4"
+                >
+                  Adding {uploadingFileName ?? 'file'} ({String(uploadingFileIndex)} of{' '}
+                  {String(uploadingFiles)})…
+                </Text>
+              ) : null}
+              {readOnly || stale ? null : (
+                <SlashMenu
+                  editor={editor}
+                  onInsertItem={(kind) => {
+                    if (uploadingFilesRef.current > 0) return;
+                    insertionRef.current = editor.state.selection.from;
+                    setItemRequest(kind);
+                  }}
+                  onPageBreak={() => {
+                    insertPageBreak(editor);
+                  }}
+                  onInsertImage={() => {
+                    insertionRef.current = editor.state.selection.from;
+                    setAddressRequest('image');
+                  }}
+                  onInlineAi={inlineAi.available ? inlineAi.start : undefined}
+                />
+              )}
+              {readOnly || stale ? null : (
+                <ReferenceMenu
+                  editor={editor}
+                  workspaceId={workspaceId}
+                  itemId={itemId}
+                  parentId={parentId}
+                />
+              )}
+              {/*
             The block handle: hover a block and a grip appears in the margin; dragging it moves
             the block. The component registers the drag-handle plugin itself and portals this
             content into an element the plugin owns - so its position in this JSX is not its
@@ -1281,267 +1265,263 @@ export function NoteEditor({
             positions is a role-less, name-less div, so nothing here reaches the accessibility
             tree - which is the right outcome.
           */}
-                {!localCanWrite || readOnly || stale ? null : (
-                  <DragHandle
-                    editor={editor}
-                    className="flex cursor-grab items-center justify-center rounded-sm p-1 text-muted hover:bg-foreground/7 hover:text-foreground data-[dragging=true]:cursor-grabbing"
-                  >
-                    <Icon icon={GripVertical} size="sm" />
-                  </DragHandle>
-                )}
-                {/*
+              {readOnly || stale ? null : (
+                <DragHandle
+                  editor={editor}
+                  className="flex cursor-grab items-center justify-center rounded-sm p-1 text-muted hover:bg-foreground/7 hover:text-foreground data-[dragging=true]:cursor-grabbing"
+                >
+                  <Icon icon={GripVertical} size="sm" />
+                </DragHandle>
+              )}
+              {/*
             The positioned box the page guides are measured in. `h-full` keeps what
             `EditorContent` had: the editor fills the viewport, so a click below a short note
             still lands in it.
           */}
-                {markdownMode?.phase === 'open' ? (
-                  <MarkdownModePanel
-                    doc={doc}
-                    fragment={fragment}
-                    snapshot={markdownMode.snapshot}
-                    onClose={() => {
-                      setMarkdownMode(null);
-                      awareness.setLocalStateField('markdownMode', false);
-                    }}
-                  />
-                ) : null}
-                {markdownMode?.phase === 'confirming' ? (
-                  <MarkdownLossesDialog
-                    snapshot={markdownMode.snapshot}
-                    onContinue={() => {
-                      setMarkdownMode({ phase: 'open', snapshot: markdownMode.snapshot });
-                      awareness.setLocalStateField('markdownMode', true);
-                    }}
-                    onCancel={() => {
-                      setMarkdownMode(null);
-                    }}
-                  />
-                ) : null}
-                {/* Hidden, not unmounted, while the Markdown textarea is up: the sync binding,
+              {markdownMode?.phase === 'open' ? (
+                <MarkdownModePanel
+                  doc={doc}
+                  fragment={fragment}
+                  snapshot={markdownMode.snapshot}
+                  onClose={() => {
+                    setMarkdownMode(null);
+                    awareness.setLocalStateField('markdownMode', false);
+                  }}
+                />
+              ) : null}
+              {markdownMode?.phase === 'confirming' ? (
+                <MarkdownLossesDialog
+                  snapshot={markdownMode.snapshot}
+                  onContinue={() => {
+                    setMarkdownMode({ phase: 'open', snapshot: markdownMode.snapshot });
+                    awareness.setLocalStateField('markdownMode', true);
+                  }}
+                  onCancel={() => {
+                    setMarkdownMode(null);
+                  }}
+                />
+              ) : null}
+              {/* Hidden, not unmounted, while the Markdown textarea is up: the sync binding,
                     presence and undo history stay attached to the document underneath. */}
-                <div
-                  ref={setSurface}
-                  hidden={markdownMode?.phase === 'open'}
-                  data-text-width={narrow ? 'reading' : textWidth}
-                  className={`relative h-full min-w-0 ${noteColumn} ${
-                    !narrow && textWidth === 'full'
-                      ? 'max-w-none [&_.ProseMirror]:max-w-none'
-                      : WRITING_MODES[writingMode].measure
-                  }`}
-                >
-                  {bodyUnavailable ? (
-                    <Text variant="note" tone="muted" role="status">
-                      Nix can no longer show this note. Restore access and reopen it to continue.
-                    </Text>
-                  ) : (
-                    <MermaidCaptureContext.Provider value={captureDiagram}>
-                      <EditorContent
-                        editor={editor}
-                        className="h-full"
-                        onDragEnterCapture={(event) => {
-                          if (hasFilePayload(event)) setDropActive(true);
-                        }}
-                        onDragOverCapture={(event) => {
-                          if (hasFilePayload(event)) {
-                            event.preventDefault();
-                            setDropActive(true);
-                          }
-                        }}
-                        onDragLeaveCapture={(event) => {
-                          if (
-                            hasFilePayload(event) &&
-                            !event.currentTarget.contains(event.relatedTarget as Node | null)
-                          ) {
-                            setDropActive(false);
-                          }
-                        }}
-                        onDropCapture={(event) => {
+              <div
+                ref={setSurface}
+                hidden={markdownMode?.phase === 'open'}
+                data-text-width={narrow ? 'reading' : textWidth}
+                className={`relative h-full min-w-0 ${noteColumn} ${
+                  !narrow && textWidth === 'full'
+                    ? 'max-w-none [&_.ProseMirror]:max-w-none'
+                    : WRITING_MODES[writingMode].measure
+                }`}
+              >
+                {bodyUnavailable ? (
+                  <Text variant="note" tone="muted" role="status">
+                    Nix can no longer show this note. Restore access and reopen it to continue.
+                  </Text>
+                ) : (
+                  <MermaidCaptureContext.Provider value={captureDiagram}>
+                    <EditorContent
+                      editor={editor}
+                      className="h-full"
+                      onDragEnterCapture={(event) => {
+                        if (hasFilePayload(event)) setDropActive(true);
+                      }}
+                      onDragOverCapture={(event) => {
+                        if (hasFilePayload(event)) {
+                          event.preventDefault();
+                          setDropActive(true);
+                        }
+                      }}
+                      onDragLeaveCapture={(event) => {
+                        if (
+                          hasFilePayload(event) &&
+                          !event.currentTarget.contains(event.relatedTarget as Node | null)
+                        ) {
                           setDropActive(false);
-                          if (handleFileDrop(editor.view, event.nativeEvent)) {
-                            event.stopPropagation();
-                          }
-                        }}
-                      />
-                    </MermaidCaptureContext.Provider>
-                  )}
-                  {/* Where the exported pages would break, drawn over the text as it is written. */}
-                  {!bodyUnavailable && pageGuides === 'shown' ? (
-                    <PageGuides editor={editor} host={surface} />
-                  ) : null}
-                </div>
-                {/* After the editable region on purpose: Tab from the text is what reaches its buttons. */}
-                {!localCanWrite || readOnly || stale ? null : (
-                  <BubbleMenu
-                    editor={editor}
-                    onOpenInlineAi={
-                      inlineAi.available
-                        ? () => {
-                            inlineAi.start(null);
-                          }
-                        : undefined
-                    }
-                  />
+                        }
+                      }}
+                      onDropCapture={(event) => {
+                        setDropActive(false);
+                        if (handleFileDrop(editor.view, event.nativeEvent)) {
+                          event.stopPropagation();
+                        }
+                      }}
+                    />
+                  </MermaidCaptureContext.Provider>
                 )}
-                {!localCanWrite || readOnly || stale ? null : (
-                  <InlineAiPanel editor={editor} controller={inlineAi} />
-                )}
-                <MentionBubble editor={editor} />
-                {!localCanWrite || readOnly || stale ? null : <TableMenu editor={editor} />}
-              </PaneViewport>
+                {/* Where the exported pages would break, drawn over the text as it is written. */}
+                {!bodyUnavailable && pageGuides === 'shown' ? (
+                  <PageGuides editor={editor} host={surface} />
+                ) : null}
+              </div>
+              {/* After the editable region on purpose: Tab from the text is what reaches its buttons. */}
+              {readOnly || stale ? null : (
+                <BubbleMenu
+                  editor={editor}
+                  onOpenInlineAi={
+                    inlineAi.available
+                      ? () => {
+                          inlineAi.start(null);
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              {readOnly || stale ? null : <InlineAiPanel editor={editor} controller={inlineAi} />}
+              <MentionBubble editor={editor} />
+              {readOnly || stale ? null : <TableMenu editor={editor} />}
+            </PaneViewport>
 
-              {itemRequest !== null && workspaceId !== undefined ? (
-                <ItemInsertDialog
-                  kind={itemRequest}
-                  workspaceId={workspaceId}
-                  parentId={itemId}
-                  onCancel={() => {
-                    setItemRequest(null);
-                    focusAfterDialog(editor);
-                  }}
-                  onFiles={(files) => {
-                    void uploadDroppedFiles(
-                      editor.view,
-                      files,
-                      insertionRef.current ?? editor.state.selection.from,
-                    );
-                  }}
-                  onInsert={(id, presentation, label) => {
-                    if (editor.isDestroyed || !editor.isEditable) return false;
-                    const position = insertionRef.current ?? editor.state.selection.from;
-                    const content =
-                      presentation === 'image'
-                        ? { type: 'image', attrs: { fileItemId: id, src: '', alt: label } }
-                        : presentation === 'inline'
-                          ? { type: 'reference', attrs: { kind: 'item', targetId: id, label } }
-                          : { type: 'itemBlock', attrs: { targetId: id, presentation } };
-                    const inserted = editor
+            {itemRequest !== null && workspaceId !== undefined ? (
+              <ItemInsertDialog
+                kind={itemRequest}
+                workspaceId={workspaceId}
+                parentId={itemId}
+                onCancel={() => {
+                  setItemRequest(null);
+                  focusAfterDialog(editor);
+                }}
+                onFiles={(files) => {
+                  void uploadDroppedFiles(
+                    editor.view,
+                    files,
+                    insertionRef.current ?? editor.state.selection.from,
+                  );
+                }}
+                onInsert={(id, presentation, label) => {
+                  if (editor.isDestroyed || !editor.isEditable) return false;
+                  const position = insertionRef.current ?? editor.state.selection.from;
+                  const content =
+                    presentation === 'image'
+                      ? { type: 'image', attrs: { fileItemId: id, src: '', alt: label } }
+                      : presentation === 'inline'
+                        ? { type: 'reference', attrs: { kind: 'item', targetId: id, label } }
+                        : { type: 'itemBlock', attrs: { targetId: id, presentation } };
+                  const inserted = editor
+                    .chain()
+                    .setTextSelection(position)
+                    .insertContent(
+                      presentation === 'inline' ? content : [content, { type: 'paragraph' }],
+                    )
+                    .run();
+                  if (inserted) focusAfterDialog(editor);
+                  return inserted;
+                }}
+              />
+            ) : null}
+            {uploadingFiles > 0 ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  dropAbortRef.current?.abort();
+                }}
+              >
+                Cancel upload
+              </Button>
+            ) : null}
+            {uploadingFiles === 0 && retryFiles.length > 0 ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void uploadDroppedFiles(
+                    editor.view,
+                    retryFiles,
+                    insertionRef.current ?? editor.state.selection.from,
+                  );
+                }}
+              >
+                Retry remaining files
+              </Button>
+            ) : null}
+            {addressRequest === null ? null : (
+              <EditorAddressDialog
+                kind={addressRequest}
+                onCancel={() => {
+                  setAddressRequest(null);
+                }}
+                onSubmit={({ address, description }) => {
+                  if (!editor.isEditable)
+                    throw new Error('This note is read-only. Changes cannot be added.');
+                  const request = addressRequest;
+                  if (editor.isDestroyed) {
+                    return;
+                  }
+
+                  if (request === 'image' && insertionRef.current !== null)
+                    editor.commands.setTextSelection(insertionRef.current);
+                  // Commit before closing. Deferring the document mutation would create a gap where
+                  // changing tabs can unmount this editor after the validated form has disappeared but
+                  // before its command runs, silently losing the submission. The command itself does
+                  // not focus, so it is safe while the modal still makes the editor inert.
+                  if (request === 'image') {
+                    // Leave a text block after the image. Besides giving the writer somewhere obvious
+                    // to continue, this keeps the collaborative selection inside an inline-capable
+                    // node instead of forcing it onto the document boundary.
+                    editor
                       .chain()
-                      .setTextSelection(position)
-                      .insertContent(
-                        presentation === 'inline' ? content : [content, { type: 'paragraph' }],
-                      )
+                      .setImage({ src: address, alt: description })
+                      .createParagraphNear()
                       .run();
-                    if (inserted) focusAfterDialog(editor);
-                    return inserted;
-                  }}
-                />
-              ) : null}
-              {uploadingFiles > 0 ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    dropAbortRef.current?.abort();
-                  }}
+                  } else {
+                    editor.chain().setLink({ href: address }).run();
+                  }
+
+                  setAddressRequest(null);
+                  focusAfterDialog(editor);
+                }}
+                onExistingImage={() => {
+                  setAddressRequest(null);
+                  setItemRequest('image');
+                }}
+                onUploadImage={async (file, description) => {
+                  const inserted = await uploadDroppedFiles(
+                    editor.view,
+                    [file],
+                    insertionRef.current ?? editor.state.selection.from,
+                    description,
+                    false,
+                  );
+                  if (!inserted)
+                    throw new Error('The image was not inserted. Retry the upload or cancel.');
+                  focusAfterDialog(editor);
+                }}
+              />
+            )}
+
+            {presetStatus === null ? null : (
+              <div className="flex min-w-0 items-baseline gap-3 px-8 py-1.5">
+                <Text
+                  variant="caption"
+                  as="p"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="shrink-0 font-heading font-semibold tracking-wider text-muted"
                 >
-                  Cancel upload
-                </Button>
-              ) : null}
-              {uploadingFiles === 0 && retryFiles.length > 0 ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void uploadDroppedFiles(
-                      editor.view,
-                      retryFiles,
-                      insertionRef.current ?? editor.state.selection.from,
-                    );
-                  }}
-                >
-                  Retry remaining files
-                </Button>
-              ) : null}
-              {addressRequest === null ? null : (
-                <EditorAddressDialog
-                  kind={addressRequest}
-                  onCancel={() => {
-                    setAddressRequest(null);
-                  }}
-                  onSubmit={({ address, description }) => {
-                    if (!editor.isEditable)
-                      throw new Error('This note is read-only. Changes cannot be added.');
-                    const request = addressRequest;
-                    if (editor.isDestroyed) {
-                      return;
-                    }
-
-                    if (request === 'image' && insertionRef.current !== null)
-                      editor.commands.setTextSelection(insertionRef.current);
-                    // Commit before closing. Deferring the document mutation would create a gap where
-                    // changing tabs can unmount this editor after the validated form has disappeared but
-                    // before its command runs, silently losing the submission. The command itself does
-                    // not focus, so it is safe while the modal still makes the editor inert.
-                    if (request === 'image') {
-                      // Leave a text block after the image. Besides giving the writer somewhere obvious
-                      // to continue, this keeps the collaborative selection inside an inline-capable
-                      // node instead of forcing it onto the document boundary.
-                      editor
-                        .chain()
-                        .setImage({ src: address, alt: description })
-                        .createParagraphNear()
-                        .run();
-                    } else {
-                      editor.chain().setLink({ href: address }).run();
-                    }
-
-                    setAddressRequest(null);
-                    focusAfterDialog(editor);
-                  }}
-                  onExistingImage={() => {
-                    setAddressRequest(null);
-                    setItemRequest('image');
-                  }}
-                  onUploadImage={async (file, description) => {
-                    const inserted = await uploadDroppedFiles(
-                      editor.view,
-                      [file],
-                      insertionRef.current ?? editor.state.selection.from,
-                      description,
-                      false,
-                    );
-                    if (!inserted)
-                      throw new Error('The image was not inserted. Retry the upload or cancel.');
-                    focusAfterDialog(editor);
-                  }}
-                />
-              )}
-
-              {presetStatus === null ? null : (
-                <div className="flex min-w-0 items-baseline gap-3 px-8 py-1.5">
-                  <Text
-                    variant="caption"
-                    as="p"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                    className="shrink-0 font-heading font-semibold tracking-wider text-muted"
-                  >
-                    <span className="uppercase">{presetStatus.label}</span>
-                    {presetStatus.recording === null ? null : (
-                      <span className="uppercase"> · {presetStatus.recording}</span>
-                    )}
-                    {presetStatus.message === '' ? null : (
-                      <span className="font-normal"> · {presetStatus.message}</span>
-                    )}
-                  </Text>
-                  {/* The command being typed, kept out of the live region so it is not read per key. */}
-                  <Text variant="caption" as="p" className="min-w-0 truncate font-mono text-muted">
-                    {presetStatus.keys}
-                  </Text>
-                </div>
-              )}
-            </div>
-            <DocumentIssueDialog
-              noun="note"
-              state={syncState}
-              draftState={draftState}
-              offline={offline}
-              stale={stale}
-              refusal={refusal}
-              paused={addressRequest !== null || itemRequest !== null}
-              reloadRequired={noticeCode === 'schema_version_mismatch'}
-            />
+                  <span className="uppercase">{presetStatus.label}</span>
+                  {presetStatus.recording === null ? null : (
+                    <span className="uppercase"> · {presetStatus.recording}</span>
+                  )}
+                  {presetStatus.message === '' ? null : (
+                    <span className="font-normal"> · {presetStatus.message}</span>
+                  )}
+                </Text>
+                {/* The command being typed, kept out of the live region so it is not read per key. */}
+                <Text variant="caption" as="p" className="min-w-0 truncate font-mono text-muted">
+                  {presetStatus.keys}
+                </Text>
+              </div>
+            )}
           </div>
-        </OfflineNoteAssetsProvider>
+          <DocumentIssueDialog
+            noun="note"
+            state={syncState}
+            draftState={draftState}
+            stale={stale}
+            refusal={refusal}
+            paused={addressRequest !== null || itemRequest !== null}
+            reloadRequired={noticeCode === 'schema_version_mismatch'}
+          />
+        </div>
       </ReferenceResolutionProvider>
     </NoteSourcesProvider>
   );

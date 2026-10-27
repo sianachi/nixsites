@@ -33,8 +33,6 @@ import { ArchivedWorkspacesPage } from './workspaces/archived-workspaces-page';
 import { AccessibleWorkspacesProvider } from './workspaces/workspace-context';
 import { PetCompanion } from './pets/pet-companion';
 import { LaunchPage } from './launch/launch-page';
-import { OfflineRuntime } from './offline/offline-runtime';
-import { OfflineNotesPage } from './offline/offline-notes-page';
 
 // Loaded when somebody opens /tokens, not before: the specimens are about 35 kB of design-lane
 // reference material - every ramp step, every type scale, every rhythm demo - and nobody working
@@ -91,7 +89,6 @@ export function App(): ReactElement {
       <AppErrorBoundary>
         <AuthProvider>
           <ApiClientProvider>
-            <OfflineRuntime />
             <AppRoutes />
           </ApiClientProvider>
         </AuthProvider>
@@ -110,7 +107,6 @@ export function AppRoutes(): ReactElement {
       <Route path="/forms/:token" element={<PublicFormPage />} />
 
       <Route element={<RequireSession />}>
-        <Route path="/offline" element={<OfflineNotesPage />} />
         <Route element={<AccessibleWorkspacesProvider />}>
           <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
           <Route path="/workspaces/groups/:groupId" element={<WorkspaceGroupPage />} />

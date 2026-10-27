@@ -6,12 +6,8 @@ import { Button, Field, Select, Text } from '@nix/ui';
 import { useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 
 import { announce } from '../../a11y/announcer';
-import { useSessionStore } from '../../auth/session-store';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';
-import { useOfflinePreference } from '../../offline/offline-preference';
-import { requestOfflineSync } from '../../offline/offline-runtime';
-import { rememberOfflineAccount } from '../../offline/offline-store';
 import { KeyboardModeSchema, useKeyboardModeStore } from '../../editor/keyboard-mode-store';
 import { LINK_MENTION_SHORTCUT } from '../../keyboard/shortcut-registry';
 import { formatShortcut } from '../../lib/shortcuts';
@@ -47,10 +43,6 @@ export function EditorPreferencesSection(): ReactElement {
   const viewSetting = useViewSuggestionPreference((state) => state.setting);
   const viewSaved = useViewSuggestionPreference((state) => state.saved);
   const setViewSetting = useViewSuggestionPreference((state) => state.setSetting);
-  const offlineEnabled = useOfflinePreference((state) => state.enabled);
-  const offlineSaved = useOfflinePreference((state) => state.saved);
-  const setOfflineEnabled = useOfflinePreference((state) => state.setEnabled);
-  const sessionProfile = useSessionStore((state) => state.profile);
   const choiceSetting = useChoiceOrderPreference((state) => state.setting);
   const choiceSaved = useChoiceOrderPreference((state) => state.saved);
   const setChoiceSetting = useChoiceOrderPreference((state) => state.setSetting);
@@ -203,30 +195,6 @@ export function EditorPreferencesSection(): ReactElement {
       <Text variant="h5" as="h3">
         This device
       </Text>
-      <PreferenceToggle
-        label="Keep notes on this device"
-        deviceOnly
-        checked={offlineEnabled}
-        onChange={(checked) => {
-          setOfflineEnabled(checked);
-          if (checked && sessionProfile !== null) {
-            void rememberOfflineAccount(sessionProfile).then(requestOfflineSync, () => undefined);
-          }
-        }}
-        description="Opens your unlocked notes offline and shows sync status"
-        unsaved={
-          offlineSaved
-            ? null
-            : 'The device sync preference applies to this session; browser storage is unavailable.'
-        }
-        more={
-          <>
-            Syncs your unlocked notes to this browser and shows the sync status at the foot of the
-            window. Off hides that status and stops syncing; notes already saved here stay until you
-            clear them from Notes on this device.
-          </>
-        }
-      />
       <PreferenceToggle
         label="Hide mobile tools while writing"
         deviceOnly

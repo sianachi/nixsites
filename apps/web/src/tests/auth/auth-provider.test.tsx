@@ -12,14 +12,8 @@ import { frecencyScores, recordPick } from '../../lib/frecency';
 import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
 import { useSessionStore } from '../../auth/session-store';
 import * as registerServiceWorker from '../../pwa/register-service-worker';
-import * as offline from '../../offline/offline-store';
-import * as offlineAssets from '../../offline/offline-assets';
 import { workspaces } from '@nix/api-client';
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
-
-vi.mock('../../offline/offline-assets', () => ({
-  clearOfflineNoteAssets: vi.fn(() => Promise.resolve()),
-}));
 
 const future = '2099-01-01T00:00:00+00:00';
 
@@ -134,8 +128,6 @@ function renderProvider(strict = false): ReturnType<typeof render> {
 
 beforeEach(() => {
   useSessionStore.setState({ status: 'unknown', profile: null, error: null });
-  vi.spyOn(offline, 'clearOfflineData').mockResolvedValue(undefined);
-  vi.spyOn(offlineAssets, 'clearOfflineNoteAssets').mockResolvedValue(undefined);
   vi.spyOn(bodies, 'sealAccountBodies').mockResolvedValue(undefined);
 });
 
@@ -148,10 +140,6 @@ describe('Core-mediated browser sessions', () => {
     'ignores a session response arriving after sign-out in %s',
     async (source) => {
       const restore = deferred<Response>();
-      const remember = vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-        vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-        return Promise.resolve();
-      });
       vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
       vi.stubGlobal(
         'fetch',
@@ -176,37 +164,6 @@ describe('Core-mediated browser sessions', () => {
       await waitFor(() => {
         expect(useSessionStore.getState().status).toBe('anonymous');
       });
-      expect(remember).not.toHaveBeenCalled();
-      expect(useSessionStore.getState().profile).toBeNull();
-    },
-  );
-
-  it.each(['anonymous', 'authenticated', 'same account reauthenticated'])(
-    'ignores a deferred startup response after shared admission changes: %s',
-    async (answer) => {
-      const restore = deferred<Response>();
-      const profile = { subject: 'person-1', name: 'Stored Person', email: null };
-      const read = vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      const epoch = vi.spyOn(bodies, 'bodyCacheAccountEpoch').mockReturnValue('old-epoch');
-      const open = vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
-      const remember = vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-        vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-        return Promise.resolve();
-      });
-      const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-      vi.stubGlobal('fetch', vi.fn().mockReturnValue(restore.promise));
-      renderProvider();
-      await screen.findByText('authenticating');
-      if (answer === 'same account reauthenticated') epoch.mockReturnValue('new-epoch');
-      else read.mockReturnValue({ subject: 'person-2', name: 'Other Person', email: null });
-      await act(async () => {
-        restore.resolve(answer === 'anonymous' ? anonymous() : authenticated());
-        await restore.promise;
-      });
-      await screen.findByText('failed');
-      expect(open).not.toHaveBeenCalled();
-      expect(remember).not.toHaveBeenCalled();
-      expect(forget).not.toHaveBeenCalled();
       expect(useSessionStore.getState().profile).toBeNull();
     },
   );
@@ -236,7 +193,6 @@ describe('Core-mediated browser sessions', () => {
     );
     renderProvider();
     await screen.findByText('authenticated');
-    expect(offline.readOfflineAccount()?.subject).toBe(subject);
     expect(bodies.bodyCacheAccountEpoch(subject)).not.toBeNull();
     const restored = new Y.Doc();
     for (const record of await drafts.readDrafts(scope)) Y.applyUpdate(restored, record.update);
@@ -246,23 +202,7 @@ describe('Core-mediated browser sessions', () => {
     vi.unstubAllGlobals();
   });
 
-  it('reports offline storage failure while keeping the confirmed online session', async () => {
-    vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
-    vi.spyOn(offline, 'rememberOfflineAccount').mockRejectedValue(
-      new Error('Storage quota exceeded.'),
-    );
-    const progress = vi.spyOn(offline, 'setOfflineProgress');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticated()));
-    renderProvider();
-    await screen.findByText('authenticated');
-    expect(progress).toHaveBeenCalledWith({ status: 'error', error: 'Storage quota exceeded.' });
-  });
-
   it('closes cached admission after a malformed successful token renewal', async () => {
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     vi.stubGlobal(
       'fetch',
       vi
@@ -283,7 +223,6 @@ describe('Core-mediated browser sessions', () => {
     async (answer) => {
       vi.stubGlobal('indexedDB', new IDBFactory());
       vi.stubGlobal('localStorage', memoryStorage());
-      const forget = vi.spyOn(offline, 'forgetOfflineAccount');
       const clear = vi.spyOn(drafts, 'clearDrafts');
       if (answer === 'offline') vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
       const fetch = vi.fn().mockResolvedValueOnce(authenticated());
@@ -313,10 +252,8 @@ describe('Core-mediated browser sessions', () => {
       );
       expect(useSessionStore.getState().profile?.subject).toBe(subject);
       expect(screen.getByLabelText('Access token')).toHaveTextContent('No token');
-      expect(offline.readOfflineAccount()?.subject).toBe(subject);
       expect(bodies.bodyCacheAccountAdmits(subject)).toBe(true);
       expect(bodies.bodyCacheAdmits(scope)).toBe(true);
-      expect(forget).not.toHaveBeenCalled();
       expect(bodies.sealAccountBodies).not.toHaveBeenCalled();
       expect(clear).not.toHaveBeenCalled();
       const restored = new Y.Doc();
@@ -338,10 +275,6 @@ describe('Core-mediated browser sessions', () => {
     ),
   )('ignores renewal $answer arriving after $changed starts', async ({ changed, answer }) => {
     const renewal = deferred<Response>();
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     const epoch = vi.spyOn(bodies, 'bodyCacheAccountEpoch').mockReturnValue('original');
     vi.stubGlobal(
       'fetch',
@@ -373,10 +306,6 @@ describe('Core-mediated browser sessions', () => {
 
   it('accepts renewal after the same admitted profile is normalized', async () => {
     const renewal = deferred<Response>();
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     vi.spyOn(bodies, 'bodyCacheAccountEpoch').mockReturnValue('current-epoch');
     vi.stubGlobal(
       'fetch',
@@ -403,7 +332,6 @@ describe('Core-mediated browser sessions', () => {
       try {
         vi.stubGlobal('indexedDB', new IDBFactory());
         vi.stubGlobal('localStorage', memoryStorage());
-        const forget = vi.spyOn(offline, 'forgetOfflineAccount');
         const fetch = vi
           .fn()
           .mockResolvedValueOnce(authenticated())
@@ -433,9 +361,7 @@ describe('Core-mediated browser sessions', () => {
           expect(fetch).toHaveBeenCalledTimes(3);
           expect(useSessionStore.getState().status).toBe('unreachable');
         });
-        expect(offline.readOfflineAccount()?.subject).toBe('person-1');
         expect(bodies.bodyCacheAdmits(scope)).toBe(true);
-        expect(forget).not.toHaveBeenCalled();
         const recovered = new Y.Doc();
         for (const record of await drafts.readDrafts(scope))
           Y.applyUpdate(recovered, record.update);
@@ -453,12 +379,46 @@ describe('Core-mediated browser sessions', () => {
     },
   );
 
-  it('does not remember a session when sign-out happens while its body cache is opening', async () => {
+  it('fails the restore when the account changes in another tab while its body cache opens', async () => {
+    vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
+    vi.spyOn(bodies, 'bodyCacheAccountEpoch')
+      .mockReturnValueOnce('before')
+      .mockReturnValue('after');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticated()));
+    renderProvider();
+    await screen.findByText('failed');
+    expect(useSessionStore.getState().profile).toBeNull();
+  });
+
+  it('deletes the retired offline-notes databases and keys when signing out', async () => {
+    const idb = new IDBFactory();
+    const deleted = vi.spyOn(idb, 'deleteDatabase');
+    vi.spyOn(bodies, 'clearBodyCache').mockResolvedValue(undefined);
+    vi.spyOn(drafts, 'clearDrafts').mockResolvedValue(undefined);
+    vi.stubGlobal('indexedDB', idb);
+    localStorage.setItem('nix.offline.preference', 'true');
+    localStorage.setItem('nix.other', 'kept');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(authenticated())
+        .mockResolvedValue(new Response(null, { status: 204 })),
+    );
+    renderProvider();
+    await screen.findByText('authenticated');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
+    await screen.findByText('anonymous');
+    expect(deleted).toHaveBeenCalledWith('nix-offline-notes');
+    expect(deleted).toHaveBeenCalledWith('nix-offline-note-assets');
+    expect(localStorage.getItem('nix.offline.preference')).toBeNull();
+    expect(localStorage.getItem('nix.other')).toBe('kept');
+    localStorage.removeItem('nix.other');
+    vi.unstubAllGlobals();
+  });
+
+  it('does not admit a session when sign-out happens while its body cache is opening', async () => {
     const opened = deferred<undefined>();
-    const remember = vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     const open = vi.spyOn(bodies, 'openBodyCache').mockReturnValue(opened.promise);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticated()));
     renderProvider();
@@ -471,15 +431,11 @@ describe('Core-mediated browser sessions', () => {
       await opened.promise;
     });
     await screen.findByText('anonymous');
-    expect(remember).not.toHaveBeenCalled();
+    expect(useSessionStore.getState().profile).toBeNull();
   });
 
   it('ignores a token renewal arriving after another tab signs out', async () => {
     const refresh = deferred<Response>();
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     vi.stubGlobal(
       'fetch',
       vi
@@ -500,10 +456,6 @@ describe('Core-mediated browser sessions', () => {
 
   it('closes token acquisition as soon as explicit sign-out begins', async () => {
     const logout = deferred<Response>();
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(authenticated())
@@ -521,18 +473,11 @@ describe('Core-mediated browser sessions', () => {
     await screen.findByText('anonymous');
   });
 
-  it('closes local body, draft and asset storage before waiting for push cleanup', async () => {
+  it('closes local body and draft storage before waiting for push cleanup', async () => {
     vi.stubGlobal('indexedDB', new IDBFactory());
     const pushCleanup = deferred<Response>();
     const bodyClear = vi.spyOn(bodies, 'clearBodyCache').mockResolvedValue(undefined);
     const draftsClear = vi.spyOn(drafts, 'clearDrafts').mockResolvedValue(undefined);
-    const assetsClear = vi
-      .spyOn(offlineAssets, 'clearOfflineNoteAssets')
-      .mockResolvedValue(undefined);
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
     const subscription = {
       endpoint: 'https://push.example/subscription',
       unsubscribe: vi.fn().mockResolvedValue(true),
@@ -554,27 +499,16 @@ describe('Core-mediated browser sessions', () => {
     });
     expect(bodyClear).toHaveBeenCalled();
     expect(draftsClear).toHaveBeenCalled();
-    expect(assetsClear).toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalledWith('/auth/logout', expect.anything());
     pushCleanup.resolve(new Response(null, { status: 204 }));
     await screen.findByText('anonymous');
     vi.unstubAllGlobals();
   });
 
-  it('closes cached account access on a definitive forbidden session response', async () => {
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 403 })));
-    renderProvider();
-    await screen.findByText('failed');
-    expect(forget).toHaveBeenCalled();
-    expect(offline.clearOfflineData).not.toHaveBeenCalled();
-  });
-
-  it('renews a valid cached token after Core401 and closes offline access if the fresh token is refused', async () => {
+  it('renews a valid cached token after Core401 and closes the session if the fresh token is refused', async () => {
     vi.stubGlobal('indexedDB', new IDBFactory());
     vi.stubGlobal('localStorage', memoryStorage());
     vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
     const clear = vi.spyOn(drafts, 'clearDrafts');
     const coreTokens: (string | null)[] = [];
     let sessions = 0;
@@ -608,15 +542,12 @@ describe('Core-mediated browser sessions', () => {
       </AuthProvider>,
     );
     await screen.findByText('authenticated');
-    expect(offline.readOfflineAccount()?.subject).toBe('person-1');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Read workspaces' }));
     await waitFor(() => {
       expect(screen.getByLabelText('API result')).toHaveTextContent('Refused');
     });
     expect(sessions).toBe(2);
     expect(coreTokens).toEqual(['Bearer cached-valid-token', 'Bearer fresh-core-token']);
-    expect(forget).toHaveBeenCalled();
-    expect(offline.readOfflineAccount()).toBeNull();
     expect(useSessionStore.getState().status).toBe('anonymous');
     expect(clear).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
@@ -626,16 +557,6 @@ describe('Core-mediated browser sessions', () => {
     ['auth.principal_inactive', 'anonymous'],
     ['item.access_denied', 'authenticated'],
   ])('treats Core403 code %s according to its scope', async (code, expectedStatus) => {
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
-    vi.spyOn(offline, 'readOfflineAccount').mockReturnValue({
-      subject: 'person-1',
-      name: 'Stored Person',
-      email: null,
-    });
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
     const fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
       const path = pathOf(input);
       if (path === '/auth/session') return Promise.resolve(authenticated());
@@ -661,22 +582,10 @@ describe('Core-mediated browser sessions', () => {
       expect(screen.getByLabelText('API result')).toHaveTextContent('Refused');
     });
     expect(useSessionStore.getState().status).toBe(expectedStatus);
-    if (expectedStatus === 'anonymous') expect(forget).toHaveBeenCalled();
-    else expect(forget).not.toHaveBeenCalled();
   });
 
-  it('rejects renewal for another account while preserving that account’s offline marker', async () => {
+  it('rejects renewal for another account and seals the departing account’s bodies', async () => {
     vi.stubGlobal('localStorage', memoryStorage());
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
-    vi.spyOn(offline, 'readOfflineAccount').mockReturnValue({
-      subject: 'person-1',
-      name: 'Stored Person',
-      email: null,
-    });
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
     const clear = vi.spyOn(drafts, 'clearDrafts');
     vi.stubGlobal(
       'fetch',
@@ -694,30 +603,17 @@ describe('Core-mediated browser sessions', () => {
     await screen.findByText('authenticated');
     const departingEpoch = bodies.bodyCacheAccountEpoch('person-1');
     expect(departingEpoch).not.toBeNull();
-    vi.mocked(offline.readOfflineAccount).mockReturnValue({
-      subject: 'person-2',
-      name: 'Other Person',
-      email: null,
-    });
     await userEvent.setup().click(screen.getByRole('button', { name: 'Read access token' }));
     await screen.findByText('anonymous');
     expect(screen.getByLabelText('Access token')).toHaveTextContent('No token');
-    expect(forget).toHaveBeenCalledWith('person-1', departingEpoch);
-    expect(bodies.sealAccountBodies).toHaveBeenCalledWith('person-1', departingEpoch);
+    expect(bodies.sealAccountBodies).toHaveBeenCalledWith('person-1');
     expect(clear).not.toHaveBeenCalled();
-    expect(offline.readOfflineAccount()).toMatchObject({ subject: 'person-2' });
     expect(useSessionStore.getState().profile).toBeNull();
   });
 
   it.each(['another account', 'a fresh session for the same account'])(
     'ignores a delayed cross-tab sign-out for %s',
     async (scope) => {
-      vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-        vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-        return Promise.resolve();
-      });
-      const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-      const clear = vi.spyOn(offline, 'clearOfflineData');
       vi.spyOn(bodies, 'bodyCacheCleanupCurrent').mockReturnValue(false);
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticated()));
       renderProvider();
@@ -731,44 +627,21 @@ describe('Core-mediated browser sessions', () => {
         }),
       );
       expect(useSessionStore.getState().status).toBe('authenticated');
-      expect(forget).not.toHaveBeenCalled();
-      expect(clear).not.toHaveBeenCalled();
     },
   );
 
-  it('remembers only the profile after an authoritative session restore', async () => {
-    const remember = vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticated()));
-    renderProvider();
-    await screen.findByText('authenticated');
-    expect(remember).toHaveBeenCalledWith({
-      subject: 'person-1',
-      name: 'Stored Person',
-      email: null,
-    });
-  });
-
-  it('restores a cached account locally while Core is unreachable, without authenticating it', async () => {
-    const profile = { subject: 'person-1', name: 'Stored Person', email: null };
-    vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-    vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
+  it('restores no account while Core is unreachable and never authenticates', async () => {
     const fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     vi.stubGlobal('fetch', fetch);
     renderProvider();
     await screen.findByText('unreachable');
-    expect(useSessionStore.getState().profile).toEqual(profile);
+    expect(useSessionStore.getState().profile).toBeNull();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Read access token' }));
     expect(await screen.findByLabelText('Access token')).toHaveTextContent('No token');
     expect(useSessionStore.getState().status).toBe('unreachable');
   });
 
-  it('keeps the cached account through an automatic session retry', async () => {
-    const profile = { subject: 'person-1', name: 'Stored Person', email: null };
-    vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-    vi.spyOn(bodies, 'openBodyCache').mockResolvedValue(undefined);
+  it('retries the session after an unreachable Core without inventing an account', async () => {
     const pending = deferred<Response>();
     vi.stubGlobal(
       'fetch',
@@ -778,64 +651,10 @@ describe('Core-mediated browser sessions', () => {
     await screen.findByText('unreachable');
     useSessionStore.getState().sessionRetryRequested();
     await screen.findByText('authenticating');
-    expect(useSessionStore.getState().profile).toEqual(profile);
+    expect(useSessionStore.getState().profile).toBeNull();
     pending.resolve(anonymous());
     await screen.findByText('anonymous');
     expect(useSessionStore.getState().profile).toBeNull();
-  });
-
-  it.each(['anonymous', 'unauthorized', 'forbidden'])(
-    'closes shared body admission after startup answers %s, preserving pending drafts',
-    async (answer) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue({
-        subject: 'person-1',
-        name: 'Stored Person',
-        email: null,
-      });
-      vi.spyOn(bodies, 'bodyCacheAccountEpoch').mockReturnValue('admission-epoch');
-      const clear = vi.spyOn(drafts, 'clearDrafts');
-      vi.stubGlobal(
-        'fetch',
-        vi
-          .fn()
-          .mockResolvedValue(
-            answer === 'anonymous' ? anonymous() : json({}, answer === 'unauthorized' ? 401 : 403),
-          ),
-      );
-      renderProvider();
-      await screen.findByText(answer === 'anonymous' ? 'anonymous' : 'failed');
-      expect(bodies.sealAccountBodies).toHaveBeenCalledWith('person-1', 'admission-epoch');
-      expect(clear).not.toHaveBeenCalled();
-    },
-  );
-
-  it('removes offline access after a definitive anonymous answer without deleting pending data', async () => {
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-    const clear = vi.spyOn(offline, 'clearOfflineData');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(anonymous()));
-    renderProvider();
-    await screen.findByText('anonymous');
-    expect(forget).toHaveBeenCalled();
-    expect(clear).not.toHaveBeenCalled();
-  });
-
-  it('removes offline access before an explicit sign-out starts network cleanup', async () => {
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-    const logout = deferred<Response>();
-    vi.spyOn(offline, 'rememberOfflineAccount').mockImplementation((profile) => {
-      vi.spyOn(offline, 'readOfflineAccount').mockReturnValue(profile);
-      return Promise.resolve();
-    });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValueOnce(authenticated()).mockReturnValueOnce(logout.promise),
-    );
-    renderProvider();
-    await screen.findByText('authenticated');
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(forget).toHaveBeenCalled();
-    logout.resolve(new Response(null, { status: 204 }));
-    await screen.findByText('anonymous');
   });
 
   it('finishes anonymously from the server session endpoint without provider traffic', async () => {
@@ -972,7 +791,7 @@ describe('Core-mediated browser sessions', () => {
       .mockResolvedValueOnce(authenticated())
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetch);
-    vi.stubGlobal('indexedDB', {});
+    vi.stubGlobal('indexedDB', { deleteDatabase: vi.fn() });
     const clear = vi.spyOn(drafts, 'clearDrafts').mockRejectedValue(new Error('Storage blocked'));
     const clearBodies = vi.spyOn(bodies, 'clearBodyCache').mockResolvedValue(undefined);
     renderProvider();
