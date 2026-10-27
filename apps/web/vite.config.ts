@@ -166,13 +166,10 @@ function excalidrawFontAssets(): Plugin {
 
 /**
  * The scripts and styles the application needs before it can paint: the entry chunk, the chunk it
- * loads the application from, and everything those import statically. Offline note renderers also
- * need Mermaid's lazy diagram and layout modules. Other feature chunks are cached on first use.
+ * loads the application from, and everything those import statically. Feature chunks are cached on
+ * first use.
  */
-export function startupGraph(
-  bundle: Rollup.OutputBundle,
-  offlineRoots: readonly string[] = [],
-): {
+export function startupGraph(bundle: Rollup.OutputBundle): {
   readonly entry: string;
   readonly startup: readonly string[];
 } {
@@ -183,15 +180,14 @@ export function startupGraph(
   if (!entry) throw new Error('The application entry chunk is missing.');
   const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
   const files = new Set<string>();
-  const visit = (fileName: string, dynamic = false): void => {
+  const visit = (fileName: string): void => {
     if (files.has(fileName)) return;
     files.add(fileName);
     const chunk = byName.get(fileName);
     if (!chunk) return;
     for (const css of chunk.viteMetadata?.importedCss ?? []) files.add(css);
     for (const asset of chunk.viteMetadata?.importedAssets ?? []) files.add(asset);
-    for (const imported of chunk.imports) visit(imported, dynamic);
-    if (dynamic) for (const imported of chunk.dynamicImports) visit(imported, true);
+    for (const imported of chunk.imports) visit(imported);
   };
   visit(entry.fileName);
   // main.tsx loads the application with one dynamic import after its boot concerns run; that
@@ -203,48 +199,7 @@ export function startupGraph(
     );
   }
   for (const dynamic of entry.dynamicImports) visit(dynamic);
-  for (const root of offlineRoots) visit(root, true);
   return { entry: `/${entry.fileName}`, startup: [...files].map((file) => `/${file}`) };
-}
-
-function mermaidOfflineRoots(
-  bundle: Rollup.OutputBundle,
-  getModuleInfo: (
-    id: string,
-  ) => Pick<Rollup.ModuleInfo, 'importedIds' | 'dynamicallyImportedIds'> | null,
-): readonly string[] {
-  const chunks = Object.values(bundle).filter(
-    (output): output is Rollup.OutputChunk => output.type === 'chunk',
-  );
-  const moduleIds = (chunk: Rollup.OutputChunk): readonly string[] => [
-    ...chunk.moduleIds,
-    ...Object.keys(chunk.modules),
-  ];
-  const visited = new Set<string>();
-  const dynamicModules = new Set<string>();
-  const inspect = (id: string): void => {
-    if (visited.has(id)) return;
-    visited.add(id);
-    const info = getModuleInfo(id);
-    if (!info) return;
-    for (const imported of info.dynamicallyImportedIds) {
-      dynamicModules.add(imported);
-      inspect(imported);
-    }
-    for (const imported of info.importedIds) inspect(imported);
-  };
-  for (const chunk of chunks) {
-    for (const id of moduleIds(chunk)) {
-      if (/[/\\](?:node_modules[/\\]mermaid[/\\]|\.pnpm[/\\]mermaid@)/u.test(id)) {
-        inspect(id);
-      }
-    }
-  }
-  // Mermaid's root can share the app chunk. Inspect module ownership before following lazy
-  // chunks, so the app's unrelated canvas and PDF imports do not join every offline install.
-  return chunks
-    .filter((chunk) => moduleIds(chunk).some((id) => dynamicModules.has(id)))
-    .map((chunk) => chunk.fileName);
 }
 
 function replaceExactlyOnce(source: string, pattern: string | RegExp, replacement: string): string {
@@ -385,10 +340,7 @@ export default defineConfig({
           .slice(0, 16);
         const offlineCss = assets.find((name) => /^\/assets\/index-.*\.css$/.test(name));
         if (!offlineCss) throw new Error('The offline screen stylesheet is missing.');
-        const { entry, startup } = startupGraph(
-          bundle,
-          mermaidOfflineRoots(bundle, (id) => this.getModuleInfo(id)),
-        );
+        const { entry, startup } = startupGraph(bundle);
         const baseShellFiles = ['/offline.html', '/nix-icon-192.png', '/nix-icon-512.png'];
         this.emitFile({
           type: 'asset',

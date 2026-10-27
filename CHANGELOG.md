@@ -3,6 +3,16 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## Unreleased
+
+### Removed
+
+- Offline notes. The installed app no longer downloads your notes, the "Keep notes on this
+  device" setting, Notes on this device page and Sync notes menu items are gone, and an
+  installed app without a connection shows the reconnect screen. Signing out deletes notes an
+  earlier version downloaded. Notes created offline that never synced are not published; open
+  Notes on this device in the current release and sync before updating to keep them.
+
 ## 0.4.0 - 2026-10-23
 
 ### Added

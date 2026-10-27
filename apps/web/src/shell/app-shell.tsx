@@ -8,7 +8,6 @@ import { MobileNavigation } from './mobile-navigation';
 import { petAttentionText } from '../pets/pet-attention';
 import { usePetNavEntry } from '../pets/use-pet-nav-entry';
 import { PwaControls } from '../pwa/pwa-controls';
-import { OfflineStatus } from '../offline/offline-status';
 import { useRememberLocation } from '../pwa/use-remember-location';
 import { focusRing } from '@nix/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -161,8 +160,8 @@ export function AppShell(): ReactNode {
   const sidebar = useSidebar(narrow);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
-  // The companion page owns a phone screen: the sync footer would otherwise
-  // squeeze the message list to a sliver. Offline and update notices still show; they are state.
+  // The companion page owns a phone screen: chrome would otherwise squeeze the message list to a
+  // sliver.
   const chatOwnsScreen = narrow && /^\/w\/[^/]+\/pet\/?$/.test(location.pathname);
   const visibleHeight = useVisualViewportHeight(chatOwnsScreen && keyboardVisible);
   // The installed app's Search shortcut lands here with a request to open search over whatever
@@ -734,7 +733,6 @@ export function AppShell(): ReactNode {
             clears this region's measured height, clears the player too. Hidden while the software
             keyboard is up, when the room is better spent on the text being typed. */}
         {keyboardVisible || zen ? null : <MiniPlayer onOpen={openPinned} />}
-        {zen || chatOwnsScreen ? null : <OfflineStatus />}
         {zen ? null : <PwaControls />}
         {navRendered ? (
           <MobileNavigation

@@ -198,7 +198,7 @@ describe('offline cleanup lifecycle', () => {
     },
   );
 
-  it('keeps a newly admitted account’s bodies, drafts, and migration mappings during delayed cleanup', async () => {
+  it('keeps a newly admitted account’s bodies and drafts during delayed cleanup', async () => {
     vi.resetModules();
     const otherBodyCache = await import('../../editor/body-cache');
     const otherDrafts = await import('../../editor/draft-journal');
@@ -213,31 +213,10 @@ describe('offline cleanup lifecycle', () => {
       });
       await bodyCache.openBodyCache(BOB);
       await saveNote(BOB, 'fresh-bob', 'Fresh Bob note');
-      const localScope = scope(BOB, 'local-bob');
-      const publishedScope = scope(BOB, 'published-bob');
-      await bodyCache.writeBodyCache({
-        scope: localScope,
-        docId: 'local:local-bob',
-        schemaVersion: 1,
-        savedAt: Date.now(),
-        update: update('Bob local note'),
-      });
-      await drafts.migrateLocalDrafts(localScope, publishedScope);
       gate.release();
       await cleanup;
 
       await expectSavedNote(BOB, 'fresh-bob', 'Fresh Bob note');
-      await drafts.writeDraft({
-        id: 'late-bob-edit',
-        scope: localScope,
-        docId: 'local:local-bob',
-        revision: 1,
-        update: update('Later Bob edit'),
-      });
-      expect(await drafts.readDrafts(localScope)).toEqual([]);
-      expect((await drafts.readDrafts(publishedScope)).map((record) => record.id)).toContain(
-        'late-bob-edit',
-      );
       expect(bodyCache.bodyCacheAccountAdmits(BOB)).toBe(true);
     } finally {
       gate.release();

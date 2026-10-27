@@ -26,8 +26,7 @@ export type SessionStatus =
   | 'failed'
   /**
    * Core could not be reached at all - the device is offline, or the server is not answering. Not
-   * a sign-in failure. A previously confirmed profile can open downloaded notes locally, without
-   * asserting that the server session is still valid. Restoration is retried.
+   * a sign-in failure. Restoration is retried.
    */
   | 'unreachable';
 

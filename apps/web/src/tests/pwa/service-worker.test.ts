@@ -150,19 +150,6 @@ describe('PWA caching boundaries', () => {
     expect(runtime.fetch).not.toHaveBeenCalled();
   });
 
-  it('cold-launches the exact offline notes route and selection from the cached shell', async () => {
-    const runtime = worker({ cached: { '/index.html': new Response('installed shell') } });
-    for (const path of [
-      '/offline',
-      '/offline?workspace=&item=',
-      '/offline?workspace=workspace-id&item=note-id',
-    ]) {
-      const response = await navigate(runtime, path);
-      expect(await response?.text()).toBe('installed shell');
-    }
-    expect(runtime.fetch).not.toHaveBeenCalled();
-  });
-
   it('uses the network, then the offline screen, before a shell is installed', async () => {
     const online = worker({ network: () => Promise.resolve(new Response('from network')) });
     expect(await (await navigate(online, '/w/workspace'))?.text()).toBe('from network');
