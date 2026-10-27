@@ -5,8 +5,6 @@ import { Outlet } from 'react-router';
 import { useAuth } from '../auth/auth-provider';
 import { useSessionStore, type Unreachable } from '../auth/session-store';
 import { LoginPage } from '../pages/login-page';
-import { OfflineNotesPage } from '../offline/offline-notes-page';
-import { useNetworkOnline } from '../offline/use-network-online';
 
 /**
  * The session gate: everything below it renders only for a signed-in person.
@@ -26,18 +24,7 @@ export function RequireSession(): ReactNode {
   const error = useSessionStore((state) => state.error);
   const retry = useSessionStore((state) => state.sessionRetryRequested);
   const unreachable = useSessionStore((state) => state.unreachable);
-  const profile = useSessionStore((state) => state.profile);
-  const online = useNetworkOnline();
   const { signIn, isConfigured } = useAuth();
-
-  if (
-    profile !== null &&
-    ((status === 'authenticated' && !online) ||
-      (unreachable !== null &&
-        (status === 'unreachable' || status === 'unknown' || status === 'authenticating')))
-  ) {
-    return <OfflineNotesPage />;
-  }
 
   if (status === 'authenticated') {
     return <Outlet />;

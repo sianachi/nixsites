@@ -100,8 +100,6 @@ export interface ProviderSocket {
 
 export interface CollabSyncOptions {
   readonly draftScope?: string;
-  /** Local-only notes still load and journal edits, but never open a socket. */
-  readonly offline?: boolean;
   /**
    * Keeps a local copy of this body's last confirmed state under this scope, and paints it before
    * the connection opens. See `body-cache.ts` for what the copy may and may not be trusted with.
@@ -164,8 +162,6 @@ export interface CollabSync {
   readonly flushAndWait: () => Promise<void>;
   /** Waits for durable local draft writes, including storage failure reporting. */
   readonly flushLocal: () => Promise<void>;
-  /** Complete download/replay: initial sync, persistence confirmation, then a durable body copy. */
-  readonly syncAndCache: (signal?: AbortSignal) => Promise<void>;
 
   /** Closes the socket and stops reconnecting. The document itself keeps every edit. */
   destroy: () => void;
@@ -174,13 +170,6 @@ export interface CollabSync {
 const DEFAULT_BASE_URL = '/collab';
 const localProviders = new Map<string, Set<CollabSync>>();
 
-/** Flushes mounted editors before their local note is published under a server identity. */
-export async function flushLocalDraftsForScope(scope: string): Promise<void> {
-  await Promise.all(
-    [...(localProviders.get(scope) ?? [])].map((provider) => provider.flushLocal()),
-  );
-}
-
 /** Drains this account's editors before pending-edit inventory or sign-out. */
 export async function flushLocalDraftsForAccount(subject: string): Promise<void> {
   const prefix = `${JSON.stringify([subject]).slice(0, -1)},`;
@@ -188,15 +177,6 @@ export async function flushLocalDraftsForAccount(subject: string): Promise<void>
     [...localProviders.entries()]
       .filter(([scope]) => scope.startsWith(prefix))
       .flatMap(([, providers]) => [...providers].map((provider) => provider.flushLocal())),
-  );
-}
-
-/** Completes durable local writes before the application switches to its offline browser. */
-export async function flushLocalDrafts(): Promise<void> {
-  await Promise.all(
-    [...localProviders.values()].flatMap((providers) =>
-      [...providers].map((provider) => provider.flushLocal()),
-    ),
   );
 }
 
@@ -280,15 +260,6 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
             if (record === null || isDestroyed()) return;
             if (sharedCache && !cacheWriteAdmitted()) return;
             if (record.schemaVersion !== SCHEMA_VERSION) {
-              if (options.offline) {
-                halted = true;
-                failInitial('This offline copy requires a compatible editor version.');
-                onNotice?.({
-                  code: 'offline_copy_unavailable',
-                  detail: initialFailure?.message ?? '',
-                });
-                return;
-              }
               void cache.discard(cacheScope).catch(() => undefined);
               return;
             }
@@ -296,15 +267,6 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
             cachedDocId = record.docId;
           })
           .catch(() => {
-            if (options.offline) {
-              halted = true;
-              failInitial('This note’s offline copy could not be read. Reconnect before editing.');
-              onNotice?.({
-                code: 'offline_copy_unavailable',
-                detail: initialFailure?.message ?? '',
-              });
-              return;
-            }
             // An unreadable copy is only a slower first paint; drop it and sync normally.
             void cache.discard(cacheScope).catch(() => undefined);
           });
@@ -364,21 +326,6 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
         );
         onState('readonly');
         onNotice?.({ code: 'body_access_unavailable', detail: initialFailure?.message ?? '' });
-        return;
-      }
-      if (
-        options.offline &&
-        cachedDocId === null &&
-        !restoredDrafts.some(
-          (record) =>
-            options.draftScope !== undefined &&
-            record.id === `${options.draftScope}:published-local` &&
-            record.docId === `local:${itemId}`,
-        )
-      ) {
-        halted = true;
-        failInitial('This note has not finished downloading. Reconnect before editing.');
-        onNotice?.({ code: 'offline_copy_unavailable', detail: initialFailure?.message ?? '' });
         return;
       }
       for (const record of restoredDrafts) {
@@ -727,7 +674,7 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
   }
 
   async function connect(): Promise<void> {
-    if (options.offline || destroyed || halted || connecting) {
+    if (destroyed || halted || connecting) {
       return;
     }
 
@@ -975,8 +922,8 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
     }
   }
 
-  onState(options.offline ? 'offline' : 'connecting');
-  if (!options.offline) void connect();
+  onState('connecting');
+  void connect();
 
   const sync: CollabSync = {
     awareness,
@@ -1000,55 +947,6 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
       await draft?.snapshot();
       if (destroyed) unregisterLocalProvider();
       else if (halted && !cacheInvalid && initialFailure !== null) throw initialFailure;
-    },
-    async syncAndCache(signal?: AbortSignal): Promise<void> {
-      if (options.offline) throw new Error('This local note has not been published.');
-      signal?.throwIfAborted();
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      let waiter: { resolve: () => void; reject: (error: Error) => void } | undefined;
-      let aborted: (() => void) | undefined;
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(new Error('The offline download did not finish in time.'));
-        }, 30_000);
-        aborted = () => {
-          reject(new Error('The offline download was cancelled.'));
-        };
-        signal?.addEventListener('abort', aborted, { once: true });
-      });
-      const operation = async (): Promise<void> => {
-        await localReady;
-        if (destroyed) throw new Error('The document was closed.');
-        if (initialFailure !== null) throw initialFailure;
-        if (!initialSynced)
-          await new Promise<void>((resolve, reject) => {
-            waiter = { resolve, reject };
-            initialWaiters.add(waiter);
-          });
-        signal?.throwIfAborted();
-        if (hasWriteRefusal()) throw new Error('The server refused an edit.');
-        if (mode === 'read' && localRevision !== confirmedRevision)
-          throw new Error('This note is read-only. Pending edits remain saved on this device.');
-        while (localRevision !== confirmedRevision) {
-          signal?.throwIfAborted();
-          if (isDestroyed() || isHalted())
-            throw new Error('The document was closed before its changes were confirmed.');
-          await confirm();
-        }
-        signal?.throwIfAborted();
-        const update = Y.encodeStateAsUpdate(doc);
-        await persistenceBarrier();
-        if (hasWriteRefusal()) throw new Error('The server refused an edit.');
-        signal?.throwIfAborted();
-        await cacheConfirmed(update);
-      };
-      try {
-        await Promise.race([operation(), timeout]);
-      } finally {
-        if (timer !== undefined) clearTimeout(timer);
-        if (waiter !== undefined) initialWaiters.delete(waiter);
-        if (aborted !== undefined) signal?.removeEventListener('abort', aborted);
-      }
     },
     destroy(): void {
       // Last chance for anything still waiting on the flush timer. Closing the editor is exactly
@@ -1134,7 +1032,7 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
   }, 2_000);
   let checkingConnection = false;
   const resume = (): void => {
-    if (options.offline || destroyed || halted || connecting) return;
+    if (destroyed || halted || connecting) return;
     if (socket?.readyState === 1 && ready) {
       if (checkingConnection) return;
       checkingConnection = true;

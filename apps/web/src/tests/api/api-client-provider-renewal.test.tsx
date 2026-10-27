@@ -11,11 +11,6 @@ import { AuthProvider } from '../../auth/auth-provider';
 import { useSessionStore } from '../../auth/session-store';
 import * as bodies from '../../editor/body-cache';
 import * as drafts from '../../editor/draft-journal';
-import * as offline from '../../offline/offline-store';
-
-vi.mock('../../offline/offline-assets', () => ({
-  clearOfflineNoteAssets: vi.fn(() => Promise.resolve()),
-}));
 
 const profile = { subject: 'renewal-person', name: 'Stored person', email: null };
 const command = defineCommand({
@@ -98,11 +93,10 @@ function renderProviders(): { readonly client: () => NixClient } {
   };
 }
 
-beforeEach(async () => {
+beforeEach(() => {
   vi.stubGlobal('indexedDB', new IDBFactory());
   vi.stubGlobal('IDBKeyRange', FakeIDBKeyRange);
   vi.stubGlobal('localStorage', memoryStorage());
-  await offline.clearOfflineData();
   useSessionStore.setState({
     status: 'unknown',
     profile: null,
@@ -120,10 +114,8 @@ afterEach(() => {
 
 describe('bearer renewal through the real browser session provider', () => {
   it.each(['gateway outage', 'network drop', 'rate limit'] as const)(
-    'preserves the offline account after a %s and resumes through automatic restoration',
+    'keeps the session profile after a %s and resumes through automatic restoration',
     async (failure) => {
-      const forget = vi.spyOn(offline, 'forgetOfflineAccount');
-      const clear = vi.spyOn(offline, 'clearOfflineData');
       const clearDrafts = vi.spyOn(drafts, 'clearDrafts');
       const coreTokens: (string | null)[] = [];
       let sessions = 0;
@@ -162,7 +154,6 @@ describe('bearer renewal through the real browser session provider', () => {
         expect(screen.getByLabelText('Session status')).toHaveTextContent('authenticated');
       });
       const client = providers.client();
-      expect(offline.readOfflineAccount()).toEqual(profile);
 
       await act(async () => {
         await expect(client.execute(command)).rejects.toMatchObject({
@@ -173,12 +164,9 @@ describe('bearer renewal through the real browser session provider', () => {
 
       expect(useSessionStore.getState().status).toBe('unreachable');
       expect(useSessionStore.getState().profile).toEqual(profile);
-      expect(offline.readOfflineAccount()).toEqual(profile);
       expect(sessions).toBe(2);
       expect(coreTokens).toEqual(['Bearer cached-bearer']);
-      expect(forget).not.toHaveBeenCalled();
       expect(bodies.sealAccountBodies).not.toHaveBeenCalled();
-      expect(clear).not.toHaveBeenCalled();
       expect(clearDrafts).not.toHaveBeenCalled();
 
       act(() => {
@@ -193,15 +181,12 @@ describe('bearer renewal through the real browser session provider', () => {
       expect(sessions).toBe(3);
       expect(coreTokens).toEqual(['Bearer cached-bearer', 'Bearer restored-bearer']);
       expect(useSessionStore.getState().profile).toEqual(profile);
-      expect(offline.readOfflineAccount()).toEqual(profile);
-      expect(forget).not.toHaveBeenCalled();
       expect(bodies.sealAccountBodies).not.toHaveBeenCalled();
     },
   );
 
   it('preserves a fresh same-account lifecycle when an old forced renewal answers 503', async () => {
     vi.mocked(bodies.openBodyCache).mockRestore();
-    const forget = vi.spyOn(offline, 'forgetOfflineAccount');
     const clearDrafts = vi.spyOn(drafts, 'clearDrafts');
     let resolveRenewal: (response: Response) => void = () => {
       throw new Error('The renewal request was not initialized.');
@@ -242,7 +227,6 @@ describe('bearer renewal through the real browser session provider', () => {
     await bodies.clearBodyCache(profile.subject);
     await bodies.openBodyCache(profile.subject, { reauthorized: true });
     const freshProfile = { ...profile, name: 'Fresh session person' };
-    await offline.rememberOfflineAccount(freshProfile);
     act(() => {
       useSessionStore.getState().signInSucceeded(freshProfile);
     });
@@ -272,11 +256,9 @@ describe('bearer renewal through the real browser session provider', () => {
     expect(useSessionStore.getState().status).toBe('authenticated');
     expect(useSessionStore.getState().profile).toBe(freshProfile);
     expect(useSessionStore.getState().unreachable).toBeNull();
-    expect(offline.readOfflineAccount()).toEqual(freshProfile);
     expect(bodies.bodyCacheAccountEpoch(profile.subject)).toBe(freshEpoch);
     expect(bodies.bodyCacheAdmits(scope)).toBe(true);
     expect(await bodies.readBodyCache(scope)).toEqual(retained);
-    expect(forget).not.toHaveBeenCalled();
     expect(bodies.sealAccountBodies).not.toHaveBeenCalled();
     expect(clearDrafts).not.toHaveBeenCalled();
   });

@@ -6,14 +6,11 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
 import { isCanceledError, references } from '@nix/api-client';
 import { useApiClient } from '../api/api-client-provider';
-import { getOfflineSnapshot, subscribeOfflineNotes } from '../offline/offline-store';
-import { bodyCacheAdmits, documentScope, sealItemBodies } from './body-cache';
 
 /**
  * What a document's references point at, resolved against the server.
@@ -56,7 +53,6 @@ interface ReferenceResolver {
 }
 
 const ReferenceResolutionContext = createContext<ReferenceResolver | null>(null);
-const ignoreSubscription = (): (() => void) => () => undefined;
 
 /**
  * Resolves every reference on screen, in as few requests as it can.
@@ -72,17 +68,10 @@ const ignoreSubscription = (): (() => void) => () => undefined;
  */
 export function ReferenceResolutionProvider({
   children,
-  offline = false,
 }: {
   readonly children: ReactNode;
-  readonly offline?: boolean;
 }): ReactNode {
   const client = useApiClient();
-  const local = useSyncExternalStore(
-    offline ? subscribeOfflineNotes : ignoreSubscription,
-    getOfflineSnapshot,
-    getOfflineSnapshot,
-  );
   const [answers, setAnswers] = useState<ReadonlyMap<string, ReferenceState>>(new Map());
 
   // Held in refs rather than state: they are bookkeeping for the next flush, and a render caused
@@ -159,42 +148,13 @@ export function ReferenceResolutionProvider({
     }
 
     try {
-      const requestSubject = getOfflineSnapshot().account?.subject;
       const parsed = await client.query(references.resolveReferences(ids), {
         signal: controller.signal,
         forceRefresh: true,
       });
-      if (!live.current || getOfflineSnapshot().account?.subject !== requestSubject) {
+      if (!live.current) {
         return;
       }
-      const saved = getOfflineSnapshot();
-      for (const entry of parsed.references) {
-        if (entry.readable || saved.account === null) continue;
-        const note = saved.notes.find(
-          (candidate) =>
-            candidate.publication.kind === 'published' &&
-            candidate.publication.serverId === entry.id,
-        );
-        if (note?.publication.kind !== 'published') continue;
-        const scope = documentScope(
-          saved.account.subject,
-          note.workspaceId,
-          note.publication.serverId,
-          'note',
-        );
-        if (scope === undefined || !bodyCacheAdmits(scope)) continue;
-        void sealItemBodies(
-          saved.account.subject,
-          note.workspaceId,
-          note.publication.serverId,
-        ).catch((cause: unknown) => {
-          console.warn(
-            'An unreadable linked note could not be removed from offline storage.',
-            cause,
-          );
-        });
-      }
-
       setAnswers((previous) => {
         const next = new Map(previous);
         for (const entry of parsed.references) {
@@ -253,7 +213,6 @@ export function ReferenceResolutionProvider({
 
   const request = useCallback(
     (targetId: string) => {
-      if (offline) return;
       if (asked.current.has(targetId)) {
         return;
       }
@@ -262,7 +221,7 @@ export function ReferenceResolutionProvider({
       pending.current.add(targetId);
       scheduleFlush();
     },
-    [offline, scheduleFlush],
+    [scheduleFlush],
   );
 
   const refresh = useCallback(
@@ -283,23 +242,11 @@ export function ReferenceResolutionProvider({
     // The identity is a dependency of the context consumers' effects: an unstable one would make
     // every reference on the page re-request itself on every render of this provider.
     () => ({
-      stateOf: (targetId) => {
-        if (!offline) return answers.get(targetId) ?? { status: 'loading' };
-        if (answers.get(targetId)?.status === 'refused') return { status: 'refused' };
-        const note = local.notes.find(
-          (candidate) =>
-            candidate.id === targetId ||
-            (candidate.publication.kind !== 'pending' &&
-              candidate.publication.serverId === targetId),
-        );
-        return local.account !== null && note?.bodyAvailable && note.blockedReason === null
-          ? { status: 'resolved', title: note.title, workspaceId: note.workspaceId, type: 'note' }
-          : { status: 'unavailable' };
-      },
+      stateOf: (targetId) => answers.get(targetId) ?? { status: 'loading' },
       request,
       refresh,
     }),
-    [answers, local, offline, request, refresh],
+    [answers, request, refresh],
   );
 
   return (

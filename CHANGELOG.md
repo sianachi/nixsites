@@ -40,6 +40,14 @@ follows semantic versioning (`0.x` pre-1.0).
   both themes. Dates, tags and other metadata use the site's own typeface when it is the serif
   or Atkinson.
 
+### Removed
+
+- Offline notes. The installed app no longer downloads your notes, the "Keep notes on this
+  device" setting, Notes on this device page and Sync notes menu items are gone, and an
+  installed app without a connection shows the reconnect screen. Signing out deletes notes an
+  earlier version downloaded. Notes created offline that never synced are not published; open
+  Notes on this device in the current release and sync before updating to keep them.
+
 ## 0.3.1 - 2026-10-21
 
 ### Added

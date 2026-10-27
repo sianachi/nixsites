@@ -177,12 +177,11 @@ describe('publishing', () => {
 });
 
 describe('device-only rows', () => {
-  it('say so on the offline and mobile toolbar toggles and nowhere else', () => {
+  it('say so on the mobile toolbar toggle and nowhere else', () => {
     render(<EditorPreferencesSection />);
 
     const captions = screen.getAllByText('This device only');
-    expect(captions).toHaveLength(2);
-    expect(screen.getByRole('checkbox', { name: 'Keep notes on this device' })).toBeInTheDocument();
+    expect(captions).toHaveLength(1);
     expect(screen.queryByText('This device only', { selector: 'label *' })).toBeNull();
   });
 

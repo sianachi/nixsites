@@ -1,25 +1,14 @@
 import { Icon, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
-import {
-  ChevronDown,
-  Download,
-  HardDrive,
-  KeyRound,
-  LogOut,
-  RefreshCw,
-  Settings,
-  User,
-} from 'lucide-react';
+import { ChevronDown, Download, KeyRound, LogOut, Settings, User } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
-import { requestOfflineSync } from '../offline/offline-runtime';
-import { useOfflineSyncState } from '../offline/offline-status';
-import { usePendingSignOut } from '../offline/use-pending-sign-out';
 import { useInstallNix } from '../pwa/install-nix';
 import { ThemeChoice } from '../theme/theme-choice';
 import type { CurrentPrincipalState } from '../session/use-current-principal';
 import { useWorkspace } from '../workspaces/workspace-context';
+import { usePendingSignOut } from './use-pending-sign-out';
 
 /**
  * The profile menu, top right: who you are, and the things that belong to you rather than to the
@@ -42,7 +31,6 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
   const { accountUrl } = useAuth();
   const pendingSignOut = usePendingSignOut();
   const { workspaceId } = useWorkspace();
-  const sync = useOfflineSyncState();
   const install = useInstallNix();
 
   const name = principal.principal?.displayName ?? 'Loading…';
@@ -89,37 +77,6 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
             external: true,
           } satisfies MenuEntry,
         ]),
-    // Routine sync lives here, not in a banner: the status line, the way to the saved notes, and a
-    // manual sync.
-    ...(sync.available
-      ? [
-          {
-            kind: 'content',
-            content: (
-              <Text as="p" variant="caption" tone="muted" className="px-3 py-1">
-                {sync.message}
-              </Text>
-            ),
-          } satisfies MenuEntry,
-        ]
-      : []),
-    ...(sync.available && sync.accountMatches
-      ? [
-          {
-            kind: 'link',
-            label: 'Notes on this device',
-            icon: HardDrive,
-            href: '/offline',
-          } satisfies MenuEntry,
-          {
-            kind: 'action',
-            label: sync.busy ? 'Syncing notes…' : 'Sync notes',
-            icon: RefreshCw,
-            disabled: sync.busy || !sync.online,
-            onSelect: requestOfflineSync,
-          } satisfies MenuEntry,
-        ]
-      : []),
     ...(install.offer
       ? [
           {

@@ -110,8 +110,7 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
 - Uploads are inspected by the worker before they are published: size and expiry checks, SHA-256,
   media type from magic bytes, preview and thumbnail generation. Files are not malware-scanned.
 - An installable web app with manifest shortcuts (New note, Today, Search), a share target, a
-  Markdown file handler, an offline page, offline copies of opened document bodies, last-location
-  restore, right-click context menus and a keyboard shortcuts dialog; light and dark themes.
+  Markdown file handler, an offline page, last-location restore, right-click context menus and a keyboard shortcuts dialog; light and dark themes.
 - Docker Compose production manifests with CI-built multi-architecture images, migrations, seed and
   verification jobs, a smoke-tested release script and a restic-to-R2 backup helper. Kubernetes
   manifests are retained. Logical database dumps alone do not restore file-backed documents.
