@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
@@ -24,6 +25,9 @@ var Kinds = []string{"notify.push"}
 // pushTTLSeconds is the "TTL" header sent with every push message: the push
 // service may hold an undelivered message this long before discarding it.
 const pushTTLSeconds = 86400
+
+// maxConcurrentPushes bounds simultaneous sends per notification.
+const maxConcurrentPushes = 8
 
 type Payload struct {
 	NotificationID string `json:"notificationId"`
@@ -85,10 +89,23 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 		return nil, failure("notify_payload_encode_failed", err)
 	}
 	result := Result{NotificationID: payload.NotificationID}
-	results := make([]workerapi.NotificationDeliveryResult, 0, len(delivery.Subscriptions))
-	for _, subscription := range delivery.Subscriptions {
-		status, httpStatus := handler.deliver(ctx, subscription, plaintext)
-		switch status {
+	results := make([]workerapi.NotificationDeliveryResult, len(delivery.Subscriptions))
+	// Subscriptions are independent push services, so a slow one must not delay the rest;
+	// results keep the subscription order.
+	var group sync.WaitGroup
+	slots := make(chan struct{}, maxConcurrentPushes)
+	for index, subscription := range delivery.Subscriptions {
+		slots <- struct{}{}
+		group.Add(1)
+		go func() {
+			defer func() { <-slots; group.Done() }()
+			status, httpStatus := handler.deliver(ctx, subscription, plaintext)
+			results[index] = workerapi.NotificationDeliveryResult{SubscriptionID: subscription.ID, Status: status, HTTPStatus: httpStatus}
+		}()
+	}
+	group.Wait()
+	for _, delivered := range results {
+		switch delivered.Status {
 		case "delivered":
 			result.Delivered++
 		case "gone":
@@ -96,11 +113,6 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 		default:
 			result.Failed++
 		}
-		results = append(results, workerapi.NotificationDeliveryResult{
-			SubscriptionID: subscription.ID,
-			Status:         status,
-			HTTPStatus:     httpStatus,
-		})
 	}
 	if len(results) > 0 {
 		if err := handler.report(ctx, payload.NotificationID, results); err != nil {
