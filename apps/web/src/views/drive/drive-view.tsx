@@ -25,8 +25,6 @@ import { DriveTable } from './drive-table';
 import { useDriveFileInfo } from './use-drive-file-info';
 import { useDriveTransfers } from './use-drive-transfers';
 
-export { DEFAULT_DRIVE_LAYOUT, DRIVE_LAYOUTS, type DriveLayout } from './drive-layout';
-
 /**
  * The drive: a container's children as a file manager, list or grid.
  *

@@ -5,7 +5,8 @@ import { type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 
 import { type Item } from '../core/container-model';
 import { cellId } from './grid-geometry';
-import { TITLE_COLUMN_KEY, cellDisplay, cellText, type SpreadsheetColumn } from './grid-model';
+import { TITLE_COLUMN_KEY } from '../core/columns';
+import { cellDisplay, cellText, type SpreadsheetColumn } from './grid-model';
 
 interface GridCellProps {
   readonly gridId: string;

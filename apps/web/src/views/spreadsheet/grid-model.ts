@@ -13,8 +13,6 @@ import {
 import { dayFor, formatTime, readTimestampValue, readerZone } from '../core/timestamps';
 import { continueSeries, type SeriesKind } from '../../lib/suggest/fill-series';
 
-export { TITLE_COLUMN_KEY } from '../core/columns';
-
 /**
  * The spreadsheet view's geometry and coercion, as pure functions.
  *

@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CalendarDay } from '../../../views/core/calendar-dates';
-import { HourGrid, minutesToPx } from '../../../views/calendar/calendar-hours';
+import { HourGrid } from '../../../views/calendar/calendar-hours';
+import { minutesToPx } from '../../../views/calendar/hours/geometry';
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
 import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';

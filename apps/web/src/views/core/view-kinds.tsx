@@ -39,13 +39,10 @@ import {
   TYPE_GROUP_KEY,
   valueShapeOf,
 } from './property-types';
-import { CARD_SIZES, DEFAULT_CARD_SIZE, GalleryView, type CardSize } from '../gallery/gallery-view';
-import {
-  DEFAULT_DRIVE_LAYOUT,
-  DRIVE_LAYOUTS,
-  DriveView,
-  type DriveLayout,
-} from '../drive/drive-view';
+import { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from '../gallery/card-size';
+import { GalleryView } from '../gallery/gallery-view';
+import { DEFAULT_DRIVE_LAYOUT, DRIVE_LAYOUTS, type DriveLayout } from '../drive/drive-layout';
+import { DriveView } from '../drive/drive-view';
 import { FormView } from '../form/form-view';
 import { InteractiveFormView } from '../form/interactive-form-view';
 import { ListView } from '../list/list-view';
