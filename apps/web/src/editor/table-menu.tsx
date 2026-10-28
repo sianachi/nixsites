@@ -17,8 +17,9 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
+import { useFloatingPlacement } from './floating-placement';
 import { cellCoordinates, hasHeaderColumn, hasHeaderRow, tableContext } from './table-controls';
 
 /**
@@ -206,101 +207,45 @@ export function tableControlGroups(editor: Editor): readonly ControlGroup[] {
   ];
 }
 
+function readPlacement(editor: Editor): Placement | null {
+  const context = tableContext(editor.state);
+  if (context === null) {
+    return null;
+  }
+  const dom = editor.view.nodeDOM(context.pos);
+  if (!(dom instanceof HTMLElement)) {
+    return null;
+  }
+  const rect = dom.getBoundingClientRect();
+  const viewport = readViewportBounds();
+  // Scrolled entirely off the viewport: nothing to float over.
+  if (rect.bottom < viewport.top + MENU_CLEARANCE || rect.top > viewport.top + viewport.height) {
+    return null;
+  }
+  const placed = placeFloatingMenu(
+    {
+      left: rect.left,
+      top: rect.top - MENU_GAP,
+      bottom: Math.max(viewport.top + MENU_GAP, rect.top + MENU_GAP),
+    },
+    MENU_WIDTH_ESTIMATE,
+    viewport,
+    { preferAbove: true, minHeight: MENU_CLEARANCE },
+  );
+  return {
+    left: placed.left,
+    top: placed.top,
+    pinned: !placed.above,
+    maxWidth: placed.maxWidth,
+    maxHeight: placed.maxHeight,
+  };
+}
+
 export function TableMenu({ editor }: { readonly editor: Editor }): ReactNode {
-  const [placement, setPlacement] = useState<Placement | null>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const container = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let frame: number | null = null;
-
-    function read(): void {
-      if (editor.isDestroyed) {
-        setPlacement(null);
-        return;
-      }
-      const context = tableContext(editor.state);
-      if (context === null) {
-        setPlacement(null);
-        return;
-      }
-      const dom = editor.view.nodeDOM(context.pos);
-      if (!(dom instanceof HTMLElement)) {
-        setPlacement(null);
-        return;
-      }
-      const rect = dom.getBoundingClientRect();
-      const viewport = readViewportBounds();
-      // Scrolled entirely off the viewport: nothing to float over.
-      if (
-        rect.bottom < viewport.top + MENU_CLEARANCE ||
-        rect.top > viewport.top + viewport.height
-      ) {
-        setPlacement(null);
-        return;
-      }
-      const placed = placeFloatingMenu(
-        {
-          left: rect.left,
-          top: rect.top - MENU_GAP,
-          bottom: Math.max(viewport.top + MENU_GAP, rect.top + MENU_GAP),
-        },
-        MENU_WIDTH_ESTIMATE,
-        viewport,
-        { preferAbove: true, minHeight: MENU_CLEARANCE },
-      );
-      setPlacement({
-        left: placed.left,
-        top: placed.top,
-        pinned: !placed.above,
-        maxWidth: placed.maxWidth,
-        maxHeight: placed.maxHeight,
-      });
-    }
-
-    function schedule(): void {
-      if (frame !== null) {
-        return;
-      }
-      frame = requestAnimationFrame(() => {
-        frame = null;
-        read();
-      });
-    }
-
-    // Focus moving into the menu is a keyboard user arriving, not focus leaving the table.
-    function onBlur({ event }: { readonly event: FocusEvent }): void {
-      const destination = event.relatedTarget;
-      if (destination instanceof Node && container.current?.contains(destination) === true) {
-        return;
-      }
-      setPlacement(null);
-    }
-
-    read();
-    editor.on('transaction', read);
-    editor.on('blur', onBlur);
-    editor.on('focus', read);
-    window.addEventListener('scroll', schedule, { capture: true, passive: true });
-    window.addEventListener('resize', schedule);
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', schedule);
-    viewport?.addEventListener('scroll', schedule);
-
-    return () => {
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-      }
-      editor.off('transaction', read);
-      editor.off('blur', onBlur);
-      editor.off('focus', read);
-      window.removeEventListener('scroll', schedule, { capture: true });
-      window.removeEventListener('resize', schedule);
-      viewport?.removeEventListener('resize', schedule);
-      viewport?.removeEventListener('scroll', schedule);
-    };
-  }, [editor]);
+  const placement = useFloatingPlacement(editor, readPlacement, container, true);
 
   if (editor.isDestroyed || placement === null) {
     return null;

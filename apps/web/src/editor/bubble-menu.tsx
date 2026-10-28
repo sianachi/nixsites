@@ -1,6 +1,7 @@
 import { Icon, placeFloatingMenu, readViewportBounds } from '@nix/ui';
 import type { TextColor } from '@nix/editor-schema';
 import type { Editor } from '@tiptap/react';
+import { useFloatingPlacement } from './floating-placement';
 import type { MarkType, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import {
   Baseline,
@@ -13,7 +14,7 @@ import {
   Underline,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 /**
  * The selection bubble menu: a small toolbar that appears over selected text.
@@ -266,6 +267,53 @@ interface MenuPlacement {
   readonly to: number;
 }
 
+/**
+ * A fresh object on every transaction, not only when the coordinates move: a colour applied to a
+ * standing selection changes no coordinate, and the buttons' pressed state has to re-render from
+ * the new document all the same.
+ */
+function readPlacement(editor: Editor): MenuPlacement | null {
+  const { state } = editor;
+  const { from, to, empty } = state.selection;
+
+  // Only a selection that actually holds text. An empty selection is a caret; a non-empty
+  // one over no text (a bare node selection, a table cell boundary) has nothing this menu's
+  // commands could colour.
+  if (empty || !hasText(state.doc, from, to)) {
+    return null;
+  }
+
+  const coords = editor.view.coordsAtPos(from);
+
+  // Above the selection by default, flipping below only when the viewport has no room above
+  // it - the same clamp the slash and reference menus use, with the preferred side reversed:
+  // this menu opens over the selection, not under the caret. On a touch screen it always
+  // opens below regardless of room, because iOS draws its own Copy/Paste bar directly above
+  // a selection, and this menu would otherwise open right underneath it.
+  const placed = placeFloatingMenu(
+    { left: coords.left, top: coords.top, bottom: coords.bottom },
+    MENU_WIDTH_ESTIMATE,
+    readViewportBounds(),
+    {
+      preferAbove: true,
+      forceBelow:
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(any-pointer: coarse)').matches,
+      minHeight: MENU_CLEARANCE,
+    },
+  );
+
+  return {
+    left: placed.left,
+    top: placed.top,
+    below: !placed.above,
+    maxWidth: placed.maxWidth,
+    maxHeight: Math.max(0, placed.maxHeight - 8),
+    from,
+    to,
+  };
+}
+
 export function BubbleMenu({
   editor,
   onOpenInlineAi,
@@ -274,8 +322,6 @@ export function BubbleMenu({
   /** Present only when the writing assistance is on offer; the control exists only then. */
   readonly onOpenInlineAi?: (() => void) | undefined;
 }): ReactNode {
-  const [placement, setPlacement] = useState<MenuPlacement | null>(null);
-
   // The selection Escape dismissed the menu over. Selecting something else opens it again.
   const [dismissed, setDismissed] = useState<{ readonly from: number; readonly to: number } | null>(
     null,
@@ -286,113 +332,7 @@ export function BubbleMenu({
   const [focusIndex, setFocusIndex] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const container = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    // The frame a coalesced read is already booked for, so a burst of scroll events costs one
-    // measurement rather than one each. Without it a hundred scroll events were a hundred
-    // renders, each forcing layout through `coordsAtPos` - and the listener is deliberately
-    // capture-phase on the window, so *every* scrolling element on the page reaches it.
-    let frame: number | null = null;
-
-    // A fresh object on every transaction, not only when the coordinates move: a colour applied
-    // to a standing selection changes no coordinate, and the buttons' pressed state has to
-    // re-render from the new document all the same.
-    function readSelection(): void {
-      if (editor.isDestroyed) {
-        setPlacement(null);
-        return;
-      }
-
-      const { state } = editor;
-      const { from, to, empty } = state.selection;
-
-      // Only a selection that actually holds text. An empty selection is a caret; a non-empty
-      // one over no text (a bare node selection, a table cell boundary) has nothing this menu's
-      // commands could colour.
-      if (empty || !hasText(state.doc, from, to)) {
-        setPlacement(null);
-        return;
-      }
-
-      const coords = editor.view.coordsAtPos(from);
-
-      // Above the selection by default, flipping below only when the viewport has no room above
-      // it - the same clamp the slash and reference menus use, with the preferred side reversed:
-      // this menu opens over the selection, not under the caret. On a touch screen it always
-      // opens below regardless of room, because iOS draws its own Copy/Paste bar directly above
-      // a selection, and this menu would otherwise open right underneath it.
-      const viewport = readViewportBounds();
-      const placed = placeFloatingMenu(
-        { left: coords.left, top: coords.top, bottom: coords.bottom },
-        MENU_WIDTH_ESTIMATE,
-        viewport,
-        {
-          preferAbove: true,
-          forceBelow:
-            typeof window.matchMedia === 'function' &&
-            window.matchMedia('(any-pointer: coarse)').matches,
-          minHeight: MENU_CLEARANCE,
-        },
-      );
-
-      setPlacement({
-        left: placed.left,
-        top: placed.top,
-        below: !placed.above,
-        maxWidth: placed.maxWidth,
-        maxHeight: Math.max(0, placed.maxHeight - 8),
-        from,
-        to,
-      });
-    }
-
-    // Closed when focus truly leaves the editing surface. Focus moving *into* the menu is not
-    // leaving - that is a keyboard user arriving - so the blur is ignored when its destination
-    // sits inside the menu's own element.
-    function onBlur({ event }: { readonly event: FocusEvent }): void {
-      const destination = event.relatedTarget;
-      if (destination instanceof Node && container.current?.contains(destination) === true) {
-        return;
-      }
-      setPlacement(null);
-    }
-
-    /** One read per frame, however many events arrive in it. */
-    function scheduleRead(): void {
-      if (frame !== null) {
-        return;
-      }
-      frame = requestAnimationFrame(() => {
-        frame = null;
-        readSelection();
-      });
-    }
-
-    readSelection();
-    editor.on('transaction', readSelection);
-    editor.on('blur', onBlur);
-
-    // Capture, because a scroll event does not bubble out of the element that scrolled - and
-    // the editor's own scroller is exactly the one that moves this text. Passive, because the
-    // handler only ever books a frame.
-    window.addEventListener('scroll', scheduleRead, { capture: true, passive: true });
-    window.addEventListener('resize', scheduleRead);
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', scheduleRead);
-    viewport?.addEventListener('scroll', scheduleRead);
-
-    return () => {
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-      }
-      editor.off('transaction', readSelection);
-      editor.off('blur', onBlur);
-      window.removeEventListener('scroll', scheduleRead, { capture: true });
-      window.removeEventListener('resize', scheduleRead);
-      viewport?.removeEventListener('resize', scheduleRead);
-      viewport?.removeEventListener('scroll', scheduleRead);
-    };
-  }, [editor]);
+  const placement = useFloatingPlacement(editor, readPlacement, container);
 
   // After the hooks, which have to run unconditionally. `useEditor` tears an editor down and
   // builds another whenever its dependencies change - strict mode does it on every mount - and

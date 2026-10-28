@@ -1067,6 +1067,21 @@ export function NoteEditor({
     };
   }, [awareness, doc]);
 
+  const insertHandlers = {
+    onInsertItem: (kind: ItemInsertKind) => {
+      if (uploadingFilesRef.current > 0) return;
+      insertionRef.current = editor.state.selection.from;
+      setItemRequest(kind);
+    },
+    onPageBreak: () => {
+      insertPageBreak(editor);
+    },
+    onInsertImage: () => {
+      insertionRef.current = editor.state.selection.from;
+      setAddressRequest('image');
+    },
+  };
+
   const formatting =
     readOnly || stale ? null : (
       <div className={narrow ? 'flex items-center' : 'min-w-0 shrink-0 px-8'}>
@@ -1108,18 +1123,7 @@ export function NoteEditor({
               </>
             }
             textWidthControl={narrow ? undefined : <TextWidthControl />}
-            onInsertItem={(kind) => {
-              if (uploadingFilesRef.current > 0) return;
-              insertionRef.current = editor.state.selection.from;
-              setItemRequest(kind);
-            }}
-            onPageBreak={() => {
-              insertPageBreak(editor);
-            }}
-            onInsertImage={() => {
-              insertionRef.current = editor.state.selection.from;
-              setAddressRequest('image');
-            }}
+            {...insertHandlers}
             onInsertLink={() => {
               insertionRef.current = editor.state.selection.from;
               setAddressRequest('link');
@@ -1222,18 +1226,7 @@ export function NoteEditor({
               {readOnly || stale ? null : (
                 <SlashMenu
                   editor={editor}
-                  onInsertItem={(kind) => {
-                    if (uploadingFilesRef.current > 0) return;
-                    insertionRef.current = editor.state.selection.from;
-                    setItemRequest(kind);
-                  }}
-                  onPageBreak={() => {
-                    insertPageBreak(editor);
-                  }}
-                  onInsertImage={() => {
-                    insertionRef.current = editor.state.selection.from;
-                    setAddressRequest('image');
-                  }}
+                  {...insertHandlers}
                   onInlineAi={inlineAi.available ? inlineAi.start : undefined}
                 />
               )}
