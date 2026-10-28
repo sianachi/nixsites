@@ -37,21 +37,14 @@ async function openNew(
   entry: string,
   dialogName: string,
 ): Promise<HTMLElement> {
-  await user.click(screen.getByRole('button', { name: /new item in the workspace/i }));
+  await user.click(screen.getByRole('button', { name: 'New view' }));
   await user.click(await screen.findByRole('menuitem', { name: entry }));
   return screen.findByRole('dialog', { name: dialogName });
 }
 
-/** Makes a note through the New dialog, optionally inside the selected item. */
-async function createNote(
-  user: ReturnType<typeof userEvent.setup>,
-  inside?: string,
-): Promise<void> {
-  const dialog = await openNew(user, 'Note…', 'New note');
-  if (inside !== undefined) {
-    await user.click(within(dialog).getByRole('button', { name: `Inside ${inside}` }));
-  }
-  await user.click(within(dialog).getByRole('button', { name: 'Create note' }));
+/** Makes an untitled note at the top of the workspace, in one press. */
+async function createNote(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'New note' }));
 }
 
 describe('creating an item', () => {
@@ -73,22 +66,33 @@ describe('creating an item', () => {
     });
   });
 
-  it('opens the new child without expanding its sidebar parent', async () => {
+  it('opens a new note in one press', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [PARENT] });
+    renderAt(<App />);
+
+    await screen.findByRole('button', { name: 'Engineering' });
+    await createNote(user);
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
+    });
+  });
+
+  it('puts a new child inside its parent without expanding it in the sidebar', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [PARENT, CHILD] });
     renderAt(<App />, `/?item=${PARENT.id}`);
 
     // Open the parent without expanding it, so the new child lands somewhere closed.
     await screen.findByRole('button', { name: 'Engineering' });
+    const dialog = await openNew(user, 'Canvas…', 'New canvas');
+    await user.click(within(dialog).getByRole('button', { name: 'Inside Engineering' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Title' }), 'Sketch{Enter}');
 
-    await createNote(user, 'Engineering');
-
-    await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
-    });
-    expect(screen.getByRole('button', { name: /expand engineering/i })).toBeVisible();
+    expect(await screen.findByRole('button', { name: /expand engineering/i })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /expand engineering/i }));
-    expect(screen.getByRole('button', { name: 'Untitled note' }).closest('ul')).toHaveAttribute(
+    expect((await screen.findByRole('button', { name: 'Sketch' })).closest('ul')).toHaveAttribute(
       'role',
       'group',
     );
@@ -135,35 +139,34 @@ describe('creating an item', () => {
 });
 
 describe('the new-item menu', () => {
-  it('supports menu arrow keys and returns focus to New on Escape', async () => {
+  it('supports menu arrow keys and returns focus to New view on Escape', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />, `/?item=${PARENT.id}`);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const trigger = screen.getByRole('button', { name: /new item in the workspace/i });
+    const trigger = screen.getByRole('button', { name: 'New view' });
     await user.click(trigger);
 
-    expect(screen.getByRole('menuitem', { name: 'Note…' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Canvas…' })).toHaveFocus();
     await user.keyboard('{End}');
     expect(screen.getByRole('menuitem', { name: 'Chat…' })).toHaveFocus();
     await user.keyboard('{Home}');
-    expect(screen.getByRole('menuitem', { name: 'Note…' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Canvas…' })).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
 
-  it('offers seven entries including live chat notes', async () => {
+  it('offers every kind but the note, which has its own button', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />, `/?item=${PARENT.id}`);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /new item in the workspace/i }));
+    await user.click(screen.getByRole('button', { name: 'New view' }));
 
     expect(screen.getAllByRole('menuitem').map((entry) => entry.textContent)).toEqual([
-      'Note…',
       'Canvas…',
       'Sheet…',
       'Upload files…',
@@ -198,7 +201,7 @@ describe('the new-item menu', () => {
     renderAt(<App />, `/?item=${PARENT.id}`);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    let dialog = await openNew(user, 'Note…', 'New note');
+    let dialog = await openNew(user, 'Canvas…', 'New canvas');
     expect(within(dialog).getByRole('button', { name: 'Top of workspace' })).toHaveAttribute(
       'aria-current',
       'true',
@@ -206,7 +209,7 @@ describe('the new-item menu', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Inside Engineering' }));
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    dialog = await openNew(user, 'Note…', 'New note');
+    dialog = await openNew(user, 'Canvas…', 'New canvas');
     expect(within(dialog).getByRole('button', { name: 'Top of workspace' })).toHaveAttribute(
       'aria-current',
       'true',
@@ -258,7 +261,7 @@ describe('the new-item menu', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const trigger = screen.getByRole('button', { name: /new item in the workspace/i });
+    const trigger = screen.getByRole('button', { name: 'New view' });
 
     await user.click(trigger);
     expect(screen.getByRole('menu')).toBeVisible();
@@ -272,11 +275,11 @@ describe('the new-item menu', () => {
 
     // jsdom does not turn Escape into the native dialog's cancel event, so the visible way out
     // stands in for it here; `Dialog`'s own tests cover Escape.
-    const dialog = await openNew(user, 'Note…', 'New note');
+    const dialog = await openNew(user, 'Canvas…', 'New canvas');
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
     await waitFor(() => {
       expect(dialog).not.toBeInTheDocument();
     });
-    expect(screen.queryByRole('button', { name: 'Untitled note' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Untitled canvas' })).not.toBeInTheDocument();
   });
 });

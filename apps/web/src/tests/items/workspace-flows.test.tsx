@@ -42,10 +42,10 @@ describe('creating an item', () => {
 
     await screen.findByRole('button', { name: 'Engineering' });
 
-    expect(screen.getByRole('button', { name: /new item in the workspace/i })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: /new item in the workspace/i }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Note…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New note' });
+    expect(screen.getByRole('button', { name: 'New view' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'New view' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Canvas…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New canvas' });
     expect(within(dialog).queryByRole('group', { name: 'Where' })).not.toBeInTheDocument();
   });
 
@@ -58,11 +58,11 @@ describe('creating an item', () => {
 
     // Root is the stable default; one choice in the dialog moves the destination, for every kind.
     for (const [entry, title] of [
-      ['Note…', 'New note'],
+      ['Canvas…', 'New canvas'],
       ['Structured…', 'New structured item'],
       ['From a template…', 'New from a template'],
     ] as const) {
-      await user.click(screen.getByRole('button', { name: /new item in the workspace/i }));
+      await user.click(screen.getByRole('button', { name: 'New view' }));
       await user.click(await screen.findByRole('menuitem', { name: entry }));
       const dialog = await screen.findByRole('dialog', { name: title });
       const where = within(dialog).getByRole('group', { name: 'Where' });
@@ -83,9 +83,9 @@ describe('creating an item', () => {
       expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Roadmap');
     });
 
-    await user.click(screen.getByRole('button', { name: /new item in the workspace/i }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Note…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New note' });
+    await user.click(screen.getByRole('button', { name: 'New view' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Canvas…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New canvas' });
     expect(within(dialog).getByRole('button', { name: 'Inside Roadmap' })).toBeVisible();
   });
 });
