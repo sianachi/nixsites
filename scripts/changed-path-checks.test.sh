@@ -22,6 +22,10 @@ package_output=$("$planner" packages/ui/src/controls/Button.tsx)
 assert_contains "$package_output" 'pnpm --filter @nix/ui test'
 assert_contains "$package_output" 'pnpm exec prettier --check packages/ui/src/controls/Button.tsx'
 
+web_package_output=$("$planner" packages/web-editor/src/editor/toolbar.tsx)
+assert_contains "$web_package_output" 'pnpm --filter @nix/web-editor typecheck'
+assert_contains "$web_package_output" 'pnpm --filter @nix/web test'
+
 cli_output=$("$planner" apps/cli/src/index.ts)
 assert_contains "$cli_output" 'pnpm exec prettier --check apps/cli/src/index.ts'
 

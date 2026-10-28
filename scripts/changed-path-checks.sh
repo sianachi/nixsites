@@ -101,6 +101,8 @@ for path in "${paths[@]}"; do
       package_name=${path#packages/}
       package_name=${package_name%%/*}
       add_frontend_package "@nix/$package_name"
+      # The web packages' tests live in apps/web, which also typechecks them as their consumer.
+      case "$package_name" in web-*) add_frontend_package '@nix/web' ;; esac
       ;;
     backend/*|Nix.slnx|Nix.Frontend/*) has_backend=true ;;
     apps/go-workers/*) has_workers=true ;;

@@ -290,7 +290,7 @@
         "backend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs",
         "apps/web/src/pets/pet-device-settings.tsx",
         "apps/web/src/pets/pet-conversation.tsx",
-        "apps/web/src/pets/device-preferences.ts"
+        "packages/web-foundation/src/lib/device-preferences.ts"
       ],
       "words": 559,
       "properties": {
@@ -299,7 +299,7 @@
         "runtime": "Go",
         "transports": "HTTP/RPC, HTTP/internal, Provider HTTP",
         "depends_on": "Core authorization, linked provider, worker companion runtime",
-        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/go-workers/internal/companion/manager.go\napps/go-workers/internal/companion/rpc.go\napps/go-workers/internal/companion/tools.go\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\napps/web/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\napps/web/src/pets/device-preferences.ts"
+        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/go-workers/internal/companion/manager.go\napps/go-workers/internal/companion/rpc.go\napps/go-workers/internal/companion/tools.go\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\napps/web/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\npackages/web-foundation/src/lib/device-preferences.ts"
       },
       "localProofItemId": "01a12247-5982-7cb7-ab74-946fc37792ff"
     },
@@ -374,8 +374,8 @@
         "packages/web-editor/src/editor/canvas-editor.tsx",
         "packages/web-editor/src/editor/canvas-binding.ts",
         "packages/web-editor/src/editor/collab-sync.ts",
-        "packages/web-editor/src/editor/body-cache.ts",
-        "packages/web-editor/src/editor/draft-journal.ts",
+        "packages/web-foundation/src/lib/body-cache.ts",
+        "packages/web-foundation/src/lib/draft-journal.ts",
         "apps/web/src/views/sheet/sheet-editor.tsx",
         "packages/editor-schema/src/index.ts",
         "packages/web-editor/src/editor/toolbar.tsx",
@@ -389,7 +389,7 @@
         "runtime": "Browser",
         "transports": "WebSocket/Yjs, HTTP/JSON, IndexedDB",
         "depends_on": "Core, collaboration, Yjs and local body copies",
-        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-editor/src/editor/body-cache.ts\npackages/web-editor/src/editor/draft-journal.ts\napps/web/src/views/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
+        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-foundation/src/lib/body-cache.ts\npackages/web-foundation/src/lib/draft-journal.ts\napps/web/src/views/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
       },
       "localProofItemId": "01a12247-5982-793f-8300-50c278ae2111"
     },
@@ -1172,8 +1172,8 @@
       "sources": [
         "apps/web/src/offline",
         "packages/web-platform/src/auth/auth-provider.tsx",
-        "packages/web-editor/src/editor/body-cache.ts",
-        "packages/web-editor/src/editor/draft-journal.ts",
+        "packages/web-foundation/src/lib/body-cache.ts",
+        "packages/web-foundation/src/lib/draft-journal.ts",
         "packages/web-editor/src/editor/collab-sync.ts",
         "backend/src/Nix.Api/Features/Items/CreateItem.cs"
       ],
@@ -1359,7 +1359,7 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "apps/web/src/pets/pet-work-tools.tsx",
-        "apps/web/src/pets/device-preferences.ts",
+        "packages/web-foundation/src/lib/device-preferences.ts",
         "packages/companion/src/guards.ts",
         "packages/companion/src/run.ts",
         "apps/go-workers/internal/companion/instructions.go"
@@ -1406,7 +1406,7 @@
         "backend/src/Nix.Api/Domain/Content/PetPreferences.cs",
         "apps/web/src/pets/catalog.ts",
         "apps/web/src/pets/pet-avatar.tsx",
-        "apps/web/src/pets/device-preferences.ts",
+        "packages/web-foundation/src/lib/device-preferences.ts",
         "backend/src/Nix.Api/Features/Pets/PetInline.cs",
         "apps/go-workers/internal/companion/inline.go"
       ],
