@@ -134,10 +134,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 }));
 
-/** Selector: whether the application should render its authenticated shell. */
-export const selectIsAuthenticated = (state: SessionState): boolean =>
-  state.status === 'authenticated';
-
 /** Selector: whether a sign-in is in flight, for disabling the button that started it. */
 export const selectIsBusy = (state: SessionState): boolean =>
   state.status === 'authenticating' || state.status === 'unknown';

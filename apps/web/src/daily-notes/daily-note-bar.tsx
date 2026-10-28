@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useWorkspaceCalendar } from '../calendar/use-workspace-calendar';
+import { writeStored } from '../editor/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 import { useMobileKeyboard } from '../layout/use-mobile-keyboard';
 import { useNarrowViewport } from '../layout/viewport';
@@ -25,14 +26,6 @@ function readScheduleOpen(): boolean {
     return browserStorage()?.getItem(SCHEDULE_OPEN_KEY) === 'true';
   } catch {
     return false;
-  }
-}
-
-function storeScheduleOpen(open: boolean): void {
-  try {
-    browserStorage()?.setItem(SCHEDULE_OPEN_KEY, String(open));
-  } catch {
-    // A device that will not remember is a device where the section starts closed; nothing to say.
   }
 }
 
@@ -216,7 +209,8 @@ export function DailyNoteBar({
           className="px-2 py-1 text-xs sm:ml-auto"
           aria-expanded={scheduleOpen}
           onClick={() => {
-            storeScheduleOpen(!scheduleOpen);
+            // A device that will not remember is a device where the section starts closed; nothing to say.
+            writeStored(SCHEDULE_OPEN_KEY, String(!scheduleOpen));
             setScheduleOpen(!scheduleOpen);
           }}
         >

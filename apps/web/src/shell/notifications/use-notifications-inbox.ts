@@ -6,20 +6,15 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../../api/api-client-provider';
+import { isAborted } from '../../lib/guards';
 
 /** Never poll more often than this, even when the server answers `watch` instantly. */
 const MIN_POLL_GAP_MS = 250;
 /** Backoff ladder for a failed or throttled (429) watch, per ADR-0051 section 5. */
 const BACKOFF_STEPS_MS = [1000, 2000, 4000, 10_000];
 
-// Cancellation and disposal can change while a request is awaiting I/O; wrapping the read in a
-// function is what keeps TypeScript from narrowing a closed-over flag to a stale literal across
-// the `await` (see `settings/use-notification-preferences.ts`'s own `isAborted` for the same
-// pattern against an `AbortSignal`).
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
-}
-
+// Cancellation and disposal can change while a request is awaiting I/O; reading them through a
+// function keeps TypeScript from narrowing the flag to a stale literal across the `await`.
 function isDisposed(lifecycle: { disposed: boolean }): boolean {
   return lifecycle.disposed;
 }

@@ -1,3 +1,4 @@
+import { writeStored } from '../editor/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 
 const LAST_WORKSPACE_KEY = 'nix.last-workspace-id';
@@ -13,9 +14,6 @@ export function readLastWorkspaceId(): string | null {
 }
 
 export function rememberLastWorkspaceId(workspaceId: string): void {
-  try {
-    browserStorage()?.setItem(LAST_WORKSPACE_KEY, workspaceId);
-  } catch {
-    // Workspace selection still works when browser persistence is unavailable.
-  }
+  // Workspace selection still works when browser persistence is unavailable.
+  writeStored(LAST_WORKSPACE_KEY, workspaceId);
 }

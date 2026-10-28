@@ -94,11 +94,6 @@ export function claimZenSurface(): () => void {
   };
 }
 
-/** The request, reactive. Prefer `useZenActive` for deciding what to draw. */
-export function useZenMode(): boolean {
-  return useSyncExternalStore(subscribe, zenModeOn, zenModeOn);
-}
-
 /** Whether Zen is both requested and applicable: the answer layout decisions read. */
 export function useZenActive(): boolean {
   return useSyncExternalStore(

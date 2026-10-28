@@ -121,23 +121,6 @@ export function bucketByDay(
 }
 
 /**
- * Which container each item came from, so a card can say so.
- *
- * The whole point of collating is that an item from anywhere appears, and an item that cannot say
- * where it came from is a title with no context - two notes called "Review" from different projects
- * would be indistinguishable.
- */
-export function containersById(entries: readonly CalendarEntry[]): ReadonlyMap<string, string> {
-  const names = new Map<string, string>();
-
-  for (const entry of entries) {
-    names.set(entry.itemId, entry.containerTitle ?? 'Untitled');
-  }
-
-  return names;
-}
-
-/**
  * How many entries the response could not place, counted rather than listed.
  *
  * A value that does not begin with a day is one this build cannot put anywhere - the server windows

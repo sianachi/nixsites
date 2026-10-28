@@ -1,15 +1,13 @@
 import { z } from 'zod';
+import { writeStored } from '../editor/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 
 const savedLocation = z.object({ workspaceId: z.uuid(), path: z.string().max(4096) });
 const key = (subject: string): string => `nix.last-location:${subject}`;
 export function rememberLocation(subject: string, workspaceId: string, path: string): void {
   if (!isRestorable(workspaceId, path)) return;
-  try {
-    browserStorage()?.setItem(key(subject), JSON.stringify({ workspaceId, path }));
-  } catch {
-    /* Navigation works without storage. */
-  }
+  // Navigation works without storage.
+  writeStored(key(subject), JSON.stringify({ workspaceId, path }));
 }
 function isRestorable(workspaceId: string, path: string): boolean {
   const pathname = path.split(/[?#]/u)[0];
