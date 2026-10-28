@@ -319,19 +319,4 @@ public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
     /// before <c>Program</c> reads the connection string - while a source added through
     /// <c>ConfigureAppConfiguration</c> lands after those reads have already answered.
     /// </summary>
-    private sealed class ConfiguredApplicationFactory : WebApplicationFactory<Program>
-    {
-        private readonly Dictionary<string, string?> _settings;
-
-        public ConfiguredApplicationFactory(Dictionary<string, string?> settings) =>
-            _settings = settings;
-
-        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
-        {
-            foreach (var (key, value) in _settings)
-            {
-                builder.UseSetting(key, value);
-            }
-        }
-    }
 }

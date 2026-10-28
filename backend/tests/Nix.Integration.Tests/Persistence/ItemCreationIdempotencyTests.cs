@@ -377,15 +377,4 @@ public sealed class ItemCreationIdempotencyTests(NixPostgresFixture fixture, ITe
         }
         Assert.Fail("The concurrent creation did not wait for its transaction lock.");
     }
-
-    private sealed class ConfiguredApplicationFactory(Dictionary<string, string?> settings) : WebApplicationFactory<Program>
-    {
-        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
-        {
-            foreach (var (key, value) in settings)
-            {
-                builder.UseSetting(key, value);
-            }
-        }
-    }
 }

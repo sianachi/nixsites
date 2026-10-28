@@ -265,15 +265,4 @@ public sealed class NotificationDeliveryHttpTests : IAsyncLifetime
         request.Headers.TryAddWithoutValidation(WorkerExecutionMiddleware.ExecutionHeaderName, execution);
         return await _client.SendAsync(request, Cancellation);
     }
-
-    private sealed class ConfiguredApplicationFactory(Dictionary<string, string?> settings) : WebApplicationFactory<Program>
-    {
-        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
-        {
-            foreach (var (key, value) in settings)
-            {
-                builder.UseSetting(key, value);
-            }
-        }
-    }
 }

@@ -227,15 +227,4 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
         return document.RootElement.GetProperty("code").GetString();
     }
-
-    private sealed class ConfiguredApplicationFactory(Dictionary<string, string?> settings) : WebApplicationFactory<Program>
-    {
-        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
-        {
-            foreach (var (key, value) in settings)
-            {
-                builder.UseSetting(key, value);
-            }
-        }
-    }
 }
