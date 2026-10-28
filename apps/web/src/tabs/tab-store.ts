@@ -228,6 +228,17 @@ function claimItem(
   return next;
 }
 
+/** Opens `itemId` in `pane`, keeping it pinned if it already was, and takes it out of the others. */
+function revealed(
+  byPane: Readonly<Record<number, readonly OpenTab[]>>,
+  pane: number,
+  itemId: string,
+): { byPane: Readonly<Record<number, readonly OpenTab[]>> } {
+  const tabs = byPane[pane] ?? [];
+  const next = itemIsPinned(byPane, itemId) ? pinTabs(tabs, itemId) : previewTabs(tabs, itemId);
+  return { byPane: claimItem(byPane, pane, itemId, next) };
+}
+
 export const useTabStore = create<TabsState>((set) => ({
   workspaceId: null,
   byPane: {},
@@ -252,14 +263,7 @@ export const useTabStore = create<TabsState>((set) => ({
   },
 
   tabPreviewed: (pane, itemId) => {
-    set((state) => {
-      const tabs = state.byPane[pane] ?? [];
-      const next = itemIsPinned(state.byPane, itemId)
-        ? pinTabs(tabs, itemId)
-        : previewTabs(tabs, itemId);
-
-      return { byPane: claimItem(state.byPane, pane, itemId, next) };
-    });
+    set((state) => revealed(state.byPane, pane, itemId));
   },
 
   tabPinned: (pane, itemId) => {
@@ -272,14 +276,7 @@ export const useTabStore = create<TabsState>((set) => ({
   },
 
   tabActivated: (pane, itemId) => {
-    set((state) => {
-      const tabs = state.byPane[pane] ?? [];
-      const next = itemIsPinned(state.byPane, itemId)
-        ? pinTabs(tabs, itemId)
-        : previewTabs(tabs, itemId);
-
-      return { byPane: claimItem(state.byPane, pane, itemId, next) };
-    });
+    set((state) => revealed(state.byPane, pane, itemId));
   },
 
   tabsTransferred: (nextByPane) => {
