@@ -113,20 +113,6 @@ func eachRecord(next RecordSource, maximum int, consume func(stream.Record) erro
 	}
 }
 
-func eachLine(value string, consume func(string) error) error {
-	start := 0
-	for index := 0; index <= len(value); index++ {
-		if index != len(value) && value[index] != '\n' {
-			continue
-		}
-		if err := consume(strings.TrimSuffix(value[start:index], "\r")); err != nil {
-			return err
-		}
-		start = index + 1
-	}
-	return nil
-}
-
 func writeNix(output io.Writer, records []stream.Record, limits stream.Limits) error {
 	if len(records) == 0 {
 		return errors.New("cannot export an empty Nix archive")
