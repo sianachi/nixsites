@@ -7,6 +7,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../../api/api-client-provider';
+import { isAborted } from '../../lib/guards';
 
 export interface NotificationPreferencesState {
   readonly saved: PrincipalPreferencesResponse | null;
@@ -18,10 +19,6 @@ export interface NotificationPreferencesState {
 }
 
 // Cancellation can change while a request is awaiting I/O.
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
-}
-
 /**
  * Loads and saves the caller's own reminder and notification preferences, following the
  * compare-and-set pattern `pets/use-pet-settings.ts` established for personal, revisioned

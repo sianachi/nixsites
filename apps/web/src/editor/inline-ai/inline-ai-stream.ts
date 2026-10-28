@@ -1,6 +1,7 @@
 import type { NixClient } from '@nix/api-client';
 
 import { readSse } from '../../lib/sse';
+import { isRecord } from '../../lib/guards';
 
 /**
  * The inline writing request, as the Core endpoint defines it: one POST that answers with a
@@ -76,10 +77,6 @@ export interface StreamInlineOptions {
   /** Aborting it aborts the request, which is how a cancel reaches the server. */
   readonly signal: AbortSignal;
   readonly onDelta: (piece: string) => void;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 /** The `code` of an RFC 9457 problem body, or a status-shaped stand-in when there is none. */

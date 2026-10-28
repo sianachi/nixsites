@@ -8,6 +8,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../api/api-client-provider';
+import { isAborted } from '../lib/guards';
 
 interface PetSettingsState {
   readonly saved: PetSettingsResponse | null;
@@ -20,10 +21,6 @@ interface PetSettingsState {
 }
 
 // Cancellation can change while a request is awaiting I/O.
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
-}
-
 export function usePetSettings(): PetSettingsState {
   const client = useApiClient();
   const [saved, setSaved] = useState<PetSettingsResponse | null>(null);

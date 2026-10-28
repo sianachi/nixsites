@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../../workspaces/workspace-context';
+import { isAborted } from '../../lib/guards';
 
 export interface DailyNoteSettingsState {
   readonly saved: DailyNoteSettings | null;
@@ -20,10 +21,6 @@ export interface DailyNoteSettingsState {
 }
 
 // Cancellation can change while a request is awaiting I/O.
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
-}
-
 /**
  * Loads and saves one workspace's daily-note settings, following the shape of
  * `use-notification-preferences.ts`. Unlike that document these settings are not revisioned, so

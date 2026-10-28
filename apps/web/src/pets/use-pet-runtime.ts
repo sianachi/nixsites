@@ -2,6 +2,7 @@ import { isCanceledError, isNixApiError, pets, type PetConnection } from '@nix/a
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../api/api-client-provider';
 import { ownerTurnContext } from './turn-context';
+import { isAborted } from '../lib/guards';
 
 /** The floor on how often the watch loop starts a new request, whether that request is the
  * next iteration of a normal poll or the very first one after a pause. */
@@ -60,10 +61,6 @@ export interface UsePetRuntimeResult {
   /** Wakes a watch loop that is mid-backoff after a load failure, rather than waiting out the
    * remaining delay - the retry action behind a `load` error's "Retry now". */
   readonly retryWatch: () => void;
-}
-
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
 }
 
 function backoffDelay(failures: number): number {

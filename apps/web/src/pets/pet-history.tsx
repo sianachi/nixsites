@@ -2,6 +2,7 @@ import { pets, type PetConnection, type PetMessage, type NixClient } from '@nix/
 import { Button, Icon, Input, Text } from '@nix/ui';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { isAborted } from '../lib/guards';
 
 export function exportPetMessages(messages: readonly PetMessage[], name: string): void {
   const text = messages
@@ -374,8 +375,4 @@ function RowAction({
       <Icon icon={icon} size="sm" />
     </Button>
   );
-}
-
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
 }

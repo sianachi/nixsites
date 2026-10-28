@@ -14,10 +14,7 @@ import { PetChatViewport } from '../../pets/pet-chat-viewport';
 import { PetMessageText } from '../../pets/pet-message-text';
 import { earlierPieces } from '../../openui/fence';
 import { useAccessibleWorkspaces } from '../../workspaces/workspace-context';
-
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
-}
+import { isAborted } from '../../lib/guards';
 
 export function ChatView({
   itemId,
