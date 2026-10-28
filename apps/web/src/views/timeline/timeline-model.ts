@@ -3,7 +3,6 @@ import {
   type ContainerViews,
   type EffectiveSchema,
   type Item,
-  type PropertyDefinition,
   type View,
 } from '../core/container-model';
 import { propertyTypeWord, isDateShaped } from '../core/property-types';
@@ -114,16 +113,12 @@ export function describeUndrawable(
     return `This timeline starts its bars from "${view.dateProperty}", and that property is not in this item's schema. It was probably removed. The items are all still here; a list view will show them.`;
   }
 
-  if (!placesOnAnAxis(definition)) {
+  // A bar can start from a date (all-day) or a timestamp (a moment that carries a day).
+  if (!isDateShaped(definition.type)) {
     return `This timeline starts its bars from "${definition.label}", which is a ${propertyTypeWord(definition.type)} property rather than a date. There is no day to start from, so nothing can be drawn.`;
   }
 
   return null;
-}
-
-/** Both, because both name a day: a date is all-day, a timestamp is a moment that carries one. */
-function placesOnAnAxis(property: PropertyDefinition): boolean {
-  return isDateShaped(property.type);
 }
 
 /**
@@ -147,7 +142,7 @@ export function describeLostEndProperty(view: View, schema: EffectiveSchema | nu
 
   // The type is named by its label rather than by the stored token: somebody who chose "Date and
   // time" from a list should not be told their property is now a "timestamp".
-  return placesOnAnAxis(definition)
+  return isDateShaped(definition.type)
     ? null
     : `Bars ended on "${definition.label}", which is now a ${propertyTypeWord(definition.type)} property rather than a date. ${still}`;
 }

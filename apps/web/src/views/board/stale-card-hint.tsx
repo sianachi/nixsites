@@ -41,10 +41,6 @@ function daysText(days: number): string {
   return days === 1 ? 'a day' : `${String(days)} days`;
 }
 
-function daysPhrase(ms: number): string {
-  return daysText(wholeDays(ms, Math.floor));
-}
-
 export function StaleCardHint(props: StaleCardHintProps): ReactNode {
   const { title, columnLabel, ageMs, medianMs, onDismiss } = props;
 
@@ -54,7 +50,8 @@ export function StaleCardHint(props: StaleCardHintProps): ReactNode {
       onDismiss={onDismiss}
       dismissLabel={`Dismiss the stale card note on ${title || 'Untitled'}`}
     >
-      No changes in {daysPhrase(ageMs)}. Half the cards in {columnLabel} changed in the last{' '}
+      No changes in {daysText(wholeDays(ageMs, Math.floor))}. Half the cards in {columnLabel}{' '}
+      changed in the last{' '}
       {wholeDays(medianMs, Math.ceil) === 1 ? 'day' : daysText(wholeDays(medianMs, Math.ceil))}.
     </SuggestionHint>
   );
