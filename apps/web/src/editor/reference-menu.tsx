@@ -6,7 +6,7 @@ import {
   type ListboxOption,
 } from '@nix/ui';
 import { FileText } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor } from '@tiptap/react';
 
@@ -27,6 +27,7 @@ import {
   withinWait,
   type CoCitationSource,
 } from './related-items';
+import { useEditorListbox, useEditorTrigger } from './trigger-menu';
 
 // Where the pool size used to live; the ranking test and other callers still import it from here.
 export { CANDIDATE_POOL } from './item-search';
@@ -148,17 +149,6 @@ export function findTrigger(text: string, truncated = false): FoundTrigger | nul
   return { start, query, kind: isBrackets ? 'item' : 'principal' };
 }
 
-/** Where the picker sits, and what it is filtering. */
-interface OpenTrigger extends FoundTrigger {
-  /** Document positions of the trigger's text, so it can be replaced exactly. */
-  readonly from: number;
-  readonly to: number;
-  /** Viewport coordinates of the caret, for `placeFloatingMenu` to clamp against. */
-  readonly left: number;
-  readonly top: number;
-  readonly bottom: number;
-}
-
 export interface ReferenceMenuProps {
   readonly editor: Editor;
   /**
@@ -196,68 +186,7 @@ export function ReferenceMenu({
       coCitations.current = null;
     };
   }, [client, itemId]);
-  const [trigger, setTrigger] = useState<OpenTrigger | null>(null);
-  const [dismissed, setDismissed] = useState<number | null>(null);
-
-  // Read from the document on every transaction, because the document is where the trigger lives.
-  useEffect(() => {
-    function readTrigger(): void {
-      const { state } = editor;
-      const { from, empty } = state.selection;
-
-      if (!empty) {
-        setTrigger(null);
-        return;
-      }
-
-      // Only the tail of the block is read. This runs on every transaction - every local keystroke
-      // and every remote update arriving through the CRDT - and at most `MAX_QUERY` plus the
-      // trigger can ever matter, so reading a whole paragraph would allocate a fresh copy of it
-      // per keystroke per collaborator to look at its last sixty characters.
-      const at = state.doc.resolve(from);
-      const window = Math.max(0, at.parentOffset - (MAX_QUERY + 2));
-      const text = at.parent.textBetween(window, at.parentOffset, '\n', '\n');
-      const found = findTrigger(text, window > 0);
-
-      if (found === null) {
-        setTrigger(null);
-        return;
-      }
-
-      const start = from - (text.length - found.start);
-      const coords = editor.view.coordsAtPos(from);
-
-      setTrigger({
-        ...found,
-        from: start,
-        to: from,
-        left: coords.left,
-        top: coords.top,
-        bottom: coords.bottom,
-      });
-    }
-
-    // Closed when the editor loses the focus. `open` derives from the document's selection, which
-    // survives a blur - so clicking into the sidebar with `[[` half-typed left the picker floating
-    // on screen with its only keyboard handler bound to an element that no longer had focus.
-    function onBlur(): void {
-      setTrigger(null);
-    }
-
-    readTrigger();
-    editor.on('transaction', readTrigger);
-    editor.on('blur', onBlur);
-
-    return () => {
-      editor.off('transaction', readTrigger);
-      editor.off('blur', onBlur);
-    };
-  }, [editor]);
-
-  // Escape closes a trigger without unwriting it: the `[[` somebody typed is theirs, and deleting
-  // it would be the editor editing. Reopening the same trigger by typing another character is
-  // deliberate - the dismissal is of one position, not of the feature.
-  const open = trigger !== null && trigger.from !== dismissed;
+  const { trigger, open, dismiss } = useEditorTrigger(editor, MAX_QUERY + 2, findTrigger);
   const query = trigger?.query ?? '';
 
   // Opening the picker is when co-citations are first worth having; the request starts now, so it
@@ -340,60 +269,9 @@ export function ReferenceMenu({
     }
   });
 
-  // The keys are taken off the editor's own element, because that is what holds the focus. Capture
-  // phase, so the arrow keys move the highlight rather than the caret while the picker is open.
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  useEditorListbox(editor, listbox, trigger, open, dismiss);
 
-    const dom = editor.view.dom;
-    const dismissAt = trigger.from;
-
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') {
-        // The innermost open layer wins and stops the event, so Escape here does not also close
-        // the pane behind it. See `command-palette.tsx` for the full convention.
-        event.preventDefault();
-        event.stopPropagation();
-        setDismissed(dismissAt);
-        return;
-      }
-
-      listbox.onKeyDown(event);
-    }
-
-    dom.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      dom.removeEventListener('keydown', onKeyDown, true);
-    };
-  }, [editor, listbox, open, trigger]);
-
-  // `aria-activedescendant` on the editor itself. It is a textbox with a listbox attached, which
-  // is what the attribute is for; without it the highlight moves silently for anybody who cannot
-  // see it.
-  useEffect(() => {
-    const dom = editor.view.dom;
-    if (!open) {
-      dom.removeAttribute('aria-activedescendant');
-      dom.removeAttribute('aria-controls');
-      return;
-    }
-
-    dom.setAttribute('aria-controls', listbox.id);
-    if (listbox.activeOptionId === undefined) {
-      dom.removeAttribute('aria-activedescendant');
-    } else {
-      dom.setAttribute('aria-activedescendant', listbox.activeOptionId);
-    }
-
-    return () => {
-      dom.removeAttribute('aria-activedescendant');
-      dom.removeAttribute('aria-controls');
-    };
-  }, [editor, listbox.activeOptionId, listbox.id, open]);
-
-  if (!open) {
+  if (trigger === null || !open) {
     return null;
   }
 

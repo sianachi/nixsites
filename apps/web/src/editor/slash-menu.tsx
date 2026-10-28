@@ -1,7 +1,7 @@
 import type { ItemInsertKind } from './item-insert-dialog';
 import { TOGGLE_LEVELS, type ToggleLevel } from '@nix/editor-schema';
 import { Listbox, placeFloatingMenu, readViewportBounds, useListbox } from '@nix/ui';
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { Editor } from '@tiptap/react';
 import {
   ChevronRight,
@@ -32,6 +32,7 @@ import {
   MAX_QUERY as REFERENCE_MAX_QUERY,
   findTrigger as findReferenceTrigger,
 } from './reference-menu';
+import { useEditorListbox, useEditorTrigger } from './trigger-menu';
 
 /**
  * The frecency namespace for slash commands. One for every workspace: a command is not workspace
@@ -417,16 +418,13 @@ export function findSlashTrigger(text: string, truncated = false): FoundSlashTri
   return { start, query };
 }
 
-/** Where the menu sits, and what it is filtering. */
-interface OpenTrigger {
-  /** Document positions of the trigger's text - the `/` and the query - so it can be removed exactly. */
-  readonly from: number;
-  readonly to: number;
-  readonly query: string;
-  /** Viewport coordinates of the caret, for `placeFloatingMenu` to clamp against. */
-  readonly left: number;
-  readonly top: number;
-  readonly bottom: number;
+// The window is the *reference* picker's, not this menu's own smaller one, because the deferral
+// has to see everything that picker can: a `[[` that sits further back than a slash query is long
+// would otherwise be invisible here, and both menus would open at once over the same caret.
+// The reference picker wins. `[[quarterly /q2` is somebody typing a slash inside a link query, and
+// two floating menus fighting over the same arrow keys helps nobody.
+function findUnlessReference(text: string, truncated: boolean): FoundSlashTrigger | null {
+  return findReferenceTrigger(text, truncated) === null ? findSlashTrigger(text, truncated) : null;
 }
 
 /**
@@ -459,75 +457,11 @@ export function SlashMenu({
   /** Present only when the writing assistance is on offer; its commands are listed only then. */
   readonly onInlineAi?: ((kind: InlineKind) => void) | undefined;
 }): ReactNode {
-  const [trigger, setTrigger] = useState<OpenTrigger | null>(null);
-  const [dismissed, setDismissed] = useState<number | null>(null);
-
-  // Read from the document on every transaction, because the document is where the trigger lives.
-  useEffect(() => {
-    function readTrigger(): void {
-      const { state } = editor;
-      const { from, empty } = state.selection;
-
-      if (!empty) {
-        setTrigger(null);
-        return;
-      }
-
-      // The window is the *reference* picker's, not this menu's own smaller one, because the
-      // deferral below has to see everything that picker can: a `[[` that sits further back than
-      // a slash query is long would otherwise be invisible here, and both menus would open at
-      // once over the same caret.
-      const at = state.doc.resolve(from);
-      const window = Math.max(0, at.parentOffset - (REFERENCE_MAX_QUERY + 2));
-      const text = at.parent.textBetween(window, at.parentOffset, '\n', '\n');
-      const truncated = window > 0;
-
-      // The reference picker wins. `[[quarterly /q2` is somebody typing a slash inside a link
-      // query, and two floating menus fighting over the same arrow keys helps nobody.
-      if (findReferenceTrigger(text, truncated) !== null) {
-        setTrigger(null);
-        return;
-      }
-
-      const found = findSlashTrigger(text, truncated);
-      if (found === null) {
-        setTrigger(null);
-        return;
-      }
-
-      const start = from - (text.length - found.start);
-      const coords = editor.view.coordsAtPos(from);
-
-      setTrigger({
-        from: start,
-        to: from,
-        query: found.query,
-        left: coords.left,
-        top: coords.top,
-        bottom: coords.bottom,
-      });
-    }
-
-    // Closed when the editor loses the focus: the trigger derives from the document's selection,
-    // which survives a blur, so clicking into the sidebar with `/` half-typed would otherwise
-    // leave the menu floating with its keyboard handler bound to an element nobody is typing in.
-    function onBlur(): void {
-      setTrigger(null);
-    }
-
-    readTrigger();
-    editor.on('transaction', readTrigger);
-    editor.on('blur', onBlur);
-
-    return () => {
-      editor.off('transaction', readTrigger);
-      editor.off('blur', onBlur);
-    };
-  }, [editor]);
-
-  // Escape closes a trigger without unwriting it, and the dismissal is of one position: typing
-  // another `/` elsewhere opens the menu again.
-  const open = trigger !== null && trigger.from !== dismissed;
+  const { trigger, open, dismiss } = useEditorTrigger(
+    editor,
+    REFERENCE_MAX_QUERY + 2,
+    findUnlessReference,
+  );
   const query = trigger?.query ?? '';
 
   const orderByPicks = useChoiceOrderPreference((state) => state.setting === 'on');
@@ -587,61 +521,9 @@ export function SlashMenu({
     });
   });
 
-  // The keys are taken off the editor's own element, because that is what holds the focus. Capture
-  // phase, so the arrow keys move the highlight rather than the caret while the menu is open.
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  useEditorListbox(editor, listbox, trigger, open, dismiss);
 
-    const dom = editor.view.dom;
-    const dismissAt = trigger.from;
-
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') {
-        // The innermost open layer wins and stops the event, so Escape here does not also close
-        // the pane behind it. See `command-palette.tsx` for the full convention.
-        event.preventDefault();
-        event.stopPropagation();
-        setDismissed(dismissAt);
-        return;
-      }
-
-      listbox.onKeyDown(event);
-    }
-
-    dom.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      dom.removeEventListener('keydown', onKeyDown, true);
-    };
-  }, [editor, listbox, open, trigger]);
-
-  // `aria-activedescendant` on the editor itself. It is a textbox with a listbox attached, which
-  // is what the attribute is for; without it the highlight moves silently for anybody who cannot
-  // see it. The reference picker sets the same attributes; the deferral above is what guarantees
-  // the two are never open - and never writing here - at once.
-  useEffect(() => {
-    const dom = editor.view.dom;
-    if (!open) {
-      dom.removeAttribute('aria-activedescendant');
-      dom.removeAttribute('aria-controls');
-      return;
-    }
-
-    dom.setAttribute('aria-controls', listbox.id);
-    if (listbox.activeOptionId === undefined) {
-      dom.removeAttribute('aria-activedescendant');
-    } else {
-      dom.setAttribute('aria-activedescendant', listbox.activeOptionId);
-    }
-
-    return () => {
-      dom.removeAttribute('aria-activedescendant');
-      dom.removeAttribute('aria-controls');
-    };
-  }, [editor, listbox.activeOptionId, listbox.id, open]);
-
-  if (!open) {
+  if (trigger === null || !open) {
     return null;
   }
 
