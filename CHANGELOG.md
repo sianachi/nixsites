@@ -26,8 +26,12 @@ follows semantic versioning (`0.x` pre-1.0).
 - **Breaking:** an invitation grants nothing until it is accepted. Invitees no longer get
   provisional access, and signing in no longer accepts a pending invitation. Updating removes the
   provisional access existing pending invitations gave.
-- People editing a document appear as small dots in their cursor colour, with their name on
-  hover. A person's dot disappears as soon as their tab is hidden or closed.
+- People editing a document appear as small, quiet profiles: their initials in a circle outlined
+  in their cursor colour, with their name on hover. A profile disappears as soon as that
+  person's tab is hidden or closed.
+- The Explorer has a New note button, which makes an untitled note in one press, and a New view
+  menu for every other kind of item.
+- The companion pet stands on the page without a card behind it.
 - The optional landing page follows the new design: a hero gallery with a screenshot of every view
   (note, board, list, calendar, timeline, spreadsheet, gallery, checklist, matrix, outline, chart,
   form, habit tracker and companion), a light and dark theme switch, and sections on views, the
