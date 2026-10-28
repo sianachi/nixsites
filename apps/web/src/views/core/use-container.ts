@@ -6,6 +6,7 @@ import {
   views as coreViews,
 } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ZodType } from 'zod';
 
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../../workspaces/workspace-context';
@@ -41,7 +42,7 @@ export interface SchemaDraft {
  * broken board look identical if you let them.
  */
 
-export type ContainerStatus = 'loading' | 'ready' | 'partial' | 'error';
+type ContainerStatus = 'loading' | 'ready' | 'partial' | 'error';
 
 export interface ContainerData {
   /**
@@ -214,7 +215,7 @@ export interface PlanWrite {
 }
 
 /** One refused or failed row of a bulk write, named so a sentence can say which row. */
-export interface PlanRefusal {
+interface PlanRefusal {
   readonly label: string;
   readonly reason: string;
 }
@@ -235,7 +236,7 @@ export interface PlanOutcome {
  * operation the server should own end to end, and letting it run as a request storm would hold a
  * connection pool for minutes with no way to cancel.
  */
-export const MAXIMUM_PLAN_WRITES = 1000;
+const MAXIMUM_PLAN_WRITES = 1000;
 
 /** How many requests of one plan are in flight at once. */
 const PLAN_CONCURRENCY = 6;
@@ -247,7 +248,7 @@ const PLAN_CONCURRENCY = 6;
  * a large container is memory and parse time rather than DOM - but it is not free, and a container
  * past this size needs server-side querying rather than a bigger client buffer.
  */
-export const MAXIMUM_CHILDREN = 4000;
+const MAXIMUM_CHILDREN = 4000;
 
 /** The server's own page ceiling (`CursorPaging.MaximumPageSize`), asked for explicitly. */
 const PAGE_SIZE = 200;
@@ -339,56 +340,49 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
         }
       })();
       const boundaryWarnings: string[] = [];
+      const readParsed = <T>(
+        request: Promise<unknown>,
+        schema: ZodType<T>,
+        what: string,
+        warning: string,
+      ): Promise<T | null> =>
+        request
+          .then((value) => {
+            const parsed = schema.safeParse(value);
+            if (parsed.success) return parsed.data;
+            console.warn(`The container ${what} did not match the contract:`, parsed.error.message);
+            boundaryWarnings.push(warning);
+            return null;
+          })
+          .catch((reason: unknown) => {
+            if (isNixApiError(reason) && reason.code === 'http.404') return null;
+            discardRefused(reason);
+            throw reason;
+          });
       const schemaRead =
         containerId === null
           ? Promise.resolve(null)
-          : client
-              .query(coreStructure.effectiveSchema(containerId), {
+          : readParsed(
+              client.query(coreStructure.effectiveSchema(containerId), {
                 signal: controller.signal,
                 forceRefresh: true,
-              })
-              .then((value) => {
-                const parsed = EffectiveSchemaSchema.safeParse(value);
-                if (parsed.success) return parsed.data;
-                console.warn(
-                  'The container schema did not match the contract:',
-                  parsed.error.message,
-                );
-                boundaryWarnings.push(
-                  'The item schema could not be read, so some fields are unavailable.',
-                );
-                return null;
-              })
-              .catch((reason: unknown) => {
-                if (isNixApiError(reason) && reason.code === 'http.404') return null;
-                discardRefused(reason);
-                throw reason;
-              });
+              }),
+              EffectiveSchemaSchema,
+              'schema',
+              'The item schema could not be read, so some fields are unavailable.',
+            );
       const viewsRead =
         containerId === null
           ? Promise.resolve(null)
-          : client
-              .query(coreViews.containerViewConfigurations(containerId), {
+          : readParsed(
+              client.query(coreViews.containerViewConfigurations(containerId), {
                 signal: controller.signal,
                 forceRefresh: true,
-              })
-              .then((value) => {
-                const parsed = ContainerViewsSchema.safeParse(value);
-                if (parsed.success) return parsed.data;
-                console.warn(
-                  'The container views did not match the contract:',
-                  parsed.error.message,
-                );
-                boundaryWarnings.push(
-                  'The item views could not be read, so some views are unavailable.',
-                );
-                return null;
-              })
-              .catch((reason: unknown) => {
-                if (isNixApiError(reason) && reason.code === 'http.404') return null;
-                discardRefused(reason);
-                throw reason;
-              });
+              }),
+              ContainerViewsSchema,
+              'views',
+              'The item views could not be read, so some views are unavailable.',
+            );
 
       const [childOutcome, schemaOutcome, viewsOutcome] = await Promise.allSettled([
         childRead,
@@ -641,53 +635,71 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
     [children, client],
   );
 
+  /**
+   * Sends one structure write, then reloads unless asked not to. Resolves to null on success or to
+   * the sentence to show: Core's own detail when it refused, `offline` when nothing got through.
+   */
+  const submit = useCallback(
+    async (
+      send: (signal: AbortSignal) => Promise<unknown>,
+      failure: string,
+      offline = failure,
+      reload = true,
+    ): Promise<string | null> => {
+      const controller = new AbortController();
+      activeRequests.current.add(controller);
+      try {
+        await send(controller.signal);
+        if (reload && !controller.signal.aborted) await load();
+        return null;
+      } catch (reason) {
+        return isNixApiError(reason) ? (reason.detail ?? failure) : offline;
+      } finally {
+        activeRequests.current.delete(controller);
+      }
+    },
+    [load],
+  );
+
   const setSchema = useCallback(
     async (draft: SchemaDraft): Promise<string | null> => {
       if (containerId === null) {
         return 'A workspace root cannot declare a schema.';
       }
 
-      const controller = new AbortController();
-      activeRequests.current.add(controller);
-      try {
-        await client.execute(
-          coreStructure.setItemSchema(containerId, {
-            inherit: draft.inherit,
-            properties: draft.properties.map((property) => ({
-              key: property.key,
-              label: property.label,
-              type: property.type,
+      return submit(
+        (signal) =>
+          client.execute(
+            coreStructure.setItemSchema(containerId, {
+              inherit: draft.inherit,
+              properties: draft.properties.map((property) => ({
+                key: property.key,
+                label: property.label,
+                type: property.type,
 
-              // Only the select types carry options, and the server refuses a schema where anything
-              // else does. Sending an empty array for the rest would be refused on a technicality
-              // nobody typed.
-              options: [...property.options],
-              required: property.required,
+                // Only the select types carry options, and the server refuses a schema where anything
+                // else does. Sending an empty array for the rest would be refused on a technicality
+                // nobody typed.
+                options: [...property.options],
+                required: property.required,
 
-              // Only a formula carries one, and the server refuses a schema where anything else does -
-              // the same technicality the options line above avoids, for the same reason.
-              expression: property.type === 'formula' ? (property.expression ?? null) : null,
+                // Only a formula carries one, and the server refuses a schema where anything else does -
+                // the same technicality the options line above avoids, for the same reason.
+                expression: property.type === 'formula' ? (property.expression ?? null) : null,
 
-              // The same rule for the rollup's pair. A count of the children carries no source, and
-              // sending one would be refused for naming a property the fold ignores.
-              aggregate: property.type === 'rollup' ? (property.aggregate ?? null) : null,
-              source: property.type === 'rollup' ? (property.source ?? null) : null,
-              choiceSource: property.choiceSource ?? null,
-            })),
-          }),
-          { signal: controller.signal },
-        );
-        if (!controller.signal.aborted) await load();
-        return null;
-      } catch (reason) {
-        return isNixApiError(reason)
-          ? (reason.detail ?? 'That could not be saved.')
-          : 'That could not be saved.';
-      } finally {
-        activeRequests.current.delete(controller);
-      }
+                // The same rule for the rollup's pair. A count of the children carries no source, and
+                // sending one would be refused for naming a property the fold ignores.
+                aggregate: property.type === 'rollup' ? (property.aggregate ?? null) : null,
+                source: property.type === 'rollup' ? (property.source ?? null) : null,
+                choiceSource: property.choiceSource ?? null,
+              })),
+            }),
+            { signal },
+          ),
+        'That could not be saved.',
+      );
     },
-    [client, containerId, load],
+    [client, containerId, submit],
   );
 
   const setViews = useCallback(
@@ -699,28 +711,24 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
       // The default is sent as it stands unless the caller says otherwise. Omitting it on an edit
       // that was not about the default would reset it to the document, so somebody renaming a view
       // would find the item opening somewhere else afterwards.
-      const controller = new AbortController();
-      activeRequests.current.add(controller);
-      try {
-        const body = ContainerViewsSchema.parse({
-          views: next,
-          unrenderable: [],
-          default: defaultView === undefined ? (views?.default ?? null) : defaultView,
-        });
-        await client.execute(
-          coreViews.setContainerViews(containerId, { views: body.views, default: body.default }),
-          { signal: controller.signal },
-        );
-        return null;
-      } catch (reason) {
-        return isNixApiError(reason)
-          ? (reason.detail ?? 'That could not be saved.')
-          : 'That could not be saved.';
-      } finally {
-        activeRequests.current.delete(controller);
-      }
+      return submit(
+        (signal) => {
+          const body = ContainerViewsSchema.parse({
+            views: next,
+            unrenderable: [],
+            default: defaultView === undefined ? (views?.default ?? null) : defaultView,
+          });
+          return client.execute(
+            coreViews.setContainerViews(containerId, { views: body.views, default: body.default }),
+            { signal },
+          );
+        },
+        'That could not be saved.',
+        'That could not be saved.',
+        false,
+      );
     },
-    [client, containerId, views],
+    [client, containerId, submit, views],
   );
 
   const appendViewSetup = useCallback(
@@ -731,33 +739,26 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
       publishInteractiveFormViewId: string | null = null,
     ): Promise<string | null> => {
       if (containerId === null) return 'A workspace root cannot offer views.';
-      const controller = new AbortController();
-      activeRequests.current.add(controller);
-      try {
-        await client.execute(
-          coreViews.appendViewSetup(containerId, {
-            properties: properties.map((property) => ({
-              ...property,
-              options: property.options.length === 0 ? null : property.options,
-              choiceSource: property.choiceSource ?? null,
-            })),
-            views: addedViews.map(toViewRequest),
-            makeDefault,
-            publishInteractiveFormViewId,
-          }),
-          { signal: controller.signal },
-        );
-        if (!controller.signal.aborted) await load();
-        return null;
-      } catch (reason) {
-        return isNixApiError(reason)
-          ? (reason.detail ?? 'This view setup could not be saved.')
-          : 'This view setup could not be sent. Check the connection and try again.';
-      } finally {
-        activeRequests.current.delete(controller);
-      }
+      return submit(
+        (signal) =>
+          client.execute(
+            coreViews.appendViewSetup(containerId, {
+              properties: properties.map((property) => ({
+                ...property,
+                options: property.options.length === 0 ? null : property.options,
+                choiceSource: property.choiceSource ?? null,
+              })),
+              views: addedViews.map(toViewRequest),
+              makeDefault,
+              publishInteractiveFormViewId,
+            }),
+            { signal },
+          ),
+        'This view setup could not be saved.',
+        'This view setup could not be sent. Check the connection and try again.',
+      );
     },
-    [client, containerId, load],
+    [client, containerId, submit],
   );
 
   const replaceViewSetup = useCallback(
@@ -768,36 +769,29 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
       publishInteractiveFormViewId: string | null = null,
     ): Promise<string | null> => {
       if (containerId === null) return 'A workspace root cannot offer views.';
-      const controller = new AbortController();
-      activeRequests.current.add(controller);
-      try {
-        await client.execute(
-          coreViews.replaceViewSetup(containerId, originalViewId, {
-            schema: {
-              inherit: schema?.inherit ?? true,
-              properties: properties.map((property) => ({
-                ...property,
-                options: property.options.length === 0 ? null : property.options,
-                choiceSource: property.choiceSource ?? null,
-              })),
-            },
-            originalPropertyKeys: schema?.declared.map((property) => property.key) ?? [],
-            views: replacementViews.map(toViewRequest),
-            publishInteractiveFormViewId,
-          }),
-          { signal: controller.signal },
-        );
-        if (!controller.signal.aborted) await load();
-        return null;
-      } catch (reason) {
-        return isNixApiError(reason)
-          ? (reason.detail ?? 'This view setup could not be saved.')
-          : 'This view setup could not be sent. Check the connection and try again.';
-      } finally {
-        activeRequests.current.delete(controller);
-      }
+      return submit(
+        (signal) =>
+          client.execute(
+            coreViews.replaceViewSetup(containerId, originalViewId, {
+              schema: {
+                inherit: schema?.inherit ?? true,
+                properties: properties.map((property) => ({
+                  ...property,
+                  options: property.options.length === 0 ? null : property.options,
+                  choiceSource: property.choiceSource ?? null,
+                })),
+              },
+              originalPropertyKeys: schema?.declared.map((property) => property.key) ?? [],
+              views: replacementViews.map(toViewRequest),
+              publishInteractiveFormViewId,
+            }),
+            { signal },
+          ),
+        'This view setup could not be saved.',
+        'This view setup could not be sent. Check the connection and try again.',
+      );
     },
-    [client, containerId, load, schema?.declared, schema?.inherit],
+    [client, containerId, submit, schema?.declared, schema?.inherit],
   );
 
   /**
@@ -867,33 +861,27 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
         return 'A workspace root cannot offer views.';
       }
 
-      const controller = new AbortController();
-      activeRequests.current.add(controller);
-      try {
-        const body = ContainerViewsSchema.parse(views);
-        // The one write that sends the flag. The others leave it out, which Core reads as "keep what
-        // is stored", so a rename or a reorder cannot bring the tab back by accident. The default
-        // goes as it stands: asked to hide a document that was the default, Core moves the default
-        // to the first view itself.
-        await client.execute(
-          coreViews.setContainerViews(containerId, {
-            views: body.views,
-            default: body.default,
-            hideDocument: hidden,
-          }),
-          { signal: controller.signal },
-        );
-        if (!controller.signal.aborted) await load();
-        return null;
-      } catch (reason) {
-        return isNixApiError(reason)
-          ? (reason.detail ?? 'That could not be saved.')
-          : 'That could not be saved. Check the connection and try again.';
-      } finally {
-        activeRequests.current.delete(controller);
-      }
+      return submit(
+        (signal) => {
+          const body = ContainerViewsSchema.parse(views);
+          // The one write that sends the flag. The others leave it out, which Core reads as "keep what
+          // is stored", so a rename or a reorder cannot bring the tab back by accident. The default
+          // goes as it stands: asked to hide a document that was the default, Core moves the default
+          // to the first view itself.
+          return client.execute(
+            coreViews.setContainerViews(containerId, {
+              views: body.views,
+              default: body.default,
+              hideDocument: hidden,
+            }),
+            { signal },
+          );
+        },
+        'That could not be saved.',
+        'That could not be saved. Check the connection and try again.',
+      );
     },
-    [client, containerId, load, views],
+    [client, containerId, submit, views],
   );
 
   const create = useCallback(

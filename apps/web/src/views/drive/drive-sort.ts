@@ -4,7 +4,7 @@ import { driveBodyKindLabel } from './drive-icons';
 import type { DriveFileInfo } from './use-drive-file-info';
 
 export type SortKey = 'name' | 'kind' | 'size' | 'modified';
-export type SortDirection = 'ascending' | 'descending';
+type SortDirection = 'ascending' | 'descending';
 
 export interface SortState {
   readonly key: SortKey;
@@ -12,7 +12,7 @@ export interface SortState {
 }
 
 /** The size in bytes this row would sort by, or -1 for anything that is not a file yet. */
-export function sizeOf(info: DriveFileInfo | undefined): number {
+function sizeOf(info: DriveFileInfo | undefined): number {
   return info?.status === 'ready' ? info.record.current.byteLength : -1;
 }
 

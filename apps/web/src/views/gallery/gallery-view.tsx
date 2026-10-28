@@ -66,8 +66,6 @@ import { GalleryGrid } from './gallery-grid';
  *     card, for something nobody attempted to load. It gets its own sentence instead.
  */
 
-export { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from './card-size';
-
 export function GalleryView(props: ViewRendererProps): ReactNode {
   const { container, view, onOpen } = props;
   const viewState = useViewState();

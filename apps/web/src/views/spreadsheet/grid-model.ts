@@ -13,8 +13,6 @@ import {
 import { dayFor, formatTime, readTimestampValue, readerZone } from '../core/timestamps';
 import { continueSeries, type SeriesKind } from '../../lib/suggest/fill-series';
 
-export { TITLE_COLUMN_KEY } from '../core/columns';
-
 /**
  * The spreadsheet view's geometry and coercion, as pure functions.
  *
@@ -244,7 +242,7 @@ export function coerceCellText(text: string, type: string | null): Coerced {
 }
 
 /** One row's worth of writes: the item, and the property changes going to it together. */
-export interface RowWrite {
+interface RowWrite {
   readonly item: Item;
   readonly bag: Record<string, PropertyValue>;
 }
@@ -354,7 +352,7 @@ export function fillPlan(
 }
 
 /** What a series fill would do to one column of the selection, for the sentence offering it. */
-export interface SeriesColumnFill {
+interface SeriesColumnFill {
   readonly column: SpreadsheetColumn;
   readonly kind: SeriesKind;
   readonly describe: string;
@@ -376,6 +374,25 @@ export interface SeriesFill {
 
   /** Whether any column continues a real pattern rather than repeating its last value. */
   readonly patterned: boolean;
+}
+
+/** The run of non-empty cells at the top of a range's column, and the first row after it. */
+function seedOf(
+  range: CellRange,
+  items: readonly Item[],
+  column: SpreadsheetColumn,
+): { readonly seed: string[]; readonly row: number } {
+  const seed: string[] = [];
+  let row = range.startRow;
+  for (; row <= range.endRow; row += 1) {
+    const item = items[row];
+    const text = item === undefined ? '' : cellText(item, column).trim();
+    if (text.length === 0) {
+      break;
+    }
+    seed.push(text);
+  }
+  return { seed, row };
 }
 
 /**
@@ -404,17 +421,7 @@ export function seriesFillPlan(
       continue;
     }
 
-    const seed: string[] = [];
-    let row = range.startRow;
-    for (; row <= range.endRow; row += 1) {
-      const item = items[row];
-      const text = item === undefined ? '' : cellText(item, column).trim();
-      if (text.length === 0) {
-        break;
-      }
-      seed.push(text);
-    }
-
+    const { seed, row } = seedOf(range, items, column);
     const count = range.endRow - row + 1;
     const continuation = continueSeries(seed, count);
     if (continuation === null) {
@@ -463,10 +470,10 @@ export function seriesFillPlan(
 }
 
 /** How many continued values an offer spells out; the sentence elides the rest. */
-export const SERIES_PREVIEW_VALUES = 3;
+const SERIES_PREVIEW_VALUES = 3;
 
 /** One column of a series-fill offer: what was found and the first values it would write. */
-export interface SeriesColumnOffer {
+interface SeriesColumnOffer {
   readonly column: SpreadsheetColumn;
   readonly kind: SeriesKind;
   readonly describe: string;
@@ -509,17 +516,7 @@ export function seriesFillOffer(
       continue;
     }
 
-    const seed: string[] = [];
-    let row = range.startRow;
-    for (; row <= range.endRow; row += 1) {
-      const item = items[row];
-      const text = item === undefined ? '' : cellText(item, column).trim();
-      if (text.length === 0) {
-        break;
-      }
-      seed.push(text);
-    }
-
+    const { seed, row } = seedOf(range, items, column);
     const count = range.endRow - row + 1;
     if (seed.length === 0 || count <= 0) {
       continue;

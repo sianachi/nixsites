@@ -22,4 +22,3 @@ export {
   TYPE_GROUP_KEY,
   valueShapeOf,
 } from '@nix/structure-spec';
-export type { PropertyValueShape } from '@nix/structure-spec';

@@ -132,7 +132,7 @@ function Gridlines(): ReactNode {
   );
 }
 
-export interface AxisProps {
+interface AxisProps {
   /** One label per bucket, of which the frame shows the first, middle and last. */
   readonly labels: readonly string[];
   /** The same labels shortened for a phone. */

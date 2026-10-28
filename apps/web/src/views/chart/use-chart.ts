@@ -27,7 +27,7 @@ import { useOptionalWorkspace } from '../../workspaces/workspace-context';
  */
 
 /** Why a failed read failed, and whether trying again could help. */
-export type ChartFailure = 'configuration' | 'locked' | 'missing' | 'unavailable';
+type ChartFailure = 'configuration' | 'locked' | 'missing' | 'unavailable';
 
 /**
  * Why a failed read failed, in words a reader can act on.
@@ -72,7 +72,7 @@ function refusal(reason: unknown): { readonly kind: ChartFailure; readonly messa
   return { kind: 'unavailable', message: 'The chart could not be loaded.' };
 }
 
-export type ChartStatus = 'loading' | 'ready' | 'error';
+type ChartStatus = 'loading' | 'ready' | 'error';
 
 export interface ChartState {
   readonly status: ChartStatus;

@@ -117,13 +117,13 @@ export type EffectiveSchema = Omit<ParsedEffectiveSchema, 'properties' | 'declar
 const _effectiveSchemaContract = EffectiveSchemaSchema satisfies z.ZodType<EffectiveSchemaContract>;
 void _effectiveSchemaContract;
 
-export const FormConditionSchema = z.object({
+const FormConditionSchema = z.object({
   fieldBlockId: z.string(),
   operator: z.string(),
   value: z.string().nullable(),
 });
 
-export const FormBlockSchema = z.object({
+const FormBlockSchema = z.object({
   id: z.string(),
   kind: z.string(),
   propertyKey: z.string().nullable(),
@@ -134,7 +134,7 @@ export const FormBlockSchema = z.object({
   visibleWhen: z.array(FormConditionSchema),
 });
 
-export const FormPageSchema = z.object({
+const FormPageSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
@@ -142,7 +142,7 @@ export const FormPageSchema = z.object({
   blocks: z.array(FormBlockSchema),
 });
 
-export const InteractiveFormSchema = z.object({
+const InteractiveFormSchema = z.object({
   pages: z.array(FormPageSchema),
   titleMode: z.string(),
   titleFieldBlockId: z.string().nullable(),
@@ -181,7 +181,7 @@ const ViewFilterGroupSchema = z.object({
  * chart of categories - rather than the parse of the whole view set. Every field is optional and
  * nullable because a write sends only what was chosen.
  */
-export const ChartOptionsSchema = z.object({
+const ChartOptionsSchema = z.object({
   kind: z.string().nullable().default(null),
   period: z.string().nullable().default(null),
   splitBy: z.string().nullable().default(null),
@@ -344,15 +344,6 @@ export const ViewSchema = z.object({
 });
 
 type ParsedView = z.infer<typeof ViewSchema>;
-
-/** One sort key of a view. */
-export type ViewSort = ParsedView['sorts'][number];
-
-/** One group's soft limit. */
-export type ViewGroupLimit = ParsedView['groupLimits'][number];
-
-/** One column's summary. */
-export type ViewAggregate = ParsedView['aggregates'][number];
 
 /** New layout/form fields are optional in drafts; parsed server views always receive null defaults. */
 export type View = Omit<

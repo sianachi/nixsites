@@ -12,7 +12,6 @@ import { RescheduleDialog } from './reschedule-dialog';
 import { useRovingGrid } from './use-roving-grid';
 
 // Kept as this module's export: the tests and the collated calendar import it from here.
-export { minutesToPx } from './hours/geometry';
 
 /**
  * A day or a week, drawn against the hours.

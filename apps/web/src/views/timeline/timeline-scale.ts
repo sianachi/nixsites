@@ -15,8 +15,6 @@ import {
   type CalendarDay,
   type CalendarMonth,
 } from '../core/calendar-dates';
-import { readDateValue, type Item } from '../core/container-model';
-import { dayFor, readTimestampValue } from '../core/timestamps';
 
 /**
  * Where a timeline's columns are, and which of them a span covers.
@@ -333,23 +331,4 @@ export function placeSpan(
     continuesBefore: start < axis.fromText,
     continuesAfter: end > axis.toText,
   };
-}
-
-/**
- * The day an item's property names, for the reader.
- *
- * Two stored shapes reach here and they are not the same kind of thing. A `date` is an all-day fact
- * - "the 3rd" is the 3rd for everybody - and is used as it stands. A `timestamp` is a moment, and
- * the day it falls on genuinely depends on where the reader is sitting, so it is converted first: a
- * 09:00 London start is the previous evening in Honolulu, and placing it without converting puts
- * the bar in the wrong column for everybody but its author.
- */
-export function readDayValue(item: Item, key: string, zone: string): string | null {
-  const date = readDateValue(item, key);
-  if (date !== null) {
-    return date;
-  }
-
-  const moment = readTimestampValue(item.properties, key);
-  return moment === null ? null : dayFor(moment, zone);
 }

@@ -70,21 +70,20 @@ export function boardCard(
   );
 }
 
-interface BoardCardProps {
+interface BoardCardProps extends Pick<
+  BoardCardListProps,
+  | 'columns'
+  | 'property'
+  | 'cardProperties'
+  | 'schema'
+  | 'setDragged'
+  | 'onMove'
+  | 'onWrite'
+  | 'onOpen'
+  | 'onDismissStale'
+> {
   readonly item: Item;
-  readonly columns: readonly BoardColumn[];
-  readonly property: PropertyDefinition;
-  readonly cardProperties: readonly string[];
-  readonly schema: readonly PropertyDefinition[];
   readonly dragging: boolean;
-  readonly setDragged: (itemId: string | null) => void;
-  readonly onMove: (item: Item, value: string | null) => void;
-  readonly onWrite: (
-    itemId: string,
-    propertyKey: string,
-    value: PropertyValue,
-  ) => Promise<string | null>;
-  readonly onOpen: (itemId: string) => void;
   readonly position: number;
   readonly setSize: number;
   readonly virtualIndex?: number;
@@ -94,7 +93,6 @@ interface BoardCardProps {
 
   /** Set when the card has gone untouched far longer than its column's usual and not been waved off. */
   readonly stale: StaleMember | undefined;
-  readonly onDismissStale: (item: Item) => void;
 }
 
 function BoardCard(props: BoardCardProps): ReactNode {

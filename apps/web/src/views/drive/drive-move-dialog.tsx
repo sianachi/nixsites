@@ -2,7 +2,7 @@ import { Button, Dialog, Icon, Text, focusRing } from '@nix/ui';
 import { ArrowUp, Folder } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-export interface DriveMoveDestination {
+interface DriveMoveDestination {
   readonly id: string;
   readonly title: string;
 }

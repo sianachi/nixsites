@@ -31,14 +31,13 @@ import { paneFilterPrefix, paneParam } from '../../panes/pane-params';
  * just looking at" is what everybody expects.
  */
 
-export const VIEW_PARAM = 'view';
+const VIEW_PARAM = 'view';
 const MODE_PARAM = 'mode';
-export const SORT_PARAM = 'sort';
-export const DIRECTION_PARAM = 'dir';
-export const FILTER_PREFIX = 'f.';
+const SORT_PARAM = 'sort';
+const DIRECTION_PARAM = 'dir';
 export const SEARCH_PARAM = 'search';
 
-export const SortDirectionSchema = z.enum(['ascending', 'descending']);
+const SortDirectionSchema = z.enum(['ascending', 'descending']);
 
 export type SortDirection = z.infer<typeof SortDirectionSchema>;
 

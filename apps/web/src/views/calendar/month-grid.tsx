@@ -126,7 +126,7 @@ export function DayNumber(props: {
 }
 
 /** The width floor of a single day column. */
-export const MONTH_DAY_COLUMN = 'w-[6.5rem]';
+const MONTH_DAY_COLUMN = 'w-[6.5rem]';
 
 /**
  * The width floor of the whole grid: seven columns and their borders.
@@ -134,7 +134,7 @@ export const MONTH_DAY_COLUMN = 'w-[6.5rem]';
  * Below this the grid scrolls rather than compressing, because seven columns squeezed into a phone
  * are seven columns of nothing legible.
  */
-export const MONTH_GRID_MIN_WIDTH = 'min-w-[45.5rem]';
+const MONTH_GRID_MIN_WIDTH = 'min-w-[45.5rem]';
 
 export interface MonthGridProps {
   /** The month to draw. */

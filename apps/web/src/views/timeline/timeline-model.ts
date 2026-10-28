@@ -1,36 +1,18 @@
-import type { CalendarDay } from '../core/calendar-dates';
 import {
   readPropertyText,
   type ContainerViews,
   type EffectiveSchema,
   type Item,
-  type PropertyDefinition,
   type View,
 } from '../core/container-model';
 import { propertyTypeWord, isDateShaped } from '../core/property-types';
-import {
-  placeSpan,
-  readDayValue,
-  type TimelinePlacement,
-  type TimelineWindow,
-} from './timeline-scale';
+import { readDayValue } from '../calendar/model/day-math';
+import { placeSpan, type TimelinePlacement, type TimelineWindow } from './timeline-scale';
 
 export const NO_START_PROPERTY =
   'A timeline places each bar by the date it starts on, and this view does not name a start ' +
   'property. Nothing has been lost - every item is still here, and a list or board view will ' +
   'show them.';
-
-/**
- * Today, in the reader's own zone.
- *
- * The one place a clock is read, and the one place local time is the right question: "today" is
- * where the person is sitting, not where the server is. The result is integers immediately, so
- * nothing downstream handles an instant.
- */
-export function todayDay(): CalendarDay {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth(), day: now.getDate() };
-}
 
 export function titleOf(item: Item): string {
   return item.title || 'Untitled';
@@ -131,16 +113,12 @@ export function describeUndrawable(
     return `This timeline starts its bars from "${view.dateProperty}", and that property is not in this item's schema. It was probably removed. The items are all still here; a list view will show them.`;
   }
 
-  if (!placesOnAnAxis(definition)) {
+  // A bar can start from a date (all-day) or a timestamp (a moment that carries a day).
+  if (!isDateShaped(definition.type)) {
     return `This timeline starts its bars from "${definition.label}", which is a ${propertyTypeWord(definition.type)} property rather than a date. There is no day to start from, so nothing can be drawn.`;
   }
 
   return null;
-}
-
-/** Both, because both name a day: a date is all-day, a timestamp is a moment that carries one. */
-export function placesOnAnAxis(property: PropertyDefinition): boolean {
-  return isDateShaped(property.type);
 }
 
 /**
@@ -164,7 +142,7 @@ export function describeLostEndProperty(view: View, schema: EffectiveSchema | nu
 
   // The type is named by its label rather than by the stored token: somebody who chose "Date and
   // time" from a list should not be told their property is now a "timestamp".
-  return placesOnAnAxis(definition)
+  return isDateShaped(definition.type)
     ? null
     : `Bars ended on "${definition.label}", which is now a ${propertyTypeWord(definition.type)} property rather than a date. ${still}`;
 }

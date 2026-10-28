@@ -4,10 +4,8 @@ import {
   chartCaption as drawnChartCaption,
   labelsFor,
   plottedSeries as drawnPlottedSeries,
-  seriesLabel as drawnSeriesLabel,
   seriesPattern,
   type ChartLabels,
-  type ChartSeriesInput,
   type PlottedSeries as DrawnSeries,
   type SeriesHatch,
 } from '@nix/chart-render';
@@ -25,7 +23,6 @@ import { UNSET_LABEL, type PropertyDefinition } from '../core/container-model';
 
 export {
   AVERAGE_SPAN,
-  CHART_KINDS,
   CHART_KIND_LABELS,
   CHART_PERIODS,
   CHART_PERIOD_LABELS,
@@ -41,8 +38,6 @@ export {
   trailingAverage,
   type ChartKind,
   type ChartLabels,
-  type ChartPeriod,
-  type SeriesHatch,
 } from '@nix/chart-render';
 
 export function chartLabels(fields: readonly PropertyDefinition[]): ChartLabels {
@@ -50,7 +45,7 @@ export function chartLabels(fields: readonly PropertyDefinition[]): ChartLabels 
 }
 
 /** Labels that know no definitions: keys and values as stored. */
-export const RAW_LABELS: ChartLabels = chartLabels([]);
+const RAW_LABELS: ChartLabels = chartLabels([]);
 
 /** A stored day as a person reads it - "6 Oct 2025" in their locale - or the text itself. */
 export function formatDay(day: string | null): string {
@@ -66,16 +61,6 @@ export function bucketLabel(
   short = false,
 ): string {
   return drawnBucketLabel(value, period, labels, groupBy, short);
-}
-
-/** What a series is called in a legend and a table header. */
-export function seriesLabel(
-  series: ChartSeriesInput,
-  otherValues: number,
-  labels: ChartLabels = RAW_LABELS,
-  splitBy: string | null = null,
-): string {
-  return drawnSeriesLabel(series, otherValues, labels, splitBy);
 }
 
 /**

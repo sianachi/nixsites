@@ -2,18 +2,13 @@ import { type CellRef } from '@nix/sheet';
 import { useEffect, useRef, useState, type Dispatch, type RefObject } from 'react';
 
 import { isKnownPropertyType } from '../../properties/property-input';
+import { TITLE_COLUMN_KEY } from '../core/columns';
 import { type Item, type PropertyDefinition } from '../core/container-model';
 import { isComputedType } from '../core/property-types';
 import type { PlanOutcome, PlanWrite } from '../core/use-container';
 import { type GridBounds, type SelectionAction, type SelectionState } from '../sheet/selection';
 import { type PlanVerb } from './grid-geometry';
-import {
-  TITLE_COLUMN_KEY,
-  cellText,
-  coerceCellText,
-  type SpreadsheetColumn,
-  type WritePlan,
-} from './grid-model';
+import { cellText, coerceCellText, type SpreadsheetColumn, type WritePlan } from './grid-model';
 
 export function canEditProperty(property: PropertyDefinition | undefined): boolean {
   return (

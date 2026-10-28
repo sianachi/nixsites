@@ -42,40 +42,7 @@ export interface RuleContext {
   readonly principalId: string | null;
 }
 
-/** The value tokens, spelled once. */
-export const TODAY_TOKEN = 'today';
 export const ME_TOKEN = 'me';
-
-/**
- * Every token a day operator accepts where a date would go, resolved from the reader's own today
- * (`QueryOperators.DayTokens`). Weeks start on Monday, as the calendar draws them.
- */
-export const DAY_TOKENS = [
-  'today',
-  'start-of-week',
-  'start-of-month',
-  'same-day-last-week',
-  'same-day-last-month',
-] as const;
-
-/** Every operator this build evaluates: the server's `QueryOperators.All`. */
-export const RULE_OPERATORS = [
-  'equals',
-  'not-equals',
-  'contains',
-  'not-contains',
-  'greater-than',
-  'less-than',
-  'on',
-  'before',
-  'on-or-after',
-  'within-next',
-  'within-last',
-  'is-empty',
-  'is-not-empty',
-] as const;
-
-export type RuleOperator = (typeof RULE_OPERATORS)[number];
 
 /** Whether an operator takes no value - its meaning is entirely about the property's presence. */
 export function operatorTakesValue(operator: string): boolean {

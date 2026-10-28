@@ -1,6 +1,8 @@
 import { Checkbox, Field, Input, Select, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
+import { todayDay } from '../calendar/model/day-math';
+import { addDays, dayText } from '../core/calendar-dates';
 import type { ChartOptions, PropertyDefinition, View } from '../core/container-model';
 import { canSplitBy } from '../core/property-types';
 import {
@@ -151,8 +153,8 @@ export function ChartOptionsEditor({ view, fields, onChange }: ChartOptionsEdito
                     : shape === 'range'
                       ? {
                           lastPeriods: null,
-                          from: options.from ?? today(-365),
-                          to: options.to ?? today(0),
+                          from: options.from ?? dayText(addDays(todayDay(), -365)),
+                          to: options.to ?? dayText(todayDay()),
                         }
                       : { lastPeriods: null, from: null, to: null },
                 );
@@ -289,12 +291,4 @@ export function ChartOptionsEditor({ view, fields, onChange }: ChartOptionsEdito
       ) : null}
     </div>
   );
-}
-
-/** Today shifted by a number of days, as `yyyy-MM-dd` in the reader's own calendar. */
-function today(offset: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + offset);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

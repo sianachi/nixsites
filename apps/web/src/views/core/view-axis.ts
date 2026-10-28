@@ -54,7 +54,7 @@ export type ViewAxisResolution =
   | { readonly kind: 'wrongType'; readonly property: PropertyDefinition };
 
 /** The group for "no value" - the convention `collapsedGroups` already stores. */
-export const NO_VALUE_GROUP = '';
+const NO_VALUE_GROUP = '';
 
 const CHECKED = 'true';
 const UNCHECKED = 'false';

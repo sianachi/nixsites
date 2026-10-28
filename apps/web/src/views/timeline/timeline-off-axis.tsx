@@ -78,7 +78,7 @@ export function OffAxisList({
   );
 }
 
-export function OffAxisEntry({
+function OffAxisEntry({
   placed,
   aside,
 }: {

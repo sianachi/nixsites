@@ -2,7 +2,7 @@ import { habits, isNixApiError, type HabitTracker, type SetHabitInput } from '@n
 import { useApiClient } from '../../api/api-client-provider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-export type HabitLoadState = 'loading' | 'ready' | 'partial' | 'error';
+type HabitLoadState = 'loading' | 'ready' | 'partial' | 'error';
 
 export interface HabitsState {
   readonly status: HabitLoadState;
@@ -110,47 +110,37 @@ export function useHabits(habitIds: readonly string[], from: string, to: string)
     };
   }, [client, from, generation, ids, to]);
 
-  // Neither write below bumps `generation`: a check-in changes exactly one habit, so the caller
-  // refreshes that one habit with `refetchHabit` instead of paying for a reload of every habit in
-  // range twice over (once for this hook's window, once for whichever other window a sibling
-  // `useHabits` call covers).
-  const saveCheckIn = useCallback(
-    async (habitId: string, day: string, completed: boolean, quantity: number | null) => {
+  // A check-in changes exactly one habit, so it does not bump `generation`: the caller refreshes
+  // that one habit with `refetchHabit` instead of paying for a reload of every habit in range twice
+  // over (once for this hook's window, once for whichever other window a sibling `useHabits` call
+  // covers). Writes that change the list itself (`reload`) do bump it.
+  const write = useCallback(
+    async (request: Parameters<typeof client.execute>[0], reload: boolean) => {
       try {
-        await client.execute(habits.checkIn(habitId, day, { completed, quantity }), {
-          signal: writes.current?.signal,
-        });
+        await client.execute(request, { signal: writes.current?.signal });
+        if (reload) setGeneration((value) => value + 1);
         return null;
       } catch (reason) {
         return messageFor(reason);
       }
     },
     [client],
+  );
+
+  const saveCheckIn = useCallback(
+    (habitId: string, day: string, completed: boolean, quantity: number | null) =>
+      write(habits.checkIn(habitId, day, { completed, quantity }), false),
+    [write],
   );
 
   const saveHabit = useCallback(
-    async (habitId: string, input: SetHabitInput) => {
-      try {
-        await client.execute(habits.setHabit(habitId, input), { signal: writes.current?.signal });
-        setGeneration((value) => value + 1);
-        return null;
-      } catch (reason) {
-        return messageFor(reason);
-      }
-    },
-    [client],
+    (habitId: string, input: SetHabitInput) => write(habits.setHabit(habitId, input), true),
+    [write],
   );
 
   const undoCheckIn = useCallback(
-    async (habitId: string, day: string) => {
-      try {
-        await client.execute(habits.undoCheckIn(habitId, day), { signal: writes.current?.signal });
-        return null;
-      } catch (reason) {
-        return messageFor(reason);
-      }
-    },
-    [client],
+    (habitId: string, day: string) => write(habits.undoCheckIn(habitId, day), false),
+    [write],
   );
 
   const refetchHabit = useCallback(
@@ -188,18 +178,9 @@ export function useHabits(habitIds: readonly string[], from: string, to: string)
   );
 
   const setStatus = useCallback(
-    async (habitId: string, status: 'active' | 'paused' | 'archived') => {
-      try {
-        await client.execute(habits.setStatus(habitId, { status }), {
-          signal: writes.current?.signal,
-        });
-        setGeneration((value) => value + 1);
-        return null;
-      } catch (reason) {
-        return messageFor(reason);
-      }
-    },
-    [client],
+    (habitId: string, status: 'active' | 'paused' | 'archived') =>
+      write(habits.setStatus(habitId, { status }), true),
+    [write],
   );
 
   return {

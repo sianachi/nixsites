@@ -43,7 +43,7 @@ const BLANK: SortKey = { blank: true, rank: 0, text: '' };
 const textCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 /** The text key the title sorts by. Its own case because it is not in the property bag. */
-export const TITLE_SORT_KEY = 'title';
+const TITLE_SORT_KEY = 'title';
 
 /**
  * Reads one item's key for a property.

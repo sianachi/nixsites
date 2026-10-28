@@ -39,13 +39,10 @@ import {
   TYPE_GROUP_KEY,
   valueShapeOf,
 } from './property-types';
-import { CARD_SIZES, DEFAULT_CARD_SIZE, GalleryView, type CardSize } from '../gallery/gallery-view';
-import {
-  DEFAULT_DRIVE_LAYOUT,
-  DRIVE_LAYOUTS,
-  DriveView,
-  type DriveLayout,
-} from '../drive/drive-view';
+import { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from '../gallery/card-size';
+import { GalleryView } from '../gallery/gallery-view';
+import { DEFAULT_DRIVE_LAYOUT, DRIVE_LAYOUTS, type DriveLayout } from '../drive/drive-layout';
+import { DriveView } from '../drive/drive-view';
 import { FormView } from '../form/form-view';
 import { InteractiveFormView } from '../form/interactive-form-view';
 import { ListView } from '../list/list-view';
@@ -209,7 +206,7 @@ interface ViewChoiceOf<TField extends ChoiceField, TToken extends string> {
   readonly fallback: TToken;
 }
 
-export type ViewChoice = {
+type ViewChoice = {
   [TField in ChoiceField]: ViewChoiceOf<TField, ChoiceTokens[TField]>;
 }[ChoiceField];
 
@@ -292,9 +289,9 @@ const CARD_SIZE_LABELS: Record<CardSize, string> = {
  * numeric property. The server's `ChartMeasures` is the authority on the tokens; this is what a
  * person chooses from, and the `ChoiceTokens` join above is what stops the two lists drifting.
  */
-export const CHART_MEASURES = ['count', 'sum'] as const;
-export type ChartMeasure = (typeof CHART_MEASURES)[number];
-export const DEFAULT_CHART_MEASURE: ChartMeasure = 'count';
+const CHART_MEASURES = ['count', 'sum'] as const;
+type ChartMeasure = (typeof CHART_MEASURES)[number];
+const DEFAULT_CHART_MEASURE: ChartMeasure = 'count';
 
 const CHART_MEASURE_LABELS: Record<ChartMeasure, string> = {
   count: 'How many items',
