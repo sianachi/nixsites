@@ -13,6 +13,7 @@ import {
   parseSitePages,
   renderSite,
   stripImageMetadata,
+  type FileReference,
   type PublishedDownload,
   type RenderedFile,
   type SitePage,
@@ -22,7 +23,7 @@ import {
 
 import { mapLimited } from '../shared/map-limited.ts';
 import type { ObjectTransfer } from '../shared/object-transfer.ts';
-import type { CoreClient, UploadEntry } from './core-client.ts';
+import type { CoreClient, Execution, UploadEntry } from './core-client.ts';
 import { JobError, type JobContext } from './dispatch.ts';
 
 /**
@@ -42,6 +43,7 @@ import { JobError, type JobContext } from './dispatch.ts';
 const PAGE_BATCH = 200;
 const UPLOAD_BATCH = 100;
 const BODY_CONCURRENCY = 4;
+const FILE_CONCURRENCY = 4;
 const UPLOAD_CONCURRENCY = 8;
 const MAX_BODY_BYTES = 32 << 20;
 const MAX_IMAGE_BYTES = 10 << 20;
@@ -93,6 +95,74 @@ function lossStrings(loss: readonly LossEntry[]): string[] {
     ];
   }
   return lines;
+}
+
+interface FetchedFile {
+  readonly image: StrippedImage | null;
+  readonly download: PublishedDownload | null;
+  readonly skipped: LossEntry | null;
+}
+
+/** One file as a page first uses it: Core's read capability, the bytes, and the published form. */
+async function fetchFile(
+  deps: BuildDeps,
+  execution: Execution,
+  reference: FileReference,
+  signal: AbortSignal,
+): Promise<FetchedFile> {
+  const none = { image: null, download: null, skipped: null };
+  const file = await deps.core.file(execution, reference.fileItemId, reference.pageItemId, signal);
+  if (file === null) {
+    // A link target is usually a page that is not published, not a file; the page says so.
+    return reference.kind === 'embed'
+      ? {
+          ...none,
+          skipped: {
+            itemId: reference.pageItemId,
+            kind: 'image-not-embedded',
+            detail: 'An image was not available to this site and was left out.',
+          },
+        }
+      : none;
+  }
+  // A linked picture is not a download, and the block or reference does not show pictures.
+  if (reference.kind === 'link' && downloadType(file.mediaType) === null) return none;
+  const isDownload = downloadType(file.mediaType) !== null;
+  const bytes = await deps.objects.download(
+    file.url,
+    Math.min(
+      file.byteLength,
+      isDownload
+        ? file.mediaType.startsWith('video/')
+          ? MAX_VIDEO_BYTES
+          : MAX_DOWNLOAD_BYTES
+        : MAX_IMAGE_BYTES,
+    ),
+    signal,
+  );
+  if (sha256(bytes) !== file.sha256) {
+    throw new JobError('site_image_corrupt', 'A file did not match its recorded digest.');
+  }
+  try {
+    return isDownload
+      ? {
+          ...none,
+          download: prepareDownload(bytes, file.mediaType, file.fileName ?? 'download'),
+        }
+      : { ...none, image: stripImageMetadata(bytes, file.mediaType) };
+  } catch (error) {
+    if (!(error instanceof UnsupportedImage) && !(error instanceof UnsupportedDownload)) {
+      throw error;
+    }
+    return {
+      ...none,
+      skipped: {
+        itemId: reference.pageItemId,
+        kind: 'image-not-embedded',
+        detail: error.message,
+      },
+    };
+  }
 }
 
 export async function buildSite(deps: BuildDeps, context: JobContext): Promise<unknown> {
@@ -149,68 +219,30 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
   const assets = new Map<string, StrippedImage>();
   const downloads = new Map<string, PublishedDownload>();
   const skipped: LossEntry[] = [];
-  const downloaded = new Map<string, StrippedImage | PublishedDownload | null>();
-  for (const reference of collectFileReferences(pages, bodies)) {
+  const references = collectFileReferences(pages, bodies);
+  // Each file is fetched once, for the first page that uses it; files fetch side by side, and their
+  // results are applied in reference order so the output does not depend on which finished first.
+  const firstUse = new Map<string, FileReference>();
+  for (const reference of references) {
+    if (!firstUse.has(reference.fileItemId)) firstUse.set(reference.fileItemId, reference);
+  }
+  const fetched = await mapLimited([...firstUse.values()], FILE_CONCURRENCY, signal, (reference) =>
+    fetchFile(deps, execution, reference, signal),
+  );
+  const copies = new Map<string, unknown>();
+  for (const [index, reference] of [...firstUse.values()].entries()) {
+    const result = fetched[index] as FetchedFile;
+    if (result.skipped !== null) skipped.push(result.skipped);
+    if (result.image !== null) assets.set(reference.fileItemId, result.image);
+    if (result.download !== null) downloads.set(reference.fileItemId, result.download);
+    copies.set(reference.fileItemId, result.image ?? result.download);
+  }
+  for (const reference of references) {
+    if (firstUse.get(reference.fileItemId) === reference) continue;
     signal.throwIfAborted();
-    const cached = downloaded.get(reference.fileItemId);
-    if (cached !== undefined) {
-      // Core records the (page, file) pair, so ask again for each page that uses a known file.
-      if (cached !== null)
-        await core.file(execution, reference.fileItemId, reference.pageItemId, signal);
-      continue;
-    }
-    const file = await core.file(execution, reference.fileItemId, reference.pageItemId, signal);
-    let copied: StrippedImage | PublishedDownload | null = null;
-    if (file === null) {
-      // A link target is usually a page that is not published, not a file; the page says so.
-      if (reference.kind === 'embed') {
-        skipped.push({
-          itemId: reference.pageItemId,
-          kind: 'image-not-embedded',
-          detail: 'An image was not available to this site and was left out.',
-        });
-      }
-    } else if (reference.kind === 'link' && downloadType(file.mediaType) === null) {
-      // A linked picture is not a download, and the block or reference does not show pictures.
-    } else {
-      const isDownload = downloadType(file.mediaType) !== null;
-      const bytes = await deps.objects.download(
-        file.url,
-        Math.min(
-          file.byteLength,
-          isDownload
-            ? file.mediaType.startsWith('video/')
-              ? MAX_VIDEO_BYTES
-              : MAX_DOWNLOAD_BYTES
-            : MAX_IMAGE_BYTES,
-        ),
-        signal,
-      );
-      if (sha256(bytes) !== file.sha256) {
-        throw new JobError('site_image_corrupt', 'A file did not match its recorded digest.');
-      }
-      try {
-        if (isDownload) {
-          const prepared = prepareDownload(bytes, file.mediaType, file.fileName ?? 'download');
-          downloads.set(reference.fileItemId, prepared);
-          copied = prepared;
-        } else {
-          const image = stripImageMetadata(bytes, file.mediaType);
-          assets.set(reference.fileItemId, image);
-          copied = image;
-        }
-      } catch (error) {
-        if (!(error instanceof UnsupportedImage) && !(error instanceof UnsupportedDownload)) {
-          throw error;
-        }
-        skipped.push({
-          itemId: reference.pageItemId,
-          kind: 'image-not-embedded',
-          detail: error.message,
-        });
-      }
-    }
-    downloaded.set(reference.fileItemId, copied);
+    // Core records the (page, file) pair, so ask again for each page that uses a known file.
+    if (copies.get(reference.fileItemId) !== null)
+      await core.file(execution, reference.fileItemId, reference.pageItemId, signal);
   }
 
   // 4. Render, in memory.
