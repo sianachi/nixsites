@@ -502,6 +502,29 @@ describe('the sites server', () => {
     await get(port, '/', 'h0.sites.test');
     expect(reads.filter((key) => key === first)).toHaveLength(2);
   });
+  it('reads the host manifest once for requests that arrive while it is being read', async () => {
+    const reads: string[] = [];
+    const reader = memory(published);
+    server = createSiteServer({
+      reader: {
+        async open(key, method) {
+          reads.push(key);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return reader.open(key, method);
+        },
+      },
+      allowedSuffix: 'sites.test',
+      manifestTtlMs: 0,
+    });
+    await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, () => get(port, '/', 'docs.sites.test')),
+    );
+    expect(responses.every((response) => response.body === '<h1>home</h1>')).toBe(true);
+    expect(reads.filter((key) => key === 'sites/_hosts/docs.sites.test.json')).toHaveLength(1);
+    expect(reads.filter((key) => key.endsWith('_nix/redirects.json'))).toHaveLength(1);
+  });
 });
 
 describe('readServeConfig', () => {

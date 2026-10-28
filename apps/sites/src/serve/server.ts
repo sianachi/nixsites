@@ -156,16 +156,14 @@ export function createSiteServer(options: SiteServerOptions): Server {
     options.defaultLabelSuffix
       ? host.endsWith(ownTail) && /^[a-z0-9-]+$/.test(host.slice(0, -ownTail.length))
       : host.endsWith(suffix);
-  const manifests = new Map<string, Cached<HostManifest>>();
-  const redirectTables = new Map<string, Cached<Record<string, string>>>();
-  const assetTables = new Map<string, Cached<ReadonlySet<string>>>();
+  const tables: Map<string, Cached<unknown>>[] = [];
 
   // Fixed: the maps are bounded, not only swept. Host headers are client-chosen and misses are
   // cached, so a burst of distinct hosts within one TTL could grow them without limit; past the
   // cap the oldest entries (a Map keeps insertion order) are dropped and simply re-read later.
   function sweep(): void {
     const at = now();
-    for (const table of [manifests, redirectTables, assetTables] as const) {
+    for (const table of tables) {
       if (table.size < 1024) continue;
       for (const [key, entry] of table) if (entry.expires <= at) table.delete(key);
       for (const key of table.keys()) {
@@ -192,30 +190,49 @@ export function createSiteServer(options: SiteServerOptions): Server {
     }
   }
 
-  async function hostManifest(host: string): Promise<HostManifest | null> {
-    const cached = manifests.get(host);
-    if (cached !== undefined && cached.expires > now()) return cached.value;
-    sweep();
+  /**
+   * A TTL cache whose misses are shared: requests arriving while a read is in flight wait for it
+   * instead of each reading storage again, so an expiry under load costs one read, not one per
+   * request. Negative results are cached too, so an unknown hostname cannot turn every request
+   * into a storage read. A failed read is not cached.
+   */
+  function ttlCache<T>(
+    load: (key: string, stale: T | null) => Promise<T | null>,
+  ): (key: string) => Promise<T | null> {
+    const table = new Map<string, Cached<T>>();
+    const flights = new Map<string, Promise<T | null>>();
+    tables.push(table);
+    return (key) => {
+      const hit = table.get(key);
+      if (hit !== undefined && hit.expires > now()) return Promise.resolve(hit.value);
+      let flight = flights.get(key);
+      if (flight === undefined) {
+        sweep();
+        flight = load(key, hit?.value ?? null)
+          .then((value) => {
+            table.set(key, { value, expires: now() + ttl });
+            return value;
+          })
+          .finally(() => flights.delete(key));
+        flights.set(key, flight);
+      }
+      return flight;
+    };
+  }
+
+  const hostManifest = ttlCache<HostManifest>(async (host, previous) => {
     const value = parseHostManifest(await readJson(`sites/_hosts/${host}.json`));
     // Two activations of one site can land out of order in the bucket; a manifest older than the
     // one already served for the same site is ignored rather than rolling the host back.
-    const previous = cached?.value ?? null;
-    const kept =
-      value !== null &&
+    return value !== null &&
       previous !== null &&
       previous.siteId === value.siteId &&
       value.generation < previous.generation
-        ? previous
-        : value;
-    // Negative results are cached too, so an unknown hostname cannot turn every request into a
-    // storage read.
-    manifests.set(host, { value: kept, expires: now() + ttl });
-    return kept;
-  }
+      ? previous
+      : value;
+  });
 
-  async function redirects(buildPrefix: string): Promise<Record<string, string>> {
-    const cached = redirectTables.get(buildPrefix);
-    if (cached !== undefined && cached.expires > now()) return cached.value ?? {};
+  const redirectTable = ttlCache<Record<string, string>>(async (buildPrefix) => {
     const json = await readJson(`${buildPrefix}_nix/redirects.json`);
     const table: Record<string, string> = {};
     if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
@@ -224,18 +241,17 @@ export function createSiteServer(options: SiteServerOptions): Server {
         if (typeof to === 'string' && /^\/(?!\/)[^\\\s]*$/.test(to)) table[from] = to;
       }
     }
-    redirectTables.set(buildPrefix, { value: table, expires: now() + ttl });
     return table;
-  }
+  });
+  const redirects = async (buildPrefix: string): Promise<Record<string, string>> =>
+    (await redirectTable(buildPrefix)) ?? {};
 
   /**
    * The asset and download paths the live build lists in its index. Assets are stored once per site,
    * so a superseded build's files are still in the store; only this list says a file is published.
    * An unreadable index lists nothing, so a missing file is never served by mistake.
    */
-  async function liveAssets(buildPrefix: string): Promise<ReadonlySet<string>> {
-    const cached = assetTables.get(buildPrefix);
-    if (cached !== undefined && cached.expires > now()) return cached.value ?? new Set();
+  const assetTable = ttlCache<ReadonlySet<string>>(async (buildPrefix) => {
     const json = await readJson(`${buildPrefix}_nix/build.json`, 16 << 20);
     const paths = new Set<string>();
     const files = (json as { files?: unknown } | null)?.files;
@@ -244,9 +260,10 @@ export function createSiteServer(options: SiteServerOptions): Server {
         if (file.kind === 'asset' && typeof file.path === 'string') paths.add(file.path);
       }
     }
-    assetTables.set(buildPrefix, { value: paths, expires: now() + ttl });
     return paths;
-  }
+  });
+  const liveAssets = async (buildPrefix: string): Promise<ReadonlySet<string>> =>
+    (await assetTable(buildPrefix)) ?? new Set();
 
   function send(
     response: ServerResponse,
