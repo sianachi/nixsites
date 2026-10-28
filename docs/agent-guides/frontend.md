@@ -3,9 +3,16 @@
 Read for `apps/web/` and `packages/` changes.
 
 Keep dependency direction `apps/* -> packages/*`; `packages/web-*` never import
-`apps/`. `lib/`, `a11y/`, `layout/`, `keyboard/`, `theme/`, `audio/` and
-`components/` live in `packages/web-foundation` (see its README for the import
-form): `lib/` and `a11y/` are leaves and `layout/` may additionally reach `lib/`.
+`apps/`. The web app's lower layers are packages, each importing only those before it:
+`web-foundation` (`lib/`, `a11y/`, `layout/`, `keyboard/`, `theme/`, `audio/`,
+`components/`) <- `web-platform` (`auth/`, `pwa/`, `api/`, `session/`, `panes/`,
+`routing/`, `export/`) <- `web-editor` (`editor/`, `plugins/`) and `web-workspaces`
+(`workspaces/`, `import/`, `launch/`) <- `web-sites` (`sites/`). They export TypeScript
+source (no build); import deep paths that mirror the folders, e.g.
+`@nix/web-foundation/lib/browser-storage`. A new `.tsx` file needs its own exact
+`exports` entry in the package's `package.json` (the `./*` pattern only reaches `.ts`).
+Tests stay in `apps/web/src/tests`. `check-frontend-layering.sh` (R6, R7) enforces the
+order. In `web-foundation`, `lib/` and `a11y/` are leaves and `layout/` may additionally reach `lib/`.
 Inside `apps/web/src`, features may import those, siblings, and `shell/` types
 only; only `app.tsx` value-imports `shell/`. Put a file where its knowledge
 belongs: pure arguments in `lib/`, arrangement in `layout/`, data regions in
