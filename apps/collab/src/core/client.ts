@@ -1,4 +1,5 @@
 import type { SchemaSnapshot, ViewsSnapshot } from '@nix/export';
+import { isRecord } from '../is-record.ts';
 
 /**
  * Reads from Core, with the caller's own token.
@@ -217,10 +218,6 @@ function toProperties(raw: unknown): SchemaSnapshot['properties'] {
       ...(property.source === undefined ? {} : { source: nullableText(property.source) }),
     };
   });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function text(value: unknown): string {

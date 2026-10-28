@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 
 import { TemplateBodyError, writeArchiveBodies } from '../templates/bodies.ts';
 import type { CoreTemplateImportClient } from './core.ts';
+import { isRecord } from '../is-record.ts';
 
 const BODY_WRITE_LIMIT = 10_000;
 const WRITE_BATCH_SIZE = 32;
@@ -99,13 +100,13 @@ export function createTemplateImportBodyService(input: {
 }
 
 function parseWrites(value: unknown): readonly RequestedWrite[] {
-  if (!record(value) || !Array.isArray(value.writes) || value.writes.length > BODY_WRITE_LIMIT) {
+  if (!isRecord(value) || !Array.isArray(value.writes) || value.writes.length > BODY_WRITE_LIMIT) {
     throw invalid('Expected a bounded writes array.');
   }
   const seen = new Set<string>();
   return value.writes.map((candidate): RequestedWrite => {
     if (
-      !record(candidate) ||
+      !isRecord(candidate) ||
       !sourceId(candidate.sourceId) ||
       !archiveBody(candidate.body) ||
       seen.has(candidate.sourceId)
@@ -119,14 +120,14 @@ function parseWrites(value: unknown): readonly RequestedWrite[] {
 
 function archiveBody(value: unknown): value is ItemBody {
   if (
-    !record(value) ||
+    !isRecord(value) ||
     !Number.isSafeInteger(value.schemaVersion) ||
     Number(value.schemaVersion) < 1
   ) {
     return false;
   }
   const representations = ['prosemirror', 'sheet', 'canvas'].filter((key) => key in value);
-  return representations.length === 1 && record(value[representations[0] ?? '']);
+  return representations.length === 1 && isRecord(value[representations[0] ?? '']);
 }
 
 function invalid(message = 'The body set does not match the authorized template import plan.') {
@@ -140,8 +141,4 @@ function sourceId(value: unknown): value is string {
     value.length <= 160 &&
     /^[A-Za-z0-9._:/-]+$/.test(value)
   );
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

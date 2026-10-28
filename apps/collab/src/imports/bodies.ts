@@ -5,6 +5,7 @@ import type { Pool } from 'pg';
 
 import { TemplateBodyError, writeArchiveBodies } from '../templates/bodies.ts';
 import type { CoreImportClient, ImportBodyAuthorizationItem } from './core.ts';
+import { isRecord } from '../is-record.ts';
 
 export interface ImportBodyService {
   write(input: {
@@ -105,11 +106,11 @@ export function createImportBodyService(input: {
 }
 
 function parseWrites(value: unknown): readonly PlannedWrite[] {
-  if (!record(value) || !Array.isArray(value.writes) || value.writes.length > 10_000) {
+  if (!isRecord(value) || !Array.isArray(value.writes) || value.writes.length > 10_000) {
     throw invalid('Expected a bounded writes array.');
   }
   return value.writes.map((candidate): PlannedWrite => {
-    if (!record(candidate) || !sourceId(candidate.sourceId) || !record(candidate.body)) {
+    if (!isRecord(candidate) || !sourceId(candidate.sourceId) || !isRecord(candidate.body)) {
       throw invalid('An imported body is malformed.');
     }
     const encoding = candidate.body.encoding;
@@ -124,8 +125,8 @@ function parseWrites(value: unknown): readonly PlannedWrite[] {
     if (
       ((encoding === 'markdown' || encoding === 'plain_text') &&
         typeof candidate.body.text !== 'string') ||
-      (encoding === 'prosemirror' && !record(candidate.body.document)) ||
-      (encoding === 'archive' && !record(candidate.body.archive))
+      (encoding === 'prosemirror' && !isRecord(candidate.body.document)) ||
+      (encoding === 'archive' && !isRecord(candidate.body.archive))
     ) {
       throw invalid('An imported body does not contain its declared representation.');
     }
@@ -134,8 +135,8 @@ function parseWrites(value: unknown): readonly PlannedWrite[] {
       body: {
         encoding,
         ...(typeof candidate.body.text === 'string' ? { text: candidate.body.text } : {}),
-        ...(record(candidate.body.document) ? { document: candidate.body.document } : {}),
-        ...(record(candidate.body.archive) ? { archive: candidate.body.archive } : {}),
+        ...(isRecord(candidate.body.document) ? { document: candidate.body.document } : {}),
+        ...(isRecord(candidate.body.archive) ? { archive: candidate.body.archive } : {}),
       },
     };
   });
@@ -184,10 +185,6 @@ function sourceId(value: unknown): value is string {
     value.length <= 160 &&
     /^[A-Za-z0-9._:/-]+$/.test(value)
   );
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function importBodyProblem(error: unknown): ImportBodyError | null {
