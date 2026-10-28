@@ -1,5 +1,17 @@
 import type { PetProfile } from '@nix/api-client';
 
+import { writeStored } from '../editor/stored-setting';
+import { browserStorage } from '../lib/browser-storage';
+
+/** One stored value, or null when absent or storage is blocked. */
+function readLocal(key: string): string | null {
+  try {
+    return browserStorage()?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type PetPlacement = 'left' | 'right';
 
 /** Where the chat opens: the floating panel, its own page, or both. A device preference because
@@ -25,7 +37,7 @@ export interface PetPosition {
 
 export function readPetPosition(): PetPosition | null {
   try {
-    const raw = localStorage.getItem('nix.pet.position');
+    const raw = readLocal('nix.pet.position');
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (
@@ -46,11 +58,7 @@ export function readPetPosition(): PetPosition | null {
 }
 
 export function writePetPosition(position: PetPosition): void {
-  try {
-    localStorage.setItem('nix.pet.position', JSON.stringify(position));
-  } catch {
-    /* The current session still retains the position when storage is unavailable. */
-  }
+  writeStored('nix.pet.position', JSON.stringify(position));
   window.dispatchEvent(new Event('nix-pet-device-changed'));
 }
 
@@ -71,7 +79,7 @@ export function readConversationModel(
 ): string {
   try {
     const model =
-      localStorage.getItem(conversationModelKey(workspaceId, petId, provider)) ??
+      readLocal(conversationModelKey(workspaceId, petId, provider)) ??
       (provider === 'chatgpt'
         ? sessionStorage.getItem(`nix.pet.model.${workspaceId}.${petId}`)
         : null) ??
@@ -88,29 +96,17 @@ export function writeConversationModel(
   provider: PetProfile['provider'],
   model: string,
 ): void {
-  try {
-    localStorage.setItem(conversationModelKey(workspaceId, petId, provider), model);
-  } catch {
-    /* The open conversation retains the selection when storage is unavailable. */
-  }
+  writeStored(conversationModelKey(workspaceId, petId, provider), model);
 }
 
 type DevicePreferenceKey = 'placement' | 'surface' | 'inlineContext';
 
 export function readDevicePreference(key: DevicePreferenceKey): string {
-  try {
-    return localStorage.getItem(`nix.pet.${key}`) ?? '';
-  } catch {
-    return '';
-  }
+  return readLocal(`nix.pet.${key}`) ?? '';
 }
 
 export function writeDevicePreference(key: DevicePreferenceKey, value: string): void {
-  try {
-    localStorage.setItem(`nix.pet.${key}`, value);
-  } catch {
-    /* Storage may be disabled. */
-  }
+  writeStored(`nix.pet.${key}`, value);
   window.dispatchEvent(new Event('nix-pet-device-changed'));
 }
 
@@ -129,20 +125,12 @@ export function readPetSurface(): PetSurface {
  * per-message workspace access toggle; reads are Core-authorised, scoped to the workspace, at most 20 per
  * turn and 16000 characters each. Device-wide, like `placement` above. */
 export function readReadWithoutAsking(): boolean {
-  try {
-    const raw = localStorage.getItem('nix.pet.readWithoutAsking');
-    return raw === null ? true : raw === 'true';
-  } catch {
-    return true;
-  }
+  const raw = readLocal('nix.pet.readWithoutAsking');
+  return raw === null ? true : raw === 'true';
 }
 
 export function writeReadWithoutAsking(value: boolean): void {
-  try {
-    localStorage.setItem('nix.pet.readWithoutAsking', String(value));
-  } catch {
-    /* The open conversation still applies the choice for this session. */
-  }
+  writeStored('nix.pet.readWithoutAsking', String(value));
   window.dispatchEvent(new Event('nix-pet-device-changed'));
 }
 
@@ -154,17 +142,9 @@ function workspaceAccessKey(workspaceId: string, petId: string): string {
  * this workspace. Off on first use: a device that has never granted a pet workspace access
  * should not silently start sending it workspace content. */
 export function readWorkspaceAccess(workspaceId: string, petId: string): boolean {
-  try {
-    return localStorage.getItem(workspaceAccessKey(workspaceId, petId)) === 'true';
-  } catch {
-    return false;
-  }
+  return readLocal(workspaceAccessKey(workspaceId, petId)) === 'true';
 }
 
 export function writeWorkspaceAccess(workspaceId: string, petId: string, value: boolean): void {
-  try {
-    localStorage.setItem(workspaceAccessKey(workspaceId, petId), String(value));
-  } catch {
-    /* The open conversation still remembers the toggle for this session. */
-  }
+  writeStored(workspaceAccessKey(workspaceId, petId), String(value));
 }

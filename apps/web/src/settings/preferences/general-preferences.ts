@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { writeStored } from '../../editor/stored-setting';
 import { browserStorage } from '../../lib/browser-storage';
 
 /**
@@ -26,21 +27,7 @@ export interface GeneralPreferencesState {
 export const useGeneralPreferences = create<GeneralPreferencesState>((set) => ({
   footerVisible: readFooterVisible(browserStorage()),
   setFooterVisible: (visible: boolean) => {
-    try {
-      const storage = browserStorage();
-      if (visible) {
-        storage?.removeItem(FOOTER_VISIBLE_KEY);
-      } else {
-        storage?.setItem(FOOTER_VISIBLE_KEY, 'off');
-      }
-    } catch {
-      // Storage unavailable or disabled
-    }
+    writeStored(FOOTER_VISIBLE_KEY, visible ? null : 'off');
     set({ footerVisible: visible });
   },
 }));
-
-/** Helper selector outside React or for convenience */
-export function footerVisible(): boolean {
-  return useGeneralPreferences.getState().footerVisible;
-}

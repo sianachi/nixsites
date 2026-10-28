@@ -1,8 +1,4 @@
 import {
-  templateImportPreviewSchema,
-  templateImportResultSchema,
-  templateImportSchema,
-  templateImportUploadSchema,
   files as coreFiles,
   operations as coreOperations,
   templateImports as coreTemplateImports,
@@ -11,39 +7,25 @@ import {
   views as coreViews,
   type BeginTemplateImportInput,
   type NixClient,
-  type TemplateCatalog,
   type TemplateDetail,
   type TemplateDraft,
-  type TemplateApplicationRequest,
-  type TemplateApplicationResult,
-  type TemplateCaptureRequest,
   type TemplateImport,
   type TemplateImportPreview,
-  type TemplateImportResult,
-  type TemplateImportUpload,
   type TemplateInitialization,
   type TemplateInitializationRule,
   type TemplateInput,
   type TemplateReferenceRule,
   type TemplateItem,
   type TemplatePreflight,
-  type TemplatePreflightInput,
   type TemplateSummary,
 } from '@nix/api-client';
 
 import type { EffectiveSchema } from '../views/core/container-model';
 
-export {
-  templateCapabilitiesSchema as TemplateCapabilitiesSchema,
-  templateCatalogSchema as TemplateLibraryResponseSchema,
-  templateDetailSchema as TemplateDetailSchema,
-  templateItemSchema as TemplateItemSchema,
-  templateOriginSchema as TemplateOriginSchema,
-  templatePreflightSchema as TemplatePreflightSchema,
-  templateSummarySchema as TemplateSummarySchema,
-} from '@nix/api-client';
+export { templateImportPreviewSchema as TemplateImportPreviewSchema } from '@nix/api-client';
 export type {
   TemplateDetail,
+  TemplateImportPreview,
   TemplateInitialization,
   TemplateInitializationRule,
   TemplateInput,
@@ -52,18 +34,8 @@ export type {
   TemplateReferenceRule,
   TemplateSummary,
 };
-export type TemplateLibraryResponse = TemplateCatalog;
 
 export type TemplateEditDraft = TemplateDraft;
-export type TemplateApplication = TemplateApplicationResult;
-
-export {
-  templateImportPreviewSchema as TemplateImportPreviewSchema,
-  templateImportResultSchema as TemplateImportResultSchema,
-  templateImportSchema as TemplateImportSchema,
-  templateImportUploadSchema as TemplateImportUploadSchema,
-};
-export type { TemplateImport, TemplateImportPreview, TemplateImportResult, TemplateImportUpload };
 
 export const templateImportById = coreTemplateImports.byId;
 
@@ -259,7 +231,6 @@ function isCompletedTemplateImport(templateImport: TemplateImport | null): boole
   return templateImport?.status === 'completed' && templateImport.result !== null;
 }
 
-export const listTemplates = coreTemplates.listTemplates;
 export const templateById = coreTemplates.templateById;
 export const templateCaptureSourceSchema = coreStructure.effectiveSchema;
 export const templateCaptureSourceViews = coreViews.containerViews;
@@ -300,12 +271,9 @@ export const deleteTemplate = coreTemplates.deleteTemplate;
 
 export const exportTemplate = coreTemplates.exportTemplate;
 
-export type { TemplatePreflightInput };
 export const preflightTemplate = coreTemplates.preflightTemplate;
 
-export type CaptureTemplateInput = TemplateCaptureRequest;
 export const captureTemplate = coreTemplates.captureTemplate;
 
-export type ApplyTemplateInput = TemplateApplicationRequest;
 export const applyStoredTemplate = coreTemplates.applyTemplate;
 export const resumeTemplateFileTransfer = coreTemplates.resumeTemplateFileTransfer;
