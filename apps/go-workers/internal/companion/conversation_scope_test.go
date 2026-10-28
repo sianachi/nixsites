@@ -42,7 +42,7 @@ func TestDurableCatalogAndScopeRefuseMutationsAndOutsideReads(t *testing.T) {
 	r := durableRequest()
 	c := &conversation{ConversationItemID: r.ConversationItemID, SourceWorkspaceIDs: r.SourceWorkspaceIDs}
 	tools := workspaceToolsForRequest(r)
-	if len(tools) != 6 {
+	if len(tools) != 7 {
 		t.Fatalf("unexpected tools: %d", len(tools))
 	}
 	for _, tool := range tools {

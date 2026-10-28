@@ -197,9 +197,10 @@ spec:
             periodSeconds: 5
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            # 150-250 MB resident is the design's Workstation GC budget, not a guess.
+            # 150-250 MB resident is the design's Workstation GC budget, not a guess, plus about
+            # 100-250 MB for the in-process embedding model (pet retrieval) loaded and running.
             # If Core routinely approaches this limit, that is a finding, not a reason to raise it.
-            limits: { memory: 512Mi }
+            limits: { memory: 768Mi }
           volumeMounts:
             # readOnlyRootFilesystem needs somewhere writable: the runtime uses /tmp.
             - { name: tmp, mountPath: /tmp }

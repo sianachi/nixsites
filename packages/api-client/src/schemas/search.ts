@@ -44,3 +44,24 @@ const _resultsContract = searchResultsSchema satisfies z.ZodType<
   components['schemas']['SearchResponse']
 >;
 void _resultsContract;
+
+/** Passages of a note and the notes under it, as `GET /api/v1/items/{id}/passages` returns them. */
+export const notePassagesSchema = z.object({
+  passages: z.array(
+    z.object({
+      itemId: z.string(),
+      title: z.string(),
+      /** The heading trail above the passage, outermost first; empty before the first heading. */
+      heading: z.string(),
+      ord: z.number(),
+      text: z.string(),
+    }),
+  ),
+});
+
+export type NotePassages = z.infer<typeof notePassagesSchema>;
+
+const _passagesContract = notePassagesSchema satisfies z.ZodType<
+  components['schemas']['PassagesResponse']
+>;
+void _passagesContract;

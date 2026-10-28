@@ -98,6 +98,9 @@ public static class NixTables
     /// <summary>The searchable text of each item's document. Derived, rebuildable.</summary>
     public const string ItemSearch = "item_search";
 
+    /// <summary>Retrieval chunks of each note body and their embeddings. Derived, rebuildable.</summary>
+    public const string ItemChunk = "item_chunk";
+
     /// <summary>A principal's personal set of reusable Excalidraw shapes.</summary>
     public const string CanvasLibrary = "canvas_library";
 
@@ -266,6 +269,7 @@ public static class NixTables
         ContentVersion,
         ItemLink,
         ItemSearch,
+        ItemChunk,
         CanvasLibrary,
         PetPreferences,
         PrincipalPreferences,
@@ -454,6 +458,8 @@ public static class NixTables
             // was derived and never derives it.
             [ItemLink] = ReadOnly,
             [ItemSearch] = ReadOnly,
+            // Embeddings are written only through nix_set_chunk_embedding, a definer function.
+            [ItemChunk] = ReadOnly,
 
             // A principal's own library, read and written by Core alone - nothing else ever
             // touches it.

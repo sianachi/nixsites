@@ -104,4 +104,34 @@ public interface IItemSearch
         IReadOnlyList<ItemId> excludedItems,
         int limit,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The passages of a note and every note under it that best answer <paramref name="query"/>.
+    /// </summary>
+    /// <param name="rootId">The note whose subtree is searched, itself included.</param>
+    /// <param name="query">What to find, in the person's or the pet's words.</param>
+    /// <param name="readableWorkspaces">Where the caller is allowed to look.</param>
+    /// <param name="limit">The most passages to return.</param>
+    /// <param name="cancellationToken">Cancels the search.</param>
+    /// <returns>The passages, most relevant first.</returns>
+    /// <remarks>
+    /// Ranked by full text and, when the local model is loaded, by meaning, fused. Passages are
+    /// body text, so the body rule a lock carries applies (ADR-0056): nothing at or under any lock
+    /// is returned, opened or not, and neither is anything trashed, under a trashed ancestor or in a
+    /// template.
+    /// </remarks>
+    public ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
+        ItemId rootId,
+        string query,
+        IReadOnlyList<WorkspaceId> readableWorkspaces,
+        int limit,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>One retrieved passage of a note body.</summary>
+/// <param name="ItemId">The note the passage is from.</param>
+/// <param name="Title">That note's title.</param>
+/// <param name="Heading">The heading trail above the passage, outermost first; empty before the first heading.</param>
+/// <param name="Ord">The passage's position in its note, from zero.</param>
+/// <param name="Text">The passage.</param>
+public sealed record NotePassage(ItemId ItemId, string Title, string Heading, int Ord, string Text);

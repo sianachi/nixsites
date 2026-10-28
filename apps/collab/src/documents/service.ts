@@ -9,6 +9,7 @@ import {
   replaceItemLinks,
   snapshotAtOrBefore,
   updatesAfter,
+  writeItemChunks,
   writeItemSearchText,
   writeSnapshot,
   type ContentDocRow,
@@ -16,6 +17,7 @@ import {
 import { stateAt } from '../db/history.ts';
 import type { ScopedQuery } from '../db/tenant-scope.ts';
 import { FRAGMENT_NAME, noteStrategy, type BodyKindStrategy } from './body-kinds.ts';
+import { chunkNote } from './chunks.ts';
 import { LIMITS, type Rejection, rejection } from './limits.ts';
 import { boundSearchText } from './links.ts';
 
@@ -519,6 +521,18 @@ export async function writeSnapshotNow(
     seq: input.seq,
     text: boundSearchText(materialized.plaintext),
   });
+
+  if (strategy === noteStrategy) {
+    const chunks = chunkNote(materialized.json);
+    if (chunks !== null) {
+      await writeItemChunks(sql, {
+        tenantId: input.tenantId,
+        itemId: input.itemId,
+        seq: input.seq,
+        chunks,
+      });
+    }
+  }
 
   // A body kind that cannot hold a reference does not implement extraction, and a document that
   // held links and no longer does still needs its edges cleared - so the empty map is written,

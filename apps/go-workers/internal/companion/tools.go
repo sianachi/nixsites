@@ -113,6 +113,7 @@ var toolArgSpecs = map[string]map[string]argMapping{
 	"search":            {"query": {"query", argString}},
 	"read_item":         {"itemId": {"itemId", argString}},
 	"read_note":         {"itemId": {"itemId", argString}},
+	"search_note":       {"itemId": {"itemId", argString}, "query": {"query", argString}},
 	"read_structure":    {"itemId": {"itemId", argString}},
 	"read_view":         {"itemId": {"itemId", argString}, "query": {"query", argObjectJSON}},
 	"create_note":       {"title": {"title", argString}, "markdown": {"markdown", argString}, "parentId": {"parentId", argString}},
@@ -506,7 +507,7 @@ func toolIdentity(raw string) (string, bool) {
 		return "", false
 	}
 	operation, _ := args["operation"].(string)
-	readOnly := operation == "list_items" || operation == "search" || operation == "read_item" || operation == "read_note" || operation == "read_structure" || operation == "read_view" || operation == "list_templates" || operation == "read_template" || operation == "read_calendar"
+	readOnly := operation == "list_items" || operation == "search" || operation == "read_item" || operation == "read_note" || operation == "search_note" || operation == "read_structure" || operation == "read_view" || operation == "list_templates" || operation == "read_template" || operation == "read_calendar"
 	if properties, ok := args["propertiesJson"].(string); ok && properties != "" {
 		var object map[string]any
 		decoder := json.NewDecoder(strings.NewReader(properties))
@@ -608,6 +609,13 @@ func validateToolArguments(raw json.RawMessage) string {
 	case "create_note":
 		if strings.TrimSpace(p.Title) == "" {
 			return "nix_create_note requires a title."
+		}
+	case "search_note":
+		if !uuid.MatchString(p.ItemID) {
+			return "nix_search_note requires the exact itemId UUID. Discover it with nix_list_items or nix_search if it is not already known."
+		}
+		if strings.TrimSpace(p.Query) == "" {
+			return "nix_search_note requires a nonempty query."
 		}
 	case "read_item", "read_note", "read_structure", "append_note", "rename_item", "move_item", "set_properties", "trash_item", "restore_item", "read_template":
 		if !uuid.MatchString(p.ItemID) {

@@ -136,6 +136,19 @@ internal static class SearchEndpoints
             .Produces<BacklinksResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        items.MapGet("/{itemId:guid}/passages", GetPassagesEndpoint.Handle)
+            .WithName("GetPassages")
+            .WithSummary("The passages of a note and the notes under it that best answer a query")
+            .WithDescription(
+                "Returns up to 'limit' (default 8, at most 20) passages from this item's document "
+                + "and every readable document beneath it, ranked by full-text match fused with "
+                + "semantic similarity when the server's local embedding model is loaded. Locked, "
+                + "trashed and template content is never returned, opened or not. Passages are "
+                + "derived when a document is snapshotted, so the newest edits may not be "
+                + "searchable yet. An item the caller may not read is reported as not found.")
+            .Produces<PassagesResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         items.MapGet("/{itemId:guid}/related", GetRelatedItemsEndpoint.Handle)
             .WithName("GetRelatedItems")
             .WithSummary("The items most often linked alongside an item")

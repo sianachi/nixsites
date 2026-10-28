@@ -11,6 +11,7 @@ import { connectDocumentLocks } from './db/advisory-lock.ts';
 import type { TenantScope } from './db/tenant-scope.ts';
 import { RateWindow } from './documents/limits.ts';
 import { createDocumentRegistry, type DocumentHub } from './documents/registry.ts';
+import { startChunkBackfill } from './documents/chunk-backfill.ts';
 import { startRetentionSweep } from './documents/retention.ts';
 import { createConversationBodyAuthorizer } from './http/routes/conversation-bodies.ts';
 import { createServer } from './http/server.ts';
@@ -181,6 +182,15 @@ const retention = startRetentionSweep({
   },
 });
 
+const chunkBackfill = startChunkBackfill({
+  pool,
+  activeScopes: () => [...activeScopes.values()],
+  intervalMs: 60_000,
+  log: (message) => {
+    app.log.info(message);
+  },
+});
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
     // Close order is the drain order: stop accepting and tell every socket, drain the
@@ -190,6 +200,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     // it holds nothing that needs draining, only a clock that must not fire into a pool
     // that is about to close.
     retention.stop();
+    chunkBackfill.stop();
     app
       .close()
       .then(() => locks.close())

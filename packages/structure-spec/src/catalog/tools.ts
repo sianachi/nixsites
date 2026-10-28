@@ -271,9 +271,20 @@ const TOOL_BUILDS: Readonly<Record<WorkspaceOperation, () => ToolBuild>> = {
   }),
   read_note: () => ({
     description:
-      "Read a note's Markdown body, or a file item's content: text, CSV, JSON and PDF as text, images as a picture. Read-only.",
+      "Read a note's text, or a file item's content: text, CSV, JSON and PDF as text, images as a picture. Read-only.",
     properties: { itemId: stringProperty(ITEM_ID_DESCRIPTION) },
     required: ['itemId'],
+  }),
+  search_note: () => ({
+    description:
+      "Find the passages that best answer a question in a note and every note under it, with each passage's note, heading and position. Use for a note too long to read whole (nix_read_note returned partial) or a question about a note's children. Read-only.",
+    properties: {
+      itemId: stringProperty(
+        'The note (or folder or collection) whose text, and whose descendants’ text, to search.',
+      ),
+      query: stringProperty('The question or topic, in plain words.'),
+    },
+    required: ['itemId', 'query'],
   }),
   read_structure: () => ({
     description:

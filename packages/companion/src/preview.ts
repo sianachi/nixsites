@@ -259,6 +259,8 @@ function legacyHeadline(args: PreviewToolArgs): string {
       return 'I will read the linked item’s details and properties.';
     case 'read_note':
       return 'I will read the linked note’s content for context.';
+    case 'search_note':
+      return `I will search the linked note and the notes under it for “${args.query}”.`;
     case 'read_view':
       return 'I will read a bounded sample and counts from the linked view, with its display limits.';
     case 'read_structure':

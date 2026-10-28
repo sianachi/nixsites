@@ -183,6 +183,29 @@ public static class ConversationTools
             envelope["unsupported"] = body.Value.Unsupported;
             return new(true, envelope.ToJsonString());
         }
+        if (operation == "search_note")
+        {
+            var query = Arg("query").Trim();
+            if (query.Length is < 1 or > 1000)
+            {
+                return new(false, "Search needs 1 to 1000 characters.");
+            }
+
+            var passages = await services.GetRequiredService<IItemSearch>().FindPassagesAsync(item.Id, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false);
+            var rows = new JsonArray();
+            foreach (var passage in passages)
+            {
+                rows.Add(new JsonObject
+                {
+                    ["itemId"] = passage.ItemId.Value,
+                    ["title"] = passage.Title,
+                    ["heading"] = passage.Heading,
+                    ["ord"] = passage.Ord,
+                    ["text"] = passage.Text
+                });
+            }
+            return new(true, new JsonObject { ["id"] = item.Id.Value, ["title"] = ItemProperties.ReadTitle(item.Properties), ["passages"] = rows }.ToJsonString());
+        }
         return new(false, "Only read operations are available in this conversation.");
     }
 }

@@ -46,7 +46,7 @@
   },
   {
     "name": "nix_read_note",
-    "description": "Read a note's Markdown body, or a file item's content: text, CSV, JSON and PDF as text, images as a picture. Read-only.",
+    "description": "Read a note's text, or a file item's content: text, CSV, JSON and PDF as text, images as a picture. Read-only.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -56,6 +56,25 @@
         }
       },
       "required": ["itemId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nix_search_note",
+    "description": "Find the passages that best answer a question in a note and every note under it, with each passage's note, heading and position. Use for a note too long to read whole (nix_read_note returned partial) or a question about a note's children. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "description": "The note (or folder or collection) whose text, and whose descendants’ text, to search."
+        },
+        "query": {
+          "type": "string",
+          "description": "The question or topic, in plain words."
+        }
+      },
+      "required": ["itemId", "query"],
       "additionalProperties": false
     }
   },

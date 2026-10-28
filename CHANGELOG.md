@@ -11,6 +11,13 @@ follows semantic versioning (`0.x` pre-1.0).
   and week, one-press New note, Structured note, Today's note, Calendar and My Day, and the notes
   you opened last on this browser. Choose Page (one column) or Desk (actions beside your recent
   notes) from the screen itself. It replaces Notes as the first entry in the side rail.
+- The companion can search a note and every note under it: it finds the passages that answer a
+  question, by wording and by meaning, so a note far too long to read in one go (a 200-page
+  document) and its children can be asked about. Passages are matched by a small embedding model
+  that runs inside the server, with no API key or cost; locked, trashed and template content is
+  never searched. Notes are indexed as they are next saved, and existing notes in the background.
+  The API image is about 35 MB larger, the API uses 100-250 MB more memory, and its memory limit
+  in the Compose and Kubernetes files rises from 512 MB to 768 MB.
 
 ### Changed
 

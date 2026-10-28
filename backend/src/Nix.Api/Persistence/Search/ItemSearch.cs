@@ -2,6 +2,7 @@ using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Links;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Embeddings;
 using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
@@ -31,7 +32,8 @@ public sealed class ItemSearch(
     NixSqlExecutor sql,
     INixSessionContextAccessor session,
     CredentialSessionContext credential,
-    TimeProvider clock)
+    TimeProvider clock,
+    LocalEmbedder embedder)
     : IItemSearch
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -102,6 +104,49 @@ public sealed class ItemSearch(
             cancellationToken);
 
         return await CollectAsync(rows, itemIds.Count, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
+        ItemId rootId,
+        string query,
+        IReadOnlyList<WorkspaceId> readableWorkspaces,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(readableWorkspaces);
+
+        if (readableWorkspaces.Count == 0 || string.IsNullOrWhiteSpace(query))
+        {
+            return [];
+        }
+
+        var vector = embedder.EmbedQuery(query);
+        var rows = sql.QueryAsync<NotePassage, PassageMapper>(
+            SearchSql.SubtreePassages,
+            default,
+            [
+                Uuid("tenant_id", Tenant.Value),
+                Uuid("root_id", rootId.Value),
+                UuidArray("workspace_ids", readableWorkspaces),
+                new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
+                new NpgsqlParameter("query_embedding", NpgsqlDbType.Text)
+                {
+                    Value = vector is null ? DBNull.Value : LocalEmbedder.ToLiteral(vector),
+                },
+                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
+            ],
+            cancellationToken);
+
+        var passages = new List<NotePassage>(limit);
+        await foreach (var passage in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            passages.Add(passage);
+        }
+
+        return passages;
     }
 
     /// <summary>
@@ -250,6 +295,23 @@ public sealed class ItemSearch(
     {
         /// <inheritdoc />
         public ItemDigest Map(NpgsqlDataReader reader) => ItemDigestColumns.Read(reader);
+    }
+
+    /// <summary>Reads a passage row of <see cref="SearchSql.SubtreePassages"/>.</summary>
+    private readonly struct PassageMapper : INixRowMapper<NotePassage>
+    {
+        /// <inheritdoc />
+        public NotePassage Map(NpgsqlDataReader reader)
+        {
+            ArgumentNullException.ThrowIfNull(reader);
+
+            return new NotePassage(
+                ItemId.From(reader.GetGuid(0)),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetInt32(3),
+                reader.GetString(4));
+        }
     }
 
     /// <summary>Reads a title match and the phrase it matched.</summary>

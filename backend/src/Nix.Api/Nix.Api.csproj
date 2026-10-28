@@ -67,6 +67,15 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- The local embedding model behind pet retrieval (Persistence/Embeddings). -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" />
+  </ItemGroup>
+
+  <!-- Fetched by scripts/fetch-embedding-model.sh; absent in a checkout that never ran it, and
+       then retrieval is full-text only. -->
+  <ItemGroup>
+    <None Include="../../models/**" LinkBase="models" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Absorbed from Nix.Core. Value types and a tz database, no I/O - the one

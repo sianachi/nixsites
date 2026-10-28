@@ -6,7 +6,12 @@
  */
 
 import { defineQuery, type QueryEndpoint } from '../endpoints.js';
-import { searchResultsSchema, type SearchResults } from '../schemas/index.js';
+import {
+  notePassagesSchema,
+  searchResultsSchema,
+  type NotePassages,
+  type SearchResults,
+} from '../schemas/index.js';
 
 /** Full-text search across the items the caller can see. */
 export const searchItems = (query: string, limit?: number): QueryEndpoint<SearchResults> =>
@@ -17,5 +22,19 @@ export const searchItems = (query: string, limit?: number): QueryEndpoint<Search
     query: { q: query, limit },
     // Search reflects the last flushed index snapshot, so it is not a cache identity worth reusing;
     // every call re-runs.
+    cacheKey: undefined,
+  });
+
+/** The passages of a note and every readable note under it that best answer `query`. */
+export const notePassages = (
+  itemId: string,
+  query: string,
+  limit?: number,
+): QueryEndpoint<NotePassages> =>
+  defineQuery<NotePassages>({
+    operation: 'search.passages',
+    path: `/api/v1/items/${itemId}/passages`,
+    schema: notePassagesSchema,
+    query: { q: query, limit },
     cacheKey: undefined,
   });

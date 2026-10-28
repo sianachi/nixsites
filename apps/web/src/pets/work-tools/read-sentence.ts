@@ -27,6 +27,12 @@ function readPhrase(args: WorkspaceToolArgs): ReadPhrase {
       return { base: 'Read an item', progressive: 'Reading an item', past: 'Read an item' };
     case 'read_note':
       return { base: 'Read a note', progressive: 'Reading a note', past: 'Read a note' };
+    case 'search_note':
+      return {
+        base: `Search a note for "${args.query}"`,
+        progressive: `Searching a note for "${args.query}"`,
+        past: `Searched a note for "${args.query}"`,
+      };
     case 'read_view':
       return { base: 'Read a view', progressive: 'Reading a view', past: 'Read a view' };
     case 'read_structure':

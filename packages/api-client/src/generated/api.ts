@@ -1431,6 +1431,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/items/{itemId}/passages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The passages of a note and the notes under it that best answer a query
+     * @description Returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned, opened or not. Passages are derived when a document is snapshotted, so the newest edits may not be searchable yet. An item the caller may not read is reported as not found.
+     */
+    get: operations['GetPassages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/items/{itemId}/related': {
     parameters: {
       query?: never;
@@ -4885,6 +4905,18 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       completedAt: null | string;
+    };
+    PassageResponse: {
+      /** Format: uuid */
+      itemId: string;
+      title: string;
+      heading: string;
+      /** Format: int32 */
+      ord: number | string;
+      text: string;
+    };
+    PassagesResponse: {
+      passages: components['schemas']['PassageResponse'][];
     };
     PatchUiSettingsRequest: {
       settings: null | Record<string, never>;
@@ -10556,6 +10588,40 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['BacklinksResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetPassages: {
+    parameters: {
+      query?: {
+        q?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PassagesResponse'];
         };
       };
       /** @description Not Found */

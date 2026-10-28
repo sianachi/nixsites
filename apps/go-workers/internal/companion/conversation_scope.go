@@ -44,7 +44,7 @@ func conversationScopeRules(r Request) string {
 
 func conversationReadOperation(op string) bool {
 	switch op {
-	case "list_items", "search", "read_item", "read_note", "read_structure", "read_view":
+	case "list_items", "search", "read_item", "read_note", "search_note", "read_structure", "read_view":
 		return true
 	}
 	return false

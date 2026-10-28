@@ -193,6 +193,12 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddSingleton<AbandonedObjectReaper>();
         services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService>(
             provider => provider.GetRequiredService<AbandonedObjectReaper>());
+        services.AddSingleton(provider => new Nix.Persistence.Embeddings.LocalEmbedder(
+            Nix.Persistence.Embeddings.LocalEmbedder.DefaultDirectory,
+            provider.GetService<ILogger<Nix.Persistence.Embeddings.LocalEmbedder>>()));
+        services.AddSingleton<Nix.Persistence.Embeddings.ChunkEmbedder>();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService>(
+            provider => provider.GetRequiredService<Nix.Persistence.Embeddings.ChunkEmbedder>());
 
         // Scoped, like everything else here: a store reads the scope's tenant and shares the
         // context's transaction, so it belongs to one unit of work and one tenant.
@@ -443,6 +449,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IQueryHandler<SearchItems, Result<SearchResults>>, SearchItemsHandler>();
         services.AddScoped<IQueryHandler<ResolveReferences, Result<ResolvedReferences>>, ResolveReferencesHandler>();
         services.AddScoped<IQueryHandler<GetBacklinks, Result<BacklinkResults>>, GetBacklinksHandler>();
+        services.AddScoped<IQueryHandler<GetPassages, Result<IReadOnlyList<NotePassage>>>, GetPassagesHandler>();
         services.AddScoped<IQueryHandler<GetRelatedItems, Result<RelatedItemResults>>, GetRelatedItemsHandler>();
         services.AddScoped<IQueryHandler<FindMentions, Result<MentionResults>>, FindMentionsHandler>();
 

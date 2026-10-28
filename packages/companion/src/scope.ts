@@ -20,6 +20,7 @@ const SCOPED_OPERATIONS: ReadonlySet<WorkspaceToolArgs['operation']> = new Set([
   'search',
   'read_item',
   'read_note',
+  'search_note',
   'read_structure',
   'create_note',
   'append_note',
