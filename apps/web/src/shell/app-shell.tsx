@@ -108,7 +108,7 @@ import {
 
 export function AppShell(): ReactNode {
   const navigate = useNavigate();
-  const { workspaceId, workspace } = useWorkspace();
+  const { workspaceId, workspace, reload: reloadWorkspaces } = useWorkspace();
   useRememberLocation(workspaceId);
   useOpenDailyOnLaunch();
   const [dailyCaptureOpen, setDailyCaptureOpen] = useState(false);
@@ -627,57 +627,59 @@ export function AppShell(): ReactNode {
               content only: a phone has no room to share the tree beside a document, but the header's
               own toggle button is what closes the drawer, and covering it would take away the way
               back. */}
-          <div className={`relative flex flex-1 ${paneClip}`}>
-            {/* Around the sidebar as well as the panes: both draw the selection tray, and both
+          {/* Nothing of a workspace is shown before its invitation is accepted. */}
+          {workspace.pendingInvitationId !== null ? null : (
+            <div className={`relative flex flex-1 ${paneClip}`}>
+              {/* Around the sidebar as well as the panes: both draw the selection tray, and both
                 run move and delete through these commands. */}
-            <ItemCommandsProvider
-              tree={tree}
-              onDeleteItem={(item) => {
-                void requestDelete(item);
-              }}
-              onDeleteItems={requestDeleteMany}
-            >
-              {zen ? null : (
-                <ShellSidebar
-                  key={workspaceId}
-                  narrow={narrow}
-                  mobileDestinations={
-                    <NavRail
-                      compact
-                      onImport={() => {
-                        // Keep one Back entry while the drawer hands off to Import.
-                        sidebarToggleRef.current?.focus();
-                        flushSync(() => {
+              <ItemCommandsProvider
+                tree={tree}
+                onDeleteItem={(item) => {
+                  void requestDelete(item);
+                }}
+                onDeleteItems={requestDeleteMany}
+              >
+                {zen ? null : (
+                  <ShellSidebar
+                    key={workspaceId}
+                    narrow={narrow}
+                    mobileDestinations={
+                      <NavRail
+                        compact
+                        onImport={() => {
+                          // Keep one Back entry while the drawer hands off to Import.
+                          sidebarToggleRef.current?.focus();
+                          flushSync(() => {
+                            sidebar.toggle();
+                            setWorkspaceImportOpen(true);
+                          });
+                        }}
+                        onNavigate={() => {
                           sidebar.toggle();
-                          setWorkspaceImportOpen(true);
-                        });
-                      }}
-                      onNavigate={() => {
-                        sidebar.toggle();
-                        focusPane(0);
-                      }}
-                    />
-                  }
-                  sidebar={sidebar}
-                  tree={tree}
-                  selectedId={selectedId}
-                  openItem={{ openPreview, openPinned, openBeside, canOpenBeside, besideRefusal }}
-                  onDeleteItem={(item) => {
-                    void requestDelete(item);
-                  }}
-                  onStartStructured={startStructured}
-                  templates={templateLibrary.templates.filter(
-                    (template) => template.capabilities.canApply,
-                  )}
-                  templateStatus={templateLibrary.status}
-                  onStartTemplate={startTemplate}
-                  onBrowseTemplates={browseTemplates}
-                  treeRegionRef={treeRegionRef}
-                  sidebarToggleRef={sidebarToggleRef}
-                />
-              )}
+                          focusPane(0);
+                        }}
+                      />
+                    }
+                    sidebar={sidebar}
+                    tree={tree}
+                    selectedId={selectedId}
+                    openItem={{ openPreview, openPinned, openBeside, canOpenBeside, besideRefusal }}
+                    onDeleteItem={(item) => {
+                      void requestDelete(item);
+                    }}
+                    onStartStructured={startStructured}
+                    templates={templateLibrary.templates.filter(
+                      (template) => template.capabilities.canApply,
+                    )}
+                    templateStatus={templateLibrary.status}
+                    onStartTemplate={startTemplate}
+                    onBrowseTemplates={browseTemplates}
+                    treeRegionRef={treeRegionRef}
+                    sidebarToggleRef={sidebarToggleRef}
+                  />
+                )}
 
-              {/* The shell owns the main landmark so every screen has exactly one, and a screen that
+                {/* The shell owns the main landmark so every screen has exactly one, and a screen that
                 renders panels side by side does not have to nest them inside another.
 
                 `inert` while the drawer is open: the native (React 19) way of making this region
@@ -697,27 +699,28 @@ export function AppShell(): ReactNode {
                 block for `position: fixed`, so a fixed drag overlay still covers the viewport
                 geometrically - this only stops it from painting above chrome that lives outside
                 `<main>`. */}
-              <main
-                ref={mainRef}
-                id="main"
-                tabIndex={-1}
-                inert={narrow && sidebar.visible && !zen}
-                className={`isolate flex flex-1 ${paneClip}`}
-              >
-                {/* Mutable server-owned template state has its own subscribed context. Router
+                <main
+                  ref={mainRef}
+                  id="main"
+                  tabIndex={-1}
+                  inert={narrow && sidebar.visible && !zen}
+                  className={`isolate flex flex-1 ${paneClip}`}
+                >
+                  {/* Mutable server-owned template state has its own subscribed context. Router
                   Outlet context is retained for shell-owned navigation state only, so an async
                   catalog response cannot leave a mounted screen holding the initial capability
                   snapshot. */}
-                <TemplateLibraryProvider library={templateLibrary}>
-                  <CapabilitiesProvider value={capabilities}>
-                    <ItemDialogProvider tree={tree}>
-                      <Outlet context={{ tree, selectedId } satisfies ShellContext} />
-                    </ItemDialogProvider>
-                  </CapabilitiesProvider>
-                </TemplateLibraryProvider>
-              </main>
-            </ItemCommandsProvider>
-          </div>
+                  <TemplateLibraryProvider library={templateLibrary}>
+                    <CapabilitiesProvider value={capabilities}>
+                      <ItemDialogProvider tree={tree}>
+                        <Outlet context={{ tree, selectedId } satisfies ShellContext} />
+                      </ItemDialogProvider>
+                    </CapabilitiesProvider>
+                  </TemplateLibraryProvider>
+                </main>
+              </ItemCommandsProvider>
+            </div>
+          )}
         </div>
       </div>
 
@@ -851,6 +854,11 @@ export function AppShell(): ReactNode {
         }}
         inbox={notificationsInbox}
         onOpenItem={openPreview}
+        onOpenWorkspace={(id) => {
+          // An invitation that arrived after sign-in is not in the loaded list yet.
+          reloadWorkspaces();
+          void navigate(`/w/${id}`);
+        }}
       />
 
       <KeyboardShortcutsDialog

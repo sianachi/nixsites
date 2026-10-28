@@ -43,6 +43,8 @@ export interface StubWorkspace {
   readonly pendingInvitationId: string | null;
   readonly lifecycleState: 'active' | 'archived' | 'purging';
   readonly archivedAt: string | null;
+  readonly membershipLocked: boolean;
+  readonly collaboration: boolean;
 }
 
 export const STUB_WORKSPACE: StubWorkspace = {
@@ -59,6 +61,8 @@ export const STUB_WORKSPACE: StubWorkspace = {
   pendingInvitationId: null,
   lifecycleState: 'active',
   archivedAt: null,
+  membershipLocked: false,
+  collaboration: true,
 };
 
 /** A container's views, keyed by the item that offers them. */

@@ -35,6 +35,7 @@ import {
   purgeWorkspace,
   removeWorkspaceMember,
   renameWorkspace,
+  setWorkspaceSharing,
   restoreWorkspace,
   revokeWorkspaceInvitation,
 } from './commands/workspaces.ts';
@@ -55,7 +56,7 @@ import {
   removeLock,
   setLock,
 } from './commands/locks.ts';
-import { protect } from './commands/protection.ts';
+import { protect, type ProtectionOptions } from './commands/protection.ts';
 import {
   executeCreateLink,
   executeLinkLog,
@@ -417,6 +418,20 @@ export function buildProgram(): Command {
     .description('Rename a workspace.')
     .action((workspaceId: string, name: string, _options: unknown, command: Command) =>
       act(command, (profile, output) => renameWorkspace(profile, workspaceId, name, output)),
+    );
+  ws.command('sharing <workspaceId>')
+    .description('Close or open a workspace to new members, and turn live collaboration on or off.')
+    .option('--members <on|off>', 'whether new members may be invited and accept')
+    .option('--collaboration <on|off>', 'whether several people may edit a file at once')
+    .action(
+      (
+        workspaceId: string,
+        options: { members?: string; collaboration?: string },
+        command: Command,
+      ) =>
+        act(command, (profile, output) =>
+          setWorkspaceSharing(profile, workspaceId, options, output),
+        ),
     );
   ws.command('archive <workspaceId>')
     .description('Archive a workspace so it is out of everyday navigation.')
@@ -2242,7 +2257,8 @@ export function buildProgram(): Command {
     )
     .option('--delete <on|off>', 'whether the item is protected from deletion')
     .option('--children <on|off>', 'whether the item refuses new children')
-    .action((itemId: string, options: { delete?: string; children?: string }, command: Command) =>
+    .option('--collaboration <on|off>', 'whether several people may edit it at once')
+    .action((itemId: string, options: ProtectionOptions, command: Command) =>
       act(command, (profile, output) => protect(profile, itemId, options, output)),
     );
 

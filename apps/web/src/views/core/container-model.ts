@@ -536,7 +536,7 @@ export { itemSchema as ItemSchema };
  * The protection fields are relaxed the same way: absent means unprotected and unmanaged, which is
  * what the parse defaults them to.
  */
-type RelaxedItemField = 'computed' | 'noDelete' | 'noChildren' | 'managedBy';
+type RelaxedItemField = 'computed' | 'noDelete' | 'noChildren' | 'collaboration' | 'managedBy';
 export type Item = Omit<ApiItem, RelaxedItemField> & Partial<Pick<ApiItem, RelaxedItemField>>;
 
 /**

@@ -11,6 +11,8 @@ export interface NotificationInboxPanelProps {
   readonly inbox: NotificationsInboxState;
   /** Opens the item a notification points at, in the caller's own way of opening one. */
   readonly onOpenItem: (itemId: string) => void;
+  /** Opens a workspace; an invitation's workspace shows only its Accept and Decline. */
+  readonly onOpenWorkspace?: (workspaceId: string) => void;
 }
 
 /** The notification inbox: what the bell (header) and the Inbox destination (mobile nav) both
@@ -22,6 +24,7 @@ export function NotificationInboxPanel({
   onClose,
   inbox,
   onOpenItem,
+  onOpenWorkspace,
 }: NotificationInboxPanelProps): ReactElement {
   // `title` and `body` below are untrusted plain text - a reminder source or an automation's
   // `notify` action can put anything in them - and are rendered as JSX text content only, never
@@ -33,6 +36,13 @@ export function NotificationInboxPanel({
     if (notification.readAt === null) inbox.markRead(notification.id);
     if (notification.itemId !== null) {
       onOpenItem(notification.itemId);
+      onClose();
+    } else if (
+      notification.kind === 'invitation' &&
+      notification.workspaceId !== null &&
+      onOpenWorkspace !== undefined
+    ) {
+      onOpenWorkspace(notification.workspaceId);
       onClose();
     }
   }

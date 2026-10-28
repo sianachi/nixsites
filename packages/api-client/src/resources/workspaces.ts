@@ -39,6 +39,7 @@ import type {
   RecoverWorkspaceRequestContract,
   RenameWorkspaceRequestContract,
   SaveDailyNoteSettingsRequestContract,
+  SetWorkspaceSharingRequestContract,
 } from '../contracts.js';
 
 export type AssignableWorkspaceRole = ChangeWorkspaceMemberRoleRequestContract['role'];
@@ -91,6 +92,22 @@ export const renameWorkspace = (workspaceId: string, name: string): CommandEndpo
     method: 'PATCH',
     path: `/api/v1/workspaces/${workspaceId}`,
     body: { name } satisfies RenameWorkspaceRequestContract,
+    schema: workspaceSchema,
+    invalidates: [workspaceListKey, ['workspaces', workspaceId]],
+  });
+/** Closes or opens a workspace to new members, and turns live collaboration on or off. Owners only. */
+export const setWorkspaceSharing = (
+  workspaceId: string,
+  input: { readonly membershipLocked?: boolean; readonly collaboration?: boolean },
+): CommandEndpoint<Workspace> =>
+  defineCommand({
+    operation: 'workspaces.setSharing',
+    method: 'PUT',
+    path: `/api/v1/workspaces/${workspaceId}/sharing`,
+    body: {
+      membershipLocked: input.membershipLocked ?? null,
+      collaboration: input.collaboration ?? null,
+    } satisfies SetWorkspaceSharingRequestContract,
     schema: workspaceSchema,
     invalidates: [workspaceListKey, ['workspaces', workspaceId]],
   });

@@ -68,7 +68,7 @@ export function WorkspaceInvitationNotice(): ReactNode {
       className="flex flex-wrap items-center gap-2 bg-surface px-3 py-2 shadow-sm sm:px-4"
     >
       <Text className="min-w-0 flex-1">
-        You have provisional access to {workspace.name}. Accept to join, or decline to remove it.
+        You were invited to {workspace.name}. Accept to join it, or decline.
       </Text>
       <Button
         variant="secondary"

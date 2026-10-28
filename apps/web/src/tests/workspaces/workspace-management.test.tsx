@@ -112,12 +112,12 @@ describe('workspace management', () => {
     expect(screen.getByRole('button', { name: 'Remove Working editor' })).toBeEnabled();
   });
 
-  it('selects an existing user, grants provisional access and keeps the invitation visible', async () => {
+  it('selects an existing user, sends an invitation and keeps it visible', async () => {
     const user = userEvent.setup();
     stubCoreApi({ members });
     renderAt(<App />, '/settings');
 
-    await screen.findByText(/provisional access immediately/i);
+    await screen.findByText(/see nothing in this workspace until they accept/i);
     await waitFor(() => {
       expect(fetchCalls().some((call) => call.url.includes('/invitees'))).toBe(true);
     });
@@ -344,14 +344,15 @@ describe('workspace management', () => {
     ).toBe(true);
   });
 
-  it('lets the invited user accept provisional access without leaving the workspace', async () => {
+  it('shows an invited user only the invitation until they accept it', async () => {
     const user = userEvent.setup();
     stubCoreApi({ workspaces: [STUB_WORKSPACE, PENDING], invitations: [PENDING_INVITATION] });
     renderAt(<App />, `/w/${PENDING.id}`);
 
     expect(
       await screen.findByRole('complementary', { name: 'Workspace invitation' }),
-    ).toHaveTextContent(/provisional access/i);
+    ).toHaveTextContent(/You were invited/i);
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Accept' }));
 
     await waitFor(() => {
@@ -362,7 +363,7 @@ describe('workspace management', () => {
     expect(workspaceButton(PENDING.name)).toBeVisible();
   });
 
-  it('lets the invited user decline and removes the provisional workspace', async () => {
+  it('lets the invited user decline and removes the invited workspace', async () => {
     const user = userEvent.setup();
     stubCoreApi({ workspaces: [STUB_WORKSPACE, PENDING], invitations: [PENDING_INVITATION] });
     renderAt(<App />, `/w/${PENDING.id}`);
@@ -450,7 +451,7 @@ describe('workspace management', () => {
       '77777777-bbbb-4bbb-8bbb-777777777777',
     );
     await user.click(screen.getByRole('button', { name: 'Invite' }));
-    expect(await screen.findByText(/New Person now has provisional access/i)).toBeVisible();
+    expect(await screen.findByText(/New Person was invited/i)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Remove Working editor' }));
     expect(await screen.findByRole('dialog', { name: 'Remove Working editor?' })).toBeVisible();
 
@@ -469,7 +470,7 @@ describe('workspace management', () => {
     expect(
       within(people).getByRole('option', { name: /New Person.*Invitation pending/ }),
     ).toBeDisabled();
-    expect(screen.queryByText(/New Person now has provisional access/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/New Person was invited/i)).not.toBeInTheDocument();
   });
 
   it('keeps a failed removal confirmation open and reports the refusal live', async () => {

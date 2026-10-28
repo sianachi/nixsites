@@ -50,6 +50,9 @@ export interface TreeItem {
   /** Whether the item refuses new children. Absent reads as accepting them. */
   readonly noChildren?: boolean;
 
+  /** Whether several people may edit it at once. Absent reads as collaborative. */
+  readonly collaboration?: boolean;
+
   /**
    * The system feature managing the item (a linked calendar), or null. Its deletion protection is
    * lifted in settings, so the tree offers no toggle for it.
@@ -182,7 +185,11 @@ export interface WorkspaceTree {
   /** Sets whether an item can be deleted and whether it accepts new children. */
   readonly setProtection: (
     itemId: string,
-    protection: { readonly noDelete?: boolean; readonly noChildren?: boolean },
+    protection: {
+      readonly noDelete?: boolean;
+      readonly noChildren?: boolean;
+      readonly collaboration?: boolean;
+    },
   ) => Promise<MutationOutcome>;
   readonly restore: (itemId: string) => Promise<MutationOutcome>;
   readonly reload: () => Promise<void>;
@@ -199,6 +206,7 @@ function toItem(payload: Item): TreeItem {
     lifecycleState: payload.lifecycleState,
     noDelete: payload.noDelete,
     noChildren: payload.noChildren,
+    collaboration: payload.collaboration,
     managedBy: payload.managedBy,
   };
 }
@@ -900,7 +908,11 @@ export function useWorkspaceTree(): WorkspaceTree {
   const setProtection = useCallback(
     async (
       itemId: string,
-      protection: { readonly noDelete?: boolean; readonly noChildren?: boolean },
+      protection: {
+        readonly noDelete?: boolean;
+        readonly noChildren?: boolean;
+        readonly collaboration?: boolean;
+      },
     ): Promise<MutationOutcome> => {
       const controller = new AbortController();
       activeRequests.current.add(controller);
