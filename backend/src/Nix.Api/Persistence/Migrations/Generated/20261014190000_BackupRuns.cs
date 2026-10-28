@@ -6,8 +6,8 @@ namespace Nix.Persistence.Migrations.Generated;
 /// <summary>Adds the instance-wide nightly backup log, reachable only through two definer functions.</summary>
 /// <remarks>
 /// The <c>nix_backup</c> role is cluster-level, so the deploy seed creates it (and Compose's deploy
-/// script, idempotently); the grants below fail loudly when it is missing. No row retention:
-/// shortcut: no row retention, add a DELETE in the writer if the table passes ~50k rows.
+/// script, idempotently); the grants below fail loudly when it is missing. Retention (six months,
+/// pruned by the writer) arrives in <see cref="BackupRunRetention"/>.
 /// </remarks>
 [DbContext(typeof(NixDbContext))]
 [Migration("20261014190000_BackupRuns")]

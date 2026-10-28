@@ -304,7 +304,7 @@ stopping, when no nightly has succeeded or the last success is older than
 Backup status lives in the database. Each nightly run records a local and an off-host row in
 `backup_runs` (timestamps, the local size, the restic snapshot id, and on failure a fixed phrase
 with an exit code, never tool output), written through `nix_record_backup_run` as the `nix_backup`
-role. That role cannot log in; the backup jobs already run as the Postgres superuser and
+role, which also drops runs that started more than six months before the one being recorded. That role cannot log in; the backup jobs already run as the Postgres superuser and
 `SET ROLE` to it, so there is no new secret. `deploy/seed/seed.sql` creates the role (k3s runs it on
 every deploy), and Compose `deploy.sh` creates it idempotently before migrating; never run
 `seed.sql` on a Compose production host, because it resets role passwords. On an existing

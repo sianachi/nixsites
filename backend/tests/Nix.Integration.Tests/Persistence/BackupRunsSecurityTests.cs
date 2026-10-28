@@ -88,6 +88,28 @@ public sealed class BackupRunsSecurityTests(NixPostgresFixture fixture) : IAsync
     }
 
     [Fact]
+    public async Task Recording_a_run_drops_runs_started_more_than_six_months_before_it()
+    {
+        var writer = await fixture.OpenSuperuserConnectionAsync();
+        await using (writer.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(writer, null, "SET ROLE nix_backup");
+            await RecordAsync(writer, "'2026-04-14T00:59:59Z'", "'2026-04-14T00:59:59Z'", "'local'", "'succeeded'", "NULL", "10", "NULL");
+            await RecordAsync(writer, "'2026-04-14T01:00:00Z'", "'2026-04-14T01:05:00Z'", "'offsite'", "'succeeded'", "NULL", "10", "NULL");
+            await RecordAsync(writer, "'2026-10-14T01:00:00Z'", "'2026-10-14T01:05:00Z'", "'local'", "'succeeded'", "NULL", "10", "NULL");
+        }
+
+        var app = await fixture.OpenApplicationConnectionAsync();
+        await using (app.ConfigureAwait(false))
+        {
+            // The cutoff is 2026-04-14T01:00Z: the run one second before it goes, the run exactly at it stays.
+            Assert.Equal(
+                ["2026-10-14|local", "2026-04-14|offsite"],
+                await RawSql.TextListAsync(app, "SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') || '|' || step FROM nix_backup_runs(10)"));
+        }
+    }
+
+    [Fact]
     public async Task The_limit_is_clamped_to_between_one_and_one_hundred()
     {
         var migrator = await fixture.OpenMigratorConnectionAsync();
