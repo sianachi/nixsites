@@ -1,4 +1,3 @@
-import type { CalendarDay } from '../core/calendar-dates';
 import {
   readPropertyText,
   type ContainerViews,
@@ -8,29 +7,13 @@ import {
   type View,
 } from '../core/container-model';
 import { propertyTypeWord, isDateShaped } from '../core/property-types';
-import {
-  placeSpan,
-  readDayValue,
-  type TimelinePlacement,
-  type TimelineWindow,
-} from './timeline-scale';
+import { readDayValue } from '../calendar/model/day-math';
+import { placeSpan, type TimelinePlacement, type TimelineWindow } from './timeline-scale';
 
 export const NO_START_PROPERTY =
   'A timeline places each bar by the date it starts on, and this view does not name a start ' +
   'property. Nothing has been lost - every item is still here, and a list or board view will ' +
   'show them.';
-
-/**
- * Today, in the reader's own zone.
- *
- * The one place a clock is read, and the one place local time is the right question: "today" is
- * where the person is sitting, not where the server is. The result is integers immediately, so
- * nothing downstream handles an instant.
- */
-export function todayDay(): CalendarDay {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth(), day: now.getDate() };
-}
 
 export function titleOf(item: Item): string {
   return item.title || 'Untitled';

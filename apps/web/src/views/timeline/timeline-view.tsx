@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '../../components/states/status-panels';
+import { todayDay } from '../calendar/model/day-math';
 import { ShownItems } from '../core/item-selection-context';
 import { dayText, type CalendarDay } from '../core/calendar-dates';
 import { CreateItemControl } from '../core/create-item-control';
@@ -21,7 +22,6 @@ import {
   place,
   propertyWord,
   titleOf,
-  todayDay,
   type AsideContext,
 } from './timeline-model';
 import { TimelineAgenda } from './timeline-agenda';

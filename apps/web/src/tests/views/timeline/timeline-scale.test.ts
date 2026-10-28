@@ -5,10 +5,10 @@ import {
   buildWindow,
   columnOf,
   placeSpan,
-  readDayValue,
   readScale,
   stepAnchor,
 } from '../../../views/timeline/timeline-scale';
+import { readDayValue } from '../../../views/calendar/model/day-math';
 
 /**
  * The arithmetic a timeline is built from, tested without rendering one.
