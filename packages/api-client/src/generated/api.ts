@@ -2122,26 +2122,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/workspaces/{workspaceId}/my-day': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * What the caller should do today in one workspace
-     * @description Returns the tasks due today, overdue, or assigned to the caller, and the habits scheduled today, from the workspace's original items. Nothing is stored or copied: each row names its item and an 'action' naming the existing command that finishes it (set the completion property, complete a recurrence occurrence, or check in a habit on the occurrence's own date). An action is a hint; the command still checks permission. A task is an item whose effective schema declares a completion field. A task whose start day is after today is left out. Repeating tasks appear only as today's open occurrence; earlier missed occurrences are not an overdue backlog. The caller's current day is computed once from their saved time zone (UTC when they saved none) and returned as 'taskDay'. Each habit carries its own local day in its occurrence, which can differ from 'taskDay'. Every section is bounded and says so: 'coverage' is 'partial' with stable reasons when a ceiling was reached or an item could not be judged, and 'omitted' is null when the count cannot be known. Zero rows with a partial coverage is not an empty day. Rows the caller may not read are excluded while the read runs. A workspace the caller may not see is reported as not found. At most four bulk reads run at once per person ('query.too_many_in_flight', 429).
-     */
-    get: operations['GetMyDay'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/items/{itemId}/recurrence': {
     parameters: {
       query?: never;
@@ -4789,76 +4769,6 @@ export interface components {
       afterId: null | string;
       /** Format: uuid */
       workspaceId?: null | string;
-    };
-    MyDayCoverage: {
-      kind: string;
-      reasons: components['schemas']['MyDayCoverageReason'][];
-    };
-    MyDayCoverageReason: {
-      code: string;
-      /** Format: int32 */
-      omitted: null | number | string;
-    };
-    MyDayHabitRow: {
-      /** Format: uuid */
-      itemId: string;
-      /** Format: uuid */
-      containerId: null | string;
-      containerTitle: null | string;
-      title: string;
-      timezone: string;
-      occurrence: components['schemas']['HabitOccurrence'];
-    };
-    MyDayHabitSection: {
-      rows: components['schemas']['MyDayHabitRow'][];
-      coverage: components['schemas']['MyDayCoverage'];
-      limits: components['schemas']['MyDayLimits'];
-    };
-    MyDayLimits: {
-      /** Format: int32 */
-      candidates: number | string;
-      /** Format: int32 */
-      rows: number | string;
-    };
-    MyDayResponse: {
-      /** Format: uuid */
-      workspaceId: string;
-      /** Format: date-time */
-      evaluatedAt: string;
-      /** Format: date */
-      taskDay: string;
-      taskTimezone: string;
-      tasks: components['schemas']['MyDayTaskSection'];
-      habits: components['schemas']['MyDayHabitSection'];
-    };
-    MyDayTaskAction: {
-      kind: string;
-      key: null | string;
-      /** Format: date */
-      occurredOn: null | string;
-    };
-    MyDayTaskRow: {
-      /** Format: uuid */
-      itemId: string;
-      /** Format: uuid */
-      containerId: null | string;
-      containerTitle: null | string;
-      title: string;
-      section: string;
-      /** Format: date */
-      dueDay: null | string;
-      /** Format: date */
-      startDay: null | string;
-      /** Format: int32 */
-      priority: null | number | string;
-      /** Format: double */
-      estimate: null | number | string;
-      action: components['schemas']['MyDayTaskAction'];
-    };
-    MyDayTaskSection: {
-      rows: components['schemas']['MyDayTaskRow'][];
-      coverage: components['schemas']['MyDayCoverage'];
-      limits: components['schemas']['MyDayLimits'];
     };
     NotificationDto: {
       /** Format: uuid */
@@ -11967,55 +11877,6 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetMyDay: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MyDayResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
         headers: {
           [name: string]: unknown;
         };

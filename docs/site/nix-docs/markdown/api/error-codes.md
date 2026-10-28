@@ -157,7 +157,6 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 ### `query.too_many_in_flight`
 
-- GET /api/v1/workspaces/{workspaceId}/my-day
 - POST /api/v1/workspaces/{workspaceId}/query
 
 ### `recurrence.invalid_frequency`

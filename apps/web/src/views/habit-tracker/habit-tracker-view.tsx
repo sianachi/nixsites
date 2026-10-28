@@ -22,7 +22,7 @@ import { HabitSetup } from './habit-setup';
 import { HabitTrackerHeader } from './habit-tracker-header';
 import { dateText, shiftedDay, todayInTimezone, weekWindow, WEEKDAYS } from './habit-days';
 
-// The tracker's public surface stays here; My Day and tests import these from this module.
+// The tracker's public surface stays here; tests import these from this module.
 export { HabitSetup, todayInTimezone, weekWindow };
 
 export interface HabitTrackerViewProps {

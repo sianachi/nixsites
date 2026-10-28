@@ -8,7 +8,7 @@ Programs that read and change a workspace the way the app does:
 
 - list workspaces, walk the item tree, and create, rename, move, trash, restore, and purge items;
 - set properties, so tasks, habits, and other structured fields are ordinary items with fields;
-- run the same queries the views run, including My Day;
+- run the same queries the views run;
 - read a calendar window, and manage calendar sync where the token's scope allows it;
 - record habit check-ins, and read or write finance records on a finance root;
 - search, export, import, and publish a site when the token holds admin.

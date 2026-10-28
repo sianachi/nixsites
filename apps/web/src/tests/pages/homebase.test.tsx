@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
 import { isoWeek } from '../../pages/homebase';
-import { useGeneralPreferences } from '../../settings/preferences/general-preferences';
 import { STUB_WORKSPACE, item, stubCoreApi } from '../api-stub';
 import { memoryStorage } from '../memory-storage';
 import { renderAt, signedIn } from '../render-with-router';
@@ -14,7 +13,6 @@ const HOME = `/w/${STUB_WORKSPACE.id}`;
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());
-  useGeneralPreferences.setState({ homebaseLayout: 'page' });
   signedIn();
 });
 
@@ -39,10 +37,11 @@ describe('Homebase', () => {
       'href',
       `${HOME}/calendar`,
     );
-    expect(within(start).getByRole('link', { name: /my day/i })).toHaveAttribute(
+    expect(within(start).getByRole('link', { name: /templates/i })).toHaveAttribute(
       'href',
-      `${HOME}/my-day`,
+      `${HOME}/templates`,
     );
+    expect(screen.queryByRole('group', { name: 'Homebase layout' })).not.toBeInTheDocument();
 
     const recent = screen.getByRole('region', { name: 'Recently viewed' });
     await userEvent.click(within(recent).getByRole('button', { name: /roadmap/i }));
@@ -69,19 +68,6 @@ describe('Homebase', () => {
 
     await userEvent.click(within(start).getByRole('button', { name: /new note/i }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
-  });
-
-  it('switches to the Desk layout and remembers it', async () => {
-    stubCoreApi();
-    renderAt(<App />, HOME);
-
-    const layout = await screen.findByRole('group', { name: 'Homebase layout' });
-    await userEvent.click(within(layout).getByRole('button', { name: 'Desk' }));
-    expect(within(layout).getByRole('button', { name: 'Desk' })).toHaveAttribute(
-      'aria-current',
-      'true',
-    );
-    expect(localStorage.getItem('nix.homebase-layout')).toBe('desk');
   });
 
   it('numbers weeks the ISO way', () => {

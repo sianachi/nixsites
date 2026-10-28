@@ -43,7 +43,8 @@ const GROUPS: readonly { name: Group; label: string }[] = [
 // What is yours, then the workspace's, then the operator's: each section keeps its id so every
 // `?tab=` link still lands where it did. The retired `publishing` id resolves to General.
 const settingsSections: readonly { id: SettingsTab; label: string; group: Group; gate?: Gate }[] = [
-  { id: 'preferences', label: 'General', group: 'You' },
+  // Its one setting is publishing, so without sites there is nothing to show.
+  { id: 'preferences', label: 'General', group: 'You', gate: (c) => c.sites },
   { id: 'editor', label: 'Editor', group: 'You' },
   { id: 'daily-notes', label: 'Daily notes', group: 'You' },
   { id: 'notifications', label: 'Notifications', group: 'You' },

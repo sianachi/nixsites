@@ -294,7 +294,7 @@ public static class QuerySql
             sql.Append("\n  AND item.id <> @query_item_id");
         }
 
-        // No hidden proper ancestor; the fragment is shared with the My Day candidate read.
+        // No hidden proper ancestor.
         sql.Append("\n  AND ");
         sql.Append(ItemVisibilitySql.NoHiddenAncestor);
         sql.Append("\n  AND ");

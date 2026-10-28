@@ -29,7 +29,6 @@ using Nix.Features.Identity;
 using Nix.Features.Internal;
 using Nix.Features.Items;
 using Nix.Features.Locks;
-using Nix.Features.MyDay;
 using Nix.Features.Notifications;
 using Nix.Features.Pets;
 using Nix.Features.Properties;
@@ -54,7 +53,6 @@ using Nix.Persistence.Identity;
 using Nix.Persistence.Items;
 using Nix.Persistence.Links;
 using Nix.Persistence.Locks;
-using Nix.Persistence.MyDay;
 using Nix.Persistence.Notifications;
 using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.Pets;
@@ -355,7 +353,6 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IWorkspaceGraph, WorkspaceGraphReader>();
         services.AddScoped<IWorkspaceCalendar, WorkspaceCalendarReader>();
         services.AddScoped<IRecurrenceCandidates, RecurrenceCandidateReader>();
-        services.AddScoped<IMyDayCandidates, MyDayCandidateReader>();
         services.AddScoped<IRecurrenceStore, RecurrenceStore>();
         services.AddScoped<IItemQuery, ItemQueryReader>();
         services.AddScoped<IBookmarkShelf, BookmarkShelfStore>();
@@ -452,7 +449,6 @@ public static class NixPersistenceServiceCollectionExtensions
 
         services.AddScoped<IQueryHandler<GetWorkspaceGraph, Result<WorkspaceGraphResults>>, GetWorkspaceGraphHandler>();
         services.AddScoped<IQueryHandler<GetWorkspaceCalendar, Result<WorkspaceCalendarResults>>, GetWorkspaceCalendarHandler>();
-        services.AddScoped<IQueryHandler<GetMyDay, Result<MyDayResponse>>, GetMyDayHandler>();
         services.AddScoped<ICommandHandler<SetItemRecurrence, Item>, SetItemRecurrenceHandler>();
         services.AddScoped<ICommandHandler<CompleteRecurrenceOccurrence, Item>, CompleteRecurrenceOccurrenceHandler>();
         services.AddScoped<IQueryHandler<RunItemQuery, Result<ItemQueryResults>>, RunItemQueryHandler>();

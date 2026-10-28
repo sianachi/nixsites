@@ -1,7 +1,6 @@
 import { Button, Icon, Menu, Text, chromeSurface, focusRing, type MenuEntry } from '@nix/ui';
 import {
   Bookmark,
-  CalendarCheck,
   CalendarClock,
   CalendarDays,
   ChevronDown,
@@ -169,7 +168,6 @@ const PET_ITEM = page('workspace', '/pet', 'Pet', PawPrint);
 
 const ITEMS: readonly RailItem[] = [
   page('workspace', '', 'Homebase', House),
-  page('workspace', '/my-day', 'My Day', CalendarCheck),
   page('workspace', '/daily', 'Daily notes', CalendarClock),
   page('workspace', '/calendar', 'Calendar', CalendarDays),
   page('workspace', '/graph', 'Graph', Network),

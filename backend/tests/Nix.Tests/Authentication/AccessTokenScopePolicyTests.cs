@@ -112,7 +112,6 @@ public sealed class AccessTokenScopePolicyTests
         ["ListWorkspaces"] = Requirement.Read,
         ["GetWorkspace"] = Requirement.Read,
         ["GetWorkspaceCalendar"] = Requirement.Read,
-        ["GetMyDay"] = Requirement.Read,
         ["GetWorkspaceGraph"] = Requirement.Read,
         ["ListItems"] = Requirement.Read,
         ["ListTrash"] = Requirement.Read,

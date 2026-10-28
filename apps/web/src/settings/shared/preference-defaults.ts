@@ -48,8 +48,8 @@ const checkedClients = new WeakSet<object>();
 
 /**
  * Saves the device's zone once per session when the person has never saved preferences, so
- * server-side days (My Day) follow the device rather than UTC. Resolves true only when it wrote.
- * Never overwrites a saved document; any failure is swallowed and My Day keeps working.
+ * server-side days (reminders, quiet hours) follow the device rather than UTC. Resolves true only
+ * when it wrote. Never overwrites a saved document; any failure is swallowed.
  */
 export async function saveDeviceTimeZoneOnce(client: NixClient): Promise<boolean> {
   if (checkedClients.has(client)) return false;

@@ -97,7 +97,6 @@ import {
   runCalendar,
   setRecurrence,
 } from './commands/recurrence.ts';
-import { runMyDay } from './commands/my-day.ts';
 import { runSearch } from './commands/search.ts';
 import { runExport } from './commands/export.ts';
 import * as siteCommands from './commands/sites.ts';
@@ -1231,16 +1230,6 @@ export function buildProgram(): Command {
           output,
         ),
       ),
-    );
-
-  program
-    .command('my-day')
-    .description(
-      "Print what to do today in one workspace: tasks due, overdue or assigned, and today's habits, with coverage.",
-    )
-    .requiredOption('--workspace <id>', 'the workspace to read')
-    .action((options: { workspace: string }, command: Command) =>
-      act(command, (profile, output) => runMyDay(profile, options.workspace, output)),
     );
 
   const money = program

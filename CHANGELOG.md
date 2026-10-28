@@ -39,6 +39,13 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Removed
 
+- My Day. Homebase is where a day starts now: the My Day page, its rail entry, its Homebase
+  tile, `GET /api/v1/workspaces/{workspaceId}/my-day` and `nixctl my-day` are gone. Tasks and
+  habits are unchanged and still show in their own views and the calendar.
+- Homebase's Page/Desk choice. Homebase always shows the actions beside your recent notes, and
+  it now links to Templates.
+- The "Show status footer" setting, which no longer controlled anything. Settings > General only
+  appears when sites are available, since publishing is all it holds.
 - Offline notes. The installed app no longer downloads your notes, the "Keep notes on this
   device" setting, Notes on this device page and Sync notes menu items are gone, and an
   installed app without a connection shows the reconnect screen. Signing out deletes notes an

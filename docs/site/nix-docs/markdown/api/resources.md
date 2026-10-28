@@ -19,7 +19,6 @@ A task is an item inside a container whose fields carry a due date, completion, 
 - List the tasks: `GET /api/v1/workspaces/{workspaceId}/items?parentId=<container-id>`.
 - Set due date, status, and other fields: `PATCH /api/v1/items/{itemId}/properties`.
 - Recurrence is the routes under `/api/v1/items/{itemId}/recurrence`. Completing one occurrence does not copy the item.
-- My Day is `GET /api/v1/workspaces/{workspaceId}/my-day`.
 - A saved or ad-hoc query is `POST /api/v1/workspaces/{workspaceId}/query` (a read, allowed for a read scope). `query/aggregate` folds the same match.
 
 These calls change properties, recurrence, and the item tree. They do not change the note body.

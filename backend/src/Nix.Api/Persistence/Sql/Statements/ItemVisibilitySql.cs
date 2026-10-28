@@ -57,7 +57,7 @@ public static class ItemVisibilitySql
 
     /// <summary>
     /// A predicate over <c>item</c>: no proper ancestor is a template or inactive. The bulk reads
-    /// (workspace query, My Day) share it; binds <c>@tenant_id</c>.
+    /// (the workspace query) share it; binds <c>@tenant_id</c>.
     /// </summary>
     /// <remarks>
     /// A plain correlated anti-join the planner can turn into one hashed pass over the closure for

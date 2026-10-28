@@ -193,8 +193,7 @@ describe('device-only rows', () => {
     );
 
     expect(screen.getByRole('checkbox', { name: 'Show publishing on pages' })).toBeInTheDocument();
-    // Only the status footer row, which is per browser, carries the caption.
-    expect(screen.getAllByText('This device only')).toHaveLength(1);
+    expect(screen.queryByText('This device only')).not.toBeInTheDocument();
   });
 });
 

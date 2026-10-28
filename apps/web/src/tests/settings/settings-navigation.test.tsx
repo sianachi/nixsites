@@ -62,6 +62,7 @@ describe('reaching the settings screen', () => {
   });
 
   it('lists the sections in group order without the gated ones for an ordinary account', async () => {
+    // No sites on this install, so General has nothing to show and is left out.
     renderAt(<App />, '/settings');
 
     await screen.findByRole('navigation', { name: 'Your settings' });
@@ -79,7 +80,6 @@ describe('reaching the settings screen', () => {
           .map((link) => link.textContent),
       ),
     ).toEqual([
-      'General',
       'Editor',
       'Daily notes',
       'Notifications',
@@ -94,7 +94,9 @@ describe('reaching the settings screen', () => {
 
   it('adds an Administration group when the account may operate the install', () => {
     renderAt(
-      <CapabilitiesProvider value={{ ...NO_CAPABILITIES, operator: true, siteApprover: true }}>
+      <CapabilitiesProvider
+        value={{ ...NO_CAPABILITIES, operator: true, siteApprover: true, sites: true }}
+      >
         <SettingsPage />
       </CapabilitiesProvider>,
       '/settings?tab=preferences',

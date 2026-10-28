@@ -27,7 +27,6 @@ export {
   type CalendarEntry,
   type WorkspaceCalendar,
 } from './workspace-calendar.js';
-export { myDaySchema, type MyDay, type MyDayHabitRow, type MyDayTaskRow } from './my-day.js';
 export { shelfSchema, type KeptItem, type Shelf } from './bookmarks.js';
 export {
   itemLockSchema,
