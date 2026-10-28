@@ -12,21 +12,11 @@ namespace Nix.Persistence.Content;
 /// Envelope CRUD over a single row keyed by principal, so LINQ expresses it perfectly well and
 /// there is no hand-written statement to justify.
 /// </remarks>
-public sealed class CanvasLibraryStore : ICanvasLibraryStore
+public sealed class CanvasLibraryStore(NixDbContext dbContext) : ICanvasLibraryStore
 {
-    private readonly NixDbContext _dbContext;
-
-    /// <summary>Initializes a new instance of the <see cref="CanvasLibraryStore"/> class.</summary>
-    /// <param name="dbContext">The context owning the connection and transaction.</param>
-    public CanvasLibraryStore(NixDbContext dbContext)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        _dbContext = dbContext;
-    }
-
     /// <inheritdoc />
     public async ValueTask<CanvasLibrary?> FindAsync(PrincipalId principalId, CancellationToken cancellationToken) =>
-        await _dbContext.CanvasLibraries
+        await dbContext.CanvasLibraries
             .FirstOrDefaultAsync(library => library.PrincipalId == principalId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -35,20 +25,20 @@ public sealed class CanvasLibraryStore : ICanvasLibraryStore
     {
         ArgumentNullException.ThrowIfNull(library);
 
-        var existing = await _dbContext.CanvasLibraries
+        var existing = await dbContext.CanvasLibraries
             .AsTracking()
             .FirstOrDefaultAsync(row => row.PrincipalId == library.PrincipalId, cancellationToken)
             .ConfigureAwait(false);
 
         if (existing is null)
         {
-            _dbContext.CanvasLibraries.Add(library);
+            dbContext.CanvasLibraries.Add(library);
         }
         else
         {
-            _dbContext.Entry(existing).CurrentValues.SetValues(library);
+            dbContext.Entry(existing).CurrentValues.SetValues(library);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

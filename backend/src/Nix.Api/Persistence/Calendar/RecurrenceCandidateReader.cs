@@ -22,37 +22,14 @@ namespace Nix.Persistence.Calendar;
 /// dropped: the calendar says the item repeats and cannot be placed, which is the honest answer to
 /// storage written by a newer build.
 /// </remarks>
-public sealed class RecurrenceCandidateReader : IRecurrenceCandidates
+public sealed class RecurrenceCandidateReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IRecurrenceCandidates
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="RecurrenceCandidateReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with, whose unlocks decide which locked items'
-    /// children are shown.
-    /// </param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public RecurrenceCandidateReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -86,7 +63,7 @@ public sealed class RecurrenceCandidateReader : IRecurrenceCandidates
             identifiers[index] = readableWorkspaces[index].Value;
         }
 
-        var rows = _sql.QueryAsync<CandidateRow, CandidateRowMapper>(
+        var rows = sql.QueryAsync<CandidateRow, CandidateRowMapper>(
             RecurrenceSql.WorkspaceRecurrenceCandidates,
             default,
             [
@@ -95,7 +72,7 @@ public sealed class RecurrenceCandidateReader : IRecurrenceCandidates
                 new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
                 new NpgsqlParameter("from", NpgsqlDbType.Text) { Value = firstDay },
                 new NpgsqlParameter("to", NpgsqlDbType.Text) { Value = lastDay },
-                await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken).ConfigureAwait(false),
+                await LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false),
                 new NpgsqlParameter("candidate_limit", NpgsqlDbType.Integer) { Value = candidateLimit },
             ],
             cancellationToken);

@@ -28,37 +28,15 @@ namespace Nix.Persistence.Query;
 /// and its existence is the flag. Cheaper than a count, and exact.
 /// </para>
 /// </remarks>
-public sealed class ItemQueryReader : IItemQuery
+public sealed class ItemQueryReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IItemQuery
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="ItemQueryReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with, whose unlocks decide which locked items'
-    /// children are shown.
-    /// </param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public ItemQueryReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly NixSqlExecutor _sql = sql;
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -297,7 +275,7 @@ public sealed class ItemQueryReader : IItemQuery
             parameters.Add(new NpgsqlParameter("scope_parent_id", NpgsqlDbType.Uuid) { Value = scope.ParentId.Value });
         }
 
-        parameters.Add(await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken).ConfigureAwait(false));
+        parameters.Add(await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false));
         return parameters;
     }
 

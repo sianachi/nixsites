@@ -15,7 +15,7 @@ namespace Nix.Authentication;
 /// identity that currently owns its unexpired lease. The database resolves tenant and actor from
 /// that authoritative row; neither value is accepted from a header or RabbitMQ payload.
 /// </remarks>
-public sealed class WorkerExecutionMiddleware
+public sealed class WorkerExecutionMiddleware(RequestDelegate next)
 {
     /// <summary>Header naming the durable job.</summary>
     public const string JobHeaderName = "x-nix-worker-job-id";
@@ -24,13 +24,13 @@ public sealed class WorkerExecutionMiddleware
     public const string ExecutionHeaderName = "x-nix-worker-execution-id";
 
     private const string RefusalCode = "worker.execution_refused";
-    private readonly RequestDelegate _next;
 
-    /// <summary>Initializes the execution boundary.</summary>
-    public WorkerExecutionMiddleware(RequestDelegate next)
+    /// <summary>Whether the worker execution named by the request headers still holds its job.</summary>
+    internal static async Task<bool> ExecutionStillLive(HttpContext context, IWorkerDispatchStore dispatch)
     {
-        ArgumentNullException.ThrowIfNull(next);
-        _next = next;
+        var executionId = context.Request.Headers[ExecutionHeaderName].ToString();
+        return Guid.TryParse(context.Request.Headers[JobHeaderName], out var jobId)
+            && await dispatch.AuthorizeExecutionAsync(jobId, executionId, context.RequestAborted).ConfigureAwait(false) is not null;
     }
 
     /// <summary>Runs the request only while the exact execution owns a live lease.</summary>
@@ -82,7 +82,7 @@ public sealed class WorkerExecutionMiddleware
                     .ConfigureAwait(false);
                 await using (transaction.ConfigureAwait(false))
                 {
-                    await _next(context).ConfigureAwait(false);
+                    await next(context).ConfigureAwait(false);
                     if (context.Response.StatusCode >= StatusCodes.Status400BadRequest)
                     {
                         await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);

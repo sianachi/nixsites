@@ -27,7 +27,12 @@ namespace Nix.Persistence.Items;
 /// policy per row, and it is the defence in depth the security model asks for.
 /// </para>
 /// </remarks>
-public sealed class ChildAggregateReader : IChildAggregates
+public sealed class ChildAggregateReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IChildAggregates
 {
     /// <summary>The most buckets a chart read will return, whatever was asked for.</summary>
     /// <remarks>
@@ -39,34 +44,7 @@ public sealed class ChildAggregateReader : IChildAggregates
     /// </remarks>
     public const int MaximumBuckets = 100;
 
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="ChildAggregateReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with, whose unlocks decide which containers fold.
-    /// </param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public ChildAggregateReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => _session.Current?.TenantId
         ?? throw new InvalidOperationException(
@@ -102,7 +80,7 @@ public sealed class ChildAggregateReader : IChildAggregates
 
         var folds = new Dictionary<ChildAggregateKey, ChildAggregate>(parents.Count * keys.Count);
 
-        var rows = _sql.QueryAsync<FoldRow, FoldRowMapper>(
+        var rows = sql.QueryAsync<FoldRow, FoldRowMapper>(
             RollupSql.AggregateChildProperties,
             default,
             [
@@ -110,7 +88,7 @@ public sealed class ChildAggregateReader : IChildAggregates
                 Uuid("workspace_id", workspaceId.Value),
                 UuidArray("parent_ids", parentIds),
                 TextArray("keys", propertyKeys),
-                await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken).ConfigureAwait(false),
+                await LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false),
             ],
             cancellationToken);
 
@@ -139,7 +117,7 @@ public sealed class ChildAggregateReader : IChildAggregates
         long distinct = 0;
         long children = 0;
 
-        var rows = _sql.QueryAsync<BucketRow, BucketRowMapper>(
+        var rows = sql.QueryAsync<BucketRow, BucketRowMapper>(
             RollupSql.BucketChildrenByProperty,
             default,
             [
@@ -194,7 +172,7 @@ public sealed class ChildAggregateReader : IChildAggregates
         long kept = 0;
         long series = 0;
 
-        var rows = _sql.QueryAsync<SeriesCellRow, SeriesCellRowMapper>(
+        var rows = sql.QueryAsync<SeriesCellRow, SeriesCellRowMapper>(
             RollupSql.BucketChildrenByPropertyAndSeries,
             default,
             [
@@ -253,7 +231,7 @@ public sealed class ChildAggregateReader : IChildAggregates
         long series = 0;
         var rowsRead = 0;
 
-        var rows = _sql.QueryAsync<DayCellRow, DayCellRowMapper>(
+        var rows = sql.QueryAsync<DayCellRow, DayCellRowMapper>(
             RollupSql.BucketChildrenByDay,
             default,
             [

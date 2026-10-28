@@ -94,7 +94,10 @@ public sealed record WorkspaceCalendarResults(
 /// larger disclosure than a calendar.
 /// </para>
 /// </remarks>
-public sealed class GetWorkspaceCalendarHandler
+public sealed class GetWorkspaceCalendarHandler(
+    IWorkspaceCalendar calendar,
+    IRecurrenceCandidates recurrence,
+    IPermissionResolver permissions)
     : IQueryHandler<GetWorkspaceCalendar, Result<WorkspaceCalendarResults>>
 {
     /// <summary>
@@ -143,27 +146,8 @@ public sealed class GetWorkspaceCalendarHandler
     /// </remarks>
     private const string DueDateProperty = "due_date";
 
-    private readonly IWorkspaceCalendar _calendar;
-    private readonly IRecurrenceCandidates _recurrence;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetWorkspaceCalendarHandler"/> class.</summary>
-    /// <param name="calendar">Reads the dated entries.</param>
-    /// <param name="recurrence">Reads the repeating items a calendar has to expand.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetWorkspaceCalendarHandler(
-        IWorkspaceCalendar calendar,
-        IRecurrenceCandidates recurrence,
-        IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(calendar);
-        ArgumentNullException.ThrowIfNull(recurrence);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _calendar = calendar;
-        _recurrence = recurrence;
-        _permissions = permissions;
-    }
+    private readonly IWorkspaceCalendar _calendar = calendar;
+    private readonly IRecurrenceCandidates _recurrence = recurrence;
 
     /// <summary>Reads the calendar.</summary>
     /// <param name="query">The workspace and the window.</param>
@@ -181,7 +165,7 @@ public sealed class GetWorkspaceCalendarHandler
                 CalendarErrors.InvalidWindow(problem));
         }
 
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 

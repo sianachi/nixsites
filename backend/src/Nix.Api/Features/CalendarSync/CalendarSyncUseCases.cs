@@ -1,6 +1,5 @@
 using System.Buffers.Text;
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Nix.Abstractions;
@@ -13,6 +12,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
+using Nix.Features.Automations;
 using Nix.Features.Views;
 using Nix.Messaging;
 
@@ -821,32 +821,13 @@ public sealed class ListCalendarLinkLogHandler(CalendarSyncSupport support) : IC
         }
 
         var limit = Math.Clamp(command.Limit ?? DefaultLimit, 1, 100);
-        var cursor = DecodeCursor(command.Cursor);
+        var cursor = LogCursor.Decode(command.Cursor);
         var rows = await support.Store.ReadLogAsync(link.Id, cursor?.At, cursor?.Id, limit + 1, cancellationToken).ConfigureAwait(false);
         var page = rows.Take(limit).ToList();
-        var next = rows.Count > limit ? EncodeCursor(page[^1]) : null;
+        var next = rows.Count > limit ? LogCursor.Encode(page[^1].At, page[^1].Id) : null;
         return Result.Success(new CalendarSyncLogPageResponse(
             [.. page.Select(row => new CalendarSyncLogEntryResponse(row.Id, row.At, row.Direction, row.Action, row.ItemId, row.ExternalEventId, row.Detail))],
             next));
-    }
-
-    private static string EncodeCursor(CalendarSyncLogEntry entry) =>
-        $"{entry.At.UtcTicks.ToString(CultureInfo.InvariantCulture)}_{entry.Id:N}";
-
-    private static (DateTimeOffset At, Guid Id)? DecodeCursor(string? cursor)
-    {
-        if (string.IsNullOrEmpty(cursor))
-        {
-            return null;
-        }
-
-        var separator = cursor.IndexOf('_', StringComparison.Ordinal);
-        return separator > 0
-            && long.TryParse(cursor.AsSpan(0, separator), NumberStyles.None, CultureInfo.InvariantCulture, out var ticks)
-            && ticks is > 0 and < 3_155_378_975_999_999_999
-            && Guid.TryParseExact(cursor[(separator + 1)..], "N", out var id)
-                ? (new DateTimeOffset(ticks, TimeSpan.Zero), id)
-                : null;
     }
 }
 

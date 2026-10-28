@@ -42,29 +42,6 @@ public static class ReservedPropertyContent
         return key.Length > 0 && key[0] == '$' && !allowed.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal));
     }
 
-    /// <summary>The first key in a bag outside the allowlist, or null.</summary>
-    /// <param name="bag">The bag as JSON, or null.</param>
-    /// <param name="allowed">The prefixes the feature allows.</param>
-    /// <returns>The key, or <see langword="null"/> (also for a bag that does not parse, which the caller's own validation refuses).</returns>
-    public static string? FirstForbidden(string? bag, IReadOnlyList<string> allowed)
-    {
-        if (bag is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonNode.Parse(bag) is JsonObject document
-                ? document.Select(pair => pair.Key).FirstOrDefault(key => IsForbidden(key, allowed))
-                : null;
-        }
-        catch (Exception error) when (error is JsonException or ArgumentException)
-        {
-            return null;
-        }
-    }
-
     /// <summary>A bag with every key outside the allowlist removed.</summary>
     /// <param name="bag">The bag as JSON, or null.</param>
     /// <param name="allowed">The prefixes the feature allows.</param>

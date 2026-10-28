@@ -58,32 +58,15 @@ public sealed record CreateStructuredItem(
     ImmutableArray<ViewDefinition> Views,
     string DefaultView) : ICommand<Item>;
 
-public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructuredItem, Item>
+public sealed class CreateStructuredItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    ISchemaResolver schemas)
+    : ICommandHandler<CreateStructuredItem, Item>
 {
-    private readonly ISchemaResolver _schemas;
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    public CreateStructuredItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        ISchemaResolver schemas)
-    {
-        ArgumentNullException.ThrowIfNull(schemas);
-        _schemas = schemas;
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     public async ValueTask<Result<Item>> HandleAsync(
         CreateStructuredItem command,
@@ -104,15 +87,15 @@ public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructur
                 "A structured item needs at least one configured view."));
         }
 
-        if (!await _tree.WorkspaceExistsAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanWriteWorkspaceAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        if (!await tree.WorkspaceExistsAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || !await permissions.CanWriteWorkspaceAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.WorkspaceNotFound("This workspace is not visible."));
         }
 
         if (command.ParentId is { } parentId)
         {
-            var parent = await _tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
+            var parent = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
             if (parent is null || parent.WorkspaceId != command.WorkspaceId)
             {
                 return Result.Failure<Item>(ItemErrors.ParentNotFound("The selected destination is not visible."));
@@ -136,7 +119,7 @@ public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructur
 
         if (command.Views.Any(view => view.Kind == ViewKind.Chat))
         {
-            var inherited = await _schemas.ResolveForChildrenAsync(command.ParentId, cancellationToken).ConfigureAwait(false);
+            var inherited = await schemas.ResolveForChildrenAsync(command.ParentId, cancellationToken).ConfigureAwait(false);
             if (ChatSchema.Refuse(PropertySchema.Merge(inherited, command.Schema)) is { } chatReason)
             {
                 return Result.Failure<Item>(PropertyErrors.InvalidViews(chatReason));
@@ -151,7 +134,7 @@ public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructur
             return Result.Failure<Item>(PropertyErrors.InvalidViews("This setup is too large to store."));
         }
 
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var item = new Item
         {
             Id = ItemId.Create(),
@@ -159,7 +142,7 @@ public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructur
             WorkspaceId = command.WorkspaceId,
             Type = command.Type,
             ParentId = command.ParentId,
-            Seq = await _tree.NextSiblingSequenceAsync(
+            Seq = await tree.NextSiblingSequenceAsync(
                 command.WorkspaceId,
                 command.ParentId,
                 cancellationToken).ConfigureAwait(false),
@@ -173,7 +156,7 @@ public sealed class CreateStructuredItemHandler : ICommandHandler<CreateStructur
             CreatedAt = now,
             LastModifiedAt = now,
         };
-        await _tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
+        await tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
         return Result.Success(item);
     }
 }
@@ -184,41 +167,24 @@ public sealed record AppendViewSetup(
     ImmutableArray<ViewDefinition> Views,
     bool MakeDefault) : ICommand<Item>;
 
-public sealed class AppendViewSetupHandler : ICommandHandler<AppendViewSetup, Item>
+public sealed class AppendViewSetupHandler(
+    IItemTree tree,
+    ISchemaResolver schemas,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<AppendViewSetup, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly ISchemaResolver _schemas;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    public AppendViewSetupHandler(
-        IItemTree tree,
-        ISchemaResolver schemas,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-        _tree = tree;
-        _schemas = schemas;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     public async ValueTask<Result<Item>> HandleAsync(
         AppendViewSetup command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var item = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound("This item is not visible."));
         }
@@ -234,7 +200,7 @@ public sealed class AppendViewSetupHandler : ICommandHandler<AppendViewSetup, It
                 "A guided setup needs at least one field or one configured view."));
         }
 
-        var effective = await _schemas.ResolveForChildrenAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        var effective = await schemas.ResolveForChildrenAsync(item.Id, cancellationToken).ConfigureAwait(false);
         var additions = new HashSet<string>(StringComparer.Ordinal);
         foreach (var property in command.Properties)
         {
@@ -301,12 +267,12 @@ public sealed class AppendViewSetupHandler : ICommandHandler<AppendViewSetup, It
 
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
-        var now = _clock.GetUtcNow();
-        await _tree.UpdateSchemaAsync(item.Id, schemaJson, context.PrincipalId, now, cancellationToken)
+        var now = clock.GetUtcNow();
+        await tree.UpdateSchemaAsync(item.Id, schemaJson, context.PrincipalId, now, cancellationToken)
             .ConfigureAwait(false);
         if (touchesViews)
         {
-            await _tree.UpdateViewsAsync(item.Id, viewsJson, context.PrincipalId, now, cancellationToken)
+            await tree.UpdateViewsAsync(item.Id, viewsJson, context.PrincipalId, now, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -321,41 +287,24 @@ public sealed record ReplaceViewSetup(
     ImmutableArray<string> OriginalPropertyKeys,
     ImmutableArray<ViewDefinition> Views) : ICommand<Item>;
 
-public sealed class ReplaceViewSetupHandler : ICommandHandler<ReplaceViewSetup, Item>
+public sealed class ReplaceViewSetupHandler(
+    IItemTree tree,
+    ISchemaResolver schemas,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<ReplaceViewSetup, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly ISchemaResolver _schemas;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    public ReplaceViewSetupHandler(
-        IItemTree tree,
-        ISchemaResolver schemas,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-        _tree = tree;
-        _schemas = schemas;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     public async ValueTask<Result<Item>> HandleAsync(
         ReplaceViewSetup command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var item = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound("This item is not visible."));
         }
@@ -386,7 +335,7 @@ public sealed class ReplaceViewSetupHandler : ICommandHandler<ReplaceViewSetup, 
                 "A field was removed while this setup was open. Reopen the studio to use the latest schema."));
         }
 
-        var effective = await _schemas.ResolveForChildrenAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        var effective = await schemas.ResolveForChildrenAsync(item.Id, cancellationToken).ConfigureAwait(false);
         foreach (var property in command.Schema.Properties)
         {
             if (!originalPropertyKeys.Contains(property.Key) && effective.Find(property.Key) is not null)
@@ -456,7 +405,7 @@ public sealed class ReplaceViewSetupHandler : ICommandHandler<ReplaceViewSetup, 
 
         if (nextViews.Any(view => view.Kind == ViewKind.Chat))
         {
-            var inherited = await _schemas.ResolveForChildrenAsync(item.ParentId, cancellationToken).ConfigureAwait(false);
+            var inherited = await schemas.ResolveForChildrenAsync(item.ParentId, cancellationToken).ConfigureAwait(false);
             if (ChatSchema.Refuse(PropertySchema.Merge(inherited, nextSchema)) is { } chatReason)
             {
                 return Result.Failure<Item>(PropertyErrors.InvalidViews(chatReason));
@@ -473,10 +422,10 @@ public sealed class ReplaceViewSetupHandler : ICommandHandler<ReplaceViewSetup, 
 
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
-        var now = _clock.GetUtcNow();
-        await _tree.UpdateSchemaAsync(item.Id, schemaJson, context.PrincipalId, now, cancellationToken)
+        var now = clock.GetUtcNow();
+        await tree.UpdateSchemaAsync(item.Id, schemaJson, context.PrincipalId, now, cancellationToken)
             .ConfigureAwait(false);
-        await _tree.UpdateViewsAsync(item.Id, viewsJson, context.PrincipalId, now, cancellationToken)
+        await tree.UpdateViewsAsync(item.Id, viewsJson, context.PrincipalId, now, cancellationToken)
             .ConfigureAwait(false);
         return Result.Success(item);
     }
@@ -598,45 +547,18 @@ internal static class StructuredItemSetupEndpoints
             return TypedResults.Problem(StructureEndpoints.Problem(httpContext, result.Error));
         }
 
-        var effective = await dispatcher.QueryAsync<GetEffectiveSchema, Result<EffectiveSchema>>(
-            new GetEffectiveSchema(ItemId.From(itemId)),
-            httpContext.RequestAborted).ConfigureAwait(false);
-        var stored = await dispatcher.QueryAsync<GetContainerViews, Result<ContainerViewSet>>(
-            new GetContainerViews(ItemId.From(itemId)),
-            httpContext.RequestAborted).ConfigureAwait(false);
-        if (effective.IsFailure || stored.IsFailure)
-        {
-            var error = effective.IsFailure ? effective.Error : stored.Error;
-            return TypedResults.Problem(StructureEndpoints.Problem(httpContext, error));
-        }
-
-        var publicForm = await PublishIfRequested(
+        return await Respond(
+            itemId,
             request.PublishInteractiveFormViewId,
             views,
             result.Value,
             httpContext,
+            dispatcher,
             publicForms,
             schemas,
             session,
             tokens,
             clock).ConfigureAwait(false);
-        if (request.PublishInteractiveFormViewId is not null && publicForm is null)
-        {
-            return TypedResults.Problem(StructureEndpoints.Problem(
-                httpContext,
-                PropertyErrors.InvalidViews("The interactive form could not be published.")));
-        }
-
-        return TypedResults.Ok(new StructuredItemResponse(
-            ItemMapping.ToResponse(result.Value, false),
-            PropertyMapping.ToResponse(effective.Value.Effective, effective.Value.Declared),
-            new ContainerViewsResponse(
-                [.. stored.Value.Views.Select(ViewMapping.ToResponse)],
-                stored.Value.Unrenderable,
-                stored.Value.Default,
-                stored.Value.HideDocument,
-                stored.Value.Version),
-            publicForm));
     }
 
     internal static async Task<Results<Ok<StructuredItemResponse>, ProblemHttpResult>> Replace(
@@ -679,6 +601,33 @@ internal static class StructuredItemSetupEndpoints
             return TypedResults.Problem(StructureEndpoints.Problem(httpContext, result.Error));
         }
 
+        return await Respond(
+            itemId,
+            request.PublishInteractiveFormViewId,
+            views,
+            result.Value,
+            httpContext,
+            dispatcher,
+            publicForms,
+            schemas,
+            session,
+            tokens,
+            clock).ConfigureAwait(false);
+    }
+
+    private static async Task<Results<Ok<StructuredItemResponse>, ProblemHttpResult>> Respond(
+        Guid itemId,
+        string? publishInteractiveFormViewId,
+        ImmutableArray<ViewDefinition> views,
+        Item item,
+        HttpContext httpContext,
+        NixDispatcher dispatcher,
+        IPublicFormStore publicForms,
+        ISchemaResolver schemas,
+        INixSessionContextAccessor session,
+        PublicFormTokenService tokens,
+        TimeProvider clock)
+    {
         var effective = await dispatcher.QueryAsync<GetEffectiveSchema, Result<EffectiveSchema>>(
             new GetEffectiveSchema(ItemId.From(itemId)),
             httpContext.RequestAborted).ConfigureAwait(false);
@@ -692,16 +641,16 @@ internal static class StructuredItemSetupEndpoints
         }
 
         var publicForm = await PublishIfRequested(
-            request.PublishInteractiveFormViewId,
+            publishInteractiveFormViewId,
             views,
-            result.Value,
+            item,
             httpContext,
             publicForms,
             schemas,
             session,
             tokens,
             clock).ConfigureAwait(false);
-        if (request.PublishInteractiveFormViewId is not null && publicForm is null)
+        if (publishInteractiveFormViewId is not null && publicForm is null)
         {
             return TypedResults.Problem(StructureEndpoints.Problem(
                 httpContext,
@@ -709,7 +658,7 @@ internal static class StructuredItemSetupEndpoints
         }
 
         return TypedResults.Ok(new StructuredItemResponse(
-            ItemMapping.ToResponse(result.Value, false),
+            ItemMapping.ToResponse(item, false),
             PropertyMapping.ToResponse(effective.Value.Effective, effective.Value.Declared),
             new ContainerViewsResponse(
                 [.. stored.Value.Views.Select(ViewMapping.ToResponse)],

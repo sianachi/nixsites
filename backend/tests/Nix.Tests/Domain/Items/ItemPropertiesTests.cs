@@ -283,19 +283,6 @@ public sealed class ItemPropertiesStampSetByTests
     }
 
     [Fact]
-    public void Template_content_carries_no_set_by_value_at_all()
-    {
-        var stripped = ItemProperties.StripSetBy(
-            $$"""{"due_date":"2026-10-01","{{ItemProperties.DueSetByKey}}":"00000000-0000-0000-0000-00000000000f","{{ItemProperties.ReminderSetByKey}}":"00000000-0000-0000-0000-00000000000f"}""");
-
-        var parsed = Assert.IsType<JsonObject>(JsonNode.Parse(stripped!));
-        Assert.Equal("2026-10-01", (string?)parsed["due_date"]);
-        Assert.False(parsed.ContainsKey(ItemProperties.DueSetByKey));
-        Assert.False(parsed.ContainsKey(ItemProperties.ReminderSetByKey));
-        Assert.Null(ItemProperties.StripSetBy(null));
-    }
-
-    [Fact]
     public void Clearing_completion_on_a_dated_item_re_attributes_its_due_date_to_whoever_reopened_it()
     {
         // Reopening a task re-targets its due reminder as surely as setting the date does, so the
@@ -344,7 +331,6 @@ public sealed class ItemPropertiesStampSetByTests
         const string duplicated = """{"due_date":"2026-10-01","$due_set_by":"00000000-0000-0000-0000-00000000000f","$due_set_by":"00000000-0000-0000-0000-00000000000e"}""";
 
         Assert.Equal(duplicated, ItemProperties.WithTitle(duplicated, "Title"));
-        Assert.Equal(duplicated, ItemProperties.StripSetBy(duplicated));
         Assert.Equal(duplicated, ItemProperties.RestampCopiedSetBy(duplicated, "00000000-0000-0000-0000-000000000002"));
         Assert.NotNull(new Nix.Domain.Templates.TemplateDefinitionValidator().ValidateEnvelope(duplicated, null, null));
     }
@@ -378,17 +364,5 @@ public sealed class ItemPropertiesStampSetByTests
         Assert.False(parsed.ContainsKey("$cal_source"));
         Assert.False(parsed.ContainsKey("$cal_link"));
         Assert.False(parsed.ContainsKey("$cal_readonly"));
-    }
-
-    [Fact]
-    public void Template_content_carries_no_calendar_sync_key()
-    {
-        var stripped = ItemProperties.StripSetBy(
-            """{"title":"Standup","$cal_source":"microsoft","$cal_link":"0199a000-0000-7000-8000-000000000001"}""");
-
-        var parsed = Assert.IsType<JsonObject>(JsonNode.Parse(stripped!));
-        Assert.Equal("Standup", (string?)parsed["title"]);
-        Assert.False(parsed.ContainsKey("$cal_source"));
-        Assert.False(parsed.ContainsKey("$cal_link"));
     }
 }

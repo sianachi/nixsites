@@ -40,7 +40,9 @@ public sealed record ItemRollups(
     ItemId? SchemaSource) : IQuery<IReadOnlyDictionary<ItemId, JsonObject>>;
 
 /// <summary>Handles <see cref="ItemRollups"/>.</summary>
-public sealed class ItemRollupsHandler
+public sealed class ItemRollupsHandler(
+    ISchemaResolver schemas,
+    IChildAggregates aggregates)
     : IQueryHandler<ItemRollups, IReadOnlyDictionary<ItemId, JsonObject>>
 {
     /// <summary>
@@ -55,21 +57,6 @@ public sealed class ItemRollupsHandler
     /// zero - see <c>ChildAggregate.Empty</c> for why the two are kept apart.
     /// </remarks>
     public const int MaximumFoldKeys = 8;
-
-    private readonly ISchemaResolver _schemas;
-    private readonly IChildAggregates _aggregates;
-
-    /// <summary>Initializes a new instance of the <see cref="ItemRollupsHandler"/> class.</summary>
-    /// <param name="schemas">Resolves the schema that declares the rollups.</param>
-    /// <param name="aggregates">Folds the children.</param>
-    public ItemRollupsHandler(ISchemaResolver schemas, IChildAggregates aggregates)
-    {
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(aggregates);
-
-        _schemas = schemas;
-        _aggregates = aggregates;
-    }
 
     /// <summary>Folds the rollups.</summary>
     /// <param name="query">The workspace, the items, and where their schema comes from.</param>
@@ -90,7 +77,7 @@ public sealed class ItemRollupsHandler
             return Nothing;
         }
 
-        var schema = await _schemas.ResolveForItemAsync(source, cancellationToken).ConfigureAwait(false);
+        var schema = await schemas.ResolveForItemAsync(source, cancellationToken).ConfigureAwait(false);
 
         var rollups = new List<PropertyDefinition>();
         foreach (var property in schema.Properties)
@@ -127,7 +114,7 @@ public sealed class ItemRollupsHandler
             keys.Add(ChildCountKey);
         }
 
-        var folds = await _aggregates
+        var folds = await aggregates
             .FoldAsync(query.WorkspaceId, query.Items, keys, cancellationToken)
             .ConfigureAwait(false);
 

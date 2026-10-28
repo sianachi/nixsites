@@ -31,41 +31,19 @@ namespace Nix.Persistence.Items;
 /// in depth.
 /// </para>
 /// </remarks>
-public sealed partial class ItemTree : IItemTree
+public sealed partial class ItemTree(
+    NixDbContext dbContext,
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IItemTree
 {
-    private readonly NixDbContext _dbContext;
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ItemTree"/> class.
-    /// </summary>
-    /// <param name="dbContext">The context owning the connection and transaction.</param>
-    /// <param name="sql">The executor for the closure statements.</param>
-    /// <param name="session">The tenant scope this unit of work runs under.</param>
-    /// <param name="credential">The credential this request authenticated with, whose unlocks decide what trash lists.</param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public ItemTree(
-        NixDbContext dbContext,
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _dbContext = dbContext;
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly NixDbContext _dbContext = dbContext;
+    private readonly NixSqlExecutor _sql = sql;
+    private readonly INixSessionContextAccessor _session = session;
+    private readonly CredentialSessionContext _credential = credential;
+    private readonly TimeProvider _clock = clock;
 
     private TenantId Tenant => _session.Current?.TenantId
         ?? throw new InvalidOperationException(

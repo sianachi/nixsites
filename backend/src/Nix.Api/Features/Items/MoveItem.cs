@@ -45,46 +45,17 @@ public sealed record MoveItem(ItemId ItemId, ItemId? NewParentId, ItemId? AfterI
 /// that is still meaningful when the list has changed underneath it.
 /// </para>
 /// </remarks>
-public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
+public sealed class MoveItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IItemLocks locks,
+    IFinanceMutationGuard? financeGuard = null,
+    IFinanceLock? topology = null)
+    : ICommandHandler<MoveItem, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IItemLocks _locks;
-    private readonly IFinanceMutationGuard? _financeGuard;
-    private readonly IFinanceLock? _topology;
-
-    /// <summary>Initializes a new instance of the <see cref="MoveItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="locks">Keeps an item from being moved across the edge of a closed lock.</param>
-    /// <param name="financeGuard">Refuses moves that would break a finance workbook, when present.</param>
-    public MoveItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IItemLocks locks,
-        IFinanceMutationGuard? financeGuard = null,
-        IFinanceLock? topology = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-        _locks = locks;
-        _financeGuard = financeGuard;
-        _topology = topology;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Moves the item.</summary>
     /// <param name="command">
@@ -104,9 +75,9 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -122,14 +93,14 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
             return await TransferAsync(command, item, destinationWorkspace, cancellationToken).ConfigureAwait(false);
         }
 
-        if (_financeGuard is not null)
+        if (financeGuard is not null)
         {
-            var blocked = await _financeGuard.CheckAsync(item.WorkspaceId, itemId, newParentId, true, cancellationToken).ConfigureAwait(false);
+            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, newParentId, true, cancellationToken).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<Item>(blocked.Value);
             }
-            item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
             if (item is null || item.WorkspaceId != workspaceId)
             {
                 return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
@@ -146,7 +117,7 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
 
         if (newParentId is { } destination)
         {
-            var parent = await _tree.FindAsync(destination, cancellationToken).ConfigureAwait(false);
+            var parent = await tree.FindAsync(destination, cancellationToken).ConfigureAwait(false);
             if (parent is null || parent.WorkspaceId != item.WorkspaceId)
             {
                 return Result.Failure<Item>(
@@ -167,7 +138,7 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
             }
 
             if (destination == itemId
-                || await _tree.WouldCreateCycleAsync(itemId, destination, cancellationToken).ConfigureAwait(false))
+                || await tree.WouldCreateCycleAsync(itemId, destination, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<Item>(
                     ItemErrors.WouldCreateCycle(
@@ -176,7 +147,7 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
 
             // Into a closed lock is refused too: the item would vanish from the caller's own view
             // the moment it landed, which reads as the move having lost it.
-            if (!await _locks.MayReadBodyAsync(destination, cancellationToken).ConfigureAwait(false))
+            if (!await locks.MayReadBodyAsync(destination, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<Item>(
                     ItemErrors.Locked($"Item {destination} is locked. Unlock it before moving anything into it."));
@@ -188,7 +159,7 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
         // the item's own lock travels with it, so a locked note can still be reordered or filed
         // without being opened; only a lock above it is left behind by the move.
         if (item.ParentId is { } currentParent
-            && !await _locks.MayReadBodyAsync(currentParent, cancellationToken).ConfigureAwait(false))
+            && !await locks.MayReadBodyAsync(currentParent, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(
                 ItemErrors.Locked($"Item {currentParent} is locked. Unlock it before moving anything out of it."));
@@ -196,7 +167,7 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
 
         if (afterId is { } anchor)
         {
-            var sibling = await _tree.FindAsync(anchor, cancellationToken).ConfigureAwait(false);
+            var sibling = await tree.FindAsync(anchor, cancellationToken).ConfigureAwait(false);
             if (sibling is null || sibling.WorkspaceId != item.WorkspaceId)
             {
                 return Result.Failure<Item>(ItemErrors.NotFound($"No item {anchor} is visible."));
@@ -214,18 +185,18 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
             }
         }
 
-        var seq = await _tree
+        var seq = await tree
             .AllocateSiblingSequenceAsync(item.WorkspaceId, newParentId, itemId, afterId, cancellationToken)
             .ConfigureAwait(false);
 
-        await _tree
-            .ReparentAsync(itemId, newParentId, seq, context.PrincipalId, _clock.GetUtcNow(), cancellationToken)
+        await tree
+            .ReparentAsync(itemId, newParentId, seq, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
 
         // Re-read rather than patching the shape in memory: the closure rewrite and the row update
         // both went through the store, and inventing what the row now looks like is how a response
         // drifts from the row it claims to describe.
-        var moved = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var moved = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         return moved is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the move."))
@@ -234,34 +205,34 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
     private async ValueTask<Result<Item>> TransferAsync(
         MoveItem command, Item original, WorkspaceId destination, CancellationToken cancellationToken)
     {
-        if (!await _permissions.CanWriteWorkspaceAsync(destination, cancellationToken).ConfigureAwait(false)
-            || !await _tree.WorkspaceExistsAsync(destination, cancellationToken).ConfigureAwait(false))
+        if (!await permissions.CanWriteWorkspaceAsync(destination, cancellationToken).ConfigureAwait(false)
+            || !await tree.WorkspaceExistsAsync(destination, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.WorkspaceNotFound("No writable destination workspace is visible."));
         }
 
         // Structural writes already share this lock with finance operations. Acquire both before
         // discovery, in a stable order, so opposing transfers cannot deadlock or discover stale trees.
-        if (_topology is not null)
+        if (topology is not null)
         {
             foreach (var workspace in new[] { original.WorkspaceId, destination }.OrderBy(id => id.Value))
             {
-                await _topology.AcquireWorkspaceTopologyAsync(workspace, cancellationToken).ConfigureAwait(false);
+                await topology.AcquireWorkspaceTopologyAsync(workspace, cancellationToken).ConfigureAwait(false);
             }
         }
-        var item = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null || item.WorkspaceId != original.WorkspaceId)
         {
             return Result.Failure<Item>(ItemErrors.TransferConflict("The item moved while this request was being checked. Reload it before retrying."));
         }
         if (item.ParentId is { } oldParent
-            && !await _locks.MayReadBodyAsync(oldParent, cancellationToken).ConfigureAwait(false))
+            && !await locks.MayReadBodyAsync(oldParent, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.Locked("Unlock the current parent before moving this item to another workspace."));
         }
         if (command.NewParentId is { } parentId)
         {
-            var parent = await _tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
+            var parent = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
             if (parent is null || parent.WorkspaceId != destination)
             {
                 return Result.Failure<Item>(ItemErrors.ParentNotFound("The destination parent is not visible in the selected workspace."));
@@ -274,29 +245,29 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
             {
                 return Result.Failure<Item>(ItemErrors.ChildrenProtected("The destination does not accept new children."));
             }
-            if (!await _locks.MayReadBodyAsync(parentId, cancellationToken).ConfigureAwait(false))
+            if (!await locks.MayReadBodyAsync(parentId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<Item>(ItemErrors.Locked("Unlock the destination before moving an item into it."));
             }
         }
         if (command.AfterId is { } anchorId)
         {
-            var anchor = await _tree.FindAsync(anchorId, cancellationToken).ConfigureAwait(false);
+            var anchor = await tree.FindAsync(anchorId, cancellationToken).ConfigureAwait(false);
             if (anchor is null || anchor.WorkspaceId != destination || anchor.ParentId != command.NewParentId)
             {
                 return Result.Failure<Item>(ItemErrors.SiblingNotInDestination("The chosen sibling is not in the destination."));
             }
         }
-        if (_financeGuard is not null)
+        if (financeGuard is not null)
         {
-            var error = await _financeGuard.CheckAsync(item.WorkspaceId, item.Id, null, true, cancellationToken).ConfigureAwait(false);
+            var error = await financeGuard.CheckAsync(item.WorkspaceId, item.Id, null, true, cancellationToken).ConfigureAwait(false);
             if (error is not null)
             {
                 return Result.Failure<Item>(error.Value);
             }
             if (command.NewParentId is { } financeParentId)
             {
-                error = await _financeGuard.CheckAsync(destination, financeParentId, null, false, cancellationToken).ConfigureAwait(false);
+                error = await financeGuard.CheckAsync(destination, financeParentId, null, false, cancellationToken).ConfigureAwait(false);
                 if (error is not null)
                 {
                     return Result.Failure<Item>(error.Value);
@@ -305,14 +276,14 @@ public sealed class MoveItemHandler : ICommandHandler<MoveItem, Item>
         }
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context was established.");
-        var refusal = await _tree.TransferWorkspaceAsync(
+        var refusal = await tree.TransferWorkspaceAsync(
             item.Id, item.WorkspaceId, destination, command.NewParentId, command.AfterId,
-            context.PrincipalId, _clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
+            context.PrincipalId, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
         if (refusal is not null)
         {
             return Result.Failure<Item>(ItemErrors.TransferConflict(refusal));
         }
-        var moved = await _tree.FindAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        var moved = await tree.FindAsync(item.Id, cancellationToken).ConfigureAwait(false);
         return moved is null
             ? Result.Failure<Item>(ItemErrors.NotFound("The moved item could not be read."))
             : Result.Success(moved);

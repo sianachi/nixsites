@@ -46,7 +46,10 @@ public sealed record SearchResults(string Query, IReadOnlyList<ItemDigest> Hits,
 /// tenant would be both expensive and a non-answer.
 /// </para>
 /// </remarks>
-public sealed class SearchItemsHandler : IQueryHandler<SearchItems, Result<SearchResults>>
+public sealed class SearchItemsHandler(
+    IItemSearch search,
+    IPermissionResolver permissions)
+    : IQueryHandler<SearchItems, Result<SearchResults>>
 {
     /// <summary>The most results one search may return.</summary>
     /// <remarks>
@@ -83,20 +86,7 @@ public sealed class SearchItemsHandler : IQueryHandler<SearchItems, Result<Searc
     /// </remarks>
     public const int MinimumQueryLength = 3;
 
-    private readonly IItemSearch _search;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="SearchItemsHandler"/> class.</summary>
-    /// <param name="search">Runs the query.</param>
-    /// <param name="permissions">Decides where the caller may look.</param>
-    public SearchItemsHandler(IItemSearch search, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(search);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _search = search;
-        _permissions = permissions;
-    }
+    private readonly IItemSearch _search = search;
 
     /// <summary>Runs the search.</summary>
     /// <param name="query">What to look for, and how much to return.</param>
@@ -119,7 +109,7 @@ public sealed class SearchItemsHandler : IQueryHandler<SearchItems, Result<Searc
             return Result.Success(new SearchResults(text, [], limit));
         }
 
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 

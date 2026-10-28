@@ -31,7 +31,15 @@ namespace Nix.Features.Charts;
 public sealed record RunItemChart(ItemId ItemId, string ViewId) : IQuery<Result<ItemChart>>;
 
 /// <summary>Handles <see cref="RunItemChart"/>.</summary>
-public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<ItemChart>>
+public sealed class RunItemChartHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IChildAggregates aggregates,
+    IItemLocks locks,
+    TimeProvider clock,
+    IPrincipalPreferencesStore preferences,
+    INixSessionContextAccessor session)
+    : IQueryHandler<RunItemChart, Result<ItemChart>>
 {
     /// <summary>The most bars this build will draw, whatever the grouping property does.</summary>
     /// <remarks>
@@ -48,48 +56,7 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
     /// <remarks>The reader clamps to its own ceiling as well; see <c>ChildAggregateReader.MaximumCells</c>.</remarks>
     public const int MaximumCells = 10_000;
 
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IChildAggregates _aggregates;
-    private readonly IItemLocks _locks;
-    private readonly TimeProvider _clock;
-    private readonly IPrincipalPreferencesStore _preferences;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="RunItemChartHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="aggregates">Buckets the children.</param>
-    /// <param name="locks">Withholds a locked container's children until it is opened.</param>
-    /// <param name="clock">Says which period is the current one, for a rolling window.</param>
-    /// <param name="preferences">The reader's time zone, which decides which day is today.</param>
-    /// <param name="session">Who is reading.</param>
-    public RunItemChartHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IChildAggregates aggregates,
-        IItemLocks locks,
-        TimeProvider clock,
-        IPrincipalPreferencesStore preferences,
-        INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(preferences);
-        ArgumentNullException.ThrowIfNull(session);
-        _preferences = preferences;
-        _session = session;
-
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(aggregates);
-        ArgumentNullException.ThrowIfNull(locks);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _aggregates = aggregates;
-        _locks = locks;
-        _clock = clock;
-    }
+    private readonly IPrincipalPreferencesStore _preferences = preferences;
 
     /// <summary>Draws the chart.</summary>
     /// <param name="query">The container and the view.</param>
@@ -105,15 +72,15 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
 
         // The same refusal an unreadable item gets everywhere: "you may not see this" would confirm
         // the thing exists, which is how an outsider enumerates a workspace an identifier at a time.
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemChart>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
 
         // A chart is a view of the children, and a lock covers them.
-        if (!await _locks.MayReadBodyAsync(itemId, cancellationToken).ConfigureAwait(false))
+        if (!await locks.MayReadBodyAsync(itemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemChart>(
                 ItemErrors.Locked($"Item {itemId} is locked. Unlock it to see its chart."));
@@ -180,7 +147,7 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
             var today = await TodayAsync(cancellationToken).ConfigureAwait(false);
             var (first, last, endAtData) = Window(options, axis, kind, today);
 
-            var cells = await _aggregates
+            var cells = await aggregates
                 .BucketByDayAsync(
                     item.WorkspaceId,
                     itemId,
@@ -207,7 +174,7 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
 
             if (splitBy is not null)
             {
-                var cells = await _aggregates
+                var cells = await aggregates
                     .BucketBySeriesAsync(
                         item.WorkspaceId,
                         itemId,
@@ -224,7 +191,7 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
             }
             else
             {
-                var buckets = await _aggregates
+                var buckets = await aggregates
                     .BucketAsync(
                         item.WorkspaceId,
                         itemId,
@@ -268,9 +235,9 @@ public sealed class RunItemChartHandler : IQueryHandler<RunItemChart, Result<Ite
     /// </remarks>
     private async ValueTask<DateOnly> TodayAsync(CancellationToken cancellationToken)
     {
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var zone = DateTimeZone.Utc;
-        if (_session.Current is { } context
+        if (session.Current is { } context
             && await _preferences.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false) is { } stored
             && DateTimeZoneProviders.Tzdb.GetZoneOrNull(stored.TimeZone) is { } preferred)
         {

@@ -61,42 +61,16 @@ public sealed record CreateItem(
 /// either would be able to collide with an item it cannot see - which, in a system where "cannot
 /// see" is the security boundary, is a way to learn that the invisible item exists.
 /// </remarks>
-public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
+public sealed class CreateItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    ISchemaResolver schemas,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IFinanceLock? topology = null)
+    : ICommandHandler<CreateItem, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly ISchemaResolver _schemas;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceLock? _topology;
-
-    /// <summary>Initializes a new instance of the <see cref="CreateItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="schemas">Resolves the schema the new item's properties are checked against.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock, injected so timestamps are controllable in tests.</param>
-    public CreateItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        ISchemaResolver schemas,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IFinanceLock? topology = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _schemas = schemas;
-        _session = session;
-        _clock = clock;
-        _topology = topology;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Creates the item.</summary>
     /// <param name="command">
@@ -153,13 +127,13 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
             return Result.Failure<Item>(new NixError("items.invalid_idempotency_key", "A non-empty request UUID is required."));
         }
 
-        if (_topology is not null)
+        if (topology is not null)
         {
-            await _topology.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+            await topology.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);
         }
 
-        if (!await _tree.WorkspaceExistsAsync(workspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanWriteWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false))
+        if (!await tree.WorkspaceExistsAsync(workspaceId, cancellationToken).ConfigureAwait(false)
+            || !await permissions.CanWriteWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false))
         {
             // Not-found rather than forbidden: a workspace the caller cannot see must not be
             // distinguishable from one that does not exist. A reader who may see the workspace but
@@ -180,7 +154,7 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
                 ["title"] = title,
                 ["properties"] = properties?.DeepClone(),
             }.ToJsonString();
-            var receipt = await _tree.GetCreationReceiptAsync(requestKey, creationRequest, cancellationToken).ConfigureAwait(false);
+            var receipt = await tree.GetCreationReceiptAsync(requestKey, creationRequest, cancellationToken).ConfigureAwait(false);
             if (receipt is not null)
             {
                 if (!receipt.MatchesRequest)
@@ -188,9 +162,9 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
                     return Result.Failure<Item>(new NixError("items.idempotency_conflict", "This request UUID belongs to a different creation."));
                 }
 
-                var created = await _tree.FindAsync(receipt.ItemId, cancellationToken).ConfigureAwait(false);
+                var created = await tree.FindAsync(receipt.ItemId, cancellationToken).ConfigureAwait(false);
                 return created is not null
-                    && await _permissions.CanWriteWorkspaceAsync(created.WorkspaceId, cancellationToken).ConfigureAwait(false)
+                    && await permissions.CanWriteWorkspaceAsync(created.WorkspaceId, cancellationToken).ConfigureAwait(false)
                     ? Result.Success(created)
                     : Result.Failure<Item>(ItemErrors.NotFound("The previously created item is no longer available."));
             }
@@ -198,7 +172,7 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
 
         if (parentId is { } parent)
         {
-            var existing = await _tree.FindAsync(parent, cancellationToken).ConfigureAwait(false);
+            var existing = await tree.FindAsync(parent, cancellationToken).ConfigureAwait(false);
             if (existing is null || existing.WorkspaceId != workspaceId)
             {
                 return Result.Failure<Item>(
@@ -222,7 +196,7 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
         // The schema the item is about to fall under, resolved from the parent because the item has
         // no row yet to resolve from - which is the question ResolveForChildrenAsync exists to
         // answer.
-        var schema = await _schemas
+        var schema = await schemas
             .ResolveForChildrenAsync(parentId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -244,7 +218,7 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
             properties?.Select(pair => pair.Key).ToImmutableArray() ?? ImmutableArray<string>.Empty,
             context.PrincipalId.ToString());
 
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var item = new Item
         {
             Id = ItemId.Create(),
@@ -252,7 +226,7 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
             WorkspaceId = workspaceId,
             Type = type,
             ParentId = parentId,
-            Seq = await _tree
+            Seq = await tree
                 .NextSiblingSequenceAsync(workspaceId, parentId, cancellationToken)
                 .ConfigureAwait(false),
             Properties = stamped,
@@ -263,10 +237,10 @@ public sealed class CreateItemHandler : ICommandHandler<CreateItem, Item>
             LastModifiedAt = now,
         };
 
-        await _tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
+        await tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
         if (command.IdempotencyKey is { } key)
         {
-            await _tree.RecordCreationReceiptAsync(key, creationRequest!, item.Id, cancellationToken).ConfigureAwait(false);
+            await tree.RecordCreationReceiptAsync(key, creationRequest!, item.Id, cancellationToken).ConfigureAwait(false);
         }
         return Result.Success(item);
     }

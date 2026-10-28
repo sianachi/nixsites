@@ -17,7 +17,20 @@ using Nix.Persistence;
 namespace Nix.Authentication;
 
 /// <summary>Owns the server side of interactive OIDC and Core browser sessions.</summary>
-public sealed class BrowserAuthCoordinator
+public sealed class BrowserAuthCoordinator(
+    IOptions<BrowserAuthOptions> options,
+    OidcMetadataClient metadata,
+    IHttpClientFactory clientFactory,
+    IDataProtectionProvider dataProtection,
+    NixTokenValidator validator,
+    IIdentityDirectory identity,
+    IUserInfoClient userInfo,
+    ScopedNixSessionContextAccessor sessionContext,
+    NixDbContext database,
+    NixDispatcher dispatcher,
+    IBrowserSessions sessions,
+    SelfIssuedTokenService tokens,
+    TimeProvider clock)
 {
     /// <summary>The opaque HttpOnly session cookie.</summary>
     private const string SecureSessionCookieName = "__Host-nix_session";
@@ -32,64 +45,19 @@ public sealed class BrowserAuthCoordinator
     private static readonly TimeSpan LoginLifetime = TimeSpan.FromMinutes(10);
     private readonly JwtSecurityTokenHandler _jwt = new() { MapInboundClaims = false };
 
-    private readonly BrowserAuthOptions _options;
-    private readonly OidcMetadataClient _metadata;
-    private readonly IHttpClientFactory _clientFactory;
-    private readonly IDataProtector _stateProtector;
-    private readonly NixTokenValidator _validator;
-    private readonly IIdentityDirectory _identity;
-    private readonly IUserInfoClient _userInfo;
-    private readonly ScopedNixSessionContextAccessor _sessionContext;
-    private readonly NixDbContext _database;
-    private readonly NixDispatcher _dispatcher;
-    private readonly IBrowserSessions _sessions;
-    private readonly SelfIssuedTokenService _tokens;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes the interactive authentication coordinator.</summary>
-    public BrowserAuthCoordinator(
-        IOptions<BrowserAuthOptions> options,
-        OidcMetadataClient metadata,
-        IHttpClientFactory clientFactory,
-        IDataProtectionProvider dataProtection,
-        NixTokenValidator validator,
-        IIdentityDirectory identity,
-        IUserInfoClient userInfo,
-        ScopedNixSessionContextAccessor sessionContext,
-        NixDbContext database,
-        NixDispatcher dispatcher,
-        IBrowserSessions sessions,
-        SelfIssuedTokenService tokens,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(metadata);
-        ArgumentNullException.ThrowIfNull(clientFactory);
-        ArgumentNullException.ThrowIfNull(dataProtection);
-        ArgumentNullException.ThrowIfNull(validator);
-        ArgumentNullException.ThrowIfNull(identity);
-        ArgumentNullException.ThrowIfNull(userInfo);
-        ArgumentNullException.ThrowIfNull(sessionContext);
-        ArgumentNullException.ThrowIfNull(database);
-        ArgumentNullException.ThrowIfNull(dispatcher);
-        ArgumentNullException.ThrowIfNull(sessions);
-        ArgumentNullException.ThrowIfNull(tokens);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _options = options.Value;
-        _metadata = metadata;
-        _clientFactory = clientFactory;
-        _stateProtector = dataProtection.CreateProtector("Nix.Bff.OidcState.v1");
-        _validator = validator;
-        _identity = identity;
-        _userInfo = userInfo;
-        _sessionContext = sessionContext;
-        _database = database;
-        _dispatcher = dispatcher;
-        _sessions = sessions;
-        _tokens = tokens;
-        _clock = clock;
-    }
+    private readonly BrowserAuthOptions _options = options.Value;
+    private readonly OidcMetadataClient _metadata = metadata;
+    private readonly IHttpClientFactory _clientFactory = clientFactory;
+    private readonly IDataProtector _stateProtector = dataProtection.CreateProtector("Nix.Bff.OidcState.v1");
+    private readonly NixTokenValidator _validator = validator;
+    private readonly IIdentityDirectory _identity = identity;
+    private readonly IUserInfoClient _userInfo = userInfo;
+    private readonly ScopedNixSessionContextAccessor _sessionContext = sessionContext;
+    private readonly NixDbContext _database = database;
+    private readonly NixDispatcher _dispatcher = dispatcher;
+    private readonly IBrowserSessions _sessions = sessions;
+    private readonly SelfIssuedTokenService _tokens = tokens;
+    private readonly TimeProvider _clock = clock;
 
     /// <summary>Whether the deployment can begin an interactive login.</summary>
     public bool IsConfigured => _options.IsConfigured && _tokens.IsConfigured;

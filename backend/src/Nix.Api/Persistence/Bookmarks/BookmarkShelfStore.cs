@@ -19,22 +19,12 @@ namespace Nix.Persistence.Bookmarks;
 /// the planner evaluates the permission predicate beside the tenant one, and a second authorization
 /// path is the one that eventually disagrees with the first.
 /// </remarks>
-public sealed class BookmarkShelfStore : IBookmarkShelf
+public sealed class BookmarkShelfStore(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session)
+    : IBookmarkShelf
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="BookmarkShelfStore"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The principal and tenant this request runs as.</param>
-    public BookmarkShelfStore(NixSqlExecutor sql, INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _sql = sql;
-        _session = session;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private NixSessionContext Session => _session.Current
         ?? throw new InvalidOperationException(
@@ -60,7 +50,7 @@ public sealed class BookmarkShelfStore : IBookmarkShelf
             return [];
         }
 
-        var rows = _sql.QueryAsync<KeptItem, KeptItemMapper>(
+        var rows = sql.QueryAsync<KeptItem, KeptItemMapper>(
             BookmarkSql.ListShelf,
             default,
             [
@@ -85,7 +75,7 @@ public sealed class BookmarkShelfStore : IBookmarkShelf
     /// <inheritdoc />
     public async ValueTask<int> CountAsync(CancellationToken cancellationToken)
     {
-        var kept = await _sql.ScalarOrDefaultAsync<long>(
+        var kept = await sql.ScalarOrDefaultAsync<long>(
             BookmarkSql.CountShelf,
             [
                 new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
@@ -112,7 +102,7 @@ public sealed class BookmarkShelfStore : IBookmarkShelf
             return false;
         }
 
-        var written = await _sql.ExecuteAsync(
+        var written = await sql.ExecuteAsync(
             BookmarkSql.Keep,
             [
                 new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
@@ -131,7 +121,7 @@ public sealed class BookmarkShelfStore : IBookmarkShelf
     /// <inheritdoc />
     public async ValueTask<bool> ReleaseAsync(ItemId itemId, CancellationToken cancellationToken)
     {
-        var removed = await _sql.ExecuteAsync(
+        var removed = await sql.ExecuteAsync(
             BookmarkSql.Release,
             [
                 new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },

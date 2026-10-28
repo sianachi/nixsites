@@ -22,8 +22,18 @@ namespace Nix.Persistence.Templates;
 /// Template catalog and staging persistence. Every public method assumes the authenticated,
 /// tenant-scoped transaction established by the request pipeline.
 /// </summary>
-public sealed partial class TemplateStore :
-    ITemplateCatalogStore,
+public sealed partial class TemplateStore(
+    NixDbContext database,
+    IPermissionResolver permissions,
+    ISchemaResolver schemas,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    TemplateDefinitionValidator validator,
+    TemplateMergePlanner mergePlanner,
+    IWorkerJobStore jobs,
+    Nix.Persistence.ObjectStorage.S3CapabilitySigner signer,
+    IItemLocks locks)
+    : ITemplateCatalogStore,
     ITemplateDraftStore,
     ITemplateStagingStore,
     ITemplateApplicationStore,
@@ -41,52 +51,16 @@ public sealed partial class TemplateStore :
     private const int DeletionBatchSize = 256;
     private static readonly TimeSpan StagingLifetime = TimeSpan.FromMinutes(30);
 
-    private readonly NixDbContext _database;
-    private readonly IPermissionResolver _permissions;
-    private readonly ISchemaResolver _schemas;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly TemplateDefinitionValidator _validator;
-    private readonly TemplateMergePlanner _mergePlanner;
-    private readonly IWorkerJobStore _jobs;
-    private readonly Nix.Persistence.ObjectStorage.S3CapabilitySigner _signer;
-    private readonly IItemLocks _locks;
-
-    /// <summary>Initializes the store.</summary>
-    public TemplateStore(
-        NixDbContext database,
-        IPermissionResolver permissions,
-        ISchemaResolver schemas,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        TemplateDefinitionValidator validator,
-        TemplateMergePlanner mergePlanner,
-        IWorkerJobStore jobs,
-        Nix.Persistence.ObjectStorage.S3CapabilitySigner signer,
-        IItemLocks locks)
-    {
-        ArgumentNullException.ThrowIfNull(database);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(validator);
-        ArgumentNullException.ThrowIfNull(mergePlanner);
-        ArgumentNullException.ThrowIfNull(jobs);
-        ArgumentNullException.ThrowIfNull(signer);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _database = database;
-        _permissions = permissions;
-        _schemas = schemas;
-        _session = session;
-        _clock = clock;
-        _validator = validator;
-        _mergePlanner = mergePlanner;
-        _jobs = jobs;
-        _signer = signer;
-        _locks = locks;
-    }
+    private readonly NixDbContext _database = database;
+    private readonly IPermissionResolver _permissions = permissions;
+    private readonly ISchemaResolver _schemas = schemas;
+    private readonly INixSessionContextAccessor _session = session;
+    private readonly TimeProvider _clock = clock;
+    private readonly TemplateDefinitionValidator _validator = validator;
+    private readonly TemplateMergePlanner _mergePlanner = mergePlanner;
+    private readonly IWorkerJobStore _jobs = jobs;
+    private readonly Nix.Persistence.ObjectStorage.S3CapabilitySigner _signer = signer;
+    private readonly IItemLocks _locks = locks;
 
     private NixSessionContext Context => _session.Current
         ?? throw new InvalidOperationException("Template work requires an authenticated tenant session.");

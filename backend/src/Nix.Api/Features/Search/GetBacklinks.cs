@@ -39,32 +39,17 @@ public sealed record BacklinkResults(IReadOnlyList<Backlink> Backlinks, int Limi
 /// this" confirms the thing exists.
 /// </para>
 /// </remarks>
-public sealed class GetBacklinksHandler : IQueryHandler<GetBacklinks, Result<BacklinkResults>>
+public sealed class GetBacklinksHandler(
+    IItemLinks links,
+    IItemTree tree,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetBacklinks, Result<BacklinkResults>>
 {
     /// <summary>The most backlinks one read may return.</summary>
     public const int MaximumLimit = 100;
 
     /// <summary>The number returned when a caller names none.</summary>
     public const int DefaultLimit = 25;
-
-    private readonly IItemLinks _links;
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetBacklinksHandler"/> class.</summary>
-    /// <param name="links">Reads the link graph.</param>
-    /// <param name="tree">Reads the target item.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetBacklinksHandler(IItemLinks links, IItemTree tree, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(links);
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _links = links;
-        _tree = tree;
-        _permissions = permissions;
-    }
 
     /// <summary>Reads the backlinks.</summary>
     /// <param name="query">The target, and how many to return.</param>
@@ -79,7 +64,7 @@ public sealed class GetBacklinksHandler : IQueryHandler<GetBacklinks, Result<Bac
         var limit = Math.Clamp(query.Limit, 1, MaximumLimit);
         var notFound = SearchErrors.NotFound($"No item {query.TargetId} is visible.");
 
-        var target = await _tree.FindAsync(query.TargetId, cancellationToken).ConfigureAwait(false);
+        var target = await tree.FindAsync(query.TargetId, cancellationToken).ConfigureAwait(false);
         if (target is null)
         {
             return Result.Failure<BacklinkResults>(notFound);
@@ -90,7 +75,7 @@ public sealed class GetBacklinksHandler : IQueryHandler<GetBacklinks, Result<Bac
         // question, which are equivalent only while permission is per workspace. The moment access
         // control entries make it per item, the handler would be gating on one answer and filtering
         // by another, and nothing would fail until somebody noticed a backlink they should not see.
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -99,7 +84,7 @@ public sealed class GetBacklinksHandler : IQueryHandler<GetBacklinks, Result<Bac
             return Result.Failure<BacklinkResults>(notFound);
         }
 
-        var backlinks = await _links
+        var backlinks = await links
             .BacklinksAsync(query.TargetId, workspaces, limit, cancellationToken)
             .ConfigureAwait(false);
 

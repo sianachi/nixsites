@@ -30,34 +30,14 @@ namespace Nix.Features.Properties;
 public sealed record SetItemSchema(ItemId ItemId, PropertySchema? Schema) : ICommand<PropertySchema>;
 
 /// <summary>Handles <see cref="SetItemSchema"/>.</summary>
-public sealed class SetItemSchemaHandler : ICommandHandler<SetItemSchema, PropertySchema>
+public sealed class SetItemSchemaHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<SetItemSchema, PropertySchema>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="SetItemSchemaHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public SetItemSchemaHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Sets the schema.</summary>
     /// <param name="command">The container and the schema to declare.</param>
@@ -75,9 +55,9 @@ public sealed class SetItemSchemaHandler : ICommandHandler<SetItemSchema, Proper
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<PropertySchema>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -90,8 +70,8 @@ public sealed class SetItemSchemaHandler : ICommandHandler<SetItemSchema, Proper
 
         if (schema is null || schema.IsEmpty)
         {
-            await _tree
-                .UpdateSchemaAsync(itemId, null, context.PrincipalId, _clock.GetUtcNow(), cancellationToken)
+            await tree
+                .UpdateSchemaAsync(itemId, null, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
                 .ConfigureAwait(false);
 
             return Result.Success(PropertySchema.Empty);
@@ -113,8 +93,8 @@ public sealed class SetItemSchemaHandler : ICommandHandler<SetItemSchema, Proper
                     $"A schema may be at most {PropertyValidator.MaximumBytes} bytes."));
         }
 
-        await _tree
-            .UpdateSchemaAsync(itemId, json, context.PrincipalId, _clock.GetUtcNow(), cancellationToken)
+        await tree
+            .UpdateSchemaAsync(itemId, json, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
 
         return Result.Success(schema);

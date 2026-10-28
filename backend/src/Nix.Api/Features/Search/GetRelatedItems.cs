@@ -39,7 +39,11 @@ public sealed record RelatedItemResults(IReadOnlyList<RelatedItem> Related, int 
 /// come from one readable-workspace answer, asked once.
 /// </para>
 /// </remarks>
-public sealed class GetRelatedItemsHandler : IQueryHandler<GetRelatedItems, Result<RelatedItemResults>>
+public sealed class GetRelatedItemsHandler(
+    IItemLinks links,
+    IItemTree tree,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetRelatedItems, Result<RelatedItemResults>>
 {
     /// <summary>The most related items one read may return.</summary>
     public const int MaximumLimit = 25;
@@ -65,24 +69,7 @@ public sealed class GetRelatedItemsHandler : IQueryHandler<GetRelatedItems, Resu
     /// </remarks>
     public const int MaximumSources = 200;
 
-    private readonly IItemLinks _links;
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetRelatedItemsHandler"/> class.</summary>
-    /// <param name="links">Reads the link graph.</param>
-    /// <param name="tree">Reads the target item.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetRelatedItemsHandler(IItemLinks links, IItemTree tree, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(links);
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _links = links;
-        _tree = tree;
-        _permissions = permissions;
-    }
+    private readonly IItemLinks _links = links;
 
     /// <summary>Reads the related items.</summary>
     /// <param name="query">The target, and how many to return.</param>
@@ -97,7 +84,7 @@ public sealed class GetRelatedItemsHandler : IQueryHandler<GetRelatedItems, Resu
         var limit = Math.Clamp(query.Limit, 1, MaximumLimit);
         var notFound = SearchErrors.NotFound($"No item {query.TargetId} is visible.");
 
-        var target = await _tree.FindAsync(query.TargetId, cancellationToken).ConfigureAwait(false);
+        var target = await tree.FindAsync(query.TargetId, cancellationToken).ConfigureAwait(false);
         if (target is null)
         {
             return Result.Failure<RelatedItemResults>(notFound);
@@ -105,7 +92,7 @@ public sealed class GetRelatedItemsHandler : IQueryHandler<GetRelatedItems, Resu
 
         // One question, asked once, for the reason GetBacklinksHandler gives: gating on one answer
         // and filtering by another is how the two drift apart.
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 

@@ -20,24 +20,6 @@ namespace Nix.Persistence.Templates;
 
 public sealed partial class TemplateStore
 {
-    private static bool ContainsFileItems(IEnumerable<Item> items) =>
-        items.Any(item => string.Equals(item.Type, "file", StringComparison.OrdinalIgnoreCase));
-
-    private async ValueTask<bool> HasFileItemsInTreeAsync(
-        ItemId rootId,
-        CancellationToken cancellationToken)
-    {
-        var types = await (
-            from edge in _database.ItemClosure
-            join item in _database.Items on edge.DescendantId equals item.Id
-            where edge.AncestorId == rootId
-                && item.LifecycleState == ItemLifecycleState.Active
-            select item.Type)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return types.Any(type => string.Equals(type, "file", StringComparison.OrdinalIgnoreCase));
-    }
-
     private async ValueTask<WorkspaceTemplate?> ActiveTemplateAsync(
         TemplateId templateId,
         CancellationToken cancellationToken) =>

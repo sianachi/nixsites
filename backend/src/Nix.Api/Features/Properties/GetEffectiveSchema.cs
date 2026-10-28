@@ -19,27 +19,12 @@ namespace Nix.Features.Properties;
 public sealed record GetEffectiveSchema(ItemId ItemId) : IQuery<Result<EffectiveSchema>>;
 
 /// <summary>Handles <see cref="GetEffectiveSchema"/>.</summary>
-public sealed class GetEffectiveSchemaHandler : IQueryHandler<GetEffectiveSchema, Result<EffectiveSchema>>
+public sealed class GetEffectiveSchemaHandler(
+    IItemTree tree,
+    ISchemaResolver schemas,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetEffectiveSchema, Result<EffectiveSchema>>
 {
-    private readonly IItemTree _tree;
-    private readonly ISchemaResolver _schemas;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetEffectiveSchemaHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="schemas">Resolves the ancestor chain.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetEffectiveSchemaHandler(IItemTree tree, ISchemaResolver schemas, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _tree = tree;
-        _schemas = schemas;
-        _permissions = permissions;
-    }
-
     /// <summary>Reads the effective schema.</summary>
     /// <param name="query">The item whose effective schema is wanted.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
@@ -52,14 +37,14 @@ public sealed class GetEffectiveSchemaHandler : IQueryHandler<GetEffectiveSchema
 
         var itemId = query.ItemId;
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<EffectiveSchema>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
 
-        var effective = await _schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var effective = await schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         // The item's own declaration is returned alongside the merged result, because an editor
         // needs to know which properties this container declares and which it merely inherits -

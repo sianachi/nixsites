@@ -45,26 +45,13 @@ public sealed record SetItemRecurrence(ItemId ItemId, SetRecurrenceRequest? Requ
 /// backstop for.
 /// </para>
 /// </remarks>
-public sealed class SetItemRecurrenceHandler : ICommandHandler<SetItemRecurrence, Item>
+public sealed class SetItemRecurrenceHandler(
+    IItemTree tree,
+    IRecurrenceStore recurrence,
+    IPermissionResolver permissions)
+    : ICommandHandler<SetItemRecurrence, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IRecurrenceStore _recurrence;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="SetItemRecurrenceHandler"/> class.</summary>
-    /// <param name="tree">Item storage, for the item's own row and its anchor.</param>
-    /// <param name="recurrence">Storage for the rule itself.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    public SetItemRecurrenceHandler(IItemTree tree, IRecurrenceStore recurrence, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(recurrence);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _tree = tree;
-        _recurrence = recurrence;
-        _permissions = permissions;
-    }
+    private readonly IRecurrenceStore _recurrence = recurrence;
 
     /// <summary>Sets or clears the rule.</summary>
     /// <param name="command">The item and the rule to author, or <see langword="null"/> to clear it.</param>
@@ -76,9 +63,9 @@ public sealed class SetItemRecurrenceHandler : ICommandHandler<SetItemRecurrence
 
         var itemId = command.ItemId;
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -119,7 +106,7 @@ public sealed class SetItemRecurrenceHandler : ICommandHandler<SetItemRecurrence
         // Re-read rather than constructing the updated shape here: the write went through the
         // store, and inventing what the row now looks like is how a response drifts from the row it
         // claims to describe.
-        var written = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var written = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         return written is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the write."))
             : Result.Success(written);

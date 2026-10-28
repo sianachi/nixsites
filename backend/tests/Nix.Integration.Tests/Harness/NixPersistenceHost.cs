@@ -49,7 +49,7 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
         // Registered only here, never by production composition (ADR-0051's A2 lane): a fixed
         // point the scheduling tests use to exercise plan -> fire -> notify end to end without a
         // real reminder or automation source existing yet.
-        services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.SystemTestTriggerSource>();
+        services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, SystemTestTriggerSource>();
 
         if (testInterceptor is not null)
         {

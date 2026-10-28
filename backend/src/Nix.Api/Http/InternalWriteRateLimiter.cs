@@ -44,16 +44,9 @@ public sealed class InternalWriteRateLimiter : IDisposable
     private readonly record struct InternalCaller(TenantId TenantId, PrincipalId PrincipalId);
 }
 
-public sealed class InternalWriteRateLimitMiddleware
+public sealed class InternalWriteRateLimitMiddleware(RequestDelegate next)
 {
     private static readonly TimeSpan RetryAfterFallback = TimeSpan.FromMinutes(1);
-    private readonly RequestDelegate _next;
-
-    public InternalWriteRateLimitMiddleware(RequestDelegate next)
-    {
-        ArgumentNullException.ThrowIfNull(next);
-        _next = next;
-    }
 
     public async Task InvokeAsync(
         HttpContext context,
@@ -68,7 +61,7 @@ public sealed class InternalWriteRateLimitMiddleware
 
         if (!IsMutation(context.Request.Method))
         {
-            await _next(context).ConfigureAwait(false);
+            await next(context).ConfigureAwait(false);
             return;
         }
 
@@ -82,7 +75,7 @@ public sealed class InternalWriteRateLimitMiddleware
         using var lease = limiter.Attempt(session.Value);
         if (lease.IsAcquired)
         {
-            await _next(context).ConfigureAwait(false);
+            await next(context).ConfigureAwait(false);
             return;
         }
 

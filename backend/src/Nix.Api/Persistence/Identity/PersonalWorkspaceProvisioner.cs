@@ -11,20 +11,12 @@ using NpgsqlTypes;
 namespace Nix.Persistence.Identity;
 
 /// <summary>Creates one principal and personal workspace inside the ordinary request transaction.</summary>
-public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
+public sealed class PersonalWorkspaceProvisioner(
+    NixSqlExecutor sql,
+    TimeProvider clock)
+    : IPersonalWorkspaceProvisioner
 {
     private static readonly string[] PresetKeys = ["seed.kanban", "seed.calendar", "seed.list"];
-    private readonly NixSqlExecutor _sql;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a tenant-scoped first-login provisioner.</summary>
-    public PersonalWorkspaceProvisioner(NixSqlExecutor sql, TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(clock);
-        _sql = sql;
-        _clock = clock;
-    }
 
     /// <summary>Creates or observes the one winner for an externally validated identity.</summary>
     public async ValueTask<AuthenticatedPrincipal> ProvisionAsync(
@@ -46,9 +38,9 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
             subject);
         var workspaceId = DeterministicProvisioningId.PersonalWorkspace(principalId);
         var normalizedEmail = NormalizeVerifiedEmail(profile);
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
 
-        var inserted = await _sql.ScalarOrDefaultAsync<bool>(
+        var inserted = await sql.ScalarOrDefaultAsync<bool>(
             ProvisioningSql.InsertPrincipal,
             [
                 Uuid("principal_id", principalId.Value),
@@ -67,7 +59,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
             return await ReadWinnerAsync(tenantId, issuer, subject, cancellationToken).ConfigureAwait(false);
         }
 
-        var actualWorkspaceId = await _sql.ScalarOrDefaultAsync<Guid>(
+        var actualWorkspaceId = await sql.ScalarOrDefaultAsync<Guid>(
             ProvisioningSql.InsertWorkspace,
             [
                 Uuid("workspace_id", workspaceId.Value),
@@ -83,7 +75,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
         }
 
         workspaceId = WorkspaceId.From(actualWorkspaceId);
-        await _sql.ExecuteAsync(
+        await sql.ExecuteAsync(
             ProvisioningSql.SeedWorkspace,
             [
                 Uuid("workspace_id", workspaceId.Value),
@@ -101,7 +93,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
 
         if (normalizedEmail is not null)
         {
-            await _sql.ExecuteAsync(
+            await sql.ExecuteAsync(
                 ProvisioningSql.RedeemInvitations,
                 [
                     Uuid("tenant_id", tenantId.Value),
@@ -130,7 +122,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
     {
         ArgumentNullException.ThrowIfNull(profile);
         var normalizedEmail = NormalizeVerifiedEmail(profile);
-        var updated = await _sql.ExecuteAsync(
+        var updated = await sql.ExecuteAsync(
             ProvisioningSql.RefreshEmail,
             [
                 Uuid("tenant_id", tenantId.Value),
@@ -149,13 +141,13 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
 
         if (normalizedEmail is not null)
         {
-            await _sql.ExecuteAsync(
+            await sql.ExecuteAsync(
                 ProvisioningSql.RedeemInvitations,
                 [
                     Uuid("tenant_id", tenantId.Value),
                     Uuid("principal_id", principalId.Value),
                     Text("email_normalized", normalizedEmail),
-                    Timestamp("now", _clock.GetUtcNow()),
+                    Timestamp("now", clock.GetUtcNow()),
                 ],
                 cancellationToken).ConfigureAwait(false);
         }
@@ -167,7 +159,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
         string subject,
         CancellationToken cancellationToken)
     {
-        await foreach (var winner in _sql.QueryAsync<ProvisionedPrincipal, PrincipalMapper>(
+        await foreach (var winner in sql.QueryAsync<ProvisionedPrincipal, PrincipalMapper>(
             ProvisioningSql.ReadPrincipal,
             new PrincipalMapper(),
             [
@@ -211,7 +203,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
             parameters.Add(Uuid($"{prefix}_source_id", DeterministicProvisioningId.PresetObject(workspaceId, key, "source-root")));
         }
 
-        await _sql.ExecuteAsync(ProvisioningSql.SeedPresets, [.. parameters], cancellationToken)
+        await sql.ExecuteAsync(ProvisioningSql.SeedPresets, [.. parameters], cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -221,7 +213,7 @@ public sealed class PersonalWorkspaceProvisioner : IPersonalWorkspaceProvisioner
         WorkspaceId workspaceId,
         DateTimeOffset now,
         CancellationToken cancellationToken) =>
-        await _sql.ExecuteAsync(
+        await sql.ExecuteAsync(
             ProvisioningSql.InsertFoundationAudit,
             [
                 Uuid("principal_event_id", AuditEventId.Create().Value),

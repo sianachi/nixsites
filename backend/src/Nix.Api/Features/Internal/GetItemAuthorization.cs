@@ -32,39 +32,15 @@ public sealed record GetItemAuthorization(ItemId ItemId) : IQuery<Result<ItemAut
 /// is workspace-grained today because that is what <see cref="IPermissionResolver"/> answers; when
 /// item-level entries arrive the resolver's implementation changes and this handler does not.
 /// </remarks>
-public sealed class GetItemAuthorizationHandler : IQueryHandler<GetItemAuthorization, Result<ItemAuthorization>>
+public sealed class GetItemAuthorizationHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    AccessTokenSessionContext scope,
+    IItemLocks locks)
+    : IQueryHandler<GetItemAuthorization, Result<ItemAuthorization>>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly AccessTokenSessionContext _scope;
-    private readonly IItemLocks _locks;
-
-    /// <summary>Initializes a new instance of the <see cref="GetItemAuthorizationHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the acting principal may do.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="scope">The scope ceiling, when a personal access token authenticated the call.</param>
-    /// <param name="locks">Item locks, and whether this credential has the item unlocked.</param>
-    public GetItemAuthorizationHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        AccessTokenSessionContext scope,
-        IItemLocks locks)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(scope);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _scope = scope;
-        _locks = locks;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Resolves the authorization.</summary>
     /// <param name="query">The item to answer for.</param>
@@ -79,14 +55,14 @@ public sealed class GetItemAuthorizationHandler : IQueryHandler<GetItemAuthoriza
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
             return Result.Failure<ItemAuthorization>(
                 InternalErrors.NotFound($"No item {query.ItemId} is visible."));
         }
 
-        var mayRead = await _permissions
+        var mayRead = await permissions
             .CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken)
             .ConfigureAwait(false);
         if (!mayRead)
@@ -100,7 +76,7 @@ public sealed class GetItemAuthorizationHandler : IQueryHandler<GetItemAuthoriza
         // is refused here, in the one place they all ask. Only after the read check above: an item
         // the caller cannot see is still just not found, and "locked" is said only to somebody who
         // could already ask Core's lock route the same question.
-        var mayReadBody = await _locks
+        var mayReadBody = await locks
             .MayReadBodyAsync(item.Id, cancellationToken)
             .ConfigureAwait(false);
         if (!mayReadBody)
@@ -109,7 +85,7 @@ public sealed class GetItemAuthorizationHandler : IQueryHandler<GetItemAuthoriza
                 InternalErrors.BodyLocked($"The body of item {query.ItemId} is locked to this session."));
         }
 
-        var mayWrite = await _permissions
+        var mayWrite = await permissions
             .CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -118,7 +94,7 @@ public sealed class GetItemAuthorizationHandler : IQueryHandler<GetItemAuthoriza
         // at the route the caller reached. A read-only personal access token authenticates this
         // GET legitimately; intersecting with its ceiling is what stops it from writing through
         // the service that trusts CanWrite. An interactive session leaves the ceiling permissive.
-        var mayWriteWithinScope = mayWrite && _scope.MayWrite;
+        var mayWriteWithinScope = mayWrite && scope.MayWrite;
 
         return Result.Success(
             new ItemAuthorization(

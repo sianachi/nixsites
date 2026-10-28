@@ -35,29 +35,16 @@ public sealed record ListItems(
 /// you enumerate what exists, so a placeholder row would disclose the existence of something the
 /// caller was refused - the redaction rule applies to links an author placed, not to listings.
 /// </remarks>
-public sealed class ListItemsHandler : IQueryHandler<ListItems, Result<IReadOnlyList<Item>>>
+public sealed class ListItemsHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks)
+    : IQueryHandler<ListItems, Result<IReadOnlyList<Item>>>
 {
     /// <summary>Largest page this use case will return, whatever was asked for.</summary>
     public const int MaximumPageSize = 200;
 
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-
-    /// <summary>Initializes a new instance of the <see cref="ListItemsHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="locks">Withholds a locked folder's children until it is opened.</param>
-    public ListItemsHandler(IItemTree tree, IPermissionResolver permissions, IItemLocks locks)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-    }
+    private readonly IItemTree _tree = tree;
 
     /// <summary>Reads the page.</summary>
     /// <param name="query">
@@ -82,7 +69,7 @@ public sealed class ListItemsHandler : IQueryHandler<ListItems, Result<IReadOnly
         // Existence and permission answer with the same failure, deliberately: a workspace the
         // caller may not read must not be distinguishable from one that does not exist.
         if (!await _tree.WorkspaceExistsAsync(workspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanReadWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanReadWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<IReadOnlyList<Item>>(
                 ItemErrors.WorkspaceNotFound($"No workspace {workspaceId} is visible."));
@@ -105,7 +92,7 @@ public sealed class ListItemsHandler : IQueryHandler<ListItems, Result<IReadOnly
             // the board and the tree all draw from here. Refused outright rather than answered
             // empty: an empty page would read as "nothing is in here", which is not what a lock
             // means.
-            if (!await _locks.MayReadBodyAsync(parent, cancellationToken).ConfigureAwait(false))
+            if (!await locks.MayReadBodyAsync(parent, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<IReadOnlyList<Item>>(
                     ItemErrors.Locked($"Item {parent} is locked. Unlock it to see what is inside."));

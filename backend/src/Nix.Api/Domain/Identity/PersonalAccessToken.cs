@@ -70,11 +70,4 @@ public sealed class PersonalAccessToken
     /// a write per request. <see langword="null"/> until it is first used.
     /// </summary>
     public DateTimeOffset? LastUsedAt { get; set; }
-
-    /// <summary>
-    /// Whether this token authenticates requests right now.
-    /// </summary>
-    /// <param name="now">The moment to judge against.</param>
-    /// <returns>Whether it stands: not revoked, not expired.</returns>
-    public bool IsLive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
 }

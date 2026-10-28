@@ -19,22 +19,12 @@ public sealed record GetCanvasLibrary : IQuery<CanvasLibraryItems>;
 /// Always succeeds: a principal who has never saved a library simply has an empty one, the same way
 /// an item with no properties has an empty bag rather than a missing one.
 /// </remarks>
-public sealed class GetCanvasLibraryHandler : IQueryHandler<GetCanvasLibrary, CanvasLibraryItems>
+public sealed class GetCanvasLibraryHandler(
+    ICanvasLibraryStore store,
+    INixSessionContextAccessor session)
+    : IQueryHandler<GetCanvasLibrary, CanvasLibraryItems>
 {
-    private readonly ICanvasLibraryStore _store;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="GetCanvasLibraryHandler"/> class.</summary>
-    /// <param name="store">Canvas library storage.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    public GetCanvasLibraryHandler(ICanvasLibraryStore store, INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(store);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _store = store;
-        _session = session;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Reads the caller's own library.</summary>
     /// <param name="query">The query, which carries no parameters.</param>
@@ -47,7 +37,7 @@ public sealed class GetCanvasLibraryHandler : IQueryHandler<GetCanvasLibrary, Ca
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var library = await _store.FindAsync(context.PrincipalId, cancellationToken).ConfigureAwait(false);
+        var library = await store.FindAsync(context.PrincipalId, cancellationToken).ConfigureAwait(false);
         if (library is null)
         {
             return new CanvasLibraryItems(new JsonArray());

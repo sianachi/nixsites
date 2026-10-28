@@ -31,29 +31,13 @@ public sealed record CompleteRecurrenceOccurrence(ItemId ItemId, DateOnly Occurr
 /// broken".
 /// </para>
 /// </remarks>
-public sealed class CompleteRecurrenceOccurrenceHandler : ICommandHandler<CompleteRecurrenceOccurrence, Item>
+public sealed class CompleteRecurrenceOccurrenceHandler(
+    IItemTree tree,
+    IRecurrenceStore recurrence,
+    IPermissionResolver permissions)
+    : ICommandHandler<CompleteRecurrenceOccurrence, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IRecurrenceStore _recurrence;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="CompleteRecurrenceOccurrenceHandler"/> class.</summary>
-    /// <param name="tree">Item storage, for the item's own row and its anchor.</param>
-    /// <param name="recurrence">Storage for the rule itself.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    public CompleteRecurrenceOccurrenceHandler(
-        IItemTree tree,
-        IRecurrenceStore recurrence,
-        IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(recurrence);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _tree = tree;
-        _recurrence = recurrence;
-        _permissions = permissions;
-    }
+    private readonly IRecurrenceStore _recurrence = recurrence;
 
     /// <summary>Completes the occurrence.</summary>
     /// <param name="command">The item and the occurrence day.</param>
@@ -67,9 +51,9 @@ public sealed class CompleteRecurrenceOccurrenceHandler : ICommandHandler<Comple
 
         var itemId = command.ItemId;
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -142,7 +126,7 @@ public sealed class CompleteRecurrenceOccurrenceHandler : ICommandHandler<Comple
                 break;
         }
 
-        var written = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var written = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         return written is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the write."))
             : Result.Success(written);

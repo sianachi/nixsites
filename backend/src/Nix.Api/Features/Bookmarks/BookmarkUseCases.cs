@@ -38,22 +38,12 @@ public sealed record ReleaseItem(ItemId ItemId) : ICommand<bool>;
 /// things without saying so. A number is the only one of the three that is both honest and safe.
 /// </para>
 /// </remarks>
-public sealed class GetShelfHandler : IQueryHandler<GetShelf, Result<ShelfResults>>
+public sealed class GetShelfHandler(
+    IBookmarkShelf shelf,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetShelf, Result<ShelfResults>>
 {
-    private readonly IBookmarkShelf _shelf;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetShelfHandler"/> class.</summary>
-    /// <param name="shelf">Reads the kept items.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetShelfHandler(IBookmarkShelf shelf, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(shelf);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _shelf = shelf;
-        _permissions = permissions;
-    }
+    private readonly IBookmarkShelf _shelf = shelf;
 
     /// <summary>Reads the shelf.</summary>
     /// <param name="query">Carries nothing: a shelf belongs to whoever is asking.</param>
@@ -63,7 +53,7 @@ public sealed class GetShelfHandler : IQueryHandler<GetShelf, Result<ShelfResult
         GetShelf query,
         CancellationToken cancellationToken)
     {
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -86,22 +76,12 @@ public sealed class GetShelfHandler : IQueryHandler<GetShelf, Result<ShelfResult
 /// read its title back from the list - a shelf would become an oracle for whether an item exists.
 /// A refusal is reported as "not found" for the same reason every other read is.
 /// </remarks>
-public sealed class KeepItemHandler : ICommandHandler<KeepItem, bool>
+public sealed class KeepItemHandler(
+    IBookmarkShelf shelf,
+    IPermissionResolver permissions)
+    : ICommandHandler<KeepItem, bool>
 {
-    private readonly IBookmarkShelf _shelf;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="KeepItemHandler"/> class.</summary>
-    /// <param name="shelf">Writes the kept item.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public KeepItemHandler(IBookmarkShelf shelf, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(shelf);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _shelf = shelf;
-        _permissions = permissions;
-    }
+    private readonly IBookmarkShelf _shelf = shelf;
 
     /// <summary>Keeps the item.</summary>
     /// <param name="command">The item to keep.</param>
@@ -113,7 +93,7 @@ public sealed class KeepItemHandler : ICommandHandler<KeepItem, bool>
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -138,18 +118,9 @@ public sealed class KeepItemHandler : ICommandHandler<KeepItem, bool>
 /// neither see nor remove would be permanent clutter, and refusing would disclose that the row is
 /// there. The statement is scoped to their own principal, so this can only ever remove their own.
 /// </remarks>
-public sealed class ReleaseItemHandler : ICommandHandler<ReleaseItem, bool>
+public sealed class ReleaseItemHandler(IBookmarkShelf shelf) : ICommandHandler<ReleaseItem, bool>
 {
-    private readonly IBookmarkShelf _shelf;
-
-    /// <summary>Initializes a new instance of the <see cref="ReleaseItemHandler"/> class.</summary>
-    /// <param name="shelf">Removes the kept item.</param>
-    public ReleaseItemHandler(IBookmarkShelf shelf)
-    {
-        ArgumentNullException.ThrowIfNull(shelf);
-
-        _shelf = shelf;
-    }
+    private readonly IBookmarkShelf _shelf = shelf;
 
     /// <summary>Releases the item.</summary>
     /// <param name="command">The item to release.</param>

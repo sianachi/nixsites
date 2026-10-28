@@ -118,23 +118,16 @@ public enum DailyNoteOutcome
 }
 
 /// <summary>Database operations for workspace administration.</summary>
-public sealed partial class WorkspaceAdministrationStore
+public sealed partial class WorkspaceAdministrationStore(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential)
 {
     private static readonly string[] PresetKeys = ["seed.kanban", "seed.calendar", "seed.list"];
 
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-
-    /// <summary>Initializes the store.</summary>
-    public WorkspaceAdministrationStore(NixSqlExecutor sql, INixSessionContextAccessor session, CredentialSessionContext credential)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-    }
+    private readonly NixSqlExecutor _sql = sql;
+    private readonly INixSessionContextAccessor _session = session;
+    private readonly CredentialSessionContext _credential = credential;
 
     private NixSessionContext Session => _session.Current
         ?? throw new InvalidOperationException("No session context was established for workspace administration.");

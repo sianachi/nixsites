@@ -47,19 +47,6 @@ internal sealed record RecoverWorkspaceRequest(Guid NewOwnerPrincipalId);
 
 internal static class WorkspaceAdministrationRules
 {
-    internal static bool TryStoredRole(string? value, out string role)
-    {
-        role = value?.Trim() switch
-        {
-            "owner" => "owner",
-            "editor" => "editor",
-            "commenter" => "commenter",
-            "viewer" => "viewer",
-            _ => string.Empty,
-        };
-        return role.Length > 0;
-    }
-
     internal static bool TryAssignableRole(string? value, out string role)
     {
         role = value?.Trim() switch

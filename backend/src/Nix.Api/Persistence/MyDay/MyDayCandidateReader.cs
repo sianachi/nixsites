@@ -21,34 +21,14 @@ namespace Nix.Persistence.MyDay;
 /// as a workspace query. One extra row is read per kind and dropped: its presence is the truncation
 /// flag.
 /// </remarks>
-public sealed class MyDayCandidateReader : IMyDayCandidates
+public sealed class MyDayCandidateReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IMyDayCandidates
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="MyDayCandidateReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">The credential whose unlocks decide which locked subtrees are shown.</param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public MyDayCandidateReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -69,11 +49,11 @@ public sealed class MyDayCandidateReader : IMyDayCandidates
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(habitLimit);
 
         return ItemQueryReader.GuardedAsync(
-            _sql,
+            sql,
             async () =>
             {
                 var closedLocks = await LockFilterParameters
-                    .ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken)
+                    .ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken)
                     .ConfigureAwait(false);
 
                 var tasks = await ReadBatchAsync(
@@ -115,7 +95,7 @@ public sealed class MyDayCandidateReader : IMyDayCandidates
         };
         parameters.AddRange(extra);
 
-        var rows = _sql.QueryAsync<Row, RowMapper>(statement, default, [.. parameters], cancellationToken);
+        var rows = sql.QueryAsync<Row, RowMapper>(statement, default, [.. parameters], cancellationToken);
         var found = new List<MyDayCandidate>();
         var truncated = false;
 

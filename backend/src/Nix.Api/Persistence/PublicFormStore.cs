@@ -9,19 +9,14 @@ using Nix.Domain.Views;
 namespace Nix.Persistence;
 
 /// <summary>EF-backed storage for revocable public form capabilities.</summary>
-public sealed class PublicFormStore : IPublicFormStore
+public sealed class PublicFormStore(
+    NixDbContext database,
+    ScopedNixSessionContextAccessor session,
+    IFinanceLock topology)
+    : IPublicFormStore
 {
-    private readonly NixDbContext _database;
-    private readonly ScopedNixSessionContextAccessor _session;
-    private readonly IFinanceLock _topology;
-
-    /// <summary>Initializes a store sharing the request's database unit of work.</summary>
-    public PublicFormStore(NixDbContext database, ScopedNixSessionContextAccessor session, IFinanceLock topology)
-    {
-        _database = database;
-        _session = session;
-        _topology = topology;
-    }
+    private readonly ScopedNixSessionContextAccessor _session = session;
+    private readonly IFinanceLock _topology = topology;
 
     /// <inheritdoc />
     public async ValueTask<IPublicFormTransaction> BeginAsync(
@@ -29,14 +24,14 @@ public sealed class PublicFormStore : IPublicFormStore
         CancellationToken cancellationToken)
     {
         _session.Set(context);
-        var transaction = await _database.Database.BeginTransactionAsync(cancellationToken)
+        var transaction = await database.Database.BeginTransactionAsync(cancellationToken)
             .ConfigureAwait(false);
         return new PublicFormTransaction(transaction);
     }
 
     /// <inheritdoc />
     public async ValueTask<PublicFormLink?> FindAsync(Guid linkId, CancellationToken cancellationToken) =>
-        await _database.PublicFormLinks.SingleOrDefaultAsync(
+        await database.PublicFormLinks.SingleOrDefaultAsync(
             link => link.Id == linkId,
             cancellationToken).ConfigureAwait(false);
 
@@ -44,7 +39,7 @@ public sealed class PublicFormStore : IPublicFormStore
     public async ValueTask<bool> IsActivePrincipalAsync(
         PrincipalId principalId,
         CancellationToken cancellationToken) =>
-        await _database.Principals.AnyAsync(
+        await database.Principals.AnyAsync(
             principal => principal.Id == principalId && principal.Status == PrincipalStatus.Active,
             cancellationToken).ConfigureAwait(false);
 
@@ -56,7 +51,7 @@ public sealed class PublicFormStore : IPublicFormStore
             ?? throw new InvalidOperationException("Public form submissions require a tenant session.");
         // Match CreateItem's topology-first order before holding the parent against view changes.
         await _topology.AcquireWorkspaceTopologyAsync(link.WorkspaceId, cancellationToken).ConfigureAwait(false);
-        var item = await _database.Items.FromSqlInterpolated(
+        var item = await database.Items.FromSqlInterpolated(
                 $"SELECT * FROM item WHERE tenant_id = {context.TenantId.Value} AND id = {link.ItemId.Value} AND workspace_id = {link.WorkspaceId.Value} FOR UPDATE")
             .AsNoTracking().SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         return item is { TemplateId: null, LifecycleState: ItemLifecycleState.Active };
@@ -67,24 +62,24 @@ public sealed class PublicFormStore : IPublicFormStore
         ItemId itemId,
         string viewId,
         CancellationToken cancellationToken) =>
-        await _database.PublicFormLinks.AsTracking().SingleOrDefaultAsync(
+        await database.PublicFormLinks.AsTracking().SingleOrDefaultAsync(
             link => link.ItemId == itemId && link.ViewId == viewId,
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public void Add(PublicFormLink link, Principal principal, WorkspaceMember membership)
     {
-        _database.Principals.Add(principal);
-        _database.WorkspaceMembers.Add(membership);
-        _database.PublicFormLinks.Add(link);
+        database.Principals.Add(principal);
+        database.WorkspaceMembers.Add(membership);
+        database.PublicFormLinks.Add(link);
     }
 
     /// <inheritdoc />
-    public void AddAudit(AuditEvent auditEvent) => _database.AuditEvents.Add(auditEvent);
+    public void AddAudit(AuditEvent auditEvent) => database.AuditEvents.Add(auditEvent);
 
     /// <inheritdoc />
     public Task SaveAsync(CancellationToken cancellationToken) =>
-        _database.SaveChangesAsync(cancellationToken);
+        database.SaveChangesAsync(cancellationToken);
 
     private sealed class PublicFormTransaction(IDbContextTransaction transaction) : IPublicFormTransaction
     {

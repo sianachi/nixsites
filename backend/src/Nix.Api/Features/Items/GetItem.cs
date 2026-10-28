@@ -28,23 +28,11 @@ public sealed record GetItem(ItemId ItemId) : IQuery<Result<Item>>;
 /// invisible row simply is not returned. Row-level security answers the tenant question; the
 /// permission resolver answers the workspace one, and both must agree before a row is returned.
 /// </remarks>
-public sealed class GetItemHandler : IQueryHandler<GetItem, Result<Item>>
+public sealed class GetItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetItem, Result<Item>>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetItemHandler(IItemTree tree, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _tree = tree;
-        _permissions = permissions;
-    }
-
     /// <summary>Reads the item.</summary>
     /// <param name="query">The item to read.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
@@ -55,13 +43,13 @@ public sealed class GetItemHandler : IQueryHandler<GetItem, Result<Item>>
 
         var itemId = query.ItemId;
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
 
-        var mayRead = await _permissions
+        var mayRead = await permissions
             .CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken)
             .ConfigureAwait(false);
 

@@ -4,7 +4,7 @@ using Nix.Abstractions.Scheduling;
 using Nix.Domain.Notifications;
 using Nix.Domain.Scheduling;
 
-namespace Nix.Persistence.Scheduling;
+namespace Nix.Integration.Tests.Harness;
 
 /// <summary>
 /// A trigger source that exists only to exercise plan -&gt; fire -&gt; notify end to end in tests.

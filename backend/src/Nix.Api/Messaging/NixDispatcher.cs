@@ -30,19 +30,8 @@ namespace Nix.Messaging;
 /// would build the whole graph per request.
 /// </para>
 /// </remarks>
-public sealed class NixDispatcher
+public sealed class NixDispatcher(IServiceProvider provider)
 {
-    private readonly IServiceProvider _provider;
-
-    /// <summary>Initializes a new instance of the <see cref="NixDispatcher"/> class.</summary>
-    /// <param name="provider">The scope's service provider; a scope is one unit of work.</param>
-    public NixDispatcher(IServiceProvider provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        _provider = provider;
-    }
-
     /// <summary>Runs a command.</summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TValue">What the command produces on success.</typeparam>
@@ -58,7 +47,7 @@ public sealed class NixDispatcher
         TCommand command,
         CancellationToken cancellationToken)
         where TCommand : ICommand<TValue> =>
-        _provider
+        provider
             .GetRequiredService<ICommandHandler<TCommand, TValue>>()
             .HandleAsync(command, cancellationToken);
 
@@ -75,7 +64,7 @@ public sealed class NixDispatcher
         TQuery query,
         CancellationToken cancellationToken)
         where TQuery : IQuery<TResult> =>
-        _provider
+        provider
             .GetRequiredService<IQueryHandler<TQuery, TResult>>()
             .HandleAsync(query, cancellationToken);
 }

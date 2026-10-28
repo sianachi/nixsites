@@ -33,28 +33,16 @@ namespace Nix.Persistence.Authorization;
 /// hundred.
 /// </para>
 /// </remarks>
-public sealed class WorkspaceMembershipResolver : IPermissionResolver
+public sealed class WorkspaceMembershipResolver(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session)
+    : IPermissionResolver
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
+    private readonly INixSessionContextAccessor _session = session;
     private readonly Dictionary<WorkspaceId, WorkspaceRole?> _roles = [];
 
     private bool? _isAdministrator;
     private IReadOnlyList<WorkspaceId>? _readableWorkspaces;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WorkspaceMembershipResolver"/> class.
-    /// </summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    public WorkspaceMembershipResolver(NixSqlExecutor sql, INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _sql = sql;
-        _session = session;
-    }
 
     private NixSessionContext Session => _session.Current
         ?? throw new InvalidOperationException(
@@ -123,7 +111,7 @@ public sealed class WorkspaceMembershipResolver : IPermissionResolver
 
         if (administrator)
         {
-            var adminRows = _sql.QueryAsync<WorkspaceId, WorkspaceIdMapper>(
+            var adminRows = sql.QueryAsync<WorkspaceId, WorkspaceIdMapper>(
                 statement,
                 default,
                 parameters,
@@ -141,7 +129,7 @@ public sealed class WorkspaceMembershipResolver : IPermissionResolver
             // bulk read, so a list wider than the point check would let a filter disclose rows the
             // gate refuses - the wrong fail direction for a database written by a newer build.
             var seen = new HashSet<WorkspaceId>();
-            var grantRows = _sql.QueryAsync<WorkspaceGrant, WorkspaceGrantMapper>(
+            var grantRows = sql.QueryAsync<WorkspaceGrant, WorkspaceGrantMapper>(
                 statement,
                 default,
                 parameters,
@@ -173,7 +161,7 @@ public sealed class WorkspaceMembershipResolver : IPermissionResolver
         }
 
         var context = Session;
-        var answer = await _sql.ScalarOrDefaultAsync<bool>(
+        var answer = await sql.ScalarOrDefaultAsync<bool>(
             AuthorizationSql.PrincipalIsTenantAdministrator,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -206,7 +194,7 @@ public sealed class WorkspaceMembershipResolver : IPermissionResolver
         var context = Session;
         WorkspaceRole? strongest = null;
 
-        var rows = _sql.QueryAsync<string, RoleTextMapper>(
+        var rows = sql.QueryAsync<string, RoleTextMapper>(
             AuthorizationSql.WorkspaceRolesForPrincipal,
             default,
             [
@@ -244,7 +232,7 @@ public sealed class WorkspaceMembershipResolver : IPermissionResolver
         CancellationToken cancellationToken)
     {
         var context = Session;
-        return await _sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarOrDefaultAsync<bool>(
             AuthorizationSql.WorkspaceExistsInTenant,
             [
                 Uuid("tenant_id", context.TenantId.Value),

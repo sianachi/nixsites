@@ -106,27 +106,12 @@ public static class LockErrors
 /// Needs read access only, and says nothing an item read does not already imply: whoever may see
 /// an item may see that its body is locked, since that is what they will meet when they open it.
 /// </remarks>
-public sealed class GetItemLockHandler : IQueryHandler<GetItemLock, Result<ItemLockState>>
+public sealed class GetItemLockHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks)
+    : IQueryHandler<GetItemLock, Result<ItemLockState>>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-
-    /// <summary>Initializes a new instance of the <see cref="GetItemLockHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="locks">Item locks.</param>
-    public GetItemLockHandler(IItemTree tree, IPermissionResolver permissions, IItemLocks locks)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-    }
-
     /// <summary>Reads the state.</summary>
     /// <param name="query">The item.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
@@ -137,12 +122,12 @@ public sealed class GetItemLockHandler : IQueryHandler<GetItemLock, Result<ItemL
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (!await LockAccess.MayReadAsync(_tree, _permissions, query.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(tree, permissions, query.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemLockState>(LockErrors.NotFound(query.ItemId));
         }
 
-        var state = await _locks.GetStateAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
+        var state = await locks.GetStateAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
         return Result.Success(state);
     }
 }
@@ -160,54 +145,17 @@ public sealed class GetItemLockHandler : IQueryHandler<GetItemLock, Result<ItemL
 /// would be ceremony. Other credentials, including the same person's other sessions, are closed.
 /// </para>
 /// </remarks>
-public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
+public sealed class LockItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks,
+    LockPasswordGuard guard,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock,
+    IFinanceLock? topology = null)
+    : ICommandHandler<LockItem, bool>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-    private readonly LockPasswordGuard _guard;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceLock? _topology;
-
-    /// <summary>Initializes a new instance of the <see cref="LockItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may do.</param>
-    /// <param name="locks">Item locks.</param>
-    /// <param name="guard">Checks and derives passwords within the backoff and the ceiling.</param>
-    /// <param name="session">The tenant this request runs in.</param>
-    /// <param name="credential">The credential this request authenticated with.</param>
-    /// <param name="clock">Stamps the grant.</param>
-    /// <param name="topology">Serializes lock creation with structural moves.</param>
-    public LockItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IItemLocks locks,
-        LockPasswordGuard guard,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock,
-        IFinanceLock? topology = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-        ArgumentNullException.ThrowIfNull(guard);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-        _guard = guard;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-        _topology = topology;
-    }
-
     /// <summary>Sets or changes the lock.</summary>
     /// <param name="command">The item and passwords.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -216,7 +164,7 @@ public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayWriteAsync(_tree, _permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
@@ -226,25 +174,25 @@ public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
             return Result.Failure<bool>(LockErrors.PasswordInvalid());
         }
 
-        if (_topology is not null)
+        if (topology is not null)
         {
-            var before = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+            var before = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
             if (before is null)
             {
                 return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
             }
             // A lock above a moving subtree cannot be added after the mover checks that
             // ancestor and before it leaves. Recheck reach after waiting for a transfer too.
-            await _topology.AcquireWorkspaceTopologyAsync(before.WorkspaceId, cancellationToken).ConfigureAwait(false);
-            var current = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+            await topology.AcquireWorkspaceTopologyAsync(before.WorkspaceId, cancellationToken).ConfigureAwait(false);
+            var current = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
             if (current is null || current.WorkspaceId != before.WorkspaceId
-                || !await LockAccess.MayWriteAsync(_tree, _permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+                || !await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
             }
         }
 
-        var existing = await _locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var existing = await locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (existing is not null)
         {
             if (command.CurrentPassword is null)
@@ -252,8 +200,8 @@ public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
                 return Result.Failure<bool>(LockErrors.AlreadyLocked());
             }
 
-            var check = await _guard
-                .VerifyAsync(LockAccess.Tenant(_session), command.ItemId, command.CurrentPassword, existing, cancellationToken)
+            var check = await guard
+                .VerifyAsync(LockAccess.Tenant(session), command.ItemId, command.CurrentPassword, existing, cancellationToken)
                 .ConfigureAwait(false);
             if (LockErrors.For(check) is { } refused)
             {
@@ -261,30 +209,30 @@ public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
             }
         }
 
-        var verifier = await _guard.HashAsync(command.Password, cancellationToken).ConfigureAwait(false);
+        var verifier = await guard.HashAsync(command.Password, cancellationToken).ConfigureAwait(false);
         if (verifier is null)
         {
             return Result.Failure<bool>(LockErrors.Busy());
         }
 
         var written = existing is null
-            ? await _locks.LockAsync(command.ItemId, verifier, cancellationToken).ConfigureAwait(false)
-            : await _locks.ChangeVerifierAsync(command.ItemId, existing, verifier, cancellationToken).ConfigureAwait(false);
+            ? await locks.LockAsync(command.ItemId, verifier, cancellationToken).ConfigureAwait(false)
+            : await locks.ChangeVerifierAsync(command.ItemId, existing, verifier, cancellationToken).ConfigureAwait(false);
         if (!written)
         {
             // Lost a race: another lock landed first, or the lock being changed was removed or
             // had its password changed by somebody else since this one was checked.
             return Result.Failure<bool>(
                 existing is null ? LockErrors.AlreadyLocked()
-                : await _locks.IsLockedAsync(command.ItemId, cancellationToken).ConfigureAwait(false)
+                : await locks.IsLockedAsync(command.ItemId, cancellationToken).ConfigureAwait(false)
                     ? LockErrors.WrongPassword()
                     : LockErrors.NotLocked());
         }
 
-        if (_credential.CredentialId is not null)
+        if (credential.CredentialId is not null)
         {
-            await _locks
-                .GrantAsync(command.ItemId, verifier, _clock.GetUtcNow() + LockAccess.GrantLifetime, cancellationToken)
+            await locks
+                .GrantAsync(command.ItemId, verifier, clock.GetUtcNow() + LockAccess.GrantLifetime, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -294,40 +242,14 @@ public sealed class LockItemHandler : ICommandHandler<LockItem, bool>
 
 /// <summary>Removes an item's lock.</summary>
 /// <remarks>Needs write access and the password, for the reason <see cref="LockItemHandler"/> gives.</remarks>
-public sealed class RemoveItemLockHandler : ICommandHandler<RemoveItemLock, bool>
+public sealed class RemoveItemLockHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks,
+    LockPasswordGuard guard,
+    INixSessionContextAccessor session)
+    : ICommandHandler<RemoveItemLock, bool>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-    private readonly LockPasswordGuard _guard;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="RemoveItemLockHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may do.</param>
-    /// <param name="locks">Item locks.</param>
-    /// <param name="guard">Checks passwords within the backoff and the ceiling.</param>
-    /// <param name="session">The tenant this request runs in.</param>
-    public RemoveItemLockHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IItemLocks locks,
-        LockPasswordGuard guard,
-        INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-        ArgumentNullException.ThrowIfNull(guard);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-        _guard = guard;
-        _session = session;
-    }
-
     /// <summary>Removes the lock.</summary>
     /// <param name="command">The item and password.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -336,26 +258,26 @@ public sealed class RemoveItemLockHandler : ICommandHandler<RemoveItemLock, bool
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayWriteAsync(_tree, _permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
 
-        var existing = await _locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var existing = await locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
             return Result.Failure<bool>(LockErrors.NotLocked());
         }
 
-        var check = await _guard
-            .VerifyAsync(LockAccess.Tenant(_session), command.ItemId, command.Password ?? string.Empty, existing, cancellationToken)
+        var check = await guard
+            .VerifyAsync(LockAccess.Tenant(session), command.ItemId, command.Password ?? string.Empty, existing, cancellationToken)
             .ConfigureAwait(false);
         if (LockErrors.For(check) is { } refused)
         {
             return Result.Failure<bool>(refused);
         }
 
-        return await _locks.RemoveAsync(command.ItemId, existing, cancellationToken).ConfigureAwait(false)
+        return await locks.RemoveAsync(command.ItemId, existing, cancellationToken).ConfigureAwait(false)
             ? Result.Success(true)
             : Result.Failure<bool>(LockErrors.NotLocked());
     }
@@ -367,49 +289,17 @@ public sealed class RemoveItemLockHandler : ICommandHandler<RemoveItemLock, bool
 /// body. The grant lasts <see cref="LockAccess.GrantLifetime"/> and belongs to this credential
 /// alone.
 /// </remarks>
-public sealed class UnlockItemHandler : ICommandHandler<UnlockItem, DateTimeOffset>
+public sealed class UnlockItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks,
+    LockPasswordGuard guard,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : ICommandHandler<UnlockItem, DateTimeOffset>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-    private readonly LockPasswordGuard _guard;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="UnlockItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="locks">Item locks.</param>
-    /// <param name="guard">Checks passwords within the backoff and the ceiling.</param>
-    /// <param name="session">The tenant this request runs in.</param>
-    /// <param name="credential">The credential this request authenticated with.</param>
-    /// <param name="clock">Stamps the grant.</param>
-    public UnlockItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IItemLocks locks,
-        LockPasswordGuard guard,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-        ArgumentNullException.ThrowIfNull(guard);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-        _guard = guard;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly CredentialSessionContext _credential = credential;
 
     /// <summary>Unlocks the item for this credential.</summary>
     /// <param name="command">The item and password.</param>
@@ -419,7 +309,7 @@ public sealed class UnlockItemHandler : ICommandHandler<UnlockItem, DateTimeOffs
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayReadAsync(_tree, _permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<DateTimeOffset>(LockErrors.NotFound(command.ItemId));
         }
@@ -429,26 +319,26 @@ public sealed class UnlockItemHandler : ICommandHandler<UnlockItem, DateTimeOffs
             return Result.Failure<DateTimeOffset>(LockErrors.CredentialCannotUnlock());
         }
 
-        var existing = await _locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var existing = await locks.FindVerifierAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
             return Result.Failure<DateTimeOffset>(LockErrors.NotLocked());
         }
 
-        var check = await _guard
-            .VerifyAsync(LockAccess.Tenant(_session), command.ItemId, command.Password ?? string.Empty, existing, cancellationToken)
+        var check = await guard
+            .VerifyAsync(LockAccess.Tenant(session), command.ItemId, command.Password ?? string.Empty, existing, cancellationToken)
             .ConfigureAwait(false);
         if (LockErrors.For(check) is { } refused)
         {
             return Result.Failure<DateTimeOffset>(refused);
         }
 
-        var expiresAt = _clock.GetUtcNow() + LockAccess.GrantLifetime;
-        if (!await _locks.GrantAsync(command.ItemId, existing, expiresAt, cancellationToken).ConfigureAwait(false))
+        var expiresAt = clock.GetUtcNow() + LockAccess.GrantLifetime;
+        if (!await locks.GrantAsync(command.ItemId, existing, expiresAt, cancellationToken).ConfigureAwait(false))
         {
             // The lock was removed, or its password changed, while this one was being checked.
             return Result.Failure<DateTimeOffset>(
-                await _locks.IsLockedAsync(command.ItemId, cancellationToken).ConfigureAwait(false)
+                await locks.IsLockedAsync(command.ItemId, cancellationToken).ConfigureAwait(false)
                     ? LockErrors.WrongPassword()
                     : LockErrors.NotLocked());
         }
@@ -462,27 +352,12 @@ public sealed class UnlockItemHandler : ICommandHandler<UnlockItem, DateTimeOffs
 /// Idempotent, and needs read access only - closing something is never riskier than leaving it
 /// open, and a "lock again" button that could fail would be the wrong way round.
 /// </remarks>
-public sealed class RelockItemHandler : ICommandHandler<RelockItem, bool>
+public sealed class RelockItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemLocks locks)
+    : ICommandHandler<RelockItem, bool>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemLocks _locks;
-
-    /// <summary>Initializes a new instance of the <see cref="RelockItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="locks">Item locks.</param>
-    public RelockItemHandler(IItemTree tree, IPermissionResolver permissions, IItemLocks locks)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _locks = locks;
-    }
-
     /// <summary>Ends the grant.</summary>
     /// <param name="command">The item.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -491,12 +366,12 @@ public sealed class RelockItemHandler : ICommandHandler<RelockItem, bool>
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayReadAsync(_tree, _permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
 
-        await _locks.RevokeAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        await locks.RevokeAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         return Result.Success(true);
     }
 }

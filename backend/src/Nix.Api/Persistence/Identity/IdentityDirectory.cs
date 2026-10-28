@@ -22,18 +22,8 @@ namespace Nix.Persistence.Identity;
 /// They therefore take their own short-lived connection from the data source rather than borrowing
 /// the request's. Going around the guard is the point; doing it anywhere else is not.
 /// </remarks>
-public sealed class IdentityDirectory : IIdentityDirectory
+public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDirectory
 {
-    private readonly NpgsqlDataSource _dataSource;
-
-    /// <summary>Initializes a new instance of the <see cref="IdentityDirectory"/> class.</summary>
-    /// <param name="dataSource">The pool these untenanted lookups borrow a connection from.</param>
-    public IdentityDirectory(NpgsqlDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-        _dataSource = dataSource;
-    }
-
     /// <inheritdoc />
     public async ValueTask<IdentityProviderRegistration?> ResolveProviderAsync(
         string issuer,
@@ -111,7 +101,7 @@ public sealed class IdentityDirectory : IIdentityDirectory
         CancellationToken cancellationToken)
         where TRow : class
     {
-        var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using (connection.ConfigureAwait(false))
         {
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities

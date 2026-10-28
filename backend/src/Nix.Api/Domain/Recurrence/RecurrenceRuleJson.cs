@@ -229,7 +229,7 @@ public static class RecurrenceRuleJson
         return rule with { CompletedThrough = through, Completed = remaining };
     }
 
-    private static bool TryFrequency(string? text, out RecurrenceFrequency frequency)
+    internal static bool TryFrequency(string? text, out RecurrenceFrequency frequency)
     {
         switch (text)
         {
@@ -251,7 +251,7 @@ public static class RecurrenceRuleJson
         }
     }
 
-    private static string FrequencyText(RecurrenceFrequency frequency) => frequency switch
+    internal static string FrequencyText(RecurrenceFrequency frequency) => frequency switch
     {
         RecurrenceFrequency.Daily => "daily",
         RecurrenceFrequency.Weekly => "weekly",
@@ -260,38 +260,23 @@ public static class RecurrenceRuleJson
         _ => throw new ArgumentOutOfRangeException(nameof(frequency), frequency, "Unknown frequency."),
     };
 
-    private static bool TryWeekday(string? text, out IsoDayOfWeek weekday)
+    internal static bool TryWeekday(string? text, out IsoDayOfWeek weekday)
     {
-        switch (text)
+        weekday = text switch
         {
-            case "mo":
-                weekday = IsoDayOfWeek.Monday;
-                return true;
-            case "tu":
-                weekday = IsoDayOfWeek.Tuesday;
-                return true;
-            case "we":
-                weekday = IsoDayOfWeek.Wednesday;
-                return true;
-            case "th":
-                weekday = IsoDayOfWeek.Thursday;
-                return true;
-            case "fr":
-                weekday = IsoDayOfWeek.Friday;
-                return true;
-            case "sa":
-                weekday = IsoDayOfWeek.Saturday;
-                return true;
-            case "su":
-                weekday = IsoDayOfWeek.Sunday;
-                return true;
-            default:
-                weekday = default;
-                return false;
-        }
+            "mo" => IsoDayOfWeek.Monday,
+            "tu" => IsoDayOfWeek.Tuesday,
+            "we" => IsoDayOfWeek.Wednesday,
+            "th" => IsoDayOfWeek.Thursday,
+            "fr" => IsoDayOfWeek.Friday,
+            "sa" => IsoDayOfWeek.Saturday,
+            "su" => IsoDayOfWeek.Sunday,
+            _ => default,
+        };
+        return weekday != default;
     }
 
-    private static string WeekdayText(IsoDayOfWeek weekday) => weekday switch
+    internal static string WeekdayText(IsoDayOfWeek weekday) => weekday switch
     {
         IsoDayOfWeek.Monday => "mo",
         IsoDayOfWeek.Tuesday => "tu",
@@ -384,5 +369,5 @@ public static class RecurrenceRuleJson
         return days.ToImmutable();
     }
 
-    private static string Iso(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    internal static string Iso(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

@@ -26,34 +26,14 @@ public sealed record TouchItem(ItemId ItemId) : ICommand<ItemId>;
 /// who may not write the body may not claim to have written it. An item that is invisible or
 /// read-only fails as not found, the same non-answer every other refusal gives.
 /// </remarks>
-public sealed class TouchItemHandler : ICommandHandler<TouchItem, ItemId>
+public sealed class TouchItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<TouchItem, ItemId>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="TouchItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides whether the caller may write.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">Supplies the modification instant.</param>
-    public TouchItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Stamps the item.</summary>
     /// <param name="command">The item to stamp.</param>
@@ -66,14 +46,14 @@ public sealed class TouchItemHandler : ICommandHandler<TouchItem, ItemId>
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
             return Result.Failure<ItemId>(
                 InternalErrors.NotFound($"No item {command.ItemId} is visible."));
         }
 
-        var mayWrite = await _permissions
+        var mayWrite = await permissions
             .CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken)
             .ConfigureAwait(false);
         if (!mayWrite)
@@ -82,8 +62,8 @@ public sealed class TouchItemHandler : ICommandHandler<TouchItem, ItemId>
                 InternalErrors.NotFound($"No item {command.ItemId} is visible."));
         }
 
-        await _tree
-            .TouchAsync(command.ItemId, context.PrincipalId, _clock.GetUtcNow(), cancellationToken)
+        await tree
+            .TouchAsync(command.ItemId, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
 
         return Result.Success(command.ItemId);

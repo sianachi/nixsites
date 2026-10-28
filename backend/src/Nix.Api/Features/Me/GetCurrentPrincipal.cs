@@ -36,29 +36,13 @@ public sealed record GetCurrentPrincipal : IQuery<Result<CurrentPrincipal>>;
 /// truthfulness problem rather than a security one.
 /// </para>
 /// </remarks>
-public sealed class GetCurrentPrincipalHandler : IQueryHandler<GetCurrentPrincipal, Result<CurrentPrincipal>>
+public sealed class GetCurrentPrincipalHandler(
+    IPrincipalDirectory principals,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session)
+    : IQueryHandler<GetCurrentPrincipal, Result<CurrentPrincipal>>
 {
-    private readonly IPrincipalDirectory _principals;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="GetCurrentPrincipalHandler"/> class.</summary>
-    /// <param name="principals">Principal storage.</param>
-    /// <param name="permissions">Answers whether the caller is a tenant administrator.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    public GetCurrentPrincipalHandler(
-        IPrincipalDirectory principals,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(principals);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _principals = principals;
-        _permissions = permissions;
-        _session = session;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Reads the caller's own profile.</summary>
     /// <param name="query">The query, which carries no parameters.</param>
@@ -71,7 +55,7 @@ public sealed class GetCurrentPrincipalHandler : IQueryHandler<GetCurrentPrincip
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var principal = await _principals.FindAsync(context.PrincipalId, cancellationToken).ConfigureAwait(false);
+        var principal = await principals.FindAsync(context.PrincipalId, cancellationToken).ConfigureAwait(false);
         if (principal is null)
         {
             // Reachable only if the row disappeared between authentication and here, which the
@@ -81,7 +65,7 @@ public sealed class GetCurrentPrincipalHandler : IQueryHandler<GetCurrentPrincip
                 new NixError("identity.principal_not_found", "The acting principal no longer exists."));
         }
 
-        var isAdministrator = await _permissions
+        var isAdministrator = await permissions
             .IsTenantAdministratorAsync(cancellationToken)
             .ConfigureAwait(false);
 

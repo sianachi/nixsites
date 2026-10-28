@@ -46,29 +46,14 @@ public sealed record RevokeAccessToken(PersonalAccessTokenId Id) : ICommand<bool
 /// count is bounded (<see cref="PersonalAccessToken.MaximumLiveTokensPerPrincipal"/>) because a
 /// principal drowning in tokens cannot audit them, and an unbounded mint is an unbounded write.
 /// </remarks>
-public sealed class CreateAccessTokenHandler : ICommandHandler<CreateAccessToken, IssuedAccessToken>
+public sealed class CreateAccessTokenHandler(
+    IPersonalAccessTokens tokens,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<CreateAccessToken, IssuedAccessToken>
 {
-    private readonly IPersonalAccessTokens _tokens;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="CreateAccessTokenHandler"/> class.</summary>
-    /// <param name="tokens">Stores the row.</param>
-    /// <param name="session">The principal and tenant the token will act as.</param>
-    /// <param name="clock">Stamps issuance and computes expiry.</param>
-    public CreateAccessTokenHandler(
-        IPersonalAccessTokens tokens,
-        INixSessionContextAccessor session,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tokens);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tokens = tokens;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly IPersonalAccessTokens _tokens = tokens;
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Mints the token.</summary>
     /// <param name="command">What was asked for.</param>
@@ -108,7 +93,7 @@ public sealed class CreateAccessTokenHandler : ICommandHandler<CreateAccessToken
                 + $"{PersonalAccessToken.MaximumLifetimeDays}.");
         }
 
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var live = await _tokens.CountLiveAsync(now, cancellationToken).ConfigureAwait(false);
         if (live >= PersonalAccessToken.MaximumLiveTokensPerPrincipal)
         {
@@ -183,18 +168,10 @@ public sealed class CreateAccessTokenHandler : ICommandHandler<CreateAccessToken
 /// Revoked and expired rows are listed rather than filtered: the list is an audit of what has
 /// been able to act as this principal, and an audit that forgets is not one.
 /// </remarks>
-public sealed class ListAccessTokensHandler
+public sealed class ListAccessTokensHandler(IPersonalAccessTokens tokens)
     : IQueryHandler<ListAccessTokens, Result<IReadOnlyList<PersonalAccessToken>>>
 {
-    private readonly IPersonalAccessTokens _tokens;
-
-    /// <summary>Initializes a new instance of the <see cref="ListAccessTokensHandler"/> class.</summary>
-    /// <param name="tokens">Reads the rows.</param>
-    public ListAccessTokensHandler(IPersonalAccessTokens tokens)
-    {
-        ArgumentNullException.ThrowIfNull(tokens);
-        _tokens = tokens;
-    }
+    private readonly IPersonalAccessTokens _tokens = tokens;
 
     /// <summary>Reads the list.</summary>
     /// <param name="query">Carries nothing: tokens belong to whoever is asking.</param>
@@ -217,23 +194,11 @@ public sealed class ListAccessTokensHandler
 /// token that never existed, and a token belonging to somebody else all answer the same way,
 /// because telling them apart would let any principal probe which identifiers name rows.
 /// </remarks>
-public sealed class RevokeAccessTokenHandler : ICommandHandler<RevokeAccessToken, bool>
+public sealed class RevokeAccessTokenHandler(
+    IPersonalAccessTokens tokens,
+    TimeProvider clock)
+    : ICommandHandler<RevokeAccessToken, bool>
 {
-    private readonly IPersonalAccessTokens _tokens;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="RevokeAccessTokenHandler"/> class.</summary>
-    /// <param name="tokens">Writes the revocation.</param>
-    /// <param name="clock">Stamps it.</param>
-    public RevokeAccessTokenHandler(IPersonalAccessTokens tokens, TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tokens);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tokens = tokens;
-        _clock = clock;
-    }
-
     /// <summary>Revokes the token.</summary>
     /// <param name="command">The token to revoke.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -244,8 +209,8 @@ public sealed class RevokeAccessTokenHandler : ICommandHandler<RevokeAccessToken
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var revoked = await _tokens
-            .RevokeOwnAsync(command.Id, _clock.GetUtcNow(), cancellationToken)
+        var revoked = await tokens
+            .RevokeOwnAsync(command.Id, clock.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
 
         return Result.Success(revoked);

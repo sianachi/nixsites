@@ -27,37 +27,14 @@ namespace Nix.Persistence.Search;
 /// tens of small records and never grows with the corpus.
 /// </para>
 /// </remarks>
-public sealed class ItemSearch : IItemSearch
+public sealed class ItemSearch(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IItemSearch
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="ItemSearch"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with: which locks it has opened decides which
-    /// titles under a lock a search may return (ADR-0056).
-    /// </param>
-    /// <param name="clock">Judges lock-grant expiry.</param>
-    public ItemSearch(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -83,7 +60,7 @@ public sealed class ItemSearch : IItemSearch
             return [];
         }
 
-        var rows = _sql.QueryAsync<ItemDigest, DigestMapper>(
+        var rows = sql.QueryAsync<ItemDigest, DigestMapper>(
             SearchSql.MatchingItems,
             default,
             [
@@ -92,7 +69,7 @@ public sealed class ItemSearch : IItemSearch
                 new NpgsqlParameter("title_pattern", NpgsqlDbType.Text) { Value = ContainsPattern(query) },
                 new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
                 new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
-                await LockFilterParameters.AllLocksAsync(_sql, Tenant, cancellationToken).ConfigureAwait(false),
+                await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await ClosedLocksAsync(cancellationToken).ConfigureAwait(false),
             ],
             cancellationToken);
@@ -114,7 +91,7 @@ public sealed class ItemSearch : IItemSearch
             return [];
         }
 
-        var rows = _sql.QueryAsync<ItemDigest, DigestMapper>(
+        var rows = sql.QueryAsync<ItemDigest, DigestMapper>(
             SearchSql.ReadableItemsById,
             default,
             [
@@ -169,7 +146,7 @@ public sealed class ItemSearch : IItemSearch
             values[index] = phrases[index];
         }
 
-        var rows = _sql.QueryAsync<TitleMention, MentionMapper>(
+        var rows = sql.QueryAsync<TitleMention, MentionMapper>(
             SearchSql.ItemsTitledAs,
             default,
             [
@@ -237,7 +214,7 @@ public sealed class ItemSearch : IItemSearch
     }
 
     private ValueTask<NpgsqlParameter> ClosedLocksAsync(CancellationToken cancellationToken) =>
-        LockFilterParameters.ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken);
+        LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken);
 
     private static NpgsqlParameter Uuid(string name, Guid value) =>
         new(name, NpgsqlDbType.Uuid) { Value = value };

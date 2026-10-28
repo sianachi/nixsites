@@ -414,7 +414,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     private static readonly Guid ItemB = new("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
     private static readonly Guid ItemC = new("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
 
-    private static PetWorkerClient SendGateway(RecordingWorker handler, HttpClient http, Guid? unreadable = null, Guid? locked = null, string? title = null) =>
+    private static PetWorkerClient SendGateway(HttpClient http, Guid? unreadable = null, Guid? locked = null, string? title = null) =>
         new(http, Configuration(), Session(), Dispatcher(unreadableItem: unreadable, lockedItem: locked, itemTitle: title), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
 
     [Fact]
@@ -422,7 +422,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Compare",
             ItemId: ItemA, ItemIds: [ItemA, ItemB, ItemC, ItemB], SharedText: "selected"), Cancellation);
@@ -443,7 +443,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         using var http = new HttpClient(handler);
         // 239 letters then a surrogate pair puts the pair across the 240-unit limit.
         var title = new string('a', length) + (emojiStraddles ? "\U0001F600tail" : string.Empty);
-        var gateway = SendGateway(handler, http, title: title);
+        var gateway = SendGateway(http, title: title);
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Explain", ItemIds: [ItemA]), Cancellation);
 
@@ -461,7 +461,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Explain", ItemIds: [ItemB]), Cancellation);
 
@@ -477,7 +477,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http, unreadable: locked ? null : ItemB, locked: locked ? ItemB : null);
+        var gateway = SendGateway(http, unreadable: locked ? null : ItemB, locked: locked ? ItemB : null);
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Compare", ItemIds: [ItemA, ItemB]), Cancellation);
 
@@ -491,7 +491,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
         var many = Enumerable.Range(0, PetWorkerClient.MaxSharedItems + 1).Select(_ => Guid.NewGuid()).ToList();
 
         var over = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Compare", ItemIds: many), Cancellation);
@@ -509,7 +509,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Explain", RootItemId: ItemA, ItemIds: [ItemA, ItemB]), Cancellation);
 
@@ -523,7 +523,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
         var replaced = Guid.NewGuid();
 
         var sent = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Again", ReplaceFromMessageId: replaced), Cancellation);
@@ -722,7 +722,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         Assert.True((await gateway.ExecuteAsync(new("tool_result", WorkspaceGuid, PetGuid, Guid.NewGuid(),
             ToolId: "read-1", ToolResult: "{}", ToolSuccess: true, ToolImage: "data:image/jpeg;base64,/9j/AA=="), Cancellation)).IsSuccess);
@@ -749,7 +749,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         var result = await gateway.ExecuteAsync(new(operation, WorkspaceGuid, PetGuid, Guid.NewGuid(), operation == "send" ? "Hi" : "",
             ToolId: "read-1", ToolResult: "{}", ToolSuccess: true, ToolImage: image), Cancellation);
@@ -763,7 +763,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = SendGateway(handler, http);
+        var gateway = SendGateway(http);
 
         var result = await gateway.ExecuteAsync(new("tool_result", WorkspaceGuid, PetGuid, Guid.NewGuid(), ToolId: "read-1", ToolResult: "{}",
             ToolImage: "data:image/jpeg;base64," + new string('A', PetWorkerClient.MaxToolImageLength)), Cancellation);

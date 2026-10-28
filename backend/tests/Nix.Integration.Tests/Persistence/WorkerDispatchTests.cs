@@ -41,34 +41,6 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
-    public async Task Only_the_live_lease_owner_can_complete_a_job()
-    {
-        await using var scope = fixture.Application.CreateUnscopedScope();
-        var store = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
-        var job = Assert.Single(await store.LeaseJobsAsync("import.nix", "worker-one", 1, 60, Cancellation));
-
-        var refused = await store.CompleteJobAsync(
-            job.Id,
-            "worker-two",
-            succeeded: true,
-            result: "{}",
-            errorCode: null,
-            errorDetail: null,
-            Cancellation);
-        var completed = await store.CompleteJobAsync(
-            job.Id,
-            "worker-one",
-            succeeded: true,
-            result: "{}",
-            errorCode: null,
-            errorDetail: null,
-            Cancellation);
-
-        Assert.False(refused);
-        Assert.True(completed);
-    }
-
-    [Fact]
     public async Task Outbox_events_are_retried_or_acknowledged_by_their_lease_owner()
     {
         await using var scope = fixture.Application.CreateUnscopedScope();

@@ -41,7 +41,17 @@ public sealed record GetMyDay(WorkspaceId WorkspaceId) : IQuery<Result<MyDayResp
 /// overdue backlog here, because no recurrence history window is defined for one.
 /// </para>
 /// </remarks>
-public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayResponse>>
+public sealed class GetMyDayHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    IPrincipalPreferencesStore preferences,
+    IMyDayCandidates candidates,
+    ISchemaResolver schemas,
+    NixDispatcher dispatcher,
+    QueryConcurrencyLimiter concurrency,
+    TimeProvider clock)
+    : IQueryHandler<GetMyDay, Result<MyDayResponse>>
 {
     /// <summary>The most task candidates one read considers.</summary>
     public const int TaskCandidateLimit = 200;
@@ -67,57 +77,8 @@ public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayRespon
     private static readonly string PriorityKey = PropertyTypes.ToText(PropertyType.Priority);
     private static readonly string EstimateKey = PropertyTypes.ToText(PropertyType.Estimate);
 
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly IPrincipalPreferencesStore _preferences;
-    private readonly IMyDayCandidates _candidates;
-    private readonly ISchemaResolver _schemas;
-    private readonly NixDispatcher _dispatcher;
-    private readonly QueryConcurrencyLimiter _concurrency;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="GetMyDayHandler"/> class.</summary>
-    /// <param name="tree">Item storage, for the workspace.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="session">The acting principal; never taken from the client.</param>
-    /// <param name="preferences">The caller's saved time zone.</param>
-    /// <param name="candidates">Finds the items worth judging.</param>
-    /// <param name="schemas">Resolves each candidate's effective schema.</param>
-    /// <param name="dispatcher">Sends the habit reads to the habit module.</param>
-    /// <param name="concurrency">Bounds how many bulk reads one principal runs at once.</param>
-    /// <param name="clock">The instant every day is computed from.</param>
-    public GetMyDayHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        IPrincipalPreferencesStore preferences,
-        IMyDayCandidates candidates,
-        ISchemaResolver schemas,
-        NixDispatcher dispatcher,
-        QueryConcurrencyLimiter concurrency,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(preferences);
-        ArgumentNullException.ThrowIfNull(candidates);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(dispatcher);
-        ArgumentNullException.ThrowIfNull(concurrency);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _preferences = preferences;
-        _candidates = candidates;
-        _schemas = schemas;
-        _dispatcher = dispatcher;
-        _concurrency = concurrency;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
+    private readonly IMyDayCandidates _candidates = candidates;
 
     /// <summary>Reads the day.</summary>
     /// <param name="query">The workspace.</param>
@@ -133,21 +94,21 @@ public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayRespon
                 + "an acting principal; there is no anonymous path.");
 
         // Missing and unreadable answer alike, so the route cannot confirm a workspace exists.
-        if (!await _tree.WorkspaceExistsAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanReadWorkspaceAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        if (!await tree.WorkspaceExistsAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || !await permissions.CanReadWorkspaceAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<MyDayResponse>(
                 ItemErrors.WorkspaceNotFound($"No workspace {query.WorkspaceId} is visible."));
         }
 
-        using var lease = _concurrency.TryEnter(caller.PrincipalId);
+        using var lease = concurrency.TryEnter(caller.PrincipalId);
         if (lease is null)
         {
             return Result.Failure<MyDayResponse>(QueryErrors.TooManyInFlight(
                 $"At most {QueryConcurrencyLimiter.MaximumInFlight} queries may run at once for one person; wait for one to finish."));
         }
 
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var zone = await ZoneAsync(caller, cancellationToken).ConfigureAwait(false);
         var date = Instant.FromDateTimeOffset(now).InZone(zone).Date;
         var day = new DateOnly(date.Year, date.Month, date.Day);
@@ -172,7 +133,7 @@ public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayRespon
 
     private async ValueTask<DateTimeZone> ZoneAsync(NixSessionContext caller, CancellationToken cancellationToken)
     {
-        var stored = await _preferences.FindAsync(caller.TenantId, caller.PrincipalId, cancellationToken).ConfigureAwait(false);
+        var stored = await preferences.FindAsync(caller.TenantId, caller.PrincipalId, cancellationToken).ConfigureAwait(false);
         return stored?.TimeZone is { Length: > 0 } name && DateTimeZoneProviders.Tzdb.GetZoneOrNull(name) is { } zone
             ? zone
             : DateTimeZone.Utc;
@@ -190,7 +151,7 @@ public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayRespon
 
         foreach (var candidate in batch.Rows)
         {
-            var schema = await _schemas.ResolveForItemAsync(candidate.Id, cancellationToken).ConfigureAwait(false);
+            var schema = await schemas.ResolveForItemAsync(candidate.Id, cancellationToken).ConfigureAwait(false);
 
             // Task identity is the schema's Completion field, never a body type or a lookalike key.
             if (schema.Find(CompletionKey) is not { Type: PropertyType.Completion })
@@ -334,7 +295,7 @@ public sealed class GetMyDayHandler : IQueryHandler<GetMyDay, Result<MyDayRespon
 
             // The habit's own local day, which can differ from the task day by up to a day.
             var habitDay = settings.Today(now);
-            var read = await _dispatcher
+            var read = await dispatcher
                 .QueryAsync<ReadHabitTracker, Result<HabitTrackerResponse>>(
                     new ReadHabitTracker(candidate.Id, habitDay, habitDay),
                     cancellationToken)

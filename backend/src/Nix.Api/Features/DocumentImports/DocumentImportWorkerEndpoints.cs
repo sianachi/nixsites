@@ -105,7 +105,7 @@ internal static class DocumentImportWorkerEndpoints
         {
             return TypedResults.Problem(DocumentImportProblems.NotFound(context));
         }
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.Ok(DocumentImportMapping.ToResponse(result))
             : TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
     }
@@ -189,7 +189,7 @@ internal static class DocumentImportWorkerEndpoints
         {
             return TypedResults.Problem(DocumentImportProblems.NotFound(context));
         }
-        if (!await ExecutionStillLive(context, dispatch).ConfigureAwait(false))
+        if (!await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false))
         {
             return TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
         }
@@ -251,7 +251,7 @@ internal static class DocumentImportWorkerEndpoints
             return TypedResults.Problem(DocumentImportProblems.NotFound(context));
         }
 
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.Ok(new CompleteDocumentImportFileVersionsResponse(importId, request.TransferIds))
             : TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
     }
@@ -322,7 +322,7 @@ internal static class DocumentImportWorkerEndpoints
         {
             return TypedResults.Problem(DocumentImportProblems.NotFound(context));
         }
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.NoContent()
             : TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
     }
@@ -409,7 +409,7 @@ internal static class DocumentImportWorkerEndpoints
                 [execution.SourceObjectKey, execution.Import.PlanObjectKey],
                 context.RequestAborted).ConfigureAwait(false);
         }
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.Ok(DocumentImportMapping.ToResponse(result))
             : TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
     }
@@ -455,7 +455,7 @@ internal static class DocumentImportWorkerEndpoints
             signer.GetCleanupNotBefore(),
             cleanup.ObjectKeys,
             context.RequestAborted).ConfigureAwait(false);
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.NoContent()
             : TypedResults.Problem(DocumentImportProblems.ExecutionLost(context));
     }
@@ -507,18 +507,6 @@ internal static class DocumentImportWorkerEndpoints
             return null;
         }
         return execution;
-    }
-
-    private static async Task<bool> ExecutionStillLive(
-        HttpContext context,
-        IWorkerDispatchStore dispatch)
-    {
-        var executionId = context.Request.Headers[WorkerExecutionMiddleware.ExecutionHeaderName].ToString();
-        return Guid.TryParse(context.Request.Headers[WorkerExecutionMiddleware.JobHeaderName], out var jobId)
-            && await dispatch.AuthorizeExecutionAsync(
-                jobId,
-                executionId,
-                context.RequestAborted).ConfigureAwait(false) is not null;
     }
 
     private static DateTimeOffset MinimumExpiry(params ObjectCapability[] capabilities) =>

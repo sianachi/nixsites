@@ -18,31 +18,25 @@ public sealed record ListTrash(
     int Limit) : IQuery<Result<IReadOnlyList<Item>>>;
 
 /// <summary>Reads the directly deleted items that the current reader can recover.</summary>
-public sealed class ListTrashHandler : IQueryHandler<ListTrash, Result<IReadOnlyList<Item>>>
+public sealed class ListTrashHandler(
+    IItemTree tree,
+    IPermissionResolver permissions)
+    : IQueryHandler<ListTrash, Result<IReadOnlyList<Item>>>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-
-    public ListTrashHandler(IItemTree tree, IPermissionResolver permissions)
-    {
-        _tree = tree;
-        _permissions = permissions;
-    }
-
     public async ValueTask<Result<IReadOnlyList<Item>>> HandleAsync(
         ListTrash query,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (!await _tree.WorkspaceExistsAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanReadWorkspaceAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        if (!await tree.WorkspaceExistsAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || !await permissions.CanReadWorkspaceAsync(query.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<IReadOnlyList<Item>>(
                 ItemErrors.WorkspaceNotFound($"No workspace {query.WorkspaceId} is visible."));
         }
 
-        return Result.Success(await _tree.ListDeletedAsync(
+        return Result.Success(await tree.ListDeletedAsync(
             query.WorkspaceId,
             query.Before,
             query.BeforeId,

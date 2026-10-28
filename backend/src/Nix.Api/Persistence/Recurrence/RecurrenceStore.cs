@@ -30,24 +30,12 @@ namespace Nix.Persistence.Recurrence;
 /// done", "not recurring", or "gone" a silent no-op meant.
 /// </para>
 /// </remarks>
-public sealed class RecurrenceStore : IRecurrenceStore
+public sealed class RecurrenceStore(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session)
+    : IRecurrenceStore
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RecurrenceStore"/> class.
-    /// </summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    public RecurrenceStore(NixSqlExecutor sql, INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _sql = sql;
-        _session = session;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -69,7 +57,7 @@ public sealed class RecurrenceStore : IRecurrenceStore
         string? ruleJson,
         CancellationToken cancellationToken)
     {
-        var rows = await _sql.ExecuteAsync(
+        var rows = await sql.ExecuteAsync(
             RecurrenceSql.SetRecurrence,
             [
                 Uuid("tenant_id", Tenant.Value),
@@ -97,7 +85,7 @@ public sealed class RecurrenceStore : IRecurrenceStore
     {
         ArgumentNullException.ThrowIfNull(ruleJson);
 
-        var rows = await _sql.ExecuteAsync(
+        var rows = await sql.ExecuteAsync(
             RecurrenceSql.CompleteOccurrence,
             [
                 Uuid("tenant_id", Tenant.Value),
@@ -138,7 +126,7 @@ public sealed class RecurrenceStore : IRecurrenceStore
         ItemId itemId,
         CancellationToken cancellationToken)
     {
-        var rows = _sql.QueryAsync<string?, NullableTextMapper>(
+        var rows = sql.QueryAsync<string?, NullableTextMapper>(
             RecurrenceSql.ReadRecurrence,
             default,
             [

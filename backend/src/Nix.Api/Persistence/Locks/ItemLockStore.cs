@@ -14,34 +14,15 @@ namespace Nix.Persistence.Locks;
 /// The tenant, principal and credential all come from the request's own contexts. None is a
 /// parameter, so no caller can check a lock as, or issue a grant to, somebody else.
 /// </remarks>
-public sealed class ItemLockStore : IItemLocks
+public sealed class ItemLockStore(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IItemLocks
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="ItemLockStore"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="credential">The credential this request authenticated with.</param>
-    /// <param name="clock">Judges grant expiry.</param>
-    public ItemLockStore(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
+    private readonly CredentialSessionContext _credential = credential;
 
     private NixSessionContext Session => _session.Current
         ?? throw new InvalidOperationException(
@@ -51,7 +32,7 @@ public sealed class ItemLockStore : IItemLocks
     /// <inheritdoc />
     public async ValueTask<ItemLockState> GetStateAsync(ItemId itemId, CancellationToken cancellationToken)
     {
-        var rows = _sql.QueryAsync<ItemLockState, StateMapper>(
+        var rows = sql.QueryAsync<ItemLockState, StateMapper>(
             ItemLockSql.State,
             default,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
@@ -68,14 +49,14 @@ public sealed class ItemLockStore : IItemLocks
 
     /// <inheritdoc />
     public async ValueTask<bool> MayReadBodyAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        await _sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarOrDefaultAsync<bool>(
             ItemLockSql.MayReadBody,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<bool> AnyInSubtreeAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        await _sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarOrDefaultAsync<bool>(
             ItemLockSql.AnyInSubtree,
             [TenantParameter(), ItemParameter(itemId)],
             cancellationToken).ConfigureAwait(false);
@@ -99,7 +80,7 @@ public sealed class ItemLockStore : IItemLocks
             identifiers[index] = itemIds[index].Value;
         }
 
-        var rows = _sql.QueryAsync<Guid, IdentifierMapper>(
+        var rows = sql.QueryAsync<Guid, IdentifierMapper>(
             ItemLockSql.LockedAmong,
             default,
             [
@@ -117,7 +98,7 @@ public sealed class ItemLockStore : IItemLocks
 
     /// <inheritdoc />
     public ValueTask<string?> FindVerifierAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        _sql.ScalarOrDefaultAsync<string>(
+        sql.ScalarOrDefaultAsync<string>(
             ItemLockSql.Verifier,
             [TenantParameter(), ItemParameter(itemId)],
             cancellationToken);
@@ -127,7 +108,7 @@ public sealed class ItemLockStore : IItemLocks
     {
         ArgumentException.ThrowIfNullOrEmpty(verifier);
 
-        var written = await _sql.ExecuteAsync(
+        var written = await sql.ExecuteAsync(
             ItemLockSql.Lock,
             [
                 TenantParameter(),
@@ -151,7 +132,7 @@ public sealed class ItemLockStore : IItemLocks
         ArgumentException.ThrowIfNullOrEmpty(expected);
         ArgumentException.ThrowIfNullOrEmpty(verifier);
 
-        var changed = await _sql.ExecuteAsync(
+        var changed = await sql.ExecuteAsync(
             ItemLockSql.ChangeVerifier,
             [
                 TenantParameter(),
@@ -168,7 +149,7 @@ public sealed class ItemLockStore : IItemLocks
             return false;
         }
 
-        await _sql.ExecuteAsync(
+        await sql.ExecuteAsync(
             ItemLockSql.RevokeAll,
             [TenantParameter(), ItemParameter(itemId)],
             cancellationToken).ConfigureAwait(false);
@@ -181,7 +162,7 @@ public sealed class ItemLockStore : IItemLocks
     {
         ArgumentException.ThrowIfNullOrEmpty(expected);
 
-        var removed = await _sql.ExecuteAsync(
+        var removed = await sql.ExecuteAsync(
             ItemLockSql.Remove,
             [TenantParameter(), ItemParameter(itemId), new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected }],
             cancellationToken).ConfigureAwait(false);
@@ -204,7 +185,7 @@ public sealed class ItemLockStore : IItemLocks
 
         // Two statements in one command: the sweep's count is included in the total, so the
         // grant's own outcome is read back rather than inferred from it.
-        await _sql.ExecuteAsync(
+        await sql.ExecuteAsync(
             ItemLockSql.Grant,
             [
                 TenantParameter(),
@@ -217,7 +198,7 @@ public sealed class ItemLockStore : IItemLocks
             ],
             cancellationToken).ConfigureAwait(false);
 
-        return await _sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarOrDefaultAsync<bool>(
             ItemLockSql.HoldsGrant,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
             cancellationToken).ConfigureAwait(false);
@@ -236,7 +217,7 @@ public sealed class ItemLockStore : IItemLocks
             return;
         }
 
-        await _sql.ExecuteAsync(
+        await sql.ExecuteAsync(
             ItemLockSql.Revoke,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter()],
             cancellationToken).ConfigureAwait(false);
@@ -255,7 +236,7 @@ public sealed class ItemLockStore : IItemLocks
         };
 
     private NpgsqlParameter NowParameter() =>
-        new("now", NpgsqlDbType.TimestampTz) { Value = _clock.GetUtcNow() };
+        new("now", NpgsqlDbType.TimestampTz) { Value = clock.GetUtcNow() };
 
     private static NpgsqlParameter ItemParameter(ItemId itemId) =>
         new("item_id", NpgsqlDbType.Uuid) { Value = itemId.Value };

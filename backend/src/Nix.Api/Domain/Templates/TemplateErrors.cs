@@ -17,11 +17,6 @@ public static class TemplateErrors
     /// <summary>The requested shape is malformed or uses unsupported vocabulary.</summary>
     public static NixError Invalid(string message) => new("templates.invalid", message);
 
-    /// <summary>File-backed child items cannot be copied until object storage transfer is supported.</summary>
-    public static NixError FileAttachmentsUnsupported() => new(
-        "templates.file_attachments_unsupported",
-        "Templates containing file attachments cannot be captured, edited, applied, or exported yet. Remove the file attachments and try again.");
-
     /// <summary>A stable key or in-progress operation conflicts.</summary>
     public static NixError Conflict(string message) => new("templates.conflict", message);
 

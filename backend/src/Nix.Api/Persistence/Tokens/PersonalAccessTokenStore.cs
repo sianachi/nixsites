@@ -22,34 +22,19 @@ namespace Nix.Persistence.Tokens;
 /// parameter.
 /// </para>
 /// </remarks>
-public sealed class PersonalAccessTokenStore : IPersonalAccessTokens
+public sealed class PersonalAccessTokenStore(
+    NpgsqlDataSource dataSource,
+    NixDbContext context,
+    INixSessionContextAccessor session)
+    : IPersonalAccessTokens
 {
     // The window last_used_at is coarsened to. Matches the caller's own granularity in the
     // unit-of-work middleware; the two must agree, because the statement's guard and the caller's
     // skip are the same decision made in two places.
     private static readonly TimeSpan LastUsedTouchInterval = TimeSpan.FromMinutes(5);
 
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly NixDbContext _context;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="PersonalAccessTokenStore"/> class.</summary>
-    /// <param name="dataSource">The pool the untenanted exchange lookup borrows a connection from.</param>
-    /// <param name="context">The unit of work everything session-scoped runs inside.</param>
-    /// <param name="session">The principal and tenant this request runs as.</param>
-    public PersonalAccessTokenStore(
-        NpgsqlDataSource dataSource,
-        NixDbContext context,
-        INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _dataSource = dataSource;
-        _context = context;
-        _session = session;
-    }
+    private readonly NixDbContext _context = context;
+    private readonly INixSessionContextAccessor _session = session;
 
     private PrincipalId Principal => (_session.Current
         ?? throw new InvalidOperationException(
@@ -64,7 +49,7 @@ public sealed class PersonalAccessTokenStore : IPersonalAccessTokens
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(lookup);
 
-        var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using (connection.ConfigureAwait(false))
         {
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities

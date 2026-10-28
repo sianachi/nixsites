@@ -13,7 +13,6 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
     private const string RenewJobSql = "SELECT nix_renew_worker_job(@job_id, @owner, @lease_seconds)";
     private const string JobStateSql = "SELECT * FROM nix_worker_job_state(@job_id, @owner)";
     private const string AuthorizeExecutionSql = "SELECT * FROM nix_authorize_worker_execution(@job_id, @owner)";
-    private const string CompleteJobSql = "SELECT nix_complete_worker_job(@job_id, @owner, @succeeded, @result, @error_code, @error_detail)";
     private const string ApplyResultSql = "SELECT * FROM nix_apply_worker_result(@job_id, @owner, @succeeded, @retryable, @result, @error_code, @error_detail, @expected_attempt_id)";
     private const string ScheduleExportCleanupSql = "SELECT nix_schedule_export_result_cleanup(@job_id)";
     private const string LeaseOutboxSql = "SELECT * FROM nix_lease_worker_outbox(@kind, @owner, @limit, @lease_seconds)";
@@ -171,26 +170,6 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
             }
         }
     }
-
-    /// <summary>Completes a job only while the caller still owns its live lease.</summary>
-    public ValueTask<bool> CompleteJobAsync(
-        Guid jobId,
-        string owner,
-        bool succeeded,
-        string? result,
-        string? errorCode,
-        string? errorDetail,
-        CancellationToken cancellationToken) => ExecuteBooleanAsync(
-            CompleteJobSql,
-            [
-                Uuid("job_id", jobId),
-                Text("owner", owner),
-                Boolean("succeeded", succeeded),
-                Json("result", result),
-                Text("error_code", errorCode),
-                Text("error_detail", errorDetail),
-            ],
-            cancellationToken);
 
     /// <summary>Atomically validates and applies a fenced worker result.</summary>
     public async ValueTask<WorkerResultApplication> ApplyResultAsync(

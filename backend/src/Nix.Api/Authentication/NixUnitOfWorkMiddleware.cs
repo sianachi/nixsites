@@ -44,7 +44,7 @@ namespace Nix.Authentication;
 /// happen, particularly where the write maintains a derived table.
 /// </para>
 /// </remarks>
-public sealed class NixUnitOfWorkMiddleware
+public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
 {
     /// <summary>Stable code for a request with no usable credentials.</summary>
     internal const string UnauthenticatedCode = AuthenticationRefusalCodes.Unauthenticated;
@@ -71,16 +71,6 @@ public sealed class NixUnitOfWorkMiddleware
     /// hottest path in the system.
     /// </summary>
     private static readonly TimeSpan LastUsedGranularity = TimeSpan.FromMinutes(5);
-
-    private readonly RequestDelegate _next;
-
-    /// <summary>Initializes a new instance of the <see cref="NixUnitOfWorkMiddleware"/> class.</summary>
-    /// <param name="next">The rest of the pipeline.</param>
-    public NixUnitOfWorkMiddleware(RequestDelegate next)
-    {
-        ArgumentNullException.ThrowIfNull(next);
-        _next = next;
-    }
 
     /// <summary>Runs the request inside a tenant-scoped unit of work.</summary>
     /// <param name="context">The request.</param>
@@ -480,7 +470,7 @@ public sealed class NixUnitOfWorkMiddleware
             }
             try
             {
-                await _next(context).ConfigureAwait(false);
+                await next(context).ConfigureAwait(false);
 
                 if (context.Response.StatusCode >= StatusCodes.Status400BadRequest)
                 {

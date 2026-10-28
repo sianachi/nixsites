@@ -98,7 +98,16 @@ public static class QueryPresets
 }
 
 /// <summary>Handles both forms of the ad-hoc workspace query.</summary>
-public sealed class WorkspaceQueryHandler :
+/// <param name="session">The acting principal, resolving <c>me</c>; never the client.</param>
+public sealed class WorkspaceQueryHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemQuery query,
+    INixSessionContextAccessor session,
+    IItemLocks locks,
+    IPrincipalPreferencesStore preferences,
+    QueryConcurrencyLimiter concurrency)
+    :
     IQueryHandler<RunWorkspaceQuery, Result<WorkspaceQueryResults>>,
     IQueryHandler<AggregateWorkspaceQuery, Result<WorkspaceAggregateResults>>
 {
@@ -117,45 +126,8 @@ public sealed class WorkspaceQueryHandler :
     /// <summary>The longest sort or group key accepted, the rule grammar's own key bound.</summary>
     private const int MaximumKeyLength = QueryOperators.MaximumPropertyLength;
 
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemQuery _query;
-    private readonly INixSessionContextAccessor _session;
-    private readonly IItemLocks _locks;
-    private readonly IPrincipalPreferencesStore _preferences;
-    private readonly QueryConcurrencyLimiter _concurrency;
-
-    /// <summary>Initializes a new instance of the <see cref="WorkspaceQueryHandler"/> class.</summary>
-    /// <param name="tree">Item storage, for the workspace and the scope container.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="query">Runs the compiled query.</param>
-    /// <param name="session">The acting principal, resolving <c>me</c>; never the client.</param>
-    /// <param name="locks">Refuses a scope container under a lock the caller has not opened.</param>
-    /// <param name="preferences">The caller's zone, for <c>$created</c> and <c>$modified</c> days.</param>
-    /// <param name="concurrency">Bounds how many ad-hoc queries one principal runs at once.</param>
-    public WorkspaceQueryHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IItemQuery query,
-        INixSessionContextAccessor session,
-        IItemLocks locks,
-        IPrincipalPreferencesStore preferences,
-        QueryConcurrencyLimiter concurrency)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _query = query;
-        _session = session;
-        _locks = locks;
-        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
-        _concurrency = concurrency ?? throw new ArgumentNullException(nameof(concurrency));
-    }
+    private readonly IItemQuery _query = query;
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Runs the query.</summary>
     /// <param name="query">What to run.</param>
@@ -177,7 +149,7 @@ public sealed class WorkspaceQueryHandler :
         // a working answer and a truncation flag, not a 400 telling it to ask more politely.
         var limit = Math.Clamp(query.Limit ?? DefaultLimit, 1, MaximumResults);
 
-        using var lease = _concurrency.TryEnter(prepared.Value.Caller);
+        using var lease = concurrency.TryEnter(prepared.Value.Caller);
         if (lease is null)
         {
             return Result.Failure<WorkspaceQueryResults>(TooMany());
@@ -225,7 +197,7 @@ public sealed class WorkspaceQueryHandler :
 
         var property = string.IsNullOrEmpty(query.Property) ? null : query.Property;
 
-        using var lease = _concurrency.TryEnter(prepared.Value.Caller);
+        using var lease = concurrency.TryEnter(prepared.Value.Caller);
         if (lease is null)
         {
             return Result.Failure<WorkspaceAggregateResults>(TooMany());
@@ -381,8 +353,8 @@ public sealed class WorkspaceQueryHandler :
 
         // Existence and permission answer with the same failure, the listing's rule: a workspace
         // the caller may not read must not be distinguishable from one that does not exist.
-        if (!await _tree.WorkspaceExistsAsync(input.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await _permissions.CanReadWorkspaceAsync(input.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        if (!await tree.WorkspaceExistsAsync(input.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || !await permissions.CanReadWorkspaceAsync(input.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Prepared>(
                 ItemErrors.WorkspaceNotFound($"No workspace {input.WorkspaceId} is visible."));
@@ -394,7 +366,7 @@ public sealed class WorkspaceQueryHandler :
             // The item read's own refusal, word for word: a container that does not exist, one in
             // a workspace the caller cannot read, and one in another workspace than the one named
             // are all "not visible", so the scope cannot be used to probe for any of them.
-            var parent = await _tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
+            var parent = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
             if (parent is null || parent.WorkspaceId != input.WorkspaceId)
             {
                 return Result.Failure<Prepared>(ItemErrors.NotFound($"No item {parentId} is visible."));
@@ -402,7 +374,7 @@ public sealed class WorkspaceQueryHandler :
 
             // A lock covers the subtree, the children list's rule: refused rather than answered
             // empty, because an empty answer would read as "nothing in here".
-            if (!await _locks.MayReadBodyAsync(parentId, cancellationToken).ConfigureAwait(false))
+            if (!await locks.MayReadBodyAsync(parentId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<Prepared>(
                     ItemErrors.Locked($"Item {parentId} is locked. Unlock it to see what is inside."));
@@ -416,7 +388,7 @@ public sealed class WorkspaceQueryHandler :
         {
             Scope = scope,
             Grouping = grouping,
-            Zone = await QueryEvaluation.ZoneAsync(resolved, _preferences, caller, cancellationToken).ConfigureAwait(false),
+            Zone = await QueryEvaluation.ZoneAsync(resolved, preferences, caller, cancellationToken).ConfigureAwait(false),
         };
 
         return Result.Success(new Prepared(spec, todayText, caller.PrincipalId));

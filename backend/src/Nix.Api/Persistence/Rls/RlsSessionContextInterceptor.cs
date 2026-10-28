@@ -28,20 +28,10 @@ namespace Nix.Persistence.Rls;
 /// everything.
 /// </para>
 /// </remarks>
-public sealed class RlsSessionContextInterceptor : DbTransactionInterceptor
+public sealed class RlsSessionContextInterceptor(
+    INixSessionContextAccessor sessionContextAccessor)
+    : DbTransactionInterceptor
 {
-    private readonly INixSessionContextAccessor _sessionContextAccessor;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RlsSessionContextInterceptor"/> class.
-    /// </summary>
-    /// <param name="sessionContextAccessor">Source of the scope the unit of work runs under.</param>
-    public RlsSessionContextInterceptor(INixSessionContextAccessor sessionContextAccessor)
-    {
-        ArgumentNullException.ThrowIfNull(sessionContextAccessor);
-        _sessionContextAccessor = sessionContextAccessor;
-    }
-
     /// <inheritdoc />
     public override DbTransaction TransactionStarted(
         DbConnection connection,
@@ -88,7 +78,7 @@ public sealed class RlsSessionContextInterceptor : DbTransactionInterceptor
 
     private string BuildGuardedCommandText()
     {
-        var context = _sessionContextAccessor.Current
+        var context = sessionContextAccessor.Current
             ?? throw new InvalidOperationException(
                 "No RLS session context has been established for this scope. Every unit of work " +
                 "is tenant-scoped; there is no unscoped path. Set the context from the validated " +

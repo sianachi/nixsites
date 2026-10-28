@@ -65,7 +65,10 @@ public sealed record MentionResults(IReadOnlyList<FoundMention> Mentions, bool T
 /// under a lock this credential has not opened is never a mention.
 /// </para>
 /// </remarks>
-public sealed class FindMentionsHandler : IQueryHandler<FindMentions, Result<MentionResults>>
+public sealed class FindMentionsHandler(
+    IItemSearch search,
+    IPermissionResolver permissions)
+    : IQueryHandler<FindMentions, Result<MentionResults>>
 {
     /// <summary>The longest passage one request may match, in UTF-16 code units.</summary>
     /// <remarks>
@@ -84,21 +87,6 @@ public sealed class FindMentionsHandler : IQueryHandler<FindMentions, Result<Men
     /// the rest itself.
     /// </remarks>
     public const int MaximumExclusions = 256;
-
-    private readonly IItemSearch _search;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="FindMentionsHandler"/> class.</summary>
-    /// <param name="search">Matches the phrases against titles.</param>
-    /// <param name="permissions">Decides where the caller may look.</param>
-    public FindMentionsHandler(IItemSearch search, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(search);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _search = search;
-        _permissions = permissions;
-    }
 
     /// <summary>Finds the mentions.</summary>
     /// <param name="query">The passage.</param>
@@ -140,7 +128,7 @@ public sealed class FindMentionsHandler : IQueryHandler<FindMentions, Result<Men
             return Result.Success(new MentionResults([], phrases.Capped));
         }
 
-        var readable = await _permissions
+        var readable = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
         if (!readable.Contains(workspace))
@@ -149,7 +137,7 @@ public sealed class FindMentionsHandler : IQueryHandler<FindMentions, Result<Men
             return Result.Success(new MentionResults([], Truncated: false));
         }
 
-        var matches = await _search
+        var matches = await search
             .MentionsAsync(phrases.Phrases, [workspace], query.ExcludedItems, MaximumMentions, cancellationToken)
             .ConfigureAwait(false);
 

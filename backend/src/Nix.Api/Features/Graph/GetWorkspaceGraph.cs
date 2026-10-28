@@ -48,7 +48,9 @@ public sealed record WorkspaceGraphResults(WorkspaceGraph Graph, int NodeLimit, 
 /// until the response is a denial of service they served themselves.
 /// </para>
 /// </remarks>
-public sealed class GetWorkspaceGraphHandler
+public sealed class GetWorkspaceGraphHandler(
+    IWorkspaceGraph graph,
+    IPermissionResolver permissions)
     : IQueryHandler<GetWorkspaceGraph, Result<WorkspaceGraphResults>>
 {
     /// <summary>
@@ -75,20 +77,7 @@ public sealed class GetWorkspaceGraphHandler
     /// </remarks>
     public const int MaximumLinks = 4_000;
 
-    private readonly IWorkspaceGraph _graph;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetWorkspaceGraphHandler"/> class.</summary>
-    /// <param name="graph">Reads the nodes and edges.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetWorkspaceGraphHandler(IWorkspaceGraph graph, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _graph = graph;
-        _permissions = permissions;
-    }
+    private readonly IWorkspaceGraph _graph = graph;
 
     /// <summary>Reads the graph.</summary>
     /// <param name="query">The workspace to draw.</param>
@@ -100,7 +89,7 @@ public sealed class GetWorkspaceGraphHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 

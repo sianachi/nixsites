@@ -37,7 +37,18 @@ public sealed record RunItemQuery(ItemId ItemId, string ViewId, string Today)
 public sealed record ItemQueryResults(QueryResults Results, string ViewId, string Today, int Limit);
 
 /// <summary>Handles <see cref="RunItemQuery"/>.</summary>
-public sealed class RunItemQueryHandler : IQueryHandler<RunItemQuery, Result<ItemQueryResults>>
+/// <param name="session">
+/// The acting principal, used to resolve the <see cref="QueryOperators.Me"/> token. Never the
+/// client - see <see cref="QueryOperators.Me"/> for why that would defeat the check.
+/// </param>
+public sealed class RunItemQueryHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    IItemQuery query,
+    INixSessionContextAccessor session,
+    IItemLocks locks,
+    IPrincipalPreferencesStore preferences)
+    : IQueryHandler<RunItemQuery, Result<ItemQueryResults>>
 {
     /// <summary>The most rows one run returns.</summary>
     /// <remarks>
@@ -48,44 +59,8 @@ public sealed class RunItemQueryHandler : IQueryHandler<RunItemQuery, Result<Ite
     /// </remarks>
     public const int MaximumResults = 500;
 
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly IItemQuery _query;
-    private readonly INixSessionContextAccessor _session;
-    private readonly IItemLocks _locks;
-    private readonly IPrincipalPreferencesStore _preferences;
-
-    /// <summary>Initializes a new instance of the <see cref="RunItemQueryHandler"/> class.</summary>
-    /// <param name="tree">Item storage, for the smart list itself.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    /// <param name="query">Runs the compiled query.</param>
-    /// <param name="session">
-    /// The acting principal, used to resolve the <see cref="QueryOperators.Me"/> token. Never the
-    /// client - see <see cref="QueryOperators.Me"/> for why that would defeat the check.
-    /// </param>
-    /// <param name="locks">Withholds the views of a locked item until it is opened.</param>
-    /// <param name="preferences">The caller's zone, for <c>$created</c> and <c>$modified</c> days.</param>
-    public RunItemQueryHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        IItemQuery query,
-        INixSessionContextAccessor session,
-        IItemLocks locks,
-        IPrincipalPreferencesStore preferences)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(locks);
-
-        _tree = tree;
-        _permissions = permissions;
-        _query = query;
-        _session = session;
-        _locks = locks;
-        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
-    }
+    private readonly IItemQuery _query = query;
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Runs the query.</summary>
     /// <param name="query">The item, the view, and the caller's today.</param>
@@ -113,15 +88,15 @@ public sealed class RunItemQueryHandler : IQueryHandler<RunItemQuery, Result<Ite
                 + "'me' token needs an acting principal, and there is no anonymous path to this "
                 + "query.");
 
-        var item = await _tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemQueryResults>(ItemErrors.NotFound($"No item {query.ItemId} is visible."));
         }
 
         // A lock withholds an item's views along with its body, a saved query among them.
-        if (!await _locks.MayReadBodyAsync(query.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await locks.MayReadBodyAsync(query.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemQueryResults>(
                 ItemErrors.Locked($"Item {query.ItemId} is locked. Unlock it to run its views."));
@@ -175,12 +150,12 @@ public sealed class RunItemQueryHandler : IQueryHandler<RunItemQuery, Result<Ite
             ? new QueryOrder(sortBy, IsDay: false, view.SortDescending)
             : null;
 
-        var workspaces = await _permissions.ReadableWorkspacesAsync(cancellationToken).ConfigureAwait(false);
+        var workspaces = await permissions.ReadableWorkspacesAsync(cancellationToken).ConfigureAwait(false);
 
         var spec = new QuerySpec(resolvedRules, QueryEvaluation.ResolveOrder(resolvedRules, null, fallback), today)
         {
             ExcludedItemId = query.ItemId,
-            Zone = await QueryEvaluation.ZoneAsync(resolvedRules, _preferences, caller, cancellationToken).ConfigureAwait(false),
+            Zone = await QueryEvaluation.ZoneAsync(resolvedRules, preferences, caller, cancellationToken).ConfigureAwait(false),
         };
 
         QueryResults results;

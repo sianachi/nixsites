@@ -33,22 +33,12 @@ namespace Nix.Persistence.Properties;
 /// assume it away.
 /// </para>
 /// </remarks>
-public sealed class SchemaResolver : ISchemaResolver
+public sealed class SchemaResolver(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session)
+    : ISchemaResolver
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-
-    /// <summary>Initializes a new instance of the <see cref="SchemaResolver"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    public SchemaResolver(NixSqlExecutor sql, INixSessionContextAccessor session)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-
-        _sql = sql;
-        _session = session;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private NixSessionContext Session => _session.Current
         ?? throw new InvalidOperationException(
@@ -61,7 +51,7 @@ public sealed class SchemaResolver : ISchemaResolver
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var declarations = _sql.QueryAsync<string, SchemaRowMapper>(
+        var declarations = sql.QueryAsync<string, SchemaRowMapper>(
             SchemaSql.AncestorSchemas,
             default,
             [

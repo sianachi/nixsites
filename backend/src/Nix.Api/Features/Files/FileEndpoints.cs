@@ -449,7 +449,7 @@ internal static class FileEndpoints
             signer.GetCleanupNotBefore(),
             [ObjectStorageKeys.FileUpload(scoped.TenantId, FileUploadId.From(uploadId))],
             context.RequestAborted).ConfigureAwait(false);
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.Ok(result)
             : TypedResults.Problem(ExecutionLost(context));
     }
@@ -499,7 +499,7 @@ internal static class FileEndpoints
                 ObjectStorageKeys.FileThumbnail(scoped.TenantId, FileUploadId.From(uploadId)),
             ],
             context.RequestAborted).ConfigureAwait(false);
-        return await ExecutionStillLive(context, dispatch).ConfigureAwait(false)
+        return await WorkerExecutionMiddleware.ExecutionStillLive(context, dispatch).ConfigureAwait(false)
             ? TypedResults.NoContent()
             : TypedResults.Problem(ExecutionLost(context));
     }
@@ -536,18 +536,6 @@ internal static class FileEndpoints
         {
             return false;
         }
-    }
-
-    private static async Task<bool> ExecutionStillLive(
-        HttpContext context,
-        IWorkerDispatchStore dispatch)
-    {
-        var executionId = context.Request.Headers[WorkerExecutionMiddleware.ExecutionHeaderName].ToString();
-        return Guid.TryParse(context.Request.Headers[WorkerExecutionMiddleware.JobHeaderName], out var jobId)
-            && await dispatch.AuthorizeExecutionAsync(
-                jobId,
-                executionId,
-                context.RequestAborted).ConfigureAwait(false) is not null;
     }
 
     private static async Task<Results<NoContent, NotFound>> CancelPublic(

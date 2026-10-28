@@ -48,40 +48,16 @@ public sealed record DeleteItem(ItemId ItemId) : ICommand<ItemId>
 /// the retention window closes over it.
 /// </para>
 /// </remarks>
-public sealed class DeleteItemHandler : ICommandHandler<DeleteItem, ItemId>
+public sealed class DeleteItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IFinanceMutationGuard? financeGuard = null,
+    IItemProtections? protections = null)
+    : ICommandHandler<DeleteItem, ItemId>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceMutationGuard? _financeGuard;
-    private readonly IItemProtections? _protections;
-
-    /// <summary>Initializes a new instance of the <see cref="DeleteItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public DeleteItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IFinanceMutationGuard? financeGuard = null,
-        IItemProtections? protections = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-        _financeGuard = financeGuard;
-        _protections = protections;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Deletes the item.</summary>
     /// <param name="command">The item to delete.</param>
@@ -100,11 +76,11 @@ public sealed class DeleteItemHandler : ICommandHandler<DeleteItem, ItemId>
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var visible = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         var item = visible
-            ?? await _tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+            ?? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -129,17 +105,17 @@ public sealed class DeleteItemHandler : ICommandHandler<DeleteItem, ItemId>
             return Result.Success(itemId);
         }
 
-        if (_financeGuard is not null)
+        if (financeGuard is not null)
         {
             var workspaceId = item.WorkspaceId;
-            var blocked = await _financeGuard.CheckAsync(workspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
+            var blocked = await financeGuard.CheckAsync(workspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<ItemId>(blocked.Value);
             }
-            item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
             if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
-                || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+                || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
             }
@@ -155,8 +131,8 @@ public sealed class DeleteItemHandler : ICommandHandler<DeleteItem, ItemId>
         // Trashing an item hides everything under it, so a protected item beneath it would be
         // deleted in every way that matters. Refused rather than skipped: the caller asked for
         // one outcome and half of it is not theirs to have.
-        if (_protections is not null
-            && await _protections
+        if (protections is not null
+            && await protections
                 .AnyDeleteProtectedBelowAsync(itemId, userOnly: command.CalendarWrite, cancellationToken)
                 .ConfigureAwait(false))
         {
@@ -164,12 +140,12 @@ public sealed class DeleteItemHandler : ICommandHandler<DeleteItem, ItemId>
                 "An item inside this one is protected from deletion."));
         }
 
-        await _tree
+        await tree
             .SetLifecycleAsync(
                 itemId,
                 ItemLifecycleState.Deleted,
                 context.PrincipalId,
-                _clock.GetUtcNow(),
+                clock.GetUtcNow(),
                 cancellationToken)
             .ConfigureAwait(false);
 

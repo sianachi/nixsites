@@ -12,18 +12,8 @@ namespace Nix.Http;
 /// The feature is left alone when the server marks it read-only - that happens once reading has
 /// begun, at which point changing the bound would be a lie.
 /// </remarks>
-public sealed class RequestBodyLimitMiddleware
+public sealed class RequestBodyLimitMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    /// <summary>Initializes a new instance of the <see cref="RequestBodyLimitMiddleware"/> class.</summary>
-    /// <param name="next">The rest of the pipeline.</param>
-    public RequestBodyLimitMiddleware(RequestDelegate next)
-    {
-        ArgumentNullException.ThrowIfNull(next);
-        _next = next;
-    }
-
     /// <summary>Raises or lowers the request-body bound to what the matched endpoint declared.</summary>
     /// <param name="context">The request.</param>
     /// <returns>A task that completes when the request has been handled.</returns>
@@ -41,6 +31,6 @@ public sealed class RequestBodyLimitMiddleware
             }
         }
 
-        return _next(context);
+        return next(context);
     }
 }

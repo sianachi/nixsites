@@ -238,39 +238,6 @@ public sealed partial class TemplateStore
             ReadInitializationOrThrow(operation.DraftInitialization));
     }
 
-    private async ValueTask ReleaseExpiredDraftAsync(
-        WorkspaceTemplate template,
-        CancellationToken cancellationToken)
-    {
-        if (template.PendingRootItemId is null)
-        {
-            return;
-        }
-
-        var now = _clock.GetUtcNow();
-        var expired = await _database.TemplateOperations
-            .AsTracking()
-            .FirstOrDefaultAsync(
-                operation => operation.TemplateId == template.Id
-                    && operation.Kind == TemplateOperationKind.Edit
-                    && operation.State == TemplateOperationState.Provisioning
-                    && operation.ExpiresAt <= now,
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (expired is null)
-        {
-            return;
-        }
-
-        expired.State = TemplateOperationState.Aborted;
-        expired.FinalizedAt = now;
-        template.PendingRootItemId = null;
-        template.LastModifiedBy = Context.PrincipalId;
-        template.LastModifiedAt = now;
-        AddAudit("template.draft_expired", template.Id.Value, template.WorkspaceId, now);
-        await _database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    }
-
     private async ValueTask<Result<TemplateImportPlan?>> ImportReplayAsync(
         WorkspaceId workspaceId,
         TemplateImportDescriptor descriptor,

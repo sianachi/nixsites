@@ -31,7 +31,6 @@ public sealed class ReservedPropertyContentTests
             Content);
 
         Assert.Equal("""{"title":"T","$habit_unit":"times","$fin_kind":"account"}""", stripped);
-        Assert.Null(ReservedPropertyContent.FirstForbidden(stripped, Content));
     }
 
     [Fact]
@@ -67,7 +66,6 @@ public sealed class ReservedPropertyContentTests
     {
         const string bag = """{"\u0024type":"task","\u0024habit_frequency":"daily"}""";
 
-        Assert.Equal("$type", ReservedPropertyContent.FirstForbidden(bag, Content));
         var stripped = JsonNode.Parse(ReservedPropertyContent.Strip(bag, Content)!)!.AsObject();
         Assert.False(stripped.ContainsKey("$type"));
         Assert.NotNull(ReservedPropertyContent.Refuse(bag, "note"));

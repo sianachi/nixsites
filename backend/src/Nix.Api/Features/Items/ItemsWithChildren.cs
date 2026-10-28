@@ -58,18 +58,10 @@ public sealed record ItemsWithChildren(
 /// question already answered and invite the two to drift.
 /// </para>
 /// </remarks>
-public sealed class ItemsWithChildrenHandler : IQueryHandler<ItemsWithChildren, IReadOnlySet<ItemId>>
+public sealed class ItemsWithChildrenHandler(
+    IItemTree tree)
+    : IQueryHandler<ItemsWithChildren, IReadOnlySet<ItemId>>
 {
-    private readonly IItemTree _tree;
-
-    /// <summary>Initializes a new instance of the <see cref="ItemsWithChildrenHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    public ItemsWithChildrenHandler(IItemTree tree)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        _tree = tree;
-    }
-
     /// <summary>Reads which of the given items have at least one child that is not deleted.</summary>
     /// <param name="query">The workspace the items live in, and the items to ask about.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
@@ -80,7 +72,7 @@ public sealed class ItemsWithChildrenHandler : IQueryHandler<ItemsWithChildren, 
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        return await _tree
+        return await tree
             .WithChildrenAsync(query.WorkspaceId, query.Parents, cancellationToken)
             .ConfigureAwait(false);
     }

@@ -75,7 +75,7 @@ public sealed class DatePeriodsTests
     [Fact]
     public void Enumerating_a_range_yields_every_period_in_order_including_empty_ones()
     {
-        var range = DatePeriods.Spanning(Day("2025-12-31"), Day("2026-01-13"), DatePeriod.Week);
+        var range = new PeriodRange(Day("2025-12-31"), Day("2026-01-13"), DatePeriod.Week);
 
         Assert.Equal(
             [Day("2025-12-29"), Day("2026-01-05"), Day("2026-01-12")],
@@ -120,17 +120,6 @@ public sealed class DatePeriodsTests
 
     private static DateOnly Day(string text) =>
         DateOnly.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
-
-    [Theory]
-    [InlineData("2025-12-29", 1, 2026)]
-    [InlineData("2026-01-01", 1, 2026)]
-    [InlineData("2027-01-01", 53, 2026)]
-    [InlineData("2026-10-09", 41, 2026)]
-    public void The_iso_week_belongs_to_its_week_year(string date, int week, int year)
-    {
-        Assert.Equal(week, DatePeriods.IsoWeek(Day(date)));
-        Assert.Equal(year, DatePeriods.IsoWeekYear(Day(date)));
-    }
 
     [Fact]
     public void A_range_snaps_its_ends_to_period_starts_and_refuses_to_run_backwards()

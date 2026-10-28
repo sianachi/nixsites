@@ -41,7 +41,10 @@ public sealed record ResolvedReference(ItemId Id, ItemDigest? Item);
 /// enumerate a tenant one identifier at a time.
 /// </para>
 /// </remarks>
-public sealed class ResolveReferencesHandler : IQueryHandler<ResolveReferences, Result<ResolvedReferences>>
+public sealed class ResolveReferencesHandler(
+    IItemSearch search,
+    IPermissionResolver permissions)
+    : IQueryHandler<ResolveReferences, Result<ResolvedReferences>>
 {
     /// <summary>The most identifiers one request may name.</summary>
     /// <remarks>
@@ -50,21 +53,6 @@ public sealed class ResolveReferencesHandler : IQueryHandler<ResolveReferences, 
     /// the array parameter expensive to plan.
     /// </remarks>
     public const int MaximumIdentifiers = 200;
-
-    private readonly IItemSearch _search;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="ResolveReferencesHandler"/> class.</summary>
-    /// <param name="search">Reads the items.</param>
-    /// <param name="permissions">Decides where the caller may look.</param>
-    public ResolveReferencesHandler(IItemSearch search, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(search);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _search = search;
-        _permissions = permissions;
-    }
 
     /// <summary>Resolves the identifiers.</summary>
     /// <param name="query">The identifiers to resolve.</param>
@@ -90,11 +78,11 @@ public sealed class ResolveReferencesHandler : IQueryHandler<ResolveReferences, 
                     + $"this one named {requested.Count}."));
         }
 
-        var workspaces = await _permissions
+        var workspaces = await permissions
             .ReadableWorkspacesAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var readable = await _search
+        var readable = await search
             .ResolveAsync(requested, workspaces, cancellationToken)
             .ConfigureAwait(false);
 

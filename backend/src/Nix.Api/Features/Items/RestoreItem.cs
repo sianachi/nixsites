@@ -38,37 +38,15 @@ public sealed record RestoreItem(ItemId ItemId) : ICommand<Item>;
 /// is not where the user expected it - not a refusal that leaves them nowhere.
 /// </para>
 /// </remarks>
-public sealed class RestoreItemHandler : ICommandHandler<RestoreItem, Item>
+public sealed class RestoreItemHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IFinanceMutationGuard? financeGuard = null)
+    : ICommandHandler<RestoreItem, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceMutationGuard? _financeGuard;
-
-    /// <summary>Initializes a new instance of the <see cref="RestoreItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public RestoreItemHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IFinanceMutationGuard? financeGuard = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-        _financeGuard = financeGuard;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Restores the item.</summary>
     /// <param name="command">The item to restore.</param>
@@ -83,11 +61,11 @@ public sealed class RestoreItemHandler : ICommandHandler<RestoreItem, Item>
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var visible = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         var item = visible
-            ?? await _tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+            ?? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -115,28 +93,28 @@ public sealed class RestoreItemHandler : ICommandHandler<RestoreItem, Item>
             return Result.Success(visible!);
         }
 
-        if (_financeGuard is not null)
+        if (financeGuard is not null)
         {
-            var blocked = await _financeGuard.CheckAsync(item.WorkspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
+            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<Item>(blocked.Value);
             }
-            item = await _tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+            item = await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
             if (item is null || item.LifecycleState != ItemLifecycleState.Deleted)
             {
                 return Result.Failure<Item>(ItemErrors.NotFound($"No deleted item {itemId} is visible."));
             }
         }
 
-        var now = _clock.GetUtcNow();
-        await _tree
+        var now = clock.GetUtcNow();
+        await tree
             .SetLifecycleAsync(itemId, ItemLifecycleState.Active, context.PrincipalId, now, cancellationToken)
             .ConfigureAwait(false);
 
         // A restored child can deliberately remain hidden below a deleted parent. Read the stored
         // row here so that successful lifecycle transition is not misreported as disappearance.
-        var restored = await _tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var restored = await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         return restored is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the restore."))

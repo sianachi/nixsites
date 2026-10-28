@@ -49,42 +49,16 @@ public sealed record SetItemProperties(ItemId ItemId, string Changes) : ICommand
 }
 
 /// <summary>Handles <see cref="SetItemProperties"/>.</summary>
-public sealed class SetItemPropertiesHandler : ICommandHandler<SetItemProperties, Item>
+public sealed class SetItemPropertiesHandler(
+    IItemTree tree,
+    ISchemaResolver schemas,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IFinanceMutationGuard? financeGuard = null)
+    : ICommandHandler<SetItemProperties, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly ISchemaResolver _schemas;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceMutationGuard? _financeGuard;
-
-    /// <summary>Initializes a new instance of the <see cref="SetItemPropertiesHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="schemas">Resolves the schema to check against.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public SetItemPropertiesHandler(
-        IItemTree tree,
-        ISchemaResolver schemas,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IFinanceMutationGuard? financeGuard = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _schemas = schemas;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-        _financeGuard = financeGuard;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Writes the properties.</summary>
     /// <param name="command">The item and the properties to set.</param>
@@ -124,9 +98,9 @@ public sealed class SetItemPropertiesHandler : ICommandHandler<SetItemProperties
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -152,14 +126,14 @@ public sealed class SetItemPropertiesHandler : ICommandHandler<SetItemProperties
                 "This event cannot be edited in its calendar, so its time and details cannot be changed here."));
         }
 
-        if (!command.FinanceWrite && _financeGuard is not null)
+        if (!command.FinanceWrite && financeGuard is not null)
         {
-            var blocked = await _financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
+            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<Item>(blocked.Value);
             }
-            item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
             if (item is null || item.LifecycleState != ItemLifecycleState.Active)
             {
                 return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
@@ -176,7 +150,7 @@ public sealed class SetItemPropertiesHandler : ICommandHandler<SetItemProperties
 
         // Resolved at the item, not at its parent: an item's own declaration is part of the schema
         // its own values are checked against.
-        var schema = await _schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var schema = await schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         // The merge carries the keys this write named as well as its result, and required-ness is
         // enforced on those keys alone: clearing a required value is refused, leaving one alone is
@@ -194,16 +168,16 @@ public sealed class SetItemPropertiesHandler : ICommandHandler<SetItemProperties
             merged.Touched,
             context.PrincipalId.ToString());
 
-        await _tree
+        await tree
             .UpdatePropertiesAsync(
                 itemId,
                 stamped,
                 context.PrincipalId,
-                _clock.GetUtcNow(),
+                clock.GetUtcNow(),
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var written = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var written = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         return written is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the write."))

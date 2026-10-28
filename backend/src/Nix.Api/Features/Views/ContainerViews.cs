@@ -44,27 +44,12 @@ public sealed record ContainerViewSet(
 public sealed record GetContainerViews(ItemId ItemId) : IQuery<Result<ContainerViewSet>>;
 
 /// <summary>Handles <see cref="GetContainerViews"/>.</summary>
-public sealed class GetContainerViewsHandler : IQueryHandler<GetContainerViews, Result<ContainerViewSet>>
+public sealed class GetContainerViewsHandler(
+    IItemTree tree,
+    ISchemaResolver schemas,
+    IPermissionResolver permissions)
+    : IQueryHandler<GetContainerViews, Result<ContainerViewSet>>
 {
-    private readonly IItemTree _tree;
-    private readonly ISchemaResolver _schemas;
-    private readonly IPermissionResolver _permissions;
-
-    /// <summary>Initializes a new instance of the <see cref="GetContainerViewsHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="schemas">Resolves the schema a view is checked against.</param>
-    /// <param name="permissions">Decides what the caller may read.</param>
-    public GetContainerViewsHandler(IItemTree tree, ISchemaResolver schemas, IPermissionResolver permissions)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(schemas);
-        ArgumentNullException.ThrowIfNull(permissions);
-
-        _tree = tree;
-        _schemas = schemas;
-        _permissions = permissions;
-    }
-
     /// <summary>Reads the views.</summary>
     /// <param name="query">The container whose views are wanted.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
@@ -77,9 +62,9 @@ public sealed class GetContainerViewsHandler : IQueryHandler<GetContainerViews, 
 
         var itemId = query.ItemId;
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ContainerViewSet>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -93,7 +78,7 @@ public sealed class GetContainerViewsHandler : IQueryHandler<GetContainerViews, 
 
         // The schema a view's configuration is checked against is the one its children carry,
         // which is the schema at the container itself.
-        var schema = await _schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var schema = await schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         var unrenderable = views
             .Where(view => !view.CanRender(schema))
@@ -130,41 +115,15 @@ public sealed record SetContainerViews(
     : ICommand<ImmutableArray<ViewDefinition>>;
 
 /// <summary>Handles <see cref="SetContainerViews"/>.</summary>
-public sealed class SetContainerViewsHandler
+public sealed class SetContainerViewsHandler(
+    IItemTree tree,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    ISchemaResolver schemas)
     : ICommandHandler<SetContainerViews, ImmutableArray<ViewDefinition>>
 {
-    private readonly IItemTree _tree;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly ISchemaResolver _schemas;
-
-    /// <summary>Initializes a new instance of the <see cref="SetContainerViewsHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="schemas">Resolves the schema a chart's split is checked against.</param>
-    public SetContainerViewsHandler(
-        IItemTree tree,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        ISchemaResolver schemas)
-    {
-        ArgumentNullException.ThrowIfNull(schemas);
-        _schemas = schemas;
-
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Sets the views.</summary>
     /// <param name="command">The container, the views to offer, and which one opens.</param>
@@ -183,9 +142,9 @@ public sealed class SetContainerViewsHandler
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ImmutableArray<ViewDefinition>>(
                 ItemErrors.NotFound($"No item {itemId} is visible."));
@@ -244,16 +203,16 @@ public sealed class SetContainerViewsHandler
 
         if (command.ExpectedVersion is not null)
         {
-            if (!await _tree.TryUpdateViewsAsync(itemId, item.WorkspaceId, item.Views, json,
-                    context.PrincipalId, _clock.GetUtcNow(), cancellationToken).ConfigureAwait(false))
+            if (!await tree.TryUpdateViewsAsync(itemId, item.WorkspaceId, item.Views, json,
+                    context.PrincipalId, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<ImmutableArray<ViewDefinition>>(PropertyErrors.ViewVersionConflict());
             }
         }
         else
         {
-            await _tree
-                .UpdateViewsAsync(itemId, json, context.PrincipalId, _clock.GetUtcNow(), cancellationToken)
+            await tree
+                .UpdateViewsAsync(itemId, json, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -297,8 +256,8 @@ public sealed class SetContainerViewsHandler
         }
 
         var schema = views.Any(view => view.Kind == ViewKind.Chat)
-            ? await _schemas.ResolveForChildrenAsync(itemId, cancellationToken).ConfigureAwait(false)
-            : await _schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
+            ? await schemas.ResolveForChildrenAsync(itemId, cancellationToken).ConfigureAwait(false)
+            : await schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
         foreach (var view in views)
         {
             if (view.Kind == ViewKind.Chat && ChatSchema.Refuse(schema) is { } chatReason)

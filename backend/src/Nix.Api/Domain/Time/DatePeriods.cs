@@ -246,17 +246,6 @@ public static class DatePeriods
         };
     }
 
-    /// <summary>The periods two dates fall in, and every period between them.</summary>
-    /// <param name="from">The earliest date.</param>
-    /// <param name="to">The latest date.</param>
-    /// <param name="period">The period.</param>
-    /// <returns>
-    /// The range snapped outwards to whole periods: a month window asked for from the 15th still
-    /// counts the whole of that month, so its first bucket is never a half-month drawn as a month.
-    /// </returns>
-    public static PeriodRange Spanning(DateOnly from, DateOnly to, DatePeriod period) =>
-        new(from, to, period);
-
     /// <summary>The last <paramref name="count"/> periods, ending with the one <paramref name="today"/> is in.</summary>
     /// <param name="today">The reader's current date.</param>
     /// <param name="period">The period.</param>
@@ -284,22 +273,6 @@ public static class DatePeriods
             ? range
             : new PeriodRange(Add(range.Last, range.Period, -(maximum - 1)), range.Last, range.Period);
     }
-
-    /// <summary>The ISO 8601 week number of a date: 1 to 53, weeks starting on Monday.</summary>
-    /// <param name="date">The date.</param>
-    /// <returns>The week of its ISO week-year.</returns>
-    /// <remarks>
-    /// Read with <see cref="IsoWeekYear"/>, never with <see cref="DateOnly.Year"/>: 29 December 2025
-    /// is in week 1 of 2026, and pairing it with 2025 names a week a year early.
-    /// </remarks>
-    public static int IsoWeek(DateOnly date) =>
-        System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-
-    /// <summary>The ISO 8601 week-year a date's week belongs to.</summary>
-    /// <param name="date">The date.</param>
-    /// <returns>The year that owns its week, which differs from the calendar year near New Year.</returns>
-    public static int IsoWeekYear(DateOnly date) =>
-        System.Globalization.ISOWeek.GetYear(date.ToDateTime(TimeOnly.MinValue));
 
     /// <summary>Every period start in a range, earliest first.</summary>
     /// <param name="range">The range.</param>

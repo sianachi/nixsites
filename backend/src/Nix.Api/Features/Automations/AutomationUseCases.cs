@@ -12,14 +12,14 @@ using Nix.Messaging;
 
 namespace Nix.Features.Automations;
 
-/// <summary>The opaque run-log cursor: the last run's creation instant (UTC ticks) and id.</summary>
-internal static class AutomationCursor
+/// <summary>The opaque cursor of the automation run log and the calendar sync log: the last entry's instant (UTC ticks) and id.</summary>
+internal static class LogCursor
 {
-    internal static string Encode(AutomationRun run) =>
-        $"{run.CreatedAt.UtcTicks.ToString(CultureInfo.InvariantCulture)}_{run.Id:N}";
+    internal static string Encode(DateTimeOffset at, Guid id) =>
+        $"{at.UtcTicks.ToString(CultureInfo.InvariantCulture)}_{id:N}";
 
-    /// <summary>An unparseable cursor starts from the newest run, as every other cursor here does.</summary>
-    internal static (DateTimeOffset CreatedAt, Guid Id)? Decode(string? cursor)
+    /// <summary>An unparseable cursor starts from the newest entry, as every other cursor here does.</summary>
+    internal static (DateTimeOffset At, Guid Id)? Decode(string? cursor)
     {
         if (string.IsNullOrEmpty(cursor))
         {
@@ -408,9 +408,9 @@ public sealed class ListAutomationRunsHandler(AutomationRuleSupport support, IAu
             return Result.Failure<AutomationRunsPageResponse>(AutomationErrors.NotFound);
         }
 
-        var page = await runs.PageAsync(rule.TenantId, rule.Id, AutomationCursor.Decode(command.Cursor), PageSize + 1, cancellationToken).ConfigureAwait(false);
+        var page = await runs.PageAsync(rule.TenantId, rule.Id, LogCursor.Decode(command.Cursor), PageSize + 1, cancellationToken).ConfigureAwait(false);
         var items = page.Take(PageSize).ToList();
-        var next = page.Count > PageSize ? AutomationCursor.Encode(items[^1]) : null;
+        var next = page.Count > PageSize ? LogCursor.Encode(items[^1].CreatedAt, items[^1].Id) : null;
         return Result.Success(new AutomationRunsPageResponse([.. items.Select(AutomationRuleSupport.ToResponse)], next));
     }
 }

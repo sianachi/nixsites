@@ -31,42 +31,17 @@ public sealed record RenameItem(ItemId ItemId, string Title) : ICommand<Item>
 /// the property bag, replaces one key and writes the whole bag back. Preserving the rest matters:
 /// a rename must not silently drop properties a later goal added and this code knows nothing about.
 /// </remarks>
-public sealed class RenameItemHandler : ICommandHandler<RenameItem, Item>
+public sealed class RenameItemHandler(
+    IItemTree tree,
+    IFileStore files,
+    IPermissionResolver permissions,
+    INixSessionContextAccessor session,
+    TimeProvider clock,
+    IFinanceMutationGuard? financeGuard = null)
+    : ICommandHandler<RenameItem, Item>
 {
-    private readonly IItemTree _tree;
-    private readonly IFileStore _files;
-    private readonly IPermissionResolver _permissions;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-    private readonly IFinanceMutationGuard? _financeGuard;
-
-    /// <summary>Initializes a new instance of the <see cref="RenameItemHandler"/> class.</summary>
-    /// <param name="tree">Item storage.</param>
-    /// <param name="files">File storage, so a file item's rename also carries onto its file body.</param>
-    /// <param name="permissions">Decides what the caller may change.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public RenameItemHandler(
-        IItemTree tree,
-        IFileStore files,
-        IPermissionResolver permissions,
-        INixSessionContextAccessor session,
-        TimeProvider clock,
-        IFinanceMutationGuard? financeGuard = null)
-    {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(files);
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _tree = tree;
-        _files = files;
-        _permissions = permissions;
-        _session = session;
-        _clock = clock;
-        _financeGuard = financeGuard;
-    }
+    private readonly IItemTree _tree = tree;
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Renames the item.</summary>
     /// <param name="command">The item, and its new display name.</param>
@@ -84,7 +59,7 @@ public sealed class RenameItemHandler : ICommandHandler<RenameItem, Item>
 
         var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null
-            || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -105,9 +80,9 @@ public sealed class RenameItemHandler : ICommandHandler<RenameItem, Item>
                 "This event cannot be edited in its calendar, so it cannot be renamed here."));
         }
 
-        if (!command.FinanceWrite && _financeGuard is not null)
+        if (!command.FinanceWrite && financeGuard is not null)
         {
-            var blocked = await _financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
+            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<Item>(blocked.Value);
@@ -119,7 +94,7 @@ public sealed class RenameItemHandler : ICommandHandler<RenameItem, Item>
             }
         }
 
-        var now = _clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         var properties = ItemProperties.WithTitle(item.Properties, title);
 
         await _tree
@@ -133,7 +108,7 @@ public sealed class RenameItemHandler : ICommandHandler<RenameItem, Item>
         // itself is a no-op for anything else, but the type check here avoids the round trip.
         if (item.Type == "file")
         {
-            await _files.RenameCurrentVersionAsync(itemId, title, cancellationToken).ConfigureAwait(false);
+            await files.RenameCurrentVersionAsync(itemId, title, cancellationToken).ConfigureAwait(false);
         }
 
         // Re-read rather than constructing the updated shape here: the write went through the

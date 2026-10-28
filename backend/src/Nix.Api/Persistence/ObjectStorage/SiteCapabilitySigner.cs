@@ -10,23 +10,15 @@ namespace Nix.Persistence.ObjectStorage;
 /// workers need are exposed: sites objects are written and deleted through Core and never read
 /// through it, except a host manifest a worker reads before deleting it.
 /// </remarks>
-public sealed class SiteCapabilitySigner
+public sealed class SiteCapabilitySigner(
+    S3CapabilitySigner signer,
+    S3CapabilitySigner? hostSigner = null)
 {
     /// <summary>The longest a host-manifest capability lives, whatever the store's default.</summary>
     public const int HostManifestCapabilitySeconds = 300;
 
-    private readonly S3CapabilitySigner _signer;
-    private readonly S3CapabilitySigner _hostSigner;
-
-    /// <summary>Initializes the signer over an already built S3 signer.</summary>
-    /// <param name="signer">A signer whose bucket is the sites bucket.</param>
-    /// <param name="hostSigner">The same, with the short lifetime host manifests get; defaults to <paramref name="signer"/>.</param>
-    public SiteCapabilitySigner(S3CapabilitySigner signer, S3CapabilitySigner? hostSigner = null)
-    {
-        ArgumentNullException.ThrowIfNull(signer);
-        _signer = signer;
-        _hostSigner = hostSigner ?? signer;
-    }
+    private readonly S3CapabilitySigner _signer = signer;
+    private readonly S3CapabilitySigner _hostSigner = hostSigner ?? signer;
 
     /// <summary>Whether the object store and the sites bucket are both configured.</summary>
     public bool IsConfigured => _signer.IsConfigured;

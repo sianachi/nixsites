@@ -14,7 +14,11 @@ namespace Nix.Features.Canvas;
 public sealed record SaveCanvasLibrary(JsonArray Items) : ICommand<CanvasLibraryItems>;
 
 /// <summary>Handles <see cref="SaveCanvasLibrary"/>.</summary>
-public sealed class SaveCanvasLibraryHandler : ICommandHandler<SaveCanvasLibrary, CanvasLibraryItems>
+public sealed class SaveCanvasLibraryHandler(
+    ICanvasLibraryStore store,
+    INixSessionContextAccessor session,
+    TimeProvider clock)
+    : ICommandHandler<SaveCanvasLibrary, CanvasLibraryItems>
 {
     /// <summary>
     /// The same bound the database enforces via <c>canvas_library_items_bounded</c>. Checked here
@@ -23,24 +27,7 @@ public sealed class SaveCanvasLibraryHandler : ICommandHandler<SaveCanvasLibrary
     /// </summary>
     private const int MaxLibraryBytes = 1024 * 1024;
 
-    private readonly ICanvasLibraryStore _store;
-    private readonly INixSessionContextAccessor _session;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="SaveCanvasLibraryHandler"/> class.</summary>
-    /// <param name="store">Canvas library storage.</param>
-    /// <param name="session">The tenant and principal this request runs as.</param>
-    /// <param name="clock">The clock.</param>
-    public SaveCanvasLibraryHandler(ICanvasLibraryStore store, INixSessionContextAccessor session, TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(store);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _store = store;
-        _session = session;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     /// <summary>Writes the library.</summary>
     /// <param name="command">The library's new contents.</param>
@@ -61,14 +48,14 @@ public sealed class SaveCanvasLibraryHandler : ICommandHandler<SaveCanvasLibrary
             return Result.Failure<CanvasLibraryItems>(CanvasErrors.LibraryTooLarge());
         }
 
-        await _store
+        await store
             .SaveAsync(
                 new CanvasLibrary
                 {
                     PrincipalId = context.PrincipalId,
                     TenantId = context.TenantId,
                     LibraryItemsJson = json,
-                    UpdatedAt = _clock.GetUtcNow(),
+                    UpdatedAt = clock.GetUtcNow(),
                 },
                 cancellationToken)
             .ConfigureAwait(false);

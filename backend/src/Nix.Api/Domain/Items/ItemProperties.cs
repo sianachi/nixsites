@@ -287,21 +287,6 @@ public static class ItemProperties
     public static string? RestampCopiedSetBy(string? bag, string principalId)
     {
         ArgumentNullException.ThrowIfNull(principalId);
-        return RewriteSetBy(bag, principalId);
-    }
-
-    /// <summary>
-    /// Removes every set-by value from a bag that is about to become template content, where no
-    /// principal is attributed until the template is applied.
-    /// </summary>
-    /// <remarks>
-    /// A bag that is not a readable JSON object, or that names a member twice, comes back
-    /// unchanged for the caller's envelope validation to refuse; see <see cref="WithTitle"/>.
-    /// </remarks>
-    public static string? StripSetBy(string? bag) => RewriteSetBy(bag, principalId: null);
-
-    private static string? RewriteSetBy(string? bag, string? principalId)
-    {
         if (bag is null
             || (!SetByPairs.Any(pair => bag.Contains(pair.Key, StringComparison.Ordinal) || bag.Contains(pair.SetByKey, StringComparison.Ordinal))
                 && !bag.Contains(CalendarPrefix, StringComparison.Ordinal)))
@@ -318,14 +303,7 @@ public static class ItemProperties
 
             foreach (var (key, setByKey) in SetByPairs)
             {
-                if (principalId is null)
-                {
-                    document.Remove(setByKey);
-                }
-                else
-                {
-                    Attribute(document, key, setByKey, principalId);
-                }
+                Attribute(document, key, setByKey, principalId);
             }
 
             foreach (var calendarKey in document.Select(pair => pair.Key)

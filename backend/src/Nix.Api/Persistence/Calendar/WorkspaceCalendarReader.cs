@@ -27,37 +27,14 @@ namespace Nix.Persistence.Calendar;
 /// keeps the materialisation a fixed cost rather than a workspace-sized one.
 /// </para>
 /// </remarks>
-public sealed class WorkspaceCalendarReader : IWorkspaceCalendar
+public sealed class WorkspaceCalendarReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IWorkspaceCalendar
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="WorkspaceCalendarReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with, whose unlocks decide which locked items'
-    /// children are shown.
-    /// </param>
-    /// <param name="clock">Judges unlock expiry.</param>
-    public WorkspaceCalendarReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -93,7 +70,7 @@ public sealed class WorkspaceCalendarReader : IWorkspaceCalendar
             identifiers[index] = readableWorkspaces[index].Value;
         }
 
-        var rows = _sql.QueryAsync<CalendarRow, CalendarRowMapper>(
+        var rows = sql.QueryAsync<CalendarRow, CalendarRowMapper>(
             CalendarSql.WorkspaceCalendar,
             default,
             [
@@ -108,7 +85,7 @@ public sealed class WorkspaceCalendarReader : IWorkspaceCalendar
                 },
                 new NpgsqlParameter("from", NpgsqlDbType.Text) { Value = firstDay },
                 new NpgsqlParameter("to", NpgsqlDbType.Text) { Value = lastDay },
-                await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken).ConfigureAwait(false),
+                await LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false),
                 new NpgsqlParameter("entry_limit", NpgsqlDbType.Integer) { Value = entryLimit },
             ],
             cancellationToken);

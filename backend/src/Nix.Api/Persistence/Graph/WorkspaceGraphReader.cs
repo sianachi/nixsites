@@ -26,37 +26,14 @@ namespace Nix.Persistence.Graph;
 /// applies, which is what keeps the materialisation a fixed cost rather than a workspace-sized one.
 /// </para>
 /// </remarks>
-public sealed class WorkspaceGraphReader : IWorkspaceGraph
+public sealed class WorkspaceGraphReader(
+    NixSqlExecutor sql,
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IWorkspaceGraph
 {
-    private readonly NixSqlExecutor _sql;
-    private readonly INixSessionContextAccessor _session;
-    private readonly CredentialSessionContext _credential;
-    private readonly TimeProvider _clock;
-
-    /// <summary>Initializes a new instance of the <see cref="WorkspaceGraphReader"/> class.</summary>
-    /// <param name="sql">The executor sharing this unit of work's connection and transaction.</param>
-    /// <param name="session">The tenant this request runs as.</param>
-    /// <param name="credential">
-    /// The credential this request authenticated with: which locks it has opened decides which
-    /// nodes under a lock the graph may draw (ADR-0056).
-    /// </param>
-    /// <param name="clock">Judges lock-grant expiry.</param>
-    public WorkspaceGraphReader(
-        NixSqlExecutor sql,
-        INixSessionContextAccessor session,
-        CredentialSessionContext credential,
-        TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(sql);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(credential);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        _sql = sql;
-        _session = session;
-        _credential = credential;
-        _clock = clock;
-    }
+    private readonly INixSessionContextAccessor _session = session;
 
     private TenantId Tenant => (_session.Current
         ?? throw new InvalidOperationException(
@@ -90,7 +67,7 @@ public sealed class WorkspaceGraphReader : IWorkspaceGraph
             identifiers[index] = readableWorkspaces[index].Value;
         }
 
-        var rows = _sql.QueryAsync<GraphRow, GraphRowMapper>(
+        var rows = sql.QueryAsync<GraphRow, GraphRowMapper>(
             GraphSql.WorkspaceGraph,
             default,
             [
@@ -99,9 +76,9 @@ public sealed class WorkspaceGraphReader : IWorkspaceGraph
                 new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
                 new NpgsqlParameter("node_limit", NpgsqlDbType.Integer) { Value = nodeLimit },
                 new NpgsqlParameter("link_limit", NpgsqlDbType.Integer) { Value = linkLimit },
-                await LockFilterParameters.AllLocksAsync(_sql, Tenant, cancellationToken).ConfigureAwait(false),
+                await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await LockFilterParameters
-                    .ClosedLocksAsync(_sql, Tenant, _credential, _clock, cancellationToken)
+                    .ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken)
                     .ConfigureAwait(false),
             ],
             cancellationToken);

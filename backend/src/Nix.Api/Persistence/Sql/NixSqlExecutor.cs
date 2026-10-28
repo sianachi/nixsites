@@ -35,20 +35,8 @@ namespace Nix.Persistence.Sql;
 /// <see cref="OpenColumnStreamAsync"/>; nothing here returns a <c>byte[]</c>.
 /// </para>
 /// </remarks>
-public sealed class NixSqlExecutor
+public sealed class NixSqlExecutor(NixDbContext dbContext)
 {
-    private readonly NixDbContext _dbContext;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NixSqlExecutor"/> class.
-    /// </summary>
-    /// <param name="dbContext">The context whose connection and transaction are borrowed.</param>
-    public NixSqlExecutor(NixDbContext dbContext)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        _dbContext = dbContext;
-    }
-
     /// <summary>
     /// Streams the rows of <paramref name="sql"/>, mapping each with <paramref name="mapper"/>.
     /// </summary>
@@ -254,7 +242,7 @@ public sealed class NixSqlExecutor
         Justification = "The connection is owned by the DbContext, which disposes it with the scope.")]
     private async ValueTask<NpgsqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken)
     {
-        if (_dbContext.Database.GetDbConnection() is not NpgsqlConnection connection)
+        if (dbContext.Database.GetDbConnection() is not NpgsqlConnection connection)
         {
             throw new InvalidOperationException(
                 "Hand-written SQL requires the Npgsql provider. The context is configured with a " +
@@ -263,7 +251,7 @@ public sealed class NixSqlExecutor
 
         if (connection.State != ConnectionState.Open)
         {
-            await _dbContext.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return connection;
@@ -271,7 +259,7 @@ public sealed class NixSqlExecutor
 
     private NpgsqlTransaction RequireTransaction()
     {
-        var current = _dbContext.Database.CurrentTransaction
+        var current = dbContext.Database.CurrentTransaction
             ?? throw new InvalidOperationException(
                 "Refusing to run hand-written SQL outside a transaction. The RLS session context " +
                 "is published with SET LOCAL and exists only inside one, so this statement would " +

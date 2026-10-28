@@ -10,10 +10,9 @@ namespace Nix.Features.Recurrence;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The vocabulary here must match <c>RecurrenceRuleJson</c>'s exactly</b> - the same
-/// <c>daily</c>/<c>weekly</c>/<c>monthly</c>/<c>yearly</c> and <c>mo</c>..<c>su</c> spellings - so
-/// that what an endpoint accepts is what storage would have read back had it been written any other
-/// way. It cannot simply call into that reader, though: <c>RecurrenceRuleJson.Read</c> is total and
+/// <b>The vocabulary is <c>RecurrenceRuleJson</c>'s own</b>, so that what an endpoint accepts is
+/// what storage would have read back had it been written any other way. It cannot simply call into
+/// that reader, though: <c>RecurrenceRuleJson.Read</c> is total and
 /// answers only "readable or not", one bit for every reason a document could be wrong, which is
 /// the right shape for loading storage a client never sees and the wrong shape for a request
 /// somebody is waiting on an answer to. This is where each reason gets its own stable code instead.
@@ -29,7 +28,7 @@ internal static class RecurrenceMapping
     /// <summary>The accepted weekday codes, for the message a caller sees when they miss.</summary>
     private static readonly string AcceptedWeekdays = string.Join(
         ", ",
-        Enum.GetValues<IsoDayOfWeek>().Select(WeekdayText));
+        Enum.GetValues<IsoDayOfWeek>().Select(RecurrenceRuleJson.WeekdayText));
 
     /// <summary>Reads a requested rule, or says which part of it could not be accepted.</summary>
     /// <param name="request">The request.</param>
@@ -38,7 +37,7 @@ internal static class RecurrenceMapping
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!TryFrequency(request.Freq, out var frequency))
+        if (!RecurrenceRuleJson.TryFrequency(request.Freq, out var frequency))
         {
             return Result.Failure<RecurrenceRule>(
                 RecurrenceRequestErrors.InvalidFrequency(
@@ -66,7 +65,7 @@ internal static class RecurrenceMapping
             var builder = ImmutableArray.CreateBuilder<IsoDayOfWeek>(request.Weekdays!.Count);
             foreach (var text in request.Weekdays!)
             {
-                if (!TryWeekday(text, out var weekday))
+                if (!RecurrenceRuleJson.TryWeekday(text, out var weekday))
                 {
                     return Result.Failure<RecurrenceRule>(
                         RecurrenceRequestErrors.InvalidWeekday(
@@ -108,12 +107,12 @@ internal static class RecurrenceMapping
         rule is null
             ? null
             : new RecurrenceRuleResponse(
-                FrequencyText(rule.Frequency),
+                RecurrenceRuleJson.FrequencyText(rule.Frequency),
                 rule.Interval,
-                [.. rule.Weekdays.Select(WeekdayText)],
-                rule.Until is { } until ? Iso(until) : null,
-                rule.CompletedThrough is { } through ? Iso(through) : null,
-                [.. rule.Completed.Select(Iso)]);
+                [.. rule.Weekdays.Select(RecurrenceRuleJson.WeekdayText)],
+                rule.Until is { } until ? RecurrenceRuleJson.Iso(until) : null,
+                rule.CompletedThrough is { } through ? RecurrenceRuleJson.Iso(through) : null,
+                [.. rule.Completed.Select(RecurrenceRuleJson.Iso)]);
 
     /// <summary>Reads a <c>yyyy-MM-dd</c> day.</summary>
     /// <param name="text">The text to parse.</param>
@@ -145,80 +144,4 @@ internal static class RecurrenceMapping
     /// </remarks>
     internal static DateOnly? ReadAnchor(string? dueDay) =>
         dueDay is not null && TryDay(dueDay, out var day) ? day : null;
-
-    private static bool TryFrequency(string? text, out RecurrenceFrequency frequency)
-    {
-        switch (text)
-        {
-            case "daily":
-                frequency = RecurrenceFrequency.Daily;
-                return true;
-            case "weekly":
-                frequency = RecurrenceFrequency.Weekly;
-                return true;
-            case "monthly":
-                frequency = RecurrenceFrequency.Monthly;
-                return true;
-            case "yearly":
-                frequency = RecurrenceFrequency.Yearly;
-                return true;
-            default:
-                frequency = default;
-                return false;
-        }
-    }
-
-    private static string FrequencyText(RecurrenceFrequency frequency) => frequency switch
-    {
-        RecurrenceFrequency.Daily => "daily",
-        RecurrenceFrequency.Weekly => "weekly",
-        RecurrenceFrequency.Monthly => "monthly",
-        RecurrenceFrequency.Yearly => "yearly",
-        _ => throw new ArgumentOutOfRangeException(nameof(frequency), frequency, "Unknown frequency."),
-    };
-
-    private static bool TryWeekday(string? text, out IsoDayOfWeek weekday)
-    {
-        switch (text)
-        {
-            case "mo":
-                weekday = IsoDayOfWeek.Monday;
-                return true;
-            case "tu":
-                weekday = IsoDayOfWeek.Tuesday;
-                return true;
-            case "we":
-                weekday = IsoDayOfWeek.Wednesday;
-                return true;
-            case "th":
-                weekday = IsoDayOfWeek.Thursday;
-                return true;
-            case "fr":
-                weekday = IsoDayOfWeek.Friday;
-                return true;
-            case "sa":
-                weekday = IsoDayOfWeek.Saturday;
-                return true;
-            case "su":
-                weekday = IsoDayOfWeek.Sunday;
-                return true;
-            default:
-                weekday = default;
-                return false;
-        }
-    }
-
-    private static string WeekdayText(IsoDayOfWeek weekday) => weekday switch
-    {
-        IsoDayOfWeek.Monday => "mo",
-        IsoDayOfWeek.Tuesday => "tu",
-        IsoDayOfWeek.Wednesday => "we",
-        IsoDayOfWeek.Thursday => "th",
-        IsoDayOfWeek.Friday => "fr",
-        IsoDayOfWeek.Saturday => "sa",
-        IsoDayOfWeek.Sunday => "su",
-        _ => throw new ArgumentOutOfRangeException(nameof(weekday), weekday, "Unknown weekday."),
-    };
-
-    private static string Iso(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
