@@ -1,7 +1,6 @@
 package objectcleanup
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -39,14 +38,14 @@ func New(api *workerapi.Client, transfer *objecttransfer.Client) *Handler {
 
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	if job.Kind != "object.cleanup" {
-		return nil, invalid("cleanup_kind_mismatch", errors.New("job kind is not object.cleanup"))
+		return nil, jobrunner.Fail("cleanup_kind_mismatch", errors.New("job kind is not object.cleanup"))
 	}
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return nil, invalid("cleanup_payload_invalid", err)
+		return nil, jobrunner.Fail("cleanup_payload_invalid", err)
 	}
 	if handler.clock().Before(payload.NotBefore) {
-		return nil, transient("cleanup_not_ready", errors.New("the cleanup safety delay has not elapsed"))
+		return nil, jobrunner.Retry("cleanup_not_ready", errors.New("the cleanup safety delay has not elapsed"))
 	}
 
 	offset, deleted := 0, 0
@@ -56,11 +55,11 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 			return nil, apiFailure("cleanup_capability_unavailable", err)
 		}
 		if capability.OwnerKind != payload.OwnerKind || capability.OwnerID != payload.OwnerID || !capability.NotBefore.Equal(payload.NotBefore) {
-			return nil, invalid("cleanup_capability_invalid", errors.New("Core returned cleanup capabilities for a different owner"))
+			return nil, jobrunner.Fail("cleanup_capability_invalid", errors.New("Core returned cleanup capabilities for a different owner"))
 		}
 		for _, target := range capability.DeleteURLs {
 			if err := handler.transfer.Delete(ctx, target); err != nil {
-				return nil, transient("cleanup_object_unavailable", err)
+				return nil, jobrunner.Retry("cleanup_object_unavailable", err)
 			}
 			deleted++
 		}
@@ -68,12 +67,12 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 			break
 		}
 		if *capability.NextOffset <= offset || *capability.NextOffset > len(payload.ObjectKeys) {
-			return nil, invalid("cleanup_capability_invalid", errors.New("Core returned an invalid cleanup cursor"))
+			return nil, jobrunner.Fail("cleanup_capability_invalid", errors.New("Core returned an invalid cleanup cursor"))
 		}
 		offset = *capability.NextOffset
 	}
 	if deleted != len(payload.ObjectKeys) {
-		return nil, invalid("cleanup_capability_invalid", errors.New("Core returned an incomplete cleanup target set"))
+		return nil, jobrunner.Fail("cleanup_capability_invalid", errors.New("Core returned an incomplete cleanup target set"))
 	}
 	if payload.OwnerKind == "workspace-purge" {
 		if err := handler.api.FinalizeWorkspacePurge(ctx); err != nil {
@@ -84,10 +83,8 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	var payload Payload
-	if err := decoder.Decode(&payload); err != nil {
+	payload, err := jobrunner.DecodeStrict[Payload](raw)
+	if err != nil {
 		return Payload{}, err
 	}
 	if payload.OwnerKind == "" || len(payload.OwnerKind) > 80 || payload.OwnerID == "" || payload.NotBefore.IsZero() || len(payload.ObjectKeys) > 10_002 {
@@ -102,17 +99,9 @@ func apiFailure(code string, err error) error {
 		return err
 	}
 	if errors.As(err, &response) && response.Status < 500 {
-		return invalid(code, err)
+		return jobrunner.Fail(code, err)
 	}
-	return transient(code, err)
-}
-
-func invalid(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+	return jobrunner.Retry(code, err)
 }
 
 var _ jobrunner.Handler = (*Handler)(nil)

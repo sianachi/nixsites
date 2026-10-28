@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 )
 
 // MicrosoftClient talks to Microsoft Graph calendars (calendarView/delta and events
@@ -188,11 +190,11 @@ func (client *MicrosoftClient) convert(item graphEvent) ProviderEvent {
 // graphItemStamp reads the Nix item id a created event was stamped with: its transactionId, or the
 // extended property when present. Another app's transactionId is not a canonical UUID and yields "".
 func graphItemStamp(item graphEvent) string {
-	if canonicalUUID(item.TransactionID) {
+	if broker.IsCanonicalUUID(item.TransactionID) {
 		return item.TransactionID
 	}
 	for _, property := range item.ExtendedProperties {
-		if property.ID == graphItemPropertyID && canonicalUUID(property.Value) {
+		if property.ID == graphItemPropertyID && broker.IsCanonicalUUID(property.Value) {
 			return property.Value
 		}
 	}
@@ -231,7 +233,7 @@ func graphBound(value graphDateTime, zone string, allDay, isEnd bool) Bound {
 // property.
 func (client *MicrosoftClient) CreateEvent(ctx context.Context, accessToken, calendarID string, event PushEvent) (string, string, error) {
 	payload := graphEventBody(event)
-	if canonicalUUID(event.NixItemID) {
+	if broker.IsCanonicalUUID(event.NixItemID) {
 		payload["transactionId"] = event.NixItemID
 		payload["singleValueExtendedProperties"] = []graphProperty{{ID: graphItemPropertyID, Value: event.NixItemID}}
 	}

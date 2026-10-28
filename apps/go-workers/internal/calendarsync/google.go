@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 )
 
 // GoogleClient talks to the Google Calendar API (events.list/insert/patch/delete) behind the
@@ -258,7 +260,7 @@ func (client *GoogleClient) reviveEvent(ctx context.Context, accessToken, calend
 // googleEventID is the client-supplied event id for a Nix item: its UUID without dashes, or ""
 // when there is no item id to stamp.
 func googleEventID(itemID string) string {
-	if !canonicalUUID(itemID) {
+	if !broker.IsCanonicalUUID(itemID) {
 		return ""
 	}
 	return strings.ReplaceAll(itemID, "-", "")
@@ -271,7 +273,7 @@ func googleItemStamp(eventID string) string {
 		return ""
 	}
 	itemID := eventID[0:8] + "-" + eventID[8:12] + "-" + eventID[12:16] + "-" + eventID[16:20] + "-" + eventID[20:32]
-	if !canonicalUUID(itemID) {
+	if !broker.IsCanonicalUUID(itemID) {
 		return ""
 	}
 	return itemID

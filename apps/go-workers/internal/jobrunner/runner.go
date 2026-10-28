@@ -1,7 +1,9 @@
 package jobrunner
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
@@ -31,3 +33,22 @@ func (err *JobError) Error() string {
 }
 
 func (err *JobError) Unwrap() error { return err.Cause }
+
+// Fail wraps err as a permanent job failure with a stable code.
+func Fail(code string, err error) error {
+	return &JobError{Code: code, Detail: err.Error(), Cause: err}
+}
+
+// Retry wraps err as a failure the queue should redeliver.
+func Retry(code string, err error) error {
+	return &JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+}
+
+// DecodeStrict decodes a job payload, rejecting fields the payload type does not declare.
+func DecodeStrict[T any](raw json.RawMessage) (T, error) {
+	var payload T
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&payload)
+	return payload, err
+}

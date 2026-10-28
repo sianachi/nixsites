@@ -401,7 +401,7 @@ export function buildManifest(input: {
  * the locked item, the same shape as "this item had more than the export took": what is missing is
  * *under* the item, not the item.
  */
-export function lockedOmissions(
+function lockedOmissions(
   items: readonly CoreItem[],
   locked: ReadonlySet<string> | undefined,
 ): Omission[] {

@@ -1,4 +1,5 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
+import { isRecord } from '../is-record.ts';
 
 const AUTHORIZATION_RESPONSE_BYTES = 2 * 1024 * 1024;
 const AUTHORIZATION_ITEM_LIMIT = 10_000;
@@ -114,7 +115,7 @@ async function readAuthorization(response: Response): Promise<unknown> {
   try {
     while (!finished) {
       const next: unknown = await reader.read();
-      if (!record(next) || typeof next.done !== 'boolean') throw invalidAuthorization();
+      if (!isRecord(next) || typeof next.done !== 'boolean') throw invalidAuthorization();
       finished = next.done;
       if (finished) continue;
       if (!(next.value instanceof Uint8Array)) throw invalidAuthorization();
@@ -146,7 +147,7 @@ async function readAuthorization(response: Response): Promise<unknown> {
 
 function parseAuthorization(value: unknown, importId: string): TemplateImportBodyAuthorization {
   if (
-    !record(value) ||
+    !isRecord(value) ||
     !Array.isArray(value.items) ||
     value.items.length > AUTHORIZATION_ITEM_LIMIT
   ) {
@@ -167,7 +168,7 @@ function parseAuthorization(value: unknown, importId: string): TemplateImportBod
   const seenTargets = new Set<string>();
   const items = value.items.map((candidate): TemplateImportBodyAuthorizationItem => {
     if (
-      !record(candidate) ||
+      !isRecord(candidate) ||
       !sourceId(candidate.sourceId) ||
       !uuid(candidate.targetItemId) ||
       typeof candidate.itemType !== 'string' ||
@@ -229,8 +230,4 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 function uuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

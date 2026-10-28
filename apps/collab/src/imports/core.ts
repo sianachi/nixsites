@@ -1,4 +1,5 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
+import { isRecord } from '../is-record.ts';
 
 export interface ImportBodyAuthorizationItem {
   readonly sourceId: string;
@@ -96,7 +97,7 @@ export function createCoreImportClient(input: {
 }
 
 function parseAuthorization(value: unknown, importId: string): ImportBodyAuthorization {
-  if (!record(value)) throw invalidAuthorization();
+  if (!isRecord(value)) throw invalidAuthorization();
   const items = value.items;
   if (
     !uuid(value.tenantId) ||
@@ -114,7 +115,7 @@ function parseAuthorization(value: unknown, importId: string): ImportBodyAuthori
   const seenTargets = new Set<string>();
   const parsed = items.map((item): ImportBodyAuthorizationItem => {
     if (
-      !record(item) ||
+      !isRecord(item) ||
       !sourceId(item.sourceId) ||
       !uuid(item.targetItemId) ||
       typeof item.itemType !== 'string' ||
@@ -166,8 +167,4 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 function uuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -1,6 +1,7 @@
 package nixarchive
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -113,7 +114,7 @@ type FileVersionEntry struct {
 func (entry *FileVersionEntry) UnmarshalJSON(data []byte) error {
 	type wireEntry FileVersionEntry
 	var wire wireEntry
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&wire); err != nil {
 		return err

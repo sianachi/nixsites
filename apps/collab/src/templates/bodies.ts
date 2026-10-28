@@ -15,6 +15,7 @@ import { CANVAS_ELEMENTS, FRAGMENT_NAME, strategyFor } from '../documents/body-k
 import { checkMergedDocument } from '../documents/service.ts';
 import { LIMITS } from '../documents/limits.ts';
 import { boundSearchText } from '../documents/links.ts';
+import { isRecord } from '../is-record.ts';
 
 export interface OperationItemAuthorization {
   readonly tenantId: string;
@@ -994,8 +995,4 @@ function nestedRecord(value: unknown, key: string): Record<string, unknown> {
 
 function record(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

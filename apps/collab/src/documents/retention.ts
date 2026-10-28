@@ -51,16 +51,35 @@ export async function sweepTenant(
   now: Date = new Date(),
   onDocumentError?: (docId: string, error: unknown) => void,
 ): Promise<TenantSweepResult> {
+  // `prunable` is a superset test for what `pruneHistory` would delete (any snapshot at or before
+  // the cutoff that has an old update at or below it, or an unpinned snapshot below it), so a
+  // sweep that finds nothing to do costs one query rather than one round trip per document.
   const { rows } = await sql.query<{
     doc_id: string;
     workspace_id: string;
     version_retention_days: number;
+    prunable: boolean;
   }>(
-    `SELECT d.doc_id, d.workspace_id, w.version_retention_days
+    `SELECT d.doc_id, d.workspace_id, w.version_retention_days,
+            EXISTS (
+              SELECT 1 FROM content_snapshot b
+               WHERE b.tenant_id = d.tenant_id AND b.doc_id = d.doc_id
+                 AND b.created_at <= $2::timestamptz - w.version_retention_days * interval '24 hours'
+                 AND (EXISTS (SELECT 1 FROM content_update u
+                               WHERE u.tenant_id = d.tenant_id AND u.doc_id = d.doc_id
+                                 AND u.seq <= b.seq
+                                 AND u.created_at < $2::timestamptz - w.version_retention_days * interval '24 hours')
+                      OR EXISTS (SELECT 1 FROM content_snapshot s
+                                  WHERE s.tenant_id = d.tenant_id AND s.doc_id = d.doc_id
+                                    AND s.seq < b.seq
+                                    AND NOT EXISTS (SELECT 1 FROM content_version v
+                                                     WHERE v.tenant_id = s.tenant_id
+                                                       AND v.doc_id = s.doc_id AND v.seq = s.seq)))
+            ) AS prunable
      FROM content_doc d
      JOIN workspace w ON w.tenant_id = d.tenant_id AND w.workspace_id = d.workspace_id
      WHERE d.tenant_id = $1 AND w.version_retention_days > 0`,
-    [tenantId],
+    [tenantId, now.toISOString()],
   );
 
   const workspacesSwept = new Set(rows.map((row) => row.workspace_id)).size;
@@ -71,6 +90,10 @@ export async function sweepTenant(
 
   for (const row of rows) {
     try {
+      if (!row.prunable) {
+        documentsSwept += 1;
+        continue;
+      }
       const result = await pruneHistory(sql, tenantId, row.doc_id, row.version_retention_days, now);
       documentsSwept += 1;
       updatesDeleted += result.updatesDeleted;

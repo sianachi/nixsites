@@ -273,17 +273,6 @@ func archiveEntry(archive *zip.Reader, name string, maxBytes int64) ([]byte, err
 	return nil, fmt.Errorf("archive entry %q is missing", name)
 }
 
-func archiveRecord(payload []byte) (stream.Record, error) {
-	var record stream.Record
-	if err := json.Unmarshal(payload, &record); err != nil {
-		return stream.Record{}, err
-	}
-	if record.ID == "" || record.Title == "" {
-		return stream.Record{}, errors.New("item payload must contain id and title")
-	}
-	return record, nil
-}
-
 func docxText(document []byte) (string, error) {
 	upper := bytes.ToUpper(document)
 	if bytes.Contains(upper, []byte("<!DOCTYPE")) || bytes.Contains(upper, []byte("<!ENTITY")) {

@@ -50,11 +50,11 @@ func New(api *workerapi.Client, transfer *objecttransfer.Client, maxBytes int64)
 
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	if job.Kind != "file.publish" {
-		return nil, invalid("files.kind_mismatch", errors.New("job kind is not file.publish"))
+		return nil, jobrunner.Fail("files.kind_mismatch", errors.New("job kind is not file.publish"))
 	}
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return nil, invalid("files.payload_invalid", err)
+		return nil, jobrunner.Fail("files.payload_invalid", err)
 	}
 	inspection, err := handler.api.GetFileInspection(ctx, payload.UploadID)
 	if err != nil {
@@ -67,7 +67,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 		return nil, jobrunner.ErrCancelled
 	}
 	if inspection.Status == "failed" {
-		return nil, invalid("files.upload_rejected", errors.New("the upload was already rejected"))
+		return nil, jobrunner.Fail("files.upload_rejected", errors.New("the upload was already rejected"))
 	}
 	if time.Now().After(inspection.ExpiresAt) {
 		return nil, handler.reject(ctx, inspection, "files.upload_expired", errors.New("the upload capability expired"))
@@ -78,12 +78,12 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 		if errors.Is(err, objecttransfer.ErrTooLarge) {
 			return nil, handler.reject(ctx, inspection, "files.too_large", err)
 		}
-		return nil, transient("files.object_unavailable", err)
+		return nil, jobrunner.Retry("files.object_unavailable", err)
 	}
 	temporary, err := worktemp.Create("nix-file-inspection-*")
 	if err != nil {
 		_ = download.Body.Close()
-		return nil, transient("files.staging_unavailable", err)
+		return nil, jobrunner.Retry("files.staging_unavailable", err)
 	}
 	temporaryPath := temporary.Name()
 	temporaryOpen := true
@@ -103,7 +103,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 			if _, writeErr := temporary.Write(buffer[:count]); writeErr != nil {
 				_ = download.Body.Close()
 				_ = temporary.Close()
-				return nil, transient("files.staging_unavailable", writeErr)
+				return nil, jobrunner.Retry("files.staging_unavailable", writeErr)
 			}
 			if len(header) < cap(header) {
 				copyBytes := min(count, cap(header)-len(header))
@@ -118,15 +118,15 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 			if errors.Is(readErr, objecttransfer.ErrTooLarge) {
 				return nil, handler.reject(ctx, inspection, "files.too_large", readErr)
 			}
-			return nil, transient("files.object_unavailable", readErr)
+			return nil, jobrunner.Retry("files.object_unavailable", readErr)
 		}
 	}
 	if err := download.Body.Close(); err != nil {
 		_ = temporary.Close()
-		return nil, transient("files.object_unavailable", err)
+		return nil, jobrunner.Retry("files.object_unavailable", err)
 	}
 	if err := temporary.Close(); err != nil {
-		return nil, transient("files.staging_unavailable", err)
+		return nil, jobrunner.Retry("files.staging_unavailable", err)
 	}
 	temporaryOpen = false
 	if total != inspection.DeclaredByteLength {
@@ -166,13 +166,13 @@ func (handler *Handler) reject(ctx context.Context, inspection *workerapi.FileIn
 	if err := handler.api.RejectFileInspection(ctx, inspection.UploadID, code); err != nil {
 		return apiFailure("files.rejection_unavailable", err)
 	}
-	return invalid(code, cause)
+	return jobrunner.Fail(code, cause)
 }
 
 func (handler *Handler) publishObject(ctx context.Context, inspection *workerapi.FileInspection, path string, inspected workerapi.InspectedFile) error {
 	file, err := os.Open(path)
 	if err != nil {
-		return transient("files.staging_unavailable", err)
+		return jobrunner.Retry("files.staging_unavailable", err)
 	}
 	uploadErr := handler.transfer.UploadCreateOnly(
 		ctx,
@@ -184,37 +184,35 @@ func (handler *Handler) publishObject(ctx context.Context, inspection *workerapi
 	)
 	closeErr := file.Close()
 	if closeErr != nil {
-		return transient("files.staging_unavailable", closeErr)
+		return jobrunner.Retry("files.staging_unavailable", closeErr)
 	}
 	if uploadErr == nil {
 		return nil
 	}
 	if !errors.Is(uploadErr, objecttransfer.ErrAlreadyExists) {
-		return transient("files.publication_unavailable", uploadErr)
+		return jobrunner.Retry("files.publication_unavailable", uploadErr)
 	}
 	download, err := handler.transfer.Download(ctx, inspection.DestinationURL, handler.maxBytes)
 	if err != nil {
-		return transient("files.publication_unavailable", err)
+		return jobrunner.Retry("files.publication_unavailable", err)
 	}
 	written, copyErr := io.Copy(io.Discard, download.Body)
 	closeErr = download.Body.Close()
 	if copyErr != nil {
-		return transient("files.publication_unavailable", copyErr)
+		return jobrunner.Retry("files.publication_unavailable", copyErr)
 	}
 	if closeErr != nil {
-		return transient("files.publication_unavailable", closeErr)
+		return jobrunner.Retry("files.publication_unavailable", closeErr)
 	}
 	if written != inspected.ByteLength || objecttransfer.VerifyDigest(download.Digest, inspected.SHA256) != nil {
-		return invalid("files.publication_conflict", errors.New("the immutable destination contains different bytes"))
+		return jobrunner.Fail("files.publication_conflict", errors.New("the immutable destination contains different bytes"))
 	}
 	return nil
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
-	var payload Payload
-	if err := decoder.Decode(&payload); err != nil {
+	payload, err := jobrunner.DecodeStrict[Payload](raw)
+	if err != nil {
 		return Payload{}, err
 	}
 	if payload.UploadID == "" {
@@ -232,15 +230,7 @@ func consistentMediaType(declared, detected string) bool {
 func apiFailure(code string, err error) error {
 	var response *workerapi.ResponseError
 	if errors.As(err, &response) && response.Status < 500 && response.Status != 409 {
-		return invalid(code, err)
+		return jobrunner.Fail(code, err)
 	}
-	return transient(code, err)
-}
-
-func invalid(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+	return jobrunner.Retry(code, err)
 }

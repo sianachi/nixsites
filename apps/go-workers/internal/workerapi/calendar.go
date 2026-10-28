@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 )
 
 // Calendar* types and methods implement contracts C1-C6 from
@@ -128,7 +130,7 @@ type CalendarLogEntry struct {
 // the returned *ResponseError (see ResponseErrorFrom): Core already marked the connection and
 // notified the owner, so the caller only needs to stop this round.
 func (client *Client) StartCalendarSession(ctx context.Context, linkID string) (*CalendarSession, error) {
-	if !canonicalUUID(linkID) {
+	if !broker.IsCanonicalUUID(linkID) {
 		return nil, errors.New("calendar session request is invalid")
 	}
 	path := "/internal/worker-executions/calendar/links/" + linkID + "/session"
@@ -150,7 +152,7 @@ func (client *Client) StartCalendarSession(ctx context.Context, linkID string) (
 // MaxCalendarPullBodyBytes is split in halves and the per-request results are summed; every
 // request carries the same Full flag, which Core applies per event.
 func (client *Client) PullCalendarEvents(ctx context.Context, linkID string, request CalendarPullRequest) (*CalendarPullResult, error) {
-	if !canonicalUUID(linkID) || len(request.Events) > maxCalendarEventsPerBatch {
+	if !broker.IsCanonicalUUID(linkID) || len(request.Events) > maxCalendarEventsPerBatch {
 		return nil, errors.New("calendar pull request is invalid")
 	}
 	for _, event := range request.Events {
@@ -197,7 +199,7 @@ func (client *Client) pullCalendarBatch(ctx context.Context, linkID string, requ
 
 // GetCalendarChanges implements C3.
 func (client *Client) GetCalendarChanges(ctx context.Context, linkID string, limit int) (*CalendarChangesResult, error) {
-	if !canonicalUUID(linkID) || limit < 1 || limit > maxCalendarChangesLimit {
+	if !broker.IsCanonicalUUID(linkID) || limit < 1 || limit > maxCalendarChangesLimit {
 		return nil, errors.New("calendar changes request is invalid")
 	}
 	path := fmt.Sprintf("/internal/worker-executions/calendar/links/%s/changes?limit=%d", linkID, limit)
@@ -214,7 +216,7 @@ func (client *Client) GetCalendarChanges(ctx context.Context, linkID string, lim
 		default:
 			return nil, errors.New("worker API calendar change op is invalid")
 		}
-		if !canonicalUUID(change.ItemID) {
+		if !broker.IsCanonicalUUID(change.ItemID) {
 			return nil, errors.New("worker API calendar change item id is invalid")
 		}
 	}
@@ -223,11 +225,11 @@ func (client *Client) GetCalendarChanges(ctx context.Context, linkID string, lim
 
 // ReportCalendarPushed implements C4.
 func (client *Client) ReportCalendarPushed(ctx context.Context, linkID string, results []CalendarPushResult) error {
-	if !canonicalUUID(linkID) || len(results) == 0 || len(results) > maxCalendarEventsPerBatch {
+	if !broker.IsCanonicalUUID(linkID) || len(results) == 0 || len(results) > maxCalendarEventsPerBatch {
 		return errors.New("calendar pushed report is invalid")
 	}
 	for _, result := range results {
-		if !canonicalUUID(result.ItemID) || len(result.ExternalID) > maxCalendarTextLength || len(result.Version) > maxCalendarCursorLength {
+		if !broker.IsCanonicalUUID(result.ItemID) || len(result.ExternalID) > maxCalendarTextLength || len(result.Version) > maxCalendarCursorLength {
 			return errors.New("calendar pushed result is invalid")
 		}
 		switch result.Status {
@@ -252,7 +254,7 @@ func (client *Client) ReportCalendarPushed(ctx context.Context, linkID string, r
 // SetCalendarCursor implements C5. Core stores the cursor only after every page in the round has
 // been applied, so the caller must not call this until the pull loop is complete.
 func (client *Client) SetCalendarCursor(ctx context.Context, linkID, cursor string, full bool, windowStart, windowEnd time.Time) error {
-	if !canonicalUUID(linkID) || len(cursor) > maxCalendarCursorLength || windowStart.IsZero() || windowEnd.IsZero() || !windowEnd.After(windowStart) {
+	if !broker.IsCanonicalUUID(linkID) || len(cursor) > maxCalendarCursorLength || windowStart.IsZero() || windowEnd.IsZero() || !windowEnd.After(windowStart) {
 		return errors.New("calendar cursor request is invalid")
 	}
 	body, err := json.Marshal(struct {
@@ -270,7 +272,7 @@ func (client *Client) SetCalendarCursor(ctx context.Context, linkID, cursor stri
 
 // LogCalendarEntries implements C6.
 func (client *Client) LogCalendarEntries(ctx context.Context, linkID string, entries []CalendarLogEntry) error {
-	if !canonicalUUID(linkID) || len(entries) == 0 || len(entries) > maxCalendarLogEntries {
+	if !broker.IsCanonicalUUID(linkID) || len(entries) == 0 || len(entries) > maxCalendarLogEntries {
 		return errors.New("calendar log request is invalid")
 	}
 	for _, entry := range entries {
@@ -287,7 +289,7 @@ func (client *Client) LogCalendarEntries(ctx context.Context, linkID string, ent
 		if len(entry.Detail) > maxCalendarTextLength {
 			return errors.New("calendar log entry is invalid")
 		}
-		if entry.ItemID != nil && !canonicalUUID(*entry.ItemID) {
+		if entry.ItemID != nil && !broker.IsCanonicalUUID(*entry.ItemID) {
 			return errors.New("calendar log entry item id is invalid")
 		}
 	}
@@ -323,7 +325,7 @@ func validateCalendarEvent(event CalendarEvent) error {
 	if event.UpdatedAt.IsZero() {
 		return errors.New("calendar event updatedAt is required")
 	}
-	if event.NixItemID != nil && !canonicalUUID(*event.NixItemID) {
+	if event.NixItemID != nil && !broker.IsCanonicalUUID(*event.NixItemID) {
 		return errors.New("calendar event nixItemId is invalid")
 	}
 	return nil
