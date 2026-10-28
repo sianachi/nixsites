@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+import { contrast } from './contrast.test-helper.js';
 import { parseCustomProperties, splitByGround, themeCss } from './theme-sheet.js';
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -417,22 +418,6 @@ describe('the browser half of the theme', () => {
     }
   });
 });
-
-/** WCAG relative luminance of a 6-digit hex colour. */
-function luminance(hex: string): number {
-  const channels = [1, 3, 5].map(
-    (offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255,
-  );
-  const [red, green, blue] = channels.map((channel) =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  );
-  return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
-}
-
-function contrast(first: string, second: string): number {
-  const [low, high] = [luminance(first), luminance(second)].sort((a, b) => a - b);
-  return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
-}
 
 describe('chart series roles', () => {
   const SERIES = [1, 2, 3, 4, 5, 6].map((index) => `color-series-${String(index)}`);

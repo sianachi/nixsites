@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { contrast } from './contrast.test-helper.js';
+
 import { SITE_PALETTE, type SiteGround } from './site.js';
 import { parseCustomProperties, resolveProperty, splitByGround, themeCss } from './theme-sheet.js';
 
@@ -64,18 +66,6 @@ const SYNTAX_SOURCES: Record<'light' | 'dark', Record<keyof SiteGround['syntax']
 
 const FLAT_ROLES = Object.keys(SOURCES.light) as FlatRole[];
 const SYNTAX_ROLES = Object.keys(SYNTAX_SOURCES.light) as (keyof SiteGround['syntax'])[];
-
-function luminance(hex: string): number {
-  const [red = 0, green = 0, blue = 0] = [1, 3, 5]
-    .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
-    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-}
-
-function contrast(first: string, second: string): number {
-  const [low = 0, high = 0] = [luminance(first), luminance(second)].sort((a, b) => a - b);
-  return (high + 0.05) / (low + 0.05);
-}
 
 describe.each([
   ['light', light],
