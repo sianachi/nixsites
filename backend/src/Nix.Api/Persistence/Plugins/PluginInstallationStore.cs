@@ -123,12 +123,42 @@ public sealed class PluginInstallationStore(
             .OrderBy(value => value.ComponentId)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var snapshots = new List<PluginInstallationSnapshot>(installations.Count);
-        foreach (var installation in installations)
+        if (installations.Count == 0)
         {
-            snapshots.Add(await SnapshotAsync(installation, cancellationToken).ConfigureAwait(false));
+            return [];
         }
-        return snapshots;
+
+        // Three reads for the whole list, not three per installation.
+        var componentIds = installations.Select(value => value.ComponentId).Distinct().ToArray();
+        var components = await context.PluginComponents
+            .Where(value => componentIds.Contains(value.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var publisherIds = components.Select(value => value.PublisherId).Distinct().ToArray();
+        var publishers = await context.PluginPublishers
+            .Where(value => publisherIds.Contains(value.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var installationIds = installations.Select(value => value.Id).ToArray();
+        var grants = (await context.PluginCapabilityGrants
+            .Where(value => installationIds.Contains(value.InstallationId))
+            .OrderBy(value => value.Capability)
+            .Select(value => new { value.InstallationId, value.Capability })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false))
+            .ToLookup(value => value.InstallationId, value => value.Capability);
+        return installations
+            .Select(installation =>
+            {
+                var component = components.Single(value =>
+                    value.Id == installation.ComponentId && value.Version == installation.ComponentVersion);
+                return ToSnapshot(
+                    installation,
+                    component,
+                    publishers.Single(value => value.Id == component.PublisherId),
+                    grants[installation.Id].ToArray());
+            })
+            .ToList();
     }
 
     /// <summary>Enables or disables one exact workspace installation.</summary>
@@ -228,7 +258,15 @@ public sealed class PluginInstallationStore(
             .Select(value => value.Capability)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        return new PluginInstallationSnapshot(
+        return ToSnapshot(installation, component, publisher, grants);
+    }
+
+    private static PluginInstallationSnapshot ToSnapshot(
+        PluginInstallation installation,
+        PluginComponent component,
+        PluginPublisher publisher,
+        string[] grants) =>
+        new(
             installation.Id,
             installation.WorkspaceId,
             component.PublisherId,
@@ -243,7 +281,6 @@ public sealed class PluginInstallationStore(
             grants,
             installation.InstalledAt,
             installation.UpdatedAt);
-    }
 
     private static bool SameComponent(
         PluginComponent component,

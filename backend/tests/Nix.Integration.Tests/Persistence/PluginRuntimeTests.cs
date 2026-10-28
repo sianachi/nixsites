@@ -90,6 +90,34 @@ public sealed class PluginRuntimeTests(NixPostgresFixture fixture) : IAsyncLifet
     }
 
     [Fact]
+    public async Task Listing_pairs_each_installation_with_its_own_component_publisher_and_grants()
+    {
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(
+            TestTenants.AlphaContext,
+            Cancellation);
+        var store = work.Resolve<PluginInstallationStore>();
+        var workspace = WorkspaceId.From(TestTenants.AlphaWorkspace);
+        var second = await store.RegisterAsync(workspace, Registration(TestTenants.Alpha, "list.b", "list.b/two", "2.0.0", 0x62, 0x72), Cancellation);
+        var first = await store.RegisterAsync(workspace, Registration(TestTenants.Alpha, "list.a", "list.a/one", "1.0.0", 0x61, 0x71), Cancellation);
+        await store.ReplaceGrantsAsync(
+            workspace,
+            second.Installation!.Id,
+            new HashSet<string>(StringComparer.Ordinal) { PluginRuntimePolicy.ReadItemMetadataCapability },
+            Cancellation);
+
+        var listed = (await store.ListAsync(workspace, Cancellation))
+            .Where(value => value.ComponentId.StartsWith("list.", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(["list.a/one", "list.b/two"], listed.Select(value => value.ComponentId));
+        Assert.Equal(first.Installation!.Id, listed[0].Id);
+        Assert.Empty(listed[0].Capabilities);
+        Assert.Equal([PluginRuntimePolicy.ReadItemMetadataCapability], listed[1].Capabilities);
+        Assert.Equal("2.0.0", listed[1].Version);
+        Assert.True(listed[1].PublicKey.Span.SequenceEqual(Enumerable.Repeat((byte)0x62, 32).ToArray()));
+    }
+
+    [Fact]
     public async Task Separate_tenants_may_pin_the_same_publisher_name_to_different_keys()
     {
         await RegisterAndCommitAsync(
