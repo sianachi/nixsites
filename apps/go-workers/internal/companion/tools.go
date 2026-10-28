@@ -1,6 +1,7 @@
 package companion
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -154,7 +155,7 @@ func flattenToolCall(tool string, raw json.RawMessage) (json.RawMessage, string)
 	if !ok {
 		return nil, fmt.Sprintf("%s is not a supported tool.", tool)
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
 	var fields map[string]json.RawMessage
 	if err := decoder.Decode(&fields); err != nil || fields == nil {
@@ -186,7 +187,7 @@ func flattenToolCall(tool string, raw json.RawMessage) (json.RawMessage, string)
 				}
 				value = json.RawMessage(encoded)
 			}
-			objectDecoder := json.NewDecoder(strings.NewReader(string(value)))
+			objectDecoder := json.NewDecoder(bytes.NewReader(value))
 			objectDecoder.UseNumber()
 			var object map[string]any
 			if objectDecoder.Decode(&object) != nil || object == nil {
@@ -571,7 +572,7 @@ func validateToolArguments(raw json.RawMessage) string {
 		Properties  string `json:"propertiesJson"`
 		Spec        string `json:"specJson"`
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&p) != nil {
 		return "Tool arguments must be a JSON object with string fields."

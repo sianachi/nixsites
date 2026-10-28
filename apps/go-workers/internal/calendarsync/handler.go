@@ -1,13 +1,13 @@
 package calendarsync
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -67,7 +67,7 @@ type Result struct {
 
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	var payload workerapi.CalendarSyncPayload
-	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
+	decoder := json.NewDecoder(bytes.NewReader(job.Payload))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !broker.IsCanonicalUUID(payload.LinkID) {
 		return nil, jobrunner.Fail("calendar_payload_invalid", errors.New("the durable calendar sync request is invalid"))
@@ -187,7 +187,7 @@ func (handler *Handler) pushOne(ctx context.Context, provider Provider, session 
 	}
 	event, eventErr := fromWireChange(change)
 	if eventErr != nil {
-		return workerapi.CalendarPushResult{ItemID: change.ItemID, ExternalID: externalID, Version: version, Status: "failed", Detail: truncate(eventErr.Error(), 500)}
+		return workerapi.CalendarPushResult{ItemID: change.ItemID, ExternalID: externalID, Version: version, Status: "failed", Detail: truncateText(eventErr.Error(), 500)}
 	}
 	event.NixItemID = change.ItemID
 	if externalID == "" {
@@ -215,12 +215,12 @@ func (handler *Handler) pushResult(itemID, externalID, version string, err error
 	case errors.Is(err, ErrGone):
 		status = "gone"
 	}
-	return workerapi.CalendarPushResult{ItemID: itemID, ExternalID: externalID, Version: version, Status: status, Detail: truncate(err.Error(), 500)}
+	return workerapi.CalendarPushResult{ItemID: itemID, ExternalID: externalID, Version: version, Status: status, Detail: truncateText(err.Error(), 500)}
 }
 
 func (handler *Handler) logProviderError(ctx context.Context, linkID, direction string, err error) {
 	logErr := handler.api.LogCalendarEntries(ctx, linkID, []workerapi.CalendarLogEntry{
-		{Direction: direction, Action: "error", Detail: truncate(err.Error(), 500)},
+		{Direction: direction, Action: "error", Detail: truncateText(err.Error(), 500)},
 	})
 	if logErr != nil && handler.logger != nil {
 		handler.logger.Warn("calendar sync log entry failed", "link_id", linkID, "error", logErr)
@@ -282,10 +282,6 @@ func fromWireChange(change workerapi.CalendarChange) (PushEvent, error) {
 		end = &bound
 	}
 	return PushEvent{Title: change.Title, Location: change.Location, Details: change.Details, Start: start, End: end}, nil
-}
-
-func truncate(value string, maximum int) string {
-	return truncateText(value, maximum)
 }
 
 // apiFailure classifies a Core worker-executions error. A refused execution (the lease moved on)

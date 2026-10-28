@@ -1,6 +1,7 @@
 package exportjob
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -68,7 +69,7 @@ func New(api *workerapi.Client, source, destination *objecttransfer.Client, inte
 
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	var payload Payload
-	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
+	decoder := json.NewDecoder(bytes.NewReader(job.Payload))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !validPayload(payload) {
 		return nil, jobrunner.Fail("export_payload_invalid", errors.New("the durable export request is invalid"))

@@ -649,7 +649,7 @@ func (client *Client) ClaimJob(ctx context.Context, id, executionID string, leas
 	if err != nil {
 		return nil, err
 	}
-	request, err := client.newRequest(ctx, http.MethodPost, "/internal/worker-dispatch/jobs/"+id+"/claim", strings.NewReader(string(body)))
+	request, err := client.newRequest(ctx, http.MethodPost, "/internal/worker-dispatch/jobs/"+id+"/claim", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -679,7 +679,7 @@ func (client *Client) RenewJob(ctx context.Context, id, executionID string, leas
 	if err != nil {
 		return false, err
 	}
-	request, err := client.newRequest(ctx, http.MethodPost, "/internal/worker-dispatch/jobs/"+id+"/renew", strings.NewReader(string(body)))
+	request, err := client.newRequest(ctx, http.MethodPost, "/internal/worker-dispatch/jobs/"+id+"/renew", bytes.NewReader(body))
 	if err != nil {
 		return false, err
 	}
@@ -737,7 +737,7 @@ func (client *Client) PublishFileInspection(ctx context.Context, uploadID string
 	}
 	path := "/internal/worker-executions/files/uploads/" + url.PathEscape(uploadID) + "/publish"
 	var published PublishedFile
-	if err := client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), &published); err != nil {
+	if err := client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), &published); err != nil {
 		return nil, err
 	}
 	return &published, nil
@@ -755,7 +755,7 @@ func (client *Client) ThumbnailUploadURL(ctx context.Context, uploadID string, b
 	var capability struct {
 		UploadURL string `json:"uploadUrl"`
 	}
-	if err := client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), &capability); err != nil {
+	if err := client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), &capability); err != nil {
 		return "", err
 	}
 	return capability.UploadURL, nil
@@ -769,7 +769,7 @@ func (client *Client) RejectFileInspection(ctx context.Context, uploadID, code s
 		return err
 	}
 	path := "/internal/worker-executions/files/uploads/" + url.PathEscape(uploadID) + "/reject"
-	return client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), nil)
+	return client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), nil)
 }
 
 func (client *Client) GetObjectCleanupCapability(ctx context.Context, offset int) (*ObjectCleanupCapability, error) {
@@ -1010,7 +1010,7 @@ func (client *Client) CompleteDocumentImportPreview(ctx context.Context, importI
 		return err
 	}
 	path := "/internal/worker-executions/imports/" + url.PathEscape(importID) + "/preview/complete"
-	return client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), nil)
+	return client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), nil)
 }
 
 func (client *Client) GetDocumentImportCommit(ctx context.Context, importID string) (*DocumentImportCommit, error) {
@@ -1029,7 +1029,7 @@ func (client *Client) StageDocumentImport(ctx context.Context, importID string, 
 	}
 	path := "/internal/worker-executions/imports/" + url.PathEscape(importID) + "/stage"
 	var result DocumentImportStage
-	if err := client.requestJSONLimit(ctx, http.MethodPost, path, strings.NewReader(string(body)), &result, 16<<20); err != nil {
+	if err := client.requestJSONLimit(ctx, http.MethodPost, path, bytes.NewReader(body), &result, 16<<20); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -1054,7 +1054,7 @@ func (client *Client) CompleteDocumentImportObject(ctx context.Context, importID
 		return err
 	}
 	path := "/internal/worker-executions/imports/" + url.PathEscape(importID) + "/objects/complete"
-	return client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), nil)
+	return client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), nil)
 }
 
 func (client *Client) FinalizeDocumentImport(ctx context.Context, importID string) (*DocumentImportResult, error) {
@@ -1074,7 +1074,7 @@ func (client *Client) RejectDocumentImport(ctx context.Context, importID, code s
 		return err
 	}
 	path := "/internal/worker-executions/imports/" + url.PathEscape(importID) + "/reject"
-	return client.requestJSON(ctx, http.MethodPost, path, strings.NewReader(string(body)), nil)
+	return client.requestJSON(ctx, http.MethodPost, path, bytes.NewReader(body), nil)
 }
 
 func (client *Client) GetTemplateImportPreview(ctx context.Context, importID string) (*TemplateImportPreview, error) {
@@ -1306,7 +1306,7 @@ func (client *Client) lease(ctx context.Context, path, kind string, limit int, t
 	if err != nil {
 		return err
 	}
-	request, err := client.newRequest(ctx, http.MethodPost, path, strings.NewReader(string(body)))
+	request, err := client.newRequest(ctx, http.MethodPost, path, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -1340,7 +1340,7 @@ func (client *Client) finishOutbox(ctx context.Context, id string, succeeded boo
 	if err != nil {
 		return err
 	}
-	return client.post(ctx, "/internal/worker-dispatch/outbox/"+id+"/finish", strings.NewReader(string(body)))
+	return client.post(ctx, "/internal/worker-dispatch/outbox/"+id+"/finish", bytes.NewReader(body))
 }
 
 func (client *Client) post(ctx context.Context, path string, body io.Reader) error {

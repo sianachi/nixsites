@@ -1,6 +1,7 @@
 package templatefilecopy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -158,7 +159,7 @@ func (handler *Handler) verify(ctx context.Context, rawURL string, expectedLengt
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	var payload Payload
 	if err := decoder.Decode(&payload); err != nil {

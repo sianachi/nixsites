@@ -5,6 +5,7 @@
 package notifyjob
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
@@ -67,7 +68,7 @@ func New(api API, transport Transport, privateKey *ecdsa.PrivateKey, subject str
 
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	var payload Payload
-	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
+	decoder := json.NewDecoder(bytes.NewReader(job.Payload))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !broker.IsCanonicalUUID(payload.NotificationID) {
 		return nil, jobrunner.Fail("notify_payload_invalid", errors.New("the durable notify request is invalid"))
