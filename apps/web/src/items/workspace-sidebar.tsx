@@ -247,18 +247,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   }
 
   /** The explicit child destination offered alongside the workspace-level create actions. */
-  const childDestination = ((): { readonly id: string; readonly name: string } | null => {
-    if (selectedId === null) {
-      return null;
-    }
-
-    const selected = tree.find(selectedId);
-    if (selected === null) {
-      return null;
-    }
-
-    return { id: selected.id, name: selected.title || 'Untitled' };
-  })();
+  const selectedItem = selectedId === null ? null : tree.find(selectedId);
+  const childDestination =
+    selectedItem === null ? null : { id: selectedItem.id, name: selectedItem.title || 'Untitled' };
 
   async function create(parentId: string | null, title: string, type: string): Promise<void> {
     setRefusal(null);
