@@ -57,7 +57,8 @@ function EditableTree(): ReactNode {
 
 describe('the template draft item tree', () => {
   it('moves focus into the selected item editor instead of leaving it on disabled navigation', async () => {
-    const user = userEvent.setup();
+    // Focus moves in an effect that lands a macrotask after the click; keep user-event's yield.
+    const user = userEvent.setup({ delay: 0 });
     render(<EditableTree />);
 
     await user.click(screen.getByRole('button', { name: CHILD.title }));

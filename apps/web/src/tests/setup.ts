@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { cleanup, configure } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 import { stubCoreApi } from './api-stub';
@@ -74,6 +75,14 @@ if (typeof HTMLDialogElement !== 'undefined') {
  * this number.
  */
 configure({ asyncUtilTimeout: 5_000 });
+
+// user-event's default `delay: 0` parks a macrotask between every keystroke and click. Nothing in
+// this suite relies on that yield (a test that does passes its own `delay`), and a long typed
+// string or a chain of clicks otherwise pays for each one under a loaded CI runner.
+const setupUser = userEvent.setup.bind(userEvent);
+Object.assign(userEvent, {
+  setup: (options?: Parameters<typeof setupUser>[0]) => setupUser({ delay: null, ...options }),
+});
 
 /**
  * Vitest runs with `globals: false`, so describe/it/expect are imported

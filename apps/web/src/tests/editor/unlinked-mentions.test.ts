@@ -21,6 +21,7 @@ import {
   type MentionLookup,
 } from '../../editor/unlinked-mentions';
 import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { memoryStorage } from '../memory-storage';
 
 /**
  * Unlinked mentions against a real editor: typed text, a faked idle timer, a lookup that answers
@@ -35,26 +36,6 @@ const BETA = 'item-beta';
 let editor: Editor | null = null;
 
 /** An in-memory `Storage`: the test environment's global is not a usable one. */
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
-
 function hit(id: string, title: string): Mentions['mentions'][number]['item'] {
   return {
     id,

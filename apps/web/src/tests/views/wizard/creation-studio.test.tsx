@@ -6,31 +6,12 @@ import { App } from '../../../app';
 import { item, STUB_WORKSPACE, stubCoreApi } from '../../api-stub';
 import { renderAt, signedIn } from '../../render-with-router';
 import { aView } from '../../view-fixture';
+import { memoryStorage } from '../../memory-storage';
 
 const DESTINATION = item({
   id: '4a4a4a4a-4444-4444-8444-4a4a4a4a4a4a',
   title: 'Product planning',
 });
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
 
 beforeEach(() => {
   signedIn();

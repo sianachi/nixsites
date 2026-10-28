@@ -6,6 +6,7 @@ import { App } from '../../app';
 import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { setZenMode } from '../../lib/zen-mode';
+import { memoryStorage } from '../memory-storage';
 
 const SHARED_ID = '00000000-0000-4000-8000-000000000002';
 const INACCESSIBLE_ID = '00000000-0000-4000-8000-000000000099';
@@ -27,26 +28,6 @@ const ARCHIVED: StubWorkspace = {
   lifecycleState: 'archived',
   archivedAt: '2026-09-06T12:00:00Z',
 };
-
-function memoryStorage(initial: Readonly<Record<string, string>> = {}): Storage {
-  const values = new Map(Object.entries(initial));
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
 
 beforeEach(() => {
   setZenMode(false);

@@ -14,6 +14,7 @@ import {
   UnlinkedMentions,
 } from '../../editor/unlinked-mentions';
 import { readDismissals } from '../../lib/suggestion-dismissals';
+import { memoryStorage } from '../memory-storage';
 
 /**
  * The "Link to" bubble against a real editor: it appears when the caret is moved into an
@@ -26,26 +27,6 @@ const ATLAS = 'item-atlas';
 let captured: Editor | null = null;
 
 /** An in-memory `Storage`: the test environment's global is not a usable one. */
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
-
 const ANSWER: Mentions = {
   mentions: [
     {

@@ -11,6 +11,7 @@ import { AuthProvider } from '../../auth/auth-provider';
 import { useSessionStore } from '../../auth/session-store';
 import * as bodies from '../../editor/body-cache';
 import * as drafts from '../../editor/draft-journal';
+import { memoryStorage } from '../memory-storage';
 
 const profile = { subject: 'renewal-person', name: 'Stored person', email: null };
 const command = defineCommand({
@@ -20,26 +21,6 @@ const command = defineCommand({
   body: { read: true },
   schema: z.object({ ok: z.literal(true) }),
 });
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {

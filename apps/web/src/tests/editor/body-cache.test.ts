@@ -23,6 +23,7 @@ import {
 } from '../../editor/body-cache';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
+import { memoryStorage } from '../memory-storage';
 
 const ADA = 'subject-ada';
 const BO = 'subject-bo';
@@ -44,26 +45,6 @@ function record(forScope: string, savedAt = Date.now(), bytes = 4): BodyCacheRec
 }
 
 /** The marker naming who the store belongs to lives in localStorage, shared by every tab. */
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
-
 beforeEach(async () => {
   vi.stubGlobal('localStorage', memoryStorage());
   await clearBodyCache();

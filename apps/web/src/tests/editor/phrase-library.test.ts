@@ -23,6 +23,7 @@ import {
   warmPhraseLibrary,
 } from '../../editor/phrase-library';
 import { completePhrase } from '../../lib/suggest/ngram';
+import { memoryStorage } from '../memory-storage';
 
 const ADA = 'subject-ada';
 const WORKSPACE = 'workspace-1';
@@ -32,26 +33,6 @@ function scope(item: string, workspace = WORKSPACE, subject = ADA): string {
   const value = documentScope(subject, workspace, item, 'note');
   if (value === undefined) throw new Error('No scope.');
   return value;
-}
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
 }
 
 /** A Yjs update shaped the way the editor stores a note: paragraphs, and here a code block. */

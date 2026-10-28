@@ -6,26 +6,7 @@ import {
   resetColumnWidth,
   setColumnWidth,
 } from '../../../views/core/column-widths';
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
+import { memoryStorage } from '../../memory-storage';
 
 let viewId = 0;
 let storage: Storage;

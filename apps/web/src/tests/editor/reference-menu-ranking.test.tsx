@@ -9,6 +9,7 @@ import { ApiClientOverrideProvider } from '../../api/api-client-provider';
 import { CANDIDATE_POOL, linkFrecencyNamespace, ReferenceMenu } from '../../editor/reference-menu';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { memoryStorage } from '../memory-storage';
 
 /**
  * The picker's re-rank against a real editor and a fake client: it asks for a pool larger than it
@@ -16,26 +17,6 @@ import { useChoiceOrderPreference } from '../../settings/editor/suggestion-prefe
  */
 
 const WORKSPACE = 'workspace-1';
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}
 
 /** Twelve "Plan" items in server order; more than the eight the picker shows. */
 const HITS = Array.from({ length: 12 }, (_, index) => ({

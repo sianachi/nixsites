@@ -12,29 +12,10 @@ import {
   WritingModeKeymap,
   WRITING_MODE_STORAGE_KEY,
 } from '../../editor/writing-mode';
+import { memoryStorage } from '../memory-storage';
 
 let editor: Editor | undefined;
 let storage: Storage;
-
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    clear: () => {
-      values.clear();
-    },
-    key: (index) => [...values.keys()][index] ?? null,
-    get length() {
-      return values.size;
-    },
-  };
-}
 
 beforeEach(() => {
   storage = memoryStorage();

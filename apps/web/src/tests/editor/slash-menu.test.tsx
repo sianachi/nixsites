@@ -14,6 +14,7 @@ import {
 } from '../../editor/slash-menu';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { memoryStorage } from '../memory-storage';
 
 describe('the slash menu', () => {
   it('offers every block the schema defines a way to insert', () => {
@@ -432,26 +433,6 @@ describe('ordering matches by what this person picks', () => {
 });
 
 describe('remembering slash commands', () => {
-  function memoryStorage(): Storage {
-    const values = new Map<string, string>();
-    return {
-      get length() {
-        return values.size;
-      },
-      clear: () => {
-        values.clear();
-      },
-      getItem: (key) => values.get(key) ?? null,
-      key: (index) => [...values.keys()][index] ?? null,
-      removeItem: (key) => {
-        values.delete(key);
-      },
-      setItem: (key, value) => {
-        values.set(key, value);
-      },
-    };
-  }
-
   beforeEach(() => {
     vi.stubGlobal('localStorage', memoryStorage());
   });

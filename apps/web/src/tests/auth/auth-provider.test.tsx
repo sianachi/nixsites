@@ -14,6 +14,7 @@ import { useSessionStore } from '../../auth/session-store';
 import * as registerServiceWorker from '../../pwa/register-service-worker';
 import { workspaces } from '@nix/api-client';
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
+import { memoryStorage } from '../memory-storage';
 
 const future = '2099-01-01T00:00:00+00:00';
 
@@ -1123,22 +1124,3 @@ describe('Core-mediated browser sessions', () => {
 });
 
 /** An in-memory `Storage`: the test environment's global is not a usable one. */
-function memoryStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => {
-      values.clear();
-    },
-    getItem: (key) => values.get(key) ?? null,
-    key: (index) => [...values.keys()][index] ?? null,
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  };
-}

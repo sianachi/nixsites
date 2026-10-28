@@ -8,31 +8,12 @@ import {
   storeKeyboardMode,
   useKeyboardModeStore,
 } from '../../editor/keyboard-mode-store';
+import { memoryStorage } from '../memory-storage';
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-
-function memoryStorage(initial: Record<string, string> = {}): Storage {
-  const values = new Map(Object.entries(initial));
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-    clear: () => {
-      values.clear();
-    },
-    key: (index) => [...values.keys()][index] ?? null,
-    get length() {
-      return values.size;
-    },
-  };
-}
 
 describe('the stored editor keyboard mode', () => {
   it.each(['standard', 'vim', 'emacs'] as const)('reads %s', (mode) => {
