@@ -1,5 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
@@ -152,13 +152,19 @@ describe('the workspace menu', () => {
   });
 });
 
-describe('workspace groups in settings', () => {
+async function openArrange(user: UserEvent): Promise<HTMLElement> {
+  await user.click(await screen.findByRole('button', { name: 'Workspace menu' }));
+  await user.click(screen.getByRole('button', { name: 'Arrange workspaces…' }));
+  return screen.findByRole('region', { name: 'Workspace groups and pins' });
+}
+
+describe('workspace groups in the workspace menu', () => {
   it('creates a group from a workspace row, renames it and removes it without losing the workspace', async () => {
     const user = userEvent.setup();
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />, '/settings');
 
-    const section = await screen.findByRole('region', { name: 'Workspace groups and pins' });
+    const section = await openArrange(user);
     // No groups yet: nothing to manage.
     expect(within(section).queryByText('Manage groups')).not.toBeInTheDocument();
 
@@ -228,7 +234,7 @@ describe('workspace groups in settings', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />, '/settings');
 
-    const section = await screen.findByRole('region', { name: 'Workspace groups and pins' });
+    const section = await openArrange(user);
     await user.selectOptions(
       await within(section).findByRole('combobox', { name: `Group for ${SHARED.name}` }),
       'New group…',

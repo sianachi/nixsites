@@ -95,6 +95,39 @@ async function switchWorkspace(user: UserEvent, to: string): Promise<void> {
   );
 }
 
+async function createWorkspaceFromMenu(user: UserEvent, name: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Workspace menu' }));
+  await user.click(screen.getByRole('button', { name: 'New workspace…' }));
+  await user.type(await screen.findByRole('textbox', { name: 'New workspace name' }), name);
+  await user.click(screen.getByRole('button', { name: 'Create' }));
+}
+
+/** Types into the one person box and picks the matching suggestion by its full text. */
+async function pickPerson(user: UserEvent, label: string): Promise<void> {
+  const box = await screen.findByRole('combobox', { name: 'Person' });
+  await user.clear(box);
+  await user.click(box);
+  await user.paste(label);
+}
+
+function suggestions(): string[] {
+  return [...document.querySelectorAll('datalist option')].map(
+    (option) => option.getAttribute('value') ?? '',
+  );
+}
+
+async function chooseAction(user: UserEvent, name: string): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: 'Workspace actions' }));
+  await user.click(screen.getByRole('menuitem', { name }));
+}
+
+async function renameTo(user: UserEvent, name: string): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: 'Rename workspace' }));
+  const box = screen.getByRole('textbox', { name: 'Workspace name' });
+  await user.clear(box);
+  await user.type(box, `${name}{Enter}`);
+}
+
 describe('workspace management', () => {
   it('uses server-decided row capabilities for protected owner controls', async () => {
     stubCoreApi({ members });
@@ -121,10 +154,7 @@ describe('workspace management', () => {
     await waitFor(() => {
       expect(fetchCalls().some((call) => call.url.includes('/invitees'))).toBe(true);
     });
-    await user.selectOptions(
-      await screen.findByRole('combobox', { name: 'Person' }),
-      '77777777-bbbb-4bbb-8bbb-777777777777',
-    );
+    await pickPerson(user, 'New Person (new.person@example.com)');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Role' }), 'viewer');
     await user.click(screen.getByRole('button', { name: 'Invite' }));
 
@@ -138,8 +168,7 @@ describe('workspace management', () => {
       ).toBeGreaterThan(1);
     });
     expect(await screen.findByText('new.person@example.com')).toBeVisible();
-    expect(await screen.findByText('New Person')).toBeVisible();
-    expect(screen.getByText('pending')).toBeVisible();
+    expect(screen.getByText('Invited')).toBeVisible();
     expect(
       screen.getByRole('button', { name: 'Revoke invitation for new.person@example.com' }),
     ).toBeVisible();
@@ -155,30 +184,22 @@ describe('workspace management', () => {
     stubCoreApi({ invitees: people });
     renderAt(<App />, '/settings');
 
-    const person = await screen.findByRole('combobox', { name: 'Person' });
+    await screen.findByRole('combobox', { name: 'Person' });
     await waitFor(() => {
-      expect(
-        within(person).getByRole('option', { name: 'Person 64 (person64@example.test)' }),
-      ).toBeVisible();
+      expect(suggestions()).toContain('Person 64 (person64@example.test)');
     });
     expect(
       fetchCalls().some((call) => new URL(call.url, location.origin).searchParams.has('cursor')),
     ).toBe(true);
-    await user.selectOptions(person, people[0]?.principalId ?? '');
-    await user.type(
-      screen.getByRole('searchbox', { name: 'Search people by name or email' }),
-      'PERSON64@',
-    );
+    await pickPerson(user, 'Person 0 (person0@example.test)');
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeEnabled();
+    await user.clear(screen.getByRole('combobox', { name: 'Person' }));
+    await user.type(screen.getByRole('combobox', { name: 'Person' }), 'PERSON64@');
     await waitFor(() => {
-      expect(
-        within(screen.getByRole('combobox', { name: 'Person' })).getAllByRole('option'),
-      ).toHaveLength(2);
+      expect(suggestions()).toHaveLength(1);
     });
     expect(screen.getByRole('button', { name: 'Invite' })).toBeDisabled();
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Person' }),
-      people[64]?.principalId ?? '',
-    );
+    await pickPerson(user, 'Person 64 (person64@example.test)');
     expect(screen.getByRole('button', { name: 'Invite' })).toBeEnabled();
   });
 
@@ -211,11 +232,10 @@ describe('workspace management', () => {
       await screen.findByText(/The list is incomplete; some people may be missing/i),
     ).toBeVisible();
     expect(screen.getByRole('combobox', { name: 'Person' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Refresh people' })).toBeEnabled();
     expect(screen.queryByText(/No people are available/i)).not.toBeInTheDocument();
   });
 
-  it('shows people who cannot be invited with Core-provided reasons', async () => {
+  it('does not suggest people who cannot be invited', async () => {
     stubCoreApi({
       invitees: [
         {
@@ -249,19 +269,8 @@ describe('workspace management', () => {
       ],
     });
     renderAt(<App />, '/settings');
-    const people = await screen.findByRole('combobox', { name: 'Person' });
-    expect(
-      within(people).getByRole('option', { name: /Existing member.*Already has access/ }),
-    ).toBeDisabled();
-    expect(
-      within(people).getByRole('option', { name: /Unverified person.*Email not verified/ }),
-    ).toBeDisabled();
-    expect(
-      within(people).getByRole('option', { name: /Invited person.*Invitation pending/ }),
-    ).toBeDisabled();
-    expect(
-      within(people).getByRole('option', { name: /No email person.*No email address/ }),
-    ).toBeDisabled();
+    await screen.findByRole('combobox', { name: 'Person' });
+    expect(suggestions()).toEqual([]);
     expect(screen.getByRole('button', { name: 'Invite' })).toBeDisabled();
   });
 
@@ -270,7 +279,6 @@ describe('workspace management', () => {
     renderAt(<App />, '/settings');
 
     expect(await screen.findByText(/They must sign in to Nix in this organization/i)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Refresh people' })).toBeEnabled();
     expect(
       screen.queryByText(/Everyone who can be invited already has access/i),
     ).not.toBeInTheDocument();
@@ -291,11 +299,8 @@ describe('workspace management', () => {
     stubCoreApi();
     renderAt(<App />, '/settings');
 
-    await user.type(
-      await screen.findByRole('textbox', { name: 'New workspace name' }),
-      'Project Atlas',
-    );
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByRole('button', { name: 'Workspace menu' });
+    await createWorkspaceFromMenu(user, 'Project Atlas');
 
     await waitFor(() => {
       expect(
@@ -312,7 +317,7 @@ describe('workspace management', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />, `/w/${SHARED.id}/settings`);
 
-    await user.click(await screen.findByRole('button', { name: 'Leave workspace' }));
+    await chooseAction(user, 'Leave workspace');
     const confirmation = await screen.findByRole('dialog', { name: 'Leave workspace?' });
     await user.click(within(confirmation).getByRole('button', { name: 'Leave workspace' }));
 
@@ -332,7 +337,7 @@ describe('workspace management', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />, '/settings');
 
-    await user.click(await screen.findByRole('button', { name: 'Archive workspace' }));
+    await chooseAction(user, 'Archive workspace');
     const dialog = await screen.findByRole('dialog', { name: 'Archive workspace?' });
     await user.click(within(dialog).getByRole('button', { name: 'Archive workspace' }));
 
@@ -386,7 +391,7 @@ describe('workspace management', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED], leaveFails: true });
     renderAt(<App />, `/w/${SHARED.id}/settings`);
 
-    await user.click(await screen.findByRole('button', { name: 'Leave workspace' }));
+    await chooseAction(user, 'Leave workspace');
     const dialog = await screen.findByRole('dialog', { name: 'Leave workspace?' });
     const leave = within(dialog).getByRole('button', { name: 'Leave workspace' });
     leave.focus();
@@ -394,7 +399,7 @@ describe('workspace management', () => {
 
     expect(dialog).toBeVisible();
     expect(leave).toHaveFocus();
-    expect(await screen.findByRole('alert')).toHaveTextContent('The workspace could not be left.');
+    expect(await screen.findAllByText('The workspace could not be left.')).not.toHaveLength(0);
     expect(workspaceButton(SHARED.name)).toBeVisible();
   });
 
@@ -405,8 +410,37 @@ describe('workspace management', () => {
     renderAt(<App />, '/settings');
 
     expect(await screen.findByText(/cannot manage its members/i)).toBeVisible();
-    expect(screen.queryByRole('textbox', { name: 'Workspace name' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rename workspace' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Person' })).not.toBeInTheDocument();
+  });
+
+  it('renames in place: Escape cancels and returns focus to the edit button', async () => {
+    const user = userEvent.setup();
+    stubCoreApi();
+    renderAt(<App />, '/settings');
+
+    const edit = await screen.findByRole('button', { name: 'Rename workspace' });
+    await user.click(edit);
+    await user.type(screen.getByRole('textbox', { name: 'Workspace name' }), ' changed{Escape}');
+
+    expect(screen.queryByRole('textbox', { name: 'Workspace name' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rename workspace' })).toHaveFocus();
+    expect(fetchCalls().some((call) => call.method === 'PATCH')).toBe(false);
+  });
+
+  it('shows pending invitations as Invited rows and replaces the invite row when closed to new members', async () => {
+    stubCoreApi({
+      workspaces: [{ ...STUB_WORKSPACE, membershipLocked: true }],
+      invitations: [
+        PENDING_INVITATION,
+        { ...PENDING_INVITATION, id: '99999999-bbbb-4bbb-8bbb-999999999999', status: 'revoked' },
+      ],
+    });
+    renderAt(<App />, '/settings');
+
+    expect(await screen.findByText('Closed to new members')).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Person' })).not.toBeInTheDocument();
+    expect(await screen.findAllByText('Invited')).toHaveLength(1);
   });
 
   it('keeps member and invitation failures independent', async () => {
@@ -443,15 +477,11 @@ describe('workspace management', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED], members });
     renderAt(<App />, '/settings');
 
-    const rename = await screen.findByRole('textbox', { name: 'Workspace name' });
-    await user.clear(rename);
-    await user.type(rename, 'Unsaved personal name');
-    await user.selectOptions(
-      await screen.findByRole('combobox', { name: 'Person' }),
-      '77777777-bbbb-4bbb-8bbb-777777777777',
-    );
+    await user.click(await screen.findByRole('button', { name: 'Rename workspace' }));
+    await user.type(screen.getByRole('textbox', { name: 'Workspace name' }), ' unsaved');
+    await pickPerson(user, 'New Person (new.person@example.com)');
     await user.click(screen.getByRole('button', { name: 'Invite' }));
-    expect(await screen.findByText(/New Person was invited/i)).toBeVisible();
+    expect(await screen.findAllByText(/New Person was invited/i)).not.toHaveLength(0);
     await user.click(screen.getByRole('button', { name: 'Remove Working editor' }));
     expect(await screen.findByRole('dialog', { name: 'Remove Working editor?' })).toBeVisible();
 
@@ -464,13 +494,10 @@ describe('workspace management', () => {
       screen.queryByRole('dialog', { name: 'Remove Working editor?' }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Settings' }));
-    expect(await screen.findByRole('textbox', { name: 'Workspace name' })).toHaveValue(SHARED.name);
-    const people = await screen.findByRole('combobox', { name: 'Person' });
-    expect(people).toHaveValue('');
-    expect(
-      within(people).getByRole('option', { name: /New Person.*Invitation pending/ }),
-    ).toBeDisabled();
-    expect(screen.queryByText(/New Person was invited/i)).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: SHARED.name })).toBeVisible();
+    expect(screen.queryByRole('textbox', { name: 'Workspace name' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Person' })).toHaveValue('');
+    expect(suggestions()).not.toContain('New Person (new.person@example.com)');
   });
 
   it('keeps a failed removal confirmation open and reports the refusal live', async () => {
@@ -483,7 +510,7 @@ describe('workspace management', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Remove member' }));
 
     expect(dialog).toBeVisible();
-    expect(await screen.findByRole('alert')).toHaveTextContent('The member could not be removed.');
+    expect(await screen.findAllByText('The member could not be removed.')).not.toHaveLength(0);
   });
 
   it('keeps the incomplete-list warning after locally creating a workspace', async () => {
@@ -494,8 +521,7 @@ describe('workspace management', () => {
     await waitFor(() => {
       expect(document.body).toHaveTextContent(/list may be incomplete/i);
     });
-    await user.type(screen.getByRole('textbox', { name: 'New workspace name' }), 'Local project');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await createWorkspaceFromMenu(user, 'Local project');
 
     await waitFor(() => {
       expect(workspaceButton('Local project')).toBeVisible();
@@ -530,19 +556,12 @@ describe('workspace management', () => {
     );
     renderAt(<App />, '/settings');
 
-    const rename = await screen.findByRole('textbox', { name: 'Workspace name' });
-    await user.clear(rename);
-    await user.type(rename, 'Renamed personal workspace');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    await renameTo(user, 'Renamed personal workspace');
     await waitFor(() => {
       expect(refresh.finish).not.toBeNull();
     });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'New workspace name' }),
-      'New local project',
-    );
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await createWorkspaceFromMenu(user, 'New local project');
     await waitFor(() => {
       expect(workspaceButton('New local project')).toBeVisible();
     });
@@ -583,10 +602,7 @@ describe('workspace management', () => {
     );
     renderAt(<App />, '/settings');
 
-    const rename = await screen.findByRole('textbox', { name: 'Workspace name' });
-    await user.clear(rename);
-    await user.type(rename, 'Locally renamed');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    await renameTo(user, 'Locally renamed');
     await waitFor(() => {
       expect(deferred.has(2)).toBe(true);
     });
@@ -601,7 +617,7 @@ describe('workspace management', () => {
 
     await switchWorkspace(user, SHARED.name);
     await user.click(await screen.findByRole('link', { name: 'Settings' }));
-    await user.click(await screen.findByRole('button', { name: 'Leave workspace' }));
+    await chooseAction(user, 'Leave workspace');
     await user.click(
       within(await screen.findByRole('dialog', { name: 'Leave workspace?' })).getByRole('button', {
         name: 'Leave workspace',

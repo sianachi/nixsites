@@ -32,6 +32,13 @@ follows semantic versioning (`0.x` pre-1.0).
 - The Explorer has a New note button, which makes an untitled note in one press, and a New view
   menu for every other kind of item.
 - The companion pet stands on the page without a card behind it.
+- Workspace settings take far less room: the name is renamed in place, Leave and Archive sit in
+  a menu beside it, the three switches are one Options group, members and pending invitations
+  are one People list with a single invite row, and save messages are toasts. New workspace and
+  Arrange workspaces moved to the workspace switcher.
+- Pets settings are compact: saved pets are avatar tiles, the identity fields share a row, the
+  model shows as a status line once connected, instructions fold away, behaviour and device
+  settings are one group, and Save appears only when something changed.
 - The optional landing page follows the new design: a hero gallery with a screenshot of every view
   (note, board, list, calendar, timeline, spreadsheet, gallery, checklist, matrix, outline, chart,
   form, habit tracker and companion), a light and dark theme switch, and sections on views, the

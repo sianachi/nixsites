@@ -210,10 +210,7 @@ describe('switching daily notes on and off', () => {
     const writes = stubCoreApi({ items: [NOTE] });
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}/settings`);
 
-    expect(await screen.findByRole('heading', { name: 'Daily notes', level: 3 })).toBeVisible();
-    const enabled = await screen.findByRole('checkbox', {
-      name: 'Use daily notes in this workspace',
-    });
+    const enabled = await screen.findByRole('checkbox', { name: 'Daily notes' });
     expect(enabled).toBeChecked();
     expect(screen.getByRole('link', { name: /Daily notes settings/ })).toHaveAttribute(
       'href',
@@ -221,7 +218,9 @@ describe('switching daily notes on and off', () => {
     );
 
     await user.click(enabled);
-    expect(await screen.findByText('Daily notes are off for this workspace.')).toBeVisible();
+    expect(await screen.findAllByText('Daily notes are off for this workspace.')).not.toHaveLength(
+      0,
+    );
     expect(writes.dailyNoteSettingsWrites).toEqual([
       {
         workspaceId: STUB_WORKSPACE.id,
@@ -240,7 +239,9 @@ describe('switching daily notes on and off', () => {
     });
 
     await user.click(enabled);
-    expect(await screen.findByText('Daily notes are on for this workspace.')).toBeVisible();
+    expect(await screen.findAllByText('Daily notes are on for this workspace.')).not.toHaveLength(
+      0,
+    );
     expect(await within(rail()).findByRole('link', { name: 'Daily notes' })).toBeInTheDocument();
   });
 
@@ -251,14 +252,10 @@ describe('switching daily notes on and off', () => {
     });
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}/settings`);
 
-    const enabled = await screen.findByRole('checkbox', {
-      name: 'Use daily notes in this workspace',
-    });
+    const enabled = await screen.findByRole('checkbox', { name: 'Daily notes' });
     expect(enabled).toBeDisabled();
     expect(
-      screen.getByText(
-        'Only a workspace owner or an administrator can switch daily notes on or off.',
-      ),
+      screen.getByText('Only a workspace owner or an administrator can change these.'),
     ).toBeVisible();
     expect(writes.dailyNoteSettingsWrites).toEqual([]);
   });

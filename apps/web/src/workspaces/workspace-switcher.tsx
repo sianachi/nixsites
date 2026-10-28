@@ -1,12 +1,14 @@
-import { Icon, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
+import { Dialog, Icon, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
 import { Archive, Check, ChevronDown, Pin, PinOff, Plus, Settings } from 'lucide-react';
 import type { Workspace } from '@nix/api-client';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { arrangeWorkspaces, togglePin } from './arrangement';
+import { CreateWorkspaceForm } from './settings/create-workspace-form';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { useWorkspace } from './workspace-context';
+import { WorkspaceGroupsSection } from './workspace-groups-section';
 
 /**
  * The workspace switcher is also the workspace index: every accessible workspace has a direct
@@ -31,6 +33,15 @@ export function WorkspaceSwitcher(): ReactNode {
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
   const arranged = arrangeWorkspaces(activeWorkspaces, arrangement);
   const pinnedIds = new Set(arrangement.pinnedWorkspaceIds);
+  // Creating and arranging workspaces open over the page; they live outside the menu panel, which
+  // unmounts when it closes.
+  const [dialog, setDialog] = useState<'create' | 'arrange' | null>(null);
+  const menuAction =
+    (kind: 'create' | 'arrange', close: () => void): (() => void) =>
+    () => {
+      close();
+      setDialog(kind);
+    };
 
   const row = (entry: Workspace, close: () => void): ReactNode => (
     <li key={entry.id} className="flex items-center gap-1 px-1 pointer-coarse:min-h-(--control-lg)">
@@ -203,31 +214,55 @@ export function WorkspaceSwitcher(): ReactNode {
             </Link>
           ) : null}
 
-          <Link
-            to={`/w/${workspace.id}/settings`}
-            onClick={close}
-            className="flex items-center gap-2 border-t border-divider px-3 py-2 text-sm text-foreground no-underline hover:bg-accent/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          <button
+            type="button"
+            onClick={menuAction('arrange', close)}
+            className={`block w-full border-t border-divider px-3 py-2 text-left text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
+          >
+            Arrange workspaces…
+          </button>
+
+          <button
+            type="button"
+            onClick={menuAction('create', close)}
+            className={`flex w-full items-center gap-2 border-t border-divider px-3 py-2 text-left text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
           >
             <Icon icon={Plus} size="sm" />
-            Create a workspace
-          </Link>
+            New workspace…
+          </button>
         </section>
       ),
     },
   ];
 
+  const closeDialog = (): void => {
+    setDialog(null);
+  };
+
   return (
-    <Menu label="Workspaces" items={items} className="w-80 max-w-[calc(100vw-1rem)]">
-      {(trigger) => (
-        <button
-          {...trigger}
-          aria-label="Workspace menu"
-          className={`flex min-w-0 w-full flex-1 items-center justify-between gap-2 border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
-        >
-          <span className="truncate">{workspace.name}</span>
-          <Icon icon={ChevronDown} size="sm" />
-        </button>
-      )}
-    </Menu>
+    <>
+      <Menu label="Workspaces" items={items} className="w-80 max-w-[calc(100vw-1rem)]">
+        {(trigger) => (
+          <button
+            {...trigger}
+            aria-label="Workspace menu"
+            className={`flex min-w-0 w-full flex-1 items-center justify-between gap-2 border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
+          >
+            <span className="truncate">{workspace.name}</span>
+            <Icon icon={ChevronDown} size="sm" />
+          </button>
+        )}
+      </Menu>
+      {dialog === 'create' ? (
+        <Dialog open title="New workspace" onClose={closeDialog}>
+          <CreateWorkspaceForm onCreated={closeDialog} />
+        </Dialog>
+      ) : null}
+      {dialog === 'arrange' ? (
+        <Dialog open title="Arrange workspaces" onClose={closeDialog}>
+          <WorkspaceGroupsSection />
+        </Dialog>
+      ) : null}
+    </>
   );
 }

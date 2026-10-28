@@ -53,10 +53,8 @@ describe('workspace-scoped routing', () => {
       'href',
       `/w/${SHARED.id}/settings`,
     );
-    expect(within(menu).getByRole('link', { name: 'Create a workspace' })).toHaveAttribute(
-      'href',
-      `/w/${STUB_WORKSPACE.id}/settings`,
-    );
+    expect(within(menu).getByRole('button', { name: 'New workspace…' })).toBeVisible();
+    expect(within(menu).getByRole('button', { name: 'Arrange workspaces…' })).toBeVisible();
   });
 
   it('opens the personal workspace from a legacy route when no accessible workspace was remembered', async () => {

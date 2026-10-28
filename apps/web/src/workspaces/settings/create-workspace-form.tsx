@@ -1,18 +1,15 @@
 import { workspaces as coreWorkspaces } from '@nix/api-client';
-import { Blueprint, Button, Field, Input, Text } from '@nix/ui';
+import { Button, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../workspace-context';
 
-export function CreateWorkspaceForm(props: {
-  readonly onBusyChange: (busy: boolean) => void;
-}): ReactNode {
+export function CreateWorkspaceForm(props: { readonly onCreated: () => void }): ReactNode {
   const client = useApiClient();
   const navigate = useNavigate();
   const context = useWorkspace();
-  const { onBusyChange } = props;
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -24,10 +21,6 @@ export function CreateWorkspaceForm(props: {
     },
     [],
   );
-
-  useEffect(() => {
-    onBusyChange(creating);
-  }, [creating, onBusyChange]);
 
   async function createWorkspace(
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
@@ -49,6 +42,7 @@ export function CreateWorkspaceForm(props: {
       if (controller.signal.aborted || createRequest.current !== controller) return;
       context.workspaceCreated(created);
       void navigate(`/w/${created.id}`);
+      props.onCreated();
     } catch {
       if (controller.signal.aborted) return;
       setCreateError('The workspace could not be created. Check the name and try again.');
@@ -61,10 +55,7 @@ export function CreateWorkspaceForm(props: {
   }
 
   return (
-    <Blueprint className="flex max-w-xl flex-col gap-3 p-4">
-      <Text variant="h4" as="h3">
-        Create a shared workspace
-      </Text>
+    <div className="flex flex-col gap-3">
       <form
         className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end"
         onSubmit={(event) => {
@@ -91,6 +82,6 @@ export function CreateWorkspaceForm(props: {
           {createError}
         </Text>
       )}
-    </Blueprint>
+    </div>
   );
 }

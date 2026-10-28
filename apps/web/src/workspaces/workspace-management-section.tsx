@@ -1,66 +1,63 @@
 import { Text } from '@nix/ui';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '../components/states/status-panels';
+import { publishNotice } from '../lib/notices';
 import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { ConfirmationDialog } from './settings/confirmation-dialog';
-import { CreateWorkspaceForm } from './settings/create-workspace-form';
-import { InvitationsList } from './settings/invitations-list';
 import { InviteSection } from './settings/invite-section';
-import { LeaveArchiveSection } from './settings/leave-archive-section';
-import { MembersList } from './settings/members-list';
-import { RenameForm } from './settings/rename-form';
+import { PeopleList } from './settings/people-list';
 import type { Confirmation } from './settings/shared';
 import { SharingSwitches } from './settings/sharing-switches';
 import { WorkspaceOverview } from './settings/workspace-overview';
 import { useWorkspace } from './workspace-context';
 import { useWorkspaceAdministration } from './use-workspace-administration';
-import { WorkspaceGroupsSection } from './workspace-groups-section';
 
 export function WorkspaceManagementSection(): ReactNode {
   const { workspace } = useWorkspace();
   const [inviteeQuery, setInviteeQuery] = useState('');
   const administration = useWorkspaceAdministration(inviteeQuery);
-  const [creating, setCreating] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
+  const { mutationNotice, mutationError } = administration;
+
+  // Saves and refusals are said once, by the shell's toasts, not kept in the page.
+  useEffect(() => {
+    if (mutationNotice !== null) publishNotice({ key: 'workspace-saved', message: mutationNotice });
+  }, [mutationNotice]);
+  useEffect(() => {
+    if (mutationError !== null) publishNotice({ key: 'workspace-refused', message: mutationError });
+  }, [mutationError]);
 
   return (
     <section
       aria-labelledby="workspace-management-heading"
-      aria-busy={administration.working || creating}
-      className="flex min-w-0 max-w-4xl flex-col gap-6"
+      aria-busy={administration.working}
+      className="flex min-w-0 max-w-3xl flex-col gap-6"
     >
-      <WorkspaceOverview workspace={workspace} />
+      <WorkspaceOverview
+        workspace={workspace}
+        administration={administration}
+        onConfirm={setConfirmation}
+      />
 
-      <WorkspaceGroupsSection />
-
-      {administration.mutationError === null ? null : (
-        <Text role="alert" tone="muted">
-          {administration.mutationError}
+      <section aria-labelledby="workspace-options-heading" className="flex flex-col gap-1">
+        <Text id="workspace-options-heading" variant="h4" as="h3">
+          Options
         </Text>
-      )}
-      <div aria-live="polite" aria-atomic="true">
-        {administration.working ? (
-          <Text tone="muted">Saving workspace changes…</Text>
-        ) : administration.mutationNotice === null ? null : (
-          <Text>{administration.mutationNotice}</Text>
+        <DailyNotesSwitch />
+        <SharingSwitches />
+        {workspace.canRename ? null : (
+          <Text variant="note">Only a workspace owner or an administrator can change these.</Text>
         )}
-      </div>
-
-      {workspace.canRename ? (
-        <RenameForm workspace={workspace} administration={administration} />
-      ) : null}
-
-      <DailyNotesSwitch />
-
-      <SharingSwitches />
-
-      <CreateWorkspaceForm onBusyChange={setCreating} />
+      </section>
 
       {!workspace.canManageMembers ? (
         <Text tone="muted">You can see this workspace, but you cannot manage its members.</Text>
       ) : (
-        <>
+        <section aria-labelledby="workspace-people-heading" className="flex flex-col gap-2">
+          <Text id="workspace-people-heading" variant="h4" as="h3">
+            People
+          </Text>
           {administration.membersStatus === 'error' ||
           administration.membersStatus === 'partial' ||
           administration.invitationsStatus === 'error' ||
@@ -70,27 +67,17 @@ export function WorkspaceManagementSection(): ReactNode {
             <PartialNotice pending="Some workspace access information is unavailable. The available section remains usable." />
           ) : null}
           {workspace.membershipLocked ? (
-            <Text tone="muted">
-              This workspace is closed to new members. Allow new members above to invite someone.
-            </Text>
+            <Text tone="muted">Closed to new members</Text>
           ) : (
             <InviteSection
               workspace={workspace}
               administration={administration}
-              inviteeQuery={inviteeQuery}
               onInviteeQueryChange={setInviteeQuery}
             />
           )}
-          <MembersList administration={administration} onConfirm={setConfirmation} />
-          <InvitationsList administration={administration} />
-        </>
+          <PeopleList administration={administration} onConfirm={setConfirmation} />
+        </section>
       )}
-
-      <LeaveArchiveSection
-        workspace={workspace}
-        administration={administration}
-        onConfirm={setConfirmation}
-      />
 
       <ConfirmationDialog
         confirmation={confirmation}
