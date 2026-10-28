@@ -1083,6 +1083,57 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/sharing": {
+      "put": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "SetWorkspaceSharing",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWorkspaceSharingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/members": {
       "get": {
         "tags": [
@@ -18388,6 +18439,7 @@
           "computed",
           "noDelete",
           "noChildren",
+          "collaboration",
           "managedBy",
           "createdAt",
           "updatedAt"
@@ -18446,6 +18498,9 @@
             "type": "boolean"
           },
           "noChildren": {
+            "type": "boolean"
+          },
+          "collaboration": {
             "type": "boolean"
           },
           "managedBy": {
@@ -21486,6 +21541,12 @@
               "null",
               "boolean"
             ]
+          },
+          "collaboration": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -21638,6 +21699,27 @@
             "type": [
               "null",
               "string"
+            ]
+          }
+        }
+      },
+      "SetWorkspaceSharingRequest": {
+        "required": [
+          "membershipLocked",
+          "collaboration"
+        ],
+        "type": "object",
+        "properties": {
+          "membershipLocked": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "collaboration": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }
@@ -25380,7 +25462,9 @@
           "canUseDailyNotes",
           "pendingInvitationId",
           "lifecycleState",
-          "archivedAt"
+          "archivedAt",
+          "membershipLocked",
+          "collaboration"
         ],
         "type": "object",
         "properties": {
@@ -25442,6 +25526,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "membershipLocked": {
+            "type": "boolean"
+          },
+          "collaboration": {
+            "type": "boolean"
           }
         }
       },

@@ -4807,6 +4807,26 @@ Parameters:
 
 Responses: `200`, `404`, `409`.
 
+### PUT /api/v1/workspaces/{workspaceId}/sharing
+
+<a id="setworkspacesharing"></a>
+
+Operation id: `SetWorkspaceSharing`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `SetWorkspaceSharingRequest`.
+
+Responses: `200`, `404`.
+
 ## Properties
 
 - title: API reference

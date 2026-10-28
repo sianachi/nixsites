@@ -2762,6 +2762,18 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>, <code>409</code>.</p>
+</article>
+<article id="setworkspacesharing" data-search="put /api/v1/workspaces/{workspaceid}/sharing setworkspacesharing   workspaces">
+<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/sharing</code></h3>
+<p></p>
+<p class="id">Operation id: <code>SetWorkspaceSharing</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetWorkspaceSharingRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>.</p>
 </article></section>
 </main>
 <script>
