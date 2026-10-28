@@ -43,6 +43,9 @@ describe('Homebase', () => {
     );
     expect(screen.queryByRole('group', { name: 'Homebase layout' })).not.toBeInTheDocument();
 
+    await userEvent.click(within(start).getByRole('button', { name: /^import/i }));
+    expect(await screen.findByRole('dialog', { name: /import/i })).toBeVisible();
+
     const recent = screen.getByRole('region', { name: 'Recently viewed' });
     await userEvent.click(within(recent).getByRole('button', { name: /roadmap/i }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Roadmap');

@@ -8,7 +8,7 @@ follows semantic versioning (`0.x` pre-1.0).
 ### Added
 
 - Homebase, the screen a workspace opens to when no note is open: a greeting with today's date
-  and week, one-press New note, Structured note, Today's note, Calendar and Templates beside the
+  and week, one-press New note, Structured note, Today's note, Calendar, Templates and Import beside the
   notes you opened last on this browser. It replaces Notes as the first entry in the side rail.
 - Owners can close a workspace to new members in its settings. While it is closed, nobody can be
   invited and pending invitations cannot be accepted.

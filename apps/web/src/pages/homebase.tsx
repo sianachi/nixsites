@@ -5,6 +5,7 @@ import {
   Columns2,
   FilePlus,
   FileText,
+  FolderInput,
   Grid3x3,
   LayoutTemplate,
   Shapes,
@@ -54,7 +55,13 @@ interface Action {
  * The workspace's start screen, shown while no item is open: a greeting, the actions people start
  * a session with beside the items they opened last on this browser. One column on a phone.
  */
-export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode {
+export function Homebase({
+  tree,
+  onImport,
+}: {
+  readonly tree: WorkspaceTree;
+  readonly onImport: () => void;
+}): ReactNode {
   const { workspaceId, workspace } = useWorkspace();
   const { openPreview } = useOpenItem();
   const navigate = useNavigate();
@@ -117,6 +124,13 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
       detail: 'Start from a saved structure',
       icon: LayoutTemplate,
       to: `${home}/templates`,
+    },
+    {
+      key: 'import',
+      label: 'Import',
+      detail: 'Notes, documents or an archive',
+      icon: FolderInput,
+      onSelect: onImport,
     },
   ];
 

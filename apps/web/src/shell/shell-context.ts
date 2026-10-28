@@ -16,4 +16,6 @@ import type { useWorkspaceTree } from '../items/use-workspace-tree';
 export interface ShellContext {
   readonly tree: ReturnType<typeof useWorkspaceTree>;
   readonly selectedId: string | null;
+  /** Opens the shell's workspace Import dialog, the one the side rail's Import opens. */
+  readonly openImport: () => void;
 }

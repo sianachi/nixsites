@@ -721,7 +721,17 @@ export function AppShell(): ReactNode {
                   <TemplateLibraryProvider library={templateLibrary}>
                     <CapabilitiesProvider value={capabilities}>
                       <ItemDialogProvider tree={tree}>
-                        <Outlet context={{ tree, selectedId } satisfies ShellContext} />
+                        <Outlet
+                          context={
+                            {
+                              tree,
+                              selectedId,
+                              openImport: () => {
+                                setWorkspaceImportOpen(true);
+                              },
+                            } satisfies ShellContext
+                          }
+                        />
                       </ItemDialogProvider>
                     </CapabilitiesProvider>
                   </TemplateLibraryProvider>
