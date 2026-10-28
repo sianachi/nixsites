@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@nix/editor-schema": "workspace:*",
-    "@nix/export": "workspace:*",
-    "fflate": "^0.8.2"
+    "@nix/export": "workspace:*"
   }
 }

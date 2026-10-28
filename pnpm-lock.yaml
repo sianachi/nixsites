@@ -670,9 +670,6 @@ importers:
       '@nix/export':
         specifier: workspace:*
         version: link:../export
-      fflate:
-        specifier: ^0.8.2
-        version: 0.8.3
 
   packages/ui:
     dependencies:
