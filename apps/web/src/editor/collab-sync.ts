@@ -896,8 +896,14 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
         };
         // A rate limit is not a refusal: the server resyncs once the window resets and the edit
         // is saved then, so it must not block confirmation, sign-out or updates meanwhile.
-        if (notice.code !== 'rate_limited') writeRefused = true;
-        if (notice.code === 'read_only') {
+        if (notice.code === 'editable') {
+          // The editor of a file with collaboration off left, and this session holds it now.
+          mode = 'write';
+          writeRefused = false;
+          report();
+          return;
+        } else if (notice.code !== 'rate_limited') writeRefused = true;
+        if (notice.code === 'read_only' || notice.code === 'editing_elsewhere') {
           // The server stopped accepting this session's writes - a revoked grant, told
           // honestly instead of silently dropping edits.
           mode = 'read';
@@ -971,6 +977,7 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
       unregisterPending();
       clearInterval(confirmationTimer);
       browserWindow?.removeEventListener('online', resume);
+      browserWindow?.removeEventListener('pagehide', hidePresence);
       browserDocument?.removeEventListener('visibilitychange', visible);
       rejectBarriers('The editor closed before its changes were confirmed.');
       doc.off('update', onDocUpdate);
@@ -1060,13 +1067,31 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
     onState('connecting');
     void connect();
   };
+  // Peers drop this person's presence the moment the page is hidden or leaves, not when the
+  // awareness timeout finally expires.
+  let hiddenPresence: Record<string, unknown> | null = null;
+  const hidePresence = (): void => {
+    const state = awareness.getLocalState();
+    if (state === null) return;
+    hiddenPresence = state;
+    awareness.setLocalState(null);
+  };
   const visible = (): void => {
-    if (browserDocument?.visibilityState === 'visible') resume();
-    // Hidden may be the last this page is seen alive - a phone reclaims a background tab without
-    // an unload - so keep what is pending now rather than on a timer that may never fire.
-    else saveSnapshot();
+    if (browserDocument?.visibilityState === 'visible') {
+      if (hiddenPresence !== null && awareness.getLocalState() === null) {
+        awareness.setLocalState(hiddenPresence);
+      }
+      hiddenPresence = null;
+      resume();
+    } else {
+      hidePresence();
+      // Hidden may be the last this page is seen alive - a phone reclaims a background tab without
+      // an unload - so keep what is pending now rather than on a timer that may never fire.
+      saveSnapshot();
+    }
   };
   browserWindow?.addEventListener('online', resume);
+  browserWindow?.addEventListener('pagehide', hidePresence);
   browserDocument?.addEventListener('visibilitychange', visible);
   if (options.draftScope !== undefined) {
     const providers = localProviders.get(options.draftScope) ?? new Set<CollabSync>();

@@ -136,50 +136,6 @@ public static class ProvisioningSql
            AND catalog.root_item_id IS NULL
         """;
 
-    /// <summary>Redeems non-ambiguous verified invitations and audits each redemption.</summary>
-    public const string RedeemInvitations = """
-        WITH unambiguous AS (
-            SELECT count(*) = 1 AS allowed
-              FROM principal
-             WHERE tenant_id = @tenant_id
-               AND kind = 'user'
-               AND status = 'active'
-               AND email_verified
-               AND email_normalized = @email_normalized
-        ), accepted AS (
-            UPDATE workspace_invitation invitation
-               SET status = 'accepted', accepted_at = @now,
-                   accepted_by_principal_id = @principal_id
-              FROM workspace workspace, unambiguous
-             WHERE invitation.tenant_id = @tenant_id
-               AND invitation.workspace_id = workspace.workspace_id
-               AND workspace.tenant_id = invitation.tenant_id
-               AND invitation.email_normalized = @email_normalized
-               AND invitation.status = 'pending'
-               AND (invitation.target_principal_id IS NULL
-                    OR invitation.target_principal_id = @principal_id)
-               AND unambiguous.allowed
-               AND (workspace.personal_owner_principal_id IS NULL
-                    OR invitation.role IN ('editor', 'viewer'))
-            RETURNING invitation.invitation_id, invitation.workspace_id, invitation.role,
-                      invitation.invited_by_principal_id
-        ), memberships AS (
-            INSERT INTO workspace_member
-                (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            SELECT accepted.workspace_id, 'principal', @principal_id, @tenant_id,
-                   accepted.role, accepted.invited_by_principal_id, @now
-              FROM accepted
-            ON CONFLICT (workspace_id, subject_type, subject_id) DO NOTHING
-        )
-        INSERT INTO audit_event
-            (event_id, tenant_id, workspace_id, actor_id, action, subject_id,
-             subject_type, after, occurred_at)
-        SELECT gen_random_uuid(), @tenant_id, accepted.workspace_id, @principal_id,
-               'workspace.invitation_redeemed', accepted.invitation_id, 'workspace_invitation',
-               jsonb_build_object('role', accepted.role), @now
-          FROM accepted
-        """;
-
     /// <summary>Audits the three durable facts created by first-login provisioning.</summary>
     public const string InsertFoundationAudit = """
         INSERT INTO audit_event

@@ -1232,6 +1232,34 @@ describe.runIf(DB_TESTS_ENABLED)('the document lifecycle, against Postgres', () 
     expect(await countUpdates(verifyPool, TENANTS.alpha)).toBe(0);
   });
 
+  it('lets one person edit at a time when collaboration is off, and hands over when they leave', async () => {
+    const harness = track(await startLiveServer(TENANTS.alpha));
+    const alice = open(harness.url, TENANTS.alpha.itemId, 'solo-first');
+    expect((await alice.ready).mode).toBe('write');
+    const bella = open(harness.url, TENANTS.alpha.itemId, 'solo-second');
+    expect((await bella.ready).mode).toBe('read');
+    await until(
+      () => bella.notices.some((notice) => notice.code === 'editing_elsewhere'),
+      'Bella to hear someone else is editing',
+    );
+
+    alice.close();
+    await until(
+      () => bella.notices.some((notice) => notice.code === 'editable'),
+      'Bella to be handed the document',
+    );
+    // Her sync reply while she was still a reader was refused; nothing after the handover is.
+    const refusedBefore = bella.notices.filter((notice) => notice.code === 'read_only').length;
+    typeParagraph(bella.doc, 'Bella edits now.');
+
+    const again = open(harness.url, TENANTS.alpha.itemId, 'solo-first');
+    expect((await again.ready).mode).toBe('read');
+    await until(() => textOf(again.doc).includes('Bella edits now.'), "Bella's edit to be kept");
+    expect(bella.notices.filter((notice) => notice.code === 'read_only')).toHaveLength(
+      refusedBefore,
+    );
+  });
+
   it('drops a departed client from everyone else’s roster', async () => {
     const harness = track(await startLiveServer(TENANTS.alpha));
     const alice = open(harness.url, TENANTS.alpha.itemId);

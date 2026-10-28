@@ -362,6 +362,10 @@ export function createDocumentRegistry(deps: {
       sessions.get(socket.itemId)?.beginSync(socket);
     },
 
+    reauthorized(socket: SocketSession): void {
+      sessions.get(socket.itemId)?.arbitrate();
+    },
+
     handleMessage(socket: SocketSession, data: Uint8Array): void {
       sessions.get(socket.itemId)?.handleMessage(socket, data);
     },

@@ -20,6 +20,13 @@ export interface ItemAuthorization {
    * string by design (ADR-0009); an unknown kind is treated as the default prose body.
    */
   readonly bodyKind: string;
+
+  /**
+   * False when collaboration is switched off for the item or its workspace: one principal edits
+   * and everyone else reads until they leave. Absent means collaborative, which is also what a
+   * Core that predates the switch implies.
+   */
+  readonly collaborative?: boolean;
 }
 
 export interface Authorizer {
@@ -115,6 +122,7 @@ export function createAuthorizer(options: {
         workspaceId?: unknown;
         canWrite?: unknown;
         bodyKind?: unknown;
+        collaborative?: unknown;
       } | null;
 
       if (
@@ -134,6 +142,7 @@ export function createAuthorizer(options: {
         workspaceId: answer.workspaceId,
         canWrite: answer.canWrite,
         bodyKind: answer.bodyKind,
+        collaborative: answer.collaborative !== false,
       };
     },
   };

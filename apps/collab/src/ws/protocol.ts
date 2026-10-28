@@ -1,8 +1,6 @@
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
-import type { Rejection } from '../documents/limits.ts';
-
 /**
  * The socket's wire protocol, shared by this server and the web client's provider.
  *
@@ -122,8 +120,14 @@ export function parseAuthFrame(data: unknown): AuthFrame | null {
   return { token: frame.token, schemaVersion: frame.schemaVersion };
 }
 
-/** Encodes a non-fatal refusal: the rejection's code and detail, without its HTTP status. */
-export function encodeNotice(refusal: Pick<Rejection, 'code' | 'detail'>): Uint8Array {
+/**
+ * Encodes a non-fatal notice: a refusal's code and detail without its HTTP status, or a change
+ * of mode such as `editable`.
+ */
+export function encodeNotice(refusal: {
+  readonly code: string;
+  readonly detail: string;
+}): Uint8Array {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, MESSAGE_NOTICE);
   encoding.writeVarString(encoder, JSON.stringify({ code: refusal.code, detail: refusal.detail }));

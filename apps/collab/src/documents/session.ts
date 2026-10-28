@@ -25,6 +25,12 @@ import { noteStrategy, type BodyKindStrategy, type Measurement } from './body-ki
 import { LIMITS, rejection, type RateWindow, type Rejection } from './limits.ts';
 import { CATCH_UP_LIMIT, loadDocument, writeSnapshotNow } from './service.ts';
 
+const EDITABLE = { code: 'editable', detail: 'You can edit this document now.' };
+const EDITING_ELSEWHERE = {
+  code: 'editing_elsewhere',
+  detail: 'Someone else is editing. You can edit when they leave.',
+};
+
 /** The thresholds a resident document lives by. All of them configuration, none of them lore. */
 export interface SessionConfig {
   /** How long pending updates may wait before a flush. The crash-loss window. */
@@ -301,6 +307,35 @@ export class DocumentSession {
     this.#sockets.add(socket);
     this.#clientIdsBySocket.set(socket, new Set());
     this.#writerIdBySocket.set(socket, `ws:${randomUUID()}`);
+    this.arbitrate(socket);
+  }
+
+  /**
+   * With collaboration off, one principal edits - in as many tabs as they like - and everyone
+   * else who may write reads until they leave, when the earliest waiting one takes over. Sockets
+   * whose mode changes are told; `joining` is not, because its ready frame carries the mode.
+   */
+  arbitrate(joining?: SocketSession): void {
+    const sockets = [...this.#sockets];
+    const exclusive = sockets.some((socket) => socket.authorization.collaborative === false);
+    const editor = exclusive
+      ? (
+          sockets.find(
+            (socket) =>
+              socket !== joining && socket.mode === 'write' && socket.authorization.canWrite,
+          ) ?? sockets.find((socket) => socket.authorization.canWrite)
+        )?.authorization.principalId
+      : undefined;
+    for (const socket of sockets) {
+      const mode =
+        socket.authorization.canWrite && (!exclusive || socket.authorization.principalId === editor)
+          ? 'write'
+          : 'read';
+      if (mode === socket.mode) continue;
+      socket.mode = mode;
+      if (socket !== joining)
+        this.#send(socket, encodeNotice(mode === 'write' ? EDITABLE : EDITING_ELSEWHERE));
+    }
   }
 
   /**
@@ -308,6 +343,9 @@ export class DocumentSession {
    * current awareness roster so a joiner sees who is present before anyone next moves.
    */
   beginSync(socket: SocketSession): void {
+    if (socket.mode === 'read' && socket.authorization.canWrite) {
+      this.#send(socket, encodeNotice(EDITING_ELSEWHERE));
+    }
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(encoder, this.#doc);
@@ -1121,6 +1159,7 @@ export class DocumentSession {
     if (owned !== undefined && owned.size > 0) {
       awarenessProtocol.removeAwarenessStates(this.#awareness, [...owned], null);
     }
+    this.arbitrate();
 
     if (this.#sockets.size === 0) {
       this.#idleSince = this.now();

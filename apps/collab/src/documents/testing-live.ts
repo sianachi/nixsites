@@ -30,8 +30,9 @@ export const SECOND_PRINCIPAL = 'c1000000-0000-4000-8000-000000000023';
 /**
  * Tokens double as behaviour selectors so multi-principal, read-only and body-kind tests
  * need no second issuer: 'as-second-principal' acts as another member, 'as-reader' may
- * not write, 'as-canvas-author' opens the item as a canvas body, and 'as-sheet-author'
- * opens it as a spreadsheet body.
+ * not write, 'as-canvas-author' opens the item as a canvas body, 'as-sheet-author'
+ * opens it as a spreadsheet body, and 'solo-first' / 'solo-second' are the two members on an
+ * item whose collaboration is switched off.
  */
 export function authorizerFor(tenant: TestTenant): Authorizer {
   return {
@@ -39,8 +40,12 @@ export function authorizerFor(tenant: TestTenant): Authorizer {
       Promise.resolve({
         tenantId: tenant.tenantId,
         workspaceId: tenant.workspaceId,
-        principalId: token === 'as-second-principal' ? SECOND_PRINCIPAL : tenant.principalId,
+        principalId:
+          token === 'as-second-principal' || token === 'solo-second'
+            ? SECOND_PRINCIPAL
+            : tenant.principalId,
         canWrite: token !== 'as-reader',
+        collaborative: !token.startsWith('solo-'),
         bodyKind:
           token === 'as-canvas-author'
             ? 'canvas'

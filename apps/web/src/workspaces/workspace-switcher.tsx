@@ -46,6 +46,9 @@ export function WorkspaceSwitcher(): ReactNode {
           className={entry.id === workspace.id ? 'text-accent-text' : 'invisible'}
         />
         <span className="truncate">{entry.name}</span>
+        {entry.pendingInvitationId === null ? null : (
+          <span className="shrink-0 text-xs text-muted">Invited</span>
+        )}
       </Link>
       <button
         type="button"

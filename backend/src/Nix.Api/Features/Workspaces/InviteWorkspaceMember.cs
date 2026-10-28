@@ -26,6 +26,7 @@ public sealed class InviteWorkspaceMemberHandler(WorkspaceAdministrationStore st
         {
             "ok" when mutation.Invitation is { } invitation => Result.Success(invitation),
             "not_found" => Result.Failure<WorkspaceInvitationSnapshot>(WorkspaceErrors.NotFound()),
+            "locked" => Result.Failure<WorkspaceInvitationSnapshot>(WorkspaceAdministrationErrors.MembershipLocked()),
             _ => Result.Failure<WorkspaceInvitationSnapshot>(WorkspaceAdministrationErrors.InvitationConflict()),
         };
     }

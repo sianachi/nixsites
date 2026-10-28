@@ -13,7 +13,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.ToTable(NixTables.Notification, table => table.HasCheckConstraint(
             "notification_bounded",
             "char_length(title) <= 200 AND char_length(body) <= 1000"
-                + " AND kind IN ('reminder', 'automation', 'calendar', 'system')"));
+                + " AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation')"));
         builder.HasKey(row => row.Id);
         builder.Property(row => row.Id).HasColumnName("id");
         builder.Property(row => row.TenantId).HasColumnName(NixTables.TenantIdColumn);

@@ -18,6 +18,9 @@ public enum NotificationKind
 
     /// <summary>Anything else Core itself needs to tell the principal.</summary>
     System,
+
+    /// <summary>An invitation to join a workspace, waiting for the recipient to accept or decline.</summary>
+    Invitation,
 }
 
 /// <summary>One entry in a principal's inbox. Never shared with anyone else, even in the same workspace.</summary>

@@ -13,10 +13,12 @@ namespace Nix.Features.Internal;
 /// </param>
 /// <param name="CanWrite">Whether the principal may append updates to the item's body.</param>
 /// <param name="BodyKind">The item's <c>type</c>, which validation dispatches on. Open string.</param>
+/// <param name="Collaborative">Whether several people may edit at once; false means one editor at a time.</param>
 public sealed record ItemAuthorizationResponse(
     Guid TenantId,
     Guid PrincipalId,
     Guid WorkspaceId,
     bool CanRead,
     bool CanWrite,
-    string BodyKind);
+    string BodyKind,
+    bool Collaborative);

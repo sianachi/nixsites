@@ -23,7 +23,13 @@ export const principalPreferencesResponseSchema = z.object({
   mutedContainerIds: z.array(z.uuid()),
 });
 
-const notificationKindSchema = z.enum(['reminder', 'automation', 'calendar', 'system']);
+const notificationKindSchema = z.enum([
+  'reminder',
+  'automation',
+  'calendar',
+  'system',
+  'invitation',
+]);
 
 const notificationDtoSchema = z.object({
   id: z.uuid(),

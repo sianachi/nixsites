@@ -63,6 +63,33 @@ export async function renameWorkspace(
   printResult(await session.client.execute(workspaces.renameWorkspace(workspaceId, name)), output);
 }
 
+/** Closes or opens a workspace to new members, and turns live collaboration on or off. */
+export async function setWorkspaceSharing(
+  profileName: string | undefined,
+  workspaceId: string,
+  options: { readonly members?: string; readonly collaboration?: string },
+  output: OutputOptions,
+  deps: SessionDeps = {},
+): Promise<void> {
+  const parse = (value: string | undefined, flag: string): boolean | undefined => {
+    if (value === undefined) return undefined;
+    if (value !== 'on' && value !== 'off') throw new Error(`${flag} must be 'on' or 'off'.`);
+    return value === 'on';
+  };
+  const members = parse(options.members, '--members');
+  const collaboration = parse(options.collaboration, '--collaboration');
+  const session = await resolveSession(profileName, deps);
+  printResult(
+    await session.client.execute(
+      workspaces.setWorkspaceSharing(workspaceId, {
+        ...(members === undefined ? {} : { membershipLocked: !members }),
+        ...(collaboration === undefined ? {} : { collaboration }),
+      }),
+    ),
+    output,
+  );
+}
+
 /** Removes a workspace from everyday navigation without deleting its durable data. */
 export async function archiveWorkspace(
   profileName: string | undefined,

@@ -296,6 +296,29 @@ export async function createWorkspaceMcpServer(
   );
 
   server.registerTool(
+    'set_workspace_sharing',
+    {
+      description:
+        'Close or open a workspace to new members (membershipLocked), and turn live collaboration ' +
+        'on or off (off means one editor at a time). Owners only; an omitted field is left as it is.',
+      inputSchema: {
+        workspaceId: identifier,
+        membershipLocked: z.boolean().optional(),
+        collaboration: z.boolean().optional(),
+      },
+    },
+    ({ workspaceId, membershipLocked, collaboration }) =>
+      toolResult(async () =>
+        (await session()).client.execute(
+          workspaces.setWorkspaceSharing(workspaceId, {
+            ...(membershipLocked === undefined ? {} : { membershipLocked }),
+            ...(collaboration === undefined ? {} : { collaboration }),
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'list_workspace_invitations',
     {
       description: 'List invitation history for a workspace.',
@@ -1575,19 +1598,22 @@ export async function createWorkspaceMcpServer(
     'set_item_protection',
     {
       description:
-        "Protect an item from deletion or stop it accepting new children. 'on' or 'off' for each; " +
-        "an omitted one is left as it is. A linked calendar's own protection cannot be switched off here.",
+        'Protect an item from deletion, stop it accepting new children, or switch its live ' +
+        "collaboration (off means one editor at a time). 'on' or 'off' for each; an omitted one is " +
+        "left as it is. A linked calendar's own protection cannot be switched off here.",
       inputSchema: {
         itemId: identifier,
         delete: z.enum(['on', 'off']).optional(),
         children: z.enum(['on', 'off']).optional(),
+        collaboration: z.enum(['on', 'off']).optional(),
       },
     },
-    ({ itemId, delete: deletion, children }) =>
+    ({ itemId, delete: deletion, children, collaboration }) =>
       toolResult(async () =>
         executeProtect(await session(), itemId, {
           ...(deletion === undefined ? {} : { delete: deletion }),
           ...(children === undefined ? {} : { children }),
+          ...(collaboration === undefined ? {} : { collaboration }),
         }),
       ),
   );

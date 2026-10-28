@@ -26,6 +26,10 @@ export const workspaceSchema = z.object({
   pendingInvitationId: z.uuid().nullable(),
   lifecycleState: z.enum(['active', 'archived', 'purging']),
   archivedAt: z.iso.datetime({ offset: true }).nullable(),
+  /** Whether owners closed the workspace to new members. */
+  membershipLocked: z.boolean().default(false),
+  /** Whether several people may edit a file at once; off means one editor at a time. */
+  collaboration: z.boolean().default(true),
 });
 
 export type Workspace = z.infer<typeof workspaceSchema>;

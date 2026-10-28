@@ -65,6 +65,8 @@ export type SaveDailyNoteSettingsRequestContract =
   components['schemas']['SaveDailyNoteSettingsRequest'];
 export type CreateWorkspaceRequestContract = components['schemas']['CreateWorkspaceRequest'];
 export type RenameWorkspaceRequestContract = components['schemas']['RenameWorkspaceRequest'];
+export type SetWorkspaceSharingRequestContract =
+  components['schemas']['SetWorkspaceSharingRequest'];
 export type ChangeWorkspaceMemberRoleRequestContract =
   components['schemas']['ChangeWorkspaceMemberRoleRequest'];
 export type CreateWorkspaceInvitationRequestContract =

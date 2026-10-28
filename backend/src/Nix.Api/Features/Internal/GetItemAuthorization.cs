@@ -6,6 +6,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Messaging;
+using Nix.Persistence.Workspaces;
 
 namespace Nix.Features.Internal;
 
@@ -37,7 +38,8 @@ public sealed class GetItemAuthorizationHandler(
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
     AccessTokenSessionContext scope,
-    IItemLocks locks)
+    IItemLocks locks,
+    WorkspaceAdministrationStore workspaces)
     : IQueryHandler<GetItemAuthorization, Result<ItemAuthorization>>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -96,13 +98,18 @@ public sealed class GetItemAuthorizationHandler(
         // the service that trusts CanWrite. An interactive session leaves the ceiling permissive.
         var mayWriteWithinScope = mayWrite && scope.MayWrite;
 
+        // The workspace's switch wins over the item's: either one off means one editor at a time.
+        var workspace = await workspaces.FindAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        var collaborative = item.Collaboration && workspace?.Collaboration != false;
+
         return Result.Success(
             new ItemAuthorization(
                 context.TenantId,
                 context.PrincipalId,
                 item.WorkspaceId,
                 CanWrite: mayWriteWithinScope,
-                BodyKind: item.Type));
+                BodyKind: item.Type,
+                Collaborative: collaborative));
     }
 }
 
@@ -116,12 +123,17 @@ public sealed class GetItemAuthorizationHandler(
 /// dispatches validation on. An open string by design (ADR-0009); consumers treat unknown kinds
 /// as the default prose body rather than refusing them.
 /// </param>
+/// <param name="Collaborative">
+/// Whether several people may edit the body at once. When false the collaboration service lets
+/// one principal write and holds everyone else read-only until they leave.
+/// </param>
 public sealed record ItemAuthorization(
     TenantId TenantId,
     PrincipalId PrincipalId,
     WorkspaceId WorkspaceId,
     bool CanWrite,
-    string BodyKind);
+    string BodyKind,
+    bool Collaborative = true);
 
 /// <summary>
 /// Route handler for the collaboration service's authorization question.
@@ -157,7 +169,8 @@ internal static class GetItemAuthorizationEndpoint
                     authorization.WorkspaceId.Value,
                     CanRead: true,
                     authorization.CanWrite,
-                    authorization.BodyKind)),
+                    authorization.BodyKind,
+                    authorization.Collaborative)),
             error => TypedResults.Problem(InternalEndpoints.Problem(httpContext, error)));
     }
 }

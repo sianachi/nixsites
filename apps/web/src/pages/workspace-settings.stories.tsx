@@ -35,6 +35,8 @@ const workspace: Workspace = {
   pendingInvitationId: null,
   lifecycleState: 'active',
   archivedAt: null,
+  membershipLocked: false,
+  collaboration: true,
 };
 
 const members = [

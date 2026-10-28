@@ -17,6 +17,8 @@ export interface ProtectionOptions {
   readonly delete?: string;
   /** `on` or `off`; absent leaves the new-children protection as it is. */
   readonly children?: string;
+  /** `on` or `off`; off means one editor at a time. Absent leaves it as it is. */
+  readonly collaboration?: string;
 }
 
 export interface ProtectionResult {
@@ -24,6 +26,7 @@ export interface ProtectionResult {
   readonly title: string;
   readonly noDelete: boolean;
   readonly noChildren: boolean;
+  readonly collaboration: boolean;
   readonly managedBy: string | null;
 }
 
@@ -45,12 +48,14 @@ export async function executeProtect(
 ): Promise<ProtectionResult> {
   const noDelete = parseSwitch(options.delete, '--delete');
   const noChildren = parseSwitch(options.children, '--children');
+  const collaboration = parseSwitch(options.collaboration, '--collaboration');
 
   // The workspace only names a cache entry to drop, and a one-shot command has no cache to keep.
   const item = await session.client.execute(
     items.setItemProtection('', itemId, {
       ...(noDelete === undefined ? {} : { noDelete }),
       ...(noChildren === undefined ? {} : { noChildren }),
+      ...(collaboration === undefined ? {} : { collaboration }),
     }),
   );
   return {
@@ -58,6 +63,7 @@ export async function executeProtect(
     title: item.title,
     noDelete: item.noDelete,
     noChildren: item.noChildren,
+    collaboration: item.collaboration,
     managedBy: item.managedBy,
   };
 }

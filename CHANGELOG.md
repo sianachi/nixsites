@@ -11,10 +11,24 @@ follows semantic versioning (`0.x` pre-1.0).
   and week, one-press New note, Structured note, Today's note, Calendar and My Day, and the notes
   you opened last on this browser. Choose Page (one column) or Desk (actions beside your recent
   notes) from the screen itself. It replaces Notes as the first entry in the side rail.
+- Owners can close a workspace to new members in its settings. While it is closed, nobody can be
+  invited and pending invitations cannot be accepted.
+- Live collaboration can be switched off for a workspace (owners) or for one file (anyone who can
+  edit it, from the item menu). With it off, one person edits at a time. Everyone else reads
+  until that person leaves, and the next one can then edit.
+- An invitation arrives as a notification in the inbox, and opening it shows the workspace's
+  Accept and Decline.
+- `nixctl ws sharing` and `nixctl item protect --collaboration`, and the MCP tool
+  `set_workspace_sharing`.
 
 ### Changed
 
 - The note tree is now called the Explorer, so "workspace" only means a workspace you belong to.
+- **Breaking:** an invitation grants nothing until it is accepted. Invitees no longer get
+  provisional access, and signing in no longer accepts a pending invitation. Updating removes the
+  provisional access existing pending invitations gave.
+- People editing a document appear as small dots in their cursor colour, with their name on
+  hover. A person's dot disappears as soon as their tab is hidden or closed.
 - The optional landing page follows the new design: a hero gallery with a screenshot of every view
   (note, board, list, calendar, timeline, spreadsheet, gallery, checklist, matrix, outline, chart,
   form, habit tracker and companion), a light and dark theme switch, and sections on views, the

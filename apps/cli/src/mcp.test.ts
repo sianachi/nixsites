@@ -27,6 +27,7 @@ describe('nixctl mcp workspace tools', () => {
         'list_workspaces',
         'create_workspace',
         'rename_workspace',
+        'set_workspace_sharing',
         'list_workspace_invitations',
         'list_workspace_invitees',
         'invite_workspace_member',

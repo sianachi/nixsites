@@ -150,6 +150,12 @@ public sealed class Item
     public bool NoChildren { get; init; }
 
     /// <summary>
+    /// Gets whether several people may edit this item's body at once. When off (here or on its
+    /// workspace), one person edits and everyone else reads until they leave.
+    /// </summary>
+    public bool Collaboration { get; init; } = true;
+
+    /// <summary>
     /// Gets the system feature that manages this item, or <see langword="null"/> for an ordinary
     /// item. One of <see cref="ItemManagers"/>.
     /// </summary>

@@ -28,6 +28,9 @@ namespace Nix.Features.Items;
 /// Whether it is protected from deletion. It, and any ancestor holding it, cannot be trashed.
 /// </param>
 /// <param name="NoChildren">Whether it refuses new children.</param>
+/// <param name="Collaboration">
+/// Whether several people may edit it at once. Its workspace's own switch can still turn it off.
+/// </param>
 /// <param name="ManagedBy">
 /// The system feature managing it ('calendar' for a linked calendar's container, 'calendar_event'
 /// for a mirrored event), or null. A managed item's deletion protection cannot be switched off here.
@@ -69,6 +72,7 @@ internal sealed record ItemResponse(
     JsonObject? Computed,
     bool NoDelete,
     bool NoChildren,
+    bool Collaboration,
     string? ManagedBy,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

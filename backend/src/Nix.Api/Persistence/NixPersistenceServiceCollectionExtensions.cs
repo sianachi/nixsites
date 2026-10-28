@@ -369,6 +369,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IPublicFormStore, PublicFormStore>();
         services.AddScoped<IPersonalAccessTokens, PersonalAccessTokenStore>();
         services.AddScoped<WorkspaceAdministrationStore>();
+        services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Features.Workspaces.InvitationNoticeSource>();
         services.AddScoped<WorkspacePrincipalDirectoryStore>();
         services.AddSingleton<TemplateDefinitionValidator>();
         services.AddSingleton<TemplateMergePlanner>();
@@ -475,6 +476,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IQueryHandler<GetWorkspace, WorkspaceSnapshot?>, GetWorkspaceHandler>();
         services.AddScoped<ICommandHandler<CreateWorkspace, WorkspaceSnapshot>, CreateWorkspaceHandler>();
         services.AddScoped<ICommandHandler<RenameWorkspace, WorkspaceSnapshot>, RenameWorkspaceHandler>();
+        services.AddScoped<ICommandHandler<SetWorkspaceSharing, WorkspaceSnapshot>, SetWorkspaceSharingHandler>();
         services.AddScoped<ICommandHandler<ArchiveWorkspace, WorkspaceSnapshot>, ArchiveWorkspaceHandler>();
         services.AddScoped<ICommandHandler<RestoreWorkspace, WorkspaceSnapshot>, RestoreWorkspaceHandler>();
         services.AddScoped<ICommandHandler<PurgeWorkspace, bool>, PurgeWorkspaceHandler>();

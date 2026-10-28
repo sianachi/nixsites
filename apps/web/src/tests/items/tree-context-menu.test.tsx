@@ -206,6 +206,7 @@ describe('the sidebar row context menu', () => {
       'Mute reminders',
       'Protect from deletion',
       'Stop new children',
+      'Edit one at a time',
       'Delete',
     ]);
   });

@@ -116,6 +116,12 @@ export const itemSchema = z.object({
   noChildren: z.boolean().default(false),
 
   /**
+   * Whether several people may edit the item at once. Its workspace's switch can still turn it
+   * off. Defaulted, so a server from before the field still parses.
+   */
+  collaboration: z.boolean().default(true),
+
+  /**
    * The system feature managing the item (`calendar` for a linked calendar's container,
    * `calendar_event` for a mirrored event), or null. A managed item's deletion protection is the
    * system's, and is lifted by unlinking the calendar in settings, never by the protection toggle.

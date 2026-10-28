@@ -67,6 +67,8 @@ const workspace: Workspace = {
   pendingInvitationId: null,
   lifecycleState: 'active',
   archivedAt: null,
+  membershipLocked: false,
+  collaboration: true,
 };
 
 export function RecordViewStory({ children }: { readonly children: ReactNode }): ReactNode {

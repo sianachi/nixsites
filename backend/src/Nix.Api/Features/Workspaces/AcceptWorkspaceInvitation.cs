@@ -15,10 +15,17 @@ public sealed class AcceptWorkspaceInvitationHandler(WorkspaceAdministrationStor
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return await store.AcceptInvitationAsync(
-            command.WorkspaceId, command.InvitationId, clock.GetUtcNow(), cancellationToken)
-            .ConfigureAwait(false)
-            ? Result.Success(true)
-            : Result.Failure<bool>(WorkspaceErrors.NotFound());
+        if (await store.AcceptInvitationAsync(
+                command.WorkspaceId, command.InvitationId, clock.GetUtcNow(), cancellationToken)
+            .ConfigureAwait(false))
+        {
+            return Result.Success(true);
+        }
+
+        // The invitee can still read the workspace row while invited, so a closed workspace says why.
+        var workspace = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        return Result.Failure<bool>(workspace is { MembershipLocked: true, PendingInvitationId: not null }
+            ? WorkspaceAdministrationErrors.MembershipLocked()
+            : WorkspaceErrors.NotFound());
     }
 }

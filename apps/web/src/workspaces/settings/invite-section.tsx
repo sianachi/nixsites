@@ -32,8 +32,8 @@ export function InviteSection(props: {
           More<span className="sr-only"> about invitations</span>
         </summary>
         <Text variant="note" tone="muted">
-          People with a verified email who do not already have access can be invited. They receive
-          provisional access immediately and decide whether to accept or decline.
+          People with a verified email who do not already have access can be invited. They are
+          notified, and see nothing in this workspace until they accept.
         </Text>
       </details>
       <Field label="Search people by name or email">

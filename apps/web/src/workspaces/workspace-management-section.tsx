@@ -11,6 +11,7 @@ import { LeaveArchiveSection } from './settings/leave-archive-section';
 import { MembersList } from './settings/members-list';
 import { RenameForm } from './settings/rename-form';
 import type { Confirmation } from './settings/shared';
+import { SharingSwitches } from './settings/sharing-switches';
 import { WorkspaceOverview } from './settings/workspace-overview';
 import { useWorkspace } from './workspace-context';
 import { useWorkspaceAdministration } from './use-workspace-administration';
@@ -52,6 +53,8 @@ export function WorkspaceManagementSection(): ReactNode {
 
       <DailyNotesSwitch />
 
+      <SharingSwitches />
+
       <CreateWorkspaceForm onBusyChange={setCreating} />
 
       {!workspace.canManageMembers ? (
@@ -66,12 +69,18 @@ export function WorkspaceManagementSection(): ReactNode {
           administration.inviteesStatus === 'partial' ? (
             <PartialNotice pending="Some workspace access information is unavailable. The available section remains usable." />
           ) : null}
-          <InviteSection
-            workspace={workspace}
-            administration={administration}
-            inviteeQuery={inviteeQuery}
-            onInviteeQueryChange={setInviteeQuery}
-          />
+          {workspace.membershipLocked ? (
+            <Text tone="muted">
+              This workspace is closed to new members. Allow new members above to invite someone.
+            </Text>
+          ) : (
+            <InviteSection
+              workspace={workspace}
+              administration={administration}
+              inviteeQuery={inviteeQuery}
+              onInviteeQueryChange={setInviteeQuery}
+            />
+          )}
           <MembersList administration={administration} onConfirm={setConfirmation} />
           <InvitationsList administration={administration} />
         </>

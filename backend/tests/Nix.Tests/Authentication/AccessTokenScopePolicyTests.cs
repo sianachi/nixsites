@@ -228,6 +228,7 @@ public sealed class AccessTokenScopePolicyTests
         ["RevokePublicForm"] = Requirement.Admin,
         ["MoveItem"] = Requirement.Admin,
         ["CreateWorkspaceInvitation"] = Requirement.Admin,
+        ["SetWorkspaceSharing"] = Requirement.Admin,
         ["ListWorkspaceInvitees"] = Requirement.Admin,
         ["RevokeWorkspaceInvitation"] = Requirement.Admin,
         ["AcceptWorkspaceInvitation"] = Requirement.Admin,
@@ -368,6 +369,8 @@ public sealed class AccessTokenScopePolicyTests
     [InlineData("POST", "/api/v1/workspaces/00000000-0000-0000-0000-000000000001/leave/")]
     [InlineData("POST", "/api/v1/workspaces/00000000-0000-0000-0000-000000000001/archive/")]
     [InlineData("GET", "/api/v1/workspaces/00000000-0000-0000-0000-000000000001/invitees/")]
+    [InlineData("PUT", "/api/v1/workspaces/00000000-0000-0000-0000-000000000001/sharing")]
+    [InlineData("PUT", "/api/v1/workspaces/00000000-0000-0000-0000-000000000001/sharing/")]
     public void A_trailing_slash_does_not_lower_an_admin_route(string method, string path) =>
         Assert.Equal(Requirement.Admin, Classify(method, path));
 

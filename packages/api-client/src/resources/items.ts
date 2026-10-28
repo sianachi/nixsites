@@ -227,6 +227,8 @@ export interface ItemProtectionInput {
   readonly noDelete?: boolean;
   /** Whether the item refuses new children; omitted leaves it as it is. */
   readonly noChildren?: boolean;
+  /** Whether several people may edit the item at once; omitted leaves it as it is. */
+  readonly collaboration?: boolean;
 }
 
 /**
@@ -246,6 +248,7 @@ export const setItemProtection = (
     body: {
       noDelete: input.noDelete ?? null,
       noChildren: input.noChildren ?? null,
+      collaboration: input.collaboration ?? null,
     } satisfies components['schemas']['SetItemProtectionRequest'],
     invalidates: [itemKey(itemId), workspaceTreeKey(workspaceId)],
   });

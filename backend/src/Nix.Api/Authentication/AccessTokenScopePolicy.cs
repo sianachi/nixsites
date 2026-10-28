@@ -150,6 +150,7 @@ public static class AccessTokenScopePolicy
         // database role remains the authority; an admin-scoped token is an additional ceiling.
         if (value.Contains("/members", StringComparison.OrdinalIgnoreCase)
             || value.Contains("/invitations", StringComparison.OrdinalIgnoreCase)
+            || value.EndsWith("/sharing", StringComparison.OrdinalIgnoreCase)
             || value.EndsWith("/leave", StringComparison.OrdinalIgnoreCase)
             || value.EndsWith("/recover", StringComparison.OrdinalIgnoreCase)
             // Workspace lifecycle changes the availability of the whole workspace. In particular,

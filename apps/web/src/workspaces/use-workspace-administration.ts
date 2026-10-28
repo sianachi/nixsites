@@ -247,7 +247,7 @@ export function useWorkspaceAdministration(inviteeQuery = ''): WorkspaceAdminist
           client.execute(coreWorkspaces.createInvitation(workspaceId, principalId, role), {
             signal,
           }),
-        `${label} now has provisional access and can accept or decline the invitation.`,
+        `${label} was invited. They join when they accept.`,
       );
     },
     revokeInvitation: (invitationId) =>

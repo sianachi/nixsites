@@ -38,6 +38,8 @@ const workspace: Workspace = {
   pendingInvitationId: null,
   lifecycleState: 'active',
   archivedAt: null,
+  membershipLocked: false,
+  collaboration: true,
 };
 
 const GROUP = 'e5555555-5555-4555-8555-555555555555';

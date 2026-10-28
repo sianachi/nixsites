@@ -31,6 +31,8 @@ import {
   ShieldOff,
   Trash2,
   Upload,
+  User,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -989,6 +991,15 @@ function TreeNode(props: TreeNodeProps): ReactNode {
         icon: item.noChildren === true ? FolderPlus : FolderLock,
         onSelect: () => {
           void tree.setProtection(item.id, { noChildren: item.noChildren !== true });
+        },
+      },
+      {
+        kind: 'action',
+        // Off means one editor at a time; the workspace's own switch can still keep it off.
+        label: item.collaboration === false ? 'Allow editing together' : 'Edit one at a time',
+        icon: item.collaboration === false ? Users : User,
+        onSelect: () => {
+          void tree.setProtection(item.id, { collaboration: item.collaboration === false });
         },
       },
       {

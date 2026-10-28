@@ -73,6 +73,9 @@ internal static class WorkspaceAdministrationErrors
     internal static NixError InvitationConflict() => new(
         "workspaces.invitation_conflict",
         "The pending invitation role or protected ownership state conflicts with this request.");
+    internal static NixError MembershipLocked() => new(
+        "workspaces.membership_locked",
+        "This workspace is closed to new members. An owner can open it again in its settings.");
     internal static NixError ProtectedOwner() => new(
         "workspaces.owner_protected",
         "The protected personal owner or last active human owner cannot be changed or removed.");

@@ -26,13 +26,20 @@ internal sealed record WorkspaceResponse(
     bool CanUseDailyNotes,
     Guid? PendingInvitationId,
     string LifecycleState,
-    DateTimeOffset? ArchivedAt);
+    DateTimeOffset? ArchivedAt,
+    bool MembershipLocked,
+    bool Collaboration);
 
 /// <summary>A request to create a shared workspace.</summary>
 internal sealed record CreateWorkspaceRequest(string Name);
 
 /// <summary>A request to rename a workspace.</summary>
 internal sealed record RenameWorkspaceRequest(string Name);
+
+/// <summary>A request to change who may join a workspace and how its files are edited. A null field is left as it is.</summary>
+/// <param name="MembershipLocked">Whether the workspace is closed to new members.</param>
+/// <param name="Collaboration">Whether several people may edit a file at once.</param>
+internal sealed record SetWorkspaceSharingRequest(bool? MembershipLocked, bool? Collaboration);
 
 /// <summary>The canonical dated note opened for a workspace day.</summary>
 /// <param name="ItemId">The note's identifier.</param>

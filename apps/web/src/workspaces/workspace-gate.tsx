@@ -92,15 +92,19 @@ export function LegacyWorkspaceRedirect(): ReactNode {
       ? readLastLocation(
           subject,
           state.workspaces
-            .filter((workspace) => workspace.lifecycleState === 'active')
+            .filter(
+              (workspace) =>
+                workspace.lifecycleState === 'active' && workspace.pendingInvitationId === null,
+            )
             .map((workspace) => workspace.id),
         )
       : null;
   if (saved) return <Navigate replace to={saved} />;
 
   const remembered = readLastWorkspaceId();
+  // A pending invitation is never opened on its own: only when the invitee chooses to answer it.
   const activeWorkspaces = state.workspaces.filter(
-    (workspace) => workspace.lifecycleState === 'active',
+    (workspace) => workspace.lifecycleState === 'active' && workspace.pendingInvitationId === null,
   );
   if (activeWorkspaces.length === 0) return <Navigate replace to="/workspaces/archived" />;
   const rememberedWorkspace = activeWorkspaces.find((workspace) => workspace.id === remembered);

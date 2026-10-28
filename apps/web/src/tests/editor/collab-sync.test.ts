@@ -438,6 +438,31 @@ describe('the websocket provider', () => {
     expect(h.states.at(-1)).toBe('readonly');
   });
 
+  it('waits read-only while someone else edits, and goes live when handed the document', async () => {
+    const h = harness();
+    active = h.sync;
+    await settled();
+    const socket = h.latest();
+    socket.open();
+    ready(socket, 'read');
+    const notice = (code: string): void => {
+      const encoder = encoding.createEncoder();
+      encoding.writeVarUint(encoder, MESSAGE_NOTICE);
+      encoding.writeVarString(encoder, JSON.stringify({ code, detail: '' }));
+      socket.receiveBinary(encoding.toUint8Array(encoder));
+    };
+
+    notice('editing_elsewhere');
+    expect(h.states.at(-1)).toBe('readonly');
+    notice('editable');
+    expect(h.states.at(-1)).toBe('live');
+
+    const before = socket.binaryFramesSent().length;
+    typeParagraph(h.doc, 'Mine to edit now.');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(socket.binaryFramesSent().length).toBeGreaterThan(before);
+  });
+
   it.each([
     ['document_too_large', 0],
     ['rate_limited', 1],
@@ -566,6 +591,20 @@ describe('the websocket provider', () => {
       expect(h.tokens).toEqual(['token-0']);
     },
   );
+
+  it('clears local presence while hidden and restores it when visible', async () => {
+    const h = harness();
+    active = h.sync;
+    await settled();
+    h.sync.awareness.setLocalState({ user: { name: 'Me' } });
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    visibility.mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(h.sync.awareness.getLocalState()).toBeNull();
+    visibility.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(h.sync.awareness.getLocalState()).toEqual({ user: { name: 'Me' } });
+  });
 
   it('reconnects a disconnected note promptly when the app returns to the foreground', async () => {
     const h = harness();

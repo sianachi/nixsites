@@ -315,6 +315,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/workspaces/{workspaceId}/sharing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['SetWorkspaceSharing'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/workspaces/{workspaceId}/members': {
     parameters: {
       query?: never;
@@ -4631,6 +4647,7 @@ export interface components {
       computed: null | components['schemas']['JsonObject'];
       noDelete: boolean;
       noChildren: boolean;
+      collaboration: boolean;
       managedBy: null | string;
       /** Format: date-time */
       createdAt: string;
@@ -5384,6 +5401,7 @@ export interface components {
     SetItemProtectionRequest: {
       noDelete: null | boolean;
       noChildren: null | boolean;
+      collaboration?: null | boolean;
     };
     SetPluginEnabledRequest: {
       enabled: boolean;
@@ -5416,6 +5434,10 @@ export interface components {
       default: null | string;
       hideDocument?: null | boolean;
       expectedVersion?: null | string;
+    };
+    SetWorkspaceSharingRequest: {
+      membershipLocked: null | boolean;
+      collaboration: null | boolean;
     };
     ShelfResponse: {
       items: components['schemas']['KeptItemResponse'][];
@@ -6247,6 +6269,8 @@ export interface components {
       lifecycleState: string;
       /** Format: date-time */
       archivedAt: null | string;
+      membershipLocked: boolean;
+      collaboration: boolean;
     };
     WriteItemBodyRequest: {
       markdown: null | string;
@@ -7065,6 +7089,41 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetWorkspaceSharing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetWorkspaceSharingRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

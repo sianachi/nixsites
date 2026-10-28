@@ -97,6 +97,12 @@ internal static class WorkspaceEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
+        workspaces.MapPut("/{workspaceId:guid}/sharing", SetWorkspaceSharingEndpoint.Handle)
+            .WithName("SetWorkspaceSharing")
+            .Produces<WorkspaceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+
         workspaces.MapGet("/{workspaceId:guid}/members", WorkspaceAdministrationEndpoints.ListMembers)
             .WithName("ListWorkspaceMembers")
             .Produces<CursorPage<WorkspaceMemberResponse>>(StatusCodes.Status200OK)
@@ -202,7 +208,7 @@ internal static class WorkspaceEndpoints
         row.Id.Value, row.Name, row.VersionRetentionDays, row.StorageQuotaBytes, row.CreatedAt,
         row.PersonalOwnerPrincipalId is null ? "shared" : "personal",
         row.CanRename, row.CanManageMembers, row.CanLeave, row.CanUseDailyNotes,
-        row.PendingInvitationId, row.LifecycleState, row.ArchivedAt);
+        row.PendingInvitationId, row.LifecycleState, row.ArchivedAt, row.MembershipLocked, row.Collaboration);
 
     internal static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(HttpContext context, NixError error)
     {
@@ -343,6 +349,21 @@ internal static class RenameWorkspaceEndpoint
         var result = await dispatcher.SendAsync<RenameWorkspace, WorkspaceSnapshot>(
             new RenameWorkspace(WorkspaceId.From(workspaceId), request.Name), context.RequestAborted)
             .ConfigureAwait(false);
+        return result.Match<Results<Ok<WorkspaceResponse>, ProblemHttpResult>>(
+            row => TypedResults.Ok(WorkspaceEndpoints.ToResponse(row)),
+            error => TypedResults.Problem(WorkspaceEndpoints.Problem(context, error)));
+    }
+}
+
+internal static class SetWorkspaceSharingEndpoint
+{
+    internal static async Task<Results<Ok<WorkspaceResponse>, ProblemHttpResult>> Handle(
+        Guid workspaceId, SetWorkspaceSharingRequest request, HttpContext context,
+        [FromServices] NixDispatcher dispatcher)
+    {
+        var result = await dispatcher.SendAsync<SetWorkspaceSharing, WorkspaceSnapshot>(
+            new SetWorkspaceSharing(WorkspaceId.From(workspaceId), request.MembershipLocked, request.Collaboration),
+            context.RequestAborted).ConfigureAwait(false);
         return result.Match<Results<Ok<WorkspaceResponse>, ProblemHttpResult>>(
             row => TypedResults.Ok(WorkspaceEndpoints.ToResponse(row)),
             error => TypedResults.Problem(WorkspaceEndpoints.Problem(context, error)));
