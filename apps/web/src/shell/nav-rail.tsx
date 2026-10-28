@@ -136,14 +136,6 @@ type RailItem = RailDestination | RailAction;
  * sequence, with a direction - and the link graph has neither. `Network`'s undirected nodes and
  * edges are what the view actually shows.
  */
-const PET_ITEM: RailDestination = {
-  kind: 'destination',
-  to: '/pet',
-  label: 'Pet',
-  icon: PawPrint,
-  group: 'workspace',
-};
-
 /**
  * The Smart lists control: a menu rather than a destination, because smart lists are items and each
  * already has an address - what the rail adds is a way to reach them from anywhere and to keep the
@@ -157,64 +149,36 @@ const QUERIES_ITEM: RailAction = {
   group: 'workspace',
 };
 
+const page = (
+  group: RailItemBase['group'],
+  to: string,
+  label: string,
+  icon: LucideIcon,
+  includesChildren?: true,
+): RailDestination => ({
+  kind: 'destination',
+  to,
+  label,
+  icon,
+  group,
+  ...(includesChildren ? { includesChildren } : {}),
+});
+
+const PET_ITEM = page('workspace', '/pet', 'Pet', PawPrint);
+
 const ITEMS: readonly RailItem[] = [
-  { kind: 'destination', to: '', label: 'Notes', icon: NotebookText, group: 'workspace' },
-  {
-    kind: 'destination',
-    to: '/my-day',
-    label: 'My Day',
-    icon: CalendarCheck,
-    group: 'workspace',
-  },
-  {
-    kind: 'destination',
-    to: '/daily',
-    label: 'Daily notes',
-    icon: CalendarClock,
-    group: 'workspace',
-  },
-  {
-    kind: 'destination',
-    to: '/calendar',
-    label: 'Calendar',
-    icon: CalendarDays,
-    group: 'workspace',
-  },
-  { kind: 'destination', to: '/graph', label: 'Graph', icon: Network, group: 'workspace' },
-  {
-    kind: 'destination',
-    to: '/bookmarks',
-    label: 'Bookmarks',
-    icon: Bookmark,
-    group: 'workspace',
-  },
-  {
-    kind: 'destination',
-    to: '/templates',
-    label: 'Templates',
-    icon: LayoutTemplate,
-    group: 'workspace',
-    includesChildren: true,
-  },
+  page('workspace', '', 'Notes', NotebookText),
+  page('workspace', '/my-day', 'My Day', CalendarCheck),
+  page('workspace', '/daily', 'Daily notes', CalendarClock),
+  page('workspace', '/calendar', 'Calendar', CalendarDays),
+  page('workspace', '/graph', 'Graph', Network),
+  page('workspace', '/bookmarks', 'Bookmarks', Bookmark),
+  page('workspace', '/templates', 'Templates', LayoutTemplate, true),
   QUERIES_ITEM,
-  // `Zap` rather than `Workflow`, for the reason the graph note gives: an automation is a rule that
-  // fires, not a flowchart.
-  {
-    kind: 'destination',
-    to: '/automations',
-    label: 'Automations',
-    icon: Zap,
-    group: 'utility',
-  },
-  { kind: 'destination', to: '/trash', label: 'Trash', icon: Trash2, group: 'utility' },
+  page('utility', '/automations', 'Automations', Zap),
+  page('utility', '/trash', 'Trash', Trash2),
   { kind: 'action', action: 'import', label: 'Import', icon: FolderInput, group: 'utility' },
-  {
-    kind: 'destination',
-    to: '/settings',
-    label: 'Settings',
-    icon: Settings,
-    group: 'utility',
-  },
+  page('utility', '/settings', 'Settings', Settings),
 ];
 
 export interface NavRailProps {

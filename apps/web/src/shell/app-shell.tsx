@@ -202,25 +202,21 @@ export function AppShell(): ReactNode {
   // drawer took it.
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
 
-  function startStructured(parentId: string | null, recipe: StructuredRecipeId): void {
+  function openFlow(path: string, parentId: string | null): void {
     const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-    void navigate(`/w/${workspaceId}/new/${recipe}${search}`);
-    if (narrow && sidebar.visible) {
-      sidebar.toggle();
-    }
-  }
-
-  function startTemplate(parentId: string | null, templateId: string): void {
-    const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-    void navigate(`/w/${workspaceId}/templates/${templateId}/create${search}`);
+    void navigate(`/w/${workspaceId}/${path}${search}`);
     if (narrow && sidebar.visible) sidebar.toggle();
   }
 
-  function browseTemplates(parentId: string | null): void {
-    const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-    void navigate(`/w/${workspaceId}/templates${search}`);
-    if (narrow && sidebar.visible) sidebar.toggle();
-  }
+  const startStructured = (parentId: string | null, recipe: StructuredRecipeId): void => {
+    openFlow(`new/${recipe}`, parentId);
+  };
+  const startTemplate = (parentId: string | null, templateId: string): void => {
+    openFlow(`templates/${templateId}/create`, parentId);
+  };
+  const browseTemplates = (parentId: string | null): void => {
+    openFlow('templates', parentId);
+  };
 
   // Where focus goes once a delete toast's undo window closes, by any path. The row that opened it
   // is gone by then - deleted, which is why there is a toast at all - so there is no invoker to

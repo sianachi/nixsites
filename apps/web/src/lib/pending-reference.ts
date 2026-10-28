@@ -1,3 +1,5 @@
+import { createPendingSlot } from './pending-slot';
+
 /**
  * A reference somebody has asked for but not yet placed.
  *
@@ -21,33 +23,12 @@ export interface PendingReference {
   readonly label: string;
 }
 
-let pending: PendingReference | null = null;
-const listeners = new Set<() => void>();
+const slot = createPendingSlot<PendingReference>();
 
-function changed(): void {
-  for (const listener of listeners) listener();
-}
-
-export function offerReference(reference: PendingReference): void {
-  pending = reference;
-  changed();
-}
-
-export function clearPendingReference(): void {
-  if (pending !== null) {
-    pending = null;
-    changed();
-  }
-}
+export const offerReference = slot.offer;
+export const clearPendingReference = slot.clear;
 
 /** The pending reference, as `useSyncExternalStore` wants to read it. */
-export function pendingReference(): PendingReference | null {
-  return pending;
-}
+export const pendingReference = slot.get;
 
-export function onPendingReferenceChanged(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
+export const onPendingReferenceChanged = slot.subscribe;

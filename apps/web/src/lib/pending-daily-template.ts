@@ -1,3 +1,5 @@
+import { createPendingSlot } from './pending-slot';
+
 /**
  * A daily note's template, waiting to be written into the note it is for.
  *
@@ -17,33 +19,12 @@ export interface PendingDailyTemplate {
   readonly markdown: string;
 }
 
-let pending: PendingDailyTemplate | null = null;
-const listeners = new Set<() => void>();
+const slot = createPendingSlot<PendingDailyTemplate>();
 
-function changed(): void {
-  for (const listener of listeners) listener();
-}
-
-export function offerDailyTemplate(template: PendingDailyTemplate): void {
-  pending = template;
-  changed();
-}
-
-export function clearPendingDailyTemplate(): void {
-  if (pending !== null) {
-    pending = null;
-    changed();
-  }
-}
+export const offerDailyTemplate = slot.offer;
+export const clearPendingDailyTemplate = slot.clear;
 
 /** The pending template, as `useSyncExternalStore` wants to read it. */
-export function pendingDailyTemplate(): PendingDailyTemplate | null {
-  return pending;
-}
+export const pendingDailyTemplate = slot.get;
 
-export function onPendingDailyTemplateChanged(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
+export const onPendingDailyTemplateChanged = slot.subscribe;
