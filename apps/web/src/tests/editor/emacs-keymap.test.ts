@@ -2,8 +2,8 @@ import { nixEditingExtensions } from '@nix/editor-schema';
 import { Editor, Extension } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EmacsKeymap, emacsKillRing, emacsStatus } from '../../editor/emacs-keymap';
-import { useKeyboardModeStore } from '../../editor/keyboard-mode-store';
+import { EmacsKeymap, emacsKillRing, emacsStatus } from '@nix/web-editor/editor/emacs-keymap';
+import { useKeyboardModeStore } from '@nix/web-editor/editor/keyboard-mode-store';
 
 let editor: Editor | null = null;
 

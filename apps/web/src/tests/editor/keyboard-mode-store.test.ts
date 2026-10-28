@@ -7,7 +7,7 @@ import {
   readKeyboardMode,
   storeKeyboardMode,
   useKeyboardModeStore,
-} from '../../editor/keyboard-mode-store';
+} from '@nix/web-editor/editor/keyboard-mode-store';
 import { memoryStorage } from '../memory-storage';
 
 afterEach(() => {

@@ -166,7 +166,7 @@ const ALLOWLIST: readonly AllowlistRow[] = [
     why: 'The primitive cannot import itself, and a label carrying `htmlFor` has to be a real `<label>`. Those internals publish their type outward instead - through `<Text>` and through `fieldLabel` - which is why the guard scans `apps/web` and not this package.',
   },
   {
-    where: 'apps/web/src/editor/prose.ts',
+    where: 'packages/web-editor/src/editor/prose.ts',
     what: 'Every block and mark in a document',
     why: 'ProseMirror owns the document’s DOM, so React never sees a heading to wrap. The steps are named once in `prose-type.ts` and composed from there, and `prose.test.ts` holds the toggle summaries to the heading ranks they present as.',
   },

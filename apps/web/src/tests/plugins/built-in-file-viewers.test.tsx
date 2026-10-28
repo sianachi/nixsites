@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { findBuiltInFileViewer } from '../../plugins/built-in-file-viewers';
-import { CsvViewer, parseDelimited } from '../../plugins/csv-viewer';
-import { MarkdownViewer } from '../../plugins/markdown-viewer';
-import { mediaKind } from '../../plugins/media-viewer';
-import { TextViewer, isTextFile } from '../../plugins/text-viewer';
+import { findBuiltInFileViewer } from '@nix/web-editor/plugins/built-in-file-viewers';
+import { CsvViewer, parseDelimited } from '@nix/web-editor/plugins/csv-viewer';
+import { MarkdownViewer } from '@nix/web-editor/plugins/markdown-viewer';
+import { mediaKind } from '@nix/web-editor/plugins/media-viewer';
+import { TextViewer, isTextFile } from '@nix/web-editor/plugins/text-viewer';
 
 /**
  * The built-in viewers: which file each one claims, and what it draws.

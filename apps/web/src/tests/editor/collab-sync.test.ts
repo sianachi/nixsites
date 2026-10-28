@@ -9,7 +9,7 @@ import {
   type CollabSync,
   type ProviderSocket,
   type SyncState,
-} from '../../editor/collab-sync';
+} from '@nix/web-editor/editor/collab-sync';
 
 /**
  * The provider's promises, asserted over a fake socket: the token goes first and never in

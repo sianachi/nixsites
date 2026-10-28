@@ -1,7 +1,7 @@
 import { NixApiError, NixErrorKind, type NixClient } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { coCitationSource, REFRESH_MS, withinWait } from '../../editor/related-items';
+import { coCitationSource, REFRESH_MS, withinWait } from '@nix/web-editor/editor/related-items';
 
 function related(entries: readonly [string, number | string][]) {
   return {

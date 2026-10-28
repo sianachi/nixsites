@@ -6,13 +6,13 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAnnouncement } from '@nix/web-foundation/a11y/announcer';
-import { MentionBubble } from '../../editor/mention-bubble';
+import { MentionBubble } from '@nix/web-editor/editor/mention-bubble';
 import {
   IDLE_MS,
   mentionsIn,
   setMentionContext,
   UnlinkedMentions,
-} from '../../editor/unlinked-mentions';
+} from '@nix/web-editor/editor/unlinked-mentions';
 import { readDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { memoryStorage } from '../memory-storage';
 

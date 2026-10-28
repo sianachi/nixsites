@@ -2,7 +2,7 @@ import { Button, ContextMenu, Dialog, Icon, Text } from '@nix/ui';
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useId, useState, useSyncExternalStore, type ReactElement } from 'react';
 
-import { saveArchive } from '../export/export-archive';
+import { saveArchive } from '@nix/web-platform/export/export-archive';
 import type { FileViewerPlugin } from './file-viewer-registry';
 import { mermaidThemeSnapshot, renderMermaid, subscribeToMermaidTheme } from './mermaid-render';
 

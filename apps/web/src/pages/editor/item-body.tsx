@@ -18,7 +18,7 @@ import { CompanionViewPair } from './companion-view-pair';
 // An artifact's live view carries the OpenUI renderer, its own chunk loaded on first open.
 const ArtifactView = lazy(() => import('../../openui/artifact-view'));
 const CanvasEditor = lazy(async () => {
-  const module = await import('../../editor/canvas-editor');
+  const module = await import('@nix/web-editor/editor/canvas-editor');
   return { default: module.CanvasEditor };
 });
 

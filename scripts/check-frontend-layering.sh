@@ -40,7 +40,7 @@
 #   R5  apps/web/src/app/ does not exist.
 #   R6  nothing under packages/web-* imports from apps/ (packages never import apps).
 #   R7  web packages stack: web-foundation imports no other web-*, web-platform only web-foundation,
-#      web-workspaces only those two,
+#      web-editor and web-workspaces only those two,
 #      web-sites those three.
 #
 # Be clear about what this is worth. It catches the ordinary mistake - someone
@@ -166,6 +166,8 @@ if [ -n "$packages" ]; then
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-platform/src" | grep -vE "'@nix/web-(foundation|platform)[/']" || true)
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-workspaces/src" | grep -vE "'@nix/web-(foundation|platform|workspaces)[/']" || true)
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-sites/src" | grep -vE "'@nix/web-(foundation|platform|workspaces|sites)[/']" || true)"
+  up_imports="$up_imports
+$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-editor/src" | grep -vE "'@nix/web-(foundation|platform|editor)[/']" || true)"
   up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"
 fi
 

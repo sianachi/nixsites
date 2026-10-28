@@ -1,14 +1,17 @@
-import { useGhostTextPreference } from '../../editor/ghost-text-preference';
-import { useMentionPreference } from '../../editor/mention-preference';
-import { useMobileToolbarPreference } from '../../editor/mobile-toolbar-preference';
-import { usePageGuidePreference } from '../../editor/page-guide-preference';
+import { useGhostTextPreference } from '@nix/web-editor/editor/ghost-text-preference';
+import { useMentionPreference } from '@nix/web-editor/editor/mention-preference';
+import { useMobileToolbarPreference } from '@nix/web-editor/editor/mobile-toolbar-preference';
+import { usePageGuidePreference } from '@nix/web-editor/editor/page-guide-preference';
 import { Button, Field, Select, Text } from '@nix/ui';
 import { useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';
-import { KeyboardModeSchema, useKeyboardModeStore } from '../../editor/keyboard-mode-store';
+import {
+  KeyboardModeSchema,
+  useKeyboardModeStore,
+} from '@nix/web-editor/editor/keyboard-mode-store';
 import { LINK_MENTION_SHORTCUT } from '@nix/web-foundation/keyboard/shortcut-registry';
 import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
 import { clearSuggestionDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';

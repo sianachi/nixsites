@@ -2,12 +2,12 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditorToolbar, type ToolbarProps } from '../../editor/toolbar';
+import { EditorToolbar, type ToolbarProps } from '@nix/web-editor/editor/toolbar';
 import { Editor, EditorContent } from '@tiptap/react';
 import { nixEditingExtensions } from '@nix/editor-schema';
-import { MoveBlock } from '../../editor/move-block';
-import { TableControls } from '../../editor/table-controls';
-import { ColumnWidthControls } from '../../editor/column-width';
+import { MoveBlock } from '@nix/web-editor/editor/move-block';
+import { TableControls } from '@nix/web-editor/editor/table-controls';
+import { ColumnWidthControls } from '@nix/web-editor/editor/column-width';
 
 /**
  * The formatting toolbar.

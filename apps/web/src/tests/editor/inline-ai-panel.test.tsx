@@ -5,8 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { InlineAiPanel } from '../../editor/inline-ai/inline-ai-panel';
-import type { InlineAiController, InlinePanelState } from '../../editor/inline-ai/use-inline-ai';
+import { InlineAiPanel } from '@nix/web-editor/editor/inline-ai/inline-ai-panel';
+import type {
+  InlineAiController,
+  InlinePanelState,
+} from '@nix/web-editor/editor/inline-ai/use-inline-ai';
 import { stubViewport } from '../stub-viewport';
 
 const INITIAL: InlinePanelState = {

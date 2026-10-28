@@ -13,6 +13,10 @@
       "types": "./src/auth/auth-provider.tsx",
       "default": "./src/auth/auth-provider.tsx"
     },
+    "./export/export-dialog": {
+      "types": "./src/export/export-dialog.tsx",
+      "default": "./src/export/export-dialog.tsx"
+    },
     "./panes/pane-context": {
       "types": "./src/panes/pane-context.tsx",
       "default": "./src/panes/pane-context.tsx"

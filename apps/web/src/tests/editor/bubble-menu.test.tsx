@@ -5,7 +5,7 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type ReactNode } from 'react';
 
-import { BubbleMenu } from '../../editor/bubble-menu';
+import { BubbleMenu } from '@nix/web-editor/editor/bubble-menu';
 
 /**
  * The bubble menu against a real editor: shown over a real selection, applying the mark through

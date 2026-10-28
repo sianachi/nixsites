@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ItemInsertDialog } from '../../editor/item-insert-dialog';
+import { ItemInsertDialog } from '@nix/web-editor/editor/item-insert-dialog';
 const harness = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), select: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => harness }));
 vi.mock('@nix/web-platform/routing/selected-item', () => ({ useSelectedItem: () => harness }));

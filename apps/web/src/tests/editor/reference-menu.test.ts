@@ -2,7 +2,11 @@ import { getSchema } from '@tiptap/core';
 import { nixEditingExtensions } from '@nix/editor-schema';
 import { describe, expect, it } from 'vitest';
 
-import { findTrigger, linkedTargets, linkFrecencyNamespace } from '../../editor/reference-menu';
+import {
+  findTrigger,
+  linkedTargets,
+  linkFrecencyNamespace,
+} from '@nix/web-editor/editor/reference-menu';
 
 describe('finding a reference trigger in the text before the caret', () => {
   it('opens on a double bracket, for an item', () => {

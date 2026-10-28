@@ -18,8 +18,8 @@ import type {
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CanvasElement } from '../../editor/canvas-binding';
-import { NixCanvas, type NixCanvasProps } from '../../editor/nix-canvas';
+import type { CanvasElement } from '@nix/web-editor/editor/canvas-binding';
+import { NixCanvas, type NixCanvasProps } from '@nix/web-editor/editor/nix-canvas';
 
 type SceneUpdate = Parameters<ExcalidrawImperativeAPI['updateScene']>[0];
 
@@ -171,7 +171,7 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => fileHarness.client,
 }));
 
-vi.mock('../../editor/use-canvas-library', () => ({
+vi.mock('@nix/web-editor/editor/use-canvas-library', () => ({
   useCanvasLibrary: () => libraryHarness.current,
 }));
 

@@ -8,7 +8,7 @@ import {
   estimatedPageHeight,
   planPageGuides,
   type MeasuredBlock,
-} from '../../editor/page-guides';
+} from '@nix/web-editor/editor/page-guides';
 
 /**
  * The page guides' arithmetic.

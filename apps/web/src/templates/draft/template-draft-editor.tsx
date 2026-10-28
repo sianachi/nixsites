@@ -2,7 +2,7 @@ import { Field, Icon, Input, Text, cn, focusRing } from '@nix/ui';
 import { FileText } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { CollabSync } from '../../editor/collab-sync';
+import type { CollabSync } from '@nix/web-editor/editor/collab-sync';
 import type { TemplateItem } from '../template-api';
 import { currentItem, flatten, type TemplateItemEdit, type TemplateItemEdits } from './draft-model';
 import { TemplateBodyEditor } from './template-body-editor';

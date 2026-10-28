@@ -11,7 +11,7 @@ import {
   startCollabSync,
   type ProviderSocket,
   type SyncState,
-} from '../../editor/collab-sync';
+} from '@nix/web-editor/editor/collab-sync';
 import {
   bodyCacheAdmits,
   bodyCacheAccountEpoch,

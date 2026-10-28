@@ -3,15 +3,15 @@ import { UndoRedo } from '@tiptap/extensions';
 import { AllSelection } from '@tiptap/pm/state';
 import { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { anchorRange, applyInlineResult } from '../../editor/inline-ai/inline-ai-apply';
-import { contextFor, gatherMaterial } from '../../editor/inline-ai/inline-ai-material';
+import { anchorRange, applyInlineResult } from '@nix/web-editor/editor/inline-ai/inline-ai-apply';
+import { contextFor, gatherMaterial } from '@nix/web-editor/editor/inline-ai/inline-ai-material';
 import {
   InlineAiError,
   MAX_INLINE_OUTPUT_BYTES,
   streamInline,
   truncateUtf8,
   utf8Length,
-} from '../../editor/inline-ai/inline-ai-stream';
+} from '@nix/web-editor/editor/inline-ai/inline-ai-stream';
 import type { NixClient } from '@nix/api-client';
 
 const editors: Editor[] = [];

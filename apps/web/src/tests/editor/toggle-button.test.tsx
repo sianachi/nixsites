@@ -5,7 +5,7 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { type ReactNode } from 'react';
 
-import { renderToggleButton, toggleSummaryView } from '../../editor/toggle-button';
+import { renderToggleButton, toggleSummaryView } from '@nix/web-editor/editor/toggle-button';
 
 /**
  * A toggle under a keyboard, against a real editor.

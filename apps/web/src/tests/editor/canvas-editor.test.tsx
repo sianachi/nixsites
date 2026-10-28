@@ -2,9 +2,9 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CanvasElement } from '../../editor/canvas-binding';
-import { CanvasEditor } from '../../editor/canvas-editor';
-import type { NixCanvasProps } from '../../editor/nix-canvas';
+import type { CanvasElement } from '@nix/web-editor/editor/canvas-binding';
+import { CanvasEditor } from '@nix/web-editor/editor/canvas-editor';
+import type { NixCanvasProps } from '@nix/web-editor/editor/nix-canvas';
 import { stubViewport } from '../stub-viewport';
 
 const canvasHarness = vi.hoisted(() => ({
@@ -23,15 +23,15 @@ vi.mock('@nix/web-foundation/lib/session-store', () => ({
     selector({ profile: { name: 'Test person' } }),
 }));
 
-vi.mock('../../editor/collab-sync', () => ({
+vi.mock('@nix/web-editor/editor/collab-sync', () => ({
   startCollabSync: () => ({ destroy: canvasHarness.destroyed }),
 }));
 
-vi.mock('../../editor/presence-list', () => ({
+vi.mock('@nix/web-editor/editor/presence-list', () => ({
   PresenceList: () => null,
 }));
 
-vi.mock('../../editor/nix-canvas', async () => {
+vi.mock('@nix/web-editor/editor/nix-canvas', async () => {
   const React = await import('react');
   return {
     NixCanvas: (props: NixCanvasProps): React.ReactNode => {

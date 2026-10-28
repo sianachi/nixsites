@@ -17,8 +17,8 @@ import {
   IDLE_MS,
   REBUILD_MS,
   setGhostTextContext,
-} from '../../editor/ghost-text';
-import { setVimEnabled, VimMotions } from '../../editor/vim-motions';
+} from '@nix/web-editor/editor/ghost-text';
+import { setVimEnabled, VimMotions } from '@nix/web-editor/editor/vim-motions';
 
 /**
  * Phrase suggestions against a real editor: typed text, a real idle timer (faked), the decoration

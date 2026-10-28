@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useCanvasLibrary } from '../../editor/use-canvas-library';
+import { useCanvasLibrary } from '@nix/web-editor/editor/use-canvas-library';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { requestUrl } from '../request-url';
 

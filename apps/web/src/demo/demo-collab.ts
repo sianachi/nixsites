@@ -6,7 +6,7 @@ import { updateYFragment } from 'y-prosemirror';
 import * as syncProtocol from 'y-protocols/sync';
 import * as Y from 'yjs';
 
-import type { ProviderSocket } from '../editor/collab-sync';
+import type { ProviderSocket } from '@nix/web-editor/editor/collab-sync';
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_PERSISTENCE_BARRIER = 3;

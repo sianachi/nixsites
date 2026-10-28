@@ -8,7 +8,7 @@ import {
   applyMarkdown,
   snapshotMarkdown,
   watchRemoteChanges,
-} from '../../editor/markdown-mode';
+} from '@nix/web-editor/editor/markdown-mode';
 
 function noteWith(blocks: unknown[]): { doc: Y.Doc; fragment: Y.XmlFragment } {
   const doc = new Y.Doc();

@@ -2,7 +2,7 @@ import { nixSchema, parseDocument } from '@nix/editor-schema';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 
-import { moveTopLevelBlockTr } from '../../editor/move-block';
+import { moveTopLevelBlockTr } from '@nix/web-editor/editor/move-block';
 import { paragraph } from '../paragraph-fixture';
 
 /**

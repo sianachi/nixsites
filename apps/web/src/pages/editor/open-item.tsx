@@ -7,7 +7,7 @@ import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
-import { NoteEditor } from '../../editor/note-editor';
+import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import { useHiddenItems } from '../../items/use-hidden-items';
 import {
   historyPanelWidth,

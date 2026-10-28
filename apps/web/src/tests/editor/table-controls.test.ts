@@ -16,7 +16,7 @@ import {
   hasHeaderColumn,
   hasHeaderRow,
   tableContext,
-} from '../../editor/table-controls';
+} from '@nix/web-editor/editor/table-controls';
 
 /**
  * Where you are in a table, as decorations.

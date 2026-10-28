@@ -8,8 +8,11 @@ import type { ReactNode } from 'react';
 import * as Y from 'yjs';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { snapshotMarkdown } from '../../editor/markdown-mode';
-import { MarkdownLossesDialog, MarkdownModePanel } from '../../editor/markdown-mode-panel';
+import { snapshotMarkdown } from '@nix/web-editor/editor/markdown-mode';
+import {
+  MarkdownLossesDialog,
+  MarkdownModePanel,
+} from '@nix/web-editor/editor/markdown-mode-panel';
 
 const ALPHA = {
   id: '0192f2a0-7c1e-7000-8000-0000000000a1',

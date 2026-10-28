@@ -9,8 +9,8 @@ vi.hoisted(() => {
   }
 });
 
-import type { CanvasElement } from '../../editor/canvas-binding';
-import { createCanvasBinding } from '../../editor/canvas-binding';
+import type { CanvasElement } from '@nix/web-editor/editor/canvas-binding';
+import { createCanvasBinding } from '@nix/web-editor/editor/canvas-binding';
 import {
   canvasFileItemIds,
   externalCanvasFiles,
@@ -20,7 +20,7 @@ import {
   nixItemLink,
   prepareCanvasElements,
   sceneFingerprint,
-} from '../../editor/nix-canvas-model';
+} from '@nix/web-editor/editor/nix-canvas-model';
 
 function element(overrides: Partial<CanvasElement> = {}): CanvasElement {
   return {

@@ -2,7 +2,7 @@ import { nixEditingExtensions } from '@nix/editor-schema';
 import { Editor, Extension } from '@tiptap/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CollaborationHistoryKeymap } from '../../editor/collaboration-history-keymap';
+import { CollaborationHistoryKeymap } from '@nix/web-editor/editor/collaboration-history-keymap';
 
 const NAVIGATOR_PLATFORM: unknown = Reflect.get(navigator, 'platform');
 const MODIFIER: KeyboardEventInit =

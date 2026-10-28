@@ -12,7 +12,7 @@ vi.mock('mermaid', () => {
 });
 
 it('loads Mermaid only when a diagram is requested', async () => {
-  const { renderMermaid } = await import('../../plugins/mermaid-render');
+  const { renderMermaid } = await import('@nix/web-editor/plugins/mermaid-render');
   expect(renderer.loaded).not.toHaveBeenCalled();
   expect(await renderMermaid('graph TD; A-->B', 'lazy-diagram')).toBe('<svg></svg>');
   expect(renderer.loaded).toHaveBeenCalledOnce();

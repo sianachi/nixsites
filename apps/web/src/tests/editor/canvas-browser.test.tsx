@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
-import { CanvasBrowser, canvasEntries } from '../../editor/canvas-browser';
-import type { CanvasElement } from '../../editor/canvas-binding';
+import { CanvasBrowser, canvasEntries } from '@nix/web-editor/editor/canvas-browser';
+import type { CanvasElement } from '@nix/web-editor/editor/canvas-binding';
 
 const elements: CanvasElement[] = [
   { id: 'text', type: 'text', version: 1, versionNonce: 1, text: 'Think about the next release' },

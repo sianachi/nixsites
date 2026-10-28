@@ -6,7 +6,7 @@ import {
   MAX_PICKER_COLUMNS,
   MAX_PICKER_ROWS,
   TableSizePicker,
-} from '../../editor/table-size-picker';
+} from '@nix/web-editor/editor/table-size-picker';
 
 /**
  * The table size picker: a grid to sweep, with a keyboard that does the same.

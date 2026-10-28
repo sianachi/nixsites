@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { bodyCacheAccountEpoch } from '@nix/web-foundation/lib/body-cache';
-import { flushLocalDraftsForAccount } from '../editor/collab-sync';
+import { flushLocalDraftsForAccount } from '@nix/web-editor/editor/collab-sync';
 import { listDraftScopes } from '@nix/web-foundation/lib/draft-journal';
 
 interface SignOutIntent {

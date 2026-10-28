@@ -5,7 +5,7 @@ import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
 import { StrictMode } from 'react';
 import { PetCompanion } from '../../pets/pet-companion';
 import { PetPage } from '../../pages/pet-page';
-import { MobileNoteToolbar } from '../../editor/mobile-note-toolbar';
+import { MobileNoteToolbar } from '@nix/web-editor/editor/mobile-note-toolbar';
 import { stubViewport } from '../stub-viewport';
 
 const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn() }));

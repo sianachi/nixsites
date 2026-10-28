@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
-import { ReferenceResolutionProvider } from '../../editor/reference-resolution';
-import { ReferenceView } from '../../editor/reference-view';
+import { ReferenceResolutionProvider } from '@nix/web-editor/editor/reference-resolution';
+import { ReferenceView } from '@nix/web-editor/editor/reference-view';
 import { renderAt, signedIn } from '../render-with-router';
 import { requestUrl } from '../request-url';
 

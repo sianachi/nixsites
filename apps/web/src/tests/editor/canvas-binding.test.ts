@@ -6,7 +6,7 @@ import {
   supersedes,
   type CanvasBinding,
   type CanvasElement,
-} from '../../editor/canvas-binding';
+} from '@nix/web-editor/editor/canvas-binding';
 
 /**
  * The scene bridge's contract: whole-element writes ordered by the native canvas version

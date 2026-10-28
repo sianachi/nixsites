@@ -13,7 +13,7 @@ import { renderAt, signedIn } from '../render-with-router';
 
 // The real canvas editor has browser-only collaboration dependencies; what this suite asserts is the
 // routing seam in front of it, so a marker stands in.
-vi.mock('../../editor/canvas-editor', () => ({
+vi.mock('@nix/web-editor/editor/canvas-editor', () => ({
   CanvasEditor: ({ itemId }: { itemId: string }) => (
     <div aria-label="Canvas body">canvas {itemId}</div>
   ),

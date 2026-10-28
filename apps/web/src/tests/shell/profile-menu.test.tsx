@@ -7,7 +7,7 @@ import type { CurrentPrincipalState } from '@nix/web-platform/session/use-curren
 import { ProfileMenu } from '../../shell/profile-menu';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
-import * as collaboration from '../../editor/collab-sync';
+import * as collaboration from '@nix/web-editor/editor/collab-sync';
 import * as drafts from '@nix/web-foundation/lib/draft-journal';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
