@@ -52,7 +52,7 @@ describe('the presence list', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows each peer as a dot labelled with their name, and announces the count politely', () => {
+  it('shows each peer as a quiet initials profile with their name, and announces the count politely', () => {
     const awareness = makeAwareness();
     awareness.setLocalStateField('user', { name: 'Me Myself', color: 'var(--color-accent-600)' });
     joinPeer(awareness, 'Ada Lovelace');
@@ -63,14 +63,14 @@ describe('the presence list', () => {
     const roster = screen.getByLabelText('2 people here');
     expect(roster).toHaveAttribute('aria-live', 'polite');
     expect(screen.getByLabelText('Ada Lovelace')).toHaveAttribute('title', 'Ada Lovelace');
-    expect(screen.getByLabelText('Grace Hopper')).toHaveStyle({
-      backgroundColor: 'var(--color-accent-600)',
-    });
+    // The cursor colour is only the outline; the profile itself stays on the surface.
+    expect(screen.getByLabelText('Grace Hopper').style.borderColor).toBe('var(--color-accent-600)');
+    expect(screen.getByLabelText('Grace Hopper')).toHaveTextContent('GH');
     // The viewer is not in their own roster.
     expect(screen.queryByLabelText('Me Myself')).toBeNull();
   });
 
-  it('collapses a crowd into a count instead of a dot wall', () => {
+  it('collapses a crowd into a count instead of a wall of faces', () => {
     const awareness = makeAwareness();
     for (const name of ['One A', 'Two B', 'Three C', 'Four D', 'Five E', 'Six F']) {
       joinPeer(awareness, name);

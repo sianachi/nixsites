@@ -124,13 +124,6 @@ internal sealed class ItemConfiguration : IEntityTypeConfiguration<Item>
             .HasDatabaseName("ix_item_no_delete")
             .HasFilter("no_delete");
 
-        // My Day's habit candidates: only items carrying the habit marker, so the statement reads
-        // them instead of every item of the tenant. The marker is a bag read, and under row
-        // security a bag read cannot be an index condition; what carries it is the partial
-        // predicate, which the planner proves from the statement's own matching clause.
-        builder.HasIndex(["TenantId", "Id"], "ix_item_habit_marker")
-            .HasFilter("lifecycle_state = 'active' AND template_id IS NULL AND (properties ->> '$habit_frequency') IS NOT NULL");
-
         // No standalone tenant_id index. It would be a strict prefix of the alternate key and of
         // both composite foreign key indexes, so it can serve no query they do not - while costing
         // a write on every insert into the fastest-growing table in the system.

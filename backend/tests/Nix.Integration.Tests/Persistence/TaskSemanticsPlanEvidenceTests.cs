@@ -185,53 +185,6 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
         Assert.Empty(titles);
     }
 
-    /// <summary>
-    /// My Day's task candidates over the full corpus. The assignee arm is a bag read that no index
-    /// can serve under row security, so the OR defeats <c>ix_item_due_day</c> and the statement
-    /// scans the workspace's items (measured 23.7 ms, 3,572 buffers at 55,000 items). This records
-    /// that cost and pins the visibility shape rather than asserting an index it cannot have.
-    /// </summary>
-    [Fact]
-    public async Task My_day_task_candidates_are_read_for_one_workspace_with_the_visibility_filters_before_the_limit()
-    {
-        var plan = await ExplainAsRuntimeRoleAsync(MyDaySql.Tasks, MyDayParameters(201));
-        _output.WriteLine("My Day task candidates, {0} readable rows, runtime role:", AlphaChildren + Containers);
-        _output.WriteLine(plan);
-
-        Assert.Contains("nix.tenant_id", plan, StringComparison.Ordinal);
-        AssertQueryAntiJoin(plan);
-        Assert.DoesNotContain("Seq Scan on item_closure visibility_edge", plan, StringComparison.Ordinal);
-
-        var titles = await ExecuteTitlesAsRuntimeRoleAsync(MyDaySql.Tasks, MyDayParameters(201));
-        Assert.NotEmpty(titles);
-        Assert.DoesNotContain(titles, title => title.Contains("Other tenant", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task My_day_habit_candidates_are_read_from_the_habit_marker_index_and_find_every_habit()
-    {
-        var plan = await ExplainAsRuntimeRoleAsync(MyDaySql.Habits, MyDayParameters(25));
-        _output.WriteLine("My Day habit candidates, {0} readable rows, runtime role:", AlphaChildren + Containers);
-        _output.WriteLine(plan);
-
-        // The marker is a bag read, which cannot be an index condition under row security; the
-        // partial index carries it as its predicate, so only habits are visited.
-        Assert.Contains("nix.tenant_id", plan, StringComparison.Ordinal);
-        Assert.Contains("ix_item_habit_marker", plan, StringComparison.Ordinal);
-        AssertQueryAntiJoin(plan);
-
-        var titles = await ExecuteTitlesAsRuntimeRoleAsync(MyDaySql.Habits, MyDayParameters(25));
-        Assert.Equal(10, titles.Count);
-    }
-
-    private static NpgsqlParameter[] MyDayParameters(int candidateLimit) =>
-    [
-        new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = M0SchemaSeed.Alpha.WorkspaceId },
-        new NpgsqlParameter("today", NpgsqlDbType.Text) { Value = QueryDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) },
-        new NpgsqlParameter("me", NpgsqlDbType.Text) { Value = M0SchemaSeed.Alpha.PrincipalId.ToString("D", CultureInfo.InvariantCulture) },
-        new NpgsqlParameter("candidate_limit", NpgsqlDbType.Integer) { Value = candidateLimit },
-    ];
-
     [Fact]
     public async Task The_calendar_container_arm_is_served_by_ix_item_declares_views()
     {
@@ -588,8 +541,7 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
                    'active', NULL, {{betaPrincipal}}, {{betaPrincipal}}, now(), now()
             FROM generate_series(1, {{BetaItems}}) AS n;
 
-            -- A few habits among the 50,000 tasks: My Day's habit candidates must find them without
-            -- reading the corpus.
+            -- A few habits among the 50,000 tasks.
             INSERT INTO item
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)

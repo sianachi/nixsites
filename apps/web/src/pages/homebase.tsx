@@ -1,12 +1,12 @@
-import { Blueprint, Icon, Segmented, Text, cn, focusRing } from '@nix/ui';
+import { Blueprint, Icon, Text, cn, focusRing } from '@nix/ui';
 import {
-  CalendarCheck,
   CalendarClock,
   CalendarDays,
   Columns2,
   FilePlus,
   FileText,
   Grid3x3,
+  LayoutTemplate,
   Shapes,
   type LucideIcon,
 } from 'lucide-react';
@@ -17,18 +17,9 @@ import { NewItemDialog } from '../items/new-item-dialog';
 import type { WorkspaceTree } from '../items/use-workspace-tree';
 import { publishNotice } from '../lib/notices';
 import { recentItems } from '../lib/recent-items';
-import {
-  useGeneralPreferences,
-  type HomebaseLayout,
-} from '../settings/preferences/general-preferences';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { useWorkspace } from '../workspaces/workspace-context';
-
-const LAYOUTS = [
-  { value: 'page', label: 'Page' },
-  { value: 'desk', label: 'Desk' },
-] as const satisfies readonly { value: HomebaseLayout; label: string }[];
 
 /** The ISO 8601 week number of a local date: weeks start on Monday, week 1 holds 4 January. */
 export function isoWeek(date: Date): number {
@@ -61,22 +52,18 @@ interface Action {
 
 /**
  * The workspace's start screen, shown while no item is open: a greeting, the actions people start
- * a session with, and the items they opened last on this browser. Two arrangements of the same
- * content, chosen in place; on a phone both are one column, so the choice is offered only wider.
+ * a session with beside the items they opened last on this browser. One column on a phone.
  */
 export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode {
   const { workspaceId, workspace } = useWorkspace();
   const { openPreview } = useOpenItem();
   const navigate = useNavigate();
   const templateLibrary = useTemplateLibrary();
-  const layout = useGeneralPreferences((state) => state.homebaseLayout);
-  const setLayout = useGeneralPreferences((state) => state.setHomebaseLayout);
   const [choosingStructure, setChoosingStructure] = useState(false);
   const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
 
   const now = new Date();
   const home = `/w/${workspaceId}`;
-  const desk = layout === 'desk';
 
   function createNote(): void {
     void tree.create(null, 'Untitled note').then((outcome) => {
@@ -125,11 +112,11 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
       to: `${home}/calendar`,
     },
     {
-      key: 'my-day',
-      label: 'My Day',
-      detail: "Today's tasks and habits",
-      icon: CalendarCheck,
-      to: `${home}/my-day`,
+      key: 'templates',
+      label: 'Templates',
+      detail: 'Start from a saved structure',
+      icon: LayoutTemplate,
+      to: `${home}/templates`,
     },
   ];
 
@@ -138,12 +125,7 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
       <Text as="h2" variant="h6" tone="muted" id="homebase-start">
         Start something
       </Text>
-      <ul
-        className={cn(
-          'grid grid-cols-2 gap-2',
-          desk ? 'md:grid-cols-1' : actions.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-4',
-        )}
-      >
+      <ul className="grid grid-cols-2 gap-2 md:grid-cols-1">
         {actions.map((action, index) => (
           <li
             key={action.key}
@@ -157,7 +139,6 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
             <ActionTile
               action={action}
               primary={index === 0}
-              desk={desk}
               disabled={index === 0 && (tree.status !== 'ready' || tree.isCreating)}
             />
           </li>
@@ -223,28 +204,14 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
   );
 
   return (
-    <div
-      className={cn(
-        'mx-auto flex w-full min-w-0 flex-col gap-10 px-4 py-8 sm:px-8 sm:py-14',
-        desk ? 'max-w-5xl' : 'max-w-3xl',
-      )}
-    >
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-10 px-4 py-8 sm:px-8 sm:py-14">
       <header className="flex min-w-0 flex-col gap-2">
         <Text variant="kicker" tone="muted" truncate>
           {workspace.name}
         </Text>
-        <div className="flex min-w-0 items-start gap-4">
-          <Text as="h1" variant="h1" className="min-w-0 flex-1">
-            {greeting(now.getHours())}
-          </Text>
-          <Segmented
-            label="Homebase layout"
-            options={LAYOUTS}
-            value={layout}
-            onChange={setLayout}
-            className="shrink-0 max-md:hidden"
-          />
-        </div>
+        <Text as="h1" variant="h1" className="min-w-0">
+          {greeting(now.getHours())}
+        </Text>
         {/* The date as a notebook page's header rule, the week number where a page number sits. */}
         <div className="flex min-w-0 items-center gap-3">
           <Text as="p" variant="body" tone="muted" className="shrink-0">
@@ -261,17 +228,10 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
         </div>
       </header>
 
-      {desk ? (
-        <div className="grid min-w-0 gap-10 md:grid-cols-3">
-          <div className="min-w-0">{start}</div>
-          <div className="min-w-0 md:col-span-2">{recent}</div>
-        </div>
-      ) : (
-        <>
-          {start}
-          {recent}
-        </>
-      )}
+      <div className="grid min-w-0 gap-10 md:grid-cols-3">
+        <div className="min-w-0">{start}</div>
+        <div className="min-w-0 md:col-span-2">{recent}</div>
+      </div>
 
       {choosingStructure ? (
         <NewItemDialog
@@ -305,17 +265,15 @@ export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode 
 function ActionTile({
   action,
   primary,
-  desk,
   disabled,
 }: {
   readonly action: Action;
   readonly primary: boolean;
-  readonly desk: boolean;
   readonly disabled: boolean;
 }): ReactNode {
   const className = cn(
     'flex h-full min-h-24 w-full min-w-0 flex-col gap-2 rounded-md border p-3 text-left',
-    desk && 'md:min-h-0 md:flex-row md:items-center md:gap-4 md:px-4',
+    'md:min-h-0 md:flex-row md:items-center md:gap-4 md:px-4',
     primary
       ? 'max-sm:min-h-0 max-sm:flex-row max-sm:items-center border-accent-fill bg-accent-fill hover:bg-accent-fill-hover disabled:opacity-45'
       : 'border-divider hover:bg-surface',
@@ -328,7 +286,7 @@ function ActionTile({
         size="md"
         className={cn('shrink-0', primary ? 'text-background' : 'text-accent-text')}
       />
-      <span className={cn('flex min-w-0 flex-col gap-0.5', !desk && 'sm:mt-auto')}>
+      <span className="flex min-w-0 flex-col gap-0.5">
         <Text as="span" variant="h5" className={primary ? 'text-background' : ''}>
           {action.label}
         </Text>

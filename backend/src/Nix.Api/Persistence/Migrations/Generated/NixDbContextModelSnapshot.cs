@@ -2123,9 +2123,6 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.HasIndex("WorkspaceId", "ParentId", "Seq");
 
-                    b.HasIndex(new[] { "TenantId", "Id" }, "ix_item_habit_marker")
-                        .HasFilter("lifecycle_state = 'active' AND template_id IS NULL AND (properties ->> '$habit_frequency') IS NOT NULL");
-
                     b.ToTable("item", (string)null);
                 });
 

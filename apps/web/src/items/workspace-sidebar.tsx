@@ -25,7 +25,6 @@ import {
   FolderUp,
   Grid3x3,
   LayoutTemplate,
-  Plus,
   Shapes,
   Shield,
   ShieldOff,
@@ -285,6 +284,18 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
           Explorer
         </Text>
 
+        {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
+        <Button
+          variant="ghost"
+          className="ml-auto px-1.5 py-1 text-xs"
+          disabled={tree.status !== 'ready' || tree.isCreating}
+          onClick={() => {
+            void create(null, 'Untitled note', 'note');
+          }}
+        >
+          <Icon icon={FilePlus} size="sm" />
+          New note
+        </Button>
         <CreateMenu
           childDestination={childDestination}
           disabled={tree.status !== 'ready' || tree.isCreating}
@@ -447,7 +458,6 @@ const MENU_ENTRIES: readonly {
   readonly icon: LucideIcon;
   readonly mode: NewItemDialogMode;
 }[] = [
-  { key: 'note', label: 'Note…', icon: FilePlus, mode: { kind: 'item', type: 'note' } },
   { key: 'canvas', label: 'Canvas…', icon: Shapes, mode: { kind: 'item', type: 'canvas' } },
   { key: 'sheet', label: 'Sheet…', icon: Grid3x3, mode: { kind: 'item', type: 'spreadsheet' } },
   { key: 'upload', label: 'Upload files…', icon: Upload, mode: { kind: 'upload' } },
@@ -468,7 +478,7 @@ interface CreateMenuProps {
 }
 
 /**
- * One "New" control opening a short menu, each entry of which opens a dialog.
+ * "New view": every other kind of item, in a short menu, each entry of which opens a dialog.
  *
  * Built on `<Menu>` for its disclosure mechanics - open state, outside-click and Escape dismissal,
  * viewport-clamped placement, the phone bottom sheet, 44px touch targets, arrow-key roving. The
@@ -508,17 +518,10 @@ function CreateMenu({ childDestination, disabled, ...actions }: CreateMenuProps)
           }}
         />
       ) : null}
-      <Menu label="New item" items={items}>
+      <Menu label="New view" items={items}>
         {(trigger) => (
-          <Button
-            {...trigger}
-            variant="ghost"
-            className="ml-auto px-1.5 py-1 text-xs"
-            aria-label="New item in the workspace"
-            disabled={disabled}
-          >
-            <Icon icon={Plus} size="sm" />
-            New
+          <Button {...trigger} variant="ghost" className="px-1.5 py-1 text-xs" disabled={disabled}>
+            New view
             <Icon icon={ChevronDown} size="sm" />
           </Button>
         )}

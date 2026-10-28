@@ -433,43 +433,6 @@ export function createDemoFetch(): typeof fetch {
     ],
     [
       'GET',
-      /^\/api\/v1\/workspaces\/[^/]+\/my-day$/,
-      () => {
-        const today = day(0);
-        const limits = { candidates: 500, rows: 100 };
-        const complete = { kind: 'complete', reasons: [] };
-        return json({
-          workspaceId: DEMO_WORKSPACE,
-          evaluatedAt: now(),
-          taskDay: today,
-          taskTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          tasks: {
-            rows: live()
-              .filter((entry) => {
-                const due = entry.properties.due;
-                return typeof due === 'string' && due <= today && entry.properties.done !== true;
-              })
-              .map((entry) => ({
-                itemId: entry.id,
-                containerId: entry.parentId,
-                containerTitle: itemAt(entry.parentId ?? undefined)?.title ?? null,
-                title: entry.title,
-                section: entry.properties.due === today ? 'today' : 'overdue',
-                dueDay: entry.properties.due,
-                startDay: entry.properties.start ?? null,
-                priority: null,
-                estimate: null,
-                action: { kind: 'property', key: 'done', occurredOn: null },
-              })),
-            coverage: complete,
-            limits,
-          },
-          habits: { rows: [], coverage: complete, limits },
-        });
-      },
-    ],
-    [
-      'GET',
       /^\/api\/v1\/workspaces\/[^/]+\/graph$/,
       () =>
         json({
