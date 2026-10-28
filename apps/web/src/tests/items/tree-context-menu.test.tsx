@@ -14,7 +14,7 @@ import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { STUB_WORKSPACE } from '../api-stub';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 import { signedIn } from '../render-with-router';
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as bodies from '../editor/body-cache';
-import { memoryStorage } from './views/suggest/suggest-fixtures';
+import { memoryStorage } from './memory-storage';
 import { prepareHealthyAdmission, resetSession, signedIn } from './render-with-router';
 
 describe('healthy account fixture admission', () => {

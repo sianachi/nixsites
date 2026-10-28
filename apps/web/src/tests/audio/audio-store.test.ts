@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAudio } from './fake-audio';
 import type * as AudioStore from '../../audio/audio-store';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 import { readAudioPosition, rememberAudioPosition } from '../../lib/audio-positions';
 
 let store: typeof AudioStore;

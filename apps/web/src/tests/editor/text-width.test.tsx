@@ -8,7 +8,7 @@ import {
   TEXT_WIDTH_STORAGE_KEY,
   useTextWidthPreference,
 } from '../../editor/text-width-preference';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());

@@ -5,7 +5,7 @@ import { PropertyInput } from '../../properties/property-input';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
 import type { PropertyDefinition } from '../../views/core/container-model';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 
 /**
  * Select options keep their declared order; what this person usually picks, per workspace and

@@ -13,7 +13,7 @@ import { useHiddenItems, useHiddenItemPredicate } from '../../items/use-hidden-i
 import { ViewItemVisibility } from '../../views/core/view-item-visibility';
 import { aContainer } from '../container-fixture';
 import { item } from '../api-stub';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 import { signedIn } from '../render-with-router';
 
 const workspace = vi.hoisted(() => ({ id: 'workspace-a' }));

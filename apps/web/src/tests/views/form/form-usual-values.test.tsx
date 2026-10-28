@@ -8,7 +8,8 @@ import { FormView } from '../../../views/form/form-view';
 import { rememberSubmission } from '../../../views/form/form-memory';
 import { useViewSuggestionPreference } from '../../../settings/editor/suggestion-preferences';
 import { useChoiceOrderPreference } from '../../../settings/editor/suggestion-preferences';
-import { CATEGORY, memoryStorage } from '../suggest/suggest-fixtures';
+import { CATEGORY } from '../suggest/suggest-fixtures';
+import { memoryStorage } from '../../memory-storage';
 
 /**
  * The form's usual values: offered beside an empty field from this person's own earlier

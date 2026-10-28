@@ -1,5 +1,4 @@
 import type { Item, PropertyDefinition } from '../../../views/core/container-model';
-import { memoryStorage } from '../../memory-storage';
 
 /** Shared fixtures for the suggestion suites: a small container of bills and errands. */
 
@@ -67,7 +66,3 @@ export function billsAndErrands(): Item[] {
     anItem('Groceries for the weekend', { category: 'Errands', tags: ['home'] }),
   ];
 }
-
-/** An in-memory `Storage`: the test environment's global is not a usable one. */
-
-export { memoryStorage };

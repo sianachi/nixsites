@@ -15,7 +15,7 @@ import {
 } from '../../../views/form/interactive-form-editor';
 import { renderAt } from '../../render-with-router';
 import { useChoiceOrderPreference } from '../../../settings/editor/suggestion-preferences';
-import { memoryStorage } from '../suggest/suggest-fixtures';
+import { memoryStorage } from '../../memory-storage';
 
 vi.mock('../../../workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: 'preview-workspace' }),

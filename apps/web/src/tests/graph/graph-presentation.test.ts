@@ -4,7 +4,7 @@ import {
   readGraphPresentation,
   writeGraphPresentation,
 } from '../../graph/graph-presentation';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 let storage: Storage;
 beforeEach(() => {
   storage = memoryStorage();

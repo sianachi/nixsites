@@ -6,7 +6,7 @@ import { stubViewport } from '../stub-viewport';
 import { GraphView } from '../../graph/graph-view';
 import { readGraphPresentation, writeGraphPresentation } from '../../graph/graph-presentation';
 import { readArrangement, writeArrangement } from '../../graph/graph-arrangement';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());

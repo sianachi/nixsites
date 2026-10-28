@@ -9,7 +9,7 @@ import {
 import { useKeyboardModeStore } from '../../../editor/keyboard-mode-store';
 import { usePageGuidePreference } from '../../../editor/page-guide-preference';
 import { readDismissals, rememberDismissal } from '../../../lib/suggestion-dismissals';
-import { memoryStorage } from '../../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../../memory-storage';
 import { EditorPreferencesSection } from '../../../settings/editor/editor-preferences-section';
 import { PreferencesSection } from '../../../settings/preferences/PreferencesSection';
 import {

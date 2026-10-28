@@ -6,7 +6,7 @@ import { item, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { aView } from '../view-fixture';
 import { stubViewport } from '../stub-viewport';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 
 const root = item({
   id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',

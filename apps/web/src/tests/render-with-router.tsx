@@ -6,7 +6,7 @@ import { useSessionStore } from '../auth/session-store';
 import { bodyCacheAccountEpoch, openBodyCache } from '../editor/body-cache';
 import { browserStorage } from '../lib/browser-storage';
 import { vi } from 'vitest';
-import { memoryStorage } from './views/suggest/suggest-fixtures';
+import { memoryStorage } from './memory-storage';
 import { stubHealthyCollaboration } from './healthy-collaboration';
 
 /**

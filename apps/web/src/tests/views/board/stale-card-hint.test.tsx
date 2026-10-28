@@ -8,7 +8,8 @@ import { BoardView } from '../../../views/board/board-view';
 import type { Item, PropertyDefinition } from '../../../views/core/container-model';
 import { clearSuggestionDismissals } from '../../../lib/suggestion-dismissals';
 import { useViewSuggestionPreference } from '../../../settings/editor/suggestion-preferences';
-import { anItem, memoryStorage } from '../suggest/suggest-fixtures';
+import { anItem } from '../suggest/suggest-fixtures';
+import { memoryStorage } from '../../memory-storage';
 
 /**
  * The board's stale-card note: said only for a card far older than its column's usual, phrased as

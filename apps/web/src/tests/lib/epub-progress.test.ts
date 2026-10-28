@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EPUB_PROGRESS_LIMIT, readEpubProgress, writeEpubProgress } from '../../lib/epub-progress';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 
 describe('remembering EPUB chapters', () => {
   it('remembers each book independently and replaces an older position', () => {

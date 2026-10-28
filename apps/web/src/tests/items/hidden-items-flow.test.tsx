@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app';
 import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
-import { memoryStorage } from '../views/suggest/suggest-fixtures';
+import { memoryStorage } from '../memory-storage';
 import { stubViewport } from '../stub-viewport';
 import { hiddenItemsKey, writeHiddenItems } from '../../lib/view-hidden-items';
 

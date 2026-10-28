@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { rememberSubmission, usualValue, usualValues } from '../../../views/form/form-memory';
-import { CATEGORY, NOTES, TAGS, memoryStorage } from '../suggest/suggest-fixtures';
+import { CATEGORY, NOTES, TAGS } from '../suggest/suggest-fixtures';
+import { memoryStorage } from '../../memory-storage';
 
 const PRIORITY = {
   key: 'priority',
