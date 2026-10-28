@@ -12,6 +12,7 @@ import {
   clearContent,
   collabPool,
   seedTenants,
+  scopeOf,
   type TestTenant,
 } from './testing.ts';
 import {
@@ -51,10 +52,6 @@ describe.skipIf(!DB_TESTS_ENABLED)('the history data layer, against Postgres', (
   beforeEach(async () => {
     await clearContent();
   });
-
-  function scopeOf(tenant: TestTenant) {
-    return { tenantId: tenant.tenantId, principalId: tenant.principalId };
-  }
 
   async function open(tenant: TestTenant) {
     return await withTenantScope(pool, scopeOf(tenant), async (sql) => {

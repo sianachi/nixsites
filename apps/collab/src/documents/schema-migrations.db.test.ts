@@ -17,6 +17,7 @@ import {
   clearContent,
   collabPool,
   seedTenants,
+  scopeOf,
   type TestTenant,
 } from '../db/testing.ts';
 import { withTenantScope } from '../db/tenant-scope.ts';
@@ -62,10 +63,6 @@ describe.skipIf(!DB_TESTS_ENABLED)('raising a document schema pin, against Postg
   beforeEach(async () => {
     await clearContent();
   });
-
-  function scopeOf(tenant: TestTenant) {
-    return { tenantId: tenant.tenantId, principalId: tenant.principalId };
-  }
 
   async function open(tenant: TestTenant): Promise<void> {
     await withTenantScope(pool, scopeOf(tenant), async (sql) => {

@@ -176,3 +176,8 @@ export async function clearContent(): Promise<void> {
     await admin.end();
   }
 }
+
+/** The tenant scope a test opens for one of the seeded tenants. */
+export function scopeOf(tenant: TestTenant): { tenantId: string; principalId: string } {
+  return { tenantId: tenant.tenantId, principalId: tenant.principalId };
+}

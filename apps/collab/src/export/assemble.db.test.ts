@@ -8,6 +8,7 @@ import {
   clearContent,
   collabPool,
   seedTenants,
+  scopeOf,
   type TestTenant,
 } from '../db/testing.ts';
 import { withTenantScope } from '../db/tenant-scope.ts';
@@ -40,10 +41,6 @@ describe.skipIf(!DB_TESTS_ENABLED)('the body an export carries', () => {
   beforeEach(async () => {
     await clearContent();
   });
-
-  function scopeOf(tenant: TestTenant) {
-    return { tenantId: tenant.tenantId, principalId: tenant.principalId };
-  }
 
   /** The item as Core would report it, with the type that chooses how its body is read. */
   function itemOf(tenant: TestTenant, type: string): CoreItem {

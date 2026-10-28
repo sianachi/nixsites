@@ -11,6 +11,7 @@ import {
   clearContent,
   collabPool,
   seedTenants,
+  scopeOf,
   type TestTenant,
 } from '../db/testing.ts';
 import { withTenantScope } from '../db/tenant-scope.ts';
@@ -58,10 +59,6 @@ describe.skipIf(!DB_TESTS_ENABLED)('the retention sweep, against Postgres', () =
       await admin.end();
     }
   });
-
-  function scopeOf(tenant: TestTenant) {
-    return { tenantId: tenant.tenantId, principalId: tenant.principalId };
-  }
 
   async function open(tenant: TestTenant) {
     return await withTenantScope(pool, scopeOf(tenant), async (sql) => {

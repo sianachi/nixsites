@@ -10,6 +10,7 @@ import {
   clearContent,
   collabPool,
   seedTenants,
+  scopeOf,
   type TestTenant,
 } from '../db/testing.ts';
 import { withTenantScope } from '../db/tenant-scope.ts';
@@ -47,10 +48,6 @@ describe.skipIf(!DB_TESTS_ENABLED)('locked bodies in an export', () => {
   afterEach(async () => {
     await unlockAll();
   });
-
-  function scopeOf(tenant: TestTenant) {
-    return { tenantId: tenant.tenantId, principalId: tenant.principalId };
-  }
 
   function itemOf(tenant: TestTenant): CoreItem {
     return {
