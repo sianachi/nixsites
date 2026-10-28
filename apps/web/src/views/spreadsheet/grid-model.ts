@@ -378,6 +378,25 @@ export interface SeriesFill {
   readonly patterned: boolean;
 }
 
+/** The run of non-empty cells at the top of a range's column, and the first row after it. */
+function seedOf(
+  range: CellRange,
+  items: readonly Item[],
+  column: SpreadsheetColumn,
+): { readonly seed: string[]; readonly row: number } {
+  const seed: string[] = [];
+  let row = range.startRow;
+  for (; row <= range.endRow; row += 1) {
+    const item = items[row];
+    const text = item === undefined ? '' : cellText(item, column).trim();
+    if (text.length === 0) {
+      break;
+    }
+    seed.push(text);
+  }
+  return { seed, row };
+}
+
 /**
  * Fill down by pattern: each column of the range continued from the filled cells at its top.
  *
@@ -404,17 +423,7 @@ export function seriesFillPlan(
       continue;
     }
 
-    const seed: string[] = [];
-    let row = range.startRow;
-    for (; row <= range.endRow; row += 1) {
-      const item = items[row];
-      const text = item === undefined ? '' : cellText(item, column).trim();
-      if (text.length === 0) {
-        break;
-      }
-      seed.push(text);
-    }
-
+    const { seed, row } = seedOf(range, items, column);
     const count = range.endRow - row + 1;
     const continuation = continueSeries(seed, count);
     if (continuation === null) {
@@ -509,17 +518,7 @@ export function seriesFillOffer(
       continue;
     }
 
-    const seed: string[] = [];
-    let row = range.startRow;
-    for (; row <= range.endRow; row += 1) {
-      const item = items[row];
-      const text = item === undefined ? '' : cellText(item, column).trim();
-      if (text.length === 0) {
-        break;
-      }
-      seed.push(text);
-    }
-
+    const { seed, row } = seedOf(range, items, column);
     const count = range.endRow - row + 1;
     if (seed.length === 0 || count <= 0) {
       continue;
