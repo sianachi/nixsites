@@ -340,7 +340,8 @@ function Companion({
       <Button
         ref={launcher}
         variant="ghost"
-        className={`relative h-auto touch-none p-1 ${launcherHidden ? 'hidden' : ''}`}
+        // No card and no wash behind the pet: it stands on the page; its hover pose is the feedback.
+        className={`relative h-auto touch-none p-1 hover:bg-transparent active:bg-transparent ${launcherHidden ? 'hidden' : ''}`}
         aria-expanded={opensAsPage ? undefined : open}
         aria-label={`${open ? `Close ${pet.name}` : opensAsPage ? `Open ${pet.name}` : `Talk with ${pet.name}`}${
           !open && toolPending ? ' (needs approval)' : !open && unseenReply ? ' (new reply)' : ''
@@ -417,7 +418,7 @@ function Companion({
         }}
         title="Drag to move companion"
       >
-        <span className="flex items-center justify-center rounded-lg bg-surface p-1 shadow-sm">
+        <span className="flex items-center justify-center p-1">
           <PetAvatar
             appearance={pet.appearance}
             state={hover ? 'hover' : 'idle'}
