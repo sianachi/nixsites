@@ -1,4 +1,4 @@
-import { usePetSettings } from '../../api/use-pet-settings';
+import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 
 /**
  * Whether the writing assistance in the note editor is on offer.

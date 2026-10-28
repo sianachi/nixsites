@@ -6,7 +6,7 @@ import {
 import { isCanceledError, isNixApiError, items as coreItems, type Item } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { toViewRequest, type PropertyDefinition, type View } from '../views/core/container-model';
 import { useWorkspace } from '../workspaces/workspace-context';
 

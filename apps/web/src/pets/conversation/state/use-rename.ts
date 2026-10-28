@@ -1,6 +1,6 @@
 import { pets, type PetConnection } from '@nix/api-client';
 import { useState } from 'react';
-import { useApiClient } from '../../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 /** Editing the live conversation title, and why a save failed. */
 export function useRename({

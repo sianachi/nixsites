@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
-import { paneElementId } from '../panes/pane-params';
+import { paneElementId } from '@nix/web-platform/panes/pane-params';
 import { planTabTransfer, type TabTransferPayload, type TabTransferRefusal } from './tab-transfer';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 

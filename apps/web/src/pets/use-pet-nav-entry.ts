@@ -1,7 +1,7 @@
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { usePetAttention, type PetAttention } from './pet-attention';
 import { pageIsAvailable } from './pet-surface';
-import { usePetSettings } from '../api/use-pet-settings';
+import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { usePetSurface } from './use-pet-surface';
 
 /** The navigation destination for the pet page, or null while there should be none: the

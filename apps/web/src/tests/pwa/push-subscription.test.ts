@@ -5,9 +5,9 @@ import {
   disablePushOnThisDevice,
   enablePushOnThisDevice,
   pushSupported,
-} from '../../pwa/push-subscription';
+} from '@nix/web-platform/pwa/push-subscription';
 
-vi.mock('../../pwa/register-service-worker', () => ({
+vi.mock('@nix/web-platform/pwa/register-service-worker', () => ({
   getServiceWorkerRegistration: () => mockRegistration,
 }));
 

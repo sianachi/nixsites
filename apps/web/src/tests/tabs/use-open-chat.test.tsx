@@ -3,7 +3,7 @@ import { type ReactNode } from 'react';
 import { MemoryRouter, useLocation, useSearchParams } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { PaneProvider } from '../../panes/pane-context';
+import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenChat } from '../../tabs/use-open-chat';
 import { stubViewport } from '../stub-viewport';

@@ -2,7 +2,7 @@ import { Button, Dialog, Text, Textarea } from '@nix/ui';
 import { isCanceledError, isNixApiError, workspaces as coreWorkspaces } from '@nix/api-client';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { localDailyNoteDate } from './daily-note';
 

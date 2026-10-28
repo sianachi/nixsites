@@ -2,7 +2,7 @@ import { Button, Dialog, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { OpenItem } from '../pages/editor-page';
-import { PaneProvider } from '../panes/pane-context';
+import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { LocalViewStateContext } from '../views/core/view-state';

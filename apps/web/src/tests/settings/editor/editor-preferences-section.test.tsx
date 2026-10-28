@@ -16,7 +16,10 @@ import {
   usePublishingPreference,
   useSitesVisible,
 } from '../../../settings/publishing/publishing-preference';
-import { CapabilitiesProvider, NO_CAPABILITIES } from '../../../session/capabilities-context';
+import {
+  CapabilitiesProvider,
+  NO_CAPABILITIES,
+} from '@nix/web-platform/session/capabilities-context';
 import {
   readChoiceOrderSetting,
   readViewSuggestionSetting,

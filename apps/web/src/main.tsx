@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router';
 
 import { initializeExcalidrawAssets } from '@nix/web-foundation/lib/excalidraw-assets';
 import { loadWebConfig, WebConfigContext } from '@nix/web-foundation/lib/web-config';
-import { registerServiceWorker } from './pwa/register-service-worker';
+import { registerServiceWorker } from '@nix/web-platform/pwa/register-service-worker';
 import './app.css';
 
 /**

@@ -9,7 +9,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { ViewSchema } from '../../views/core/container-model';
 import { useContainer } from '../../views/core/use-container';

@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 
-import { parsePanes } from '../../panes/pane-state';
+import { parsePanes } from '@nix/web-platform/panes/pane-state';
 import { tabsForPane } from '../../tabs/tab-ownership';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useTabTransfer } from '../../tabs/use-tab-transfer';

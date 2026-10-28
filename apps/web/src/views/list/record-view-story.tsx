@@ -7,7 +7,7 @@ import {
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import type { View } from '../core/container-model';
 

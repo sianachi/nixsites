@@ -2,7 +2,7 @@ import { focusRing, cn } from '@nix/ui';
 import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { type ReactNode } from 'react';
 
-import { useSelectedItem } from '../routing/selected-item';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { proseClasses } from './prose';
 import { useReference } from './reference-resolution';
 

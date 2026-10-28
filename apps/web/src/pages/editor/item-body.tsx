@@ -6,7 +6,7 @@ import { paneColumn, paneScroller } from '@nix/web-foundation/layout/regions';
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { LockedBody } from '../../locks/locked-body';
 import type { useItemLock } from '../../locks/use-item-lock';
-import { PaneProvider } from '../../panes/pane-context';
+import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { ContainerView } from '../../views/core/container-view';
 import type { View } from '../../views/core/container-model';
 import type { useContainer } from '../../views/core/use-container';

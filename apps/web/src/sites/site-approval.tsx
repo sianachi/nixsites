@@ -2,7 +2,7 @@ import { sites, type Site } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import { useOptionalApiClient } from '../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { refusalMessage } from './site-copy';
 
 /**

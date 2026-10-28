@@ -1,7 +1,7 @@
 import { canvasLibrary, isCanceledError } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 /**
  * A principal's own set of reusable native canvas shapes, from `GET`/`PUT /api/v1/me/canvas-library`.

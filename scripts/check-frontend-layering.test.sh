@@ -209,6 +209,30 @@ export const a = App;
 FIXTURE
 expect 1 "any web-* package importing @nix/web fails" "a web package imports from apps/"
 
+# --- R7: foundation <- platform ----------------------------------------------
+
+reset_tree
+add packages/web-foundation/src/lib/up.ts <<'FIXTURE'
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+export const u = useAuth;
+FIXTURE
+expect 1 "foundation importing platform fails" "imports a package above it" "up.ts"
+
+reset_tree
+add packages/web-platform/src/auth/down.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { x } from '@nix/web-other/x';
+export const d = [announce, x];
+FIXTURE
+expect 1 "platform importing a package other than foundation fails" "imports a package above it" "down.ts"
+
+reset_tree
+add packages/web-platform/src/auth/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+export const d = announce;
+FIXTURE
+expect 0 "platform importing foundation passes"
+
 reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';

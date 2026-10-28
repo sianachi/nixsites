@@ -1,7 +1,7 @@
 import { Button, Text, cn, focusRing } from '@nix/ui';
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { formatCalendarDay } from '@nix/web-foundation/lib/date-format';
 import type { InferredFilters, InferredRule } from '@nix/web-foundation/lib/suggest/infer-filters';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';

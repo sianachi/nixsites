@@ -1,4 +1,4 @@
-import type { PaneState } from '../panes/pane-state';
+import type { PaneState } from '@nix/web-platform/panes/pane-state';
 import { chatTabId, itemIsPinned, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 
 /**

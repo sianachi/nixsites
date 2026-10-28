@@ -6,7 +6,7 @@ import { SettingsSection } from '../shared/settings-section';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { useWorkspaceAssignablePrincipals } from '../../workspaces/use-workspace-assignable-principals';
 import { formatDay } from '../access-tokens/token-facts';
-import { useCapabilities } from '../../session/capabilities-context';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import {
   SITE_APPROVERS,
   TENANT_ADMINS,

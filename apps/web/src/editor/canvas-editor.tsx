@@ -3,7 +3,7 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { useNavigate, useParams } from 'react-router';
 
-import { useAuth } from '../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { createCanvasBinding, type CanvasElement } from './canvas-binding';
 import { documentScope } from '@nix/web-foundation/lib/body-cache';

@@ -1,7 +1,7 @@
 import { isNixApiError, structure as coreStructure } from '@nix/api-client';
 import { useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '../../properties/property-input';
 import type { PropertyDefinition, PropertyValue } from '../core/container-model';
 import { ValuePopover, useTrackWrite } from '../core/value-popover';

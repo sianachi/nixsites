@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor } from '@tiptap/react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { choiceOrderOn } from '@nix/web-foundation/lib/suggestion-preferences';
 import { rankReferences } from '@nix/web-foundation/lib/suggest/rank-references';

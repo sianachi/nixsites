@@ -5,7 +5,7 @@ import { PetSettingsEditor } from '../../pets/pet-settings-section';
 import type { PetProfile, PetProviderKey, PetSettingsResponse } from '@nix/api-client';
 
 const client = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 
 vi.mock('../../pets/pet-avatar', () => ({ PetAvatar: () => null }));
 

@@ -3,7 +3,7 @@ import { Button, Select, Text } from '@nix/ui';
 import type { ReactElement, ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 import {
   EmptyPanel,

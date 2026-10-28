@@ -1,0 +1,69 @@
+{
+  "name": "@nix/web-platform",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Web app platform: auth, PWA, API client provider, session capabilities, pane state and URL routing",
+  "exports": {
+    "./api/api-client-provider": {
+      "types": "./src/api/api-client-provider.tsx",
+      "default": "./src/api/api-client-provider.tsx"
+    },
+    "./auth/auth-provider": {
+      "types": "./src/auth/auth-provider.tsx",
+      "default": "./src/auth/auth-provider.tsx"
+    },
+    "./panes/pane-context": {
+      "types": "./src/panes/pane-context.tsx",
+      "default": "./src/panes/pane-context.tsx"
+    },
+    "./panes/pane-group": {
+      "types": "./src/panes/pane-group.tsx",
+      "default": "./src/panes/pane-group.tsx"
+    },
+    "./panes/pane-split-control": {
+      "types": "./src/panes/pane-split-control.tsx",
+      "default": "./src/panes/pane-split-control.tsx"
+    },
+    "./pwa/install-nix": {
+      "types": "./src/pwa/install-nix.tsx",
+      "default": "./src/pwa/install-nix.tsx"
+    },
+    "./pwa/pwa-controls": {
+      "types": "./src/pwa/pwa-controls.tsx",
+      "default": "./src/pwa/pwa-controls.tsx"
+    },
+    "./session/capabilities-context": {
+      "types": "./src/session/capabilities-context.tsx",
+      "default": "./src/session/capabilities-context.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "react-router": "^7.18.1",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}

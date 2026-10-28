@@ -6,8 +6,11 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
-import { cacheKeysOverlap, useCacheInvalidation } from '../../api/use-cache-invalidation';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import {
+  cacheKeysOverlap,
+  useCacheInvalidation,
+} from '@nix/web-platform/api/use-cache-invalidation';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';
 
 /**

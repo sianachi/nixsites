@@ -18,11 +18,11 @@ const harness = vi.hoisted(() => ({
   select: vi.fn(),
   parentUpdate: vi.fn(),
 }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => harness }));
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => harness }));
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),
 }));
-vi.mock('../../routing/selected-item', () => ({ useSelectedItem: () => harness }));
+vi.mock('@nix/web-platform/routing/selected-item', () => ({ useSelectedItem: () => harness }));
 vi.mock('../../editor/collab-sync', () => ({
   FRAGMENT_NAME: 'default',
   startCollabSync: (options: CollabSyncOptions) => {

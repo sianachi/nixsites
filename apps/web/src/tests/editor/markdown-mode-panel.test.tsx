@@ -7,7 +7,7 @@ import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as Y from 'yjs';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { snapshotMarkdown } from '../../editor/markdown-mode';
 import { MarkdownLossesDialog, MarkdownModePanel } from '../../editor/markdown-mode-panel';
 

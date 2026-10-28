@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router';
 
 import { isCanceledError, isNixApiError, NixErrorKind } from '@nix/api-client';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { useTemplateLibrary } from '../template-library-context';
 import {

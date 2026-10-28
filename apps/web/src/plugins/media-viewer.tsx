@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
 import { authorisedAudioUrl } from '@nix/web-foundation/audio/audio-source';
 import {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CurrentPrincipalState } from '../../session/use-current-principal';
+import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { ProfileMenu } from '../../shell/profile-menu';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
@@ -19,7 +19,7 @@ const auth = vi.hoisted(() => ({
 }));
 
 // The menu reads only these two seams; stubbing them keeps the test off the provider stack.
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({
     accountUrl: auth.accountUrl,
     signOut: auth.signOut,

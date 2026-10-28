@@ -39,6 +39,7 @@
 #   R4  nobody outside shell/, app.tsx and main.tsx imports shell/ for a value.
 #   R5  apps/web/src/app/ does not exist.
 #   R6  nothing under packages/web-* imports from apps/ (packages never import apps).
+#   R7  web packages stack: web-foundation imports no other web-*, web-platform only web-foundation.
 #
 # Be clear about what this is worth. It catches the ordinary mistake - someone
 # adds `import { announce } from '../a11y/announcer'` to a layout/ file - and
@@ -156,8 +157,16 @@ if [ -n "$packages" ]; then
   apps_imports="$(printf '%s' "$apps_imports" | grep -v '^$' || true)"
 fi
 
+# R7: dependency direction web-foundation <- web-platform <- later packages. Add a line per new package.
+up_imports=""
+if [ -n "$packages" ]; then
+  up_imports="$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-foundation/src" | grep -vE "'@nix/web-foundation[/']" || true)
+$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-platform/src" | grep -vE "'@nix/web-(foundation|platform)[/']" || true)"
+  up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"
+fi
+
 if [ -z "$layout_leaks" ] && [ -z "$a11y_leaks" ] && [ -z "$lib_leaks" ] &&
-  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ] && [ -z "$apps_imports" ]; then
+  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ] && [ -z "$apps_imports" ] && [ -z "$up_imports" ]; then
   echo "check-frontend-layering: OK (the leaves are leaves; the shell is imported for a value only by the route table)."
   exit 0
 fi
@@ -179,6 +188,7 @@ report "layout/ imports something other than lib/:" "$layout_leaks"
 report "a11y/ imports from the application:" "$a11y_leaks"
 report "lib/ imports from the application:" "$lib_leaks"
 report "a web package imports from apps/:" "$apps_imports"
+report "a web package imports a package above it (foundation <- platform):" "$up_imports"
 report "a feature imports shell/ for a value rather than a type:" "$shell_value_imports"
 if [ -n "$app_folder" ]; then
   report "the dissolved app/ folder is back:" "$app_folder"

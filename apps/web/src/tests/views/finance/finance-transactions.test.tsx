@@ -7,7 +7,7 @@ import {
   type FinanceTransaction,
   type QueryEndpoint,
 } from '@nix/api-client';
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type * as UseFinanceModule from '../../../views/finance/use-finance';
 
 const queries = vi.hoisted(

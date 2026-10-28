@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isCanceledError } from '@nix/api-client';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { templateById, type TemplateDetail } from './template-api';
 
 type PreviewStatus = 'loading' | 'ready' | 'error';

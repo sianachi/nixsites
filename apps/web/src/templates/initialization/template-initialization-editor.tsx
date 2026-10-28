@@ -2,7 +2,7 @@ import { Blueprint, Button, Checkbox, Field, Input, Select, Text } from '@nix/ui
 import { items as coreItems } from '@nix/api-client';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceAssignablePrincipals } from '../../workspaces/use-workspace-assignable-principals';
 import type { TreeItem } from '../../items/use-workspace-tree';
 import type {

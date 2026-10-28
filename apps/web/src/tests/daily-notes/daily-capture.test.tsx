@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DailyCaptureDialog } from '../../daily-notes/daily-capture-dialog';
 
 const io = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), append: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => io }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => io }));
 vi.mock('@nix/companion', () => ({ createCompanionBodies: () => ({ append: io.append }) }));
 
 beforeEach(() => {

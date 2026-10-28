@@ -10,7 +10,7 @@ import {
 import type { ReactElement } from 'react';
 import { waitFor, within } from '@testing-library/dom';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { AccountDialog, LineDialog, SettingsDialog } from './finance-setup';
 import { CloseMonthDialog } from './close-month-dialog';
 import { FinanceDashboard as Dashboard } from './finance-dashboard';

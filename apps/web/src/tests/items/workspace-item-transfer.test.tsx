@@ -6,7 +6,7 @@ import { NixApiError } from '@nix/api-client';
 import { WorkspaceItemTransfer } from '../../items/workspace-item-transfer';
 
 const client = vi.hoisted(() => ({ paginate: vi.fn(), execute: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 const SOURCE = '11111111-1111-4111-8111-111111111111';
 const DESTINATION = '22222222-2222-4222-8222-222222222222';
 const ITEM = '33333333-3333-4333-8333-333333333333';

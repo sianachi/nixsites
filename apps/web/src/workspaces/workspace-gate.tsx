@@ -1,5 +1,5 @@
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { readLastLocation } from '../pwa/last-location';
+import { readLastLocation } from '@nix/web-platform/pwa/last-location';
 import { Button } from '@nix/ui';
 import type { ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';

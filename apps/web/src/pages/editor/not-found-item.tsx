@@ -1,7 +1,7 @@
 import { Button, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { PaneState } from '../../panes/pane-state';
+import type { PaneState } from '@nix/web-platform/panes/pane-state';
 import type { ShellContext } from '../../shell/shell-context';
 import { useForgetMissingSmartList } from '../../views/query/known-smart-lists';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';

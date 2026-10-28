@@ -2,7 +2,7 @@ import { type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button } from '@nix/ui';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
@@ -11,8 +11,8 @@ import { openPanelPosition } from './panel-position';
 import { PetAvatar } from './pet-avatar';
 import { publishPetAttention } from './pet-attention';
 import { useOpenChat } from '../tabs/use-open-chat';
-import { usePanes } from '../panes/pane-state';
-import { usePetSettings } from '../api/use-pet-settings';
+import { usePanes } from '@nix/web-platform/panes/pane-state';
+import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { usePetRuntime } from './use-pet-runtime';
 import {
   readDevicePreference,

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { writeStored } from '@nix/web-foundation/lib/stored-setting';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '@nix/web-foundation/lib/ui-settings-sync';
-import { useCapabilities } from '../../session/capabilities-context';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 
 /**
  * Whether the person wants site publishing shown for pages they own: synced to the account as

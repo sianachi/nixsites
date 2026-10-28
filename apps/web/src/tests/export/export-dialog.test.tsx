@@ -8,7 +8,7 @@ import * as archiveRequests from '../../export/export-archive';
 
 let client: NixClient;
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
 }));
 

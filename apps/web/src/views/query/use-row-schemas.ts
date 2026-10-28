@@ -1,7 +1,7 @@
 import { structure } from '@nix/api-client';
 import { useEffect, useState } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import type { PropertyDefinition } from '../core/container-model';
 
 /**

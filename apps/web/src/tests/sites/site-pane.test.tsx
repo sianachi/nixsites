@@ -26,7 +26,7 @@ const client = {
 };
 let canRename = true;
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

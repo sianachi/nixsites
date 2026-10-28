@@ -25,9 +25,9 @@ import { ySyncPlugin, yUndoPlugin } from 'y-prosemirror';
 import type { Plugin } from '@tiptap/pm/state';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import * as Y from 'yjs';
-import { useAuth } from '../auth/auth-provider';
-import { useApiClient } from '../api/api-client-provider';
-import { useSelectedItem } from '../routing/selected-item';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { startCollabSync, FRAGMENT_NAME, type SyncState, type CollabSync } from './collab-sync';
 import {
   discardBodyCache,

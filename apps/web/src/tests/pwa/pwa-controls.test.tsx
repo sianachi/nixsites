@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { PwaControls } from '../../pwa/pwa-controls';
+import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 
 afterEach(() => {
   vi.restoreAllMocks();

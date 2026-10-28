@@ -8,7 +8,7 @@ import {
 } from '@nix/api-client';
 import { useState, type ReactElement } from 'react';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type { PropertyDefinition, View } from '../core/container-model';
 import type { ContainerData } from '../core/use-container';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';

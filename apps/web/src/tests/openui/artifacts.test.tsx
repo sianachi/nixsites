@@ -14,7 +14,7 @@ $count = 0`;
 const client = { query: vi.fn(), execute: vi.fn() };
 const bodies = { read: vi.fn(), append: vi.fn(), planEdit: vi.fn(), applyEdit: vi.fn() };
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

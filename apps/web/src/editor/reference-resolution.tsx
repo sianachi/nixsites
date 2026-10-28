@@ -10,7 +10,7 @@ import {
 } from 'react';
 
 import { isCanceledError, references } from '@nix/api-client';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 /**
  * What a document's references point at, resolved against the server.

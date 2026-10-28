@@ -4,7 +4,7 @@ import { isTypingTarget, matchesShortcut } from '@nix/web-foundation/lib/shortcu
 import { SHORTCUTS, type ShellShortcutId } from '@nix/web-foundation/keyboard/shortcut-registry';
 
 import type { WorkspaceTree } from '../items/use-workspace-tree';
-import type { PaneState } from '../panes/pane-state';
+import type { PaneState } from '@nix/web-platform/panes/pane-state';
 
 /**
  * Reveals every item addressed by an open pane once the shell's lazy tree is ready.

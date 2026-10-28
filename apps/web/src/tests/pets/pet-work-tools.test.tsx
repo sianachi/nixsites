@@ -15,7 +15,7 @@ import { markdownToDocument } from '@nix/markdown';
 import * as actionReceipts from '../../pets/action-receipts';
 
 const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn(), invalidate: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

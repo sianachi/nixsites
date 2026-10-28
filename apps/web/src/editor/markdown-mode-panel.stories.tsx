@@ -6,7 +6,7 @@ import type { ReactElement } from 'react';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import * as Y from 'yjs';
 
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { snapshotMarkdown } from './markdown-mode';
 import { MarkdownModePanel } from './markdown-mode-panel';
 

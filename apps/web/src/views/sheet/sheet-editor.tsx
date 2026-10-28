@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { useAuth } from '../../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { documentScope } from '@nix/web-foundation/lib/body-cache';
 import { startCollabSync, type CollabSync, type SyncState } from '../../editor/collab-sync';

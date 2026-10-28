@@ -3,7 +3,7 @@ import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type { CanvasElement } from './canvas-binding';
 import { NixCanvas } from './nix-canvas';
 

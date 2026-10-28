@@ -341,13 +341,13 @@
       "sources": [
         "apps/web/src/main.tsx",
         "apps/web/src/app.tsx",
-        "apps/web/src/auth/auth-provider.tsx",
-        "apps/web/src/auth/session-store.ts",
-        "apps/web/src/api/api-client-provider.tsx",
+        "packages/web-platform/src/auth/auth-provider.tsx",
+        "packages/web-foundation/src/lib/session-store.ts",
+        "packages/web-platform/src/api/api-client-provider.tsx",
         "packages/api-client/src/http.ts",
         "apps/web/public/manifest.webmanifest",
         "apps/web/public/service-worker.js",
-        "apps/web/src/pwa/register-service-worker.ts",
+        "packages/web-platform/src/pwa/register-service-worker.ts",
         "apps/web/vite.config.ts",
         "apps/web/src/tests/auth/auth-provider.test.tsx",
         "apps/web/src/shell/app-shell.tsx",
@@ -360,7 +360,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, OIDC, IndexedDB",
         "depends_on": "Core BFF, collaboration and service worker",
-        "source_paths": "apps/web/src/main.tsx\napps/web/src/app.tsx\napps/web/src/auth/auth-provider.tsx\napps/web/src/auth/session-store.ts\napps/web/src/api/api-client-provider.tsx\npackages/api-client/src/http.ts\napps/web/public/manifest.webmanifest\napps/web/public/service-worker.js\napps/web/src/pwa/register-service-worker.ts\napps/web/vite.config.ts\napps/web/src/tests/auth/auth-provider.test.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts"
+        "source_paths": "apps/web/src/main.tsx\napps/web/src/app.tsx\npackages/web-platform/src/auth/auth-provider.tsx\npackages/web-foundation/src/lib/session-store.ts\npackages/web-platform/src/api/api-client-provider.tsx\npackages/api-client/src/http.ts\napps/web/public/manifest.webmanifest\napps/web/public/service-worker.js\npackages/web-platform/src/pwa/register-service-worker.ts\napps/web/vite.config.ts\napps/web/src/tests/auth/auth-provider.test.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts"
       },
       "localProofItemId": "01a12247-5982-7342-aad3-f92fc7e61246"
     },
@@ -1171,7 +1171,7 @@
       "archive": "docs/nix/nix-offline-notes-decision.nix",
       "sources": [
         "apps/web/src/offline",
-        "apps/web/src/auth/auth-provider.tsx",
+        "packages/web-platform/src/auth/auth-provider.tsx",
         "apps/web/src/editor/body-cache.ts",
         "apps/web/src/editor/draft-journal.ts",
         "apps/web/src/editor/collab-sync.ts",

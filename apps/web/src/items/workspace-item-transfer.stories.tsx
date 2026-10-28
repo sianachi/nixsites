@@ -1,7 +1,7 @@
 import type { NixClient } from '@nix/api-client';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceItemTransfer } from './workspace-item-transfer';
 
 export default { title: 'Nix/Items/Move to workspace', parameters: { layout: 'padded' } };

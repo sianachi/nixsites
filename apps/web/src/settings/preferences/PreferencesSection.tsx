@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react';
 
-import { useCapabilities } from '../../session/capabilities-context';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';

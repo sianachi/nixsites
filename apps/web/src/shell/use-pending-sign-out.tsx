@@ -2,7 +2,7 @@ import { Button, Dialog, Text } from '@nix/ui';
 import { useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 
-import { useAuth } from '../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { bodyCacheAccountEpoch } from '@nix/web-foundation/lib/body-cache';
 import { flushLocalDraftsForAccount } from '../editor/collab-sync';

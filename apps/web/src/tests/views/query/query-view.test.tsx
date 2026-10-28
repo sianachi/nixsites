@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAt, signedIn } from '../../render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView } from '../../view-fixture';
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type { View } from '../../../views/core/container-model';
 import { QueryView } from '../../../views/query/query-view';
 import { ViewTools } from '../../../views/core/view-tools';

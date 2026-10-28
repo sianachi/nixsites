@@ -32,7 +32,7 @@ const { beginUploadMock, uploadAndCompleteFileMock, fetchFileContentMock } = vi.
   ),
 }));
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useOptionalApiClient: () => ({ execute: vi.fn(() => Promise.resolve({ id: 'upload-1' })) }),
 }));
 

@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation, useSearchParams } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetAnnouncements, useAnnouncement } from '@nix/web-foundation/a11y/announcer';
-import { PaneProvider } from '../../panes/pane-context';
+import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { stubViewport } from '../stub-viewport';

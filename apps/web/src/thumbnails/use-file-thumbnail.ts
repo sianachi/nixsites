@@ -1,7 +1,7 @@
 import { files as fileResources, isNixApiError } from '@nix/api-client';
 import { useEffect, useState } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { loadServerThumbnail } from './server-thumbnail';
 import { usePdfThumbnail, type PdfThumbnailStatus } from './use-pdf-thumbnail';
 

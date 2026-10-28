@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 
 import { isCanceledError, isNixApiError } from '@nix/api-client';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '../properties/property-input';
 import { type PropertyValue } from '../views/core/container-model';
 import { reportFormValidity } from '../views/form/form-validity';

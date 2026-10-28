@@ -2,14 +2,14 @@ import { type PreferencesInput, type PrincipalPreferencesResponse } from '@nix/a
 import { Button, Checkbox, Field, Input, Text, cn } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   currentPushSubscription,
   disablePushOnThisDevice,
   enablePushOnThisDevice,
   pushSupported,
   type PushUnavailableReason,
-} from '../../pwa/push-subscription';
+} from '@nix/web-platform/pwa/push-subscription';
 import { SettingsSection } from '../shared/settings-section';
 import { preferencesInputFrom } from '../shared/preference-defaults';
 import { useMutedContainerTitles } from './use-muted-container-titles';

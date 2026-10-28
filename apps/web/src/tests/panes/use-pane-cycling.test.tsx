@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
 
-import { paneElementId } from '../../panes/pane-params';
-import { usePaneCycling } from '../../panes/use-pane-cycling';
+import { paneElementId } from '@nix/web-platform/panes/pane-params';
+import { usePaneCycling } from '@nix/web-platform/panes/use-pane-cycling';
 
 /**
  * F6 as the key between regions.

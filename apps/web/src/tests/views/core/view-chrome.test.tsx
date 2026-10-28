@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { renderAt } from '../../render-with-router';
 import { aContainer } from '../../container-fixture';
 import type { Item, ViewFilterRule } from '../../../views/core/container-model';

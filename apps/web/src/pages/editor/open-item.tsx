@@ -3,7 +3,7 @@ import { MoreHorizontal, Settings2, Maximize2 } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
-import { useAuth } from '../../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
@@ -19,7 +19,7 @@ import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
-import { usePaneIndex } from '../../panes/pane-context';
+import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { readPanelOpen, storePanelOpen } from '../../panel/panel-state';
 import type { Pane } from '../../panel/item-panel';
 import { useItemProperties } from '../../properties/use-item-properties';

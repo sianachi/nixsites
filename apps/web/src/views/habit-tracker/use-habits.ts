@@ -1,5 +1,5 @@
 import { habits, isNixApiError, type HabitTracker, type SetHabitInput } from '@nix/api-client';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type HabitLoadState = 'loading' | 'ready' | 'partial' | 'error';

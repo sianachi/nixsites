@@ -28,7 +28,7 @@ const cache = createNixClient({
   },
 }).cache;
 
-vi.mock('../../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => (client.current ??= { query, cache }),
 }));
 

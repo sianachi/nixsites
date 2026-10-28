@@ -1,6 +1,6 @@
 import { items, locks } from '@nix/api-client';
 import { useEffect, useState } from 'react';
-import { useApiClient } from '../../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 /** The most notes one message carries; the server refuses more. */
 export const MAX_CONTEXTS = 5;

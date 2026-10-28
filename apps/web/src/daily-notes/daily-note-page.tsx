@@ -3,7 +3,7 @@ import { isCanceledError, isNixApiError, workspaces as coreWorkspaces } from '@n
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { offerDailyTemplate } from '@nix/web-foundation/lib/pending-daily-template';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { dailyNoteLabel, localDailyNoteDate, parseDailyNoteDate } from './daily-note';

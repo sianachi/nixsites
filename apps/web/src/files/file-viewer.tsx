@@ -3,8 +3,11 @@ import { Button, ContextMenu, Dialog, Icon, Text, cn } from '@nix/ui';
 import { Download, File as FileIcon, Info, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
-import { cacheKeysOverlap, useCacheInvalidation } from '../api/use-cache-invalidation';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import {
+  cacheKeysOverlap,
+  useCacheInvalidation,
+} from '@nix/web-platform/api/use-cache-invalidation';
 import { useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { findBuiltInFileViewer } from '../plugins/built-in-file-viewers';
 import { FileDetails } from './file-details';

@@ -2,7 +2,7 @@ import { Duotone, Icon, blueprintFrame, cn } from '@nix/ui';
 import { BookOpen, File, FileText, Image, Music, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { files, type FileVersion } from '@nix/api-client';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 import {
   fileThumbnailKind,

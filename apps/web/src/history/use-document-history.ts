@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useAuth } from '../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import {
   deleteNamedVersion,
   fetchStateAt,

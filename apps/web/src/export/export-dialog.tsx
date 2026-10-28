@@ -2,7 +2,7 @@ import { exports as exportResources, isNixApiError, type Export } from '@nix/api
 import { Button, Dialog, Field, Segmented, Select, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   cancelArchive,
   requestArchive,

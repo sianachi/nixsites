@@ -9,7 +9,7 @@ import {
 import { useSearchParams } from 'react-router';
 import { z } from 'zod';
 
-import { usePaneIndex } from '../../panes/pane-context';
+import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import {
   DIRECTION_PARAM,
   MODE_PARAM,
@@ -19,7 +19,7 @@ import {
   clearViewState,
   paneFilterPrefix,
   paneParam,
-} from '../../panes/pane-params';
+} from '@nix/web-platform/panes/pane-params';
 
 /**
  * Which view is on screen, and how it is sorted and filtered - held in the URL.

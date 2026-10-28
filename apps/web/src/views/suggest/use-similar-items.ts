@@ -1,7 +1,7 @@
 import { isCanceledError, search } from '@nix/api-client';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   DUPLICATE_THRESHOLD,
   MINIMUM_DUPLICATE_QUERY,

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 /**
  * The URL-state parameter for the settings screen's active tab, following the convention in
- * `apps/web/src/routing/url-state.ts`: one Zod schema per parameter, and a reader that returns a valid
+ * `packages/web-platform/src/routing/url-state.ts`: one Zod schema per parameter, and a reader that returns a valid
  * value or null. Navigation itself is links, so there is no writer.
  */
 export const SettingsTabSchema = z.enum([

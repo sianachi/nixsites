@@ -2,7 +2,7 @@ import { Button, Icon, Text, focusRing, inkWashStates } from '@nix/ui';
 import { FileText } from 'lucide-react';
 import { type ReactNode } from 'react';
 
-import { useSelectedItem } from '../routing/selected-item';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { useBacklinks } from './use-backlinks';
 
 /**

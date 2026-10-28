@@ -11,7 +11,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useState } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { isNoSite, refusalMessage } from './site-copy';
 
 /**

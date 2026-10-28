@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 import { readPropertyText } from '../../views/core/container-model';
 

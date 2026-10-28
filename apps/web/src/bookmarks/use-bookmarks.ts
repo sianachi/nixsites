@@ -2,7 +2,7 @@ import { bookmarks, isNixApiError, type KeptItem, type NixClient } from '@nix/ap
 import { useEffect } from 'react';
 import { create } from 'zustand';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 /**

@@ -7,7 +7,7 @@ import { fileImageReference } from '../../../properties/inputs/image-reference';
 import { CoverImage } from '../../../views/gallery/cover-image';
 
 const client = vi.hoisted(() => ({ query: vi.fn() }));
-vi.mock('../../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

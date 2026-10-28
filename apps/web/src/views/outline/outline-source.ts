@@ -1,7 +1,7 @@
 import { isNixApiError, items as coreItems, structure as coreStructure } from '@nix/api-client';
 import { useMemo } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useWorkspace } from '../../workspaces/workspace-context';
 import type { Item } from '../core/container-model';

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isCanceledError, isNixApiError } from '@nix/api-client';
 
-import { useApiClient } from '../../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { changePublicFormStatus, publicFormStatus } from '../public-form-api';
 
 export function PublishingControls({

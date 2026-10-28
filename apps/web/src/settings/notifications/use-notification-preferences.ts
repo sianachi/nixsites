@@ -6,7 +6,7 @@ import {
   type PrincipalPreferencesResponse,
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export interface NotificationPreferencesState {

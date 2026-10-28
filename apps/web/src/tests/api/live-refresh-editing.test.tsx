@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { PropertyPanel } from '../../properties/property-panel';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useDriveFileInfo } from '../../views/drive/use-drive-file-info';

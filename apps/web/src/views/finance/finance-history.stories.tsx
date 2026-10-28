@@ -6,7 +6,7 @@ import {
   type QueryEndpoint,
 } from '@nix/api-client';
 import { useRef, useState, type ReactElement } from 'react';
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { FinanceTransactions as History } from './finance-transactions';
 import type { FinanceState } from './use-finance';
 

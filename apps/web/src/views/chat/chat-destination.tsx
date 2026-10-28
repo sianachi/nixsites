@@ -1,7 +1,7 @@
 import { items, type Item } from '@nix/api-client';
 import { Button, Select, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 export function ChatDestination({
   workspaceId,

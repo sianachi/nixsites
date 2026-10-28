@@ -13,7 +13,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useContainer } from '../../views/core/use-container';

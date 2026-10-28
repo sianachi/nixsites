@@ -2,7 +2,7 @@ import { sites, type CommandEndpoint, type Site, type SiteHostname } from '@nix/
 import { Button, Field, Input, Select, Tag, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import { useOptionalApiClient } from '../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { refusalMessage } from './site-copy';
 
 /** Runs one hostname command; resolves to the refusal in words, or null when it went through. */

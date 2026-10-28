@@ -5,7 +5,7 @@ import type { NixClient, Workspace } from '@nix/api-client';
 import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type { WorkspaceLoadState } from '../workspaces/workspace-context';
 import { WorkspaceProvider } from '../workspaces/workspace-context';
 import { TemplateInitializationEditor } from './initialization/template-initialization-editor';

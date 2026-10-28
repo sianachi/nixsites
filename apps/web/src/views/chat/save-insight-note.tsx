@@ -3,7 +3,7 @@ import { createCompanionBodies } from '@nix/companion';
 import { Button, Checkbox, Input, Select, Text, Textarea } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useAccessibleWorkspaces } from '../../workspaces/workspace-context';
 import { ChatDestination } from './new-chat-note';
 

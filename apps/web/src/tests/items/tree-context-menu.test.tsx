@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
-import { AuthProvider } from '../../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-hidden-items';

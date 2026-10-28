@@ -7,13 +7,13 @@ import { StrictMode, useState } from 'react';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AuthProvider, useAuth } from '../../auth/auth-provider';
+import { AuthProvider, useAuth } from '@nix/web-platform/auth/auth-provider';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import * as registerServiceWorker from '../../pwa/register-service-worker';
+import * as registerServiceWorker from '@nix/web-platform/pwa/register-service-worker';
 import { workspaces } from '@nix/api-client';
-import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
+import { ApiClientProvider, useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { memoryStorage } from '../memory-storage';
 
 const future = '2099-01-01T00:00:00+00:00';

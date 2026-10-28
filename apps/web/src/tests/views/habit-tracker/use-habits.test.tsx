@@ -5,7 +5,7 @@ import { useHabits } from '../../../views/habit-tracker/use-habits';
 
 const query = vi.fn<() => Promise<HabitTracker>>();
 const client = { query };
-vi.mock('../../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 const tracker: HabitTracker = {
   habitId: 'read',
   frequency: 'daily',

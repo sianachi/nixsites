@@ -2,7 +2,7 @@ import { isCanceledError, isNixApiError, workspaces as coreWorkspaces } from '@n
 import { Checkbox, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspace-context';
 

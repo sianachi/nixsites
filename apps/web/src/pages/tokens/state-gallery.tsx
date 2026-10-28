@@ -11,7 +11,7 @@ import {
   type StatePreview,
   statePreviewSearch,
   useStatePreview,
-} from '../../routing/url-state';
+} from '@nix/web-platform/routing/url-state';
 
 /**
  * The state-pattern gallery, and the page's demonstration of the URL-state

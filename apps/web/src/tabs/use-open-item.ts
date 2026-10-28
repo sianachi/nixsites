@@ -2,10 +2,15 @@ import { useCallback } from 'react';
 import { useLocation, useNavigate, useSearchParams, type NavigateFunction } from 'react-router';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
-import { usePaneIndex } from '../panes/pane-context';
-import { focusPane } from '../panes/pane-params';
-import { BESIDE_REFUSAL_COPY, parsePanes, usePanes, type BesideRefusal } from '../panes/pane-state';
-import { useSelectedItem, writeSelectedItem } from '../routing/selected-item';
+import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
+import { focusPane } from '@nix/web-platform/panes/pane-params';
+import {
+  BESIDE_REFUSAL_COPY,
+  parsePanes,
+  usePanes,
+  type BesideRefusal,
+} from '@nix/web-platform/panes/pane-state';
+import { useSelectedItem, writeSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { ownerOfItem } from './tab-ownership';
 import { useTabStore, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 import { withViewTransition } from '@nix/web-foundation/lib/view-transition';

@@ -5,7 +5,7 @@ import {
 } from '@nix/api-client';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { isFilterGroup, type ViewFilterRule } from './container-model';
 import { ME_TOKEN, type RuleContext } from './filter-rules';
 import { readerToday } from './timestamps';

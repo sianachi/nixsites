@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router';
 
 import type { NixClient } from '@nix/api-client';
 
-import { useOptionalApiClient } from '../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ApprovalCard, type WriteDecision } from '../pets/approval/approval-card';
 import { afterWrite } from '../pets/approval/prepare-write';
 import { storableState, type ProgramPiece } from './fence';

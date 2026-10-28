@@ -2,8 +2,8 @@ import { Button, Text } from '@nix/ui';
 import { Keyboard, Maximize2, PanelLeft } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import { ApiClientProvider } from '../api/api-client-provider';
-import { AuthProvider } from '../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { CommandPalette } from './command-palette';
 import type { PaletteCommand } from './commands';
 

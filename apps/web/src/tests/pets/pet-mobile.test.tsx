@@ -9,11 +9,11 @@ import { MobileNoteToolbar } from '../../editor/mobile-note-toolbar';
 import { stubViewport } from '../stub-viewport';
 
 const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 vi.mock('../../workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));
-vi.mock('../../api/use-pet-settings', () => ({
+vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
   usePetSettings: () => ({
     saved: {
       revision: 1,

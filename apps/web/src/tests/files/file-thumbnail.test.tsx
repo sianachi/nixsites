@@ -6,7 +6,7 @@ import { useFileThumbnail, fileThumbnailKind } from '../../thumbnails/use-file-t
 const client = vi.hoisted(() => ({ query: vi.fn() }));
 const query = client.query;
 const revokeObjectURL = vi.fn();
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 vi.mock('../../thumbnails/use-pdf-thumbnail', () => ({
   usePdfThumbnail: () => ({ status: 'none', url: null }),
 }));

@@ -38,7 +38,7 @@ vi.mock('../../../workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE_ID }),
 }));
 
-vi.mock('../../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useOptionalApiClient: () =>
     ({
       query: () => Promise.resolve({ query: '', limit: 20, truncated: false, results: [] }),

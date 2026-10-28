@@ -14,8 +14,11 @@ import { renderAt, signedIn } from '../../render-with-router';
 import { aContainer, views } from '../../container-fixture';
 import { aView } from '../../view-fixture';
 import { STUB_WORKSPACE } from '../../api-stub';
-import { ApiClientOverrideProvider, ApiClientProvider } from '../../../api/api-client-provider';
-import { AuthProvider } from '../../../auth/auth-provider';
+import {
+  ApiClientOverrideProvider,
+  ApiClientProvider,
+} from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import {
   toViewRequest,
   type PropertyDefinition,

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { stubViewport } from '../stub-viewport';
 import { parseFilters, parseViewState } from '../../views/core/view-state';
-import { closePaneParams, parsePanes, usePanes } from '../../panes/pane-state';
+import { closePaneParams, parsePanes, usePanes } from '@nix/web-platform/panes/pane-state';
 import {
   PANE_LIMIT,
   clearViewState,
@@ -13,7 +13,7 @@ import {
   parseSizes,
   parseSplit,
   sizesToParam,
-} from '../../panes/pane-params';
+} from '@nix/web-platform/panes/pane-params';
 
 /**
  * The arrangement, read out of a query string.

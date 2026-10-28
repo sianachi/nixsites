@@ -2,7 +2,7 @@ import { Button, Text } from '@nix/ui';
 import { type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
-import { useAuth } from '../auth/auth-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore, type Unreachable } from '@nix/web-foundation/lib/session-store';
 import { useWebConfig } from '@nix/web-foundation/lib/web-config';
 import { LandingPage } from '../pages/landing-page';

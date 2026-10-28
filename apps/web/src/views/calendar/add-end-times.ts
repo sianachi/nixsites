@@ -1,6 +1,6 @@
 import { isNixApiError, structure as coreStructure, views as coreViews } from '@nix/api-client';
 
-import type { useApiClient } from '../../api/api-client-provider';
+import type { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   ContainerViewsSchema,
   EffectiveSchemaSchema,

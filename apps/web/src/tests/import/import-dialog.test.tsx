@@ -17,7 +17,7 @@ const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 
 // The dialog reaches the client only through the run seam, which these tests stub; the hook is
 // stubbed so rendering does not need the whole provider stack.
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => ({}) as unknown,
 }));
 

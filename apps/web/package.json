@@ -28,6 +28,7 @@
     "@nix/ui": "workspace:*",
     "@nix/view-render": "workspace:*",
     "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
     "@openuidev/lang-core": "1.0.1",
     "@openuidev/react-lang": "1.0.1",
     "@tiptap/core": "^3.29.0",

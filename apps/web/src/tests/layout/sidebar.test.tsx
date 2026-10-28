@@ -6,7 +6,7 @@ import { App } from '../../app';
 import { item, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { stubViewport } from '../stub-viewport';
-import { paneElementId } from '../../panes/pane-params';
+import { paneElementId } from '@nix/web-platform/panes/pane-params';
 import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MAXIMUM_WIDTH,

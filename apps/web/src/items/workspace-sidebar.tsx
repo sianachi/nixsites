@@ -44,7 +44,7 @@ import {
   type RefObject,
 } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
 import { useBookmarksStore } from '../bookmarks/use-bookmarks';

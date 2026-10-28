@@ -3,7 +3,7 @@ import { Button, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '../workspace-context';
 
 export function CreateWorkspaceForm(props: { readonly onCreated: () => void }): ReactNode {

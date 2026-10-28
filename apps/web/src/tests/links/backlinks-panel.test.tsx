@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useLocation } from 'react-router';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
-import { AuthProvider } from '../../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { BacklinksPane } from '../../links/backlinks-panel';
 import { item, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';

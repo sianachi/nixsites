@@ -11,7 +11,7 @@ const collection = '22222222-2222-4222-8222-222222222222';
 const client = { query: vi.fn(), execute: vi.fn(), invalidate: vi.fn() };
 const run = vi.fn();
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

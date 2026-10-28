@@ -27,7 +27,7 @@ import {
 } from '../views/query/known-smart-lists';
 
 import { petAttentionText } from '../pets/pet-attention';
-import { useSelectedItem } from '../routing/selected-item';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { usePetNavEntry } from '../pets/use-pet-nav-entry';
 import { useWorkspace } from '../workspaces/workspace-context';
 

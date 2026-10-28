@@ -3,7 +3,7 @@ import { Button, Dialog, Icon, Menu } from '@nix/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useHiddenItems } from './use-hidden-items';
 import { HiddenItemsList, type HiddenEntry } from './hidden-items-list';
 

@@ -13,7 +13,7 @@
 # The site address is plain :8090 because TLS termination is the host environment's decision
 # (a load balancer, or Caddy's own automatic HTTPS once a real hostname replaces the port). It is
 # not 8080: deploy/compose.dev.yml keeps Zitadel off that port for being too popular to claim, and
-# apps/web/src/auth/oidc-config.ts still names http://localhost:8080 as its issuer fallback, so a
+# packages/web-platform/src/auth/oidc-config.ts still names http://localhost:8080 as its issuer fallback, so a
 # Caddy sitting there would answer requests meant for an identity provider.
 
 :8090 {

@@ -3,7 +3,7 @@ import { Text, focusRing } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 import {
   EmptyPanel,
@@ -16,7 +16,7 @@ import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { Conversation } from '../pets/conversation/conversation';
 import { usePetRuntime } from '../pets/use-pet-runtime';
-import { usePetSettings } from '../api/use-pet-settings';
+import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { useWorkspace } from '../workspaces/workspace-context';
 
 // On this page nothing sits behind a launcher, so there is no badge for a decision to set.

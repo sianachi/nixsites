@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
-import { AuthProvider } from '../../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';

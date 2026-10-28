@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { NoteImageView } from '../../editor/note-image-view';
 
 const apiClient = vi.hoisted(() => ({}));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => apiClient }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => apiClient }));
 vi.mock('@tiptap/react', () => ({
   NodeViewWrapper: ({ children }: { children: ReactNode }) => <figure>{children}</figure>,
 }));

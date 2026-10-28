@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { PANE_LIMIT } from '../panes/pane-params';
-import { closePaneParams, parsePanes } from '../panes/pane-state';
-import { writeSelectedItem } from '../routing/selected-item';
+import { PANE_LIMIT } from '@nix/web-platform/panes/pane-params';
+import { closePaneParams, parsePanes } from '@nix/web-platform/panes/pane-state';
+import { writeSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { ownerOfItem, tabsForPane } from './tab-ownership';
 import { isChatTabId, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 

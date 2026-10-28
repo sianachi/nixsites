@@ -37,8 +37,8 @@ import { Awareness } from 'y-protocols/awareness';
 import { redo, undo, yCursorPlugin, ySyncPluginKey, yUndoPlugin, ySyncPlugin } from 'y-prosemirror';
 import * as Y from 'yjs';
 
-import { useAuth } from '../auth/auth-provider';
-import { useApiClient } from '../api/api-client-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ItemBlockView, PageBreakView, NoteSourcesProvider } from './note-block-views';
 import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';

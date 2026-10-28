@@ -3,9 +3,9 @@ import { Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { AppRoutes } from '../app';
-import { AuthOverrideProvider, type AuthContextValue } from '../auth/auth-provider';
+import { AuthOverrideProvider, type AuthContextValue } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import {

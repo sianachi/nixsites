@@ -1,6 +1,6 @@
 import { isCanceledError, isNixApiError, pets, type PetConnection } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ownerTurnContext } from './turn-context';
 import { isAborted } from '@nix/web-foundation/lib/guards';
 

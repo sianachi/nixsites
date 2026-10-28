@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type { PublicForm } from '../../pages/public-form-api';
 import { PublicFormPage } from '../../pages/public-form-page';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';

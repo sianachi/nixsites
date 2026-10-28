@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { hydrateUiSettings } from '@nix/web-foundation/lib/ui-settings-sync';
 
 /** Reads the account's synced interface settings once the shell knows who is signed in. */

@@ -11,7 +11,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { addEndTimes as addEndTimesTo } from '../views/calendar/add-end-times';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 

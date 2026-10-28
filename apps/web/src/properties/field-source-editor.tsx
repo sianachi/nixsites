@@ -2,7 +2,7 @@ import { structure } from '@nix/api-client';
 import { Field, Select, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { useOptionalApiClient } from '../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { TemplateItemPicker } from '../templates/template-item-picker';
 import type { PropertyDefinition } from '../views/core/container-model';
 

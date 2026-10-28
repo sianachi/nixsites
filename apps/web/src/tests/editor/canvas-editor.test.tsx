@@ -14,7 +14,7 @@ const canvasHarness = vi.hoisted(() => ({
   getAccessToken: vi.fn(() => Promise.resolve('token')),
 }));
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: canvasHarness.getAccessToken }),
 }));
 

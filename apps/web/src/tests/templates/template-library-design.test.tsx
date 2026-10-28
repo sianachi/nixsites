@@ -5,7 +5,7 @@ import { expect, it, vi } from 'vitest';
 import { TemplateLibraryPage } from '../../templates/library/template-library-page';
 
 const settings = vi.hoisted(() => ({ enabled: true }));
-vi.mock('../../api/use-pet-settings', () => ({
+vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
   usePetSettings: () => ({ saved: { settings: { enabled: settings.enabled } } }),
 }));
 vi.mock('../../templates/template-library-context', () => ({
@@ -16,7 +16,7 @@ vi.mock('../../templates/template-library-context', () => ({
     reload: () => undefined,
   }),
 }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => ({}) }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => ({}) }));
 vi.mock('../../workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));

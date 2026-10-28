@@ -3,7 +3,7 @@ import { Button, Field, Select, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 /** The destinations are supplied by Core; browser membership data never decides write access. */

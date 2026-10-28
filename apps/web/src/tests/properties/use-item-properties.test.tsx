@@ -27,7 +27,7 @@ const client = {
     },
   }).cache,
 };
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 
 function emptySchema(): Record<string, unknown> {
   return { properties: [], declared: [], inherit: true };

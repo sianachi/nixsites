@@ -9,7 +9,7 @@ import {
 import { Button, Dialog, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { TemplateItemPicker } from '../templates/template-item-picker';
 import {
   describeRunReason,

@@ -2,8 +2,8 @@ import { isCanceledError, workspaces as coreWorkspaces, type Workspace } from '@
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Outlet, useParams } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
-import { cacheKeysOverlap } from '../api/use-cache-invalidation';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { cacheKeysOverlap } from '@nix/web-platform/api/use-cache-invalidation';
 import {
   cancelItemChildrenRefresh,
   notifyItemChildrenChanged,

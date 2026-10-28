@@ -3,7 +3,7 @@ import { RotateCcw, Trash2 } from 'lucide-react';
 import { isNixApiError, items as coreItems, type Item } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   EmptyPanel,
   ErrorPanel,

@@ -4,7 +4,7 @@ import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { NewChatNote } from './new-chat-note';
 

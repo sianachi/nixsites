@@ -3,7 +3,7 @@ import { Button, Checkbox, Input, Select, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ChatDestination } from '../views/chat/new-chat-note';
 import { useAccessibleWorkspaces } from '../workspaces/workspace-context';
 import { fenced, fencedState } from './fence';

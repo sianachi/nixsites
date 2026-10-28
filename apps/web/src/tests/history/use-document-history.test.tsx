@@ -12,7 +12,7 @@ import { json } from '../json-response';
 
 const getAccessToken = (): Promise<string> => Promise.resolve('token');
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken }),
 }));
 

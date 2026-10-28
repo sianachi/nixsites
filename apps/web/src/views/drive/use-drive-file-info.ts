@@ -1,8 +1,11 @@
 import { files as fileResources, isNixApiError, type FileRecord } from '@nix/api-client';
 import { useEffect, useRef, useState } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
-import { cacheKeysOverlap, useCacheInvalidation } from '../../api/use-cache-invalidation';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import {
+  cacheKeysOverlap,
+  useCacheInvalidation,
+} from '@nix/web-platform/api/use-cache-invalidation';
 
 /** What this hook knows about one file item's record, or why it does not know yet. */
 export type DriveFileInfo =

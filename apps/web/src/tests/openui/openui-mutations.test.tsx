@@ -10,7 +10,7 @@ const run = vi.fn();
 const prepareWrite = vi.fn();
 const afterWrite = vi.fn();
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));

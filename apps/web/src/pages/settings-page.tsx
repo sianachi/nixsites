@@ -20,7 +20,7 @@ import { PreferencesSection } from '../settings/preferences/PreferencesSection';
 import { NotificationsSection } from '../settings/notifications/notifications-section';
 import { WorkspaceManagementSection } from '../workspaces/workspace-management-section';
 import { PetSettingsSection } from '../pets/pet-settings-section';
-import { useCapabilities, type Capabilities } from '../session/capabilities-context';
+import { useCapabilities, type Capabilities } from '@nix/web-platform/session/capabilities-context';
 import {
   DEFAULT_SETTINGS_TAB,
   SETTINGS_TAB_PARAM,

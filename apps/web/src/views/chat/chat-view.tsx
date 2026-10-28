@@ -9,7 +9,7 @@ import {
 } from '@nix/api-client';
 import { Button, Text, Textarea, Checkbox } from '@nix/ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PetChatViewport } from '../../pets/pet-chat-viewport';
 import { PetMessageText } from '../../pets/pet-message-text';
 import { earlierPieces } from '../../openui/fence';

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';
 import type { PropertyDefinition, PropertyValue } from '../core/container-model';
 import { DuplicateNotice } from './duplicate-notice';

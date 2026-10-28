@@ -6,7 +6,7 @@ import {
   type FinanceTransactions as Transactions,
 } from '@nix/api-client';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   ErrorPanel,
   LoadingPanel,

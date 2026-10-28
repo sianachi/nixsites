@@ -2,7 +2,7 @@ import { isCanceledError, isNixApiError, pets, type PetProviderKey } from '@nix/
 import { Button, Field, Input, Text } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { petProviderLabels } from './catalog';
 import { useChangeFocus } from './use-change-focus';
 

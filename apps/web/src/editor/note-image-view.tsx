@@ -3,7 +3,7 @@ import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NoteImageSize } from './note-image-size';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { proseClasses } from './prose';
 
 /**

@@ -16,10 +16,10 @@ import { useSearchParams } from 'react-router';
 import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
 import { copyLinkEntry } from '../items/item-menu-entries';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { CHAT_PARAM, paneParam } from '../panes/pane-params';
-import type { PaneState } from '../panes/pane-state';
+import { CHAT_PARAM, paneParam } from '@nix/web-platform/panes/pane-params';
+import type { PaneState } from '@nix/web-platform/panes/pane-state';
 import type { ShellContext } from '../shell/shell-context';
-import { useSelectedItem } from '../routing/selected-item';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { useOptionalWorkspace } from '../workspaces/workspace-context';
 import {
   carriesTabTransfer,

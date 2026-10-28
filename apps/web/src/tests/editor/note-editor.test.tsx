@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import type * as apiClient from '@nix/api-client';
 import type * as collabSync from '../../editor/collab-sync';
-import type * as apiClientProvider from '../../api/api-client-provider';
+import type * as apiClientProvider from '@nix/web-platform/api/api-client-provider';
 import { useKeyboardModeStore } from '../../editor/keyboard-mode-store';
 import { useWritingModePreference } from '../../editor/writing-mode';
 import { useTextWidthPreference } from '../../editor/text-width-preference';
@@ -80,11 +80,13 @@ vi.mock('../../editor/bubble-menu', () => ({ BubbleMenu: () => null }));
 
 // Reference navigation has its own suite and requires a Router. This file inspects the reference
 // node in Yjs, so rendering its routing control would add no coverage here.
-vi.mock('../../routing/selected-item', () => ({ useSelectedItem: () => ({ select: vi.fn() }) }));
+vi.mock('@nix/web-platform/routing/selected-item', () => ({
+  useSelectedItem: () => ({ select: vi.fn() }),
+}));
 
 vi.mock('../../editor/reference-view', () => ({ ReferenceView: () => null }));
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),
 }));
 
@@ -102,8 +104,10 @@ vi.mock('@nix/api-client', async () => {
   };
 });
 
-vi.mock('../../api/api-client-provider', async () => {
-  const actual = await vi.importActual<typeof apiClientProvider>('../../api/api-client-provider');
+vi.mock('@nix/web-platform/api/api-client-provider', async () => {
+  const actual = await vi.importActual<typeof apiClientProvider>(
+    '@nix/web-platform/api/api-client-provider',
+  );
   return { ...actual, useApiClient: () => fileHarness.client };
 });
 

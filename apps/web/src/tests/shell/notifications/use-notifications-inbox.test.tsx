@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useNotificationsInbox } from '../../../shell/notifications/use-notifications-inbox';
 
 /**

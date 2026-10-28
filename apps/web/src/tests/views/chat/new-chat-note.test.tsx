@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { z } from 'zod';
 import { Button } from '@nix/ui';
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import {
   AccessibleWorkspacesProvider,
   WorkspaceProvider,

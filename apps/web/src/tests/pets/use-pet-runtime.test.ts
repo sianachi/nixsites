@@ -4,7 +4,7 @@ import { NixApiError, petConnectionSchema, type PetConnection } from '@nix/api-c
 import { usePetRuntime } from '../../pets/use-pet-runtime';
 
 const client = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => client }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 
 const WORKSPACE_ID = '11111111-1111-4111-8111-111111111111';
 const PET_ID = '22222222-2222-4222-8222-222222222222';

@@ -1,6 +1,6 @@
 import { readLastWorkspaceId } from './last-workspace';
 import { conversations, type Conversation } from '@nix/api-client';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { Button, Input, Text, focusRing } from '@nix/ui';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router';

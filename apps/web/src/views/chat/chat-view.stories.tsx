@@ -1,7 +1,7 @@
 import { createNixClient, type NixClient, type Workspace } from '@nix/api-client';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import type { ReactNode } from 'react';
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { AccessibleWorkspacesProvider } from '../../workspaces/workspace-context';
 import { ChatView } from './chat-view';
 

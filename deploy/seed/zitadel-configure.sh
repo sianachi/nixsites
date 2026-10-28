@@ -173,7 +173,7 @@ fi
 # ── OIDC application (SPA, PKCE, no secret) ─────────────────────────────────
 # Both dev redirect URIs are registered: the login callback, and the hidden
 # iframe target that automatic silent renewal navigates to with prompt=none.
-# Tokens are held in memory only (apps/web/src/auth/oidc-config.ts), so every
+# Tokens are held in memory only (packages/web-platform/src/auth/oidc-config.ts), so every
 # page reload depends on a silent renew - and Zitadel answers an authorize
 # request naming an unregistered redirect_uri with a hard 400, which turns a
 # missing entry here into a session that cannot survive a reload.

@@ -2,9 +2,9 @@ import { Text } from '@nix/ui';
 import { Suspense, lazy, type ReactElement } from 'react';
 import { Route, Routes } from 'react-router';
 
-import { AuthProvider } from './auth/auth-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { AutomationsPage } from './automations/automations-page';
-import { ApiClientProvider } from './api/api-client-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import { DailyNotePage } from './daily-notes/daily-note-page';
 import { NewChatNote } from './views/chat/new-chat-note';

@@ -4,8 +4,8 @@ import { Keyboard, NotebookPen } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
-import { AuthProvider } from '../../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { CommandPalette } from '../../search/command-palette';
 import { item, stubCoreApi } from '../api-stub';
 import { signedIn } from '../render-with-router';

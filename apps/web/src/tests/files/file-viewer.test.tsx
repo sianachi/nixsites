@@ -9,7 +9,7 @@ import { stubViewport } from '../stub-viewport';
 let client: NixClient;
 const revokeObjectURL = vi.fn();
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
 }));
 

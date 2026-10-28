@@ -2,8 +2,8 @@ import { Blueprint, Button, SkeletonLines, Text, focusRing } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
-import { useAuth } from '../auth/auth-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspaces/workspace-context';

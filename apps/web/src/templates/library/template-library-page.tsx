@@ -4,7 +4,7 @@ import { FileUp, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { fileNameFrom, saveArchive } from '../../export/export-archive';
 import { useTemplateLibrary } from '../template-library-context';
 import {
@@ -18,7 +18,7 @@ import {
 import { templateFailure } from '../use-templates';
 import { TemplateCard } from './template-card';
 import { useWorkspace } from '../../workspaces/workspace-context';
-import { usePetSettings } from '../../api/use-pet-settings';
+import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 interface DuplicateAttempt {

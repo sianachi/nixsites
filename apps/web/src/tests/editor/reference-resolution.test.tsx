@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { StrictMode, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
-import { AuthProvider } from '../../auth/auth-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { ReferenceResolutionProvider, useReference } from '../../editor/reference-resolution';
 import { requestUrl } from '../request-url';
 

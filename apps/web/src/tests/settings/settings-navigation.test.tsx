@@ -7,7 +7,10 @@ import { stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { App } from '../../app';
 import { SettingsPage } from '../../pages/settings-page';
-import { CapabilitiesProvider, NO_CAPABILITIES } from '../../session/capabilities-context';
+import {
+  CapabilitiesProvider,
+  NO_CAPABILITIES,
+} from '@nix/web-platform/session/capabilities-context';
 import { stubViewport } from '../stub-viewport';
 
 /**

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { CreateItemControl } from '../../../views/core/create-item-control';
 import type { CreateSuggestSource } from '../../../views/suggest/suggest-source';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';

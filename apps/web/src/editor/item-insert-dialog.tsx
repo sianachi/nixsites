@@ -2,8 +2,8 @@ import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children
 import { files, items, search, type SearchResults } from '@nix/api-client';
 import { Button, Checkbox, Dialog, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useApiClient } from '../api/api-client-provider';
-import { useSelectedItem } from '../routing/selected-item';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 
 export type ItemInsertKind = 'attachment' | 'embed' | 'subpage' | 'image';
 export function ItemInsertDialog({

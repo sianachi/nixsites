@@ -1,7 +1,7 @@
 import { isCanceledError, sites, type SiteApprovalEntry } from '@nix/api-client';
 import { useCallback, useEffect, useState } from 'react';
 
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { refusalMessage } from '../../sites/site-copy';
 
 export type SiteApprovalsStatus = 'loading' | 'ready' | 'error';

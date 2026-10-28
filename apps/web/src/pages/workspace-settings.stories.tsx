@@ -2,7 +2,7 @@ import { createNixClient, type NixClient, type Workspace } from '@nix/api-client
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '../workspaces/workspace-context';
 import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { WorkspaceManagementSection } from '../workspaces/workspace-management-section';

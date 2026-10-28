@@ -3,7 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
-import { useCapabilities } from '../../session/capabilities-context';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { SettingsSection } from '../shared/settings-section';
 import { AccessTokenCreateDialog } from '../access-tokens/access-token-create-dialog';
 import { formatDay, tokenStatus } from '../access-tokens/token-facts';

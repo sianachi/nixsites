@@ -4,7 +4,7 @@ import { search, type SearchHit } from '@nix/api-client';
 import { FileText, Search } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useHiddenItemPredicate } from '../items/use-hidden-items';
 import { filterCommands, type PaletteCommand } from './commands';
 

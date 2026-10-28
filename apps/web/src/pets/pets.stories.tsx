@@ -8,7 +8,7 @@ import { PetWorkTools } from './work-tools/pet-work-tools';
 import { writeActionReceipt } from './action-receipts';
 import { createNixClient, petConnectionSchema } from '@nix/api-client';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { ApiClientOverrideProvider } from '../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider, type WorkspaceLoadState } from '../workspaces/workspace-context';
 import { PetCompanion } from './pet-companion';
 import { PetPage } from '../pages/pet-page';

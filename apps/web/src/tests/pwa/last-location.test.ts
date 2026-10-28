@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readLastLocation, rememberLocation } from '../../pwa/last-location';
+import { readLastLocation, rememberLocation } from '@nix/web-platform/pwa/last-location';
 const workspace = 'a1000000-0000-4000-8000-000000000001';
 beforeEach(() => {
   const values = new Map<string, string>();

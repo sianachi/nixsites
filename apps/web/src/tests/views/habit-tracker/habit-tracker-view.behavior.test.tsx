@@ -51,7 +51,7 @@ vi.mock('../../../views/habit-tracker/use-habits', () => ({
     setStatus,
   }),
 }));
-vi.mock('../../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => ({ execute }),
   useOptionalApiClient: () => null,
 }));

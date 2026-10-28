@@ -3,10 +3,10 @@ import { ChevronDown, Download, KeyRound, LogOut, Settings, User } from 'lucide-
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
 
-import { useAuth } from '../auth/auth-provider';
-import { useInstallNix } from '../pwa/install-nix';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useInstallNix } from '@nix/web-platform/pwa/install-nix';
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
-import type { CurrentPrincipalState } from '../session/use-current-principal';
+import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { usePendingSignOut } from './use-pending-sign-out';
 

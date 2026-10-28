@@ -12,7 +12,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useWorkspaceArrangement } from '../../workspaces/use-workspace-arrangement';
 import { PetMessageText } from '../../pets/pet-message-text';
 import { Link, useNavigate } from 'react-router';
-import { useApiClient } from '../../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useAccessibleWorkspaces, useOptionalWorkspace } from '../../workspaces/workspace-context';
 import { readLastWorkspaceId } from '../../workspaces/last-workspace';
 import { ChatSaveTo } from './chat-save-to';

@@ -3,7 +3,7 @@ import { workspaces as coreWorkspaces } from '@nix/api-client';
 import { useLayoutEffect, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { useAccessibleWorkspaces } from './workspace-context';

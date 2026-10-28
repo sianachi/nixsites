@@ -10,7 +10,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { useState, type ReactElement } from 'react';
 import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
-import { ApiClientOverrideProvider } from '../../api/api-client-provider';
+import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import type { ContainerData } from '../core/use-container';
 import type { View } from '../core/container-model';

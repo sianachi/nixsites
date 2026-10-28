@@ -13,7 +13,7 @@ import {
 import type { ContainerData } from '../core/use-container';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
-import { useOptionalApiClient } from '../../api/api-client-provider';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';
 import { rememberSubmission, usualValues, type UsualValue } from './form-memory';
 import { MemberNames } from '../suggest/member-name';

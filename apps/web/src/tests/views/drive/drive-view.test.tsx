@@ -147,7 +147,7 @@ vi.mock('../../../items/use-workspace-tree', () => ({
 
 let client: NixClient;
 
-vi.mock('../../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => null,
 }));

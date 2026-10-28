@@ -167,7 +167,7 @@ vi.mock('@nix/api-client', () => ({
   search: { searchItems: fileHarness.searchItems },
 }));
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => fileHarness.client,
 }));
 

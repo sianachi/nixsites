@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ItemInsertDialog } from '../../editor/item-insert-dialog';
 const harness = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), select: vi.fn() }));
-vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => harness }));
-vi.mock('../../routing/selected-item', () => ({ useSelectedItem: () => harness }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => harness }));
+vi.mock('@nix/web-platform/routing/selected-item', () => ({ useSelectedItem: () => harness }));
 const common = {
   workspaceId: 'workspace',
   parentId: 'parent',

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
+import { ApiClientProvider, useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { json } from '../json-response';
 
@@ -13,7 +13,7 @@ const auth = vi.hoisted(() => ({
   handleSessionRefusal: vi.fn<(subject: string) => void>(),
 }));
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => auth,
 }));
 

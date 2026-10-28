@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../api/api-client-provider', () => ({
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => null,
   useOptionalApiClient: () => null,
 }));

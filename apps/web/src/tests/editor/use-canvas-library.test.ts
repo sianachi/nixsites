@@ -3,7 +3,7 @@ import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCanvasLibrary } from '../../editor/use-canvas-library';
-import { ApiClientProvider } from '../../api/api-client-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { requestUrl } from '../request-url';
 
 /**
@@ -13,7 +13,7 @@ import { requestUrl } from '../request-url';
  */
 const getAccessToken = (): Promise<string> => Promise.resolve('token');
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken }),
 }));
 

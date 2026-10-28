@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { expect, it, vi } from 'vitest';
 
-import { ApiClientProvider } from '../../api/api-client-provider';
+import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { executeBulkDelete } from '../../items/bulk-delete';
 import { ItemCommandsProvider } from '../../items/item-commands-context';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
@@ -14,7 +14,7 @@ import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { aView } from '../view-fixture';
 
-vi.mock('../../auth/auth-provider', () => ({
+vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),
 }));
 

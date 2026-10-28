@@ -2,7 +2,7 @@ import type { ListboxOption } from '@nix/ui';
 import { FileText } from 'lucide-react';
 import { useCallback } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   fetchCandidates,
   itemSearchEmptyMessage,

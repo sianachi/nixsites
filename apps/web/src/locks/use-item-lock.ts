@@ -1,7 +1,7 @@
 import { isCanceledError, isNixApiError, locks, type ItemLock } from '@nix/api-client';
 import { useCallback, useEffect, useState } from 'react';
 
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
 /**
  * An item's lock, as this browser session sees it, and the actions on it.
