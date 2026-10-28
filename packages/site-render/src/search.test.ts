@@ -30,7 +30,10 @@ describe('the search index', () => {
   });
 
   it('falls back to titles when the bodies would pass the cap', () => {
-    const text = Array.from({ length: 300_000 }, (_, index) => `w${String(index)}`).join(' ');
+    // Long unique tokens reach the 2 MiB cap with far fewer words than short ones.
+    const text = Array.from({ length: 50_000 }, (_, index) =>
+      index.toString(36).padStart(38, 'a'),
+    ).join(' ');
     const built = buildSearchIndex([{ path: '/', title: 'Home page', text }]);
     expect(built.partial).toBe(true);
     expect(Object.keys((JSON.parse(built.json) as SearchIndex).terms)).toEqual(['home', 'page']);

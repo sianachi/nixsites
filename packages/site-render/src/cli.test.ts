@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { main } from './cli.js';
 import { createPreviewServer, normalizePath, SITE_CSP } from './serve.js';
@@ -11,9 +11,12 @@ import { createPreviewServer, normalizePath, SITE_CSP } from './serve.js';
 const fixture = join(import.meta.dirname, '__fixtures__', 'docs');
 
 describe('nix-site-render', () => {
-  it('builds a fixture into a directory', async () => {
-    const out = join(mkdtempSync(join(tmpdir(), 'nix-site-')), 'site');
+  const out = join(mkdtempSync(join(tmpdir(), 'nix-site-')), 'site');
+  beforeAll(async () => {
     expect(await main(['build', '--fixture', fixture, '--out', out])).toBe(0);
+  });
+
+  it('builds a fixture into a directory', async () => {
     expect(readFileSync(join(out, 'index.html'), 'utf8')).toContain('<!doctype html>');
     expect(existsSync(join(out, '_nix', 'build.json'))).toBe(true);
     // A rebuild replaces its own previous output.
@@ -39,8 +42,6 @@ describe('nix-site-render', () => {
   );
 
   it('serves with the site headers, redirects, and the 404 page', async () => {
-    const out = join(mkdtempSync(join(tmpdir(), 'nix-site-')), 'site');
-    await main(['build', '--fixture', fixture, '--out', out]);
     const server = createPreviewServer(out).listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     const base = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;

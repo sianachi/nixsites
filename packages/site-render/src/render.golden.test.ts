@@ -27,11 +27,21 @@ function walk(dir: string): string[] {
   );
 }
 
-async function render(fixture: string): Promise<{ files: readonly RenderedFile[] }> {
-  return renderSite({
-    ...(await loadFixture(join(here, '__fixtures__', fixture))),
-    previews: await loadPreviewRasterizer(),
-  });
+function renderFresh(fixture: string): Promise<{ files: readonly RenderedFile[] }> {
+  return loadFixture(join(here, '__fixtures__', fixture)).then(async (input) =>
+    renderSite({ ...input, previews: await loadPreviewRasterizer() }),
+  );
+}
+
+// Rendering is the slow part and the tests only read the result, so each fixture renders once.
+const rendered = new Map<string, ReturnType<typeof renderFresh>>();
+function render(fixture: string): ReturnType<typeof renderFresh> {
+  let result = rendered.get(fixture);
+  if (result === undefined) {
+    result = renderFresh(fixture);
+    rendered.set(fixture, result);
+  }
+  return result;
 }
 
 describe.each(['docs', 'blog'])('the %s fixture', (fixture) => {
@@ -62,7 +72,7 @@ describe.each(['docs', 'blog'])('the %s fixture', (fixture) => {
   });
 
   it('renders the same bytes twice', async () => {
-    const [first, second] = [await render(fixture), await render(fixture)];
+    const [first, second] = [await render(fixture), await renderFresh(fixture)];
     expect(
       second.files.map((file) => [file.path, Buffer.from(file.bytes).toString('base64')]),
     ).toEqual(first.files.map((file) => [file.path, Buffer.from(file.bytes).toString('base64')]));

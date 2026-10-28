@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { ObjectTransfer } from '../shared/object-transfer.ts';
 import { buildSite } from './build.ts';
@@ -273,10 +273,16 @@ afterEach(async () => {
 });
 
 describe('buildSite', () => {
-  it('builds the fixture site and takes it live in the order Core requires', async () => {
-    const h = await started();
-    const result = (await h.run()) as { buildId: string; pageCount: number; fileCount: number };
+  // One successful build serves every test that only reads its result.
+  const h = new Harness();
+  let result: { buildId: string; pageCount: number; fileCount: number };
+  beforeAll(async () => {
+    await h.start();
+    result = (await h.run()) as typeof result;
+  });
+  afterAll(() => h.stop());
 
+  it('builds the fixture site and takes it live in the order Core requires', () => {
     expect(result).toMatchObject({ pageCount: 21 });
     // Everything is uploaded before the seal; the host manifest is written after the seal and
     // before the build is marked live, so an interrupted build is never served.
@@ -300,10 +306,7 @@ describe('buildSite', () => {
     expect(h.objects.get('/k/build/index.html')?.toString()).toContain('<!doctype html>');
   });
 
-  it('declares only extension and media-type pairs Core accepts, and keys assets by digest', async () => {
-    const h = await started();
-    await h.run();
-
+  it('declares only extension and media-type pairs Core accepts, and keys assets by digest', () => {
     const accepted: Record<string, string> = {
       html: 'text/html',
       css: 'text/css',
@@ -331,10 +334,7 @@ describe('buildSite', () => {
     ).toBe(true);
   });
 
-  it('publishes images with their metadata stripped', async () => {
-    const h = await started();
-    await h.run();
-
+  it('publishes images with their metadata stripped', () => {
     const original = readFileSync(
       join(FIXTURE, 'files', '0199c0de-0200-7000-8000-000000000707.jpg'),
     );
@@ -347,10 +347,7 @@ describe('buildSite', () => {
     expect(sha(published)).toBe(jpegs[0]?.sha256);
   });
 
-  it('publishes a captured Mermaid diagram re-sanitised, as an image on its page', async () => {
-    const h = await started();
-    await h.run();
-
+  it('publishes a captured Mermaid diagram re-sanitised, as an image on its page', () => {
     const svgs = h.uploaded.filter(
       (entry) => entry.kind === 'asset' && entry.path.endsWith('.svg'),
     );
@@ -364,10 +361,7 @@ describe('buildSite', () => {
     expect(post).toContain(`<img src="/_nix/assets/${svgs[0]?.path ?? ''}"`);
   });
 
-  it('publishes an attached PDF as a download under its digest, linked from its page', async () => {
-    const h = await started();
-    await h.run();
-
+  it('publishes an attached PDF as a download under its digest, linked from its page', () => {
     const pdfs = h.uploaded.filter(
       (entry) => entry.kind === 'asset' && entry.path.endsWith('.pdf'),
     );
@@ -381,9 +375,8 @@ describe('buildSite', () => {
     expect(page).toContain(`href="/_nix/files/${pdfs[0]?.sha256 ?? ''}/Desk-setup-2026.pdf"`);
   });
 
+  // Mutates the shared store, so it runs after the read-only tests above.
   it('counts an object that is already in storage as written (a redelivered job)', async () => {
-    const h = await started();
-    await h.run();
     // A second run against the same store: every create-only put now answers 412.
     h.precreated = new Set(h.objects.keys());
     h.objects.clear();
