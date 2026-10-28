@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { browserStorage } from '../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
+import { writeStored } from './stored-setting';
 
 /**
  * Whether the page guides are drawn: a browser-local preference, like the mobile toolbar's.
@@ -31,19 +32,7 @@ export const usePageGuidePreference = create<{
   visibility: readPageGuideVisibility(browserStorage()),
   saved: true,
   setVisibility: (visibility) => {
-    let saved = false;
-    try {
-      const storage = browserStorage();
-      if (visibility === 'hidden') {
-        storage?.setItem(KEY, visibility);
-      } else {
-        storage?.removeItem(KEY);
-      }
-      saved = storage !== undefined;
-    } catch {
-      /* The choice still works for this session. */
-    }
-    set({ visibility, saved });
+    set({ visibility, saved: writeStored(KEY, visibility === 'hidden' ? visibility : null) });
     settingChanged('editor.pageGuides', visibility === 'shown');
   },
 }));

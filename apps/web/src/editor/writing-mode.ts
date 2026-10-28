@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { create } from 'zustand';
 
 import { browserStorage } from '../lib/browser-storage';
+import { writeStored } from './stored-setting';
 
 export const WritingModeSchema = z.enum(['prose', 'poetry', 'planning', 'collaboration']);
 export type WritingMode = z.infer<typeof WritingModeSchema>;
@@ -56,16 +57,7 @@ export const useWritingModePreference = create<{
 }>((set) => ({
   ...loadWritingMode(browserStorage()),
   setMode: (mode) => {
-    let saved = false;
-    try {
-      const storage = browserStorage();
-      if (mode === 'prose') storage?.removeItem(WRITING_MODE_STORAGE_KEY);
-      else storage?.setItem(WRITING_MODE_STORAGE_KEY, mode);
-      saved = storage !== undefined;
-    } catch {
-      // A blocked storage write still leaves the mode available for this session.
-    }
-    set({ mode, saved });
+    set({ mode, saved: writeStored(WRITING_MODE_STORAGE_KEY, mode === 'prose' ? null : mode) });
   },
 }));
 

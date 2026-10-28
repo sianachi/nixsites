@@ -83,23 +83,30 @@ export default function ArtifactView({
     setUnsaved(text);
   }
 
+  /**
+   * Appends `appended` when the body has no such block yet. Otherwise the block is the whole text
+   * of its own code block, so a passage edit replaces exactly `previous`, planned and applied
+   * against the body as it is now; everything else in the body stays as it is.
+   */
+  async function writeBlock(previous: string | null, appended: string, replace: string) {
+    const { createCompanionBodies } = await import('@nix/companion');
+    const bodies = createCompanionBodies(client);
+    const signal = new AbortController().signal;
+    if (previous === null) await bodies.append(itemId, appended, signal);
+    else {
+      const edit = { kind: 'passage' as const, find: previous, replace };
+      const plan = await bodies.planEdit(itemId, edit, signal);
+      await bodies.applyEdit(itemId, edit, plan.fingerprint, signal);
+    }
+  }
+
   async function share(text: string) {
     if (loaded.status !== 'ready') return;
     setSaving(true);
     try {
-      const { createCompanionBodies } = await import('@nix/companion');
-      const bodies = createCompanionBodies(client);
-      const signal = new AbortController().signal;
       // shortcut: the last save wins when two people save the same artifact at once; merge per
       // $variable if shared artifacts start to see concurrent use.
-      if (loaded.saved === null) await bodies.append(itemId, fencedState(text), signal);
-      else {
-        // The saved values are the whole text of their own code block, so a passage edit
-        // replaces exactly them, planned and applied against the body as it is now.
-        const edit = { kind: 'passage' as const, find: loaded.saved.text, replace: text };
-        const plan = await bodies.planEdit(itemId, edit, signal);
-        await bodies.applyEdit(itemId, edit, plan.fingerprint, signal);
-      }
+      await writeBlock(loaded.saved?.text ?? null, fencedState(text), text);
       setLoaded({ ...loaded, saved: stateIn(fencedState(text)) });
       setUnsaved(null);
     } catch {
@@ -113,21 +120,7 @@ export default function ArtifactView({
     if (loaded.status !== 'ready') return;
     setSaving(true);
     try {
-      const { createCompanionBodies } = await import('@nix/companion');
-      const bodies = createCompanionBodies(client);
-      const signal = new AbortController().signal;
-      if (loaded.program === null) await bodies.append(itemId, fenced(program), signal);
-      else {
-        // The program is the whole text of its own code block, so a passage edit replaces exactly
-        // it; the values block and everything else in the body stay as they are.
-        const edit = {
-          kind: 'passage' as const,
-          find: loaded.program,
-          replace: `${program.trimEnd()}\n`,
-        };
-        const plan = await bodies.planEdit(itemId, edit, signal);
-        await bodies.applyEdit(itemId, edit, plan.fingerprint, signal);
-      }
+      await writeBlock(loaded.program, fenced(program), `${program.trimEnd()}\n`);
       setNotice('');
       setEditing(false);
     } catch {

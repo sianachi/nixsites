@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { browserStorage } from '../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
+import { writeStored } from './stored-setting';
 
 export const TEXT_WIDTH_STORAGE_KEY = 'nix.text-width';
 export type TextWidth = 'reading' | 'full';
@@ -27,16 +28,7 @@ export const useTextWidthPreference = create<{
 }>((set) => ({
   ...loadTextWidth(browserStorage()),
   setWidth: (width) => {
-    let saved = false;
-    try {
-      const storage = browserStorage();
-      if (width === 'reading') storage?.removeItem(TEXT_WIDTH_STORAGE_KEY);
-      else storage?.setItem(TEXT_WIDTH_STORAGE_KEY, width);
-      saved = storage !== undefined;
-    } catch {
-      // Blocked storage still allows changing the width for this session.
-    }
-    set({ width, saved });
+    set({ width, saved: writeStored(TEXT_WIDTH_STORAGE_KEY, width === 'reading' ? null : width) });
     settingChanged('editor.textWidth', width);
   },
 }));

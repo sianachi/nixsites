@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { browserStorage } from '../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
+import { writeStored } from './stored-setting';
 
 /**
  * Whether the note editor suggests phrase completions as muted text at the caret: a browser-local
@@ -35,19 +36,7 @@ export const useGhostTextPreference = create<{
   setting: readGhostTextSetting(browserStorage()),
   saved: true,
   setSetting: (setting) => {
-    let saved = false;
-    try {
-      const storage = browserStorage();
-      if (setting === 'on') {
-        storage?.setItem(KEY, setting);
-      } else {
-        storage?.removeItem(KEY);
-      }
-      saved = storage !== undefined;
-    } catch {
-      /* The choice still works for this session. */
-    }
-    set({ setting, saved });
+    set({ setting, saved: writeStored(KEY, setting === 'on' ? setting : null) });
     settingChanged('editor.phraseSuggestions', setting === 'on');
   },
 }));
