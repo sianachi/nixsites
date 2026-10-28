@@ -2,6 +2,7 @@ import { FIXTURE_DOCUMENT, SCHEMA_VERSION } from '@nix/editor-schema';
 import { createHash } from 'node:crypto';
 import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { collect } from './collect.test-helper.js';
 
 import { exportFileName, writeArchive } from './archive.js';
 import { ARCHIVE_FILE_BYTES_UNSUPPORTED } from './file-portability.js';
@@ -70,25 +71,6 @@ async function* streamOf(bundles: readonly ItemBundle[]): AsyncGenerator<ItemBun
   for (const item of bundles) {
     yield item;
   }
-}
-
-async function collect(archive: AsyncIterable<Uint8Array>): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-
-  for await (const chunk of archive) {
-    chunks.push(chunk);
-    length += chunk.length;
-  }
-
-  const out = new Uint8Array(length);
-  let at = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, at);
-    at += chunk.length;
-  }
-
-  return out;
 }
 
 function sha256(bytes: Uint8Array): string {

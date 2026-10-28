@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { SHEET_LIMITS, SHEET_SCHEMA_VERSION } from '@nix/sheet';
 import { Zip, ZipPassThrough, strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { collect } from './collect.test-helper.js';
 
 import { writeArchive } from './archive.js';
 import {
@@ -204,22 +205,6 @@ function fileArchive(bytes: Uint8Array, overrides: Record<string, unknown> = {})
 async function* bundles(): AsyncGenerator<ItemBundle> {
   yield bundle(ROOT);
   yield bundle(CHILD);
-}
-
-async function collect(source: AsyncIterable<Uint8Array>): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for await (const chunk of source) {
-    chunks.push(chunk);
-    length += chunk.byteLength;
-  }
-  const bytes = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
 }
 
 // eslint-disable-next-line @typescript-eslint/require-await -- the reader contract is deliberately asynchronous.
