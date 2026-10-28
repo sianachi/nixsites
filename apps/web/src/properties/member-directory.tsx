@@ -51,12 +51,3 @@ export function useMember(subjectId: string): MemberLookup {
   if (directory.status !== 'ready') return { status: directory.status };
   return { status: 'ready', name: directory.names.get(subjectId) ?? null };
 }
-
-/**
- * The whole map, for code that resolves many names at once - grouping, sorting. Null until a
- * directory has read its members.
- */
-export function useMemberNames(): ReadonlyMap<string, string> | null {
-  const directory = use(MemberNamesContext);
-  return directory?.status === 'ready' ? directory.names : null;
-}

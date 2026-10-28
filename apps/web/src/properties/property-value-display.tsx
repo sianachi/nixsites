@@ -283,10 +283,5 @@ function formatDay(value: string): string {
   return dayFormat.format(new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))));
 }
 
-/** Exposed for a cell that wants the same words without the chrome around them. */
-export function formatDisplayNumber(value: number): string {
-  return numberFormat.format(value);
-}
-
 /** Exposed so a grid's painted cells use the same day words as a card. */
 export { formatDay };

@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
+import { isAborted } from '../lib/guards';
 import { EMPTY_ARRANGEMENT } from './arrangement';
 
 export interface WorkspaceArrangementState {
@@ -18,10 +19,6 @@ export interface WorkspaceArrangementState {
   readonly error: string | null;
   /** Saves at the revision last read; a 409 reloads the other device's copy instead of overwriting it. */
   readonly save: (value: WorkspaceArrangementInput) => Promise<boolean>;
-}
-
-function isAborted(signal: AbortSignal): boolean {
-  return signal.aborted;
 }
 
 /**
