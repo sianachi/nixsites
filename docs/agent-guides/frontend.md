@@ -7,7 +7,7 @@ Keep dependency direction `apps/* -> packages/*`; `packages/web-*` never import
 `web-foundation` (`lib/`, `a11y/`, `layout/`, `keyboard/`, `theme/`, `audio/`,
 `components/`) <- `web-platform` (`auth/`, `pwa/`, `api/`, `session/`, `panes/`,
 `routing/`, `export/`) <- `web-editor` (`editor/`, `plugins/`) and `web-workspaces`
-(`workspaces/`, `import/`, `launch/`) <- `web-sites` (`sites/`). They export TypeScript
+(`workspaces/`, `import/`, `launch/`) <- `web-sites` (`sites/`) <- `web-settings` (`settings/`). They export TypeScript
 source (no build); import deep paths that mirror the folders, e.g.
 `@nix/web-foundation/lib/browser-storage`. A new `.tsx` file needs its own exact
 `exports` entry in the package's `package.json` (the `./*` pattern only reaches `.ts`).

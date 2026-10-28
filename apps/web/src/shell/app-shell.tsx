@@ -33,7 +33,7 @@ import { useBookmarksLoader, useBookmarksStore, useIsKept } from '../bookmarks/u
 import { MiniPlayer } from '@nix/web-foundation/audio/mini-player';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useOpenDailyOnLaunch } from '@nix/web-workspaces/launch/use-open-daily-on-launch';
-import { useUiSettingsSync } from '../settings/shared/use-ui-settings-sync';
+import { useUiSettingsSync } from '@nix/web-settings/settings/shared/use-ui-settings-sync';
 import { DailyCaptureDialog } from '../daily-notes/daily-capture-dialog';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { CapabilitiesProvider } from '@nix/web-platform/session/capabilities-context';

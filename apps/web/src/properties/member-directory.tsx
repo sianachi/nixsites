@@ -3,7 +3,7 @@ import { createContext, use, useMemo, type ReactNode } from 'react';
 import {
   useWorkspaceMembers,
   type WorkspaceMembersStatus,
-} from '../settings/members/use-workspace-members';
+} from '@nix/web-settings/settings/members/use-workspace-members';
 
 /**
  * Who each workspace member is, loaded once for a whole view.

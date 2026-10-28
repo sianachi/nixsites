@@ -1,0 +1,127 @@
+{
+  "name": "@nix/web-settings",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Settings sections: access tokens, administrators, API, backups, calendars, daily notes, editor preferences, MCP, members, notifications, preferences, publishing, site approvals",
+  "exports": {
+    "./settings/access-tokens/access-token-create-dialog": {
+      "types": "./src/settings/access-tokens/access-token-create-dialog.tsx",
+      "default": "./src/settings/access-tokens/access-token-create-dialog.tsx"
+    },
+    "./settings/access-tokens/access-tokens-section": {
+      "types": "./src/settings/access-tokens/access-tokens-section.tsx",
+      "default": "./src/settings/access-tokens/access-tokens-section.tsx"
+    },
+    "./settings/administrators/administrators-section": {
+      "types": "./src/settings/administrators/administrators-section.tsx",
+      "default": "./src/settings/administrators/administrators-section.tsx"
+    },
+    "./settings/api/api-section": {
+      "types": "./src/settings/api/api-section.tsx",
+      "default": "./src/settings/api/api-section.tsx"
+    },
+    "./settings/backups/backups-section": {
+      "types": "./src/settings/backups/backups-section.tsx",
+      "default": "./src/settings/backups/backups-section.tsx"
+    },
+    "./settings/calendars/calendar-cards": {
+      "types": "./src/settings/calendars/calendar-cards.tsx",
+      "default": "./src/settings/calendars/calendar-cards.tsx"
+    },
+    "./settings/calendars/calendar-labels": {
+      "types": "./src/settings/calendars/calendar-labels.tsx",
+      "default": "./src/settings/calendars/calendar-labels.tsx"
+    },
+    "./settings/calendars/calendars-section": {
+      "types": "./src/settings/calendars/calendars-section.tsx",
+      "default": "./src/settings/calendars/calendars-section.tsx"
+    },
+    "./settings/calendars/disconnect-dialog": {
+      "types": "./src/settings/calendars/disconnect-dialog.tsx",
+      "default": "./src/settings/calendars/disconnect-dialog.tsx"
+    },
+    "./settings/calendars/link-calendar-dialog": {
+      "types": "./src/settings/calendars/link-calendar-dialog.tsx",
+      "default": "./src/settings/calendars/link-calendar-dialog.tsx"
+    },
+    "./settings/calendars/sync-log-dialog": {
+      "types": "./src/settings/calendars/sync-log-dialog.tsx",
+      "default": "./src/settings/calendars/sync-log-dialog.tsx"
+    },
+    "./settings/calendars/unlink-dialog": {
+      "types": "./src/settings/calendars/unlink-dialog.tsx",
+      "default": "./src/settings/calendars/unlink-dialog.tsx"
+    },
+    "./settings/daily-notes/daily-notes-section": {
+      "types": "./src/settings/daily-notes/daily-notes-section.tsx",
+      "default": "./src/settings/daily-notes/daily-notes-section.tsx"
+    },
+    "./settings/daily-notes/daily-notes-switch": {
+      "types": "./src/settings/daily-notes/daily-notes-switch.tsx",
+      "default": "./src/settings/daily-notes/daily-notes-switch.tsx"
+    },
+    "./settings/editor/editor-preferences-section": {
+      "types": "./src/settings/editor/editor-preferences-section.tsx",
+      "default": "./src/settings/editor/editor-preferences-section.tsx"
+    },
+    "./settings/mcp/mcp-section": {
+      "types": "./src/settings/mcp/mcp-section.tsx",
+      "default": "./src/settings/mcp/mcp-section.tsx"
+    },
+    "./settings/notifications/notifications-section": {
+      "types": "./src/settings/notifications/notifications-section.tsx",
+      "default": "./src/settings/notifications/notifications-section.tsx"
+    },
+    "./settings/preferences/PreferencesSection": {
+      "types": "./src/settings/preferences/PreferencesSection.tsx",
+      "default": "./src/settings/preferences/PreferencesSection.tsx"
+    },
+    "./settings/shared/preference-toggle": {
+      "types": "./src/settings/shared/preference-toggle.tsx",
+      "default": "./src/settings/shared/preference-toggle.tsx"
+    },
+    "./settings/shared/settings-section": {
+      "types": "./src/settings/shared/settings-section.tsx",
+      "default": "./src/settings/shared/settings-section.tsx"
+    },
+    "./settings/site-approvals/site-approvals-section": {
+      "types": "./src/settings/site-approvals/site-approvals-section.tsx",
+      "default": "./src/settings/site-approvals/site-approvals-section.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-editor": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-sites": "workspace:*",
+    "@nix/web-workspaces": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "react-router": "^7.18.1",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@types/react": "^19.2.17",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}

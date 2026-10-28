@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MobileNoteToolbar } from '@nix/web-editor/editor/mobile-note-toolbar';
 import { useMobileToolbarPreference } from '@nix/web-editor/editor/mobile-toolbar-preference';
-import { EditorPreferencesSection } from '../../settings/editor/editor-preferences-section';
+import { EditorPreferencesSection } from '@nix/web-settings/settings/editor/editor-preferences-section';
 
 beforeEach(() => {
   useMobileToolbarPreference.setState({ visibility: 'always', saved: true });

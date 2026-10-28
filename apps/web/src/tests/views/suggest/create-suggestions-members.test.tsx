@@ -16,7 +16,7 @@ import { WORKSPACE_ID, anItem } from './suggest-fixtures';
 
 const reads = vi.hoisted(() => ({ count: 0 }));
 
-vi.mock('../../../settings/members/use-workspace-members', () => ({
+vi.mock('@nix/web-settings/settings/members/use-workspace-members', () => ({
   useWorkspaceMembers: () => {
     useEffect(() => {
       reads.count += 1;

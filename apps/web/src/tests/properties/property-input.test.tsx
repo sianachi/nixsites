@@ -8,7 +8,7 @@ import {
   useWorkspaceMembers,
   type WorkspaceMember,
   type WorkspaceMembersState,
-} from '../../settings/members/use-workspace-members';
+} from '@nix/web-settings/settings/members/use-workspace-members';
 import { propertyOf } from '../property-fixture';
 
 // A date-or-time property is read and written in the reader's own zone, so it needs one fixed for
@@ -21,7 +21,7 @@ process.env.TZ = 'Pacific/Honolulu';
  * hook itself reaches them - that read is `use-workspace-members.ts`'s own concern and is exercised
  * end to end by `members-section.test.tsx`.
  */
-vi.mock('../../settings/members/use-workspace-members', () => ({
+vi.mock('@nix/web-settings/settings/members/use-workspace-members', () => ({
   useWorkspaceMembers: vi.fn(),
 }));
 

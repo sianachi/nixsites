@@ -14,7 +14,7 @@ import { PetAvatar } from './pet-avatar';
 import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';
 import { PetDeviceSettings } from './pet-device-settings';
-import { SettingsSection } from '../settings/shared/settings-section';
+import { SettingsSection } from '@nix/web-settings/settings/shared/settings-section';
 
 export function PetSettingsSection(): ReactElement {
   const state = usePetSettings();

@@ -1,7 +1,7 @@
 import { NixApiError, type PrincipalPreferencesResponse } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { saveDeviceTimeZoneOnce } from '../../settings/shared/preference-defaults';
+import { saveDeviceTimeZoneOnce } from '@nix/web-settings/settings/shared/preference-defaults';
 
 type Client = Parameters<typeof saveDeviceTimeZoneOnce>[0];
 

@@ -55,7 +55,7 @@ import type { TemplateSummary } from '../templates/template-api';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
 import { useAutomateEntry } from '../automations/automate-entry';
-import { useMuteRemindersEntry } from '../settings/notifications/mute-reminders-entry';
+import { useMuteRemindersEntry } from '@nix/web-settings/settings/notifications/mute-reminders-entry';
 import { bookmarkEntry, copyLinkEntry, treeChildrenEntry } from './item-menu-entries';
 import { useHiddenItems } from './use-hidden-items';
 import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';

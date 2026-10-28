@@ -23,7 +23,7 @@ import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { readPanelOpen, storePanelOpen } from '../../panel/panel-state';
 import type { Pane } from '../../panel/item-panel';
 import { useItemProperties } from '../../properties/use-item-properties';
-import { useSitesVisible } from '../../settings/publishing/publishing-preference';
+import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
 import type { ShellContext } from '../../shell/shell-context';
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
 import { useItemHasSite } from '@nix/web-sites/sites/use-item-site';

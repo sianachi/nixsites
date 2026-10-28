@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../../app';
-import { apiBase } from '../../../settings/api/api-section';
+import { apiBase } from '@nix/web-settings/settings/api/api-section';
 import { stubCoreApi } from '../../api-stub';
 import { renderAt, signedIn } from '../../render-with-router';
 

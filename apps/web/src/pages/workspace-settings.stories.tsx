@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
+import { DailyNotesSwitch } from '@nix/web-settings/settings/daily-notes/daily-notes-switch';
 import { WorkspaceManagementSection } from '@nix/web-workspaces/workspaces/workspace-management-section';
 
 export default { title: 'Nix/Workspaces/Settings', parameters: { layout: 'fullscreen' } };

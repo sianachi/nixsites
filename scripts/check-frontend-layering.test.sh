@@ -265,6 +265,23 @@ FIXTURE
 expect 0 "sites importing foundation, platform and workspaces passes"
 
 reset_tree
+add packages/web-settings/src/settings/up.ts <<'FIXTURE'
+import { x } from '@nix/web-other/x';
+export const u = x;
+FIXTURE
+expect 1 "settings importing a package outside its stack fails" "imports a package above it" "up.ts"
+
+reset_tree
+add packages/web-settings/src/settings/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { refusalMessage } from '@nix/web-sites/sites/site-copy';
+export const d = [announce, useAuth, useWorkspace, refusalMessage];
+FIXTURE
+expect 0 "settings importing foundation, platform, workspaces and sites passes"
+
+reset_tree
 add packages/web-editor/src/editor/up.ts <<'FIXTURE'
 import { x } from '@nix/web-other/x';
 export const u = x;

@@ -7,9 +7,11 @@ import { PropertyValueDisplay } from '../../properties/property-value-display';
 import {
   useWorkspaceMembers,
   type WorkspaceMembersState,
-} from '../../settings/members/use-workspace-members';
+} from '@nix/web-settings/settings/members/use-workspace-members';
 
-vi.mock('../../settings/members/use-workspace-members', () => ({ useWorkspaceMembers: vi.fn() }));
+vi.mock('@nix/web-settings/settings/members/use-workspace-members', () => ({
+  useWorkspaceMembers: vi.fn(),
+}));
 
 const MEMBER_ID = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
 

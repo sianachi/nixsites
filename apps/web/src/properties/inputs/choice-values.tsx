@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-import { useWorkspaceMembers } from '../../settings/members/use-workspace-members';
+import { useWorkspaceMembers } from '@nix/web-settings/settings/members/use-workspace-members';
 import { PRIORITY_LEVELS, priorityLabel } from '../priority-levels';
 import { useSelectFrecency } from '../use-select-frecency';
 import { UNSET_LABEL, UNSET_VALUE, readSelectValue } from '../../views/core/container-model';

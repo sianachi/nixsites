@@ -41,7 +41,7 @@
 #   R6  nothing under packages/web-* imports from apps/ (packages never import apps).
 #   R7  web packages stack: web-foundation imports no other web-*, web-platform only web-foundation,
 #      web-editor and web-workspaces only those two,
-#      web-sites those three.
+#      web-sites those three, web-settings all five below it.
 #
 # Be clear about what this is worth. It catches the ordinary mistake - someone
 # adds `import { announce } from '../a11y/announcer'` to a layout/ file - and
@@ -165,7 +165,8 @@ if [ -n "$packages" ]; then
   up_imports="$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-foundation/src" | grep -vE "'@nix/web-foundation[/']" || true)
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-platform/src" | grep -vE "'@nix/web-(foundation|platform)[/']" || true)
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-workspaces/src" | grep -vE "'@nix/web-(foundation|platform|workspaces)[/']" || true)
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-sites/src" | grep -vE "'@nix/web-(foundation|platform|workspaces|sites)[/']" || true)"
+$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-sites/src" | grep -vE "'@nix/web-(foundation|platform|workspaces|sites)[/']" || true)
+$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-settings/src" | grep -vE "'@nix/web-(foundation|platform|editor|workspaces|sites|settings)[/']" || true)"
   up_imports="$up_imports
 $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-editor/src" | grep -vE "'@nix/web-(foundation|platform|editor)[/']" || true)"
   up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"

@@ -3,12 +3,12 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CalendarsSection } from '../../../settings/calendars/calendars-section';
-import { useCalendarSync } from '../../../settings/calendars/use-calendar-sync';
+import { CalendarsSection } from '@nix/web-settings/settings/calendars/calendars-section';
+import { useCalendarSync } from '@nix/web-settings/settings/calendars/use-calendar-sync';
 import { renderAt } from '../../render-with-router';
 import { stubViewport } from '../../stub-viewport';
 
-vi.mock('../../../settings/calendars/use-calendar-sync');
+vi.mock('@nix/web-settings/settings/calendars/use-calendar-sync');
 
 const CONNECTION: CalendarConnection = {
   id: 'account',
