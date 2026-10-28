@@ -2011,6 +2011,12 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("Collaboration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("collaboration");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -2341,7 +2347,7 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.ToTable("notification", null, t =>
                         {
-                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system')");
+                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation')");
                         });
                 });
 
@@ -4335,6 +4341,12 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("integer")
                         .HasColumnName("coalesce_window_min");
 
+                    b.Property<bool>("Collaboration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("collaboration");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -4349,6 +4361,12 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("text")
                         .HasDefaultValue("active")
                         .HasColumnName("lifecycle_state");
+
+                    b.Property<bool>("MembershipLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("membership_locked");
 
                     b.Property<string>("Name")
                         .IsRequired()

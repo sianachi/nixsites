@@ -438,6 +438,31 @@ describe('the websocket provider', () => {
     expect(h.states.at(-1)).toBe('readonly');
   });
 
+  it('waits read-only while someone else edits, and goes live when handed the document', async () => {
+    const h = harness();
+    active = h.sync;
+    await settled();
+    const socket = h.latest();
+    socket.open();
+    ready(socket, 'read');
+    const notice = (code: string): void => {
+      const encoder = encoding.createEncoder();
+      encoding.writeVarUint(encoder, MESSAGE_NOTICE);
+      encoding.writeVarString(encoder, JSON.stringify({ code, detail: '' }));
+      socket.receiveBinary(encoding.toUint8Array(encoder));
+    };
+
+    notice('editing_elsewhere');
+    expect(h.states.at(-1)).toBe('readonly');
+    notice('editable');
+    expect(h.states.at(-1)).toBe('live');
+
+    const before = socket.binaryFramesSent().length;
+    typeParagraph(h.doc, 'Mine to edit now.');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(socket.binaryFramesSent().length).toBeGreaterThan(before);
+  });
+
   it.each([
     ['document_too_large', 0],
     ['rate_limited', 1],

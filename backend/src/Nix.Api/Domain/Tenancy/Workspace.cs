@@ -52,4 +52,10 @@ public sealed class Workspace
 
     /// <summary>Gets when the workspace was archived, when applicable.</summary>
     public DateTimeOffset? ArchivedAt { get; init; }
+
+    /// <summary>Gets whether owners closed the workspace to new members: no invitation is sent or accepted.</summary>
+    public bool MembershipLocked { get; init; }
+
+    /// <summary>Gets whether several people may edit a file at once; when off, one editor at a time.</summary>
+    public bool Collaboration { get; init; } = true;
 }

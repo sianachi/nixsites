@@ -71,6 +71,7 @@ internal sealed class ItemConfiguration : IEntityTypeConfiguration<Item>
 
         builder.Property(item => item.NoDelete).HasColumnName("no_delete").HasDefaultValue(false);
         builder.Property(item => item.NoChildren).HasColumnName("no_children").HasDefaultValue(false);
+        builder.Property(item => item.Collaboration).HasColumnName("collaboration").HasDefaultValue(true);
         builder.Property(item => item.ManagedBy).HasColumnName("managed_by");
 
         builder.Property(item => item.PurgeAfter).HasColumnName("purge_after");

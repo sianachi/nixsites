@@ -77,6 +77,7 @@ internal static class ItemMapping
             computed,
             item.NoDelete,
             item.NoChildren,
+            item.Collaboration,
             item.ManagedBy,
             item.CreatedAt,
             item.LastModifiedAt);

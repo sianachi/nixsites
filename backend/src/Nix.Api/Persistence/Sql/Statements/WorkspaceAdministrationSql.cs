@@ -25,7 +25,7 @@ public static class WorkspaceAdministrationSql
         ), candidates AS MATERIALIZED (
             SELECT w.workspace_id, w.name, w.version_retention_days,
                    w.storage_quota_bytes, w.created_at, w.personal_owner_principal_id,
-                   w.lifecycle_state, w.archived_at, w.daily_notes
+                   w.lifecycle_state, w.archived_at, w.daily_notes, w.membership_locked, w.collaboration
             FROM workspace w
             CROSS JOIN caller c
             WHERE w.tenant_id = @tenant_id
@@ -36,7 +36,11 @@ public static class WorkspaceAdministrationSql
                       OR wm.subject_type = 'group' AND EXISTS (
                           SELECT 1 FROM group_membership gm
                           WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                            AND gm.principal_id = @principal_id))))
+                            AND gm.principal_id = @principal_id)))
+                OR EXISTS (
+                  SELECT 1 FROM workspace_invitation invited
+                  WHERE invited.tenant_id = w.tenant_id AND invited.workspace_id = w.workspace_id
+                    AND invited.target_principal_id = @principal_id AND invited.status = 'pending'))
               AND (@after_created_at IS NULL
                    OR (w.created_at, w.workspace_id) < (@after_created_at, @after_id))
             ORDER BY w.created_at DESC, w.workspace_id DESC
@@ -88,7 +92,8 @@ public static class WorkspaceAdministrationSql
                             THEN (r.daily_notes ->> 'enabled')::boolean END,
                        r.personal_owner_principal_id IS NOT NULL)
                ) AS can_use_daily_notes,
-               pending.invitation_id, r.lifecycle_state, r.archived_at
+               pending.invitation_id, r.lifecycle_state, r.archived_at,
+               r.membership_locked, r.collaboration
         FROM reachable r CROSS JOIN caller c
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -147,7 +152,8 @@ public static class WorkspaceAdministrationSql
                        CASE WHEN jsonb_typeof(w.daily_notes -> 'enabled') = 'boolean'
                             THEN (w.daily_notes ->> 'enabled')::boolean END,
                        w.personal_owner_principal_id IS NOT NULL)),
-               pending.invitation_id, w.lifecycle_state, w.archived_at
+               pending.invitation_id, w.lifecycle_state, w.archived_at,
+               w.membership_locked, w.collaboration
         FROM workspace w CROSS JOIN caller c CROSS JOIN held h
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -159,7 +165,7 @@ public static class WorkspaceAdministrationSql
             LIMIT 1
         ) pending ON true
         WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
-          AND (c.tenant_admin OR h.role_rank >= 0)
+          AND (c.tenant_admin OR h.role_rank >= 0 OR pending.invitation_id IS NOT NULL)
         """;
 
     /// <summary>Creates a shared workspace only for the active human caller.</summary>
@@ -188,6 +194,30 @@ public static class WorkspaceAdministrationSql
     /// <summary>Renames only when the caller is an owner or tenant administrator.</summary>
     public const string Rename = """
         UPDATE workspace w SET name = @name
+        WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+          AND (EXISTS (SELECT 1 FROM workspace_member wm
+                       WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
+                         AND wm.role = 'owner'
+                         AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)
+                           OR (wm.subject_type = 'group' AND EXISTS (
+                               SELECT 1 FROM group_membership gm
+                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
+                                 AND gm.principal_id = @principal_id))))
+            OR EXISTS (SELECT 1 FROM tenant_role tr
+                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
+                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
+                           OR (tr.subject_type = 'group' AND EXISTS (
+                               SELECT 1 FROM group_membership gm
+                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
+                                 AND gm.principal_id = @principal_id)))))
+        RETURNING workspace_id
+        """;
+
+    /// <summary>Sets the sharing switches named, only for an owner or tenant administrator.</summary>
+    public const string SetSharing = """
+        UPDATE workspace w
+        SET membership_locked = COALESCE(@membership_locked, w.membership_locked),
+            collaboration = COALESCE(@collaboration, w.collaboration)
         WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
           AND (EXISTS (SELECT 1 FROM workspace_member wm
                        WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
@@ -564,10 +594,13 @@ public static class WorkspaceAdministrationSql
                                  AND gm.principal_id = @principal_id)))))
         """;
 
-    /// <summary>Creates pending invitation history and grants its target provisional access.</summary>
+    /// <summary>
+    /// Creates a pending invitation. It grants nothing: access starts only when the target accepts,
+    /// and a workspace whose owners closed it to new members refuses the invitation outright.
+    /// </summary>
     public const string CreateInvitation = """
         WITH locked_workspace AS MATERIALIZED (
-            SELECT w.personal_owner_principal_id
+            SELECT w.personal_owner_principal_id, w.membership_locked
             FROM workspace w
             WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
               AND (EXISTS (SELECT 1 FROM workspace_member caller
@@ -597,6 +630,7 @@ public static class WorkspaceAdministrationSql
               AND person.email_verified AND person.email_normalized IS NOT NULL
               AND person.principal_id IS DISTINCT FROM workspace.personal_owner_principal_id
               AND (workspace.personal_owner_principal_id IS NULL OR @role <> 'owner')
+              AND NOT workspace.membership_locked
               AND NOT EXISTS (
                   SELECT 1 FROM workspace_member member
                   WHERE member.tenant_id = @tenant_id AND member.workspace_id = @workspace_id
@@ -621,27 +655,20 @@ public static class WorkspaceAdministrationSql
             RETURNING invitation_id, email_normalized, target_principal_id, role, status,
                       invited_by_principal_id, invited_at, accepted_at,
                       accepted_by_principal_id, revoked_at
-        ), membership AS (
-            INSERT INTO workspace_member (
-                workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            SELECT @workspace_id, 'principal', invitation.target_principal_id, @tenant_id,
-                   CASE invitation.role WHEN 'owner' THEN 'editor' ELSE invitation.role END,
-                   @principal_id, @now
-            FROM inserted invitation
-            ON CONFLICT (workspace_id, subject_type, subject_id) DO NOTHING
         )
         SELECT 'ok', invitation_id, email_normalized, target_principal_id,
                role, status, invited_by_principal_id,
                invited_at, accepted_at, accepted_by_principal_id, revoked_at
         FROM inserted
         UNION ALL
-        SELECT CASE WHEN EXISTS (SELECT 1 FROM locked_workspace) THEN 'conflict' ELSE 'not_found' END,
+        SELECT CASE WHEN EXISTS (SELECT 1 FROM locked_workspace WHERE membership_locked) THEN 'locked'
+                    WHEN EXISTS (SELECT 1 FROM locked_workspace) THEN 'conflict' ELSE 'not_found' END,
                NULL::uuid, NULL::text, NULL::uuid, NULL::text, NULL::text, NULL::uuid,
                NULL::timestamptz, NULL::timestamptz, NULL::uuid, NULL::timestamptz
         WHERE NOT EXISTS (SELECT 1 FROM inserted)
         """;
 
-    /// <summary>Revokes a pending invitation and removes the direct provisional grant.</summary>
+    /// <summary>Revokes a pending invitation.</summary>
     public const string RevokeInvitation = """
         WITH target AS MATERIALIZED (
             SELECT invitation.target_principal_id
@@ -665,12 +692,6 @@ public static class WorkspaceAdministrationSql
                                WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
             FOR UPDATE
-        ), membership AS (
-            DELETE FROM workspace_member member
-            USING target
-            WHERE member.tenant_id = @tenant_id AND member.workspace_id = @workspace_id
-              AND member.subject_type = 'principal'
-              AND member.subject_id = target.target_principal_id
         )
         UPDATE workspace_invitation invitation
         SET status = 'revoked', revoked_at = @now
@@ -679,7 +700,10 @@ public static class WorkspaceAdministrationSql
           AND invitation.invitation_id = @invitation_id AND invitation.status = 'pending'
         """;
 
-    /// <summary>Accepts the caller's pending invitation and applies an offered owner role.</summary>
+    /// <summary>
+    /// Accepts the caller's pending invitation and grants its offered role. Refused, leaving the
+    /// invitation pending, while the workspace is closed to new members.
+    /// </summary>
     public const string AcceptInvitation = """
         WITH accepted AS (
             UPDATE workspace_invitation invitation
@@ -687,6 +711,10 @@ public static class WorkspaceAdministrationSql
             WHERE invitation.tenant_id = @tenant_id AND invitation.workspace_id = @workspace_id
               AND invitation.invitation_id = @invitation_id AND invitation.status = 'pending'
               AND invitation.target_principal_id = @principal_id
+              AND NOT EXISTS (
+                  SELECT 1 FROM workspace w
+                  WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+                    AND w.membership_locked)
             RETURNING invitation.invitation_id, invitation.role
         ), membership AS (
             INSERT INTO workspace_member (
@@ -701,7 +729,7 @@ public static class WorkspaceAdministrationSql
         SELECT invitation_id FROM accepted CROSS JOIN membership
         """;
 
-    /// <summary>Declines the caller's pending invitation and removes provisional direct access.</summary>
+    /// <summary>Declines the caller's pending invitation.</summary>
     public const string DeclineInvitation = """
         WITH declined AS (
             UPDATE workspace_invitation invitation
@@ -710,11 +738,6 @@ public static class WorkspaceAdministrationSql
               AND invitation.invitation_id = @invitation_id AND invitation.status = 'pending'
               AND invitation.target_principal_id = @principal_id
             RETURNING invitation.invitation_id
-        ), membership AS (
-            DELETE FROM workspace_member member
-            USING declined
-            WHERE member.tenant_id = @tenant_id AND member.workspace_id = @workspace_id
-              AND member.subject_type = 'principal' AND member.subject_id = @principal_id
         )
         SELECT invitation_id FROM declined
         """;

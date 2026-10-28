@@ -44,6 +44,8 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
             .HasDefaultValue(WorkspaceLifecycleState.Active)
             .IsRequired();
         builder.Property(workspace => workspace.ArchivedAt).HasColumnName("archived_at");
+        builder.Property(workspace => workspace.MembershipLocked).HasColumnName("membership_locked").HasDefaultValue(false);
+        builder.Property(workspace => workspace.Collaboration).HasColumnName("collaboration").HasDefaultValue(true);
 
         // The target of every composite tenant-scoped reference to a workspace.
         builder.HasAlternateKey(workspace => new { workspace.TenantId, workspace.Id });

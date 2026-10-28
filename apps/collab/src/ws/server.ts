@@ -51,6 +51,12 @@ export interface SessionHub {
   ready?(session: SocketSession): void;
 
   /**
+   * Called after a re-check stored a fresh authorization, so the hub can decide who writes now:
+   * a switched-off collaboration or a lost write grant hands the pen to someone else.
+   */
+  reauthorized?(session: SocketSession): void;
+
+  /**
    * Tells a resident document that its log moved underneath it - a REST write or a restore - so
    * it catches up and shows the change to everyone editing it. A no-op when nothing is resident.
    */
@@ -389,6 +395,9 @@ function handleConnection(
           detail: 'Your access changed to read-only. Edits are no longer accepted.',
         }),
       );
+    }
+    if (hub.reauthorized !== undefined) {
+      hub.reauthorized(current);
     } else if (fresh.canWrite && current.mode === 'read') {
       current.mode = 'write';
     }

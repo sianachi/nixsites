@@ -896,8 +896,14 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
         };
         // A rate limit is not a refusal: the server resyncs once the window resets and the edit
         // is saved then, so it must not block confirmation, sign-out or updates meanwhile.
-        if (notice.code !== 'rate_limited') writeRefused = true;
-        if (notice.code === 'read_only') {
+        if (notice.code === 'editable') {
+          // The editor of a file with collaboration off left, and this session holds it now.
+          mode = 'write';
+          writeRefused = false;
+          report();
+          return;
+        } else if (notice.code !== 'rate_limited') writeRefused = true;
+        if (notice.code === 'read_only' || notice.code === 'editing_elsewhere') {
           // The server stopped accepting this session's writes - a revoked grant, told
           // honestly instead of silently dropping edits.
           mode = 'read';

@@ -372,6 +372,7 @@ const REFUSAL_COPY: Readonly<Record<string, string>> = {
   // sends immediately afterwards - so the honest thing is to name the delay, not promise a pause.
   rate_limited: 'That last change is taking a moment to save. It has not been lost.',
   read_only: 'You have read access to this note, so your changes are not being saved.',
+  editing_elsewhere: 'Someone else is editing this note. You can edit when they leave.',
   access_revoked: 'Access to this note was revoked. Recent changes cannot be saved.',
   local_draft_unreadable:
     'A saved draft could not be recovered. Keep this device’s data until the draft is recovered.',

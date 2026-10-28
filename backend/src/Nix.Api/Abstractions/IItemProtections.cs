@@ -27,11 +27,12 @@ public interface IItemProtections
     /// <param name="itemId">The item.</param>
     /// <param name="noDelete">Whether it is protected from deletion, or null to leave it.</param>
     /// <param name="noChildren">Whether it refuses new children, or null to leave it.</param>
+    /// <param name="collaboration">Whether several people may edit it at once, or null to leave it.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns>
     /// <see langword="false"/> when nothing was written because the deletion protection was named
     /// and the item is managed by a system feature - decided by the statement itself, so a sync
     /// that takes the item over between the caller's read and this write cannot be undone by it.
     /// </returns>
-    public ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, CancellationToken cancellationToken);
+    public ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, bool? collaboration, CancellationToken cancellationToken);
 }

@@ -95,7 +95,7 @@ public sealed class PersonalWorkspaceProvisionerIntegrationTests : IAsyncLifetim
     }
 
     [Fact]
-    public async Task A_verified_exact_email_redeems_the_pending_invitation_and_grants_membership()
+    public async Task Signing_in_with_an_invited_email_leaves_the_invitation_pending_and_grants_nothing()
     {
         var token = Token("invited-subject");
         var profile = new UserInfoProfile(
@@ -108,44 +108,9 @@ public sealed class PersonalWorkspaceProvisionerIntegrationTests : IAsyncLifetim
         await using (connection.ConfigureAwait(false))
         {
             Assert.Equal(1, await RawSql.CountAsync(connection, null,
-                $"SELECT count(*) FROM workspace_invitation WHERE invitation_id = '{M0SchemaSeed.Alpha.InvitationId:D}'::uuid AND status = 'accepted' AND accepted_by_principal_id = '{principal.Id.Value:D}'::uuid"));
-            Assert.Equal(1, await RawSql.CountAsync(connection, null,
-                $"SELECT count(*) FROM workspace_member WHERE workspace_id = '{M0SchemaSeed.Alpha.WorkspaceId:D}'::uuid AND subject_id = '{principal.Id.Value:D}'::uuid AND role = 'viewer'"));
-            Assert.Equal(1, await RawSql.CountAsync(connection, null,
-                $"SELECT count(*) FROM audit_event WHERE actor_id = '{principal.Id.Value:D}'::uuid AND action = 'workspace.invitation_redeemed'"));
-        }
-    }
-
-    [Fact]
-    public async Task Composed_and_decomposed_verified_emails_redeem_the_same_invitation()
-    {
-        var invitationId = Guid.Parse("41414141-4141-4141-8141-414141414141");
-        var connection = await _fixture.OpenMigratorConnectionAsync();
-        await using (connection.ConfigureAwait(false))
-        {
-            await RawSql.ExecuteAsync(connection, null,
-                $"""
-                INSERT INTO workspace_invitation
-                    (invitation_id, tenant_id, workspace_id, email_normalized, role,
-                     invited_by_principal_id, status, invited_at)
-                VALUES ('{invitationId:D}'::uuid, '{M0SchemaSeed.Alpha.TenantId:D}'::uuid,
-                        '{M0SchemaSeed.Alpha.WorkspaceId:D}'::uuid, 'üser@example.test', 'viewer',
-                        '{M0SchemaSeed.Alpha.PrincipalId:D}'::uuid, 'pending', now())
-                """);
-        }
-
-        var token = Token("unicode-invited-subject");
-        var profile = new UserInfoProfile(
-            "Unicode Person",
-            "U\u0308SER@EXAMPLE.TEST",
-            EmailVerified: true);
-        var principal = await ProvisionAndCommitAsync(token, profile);
-
-        var assertionConnection = await _fixture.OpenMigratorConnectionAsync();
-        await using (assertionConnection.ConfigureAwait(false))
-        {
-            Assert.Equal(1, await RawSql.CountAsync(assertionConnection, null,
-                $"SELECT count(*) FROM workspace_invitation WHERE invitation_id = '{invitationId:D}'::uuid AND status = 'accepted' AND accepted_by_principal_id = '{principal.Id.Value:D}'::uuid"));
+                $"SELECT count(*) FROM workspace_invitation WHERE invitation_id = '{M0SchemaSeed.Alpha.InvitationId:D}'::uuid AND status = 'pending'"));
+            Assert.Equal(0, await RawSql.CountAsync(connection, null,
+                $"SELECT count(*) FROM workspace_member WHERE workspace_id = '{M0SchemaSeed.Alpha.WorkspaceId:D}'::uuid AND subject_id = '{principal.Id.Value:D}'::uuid"));
         }
     }
 
@@ -261,7 +226,7 @@ public sealed class PersonalWorkspaceProvisionerIntegrationTests : IAsyncLifetim
     }
 
     [Fact]
-    public async Task Later_verified_email_is_refreshed_and_redeems_a_pending_workspace_invitation_once()
+    public async Task Later_verified_email_is_refreshed_and_leaves_a_pending_workspace_invitation_pending()
     {
         var token = Token("later-verified");
         var profile = new UserInfoProfile("Later Person", " Pending-Alpha@Example.Test ", EmailVerified: false);
@@ -298,11 +263,9 @@ public sealed class PersonalWorkspaceProvisionerIntegrationTests : IAsyncLifetim
                 if (verified)
                 {
                     Assert.Equal(1, await RawSql.CountAsync(connection, null,
-                        $"SELECT count(*) FROM workspace_invitation WHERE invitation_id = '{M0SchemaSeed.Alpha.InvitationId:D}'::uuid AND status = 'accepted' AND accepted_by_principal_id = '{principal.Id.Value:D}'::uuid"));
-                    Assert.Equal(1, await RawSql.CountAsync(connection, null,
+                        $"SELECT count(*) FROM workspace_invitation WHERE invitation_id = '{M0SchemaSeed.Alpha.InvitationId:D}'::uuid AND status = 'pending'"));
+                    Assert.Equal(0, await RawSql.CountAsync(connection, null,
                         $"SELECT count(*) FROM workspace_member WHERE workspace_id = '{M0SchemaSeed.Alpha.WorkspaceId:D}'::uuid AND subject_id = '{principal.Id.Value:D}'::uuid"));
-                    Assert.Equal(1, await RawSql.CountAsync(connection, null,
-                        $"SELECT count(*) FROM audit_event WHERE actor_id = '{principal.Id.Value:D}'::uuid AND action = 'workspace.invitation_redeemed'"));
                 }
             }
         }

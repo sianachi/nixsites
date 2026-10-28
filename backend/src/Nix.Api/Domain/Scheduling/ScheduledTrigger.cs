@@ -12,7 +12,10 @@ public enum TriggerKind
     /// <summary>An automation rule's schedule or date trigger.</summary>
     Automation,
 
-    /// <summary>A trigger used only by tests to exercise the plan -&gt; fire -&gt; notify path end to end.</summary>
+    /// <summary>
+    /// Core's own notices (a workspace invitation), and the tests that exercise the plan -&gt; fire
+    /// -&gt; notify path end to end.
+    /// </summary>
     System,
 
     /// <summary>A calendar link's planned poll or a write in its container (ADR-0052).</summary>

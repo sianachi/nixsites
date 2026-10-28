@@ -91,19 +91,6 @@ public sealed class PersonalWorkspaceProvisioner(
         await InsertAuditAsync(tenantId, principalId, workspaceId, now, cancellationToken)
             .ConfigureAwait(false);
 
-        if (normalizedEmail is not null)
-        {
-            await sql.ExecuteAsync(
-                ProvisioningSql.RedeemInvitations,
-                [
-                    Uuid("tenant_id", tenantId.Value),
-                    Uuid("principal_id", principalId.Value),
-                    Text("email_normalized", normalizedEmail),
-                    Timestamp("now", now),
-                ],
-                cancellationToken).ConfigureAwait(false);
-        }
-
         return new AuthenticatedPrincipal(
             principalId,
             tenantId,
@@ -137,19 +124,6 @@ public sealed class PersonalWorkspaceProvisioner(
         if (updated != 1)
         {
             throw new PersonalWorkspaceProvisioningInvariantException();
-        }
-
-        if (normalizedEmail is not null)
-        {
-            await sql.ExecuteAsync(
-                ProvisioningSql.RedeemInvitations,
-                [
-                    Uuid("tenant_id", tenantId.Value),
-                    Uuid("principal_id", principalId.Value),
-                    Text("email_normalized", normalizedEmail),
-                    Timestamp("now", clock.GetUtcNow()),
-                ],
-                cancellationToken).ConfigureAwait(false);
         }
     }
 

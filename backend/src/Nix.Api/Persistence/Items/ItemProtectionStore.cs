@@ -43,7 +43,7 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
     }
 
     /// <inheritdoc />
-    public async ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, CancellationToken cancellationToken)
+    public async ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, bool? collaboration, CancellationToken cancellationToken)
     {
         var tenantId = TenantId;
 
@@ -54,7 +54,8 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
         var written = await database.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE item
                SET no_delete = COALESCE({noDelete}::boolean, no_delete),
-                   no_children = COALESCE({noChildren}::boolean, no_children)
+                   no_children = COALESCE({noChildren}::boolean, no_children),
+                   collaboration = COALESCE({collaboration}::boolean, collaboration)
              WHERE tenant_id = {tenantId} AND id = {itemId.Value}
                AND ({noDelete}::boolean IS NULL OR managed_by IS NULL)
             """, cancellationToken).ConfigureAwait(false);

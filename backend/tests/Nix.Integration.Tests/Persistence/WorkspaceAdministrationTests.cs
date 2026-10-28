@@ -226,8 +226,8 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
                 WorkspaceId.From(Visible), invitationId, PrincipalId.From(Bob), "owner",
                 DateTimeOffset.UtcNow, Cancellation);
             Assert.Equal("pending", pending.Invitation?.Status);
-            Assert.Equal("editor", (await store.FindPrincipalMemberAsync(
-                WorkspaceId.From(Visible), PrincipalId.From(Bob), Cancellation))?.Role);
+            Assert.Null(await store.FindPrincipalMemberAsync(
+                WorkspaceId.From(Visible), PrincipalId.From(Bob), Cancellation));
 
             Assert.False(await store.ChangeMemberRoleAsync(
                 WorkspaceId.From(Visible), PrincipalId.From(Alice), "editor", DateTimeOffset.UtcNow, Cancellation));
@@ -307,7 +307,7 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Pending_invitation_grants_immediate_access_and_the_target_accepts_it()
+    public async Task Pending_invitation_grants_nothing_until_the_target_accepts_it()
     {
         await InsertHumanAsync(Charlie, "charlie", "charlie@example.test", verified: true);
         var invitationId = Guid.CreateVersion7();
@@ -327,8 +327,8 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
                 WorkspaceId.From(Visible), null, 20, Cancellation)), person => person.PrincipalId.Value == Charlie);
             Assert.False(pendingPerson.CanInvite);
             Assert.Equal("invitation_pending", pendingPerson.CannotInviteReason);
-            Assert.Equal("editor", (await store.FindPrincipalMemberAsync(
-                WorkspaceId.From(Visible), PrincipalId.From(Charlie), Cancellation))?.Role);
+            Assert.Null(await store.FindPrincipalMemberAsync(
+                WorkspaceId.From(Visible), PrincipalId.From(Charlie), Cancellation));
 
             var conflict = await store.CreateInvitationAsync(
                 WorkspaceId.From(Visible), Guid.CreateVersion7(), PrincipalId.From(Charlie), "viewer",
@@ -341,12 +341,23 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
             await work.CommitAsync(Cancellation);
         }
 
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(1, await RawSql.CountAsync(connection, null,
+                $"SELECT count(*) FROM scheduled_trigger WHERE principal_id = '{Charlie:D}'::uuid AND source = 'workspace.invitation' AND rule_id = '{invitationId:D}'::uuid AND status = 'pending'"));
+        }
+
         var accepting = await _fixture.Application.BeginUnitOfWorkAsync(Context(Charlie), Cancellation);
         await using (accepting.ConfigureAwait(false))
         {
             var store = accepting.Resolve<WorkspaceAdministrationStore>();
-            Assert.Equal(invitationId, (await store.FindAsync(
-                WorkspaceId.From(Visible), Cancellation))?.PendingInvitationId);
+            var invited = await store.FindAsync(WorkspaceId.From(Visible), Cancellation);
+            Assert.Equal(invitationId, invited?.PendingInvitationId);
+            Assert.False(invited!.CanRename || invited.CanManageMembers || invited.CanLeave || invited.CanUseDailyNotes);
+            Assert.Contains(await store.ListAsync(null, null, 50, Cancellation), row => row.Id.Value == Visible);
+            Assert.False(await accepting.Resolve<IPermissionResolver>().CanReadWorkspaceAsync(
+                WorkspaceId.From(Visible), Cancellation));
             Assert.True(await store.AcceptInvitationAsync(
                 WorkspaceId.From(Visible), invitationId, DateTimeOffset.UtcNow, Cancellation));
             await accepting.CommitAsync(Cancellation);
@@ -364,7 +375,46 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Unverified_humans_are_visible_but_cannot_be_invited_and_a_decline_removes_provisional_access()
+    public async Task A_closed_workspace_refuses_new_invitations_and_holds_pending_ones()
+    {
+        await InsertHumanAsync(Charlie, "charlie", "charlie@example.test", verified: true);
+        await InsertHumanAsync(Dana, "dana", "dana@example.test", verified: true);
+        var invitationId = Guid.CreateVersion7();
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(Context(Alice), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var store = work.Resolve<WorkspaceAdministrationStore>();
+            Assert.Equal("pending", (await store.CreateInvitationAsync(
+                WorkspaceId.From(Visible), invitationId, PrincipalId.From(Charlie), "viewer",
+                DateTimeOffset.UtcNow, Cancellation)).Invitation?.Status);
+            Assert.True(await store.SetSharingAsync(WorkspaceId.From(Visible), true, null, Cancellation));
+            Assert.Equal("locked", (await store.CreateInvitationAsync(
+                WorkspaceId.From(Visible), Guid.CreateVersion7(), PrincipalId.From(Dana), "viewer",
+                DateTimeOffset.UtcNow, Cancellation)).Outcome);
+            await work.CommitAsync(Cancellation);
+        }
+
+        var outsider = await _fixture.Application.BeginUnitOfWorkAsync(Context(Bob), Cancellation);
+        await using (outsider.ConfigureAwait(false))
+        {
+            Assert.False(await outsider.Resolve<WorkspaceAdministrationStore>().SetSharingAsync(
+                WorkspaceId.From(Visible), false, false, Cancellation));
+        }
+
+        var accepting = await _fixture.Application.BeginUnitOfWorkAsync(Context(Charlie), Cancellation);
+        await using (accepting.ConfigureAwait(false))
+        {
+            var store = accepting.Resolve<WorkspaceAdministrationStore>();
+            Assert.False(await store.AcceptInvitationAsync(
+                WorkspaceId.From(Visible), invitationId, DateTimeOffset.UtcNow, Cancellation));
+            var held = await store.FindAsync(WorkspaceId.From(Visible), Cancellation);
+            Assert.True(held?.MembershipLocked);
+            Assert.Equal(invitationId, held?.PendingInvitationId);
+        }
+    }
+
+    [Fact]
+    public async Task Unverified_humans_are_visible_but_cannot_be_invited_and_a_decline_removes_the_invitation()
     {
         await InsertHumanAsync(Charlie, "charlie", "shared@example.test", verified: false);
         await InsertHumanAsync(Dana, "dana", "dana@example.test", verified: true);

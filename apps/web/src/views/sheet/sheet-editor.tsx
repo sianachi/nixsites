@@ -58,6 +58,7 @@ const REFUSAL_COPY: Readonly<Record<string, string>> = {
   document_too_large:
     'This sheet is too large to save. Recent edits are not saved - remove some content and they will send.',
   local_copy_stale: 'This sheet changed while you were away. Reload to open the current version.',
+  editing_elsewhere: 'Someone else is editing this sheet. You can edit when they leave.',
   document_does_not_parse:
     'This sheet cannot be saved as written - a cell holds something the sheet format cannot store, or a formula is too expensive to finish recalculating.',
 };

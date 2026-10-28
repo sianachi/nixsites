@@ -24,7 +24,9 @@ public sealed record WorkspaceSnapshot(
     bool CanUseDailyNotes,
     Guid? PendingInvitationId,
     string LifecycleState,
-    DateTimeOffset? ArchivedAt);
+    DateTimeOffset? ArchivedAt,
+    bool MembershipLocked,
+    bool Collaboration);
 
 /// <summary>One active human with server-decided workspace invitation eligibility.</summary>
 public sealed record WorkspaceInviteeSnapshot(
@@ -239,6 +241,26 @@ public sealed partial class WorkspaceAdministrationStore(
     }
 
     /// <summary>Renames a reachable workspace when the caller can administer it.</summary>
+    public async ValueTask<bool> SetSharingAsync(
+        WorkspaceId workspaceId,
+        bool? membershipLocked,
+        bool? collaboration,
+        CancellationToken cancellationToken)
+    {
+        var context = Session;
+        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+            WorkspaceAdministrationSql.SetSharing,
+            [
+                Uuid("tenant_id", context.TenantId.Value),
+                Uuid("principal_id", context.PrincipalId.Value),
+                Uuid("workspace_id", workspaceId.Value),
+                new NpgsqlParameter("membership_locked", NpgsqlDbType.Boolean) { Value = membershipLocked is { } locked ? locked : DBNull.Value },
+                new NpgsqlParameter("collaboration", NpgsqlDbType.Boolean) { Value = collaboration is { } on ? on : DBNull.Value },
+            ],
+            cancellationToken).ConfigureAwait(false);
+        return result != Guid.Empty;
+    }
+
     public async ValueTask<bool> RenameAsync(
         WorkspaceId workspaceId,
         string name,
@@ -470,7 +492,7 @@ public sealed partial class WorkspaceAdministrationStore(
         return null;
     }
 
-    /// <summary>Offers one provisioned human immediate provisional access.</summary>
+    /// <summary>Offers one provisioned human a pending invitation; access starts only when they accept.</summary>
     public async ValueTask<WorkspaceInvitationMutationResult> CreateInvitationAsync(
         WorkspaceId workspaceId,
         Guid invitationId,
@@ -511,7 +533,7 @@ public sealed partial class WorkspaceAdministrationStore(
         return id != Guid.Empty;
     }
 
-    /// <summary>Declines the caller's pending invitation and removes its provisional direct grant.</summary>
+    /// <summary>Declines the caller's pending invitation.</summary>
     public async ValueTask<bool> DeclineInvitationAsync(
         WorkspaceId workspaceId,
         Guid invitationId,
@@ -869,7 +891,8 @@ public sealed partial class WorkspaceAdministrationStore(
             reader.IsDBNull(5) ? null : PrincipalId.From(reader.GetGuid(5)),
             reader.GetBoolean(6), reader.GetBoolean(7), reader.GetBoolean(8),
             reader.GetBoolean(9), reader.IsDBNull(10) ? null : reader.GetGuid(10),
-            reader.GetString(11), reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12));
+            reader.GetString(11), reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12),
+            reader.GetBoolean(13), reader.GetBoolean(14));
     }
 
     private readonly record struct DailyNoteContextRow(
