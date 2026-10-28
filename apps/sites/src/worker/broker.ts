@@ -227,7 +227,6 @@ export class Broker implements ResultPublisher {
   private connection: ChannelModel | null = null;
   private publisher: ConfirmChannel | null = null;
   private consumers = 0;
-  private closed = false;
 
   private readonly url: string;
   private readonly log: (message: string, fields?: Record<string, unknown>) => void;
@@ -259,16 +258,6 @@ export class Broker implements ResultPublisher {
     });
     this.connection = connection;
     return connection;
-  }
-
-  async ping(): Promise<boolean> {
-    try {
-      const channel = await (await this.open()).createChannel();
-      await channel.close();
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   /**
@@ -395,14 +384,9 @@ export class Broker implements ResultPublisher {
   }
 
   async close(): Promise<void> {
-    this.closed = true;
     const connection = this.connection;
     this.connection = null;
     this.publisher = null;
     await connection?.close().catch(() => undefined);
-  }
-
-  get isClosed(): boolean {
-    return this.closed;
   }
 }

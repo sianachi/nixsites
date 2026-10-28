@@ -21,7 +21,7 @@ export interface WorkerConfig {
   readonly workerId: string;
 }
 
-function required(env: NodeJS.ProcessEnv, name: string): string {
+export function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
   if (value === undefined || value.trim() === '') {
     throw new Error(`${name} is required.`);
@@ -29,7 +29,7 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   return value.trim();
 }
 
-function optional(env: NodeJS.ProcessEnv, name: string, fallback: string): string {
+export function optional(env: NodeJS.ProcessEnv, name: string, fallback: string): string {
   const value = env[name]?.trim();
   return value === undefined || value === '' ? fallback : value;
 }

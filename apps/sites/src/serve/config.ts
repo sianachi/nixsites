@@ -1,4 +1,4 @@
-import { parseAddress } from '../worker/config.ts';
+import { optional, parseAddress, required } from '../worker/config.ts';
 
 /**
  * What the serving process reads from its environment, checked once at startup.
@@ -23,17 +23,6 @@ export interface ServeConfig {
    * `<label><suffix>.<allowedSuffix>` count as its own default hostnames. Empty when unset.
    */
   readonly defaultLabelSuffix: string;
-}
-
-function required(env: NodeJS.ProcessEnv, name: string): string {
-  const value = env[name];
-  if (value === undefined || value.trim() === '') throw new Error(`${name} is required.`);
-  return value.trim();
-}
-
-function optional(env: NodeJS.ProcessEnv, name: string, fallback: string): string {
-  const value = env[name]?.trim();
-  return value === undefined || value === '' ? fallback : value;
 }
 
 export function readServeConfig(env: NodeJS.ProcessEnv): ServeConfig {
