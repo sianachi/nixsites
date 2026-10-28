@@ -41,6 +41,14 @@ describe('Homebase', () => {
       'href',
       `${HOME}/templates`,
     );
+    expect(within(start).getByRole('link', { name: /automations/i })).toHaveAttribute(
+      'href',
+      `${HOME}/automations`,
+    );
+    expect(within(start).getByRole('link', { name: /settings/i })).toHaveAttribute(
+      'href',
+      `${HOME}/settings`,
+    );
     expect(screen.queryByRole('group', { name: 'Homebase layout' })).not.toBeInTheDocument();
 
     await userEvent.click(within(start).getByRole('button', { name: /^import/i }));

@@ -8,7 +8,9 @@ import {
   FolderInput,
   Grid3x3,
   LayoutTemplate,
+  Settings,
   Shapes,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -131,6 +133,20 @@ export function Homebase({
       detail: 'Notes, documents or an archive',
       icon: FolderInput,
       onSelect: onImport,
+    },
+    {
+      key: 'automations',
+      label: 'Automations',
+      detail: 'Rules that run on their own',
+      icon: Zap,
+      to: `${home}/automations`,
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      detail: 'This workspace and your account',
+      icon: Settings,
+      to: `${home}/settings`,
     },
   ];
 
