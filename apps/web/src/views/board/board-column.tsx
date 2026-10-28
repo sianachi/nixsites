@@ -1,8 +1,6 @@
 import { Text, cn } from '@nix/ui';
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
-import type { StaleMember } from '../../lib/suggest/staleness';
-import type { Item, PropertyDefinition, PropertyValue } from '../core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
 import { useVirtualWindow } from '../core/use-virtual-window';
 import { boardCard, type BoardCardListProps } from './board-card';
@@ -13,22 +11,23 @@ const VIRTUALIZATION_THRESHOLD = 100;
 const ESTIMATED_CARD_HEIGHT = 150;
 const BOARD_CARD_GAP = 8;
 
-interface BoardColumnPanelProps {
+interface BoardColumnPanelProps extends Pick<
+  BoardCardListProps,
+  | 'columns'
+  | 'property'
+  | 'cardProperties'
+  | 'schema'
+  | 'dragged'
+  | 'setDragged'
+  | 'onMove'
+  | 'onWrite'
+  | 'onOpen'
+  | 'stale'
+  | 'dismissedStale'
+  | 'onDismissStale'
+> {
   readonly compact: boolean;
   readonly column: BoardColumn;
-  readonly columns: readonly BoardColumn[];
-  readonly property: PropertyDefinition;
-  readonly cardProperties: readonly string[];
-  readonly schema: readonly PropertyDefinition[];
-  readonly dragged: string | null;
-  readonly setDragged: (itemId: string | null) => void;
-  readonly onMove: (item: Item, value: string | null) => void;
-  readonly onWrite: (
-    itemId: string,
-    propertyKey: string,
-    value: PropertyValue,
-  ) => Promise<string | null>;
-  readonly onOpen: (itemId: string) => void;
   readonly onCreate: (
     title: string,
     properties?: Record<string, unknown>,
@@ -37,11 +36,6 @@ interface BoardColumnPanelProps {
 
   /** What the column's create field learns its suggestions from; see `CreateItemControl`. */
   readonly suggest: CreateSuggestSource;
-
-  /** Cards untouched far longer than their column's usual, and the ones whose note was waved away. */
-  readonly stale: ReadonlyMap<string, StaleMember>;
-  readonly dismissedStale: ReadonlySet<string>;
-  readonly onDismissStale: (item: Item) => void;
 }
 
 export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
