@@ -8,9 +8,8 @@ follows semantic versioning (`0.x` pre-1.0).
 ### Added
 
 - Homebase, the screen a workspace opens to when no note is open: a greeting with today's date
-  and week, one-press New note, Structured note, Today's note, Calendar and My Day, and the notes
-  you opened last on this browser. Choose Page (one column) or Desk (actions beside your recent
-  notes) from the screen itself. It replaces Notes as the first entry in the side rail.
+  and week, one-press New note, Structured note, Today's note, Calendar and Templates beside the
+  notes you opened last on this browser. It replaces Notes as the first entry in the side rail.
 - Owners can close a workspace to new members in its settings. While it is closed, nobody can be
   invited and pending invitations cannot be accepted.
 - Live collaboration can be switched off for a workspace (owners) or for one file (anyone who can
@@ -42,8 +41,6 @@ follows semantic versioning (`0.x` pre-1.0).
 - My Day. Homebase is where a day starts now: the My Day page, its rail entry, its Homebase
   tile, `GET /api/v1/workspaces/{workspaceId}/my-day` and `nixctl my-day` are gone. Tasks and
   habits are unchanged and still show in their own views and the calendar.
-- Homebase's Page/Desk choice. Homebase always shows the actions beside your recent notes, and
-  it now links to Templates.
 - The "Show status footer" setting, which no longer controlled anything. Settings > General only
   appears when sites are available, since publishing is all it holds.
 - Offline notes. The installed app no longer downloads your notes, the "Keep notes on this
