@@ -1,8 +1,10 @@
+import { mapLimited } from '../shared/map-limited.ts';
 import type { ObjectTransfer } from '../shared/object-transfer.ts';
 import type { CoreClient } from './core-client.ts';
 import type { JobContext } from './dispatch.ts';
 
 const PAGE = 500;
+const DELETE_CONCURRENCY = 8;
 
 /**
  * One `site.purge` job: delete the objects Core listed (a retired build, or everything of an
@@ -19,11 +21,10 @@ export async function purgeSite(
   for (;;) {
     signal.throwIfAborted();
     const page = await deps.core.purgeObjects(execution, after, PAGE, signal);
-    const deleted: string[] = [];
-    for (const target of page.objects) {
-      await deps.objects.delete(target.deleteUrl, signal);
-      deleted.push(target.key);
-    }
+    await mapLimited(page.objects, DELETE_CONCURRENCY, signal, (target) =>
+      deps.objects.delete(target.deleteUrl, signal),
+    );
+    const deleted = page.objects.map((target) => target.key);
     if (deleted.length > 0) removed += await deps.core.purgeDeleted(execution, deleted, signal);
     if (page.next === null) break;
     after = page.next;

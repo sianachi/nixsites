@@ -48,6 +48,7 @@ class Harness {
   }[] = [];
   sealed: Record<string, unknown> | null = null;
   withhold = false;
+  failPuts = false;
   precreated = new Set<string>();
   private servers: Server[] = [];
   coreUrl = '';
@@ -84,6 +85,7 @@ class Harness {
         return void response.writeHead(200).end(readFileSync(join(FIXTURE, 'files', file)));
       }
       this.calls.push(`put ${key}`);
+      if (this.failPuts) return void response.writeHead(500).end();
       expect(request.headers['x-amz-checksum-sha256']).toBe(
         createHash('sha256').update(body).digest('base64'),
       );
@@ -397,5 +399,12 @@ describe('buildSite', () => {
     expect(h.calls.some((call) => call.includes('/seal') || call.includes('/activated'))).toBe(
       false,
     );
+  });
+
+  it('fails the job before the seal when an upload is refused', async () => {
+    const h = await started();
+    h.failPuts = true;
+    await expect(h.run()).rejects.toThrow('The destination upload returned 500.');
+    expect(h.calls.some((call) => call.includes('/seal'))).toBe(false);
   });
 });

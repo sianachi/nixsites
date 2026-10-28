@@ -20,6 +20,7 @@ import {
   UnsupportedImage,
 } from '@nix/site-render';
 
+import { mapLimited } from '../shared/map-limited.ts';
 import type { ObjectTransfer } from '../shared/object-transfer.ts';
 import type { CoreClient, UploadEntry } from './core-client.ts';
 import { JobError, type JobContext } from './dispatch.ts';
@@ -41,6 +42,7 @@ import { JobError, type JobContext } from './dispatch.ts';
 const PAGE_BATCH = 200;
 const UPLOAD_BATCH = 100;
 const BODY_CONCURRENCY = 4;
+const UPLOAD_CONCURRENCY = 8;
 const MAX_BODY_BYTES = 32 << 20;
 const MAX_IMAGE_BYTES = 10 << 20;
 const MAX_RENDERED_BYTES = 256 << 20;
@@ -91,27 +93,6 @@ function lossStrings(loss: readonly LossEntry[]): string[] {
     ];
   }
   return lines;
-}
-
-async function mapLimited<T, R>(
-  items: readonly T[],
-  limit: number,
-  signal: AbortSignal,
-  run: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array<R>(items.length);
-  let next = 0;
-  async function worker(): Promise<void> {
-    for (;;) {
-      signal.throwIfAborted();
-      const index = next++;
-      const item = items[index];
-      if (item === undefined) return;
-      results[index] = await run(item);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
-  return results;
 }
 
 export async function buildSite(deps: BuildDeps, context: JobContext): Promise<unknown> {
@@ -286,13 +267,13 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
         'Core returned a different number of upload targets than were asked for.',
       );
     }
-    for (const [offset, file] of batch.entries()) {
-      await deps.objects.putCreateOnly(
+    await mapLimited(batch, UPLOAD_CONCURRENCY, signal, (file, offset) =>
+      deps.objects.putCreateOnly(
         (targets[offset] as { uploadUrl: string }).uploadUrl,
         file.bytes,
         signal,
-      );
-    }
+      ),
+    );
   }
 
   // 6. Seal, write the host manifests Core composed, then go live.
