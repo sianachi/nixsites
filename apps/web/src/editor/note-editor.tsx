@@ -65,6 +65,7 @@ import { useKeyboardModeStore } from './keyboard-mode-store';
 import { documentScope } from './body-cache';
 import { FRAGMENT_NAME, startCollabSync, type CollabSync, type SyncState } from './collab-sync';
 import { PresenceList } from './presence-list';
+import { remoteCursor } from './remote-cursor';
 import { DocumentIssueDialog, LOCAL_COPY_STALE } from './document-issue-dialog';
 import { usePageGuidePreference } from './page-guide-preference';
 import { PageGuides } from './page-guides-overlay';
@@ -776,7 +777,7 @@ export function NoteEditor({
 
     onCreate: ({ editor: created }) => {
       created.registerPlugin(ySyncPlugin(fragment) as Plugin);
-      created.registerPlugin(yCursorPlugin(awareness) as Plugin);
+      created.registerPlugin(yCursorPlugin(awareness, { cursorBuilder: remoteCursor }) as Plugin);
       // The Markdown mode's whole-body swap is tracked too, so Ctrl+Z after applying restores
       // the rich note in one step (the floor guard's RESTORE_ORIGIN stays untracked, as before).
       created.registerPlugin(yUndoPlugin({ trackedOrigins: [MARKDOWN_ORIGIN] }) as Plugin);

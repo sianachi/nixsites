@@ -29,6 +29,8 @@ follows semantic versioning (`0.x` pre-1.0).
 - People editing a document appear as small, quiet profiles: their initials in a circle outlined
   in their cursor colour, with their name on hover. A profile disappears as soon as that
   person's tab is hidden or closed.
+- Another person's cursor in a note is a thin line in their colour with a small initials circle
+  above it, instead of a name block that pushed the text onto the next line.
 - The Explorer has a New note button, which makes an untitled note in one press, and a New view
   menu for every other kind of item.
 - The companion pet stands on the page without a card behind it.
