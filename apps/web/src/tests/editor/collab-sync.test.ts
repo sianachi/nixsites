@@ -567,6 +567,20 @@ describe('the websocket provider', () => {
     },
   );
 
+  it('clears local presence while hidden and restores it when visible', async () => {
+    const h = harness();
+    active = h.sync;
+    await settled();
+    h.sync.awareness.setLocalState({ user: { name: 'Me' } });
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    visibility.mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(h.sync.awareness.getLocalState()).toBeNull();
+    visibility.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(h.sync.awareness.getLocalState()).toEqual({ user: { name: 'Me' } });
+  });
+
   it('reconnects a disconnected note promptly when the app returns to the foreground', async () => {
     const h = harness();
     active = h.sync;

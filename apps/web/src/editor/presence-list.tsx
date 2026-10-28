@@ -21,7 +21,7 @@ interface Peer {
   readonly color: string;
 }
 
-/** How many peers are shown by name before the rest collapse into a count. */
+/** How many peers are shown as dots before the rest collapse into a count. */
 const SHOWN = 4;
 
 function readPeers(awareness: Awareness): Peer[] {
@@ -78,13 +78,11 @@ export function PresenceList({ awareness }: PresenceListProps): ReactNode {
           aria-label={peer.name}
           style={
             {
-              borderColor: peer.color,
+              backgroundColor: peer.color,
             } /* design-token-exempt: the color is this peer's cursor identity, resolved from the accent ramp tokens at runtime; a class cannot vary per collaborator. */
           }
-          className="flex h-6 w-6 items-center justify-center rounded-sm border-2 bg-surface text-xs font-semibold"
-        >
-          {initialsOf(peer.name)}
-        </span>
+          className="h-2.5 w-2.5 rounded-full"
+        />
       ))}
       {overflow > 0 ? (
         <Text variant="caption" as="span" tone="muted">
@@ -93,11 +91,4 @@ export function PresenceList({ awareness }: PresenceListProps): ReactNode {
       ) : null}
     </div>
   );
-}
-
-function initialsOf(name: string): string {
-  const words = name.trim().split(/\s+/);
-  const first = words[0]?.charAt(0) ?? '';
-  const last = words.length > 1 ? (words[words.length - 1]?.charAt(0) ?? '') : '';
-  return `${first}${last}`.toUpperCase() || '?';
 }
