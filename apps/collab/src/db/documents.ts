@@ -119,43 +119,6 @@ export async function snapshotAtOrBefore(
 }
 
 /**
- * Whether a document's log already holds an update written under `clientId`, or under one of its
- * numbered continuations (`clientId:2`, `clientId:3`, ...).
- *
- * This is how a server-side write that may be retried recognises its own earlier success: the
- * writer derives the client id from the job it runs for, and the log row is the record that the
- * job landed. No table of its own, because the fact and the write it describes then commit or
- * roll back together by construction.
- *
- * **The record lasts as long as the document's history is kept, not for ever.** Retention prunes
- * old log rows, and the answer for a pruned one is "no". That is long enough for what this is
- * for - history outlives any job lease by orders of magnitude, so a retry always finds its row -
- * but a caller must not treat it as a permanent ledger of which jobs ever wrote.
- *
- * A scan of one document's log, not an index lookup - `client_id` is not indexed and does not
- * need to be for a question asked once per job. `starts_with` rather than `LIKE`, so nothing in
- * the client id is ever read as a pattern.
- */
-export async function hasUpdateFromClient(
-  sql: ScopedQuery,
-  tenantId: string,
-  docId: string,
-  clientId: string,
-): Promise<boolean> {
-  const { rows } = await sql.query<{ found: boolean }>(
-    `SELECT EXISTS (
-         SELECT 1
-           FROM content_update
-          WHERE tenant_id = $1 AND doc_id = $2
-            AND (client_id = $3 OR starts_with(client_id, $3 || ':'))
-       ) AS found`,
-    [tenantId, docId, clientId],
-  );
-
-  return rows[0]?.found === true;
-}
-
-/**
  * Appends one update and advances the document's head.
  *
  * **The sequence is allocated by the database, not by the caller.** `head_seq + 1` inside

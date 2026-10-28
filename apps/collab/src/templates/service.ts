@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import type { ItemBundle, SchemaSnapshot } from '@nix/export';
 import type { Pool } from 'pg';
 
@@ -492,12 +490,6 @@ function importSchema(
   return bundle.schema === null
     ? null
     : { properties: bundle.schema.declared, inherit: bundle.schema.inherit };
-}
-
-export function digestArchive(chunks: readonly Uint8Array[]): string {
-  const digest = createHash('sha256');
-  for (const chunk of chunks) digest.update(chunk);
-  return digest.digest('hex');
 }
 
 function mapping(

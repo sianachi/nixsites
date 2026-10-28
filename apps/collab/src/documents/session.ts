@@ -48,7 +48,7 @@ export interface SessionConfig {
 }
 
 /** Where a standing mirror starts paying for itself: about a thousand paragraphs of prose. */
-export const MIRROR_FROM_BYTES = 64 * 1024;
+const MIRROR_FROM_BYTES = 64 * 1024;
 
 export interface SessionContext {
   readonly pool: Pool;

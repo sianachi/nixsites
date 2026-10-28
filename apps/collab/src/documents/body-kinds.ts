@@ -131,7 +131,7 @@ export const FRAGMENT_NAME = 'default';
 export const CANVAS_ELEMENTS = 'elements';
 
 /** How many elements one canvas may hold. The browser renders every one of them. */
-export const CANVAS_ELEMENT_CEILING = 10_000;
+const CANVAS_ELEMENT_CEILING = 10_000;
 
 /**
  * Prose: the ProseMirror document in the shared XML fragment, validated by parsing.

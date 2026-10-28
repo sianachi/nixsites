@@ -122,11 +122,6 @@ export function parseAuthFrame(data: unknown): AuthFrame | null {
   return { token: frame.token, schemaVersion: frame.schemaVersion };
 }
 
-/** Encodes the handshake answer. */
-export function encodeReadyFrame(frame: Omit<ReadyFrame, 'type'>): string {
-  return JSON.stringify({ type: 'ready', ...frame });
-}
-
 /** Encodes a non-fatal refusal: the rejection's code and detail, without its HTTP status. */
 export function encodeNotice(refusal: Pick<Rejection, 'code' | 'detail'>): Uint8Array {
   const encoder = encoding.createEncoder();
