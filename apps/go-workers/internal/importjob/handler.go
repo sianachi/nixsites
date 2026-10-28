@@ -117,10 +117,8 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
-	var payload Payload
-	if err := decoder.Decode(&payload); err != nil {
+	payload, err := jobrunner.DecodeStrict[Payload](raw)
+	if err != nil {
 		return Payload{}, err
 	}
 	if payload.SourceURL == "" || payload.Format == "" || payload.RootID == "" || payload.Title == "" {

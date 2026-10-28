@@ -1,7 +1,6 @@
 package objectcleanup
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -84,10 +83,8 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	var payload Payload
-	if err := decoder.Decode(&payload); err != nil {
+	payload, err := jobrunner.DecodeStrict[Payload](raw)
+	if err != nil {
 		return Payload{}, err
 	}
 	if payload.OwnerKind == "" || len(payload.OwnerKind) > 80 || payload.OwnerID == "" || payload.NotBefore.IsZero() || len(payload.ObjectKeys) > 10_002 {

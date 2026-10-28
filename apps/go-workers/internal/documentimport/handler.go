@@ -540,10 +540,8 @@ func assetCount(plan importplan.Plan) int {
 }
 
 func decodePayload(raw json.RawMessage) (Payload, error) {
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	var payload Payload
-	if err := decoder.Decode(&payload); err != nil {
+	payload, err := jobrunner.DecodeStrict[Payload](raw)
+	if err != nil {
 		return Payload{}, err
 	}
 	if payload.ImportID == "" || len(payload.ImportID) > 64 {
