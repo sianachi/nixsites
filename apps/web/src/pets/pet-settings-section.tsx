@@ -5,15 +5,15 @@ import {
   type PetSettings,
   type PetSettingsResponse,
 } from '@nix/api-client';
-import { Button, Field, Input, Select, Text, Textarea } from '@nix/ui';
-import { useState, type ReactElement } from 'react';
-import { newPet, petCatalog, personalityDescriptions } from './catalog';
+import { Button, Checkbox, Field, Icon, Input, Menu, Select, Text, Textarea } from '@nix/ui';
+import { MoreHorizontal, Plus } from 'lucide-react';
+import { useId, useState, type ReactElement } from 'react';
+import { newPet, petCatalog } from './catalog';
 import { usePetSettings } from './use-pet-settings';
 import { PetAvatar } from './pet-avatar';
 import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';
 import { PetDeviceSettings } from './pet-device-settings';
-import { PreferenceToggle } from '../settings/shared/preference-toggle';
 import { SettingsSection } from '../settings/shared/settings-section';
 
 export function PetSettingsSection(): ReactElement {
@@ -56,6 +56,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     initial.settings.activePetId ?? initial.settings.profiles[0]?.id ?? null,
   );
   const [message, setMessage] = useState<string | null>(null);
+  const tiles = useId();
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
     if (JSON.stringify(draft) !== JSON.stringify(initial.settings)) {
@@ -117,9 +118,27 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     return ok;
   }
 
+  const motionField = (
+    <Field label="Motion">
+      {(control) => (
+        <Select
+          {...control}
+          value={draft.motion}
+          onChange={(event) => {
+            change({ ...draft, motion: event.currentTarget.value as PetSettings['motion'] });
+          }}
+        >
+          <option value="system">System</option>
+          <option value="reduced">Reduced</option>
+          <option value="full">Full</option>
+        </Select>
+      )}
+    </Field>
+  );
+
   return (
     <form
-      className="@container flex min-w-0 flex-col gap-6"
+      className="@container flex min-w-0 flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         void saveSettings();
@@ -127,130 +146,110 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     >
       <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
         <legend className="sr-only">Saved pets</legend>
-        <PreferenceToggle
-          label="Show companion in my workspaces"
-          checked={draft.enabled}
-          disabled={draft.activePetId === null}
-          onChange={(enabled) => {
-            change({ ...draft, enabled });
-          }}
-          description="Needs an active pet"
-          unsaved={null}
-        />
-        <PreferenceToggle
-          label="Use AI while writing notes"
-          checked={draft.inlineWriting}
-          disabled={draft.activePetId === null || !draft.enabled}
-          onChange={(inlineWriting) => {
-            change({ ...draft, inlineWriting });
-          }}
-          description="AI commands in the slash and selection menus"
-          unsaved={null}
-          more="The text you select is sent to your connected model. Locked notes are never sent."
-        />
-        <Text variant="h5" as="h3">
-          Pets
-        </Text>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={draft.profiles.length >= 12}
-            onClick={() => {
-              add(newPet());
-            }}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div
+            role="radiogroup"
+            aria-label="Companions"
+            className="flex min-w-0 flex-wrap items-center gap-2"
           >
-            Add pet
-          </Button>
-          {pet ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={draft.profiles.length >= 12}
-              onClick={() => {
-                add({ ...pet, id: crypto.randomUUID(), name: `${pet.name.slice(0, 75)} copy` });
-              }}
-            >
-              Duplicate pet
-            </Button>
-          ) : null}
-        </div>
-        {draft.profiles.length === 0 ? (
-          <Text variant="note" tone="muted">
-            Add your first pet to choose its appearance and personality.
-          </Text>
-        ) : (
-          <Field label="Saved pet">
-            {(control) => (
-              <Select
-                {...control}
-                value={selectedId ?? ''}
-                onChange={(event) => {
-                  setSelectedId(event.currentTarget.value);
-                }}
+            {draft.profiles.map((profile) => (
+              <label
+                key={profile.id}
+                className="relative flex w-24 min-w-0 cursor-pointer flex-col items-center gap-1 border border-divider p-2 has-checked:border-accent has-focus-visible:outline-2 has-focus-visible:outline-accent"
               >
-                {draft.profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name || 'Unnamed pet'}
-                    {profile.id === draft.activePetId ? ' (active)' : ''}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-        )}
-        {pet ? (
-          <>
-            <Field label="Model provider" hint="The service this pet uses for chat and writing">
-              {(control) => (
-                <Select
-                  {...control}
-                  value={pet.provider}
-                  onChange={(event) => {
-                    updatePet({ provider: petProviderSchema.parse(event.currentTarget.value) });
-                  }}
-                >
-                  <option value="chatgpt">ChatGPT</option>
-                  <option value="anthropic">Claude</option>
-                  <option value="openrouter">OpenRouter</option>
-                </Select>
-              )}
-            </Field>
-            {pet.provider === 'chatgpt' ? (
-              <PetConnectionPanel />
-            ) : (
-              <PetProviderKeys
-                key={pet.provider}
-                provider={pet.provider}
-                onSaveSettings={saveSettings}
-                needsProviderSave={
-                  initial.settings.profiles.find((saved) => saved.id === pet.id)?.provider !==
-                  pet.provider
-                }
-              />
-            )}
-            <Text variant="h5" as="h3">
-              Look and voice
-            </Text>
-            <PetAvatar
-              appearance={pet.appearance}
-              motion={draft.motion}
-              label={`${pet.name || 'Pet'} appearance preview`}
-            />
-            <Field label="Name">
-              {(control) => (
-                <Input
-                  {...control}
-                  required
-                  maxLength={80}
-                  value={pet.name}
-                  onChange={(event) => {
-                    updatePet({ name: event.currentTarget.value });
+                <input
+                  type="radio"
+                  name={tiles}
+                  className="sr-only"
+                  checked={profile.id === selectedId}
+                  onChange={() => {
+                    setSelectedId(profile.id);
                   }}
                 />
+                <span aria-hidden>
+                  <PetAvatar appearance={profile.appearance} motion="reduced" size="compact" />
+                </span>
+                <Text as="span" variant="caption" truncate>
+                  {profile.name || 'Unnamed pet'}
+                </Text>
+                {profile.id === draft.activePetId ? (
+                  <>
+                    <span
+                      aria-hidden
+                      className="absolute right-1 top-1 size-2 rounded-full bg-accent-fill"
+                    />
+                    <span className="sr-only">, active</span>
+                  </>
+                ) : null}
+              </label>
+            ))}
+            <Button
+              type="button"
+              variant="icon"
+              aria-label="Add pet"
+              disabled={draft.profiles.length >= 12}
+              onClick={() => {
+                add(newPet());
+              }}
+            >
+              <Icon icon={Plus} size="sm" />
+            </Button>
+          </div>
+          {pet ? (
+            <div className="flex items-center gap-2">
+              {pet.id === draft.activePetId ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    change({ ...draft, activePetId: pet.id });
+                  }}
+                >
+                  Use this pet
+                </Button>
               )}
-            </Field>
-            <div className="grid min-w-0 gap-4 @lg:grid-cols-2">
+              <Menu
+                label="Pet actions"
+                items={[
+                  {
+                    label: 'Duplicate pet',
+                    disabled: draft.profiles.length >= 12,
+                    onSelect: () => {
+                      add({
+                        ...pet,
+                        id: crypto.randomUUID(),
+                        name: `${pet.name.slice(0, 75)} copy`,
+                      });
+                    },
+                  },
+                  { label: 'Remove pet', destructive: true, onSelect: remove },
+                ]}
+              >
+                {(trigger) => (
+                  <Button {...trigger} variant="icon" aria-label="Pet actions">
+                    <Icon icon={MoreHorizontal} size="sm" />
+                  </Button>
+                )}
+              </Menu>
+            </div>
+          ) : null}
+        </div>
+        {pet ? (
+          <>
+            <div className="grid min-w-0 gap-3 @lg:grid-cols-2 @3xl:grid-cols-4">
+              <Field label="Name">
+                {(control) => (
+                  <Input
+                    {...control}
+                    required
+                    maxLength={80}
+                    value={pet.name}
+                    onChange={(event) => {
+                      updatePet({ name: event.currentTarget.value });
+                    }}
+                  />
+                )}
+              </Field>
               <Field label="Appearance">
                 {(control) => (
                   <Select
@@ -288,107 +287,154 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                   </Select>
                 )}
               </Field>
+              <Field label="Response length">
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={pet.responseLength}
+                    onChange={(event) => {
+                      updatePet({
+                        responseLength: event.currentTarget.value as PetProfile['responseLength'],
+                      });
+                    }}
+                  >
+                    <option value="concise">Concise</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="detailed">Detailed</option>
+                  </Select>
+                )}
+              </Field>
             </div>
-            <Text variant="note" tone="muted">
-              {personalityDescriptions[pet.personality]}
-            </Text>
-            <Field label="Response length">
-              {(control) => (
-                <Select
-                  {...control}
-                  value={pet.responseLength}
-                  onChange={(event) => {
-                    updatePet({
-                      responseLength: event.currentTarget.value as PetProfile['responseLength'],
-                    });
-                  }}
-                >
-                  <option value="concise">Concise</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="detailed">Detailed</option>
-                </Select>
-              )}
-            </Field>
-            <Field
-              label="Personal instructions"
-              hint="How you like to work; this never grants extra access"
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={4}
-                  maxLength={2000}
-                  value={pet.instructions}
-                  onChange={(event) => {
-                    updatePet({ instructions: event.currentTarget.value });
-                  }}
+            <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+              <Field label="Model">
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={pet.provider}
+                    onChange={(event) => {
+                      updatePet({ provider: petProviderSchema.parse(event.currentTarget.value) });
+                    }}
+                  >
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="anthropic">Claude</option>
+                    <option value="openrouter">OpenRouter</option>
+                  </Select>
+                )}
+              </Field>
+              {pet.provider === 'chatgpt' ? (
+                <PetConnectionPanel collapsible />
+              ) : (
+                <PetProviderKeys
+                  key={pet.provider}
+                  collapsible
+                  provider={pet.provider}
+                  onSaveSettings={saveSettings}
+                  needsProviderSave={
+                    initial.settings.profiles.find((saved) => saved.id === pet.id)?.provider !==
+                    pet.provider
+                  }
                 />
               )}
-            </Field>
-            <PreferenceToggle
-              label="Apply changes without asking by default"
-              checked={pet.applyWithoutAsking}
-              onChange={(applyWithoutAsking) => {
-                updatePet({ applyWithoutAsking });
-              }}
-              description="Clean changes run as soon as their preview shows no problems"
-              unsaved={null}
-              more="Starts each conversation with the Apply without asking switch on. Moves, trash, template saves and external links still ask, and you can turn the switch off in any conversation."
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={pet.id === draft.activePetId}
-                onClick={() => {
-                  change({ ...draft, activePetId: pet.id });
-                }}
-              >
-                Use this pet
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label="Remove pet from settings"
-                onClick={remove}
-              >
-                Remove pet
-              </Button>
             </div>
-          </>
-        ) : null}
-        <Field label="Motion">
-          {(control) => (
-            <Select
-              {...control}
-              value={draft.motion}
-              onChange={(event) => {
-                change({ ...draft, motion: event.currentTarget.value as PetSettings['motion'] });
+            <PetInstructions
+              key={pet.id}
+              value={pet.instructions}
+              onChange={(instructions) => {
+                updatePet({ instructions });
               }}
-            >
-              <option value="system">Follow system preference</option>
-              <option value="reduced">Reduced</option>
-              <option value="full">Full</option>
-            </Select>
-          )}
-        </Field>
-      </fieldset>
-      {draft.enabled ? <PetDeviceSettings inlineWriting={draft.inlineWriting} /> : null}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="primary" disabled={saving || !dirty}>
-          {saving ? 'Saving…' : 'Save pet settings'}
-        </Button>
-        {dirty ? (
+            />
+            <Checkbox
+              label="Apply changes without asking"
+              checked={pet.applyWithoutAsking}
+              onChange={(event) => {
+                updatePet({ applyWithoutAsking: event.currentTarget.checked });
+              }}
+            />
+          </>
+        ) : (
           <Text variant="note" tone="muted">
-            Unsaved changes
+            Add your first pet to choose its appearance and personality.
           </Text>
-        ) : null}
-      </div>
+        )}
+        <Text variant="h5" as="h3">
+          Behaviour
+        </Text>
+        <Checkbox
+          label="Show companion in my workspaces"
+          checked={draft.enabled}
+          disabled={draft.activePetId === null}
+          onChange={(event) => {
+            change({ ...draft, enabled: event.currentTarget.checked });
+          }}
+        />
+        <div className="flex flex-col gap-1">
+          <Checkbox
+            label="Use AI while writing notes"
+            checked={draft.inlineWriting}
+            disabled={draft.activePetId === null || !draft.enabled}
+            onChange={(event) => {
+              change({ ...draft, inlineWriting: event.currentTarget.checked });
+            }}
+          />
+          <Text variant="note" tone="muted">
+            The text you select is sent to your connected model. Locked notes are never sent.
+          </Text>
+        </div>
+        {draft.enabled ? (
+          <PetDeviceSettings inlineWriting={draft.inlineWriting}>{motionField}</PetDeviceSettings>
+        ) : (
+          motionField
+        )}
+      </fieldset>
       {message ? (
         <Text role="status" variant="note">
           {message}
         </Text>
       ) : null}
+      {dirty ? (
+        <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-divider bg-background py-3">
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+          <Text variant="note" tone="muted">
+            Unsaved changes
+          </Text>
+        </div>
+      ) : null}
     </form>
+  );
+}
+
+/** Collapsed until needed; opens on mount only when the pet already has instructions. */
+function PetInstructions({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}): ReactElement {
+  const [open] = useState(value !== '');
+  return (
+    <details open={open}>
+      <summary className="min-h-11 cursor-pointer text-sm text-accent-text">
+        Instructions (optional)
+      </summary>
+      <Field
+        label="Personal instructions"
+        hint="How you like to work; this never grants extra access"
+      >
+        {(control) => (
+          <Textarea
+            {...control}
+            rows={4}
+            maxLength={2000}
+            value={value}
+            onChange={(event) => {
+              onChange(event.currentTarget.value);
+            }}
+          />
+        )}
+      </Field>
+    </details>
   );
 }

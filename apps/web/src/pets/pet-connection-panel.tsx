@@ -3,16 +3,22 @@ import { Button, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useApiClient } from '../api/api-client-provider';
 import { isAborted } from '../lib/guards';
+import { useChangeFocus } from './use-change-focus';
 
 export function PetConnectionPanel({
   compact = false,
+  collapsible = false,
 }: {
   readonly compact?: boolean;
+  /** Shows a one-line "Connected · Change" status while connected, until Change is pressed. */
+  readonly collapsible?: boolean;
 }): ReactElement {
   const client = useApiClient();
   const [connection, setConnection] = useState<PetConnection | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const { panel, change: changeButton } = useChangeFocus(editing);
   const lifetime = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -62,10 +68,36 @@ export function PetConnectionPanel({
     }
   }
 
+  if (collapsible && !editing && !error && (!connection || connection.status === 'connected')) {
+    return !connection ? (
+      <Text variant="note" tone="muted" role="status">
+        Checking your connection…
+      </Text>
+    ) : (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Text as="span" variant="note" tone="muted">
+          ✓ Connected
+        </Text>
+        <Button
+          ref={changeButton}
+          aria-label="Change ChatGPT connection"
+          variant="ghost"
+          onClick={() => {
+            setEditing(true);
+          }}
+        >
+          Change
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <section
+      ref={panel}
+      tabIndex={-1}
       aria-label="ChatGPT connection"
-      className="flex min-w-0 flex-col gap-3 border border-divider p-3 wrap-anywhere"
+      className="flex w-full min-w-0 flex-col gap-3 border border-divider p-3 wrap-anywhere"
     >
       {!compact ? (
         <Text variant="h5" as="h3">
@@ -133,6 +165,16 @@ export function PetConnectionPanel({
         >
           Refresh connection
         </Button>
+        {collapsible && connection?.status === 'connected' ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setEditing(false);
+            }}
+          >
+            Done
+          </Button>
+        ) : null}
       </div>
     </section>
   );

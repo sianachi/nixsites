@@ -51,6 +51,11 @@ const savedClaudeKey = {
 } satisfies PetProviderKey;
 let providerKeys: readonly PetProviderKey[] = [];
 
+async function choosePetAction(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole('button', { name: 'Pet actions' }));
+  await user.click(screen.getByRole('menuitem', { name }));
+}
+
 describe('pet configuration', () => {
   beforeEach(() => {
     providerKeys = [];
@@ -91,7 +96,7 @@ describe('pet configuration', () => {
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Pip');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Personality' }), 'playful');
     expect(screen.getByRole('combobox', { name: 'Appearance' })).toHaveValue('owl');
-    await user.click(screen.getByRole('button', { name: 'Save pet settings' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
     });
@@ -109,7 +114,7 @@ describe('pet configuration', () => {
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     await user.click(screen.getByRole('button', { name: 'Add pet' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Appearance' }), appearance);
-    await user.click(screen.getByRole('button', { name: 'Save pet settings' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
     });
@@ -123,18 +128,19 @@ describe('pet configuration', () => {
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     await user.click(screen.getByRole('button', { name: 'Add pet' }));
-    await user.click(screen.getByRole('button', { name: 'Duplicate pet' }));
-    await user.click(screen.getByRole('button', { name: 'Save pet settings' }));
+    await choosePetAction(user, 'Duplicate pet');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
     });
     const value = save.mock.calls[0]?.[0] as PetSettingsResponse['settings'];
     expect(value.profiles).toHaveLength(2);
     expect(value.profiles[0]?.id).not.toBe(value.profiles[1]?.id);
-    await user.click(screen.getByRole('button', { name: 'Remove pet from settings' }));
-    await user.click(screen.getByRole('button', { name: 'Remove pet from settings' }));
+    await choosePetAction(user, 'Remove pet');
+    await choosePetAction(user, 'Remove pet');
     expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save pet settings' })).toBeDisabled();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 
   it('does not announce success after a failed save', async () => {
@@ -143,7 +149,7 @@ describe('pet configuration', () => {
       <PetSettingsEditor initial={initial} saving={false} onSave={() => Promise.resolve(false)} />,
     );
     await user.click(screen.getByRole('button', { name: 'Add pet' }));
-    await user.click(screen.getByRole('button', { name: 'Save pet settings' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(screen.queryByText('Pet settings saved.')).not.toBeInTheDocument();
     expect(screen.getByText('Unsaved changes')).toBeVisible();
   });
@@ -153,25 +159,26 @@ describe('pet configuration', () => {
     const user = userEvent.setup();
     const view = render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     await user.click(screen.getByRole('button', { name: 'Add pet' }));
-    await user.click(screen.getByRole('button', { name: 'Duplicate pet' }));
-    const selected = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Saved pet' }).value;
-    await user.click(screen.getByRole('button', { name: 'Save pet settings' }));
+    await choosePetAction(user, 'Duplicate pet');
+    const selected = screen.getByRole<HTMLInputElement>('radio', { checked: true });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Pet settings saved.')).toBeVisible();
     const settings = save.mock.calls[0]?.[0] as PetSettingsResponse['settings'];
     view.rerender(
       <PetSettingsEditor initial={{ revision: 1, settings }} saving={false} onSave={save} />,
     );
-    expect(screen.getByRole('combobox', { name: 'Saved pet' })).toHaveValue(selected);
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.getByRole('radio', { checked: true })).toBe(selected);
     expect(screen.getByText('Pet settings saved.')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Save pet settings' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 
   it('lets a pet choose its model provider and keeps the choice in the saved document', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
-    await user.click(screen.getByRole('button', { name: /save pet settings/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalled();
     });
@@ -192,15 +199,12 @@ describe('pet configuration', () => {
     expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('OpenRouter API key')).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     expect(await screen.findByLabelText('Claude API key')).toHaveAttribute('type', 'password');
     expect(screen.queryByRole('region', { name: 'ChatGPT connection' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('OpenRouter API key')).not.toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Model provider' }),
-      'openrouter',
-    );
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'openrouter');
     expect(await screen.findByLabelText('OpenRouter API key')).toHaveAttribute('type', 'password');
     expect(screen.queryByRole('region', { name: 'ChatGPT connection' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
@@ -215,8 +219,11 @@ describe('pet configuration', () => {
         onSave={() => Promise.resolve(true)}
       />,
     );
-    expect(await screen.findByText(/key ending 1234/)).toBeVisible();
+    expect(await screen.findByText(/ending 1234/)).toBeVisible();
+    expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Change Claude key' }));
     expect(screen.getByLabelText('Claude API key')).toHaveValue('');
+    expect(screen.getByRole('region', { name: 'Claude connection' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Replace Claude key' })).toBeDisabled();
     expect(client.query).toHaveBeenCalledOnce();
     expect(client.query).toHaveBeenCalledWith(
@@ -267,7 +274,7 @@ describe('pet configuration', () => {
     });
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
 
@@ -279,7 +286,7 @@ describe('pet configuration', () => {
       await settingsSave;
     });
 
-    expect(await screen.findByText(/key ending 1234/)).toBeVisible();
+    expect(await screen.findByText(/ending 1234/)).toBeVisible();
     expect(operations).toEqual(['settings', 'key']);
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith(
@@ -300,7 +307,7 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(false);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
 
@@ -309,7 +316,7 @@ describe('pet configuration', () => {
       expect(screen.getByRole('button', { name: 'Save Claude setup' })).toBeEnabled();
     });
     expect(client.execute).not.toHaveBeenCalled();
-    expect(screen.queryByText(/key ending 1234/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ending 1234/)).not.toBeInTheDocument();
     expect(screen.queryByText('Claude API key saved.')).not.toBeInTheDocument();
     expect(screen.queryByText('Pet settings saved.')).not.toBeInTheDocument();
     expect(screen.getByText('Unsaved changes')).toBeVisible();
@@ -319,7 +326,7 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.keyboard('{Enter}');
 
@@ -357,13 +364,15 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
-    await user.type(await screen.findByLabelText('Claude API key'), 'replacement-1234');
+    await user.click(await screen.findByRole('button', { name: 'Change Claude key' }));
+    await user.type(screen.getByLabelText('Claude API key'), 'replacement-1234');
     await user.click(screen.getByRole('button', { name: 'Replace Claude key' }));
 
     await waitFor(() => {
       expect(client.execute).toHaveBeenCalledOnce();
-      expect(screen.getByLabelText('Claude API key')).toHaveValue('');
     });
+    expect(await screen.findByText('Claude API key saved.')).toBeVisible();
+    expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
 
@@ -374,7 +383,7 @@ describe('pet configuration', () => {
     const view = render(
       <PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />,
     );
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     await user.click(await screen.findByRole('button', { name: 'Use Claude' }));
 
     expect(await screen.findByText('Claude setup saved.')).toBeVisible();
@@ -386,7 +395,7 @@ describe('pet configuration', () => {
 
     view.rerender(<PetSettingsEditor initial={saved} saving={false} onSave={save} />);
     expect(screen.queryByRole('button', { name: 'Use Claude' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Replace Claude key' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Change Claude key' })).toBeVisible();
   });
 
   it('shows a failed key save without claiming a key was saved', async () => {
@@ -405,7 +414,7 @@ describe('pet configuration', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The key could not be saved. Your pet settings were saved; retry saving the key.',
     );
-    expect(screen.queryByText(/key ending 1234/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ending 1234/)).not.toBeInTheDocument();
     expect(screen.queryByText('Claude API key saved.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Claude setup' })).toBeEnabled();
     expect(screen.getByLabelText('Claude API key')).toHaveValue('dummy-claude-1234');
@@ -421,13 +430,10 @@ describe('pet configuration', () => {
       />,
     );
     await user.type(await screen.findByLabelText('Claude API key'), 'unsaved-claude-key');
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Model provider' }),
-      'openrouter',
-    );
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'openrouter');
     expect(await screen.findByLabelText('OpenRouter API key')).toHaveValue('');
     await user.type(screen.getByLabelText('OpenRouter API key'), 'unsaved-openrouter-key');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model provider' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     expect(await screen.findByLabelText('Claude API key')).toHaveValue('');
     expect(client.execute).not.toHaveBeenCalled();
     expect(client.query).not.toHaveBeenCalledWith(
@@ -445,34 +451,30 @@ describe('pet configuration', () => {
         onSave={() => Promise.resolve(true)}
       />,
     );
-    expect(screen.getByRole('combobox', { name: 'Where the chat opens' })).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Chat opens' })).toBeVisible();
     expect(
-      screen.queryByRole('checkbox', { name: 'Send note context with inline AI on this device' }),
+      screen.queryByRole('checkbox', { name: 'Send note context with inline AI' }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: 'Use AI while writing notes' }));
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Send note context with inline AI on this device' }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: 'Send note context with inline AI' }));
     await user.click(screen.getByRole('checkbox', { name: 'Use AI while writing notes' }));
     expect(
-      screen.queryByRole('checkbox', { name: 'Send note context with inline AI on this device' }),
+      screen.queryByRole('checkbox', { name: 'Send note context with inline AI' }),
     ).not.toBeInTheDocument();
     expect(localStorage.getItem('nix.pet.inlineContext')).toBe('true');
 
     await user.click(screen.getByRole('checkbox', { name: 'Use AI while writing notes' }));
     await user.click(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' }));
+    expect(screen.queryByRole('combobox', { name: 'Chat opens' })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('combobox', { name: 'Where the chat opens' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('checkbox', { name: 'Send note context with inline AI on this device' }),
+      screen.queryByRole('checkbox', { name: 'Send note context with inline AI' }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' }));
-    expect(screen.getByRole('combobox', { name: 'Where the chat opens' })).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Chat opens' })).toBeVisible();
     expect(
-      screen.getByRole('checkbox', { name: 'Send note context with inline AI on this device' }),
+      screen.getByRole('checkbox', { name: 'Send note context with inline AI' }),
     ).toBeChecked();
   });
 
@@ -486,35 +488,84 @@ describe('pet configuration', () => {
         onSave={() => Promise.resolve(true)}
       />,
     );
-    expect(screen.getByRole('combobox', { name: 'Companion position on this device' })).toHaveValue(
-      'left',
-    );
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Where the chat opens' }),
-      'page',
-    );
-    expect(
-      screen.queryByRole('combobox', { name: 'Companion position on this device' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Position' })).toHaveValue('left');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Chat opens' }), 'page');
+    expect(screen.queryByRole('combobox', { name: 'Position' })).not.toBeInTheDocument();
     expect(localStorage.getItem('nix.pet.placement')).toBe('left');
 
     await user.click(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' }));
-    expect(
-      screen.queryByRole('combobox', { name: 'Where the chat opens' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Chat opens' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' }));
-    expect(screen.getByRole('combobox', { name: 'Where the chat opens' })).toHaveValue('page');
-    expect(
-      screen.queryByRole('combobox', { name: 'Companion position on this device' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Chat opens' })).toHaveValue('page');
+    expect(screen.queryByRole('combobox', { name: 'Position' })).not.toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Where the chat opens' }),
-      'floating',
-    );
-    expect(screen.getByRole('combobox', { name: 'Companion position on this device' })).toHaveValue(
-      'left',
-    );
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Chat opens' }), 'floating');
+    expect(screen.getByRole('combobox', { name: 'Position' })).toHaveValue('left');
     expect(localStorage.getItem('nix.pet.placement')).toBe('left');
+  });
+
+  it('selects a pet with its tile, marks the active one and hides Save until something changes', async () => {
+    const two = savedPet('anthropic');
+    const first = two.settings.profiles[0] as PetProfile;
+    const second = { ...first, id: '55555555-5555-4555-8555-555555555555', name: 'Sage' };
+    const save = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(
+      <PetSettingsEditor
+        initial={{ ...two, settings: { ...two.settings, profiles: [first, second] } }}
+        saving={false}
+        onSave={save}
+      />,
+    );
+    expect(screen.getByRole('radiogroup', { name: 'Companions' })).toBeVisible();
+    expect(screen.getByRole('radio', { name: 'Pip, active' })).toBeChecked();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use this pet' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: 'Sage' }));
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Sage');
+    await user.click(screen.getByRole('button', { name: 'Use this pet' }));
+    expect(screen.getByRole('radio', { name: 'Sage, active' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0]?.[0]).toMatchObject({ activePetId: second.id });
+  });
+
+  it('keeps instructions in a disclosure that opens only when they already have text', () => {
+    const withText = savedPet('anthropic');
+    const pet = withText.settings.profiles[0] as PetProfile;
+    const view = render(
+      <PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={vi.fn()} />,
+    );
+    expect(view.container.querySelector('details')).not.toHaveAttribute('open');
+    view.unmount();
+    const filled = render(
+      <PetSettingsEditor
+        initial={{
+          ...withText,
+          settings: { ...withText.settings, profiles: [{ ...pet, instructions: 'Be brief' }] },
+        }}
+        saving={false}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(filled.container.querySelector('details')).toHaveAttribute('open');
+  });
+
+  it('collapses a connected ChatGPT pet to a status line until Change is pressed', async () => {
+    client.query.mockImplementation((endpoint: { operation: string }) =>
+      Promise.resolve(
+        endpoint.operation === 'pets.connection'
+          ? { provider: 'chatgpt', status: 'connected', reason: 'Connected.', canConnect: true }
+          : { keys: [] },
+      ),
+    );
+    const user = userEvent.setup();
+    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={vi.fn()} />);
+    expect(await screen.findByText('✓ Connected')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Disconnect ChatGPT' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Change ChatGPT connection' }));
+    expect(screen.getByRole('button', { name: 'Disconnect ChatGPT' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getByRole('button', { name: 'Change ChatGPT connection' })).toHaveFocus();
   });
 });

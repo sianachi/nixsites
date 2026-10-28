@@ -4,15 +4,19 @@ import { useEffect, useState, type ReactElement } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { petProviderLabels } from './catalog';
+import { useChangeFocus } from './use-change-focus';
 
 export function PetProviderKeys({
   provider,
   onSaveSettings,
   needsProviderSave,
+  collapsible = false,
 }: {
   readonly provider: PetProviderKey['provider'];
   readonly onSaveSettings: () => Promise<boolean>;
   readonly needsProviderSave: boolean;
+  /** Shows a one-line "Key saved · Change" status while a key is stored, until Change is pressed. */
+  readonly collapsible?: boolean;
 }): ReactElement {
   const client = useApiClient();
   const [keys, setKeys] = useState<readonly PetProviderKey[] | null>(null);
@@ -23,6 +27,8 @@ export function PetProviderKeys({
   const [reload, setReload] = useState(0);
   const label = petProviderLabels[provider];
   const stored = keys?.find((entry) => entry.provider === provider);
+  const [editing, setEditing] = useState(false);
+  const { panel, change } = useChangeFocus(editing);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,6 +64,7 @@ export function PetProviderKeys({
       ]);
       setDraft('');
       setMessage(`${label} API key saved.`);
+      setEditing(false);
       window.dispatchEvent(new Event('nix-pet-provider-keys-changed'));
     } catch (cause) {
       setError(
@@ -105,10 +112,38 @@ export function PetProviderKeys({
     }
   }
 
+  if (collapsible && !editing && !error && (keys === null || (stored && !needsProviderSave))) {
+    return keys === null ? (
+      <Text variant="note" tone="muted" role="status">
+        Loading your key…
+      </Text>
+    ) : (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Text as="span" variant="note" tone="muted">
+          ✓ Key saved (ending {stored?.keyHint})
+        </Text>
+        <Button
+          ref={change}
+          aria-label={`Change ${label} key`}
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setEditing(true);
+          }}
+        >
+          Change
+        </Button>
+        {message ? <Text role="status">{message}</Text> : null}
+      </div>
+    );
+  }
+
   return (
     <section
+      ref={panel}
+      tabIndex={-1}
       aria-label={`${label} connection`}
-      className="flex min-w-0 flex-col gap-3 border border-divider p-3"
+      className="flex w-full min-w-0 flex-col gap-3 border border-divider p-3"
     >
       <Text variant="h5" as="h3">
         {label} connection
@@ -207,6 +242,18 @@ export function PetProviderKeys({
           ) : null}
         </>
       )}
+      {collapsible && stored && !needsProviderSave ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="self-start"
+          onClick={() => {
+            setEditing(false);
+          }}
+        >
+          Done
+        </Button>
+      ) : null}
       {message ? <Text role="status">{message}</Text> : null}
     </section>
   );

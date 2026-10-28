@@ -39,13 +39,6 @@ export const petCatalog = [
   },
 ] as const;
 
-export const personalityDescriptions = {
-  calm: 'Calm and thoughtful. Measured explanations and gentle encouragement.',
-  playful: 'Playful and inventive. Fresh suggestions with a little humour.',
-  encouraging: 'Encouraging and practical. Friendly, steady help to get things done.',
-  concise: 'Concise and composed. Direct answers with the details that matter.',
-} as const;
-
 export function newPet(): PetProfile {
   const preset = petCatalog[0];
   return {
