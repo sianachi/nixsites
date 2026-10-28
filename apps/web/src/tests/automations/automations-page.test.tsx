@@ -317,6 +317,8 @@ describe('one automation', () => {
       await screen.findByText(/Skipped\.\s+Skipped to stay within the run limits\./),
     ).toBeVisible();
     expect(writes.runs).toEqual([{ ruleId: RULE_ID, itemId: null }]);
+    const log = await screen.findByRole('list', { name: 'Runs, newest first' });
+    expect(await within(log).findByText('Run now')).toBeVisible();
   });
 
   it('deletes only after the dialog confirms, then returns to the list', async () => {
