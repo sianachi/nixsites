@@ -208,15 +208,16 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task My_day_habit_candidates_walk_the_tenants_items_and_find_every_habit()
+    public async Task My_day_habit_candidates_are_read_from_the_habit_marker_index_and_find_every_habit()
     {
         var plan = await ExplainAsRuntimeRoleAsync(MyDaySql.Habits, MyDayParameters(25));
         _output.WriteLine("My Day habit candidates, {0} readable rows, runtime role:", AlphaChildren + Containers);
         _output.WriteLine(plan);
 
-        // The habit marker is a bag read, so no index can serve it under row security: the plan
-        // filters every item of the tenant (measured 19 ms, 52,130 buffers at 55,000 items).
+        // The marker is a bag read, which cannot be an index condition under row security; the
+        // partial index carries it as its predicate, so only habits are visited.
         Assert.Contains("nix.tenant_id", plan, StringComparison.Ordinal);
+        Assert.Contains("ix_item_habit_marker", plan, StringComparison.Ordinal);
         AssertQueryAntiJoin(plan);
 
         var titles = await ExecuteTitlesAsRuntimeRoleAsync(MyDaySql.Habits, MyDayParameters(25));

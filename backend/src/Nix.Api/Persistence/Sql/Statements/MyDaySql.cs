@@ -20,12 +20,12 @@ namespace Nix.Persistence.Sql.Statements;
 /// servable from an index under row security (see <see cref="QuerySql"/>).
 /// </para>
 /// <para>
-/// shortcut: both statements scan the tenant's items, because the assignee and habit-marker tests
-/// are bag reads no index can serve under row security, and the assignee arm's OR defeats
-/// <c>ix_item_due_day</c>. Measured as the runtime role on 55,000 items: tasks 23.7 ms / 3,572
-/// buffers, habits 19 ms / 52,130 buffers (<c>TaskSemanticsPlanEvidenceTests</c>). Upgrade by
-/// adding a leakproof generated column for the habit marker and splitting the assignee arm into
-/// its own indexed statement once a tenant outgrows this.
+/// shortcut: the task statement scans the tenant's items, because the assignee test is a bag read
+/// no index can serve under row security and its OR defeats <c>ix_item_due_day</c>. Measured as
+/// the runtime role on 55,000 items: 23.7 ms / 3,572 buffers (<c>TaskSemanticsPlanEvidenceTests</c>).
+/// Upgrade by adding a leakproof generated column for the assignee and splitting that arm into
+/// its own indexed statement once a tenant outgrows this. The habit statement is served by
+/// <c>ix_item_habit_marker</c>, whose partial predicate is the marker test itself.
 /// </para>
 /// </remarks>
 public static class MyDaySql

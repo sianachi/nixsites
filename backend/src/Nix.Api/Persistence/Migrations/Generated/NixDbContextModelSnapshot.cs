@@ -18,7 +18,7 @@ namespace Nix.Persistence.Migrations.Generated
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -2116,6 +2116,9 @@ namespace Nix.Persistence.Migrations.Generated
                     b.HasIndex("TenantId", "TemplateId", "TemplateSourceId");
 
                     b.HasIndex("WorkspaceId", "ParentId", "Seq");
+
+                    b.HasIndex(new[] { "TenantId", "Id" }, "ix_item_habit_marker")
+                        .HasFilter("lifecycle_state = 'active' AND template_id IS NULL AND (properties ->> '$habit_frequency') IS NOT NULL");
 
                     b.ToTable("item", (string)null);
                 });
