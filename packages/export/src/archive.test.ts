@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { archiveFileName, exportFileName, writeArchive } from './archive.js';
+import { exportFileName, writeArchive } from './archive.js';
 import { ARCHIVE_FILE_BYTES_UNSUPPORTED } from './file-portability.js';
 import {
   ARCHIVE_FORMAT,
@@ -444,21 +444,6 @@ describe('writeArchive', () => {
   });
 });
 
-describe('archiveFileName', () => {
-  it('names the file after the item', () => {
-    expect(archiveFileName('Quarterly Review')).toBe('quarterly-review.nix');
-  });
-
-  it('keeps titles that differ only in punctuation apart', () => {
-    expect(archiveFileName('Q1/Q2')).not.toBe(archiveFileName('Q1Q2'));
-  });
-
-  it('falls back rather than producing a dotfile', () => {
-    expect(archiveFileName('...')).toBe('export.nix');
-    expect(archiveFileName('')).toBe('export.nix');
-  });
-});
-
 describe('exportFileName', () => {
   it('names the file after the item, in the format that was asked for', () => {
     expect(exportFileName('Quarterly Review', 'pdf')).toBe('quarterly-review.pdf');
@@ -469,7 +454,12 @@ describe('exportFileName', () => {
     expect(exportFileName('Quarterly Review', '.pdf')).toBe('quarterly-review.pdf');
   });
 
-  it('applies the same fallback the archive name does', () => {
-    expect(exportFileName('...', 'pdf')).toBe('export.pdf');
+  it('keeps titles that differ only in punctuation apart', () => {
+    expect(exportFileName('Q1/Q2', 'nix')).not.toBe(exportFileName('Q1Q2', 'nix'));
+  });
+
+  it('falls back rather than producing a dotfile', () => {
+    expect(exportFileName('...', 'nix')).toBe('export.nix');
+    expect(exportFileName('', 'nix')).toBe('export.nix');
   });
 });

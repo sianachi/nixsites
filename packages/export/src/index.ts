@@ -9,17 +9,15 @@
  * and view previews. PDF and DOCX conversion belongs to the Go export worker.
  */
 
-export { archiveFileName, exportFileName, writeArchive } from './archive.js';
+export { exportFileName, writeArchive } from './archive.js';
 export {
   ARCHIVE_FILE_BYTES_UNSUPPORTED,
   ArchiveFileBytesUnsupportedError,
 } from './file-portability.js';
 export {
   EXPORT_FORMATS,
-  createConverterRegistry,
   type Branding,
   type ConvertRequest,
-  type ConverterRegistry,
   type DocumentConverter,
   type ExportFormat,
   type HostCapabilities,

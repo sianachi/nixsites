@@ -24,12 +24,9 @@ import type { ArchiveManifest, ItemBundle } from './manifest.js';
  * Closed, because a format is a contract with whoever opens the file - ADR-0017 makes that argument
  * for `.nix` and it holds for the lossy ones too, which owe a stated list of what they drop.
  *
- * **`nix` is in this list and will never be in a registry.** It is produced by `writeArchive`,
- * which streams the bundles straight through without visiting a single node, and it is served by
- * the collaboration service rather than by a converter worker - leaving with everything cannot
- * with everything cannot depend on an extension seam. So `registry.formats()` is deliberately a
- * subset of this: this list is what the product can export, and a registry holds what one host
- * converts.
+ * **`nix` is in this list but is never a converter.** It is produced by `writeArchive`, which
+ * streams the bundles straight through without visiting a single node, and it is served by the
+ * collaboration service rather than by a converter worker.
  *
  * `nix` is the lossless archive; `pdf` and `docx` and `md` are the lossy render formats a Go worker
  * converts, each owing a stated list of what it drops.
@@ -134,44 +131,4 @@ export interface DocumentConverter {
    * the async signature alone does not promise constant memory.
    */
   convert(request: ConvertRequest): AsyncGenerator<Uint8Array>;
-}
-
-/**
- * A host's set of formats.
- *
- * Constructed rather than global. A module-level registry is a singleton every test has to reset
- * and no test can isolate, and it would make the plugin case - two hosts, different format sets -
- * unexpressible.
- */
-export interface ConverterRegistry {
-  register(converter: DocumentConverter): void;
-
-  /** Null for a format this host does not have, so the caller answers rather than catching. */
-  get(format: string): DocumentConverter | null;
-
-  formats(): readonly ExportFormat[];
-}
-
-export function createConverterRegistry(): ConverterRegistry {
-  const converters = new Map<string, DocumentConverter>();
-
-  return {
-    register(converter: DocumentConverter): void {
-      if (converters.has(converter.format)) {
-        // A silent overwrite would mean the format somebody gets depends on registration order,
-        // which is a composition-root bug that should fail at start-up rather than at export time.
-        throw new Error(`A converter for '${converter.format}' is already registered.`);
-      }
-
-      converters.set(converter.format, converter);
-    },
-
-    get(format: string): DocumentConverter | null {
-      return converters.get(format) ?? null;
-    },
-
-    formats(): readonly ExportFormat[] {
-      return [...converters.values()].map((converter) => converter.format);
-    },
-  };
 }

@@ -249,13 +249,3 @@ export function exportFileName(title: string, extension: string): string {
 
   return `${slug === '' ? 'export' : slug}.${extension.replace(/^\.+/, '')}`;
 }
-
-/**
- * The `.nix` case, which is what ADR-0017's writer names.
- *
- * Kept beside {@link exportFileName} rather than folded into it because `.nix` is the one format
- * whose extension is a property of this package rather than a caller's choice.
- */
-export function archiveFileName(title: string): string {
-  return exportFileName(title, 'nix');
-}

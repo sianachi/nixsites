@@ -1,4 +1,4 @@
-import { structure, views, type AppendViewSetupRequestContract } from '@nix/api-client';
+import { views, type AppendViewSetupRequestContract } from '@nix/api-client';
 import {
   compileAddView,
   type Step,
@@ -41,12 +41,4 @@ export async function execute(
     signal,
     forceRefresh: true,
   });
-}
-
-export function readExisting(
-  ports: CompanionPorts,
-  itemId: string,
-  signal: AbortSignal,
-): Promise<unknown> {
-  return ports.core.query(structure.effectiveSchema(itemId), { signal, forceRefresh: true });
 }
