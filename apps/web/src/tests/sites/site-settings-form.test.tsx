@@ -6,7 +6,7 @@ import {
   navigationProblem,
   SiteDatedCollections,
   SiteSettingsForm,
-} from '../../sites/site-settings-form';
+} from '@nix/web-sites/sites/site-settings-form';
 import { ROOT_ID, site } from './site-fixtures';
 
 describe('the site settings form', () => {

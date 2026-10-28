@@ -32,6 +32,7 @@
 @source '../../../packages/web-foundation/src';
 @source '../../../packages/web-platform/src';
 @source '../../../packages/web-workspaces/src';
+@source '../../../packages/web-sites/src';
 
 /*
  * Fonts are self-hosted, served from our own origin, and only the weights the

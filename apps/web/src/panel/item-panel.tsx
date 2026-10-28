@@ -7,7 +7,7 @@ import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
 import { PropertyPanel } from '../properties/property-panel';
 import { useSitesVisible } from '../settings/publishing/publishing-preference';
-import { SitePane } from '../sites/site-pane';
+import { SitePane } from '@nix/web-sites/sites/site-pane';
 import type { ItemProperties } from '../properties/use-item-properties';
 import type { ContainerData } from '../views/core/use-container';
 import { SchemaEditor } from '../views/core/schema-editor';

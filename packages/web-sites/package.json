@@ -1,0 +1,66 @@
+{
+  "name": "@nix/web-sites",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Site publishing UI: site pane, settings form, hostnames, pages list, exclusions, approval and publish dialog",
+  "exports": {
+    "./sites/site-approval": {
+      "types": "./src/sites/site-approval.tsx",
+      "default": "./src/sites/site-approval.tsx"
+    },
+    "./sites/site-exclusions": {
+      "types": "./src/sites/site-exclusions.tsx",
+      "default": "./src/sites/site-exclusions.tsx"
+    },
+    "./sites/site-hostnames": {
+      "types": "./src/sites/site-hostnames.tsx",
+      "default": "./src/sites/site-hostnames.tsx"
+    },
+    "./sites/site-pages-list": {
+      "types": "./src/sites/site-pages-list.tsx",
+      "default": "./src/sites/site-pages-list.tsx"
+    },
+    "./sites/site-pane": {
+      "types": "./src/sites/site-pane.tsx",
+      "default": "./src/sites/site-pane.tsx"
+    },
+    "./sites/site-publish-dialog": {
+      "types": "./src/sites/site-publish-dialog.tsx",
+      "default": "./src/sites/site-publish-dialog.tsx"
+    },
+    "./sites/site-settings-form": {
+      "types": "./src/sites/site-settings-form.tsx",
+      "default": "./src/sites/site-settings-form.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-workspaces": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@types/react": "^19.2.17",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}
