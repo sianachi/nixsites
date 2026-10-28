@@ -55,6 +55,7 @@ import { WorkspaceInvitationNotice } from '../workspaces/workspace-invitation-no
 import type { LaunchNavigationState } from '../launch/launch-intent';
 import { viewCommitted } from '../lib/view-transition';
 import { onNotice } from '../lib/notices';
+import { recordRecentItem } from '../lib/recent-items';
 import {
   claimZenSurface,
   onZenModeChanged,
@@ -128,6 +129,13 @@ export function AppShell(): ReactNode {
   );
   useUiSettingsSync(principal.principal?.id);
   const { selectedId } = useSelectedItem();
+  // Homebase lists what was opened last. Recorded once the tree knows the item, so a chat tab or a
+  // link to something unreadable is never listed, and a rename is picked up.
+  const selectedTitle = selectedId === null ? undefined : tree.find(selectedId)?.title;
+  useEffect(() => {
+    if (selectedId !== null && selectedTitle !== undefined)
+      recordRecentItem(workspaceId, selectedId, selectedTitle);
+  }, [workspaceId, selectedId, selectedTitle]);
   const { panes } = usePanes();
   const { openPreview, openPinned, openBeside, canOpenBeside, besideRefusal } = useOpenItem();
   const announcement = useAnnouncement();

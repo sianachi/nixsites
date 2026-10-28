@@ -79,7 +79,7 @@ describe('the shell', () => {
     renderAt(<App />);
 
     expect(await screen.findByRole('button', { name: 'Acquisition memo' })).toBeVisible();
-    expect(screen.getByRole('complementary', { name: /workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
   });
 
   it('keeps the workspace and search controls shrinkable on a narrow screen', async () => {
@@ -87,7 +87,7 @@ describe('the shell', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: /show the workspace tree/i });
+    await screen.findByRole('button', { name: /show the explorer/i });
     expect(screen.getByRole('banner')).toHaveClass('min-w-0', 'px-2');
     expect(screen.getByRole('button', { name: 'Workspace menu' })).toHaveClass('min-w-0', 'w-full');
     expect(screen.getByRole('button', { name: 'Search' })).toHaveClass('shrink-0', 'px-2');

@@ -5,8 +5,16 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ## Unreleased
 
+### Added
+
+- Homebase, the screen a workspace opens to when no note is open: a greeting with today's date
+  and week, one-press New note, Structured note, Today's note, Calendar and My Day, and the notes
+  you opened last on this browser. Choose Page (one column) or Desk (actions beside your recent
+  notes) from the screen itself. It replaces Notes as the first entry in the side rail.
+
 ### Changed
 
+- The note tree is now called the Explorer, so "workspace" only means a workspace you belong to.
 - The optional landing page follows the new design: a hero gallery with a screenshot of every view
   (note, board, list, calendar, timeline, spreadsheet, gallery, checklist, matrix, outline, chart,
   form, habit tracker and companion), a light and dark theme switch, and sections on views, the

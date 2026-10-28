@@ -275,12 +275,12 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     // here as well would be two owners for one dimension.
     <aside
       ref={asideRef}
-      aria-label="Workspace"
+      aria-label="Explorer"
       className={cn('flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-3">
         <Text as="span" variant="bodySmall" tone="muted" truncate className="min-w-0 flex-1">
-          Workspace
+          Explorer
         </Text>
 
         <CreateMenu

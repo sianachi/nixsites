@@ -27,9 +27,9 @@ it('returns focus to the workspace control after importing from the mobile drawe
   stubCoreApi({ items: [root] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  const workspace = screen.getByRole('button', { name: 'Show the workspace tree' });
+  const workspace = screen.getByRole('button', { name: 'Show the Explorer' });
   await user.click(workspace);
-  await user.click(screen.getByRole('button', { name: /^Notes$/ }));
+  await user.click(screen.getByRole('button', { name: /^Workspace pages$/ }));
   const back = vi.spyOn(window.history, 'back');
   await user.click(screen.getByRole('menuitem', { name: 'Import' }));
   const dialog = await screen.findByRole('dialog', { name: /^Import$/ });
@@ -46,7 +46,7 @@ it('chooses and retains a personal landmark from mobile item actions', async () 
   stubCoreApi({ items: [root] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await user.click(screen.getByRole('button', { name: 'Workspace' }));
+  await user.click(screen.getByRole('button', { name: 'Explorer' }));
   await user.click(screen.getByRole('button', { name: 'Actions for Project' }));
   await user.click(screen.getByRole('menuitem', { name: 'Choose icon…' }));
   const dialog = screen.getByRole('dialog', { name: 'Icon for Project' });
@@ -118,7 +118,7 @@ it('provides one-level browsing, without the desktop tree and its actions', asyn
   });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await userEvent.click(screen.getByRole('button', { name: 'Workspace' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Explorer' }));
   await userEvent.click(screen.getByRole('button', { name: 'Browse children of Project' }));
   expect(await screen.findByRole('button', { name: 'Plan' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Tree and actions' })).not.toBeInTheDocument();
@@ -130,17 +130,17 @@ it('keeps Hide behind item actions and provides an explicit close control', asyn
   stubCoreApi({ items: [root, child] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await user.click(screen.getByRole('button', { name: 'Workspace' }));
-  const browser = screen.getByRole('complementary', { name: 'Workspace' });
+  await user.click(screen.getByRole('button', { name: 'Explorer' }));
+  const browser = screen.getByRole('complementary', { name: 'Explorer' });
   expect(within(browser).queryByRole('button', { name: /Hide/ })).not.toBeInTheDocument();
   await user.click(within(browser).getByRole('button', { name: 'Actions for Project' }));
   await user.click(screen.getByRole('menuitem', { name: 'Hide for me' }));
   expect(within(browser).queryByRole('button', { name: 'Project' })).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(within(browser).getByRole('button', { name: 'Project' })).toBeVisible();
-  await user.click(within(browser).getByRole('button', { name: 'Close workspace' }));
-  expect(screen.queryByRole('complementary', { name: 'Workspace' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show the workspace tree' })).toHaveFocus();
+  await user.click(within(browser).getByRole('button', { name: 'Close Explorer' }));
+  expect(screen.queryByRole('complementary', { name: 'Explorer' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show the Explorer' })).toHaveFocus();
 });
 
 it('retains the capture title and reports a refused create without navigating', async () => {
@@ -197,7 +197,7 @@ it('moves an item through a destination sheet without dragging', async () => {
       screen.queryByRole('dialog', { name: 'Move item: choose a position' }),
     ).not.toBeInTheDocument();
   });
-  await userEvent.click(screen.getByRole('button', { name: 'Workspace' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Explorer' }));
   expect(await screen.findByRole('button', { name: 'Plan' })).toBeInTheDocument();
 });
 

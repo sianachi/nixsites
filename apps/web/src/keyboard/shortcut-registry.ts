@@ -10,7 +10,7 @@ import type { Shortcut } from '../lib/shortcuts';
 export type ShellShortcutId =
   'search' | 'new-note' | 'toggle-sidebar' | 'zen' | 'back' | 'forward' | 'shortcuts';
 
-type Group = 'General' | 'Editor' | 'Views' | 'Outline' | 'Panes and tabs' | 'Workspace tree';
+type Group = 'General' | 'Editor' | 'Views' | 'Outline' | 'Panes and tabs' | 'Explorer';
 
 /**
  * Links the underlined item name at the caret (`editor/unlinked-mentions.ts`). Exported so the
@@ -207,31 +207,31 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
   },
   {
     label: 'Open the focused row beside',
-    group: 'Workspace tree',
+    group: 'Explorer',
     keys: [{ key: 'Enter', alt: true }],
     handledBy: 'local',
   },
   {
     label: 'Move up among its siblings',
-    group: 'Workspace tree',
+    group: 'Explorer',
     keys: [{ key: 'ArrowUp', alt: true }],
     handledBy: 'local',
   },
   {
     label: 'Move down among its siblings',
-    group: 'Workspace tree',
+    group: 'Explorer',
     keys: [{ key: 'ArrowDown', alt: true }],
     handledBy: 'local',
   },
   {
     label: 'Move inside the row above',
-    group: 'Workspace tree',
+    group: 'Explorer',
     keys: [{ key: 'ArrowRight', alt: true }],
     handledBy: 'local',
   },
   {
     label: 'Move out of its parent',
-    group: 'Workspace tree',
+    group: 'Explorer',
     keys: [{ key: 'ArrowLeft', alt: true }],
     handledBy: 'local',
   },

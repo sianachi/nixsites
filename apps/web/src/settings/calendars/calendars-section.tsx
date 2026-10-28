@@ -284,7 +284,7 @@ export function CalendarsSection(): ReactElement {
         <Text variant="note" tone="muted">
           Each linked calendar becomes an item holding one note per event, and shows on the
           workspace calendar. Events are removed at the calendar or by unlinking here, never from
-          the workspace tree.
+          the Explorer.
         </Text>
       </details>
 

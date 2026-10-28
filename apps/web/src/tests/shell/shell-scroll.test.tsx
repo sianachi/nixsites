@@ -91,10 +91,10 @@ describe('the shell scroll model', () => {
   it('gives the workspace tree a scroller inside itself rather than making the pane one', async () => {
     await openContainer();
 
-    const sidebar = screen.getByRole('complementary', { name: /workspace/i });
+    const sidebar = screen.getByRole('complementary', { name: /explorer/i });
 
     // The landmark clips and the list within it scrolls. The other way round
-    // would scroll the "Workspace" heading and the New button away with the
+    // would scroll the "Explorer" heading and the New button away with the
     // tree.
     expect(sidebar).toHaveClass('overflow-hidden');
     expect(sidebar.querySelectorAll('.overflow-y-auto')).toHaveLength(1);

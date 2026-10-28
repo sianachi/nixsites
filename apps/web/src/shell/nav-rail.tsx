@@ -6,11 +6,11 @@ import {
   CalendarDays,
   ChevronDown,
   FolderInput,
+  House,
   LayoutTemplate,
   ListFilter,
   ListFilterPlus,
   Network,
-  NotebookText,
   PawPrint,
   Settings,
   Trash2,
@@ -28,6 +28,7 @@ import {
 } from '../views/query/known-smart-lists';
 
 import { petAttentionText } from '../pets/pet-attention';
+import { useSelectedItem } from '../routing/selected-item';
 import { usePetNavEntry } from '../pets/use-pet-nav-entry';
 import { useWorkspace } from '../workspaces/workspace-context';
 
@@ -125,10 +126,10 @@ type RailItem = RailDestination | RailAction;
 /**
  * The controls, in the order they appear.
  *
- * **Notes is first, and it is the only destination that is not a different kind of workspace view.**
+ * **Homebase is first, and it is the only destination that is not a different kind of workspace view.**
  * Calendar, Graph and Bookmarks each collapse the whole workspace into one picture drawn a
- * different way; Notes is the tree itself - the one destination that is not really "elsewhere",
- * only home. Placing it first, rather than leaving `/` reachable only through the logo, is what
+ * different way; Homebase is the workspace with nothing open - the one destination that is not
+ * really "elsewhere", only home. Placing it first, rather than leaving `/` reachable only through the logo, is what
  * makes the rail read as a complete set of destinations instead of three extra ones bolted beside
  * an unlabelled default.
  *
@@ -167,7 +168,7 @@ const page = (
 const PET_ITEM = page('workspace', '/pet', 'Pet', PawPrint);
 
 const ITEMS: readonly RailItem[] = [
-  page('workspace', '', 'Notes', NotebookText),
+  page('workspace', '', 'Homebase', House),
   page('workspace', '/my-day', 'My Day', CalendarCheck),
   page('workspace', '/daily', 'Daily notes', CalendarClock),
   page('workspace', '/calendar', 'Calendar', CalendarDays),
@@ -195,6 +196,7 @@ export interface NavRailProps {
 
 export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps): ReactNode {
   const { pathname } = useLocation();
+  const { selectedId } = useSelectedItem();
   const { workspaceId, workspace } = useWorkspace();
   const workspaceRoot = `/w/${workspaceId}`;
   const petEntry = usePetNavEntry();
@@ -243,8 +245,10 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
       (item.includesChildren === true
         ? pathname === `${workspaceRoot}${item.to}` ||
           pathname.startsWith(`${workspaceRoot}${item.to}/`)
-        : pathname === `${workspaceRoot}${item.to}` ||
-          (item.to === '' && pathname === `${workspaceRoot}/`)),
+        : item.to === ''
+          ? // Homebase is the root address with nothing open; an open note is not Homebase.
+            selectedId === null && (pathname === workspaceRoot || pathname === `${workspaceRoot}/`)
+          : pathname === `${workspaceRoot}${item.to}`),
   );
   const entryIndex =
     focusedIndex === null ? Math.max(currentIndex, 0) : Math.min(focusedIndex, items.length - 1);

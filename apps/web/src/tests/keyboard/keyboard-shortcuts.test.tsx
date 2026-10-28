@@ -50,16 +50,16 @@ describe('the application keyboard shortcuts', () => {
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}`);
     // The loading shell also draws a sidebar toggle, before shell shortcuts are installed.
     await screen.findByRole('button', { name: 'Alpha' });
-    const toggle = screen.getByRole('button', { name: 'Hide the workspace tree' });
+    const toggle = screen.getByRole('button', { name: 'Hide the Explorer' });
 
     fireEvent.keyDown(document.body, { key: '\\', code: 'Backslash', ctrlKey: true });
 
     await waitFor(() => {
-      expect(toggle).toHaveAccessibleName('Show the workspace tree');
+      expect(toggle).toHaveAccessibleName('Show the Explorer');
     });
     fireEvent.keyDown(document.body, { key: '\\', code: 'Backslash', ctrlKey: true });
     await waitFor(() => {
-      expect(toggle).toHaveAccessibleName('Hide the workspace tree');
+      expect(toggle).toHaveAccessibleName('Hide the Explorer');
     });
   });
 

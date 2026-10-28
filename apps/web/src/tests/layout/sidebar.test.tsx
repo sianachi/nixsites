@@ -69,7 +69,7 @@ describe('the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
   });
 
   it('leaves the page entirely when hidden, not merely the view', async () => {
@@ -78,10 +78,10 @@ describe('the workspace tree', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Roadmap' });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
 
     // The rows go with it. Hidden with a width of zero they would still be tabbable.
@@ -94,8 +94,8 @@ describe('the workspace tree', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Roadmap' });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
 
     expect(await screen.findByRole('button', { name: 'Roadmap' })).toBeVisible();
   });
@@ -105,13 +105,13 @@ describe('the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const toggle = await screen.findByRole('button', { name: /hide the workspace tree/i });
+    const toggle = await screen.findByRole('button', { name: /hide the explorer/i });
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     await user.click(toggle);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /show the workspace tree/i })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: /show the explorer/i })).toHaveAttribute(
         'aria-expanded',
         'false',
       );
@@ -124,7 +124,7 @@ describe('the workspace tree', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Roadmap' });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     // Somebody who collapses the tree has decided they want the width. Finding it back on the next
     // visit would make the control feel like it had not worked.
@@ -139,7 +139,7 @@ describe('resizing the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const handle = await screen.findByRole('separator', { name: /resize the workspace tree/i });
+    const handle = await screen.findByRole('separator', { name: /resize the explorer/i });
     expect(handle).toHaveAttribute('aria-valuenow', String(SIDEBAR_DEFAULT_WIDTH));
     expect(handle).toHaveAttribute('aria-valuemin', String(SIDEBAR_MINIMUM_WIDTH));
     expect(handle).toHaveAttribute('aria-valuemax', String(SIDEBAR_MAXIMUM_WIDTH));
@@ -150,7 +150,7 @@ describe('resizing the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const handle = await screen.findByRole('separator', { name: /resize the workspace tree/i });
+    const handle = await screen.findByRole('separator', { name: /resize the explorer/i });
     handle.focus();
     await user.keyboard('{ArrowRight}');
 
@@ -167,7 +167,7 @@ describe('resizing the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const handle = await screen.findByRole('separator', { name: /resize the workspace tree/i });
+    const handle = await screen.findByRole('separator', { name: /resize the explorer/i });
     handle.focus();
 
     await user.keyboard('{Home}');
@@ -182,7 +182,7 @@ describe('resizing the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const handle = await screen.findByRole('separator', { name: /resize the workspace tree/i });
+    const handle = await screen.findByRole('separator', { name: /resize the explorer/i });
     handle.focus();
     await user.keyboard('{End}');
 
@@ -200,14 +200,14 @@ describe('resizing the workspace tree', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await screen.findByRole('separator', { name: /resize the workspace tree/i });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await screen.findByRole('separator', { name: /resize the explorer/i });
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     // A handle that resizes something not on screen would be a focusable control that visibly
     // does nothing.
     await waitFor(() => {
       expect(
-        screen.queryByRole('separator', { name: /resize the workspace tree/i }),
+        screen.queryByRole('separator', { name: /resize the explorer/i }),
       ).not.toBeInTheDocument();
     });
   });
@@ -328,8 +328,8 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
 
     // A fresh visit on a phone must not inherit the desktop panel's open-by-default preference -
     // otherwise a shared deep link would open behind a drawer covering the very document it named.
-    await screen.findByRole('button', { name: /show the workspace tree/i });
-    expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: /show the explorer/i });
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
   });
 
   it('shows the tree landmark over the pane content once opened, with the pane content made inert', async () => {
@@ -338,9 +338,9 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
 
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
     // The pane content this overlays, unreachable without a hand-rolled trap - see
     // `app-shell.tsx`'s own comment on the `<main>` element.
     expect(document.getElementById('main')).toHaveAttribute('inert');
@@ -351,7 +351,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: /show the workspace tree/i });
+    await screen.findByRole('button', { name: /show the explorer/i });
     expect(document.getElementById('main')).not.toHaveAttribute('inert');
   });
 
@@ -361,11 +361,11 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    await screen.findByRole('complementary', { name: /workspace/i });
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    await screen.findByRole('complementary', { name: /explorer/i });
 
     expect(
-      screen.queryByRole('separator', { name: /resize the workspace tree/i }),
+      screen.queryByRole('separator', { name: /resize the explorer/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -375,12 +375,12 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    await screen.findByRole('complementary', { name: /workspace/i });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    await screen.findByRole('complementary', { name: /explorer/i });
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
 
     // Dismissing the drawer on a phone must not silently leave a later, wider visit collapsed.
@@ -393,14 +393,14 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const toggle = await screen.findByRole('button', { name: /show the workspace tree/i });
+    const toggle = await screen.findByRole('button', { name: /show the explorer/i });
     await user.click(toggle);
-    await screen.findByRole('complementary', { name: /workspace/i });
+    await screen.findByRole('complementary', { name: /explorer/i });
 
-    await user.click(screen.getByRole('button', { name: /close the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /close the Explorer/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
     expect(toggle).toHaveFocus();
   });
@@ -411,14 +411,14 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const toggle = await screen.findByRole('button', { name: /show the workspace tree/i });
+    const toggle = await screen.findByRole('button', { name: /show the explorer/i });
     await user.click(toggle);
-    await screen.findByRole('complementary', { name: /workspace/i });
+    await screen.findByRole('complementary', { name: /explorer/i });
 
     await user.keyboard('{Escape}');
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
     expect(toggle).toHaveFocus();
   });
@@ -433,14 +433,14 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     await user.click(await screen.findByRole('button', { name: /test person/i }));
     expect(screen.getByRole('dialog', { name: /account/i })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('dialog', { name: /account/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: /workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
   });
 
   it('closes search on Escape without closing the drawer around it', async () => {
@@ -452,7 +452,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     await user.click(await screen.findByRole('button', { name: /^search/i }));
     expect(screen.getByRole('dialog', { name: /search/i })).toBeInTheDocument();
 
@@ -462,7 +462,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     );
 
     expect(screen.queryByRole('dialog', { name: /search/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: /workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
   });
 
   it('closes once an item is selected, moving focus to the pane rather than the toggle', async () => {
@@ -471,12 +471,12 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const toggle = await screen.findByRole('button', { name: /show the workspace tree/i });
+    const toggle = await screen.findByRole('button', { name: /show the explorer/i });
     await user.click(toggle);
     await user.click(await screen.findByRole('button', { name: 'Roadmap' }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
 
     // Picking an item is "there, that one", not "never mind" - so unlike Escape and the scrim
@@ -493,17 +493,17 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    await screen.findByRole('complementary', { name: /workspace/i });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    await screen.findByRole('complementary', { name: /explorer/i });
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: /show the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /show the explorer/i }));
 
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
   });
 
   it('leaves the page entirely once closed, not merely out of view', async () => {
@@ -512,12 +512,12 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     await screen.findByRole('button', { name: 'Roadmap' });
-    await user.click(screen.getByRole('button', { name: /hide the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /hide the explorer/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
     // The rows go with it, the same guarantee the wide panel makes above.
     expect(screen.queryByRole('button', { name: 'Roadmap' })).not.toBeInTheDocument();
@@ -536,13 +536,13 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />, `/?item=${NOTE.id}`);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    await screen.findByRole('complementary', { name: /workspace/i });
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    await screen.findByRole('complementary', { name: /explorer/i });
 
     await user.click(screen.getByRole('link', { name: /skip to content/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(document.getElementById(paneElementId(0))).toHaveFocus();
@@ -561,18 +561,20 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi();
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    await screen.findByRole('complementary', { name: /workspace/i });
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    await screen.findByRole('complementary', { name: /explorer/i });
 
     await user.click(screen.getByRole('link', { name: /skip to content/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(document.getElementById(paneElementId(0))).toHaveFocus();
     });
-    expect(screen.getByText(/open the workspace tree to create your first note/i)).toBeVisible();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /good (morning|afternoon|evening)/i }),
+    ).toBeVisible();
   });
 
   it('leaves the fixed panel and its handle alone on a wide screen', async () => {
@@ -583,10 +585,8 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
-    expect(
-      screen.getByRole('separator', { name: /resize the workspace tree/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
+    expect(screen.getByRole('separator', { name: /resize the explorer/i })).toBeInTheDocument();
     expect(document.getElementById('main')).not.toHaveAttribute('inert');
   });
 });

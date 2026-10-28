@@ -71,7 +71,7 @@ export function ShellHeader({
       <button
         ref={sidebarToggleRef}
         type="button"
-        aria-label={sidebarVisible ? 'Hide the workspace tree' : 'Show the workspace tree'}
+        aria-label={sidebarVisible ? 'Hide the Explorer' : 'Show the Explorer'}
         aria-expanded={sidebarVisible}
         onClick={onToggleSidebar}
         className={`flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted max-sm:min-h-(--control-lg) max-sm:min-w-(--control-lg) any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`}

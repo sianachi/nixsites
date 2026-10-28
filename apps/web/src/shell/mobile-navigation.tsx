@@ -35,7 +35,7 @@ export function MobileNavigation({
     >
       <button type="button" className={control} aria-expanded={treeOpen} onClick={onTree}>
         <Icon icon={FolderTree} size="sm" />
-        <Text variant="caption">Workspace</Text>
+        <Text variant="caption">Explorer</Text>
       </button>
       <button type="button" className={control} onClick={onSearch}>
         <Icon icon={Search} size="sm" />

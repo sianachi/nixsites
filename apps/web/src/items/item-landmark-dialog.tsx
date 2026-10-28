@@ -84,7 +84,7 @@ export function ItemLandmarkDialog({
       }
     >
       <Text variant="note" tone="muted">
-        Choose a landmark for the workspace tree and pinned items. Saved for this workspace in this
+        Choose a landmark for the Explorer and pinned items. Saved for this workspace in this
         browser.
       </Text>
       <fieldset className="flex flex-col gap-2">

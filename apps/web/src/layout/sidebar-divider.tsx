@@ -154,10 +154,10 @@ export function SidebarDivider({ width, onPreview, onCommit }: SidebarDividerPro
       role="separator"
       tabIndex={0}
       aria-orientation="vertical"
-      aria-label="Resize the workspace tree"
+      aria-label="Resize the Explorer"
       aria-valuenow={width}
       // A bare number is announced with no units and no subject.
-      aria-valuetext={`Workspace tree ${String(width)} pixels wide`}
+      aria-valuetext={`Explorer ${String(width)} pixels wide`}
       aria-valuemin={SIDEBAR_MINIMUM_WIDTH}
       aria-valuemax={SIDEBAR_MAXIMUM_WIDTH}
       onKeyDown={onKeyDown}

@@ -52,7 +52,7 @@ describe('the sidebar drawer', () => {
       </SidebarDrawer>,
     );
 
-    await user.click(screen.getByRole('button', { name: /close the workspace tree/i }));
+    await user.click(screen.getByRole('button', { name: /close the Explorer/i }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -64,7 +64,7 @@ describe('the sidebar drawer', () => {
       </SidebarDrawer>,
     );
 
-    expect(screen.getByRole('button', { name: /close the workspace tree/i })).toHaveClass(
+    expect(screen.getByRole('button', { name: /close the Explorer/i })).toHaveClass(
       'cursor-pointer',
     );
   });
@@ -76,7 +76,7 @@ describe('the sidebar drawer', () => {
       </SidebarDrawer>,
     );
 
-    expect(screen.getByRole('button', { name: /close the workspace tree/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /close the Explorer/i })).toHaveAttribute(
       'tabindex',
       '-1',
     );
@@ -101,7 +101,7 @@ describe('the sidebar drawer', () => {
       </SidebarDrawer>,
     );
 
-    expect(screen.getByRole('button', { name: /close the workspace tree/i })).toHaveClass('z-0');
+    expect(screen.getByRole('button', { name: /close the Explorer/i })).toHaveClass('z-0');
 
     const panel = screen.getByRole('button', { name: 'First row' }).closest('div');
     expect(panel).toHaveClass('z-10');

@@ -24,7 +24,7 @@ it('offers reachable workspace, search, calendar, inbox and note creation contro
     </MemoryRouter>,
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Workspace' }));
+  await user.click(screen.getByRole('button', { name: 'Explorer' }));
   await user.click(screen.getByRole('button', { name: 'Find' }));
   await user.click(screen.getByRole('button', { name: 'Inbox' }));
   await user.click(screen.getByRole('button', { name: 'New note' }));
@@ -77,7 +77,7 @@ it('offers the pet as its own entry, named, with what it is waiting on', () => {
     'href',
     '/w/workspace/pet',
   );
-  expect(screen.getByRole('button', { name: 'Workspace' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Explorer' })).toBeVisible();
 });
 
 it('has no pet entry while the pet page is not offered', () => {

@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 
 import { browserStorage } from '../lib/browser-storage';
 import { clearFrecency } from '../lib/frecency';
+import { clearRecentItems } from '../lib/recent-items';
 import { clearSuggestionDismissals } from '../lib/suggestion-dismissals';
 
 /**
@@ -567,6 +568,7 @@ export async function openBodyCache(
     });
   clearFrecency();
   clearSuggestionDismissals();
+  clearRecentItems();
   const ownsOpening = (): boolean => storage.getItem(OPENING_MARKER) === opening;
   if (typeof indexedDB !== 'undefined')
     await clearRecords(restoringOwner ? subject : undefined, undefined, ownsOpening);

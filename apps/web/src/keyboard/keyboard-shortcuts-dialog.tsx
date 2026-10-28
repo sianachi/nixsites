@@ -15,7 +15,7 @@ const GROUPS: readonly ShortcutEntry['group'][] = [
   'Views',
   'Outline',
   'Panes and tabs',
-  'Workspace tree',
+  'Explorer',
 ];
 
 /**

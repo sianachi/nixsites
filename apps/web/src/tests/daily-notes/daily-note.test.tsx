@@ -85,7 +85,7 @@ describe('daily notes', () => {
     renderAt(<App />, `/w/${shared.id}/daily/2026-08-30`);
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Notes' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Homebase' })).toHaveAttribute(
         'href',
         `/w/${shared.id}`,
       );

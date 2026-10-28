@@ -4,7 +4,6 @@ import { useOutletContext } from 'react-router';
 
 import { announce } from '../a11y/announcer';
 import { paneColumn } from '../layout/regions';
-import { useNarrowViewport } from '../layout/viewport';
 import { useZenActive } from '../lib/zen-mode';
 import { PaneGroup } from '../panes/pane-group';
 import { focusPane, paneElementId } from '../panes/pane-params';
@@ -17,6 +16,7 @@ import { useTabStore } from '../tabs/tab-store';
 import { useTabTransfer } from '../tabs/use-tab-transfer';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { PaneContents } from './editor/pane-contents';
+import { Homebase } from './homebase';
 
 // The item dialog draws an item too and still imports `OpenItem` from here.
 export { OpenItem } from './editor/open-item';
@@ -46,7 +46,6 @@ export function EditorPage(): ReactNode {
   const templateLibrary = useTemplateLibrary();
   const { panes, split, sizes, requested, closePane, setSplit, setSizes } = usePanes();
   const paneClosed = useTabStore((state) => state.paneClosed);
-  const narrow = useNarrowViewport();
   const [draggedTab, setDraggedTab] = useState<TabTransferPayload | null>(null);
 
   const zen = useZenActive();
@@ -109,25 +108,17 @@ export function EditorPage(): ReactNode {
         id={paneElementId(0)}
         // Focusable only programmatically, the same as a real pane's `<article>` - this is pane
         // zero in every sense that matters to `focusPane(0)` and to the skip link, which lands
-        // here when the drawer it just closed was covering an empty workspace rather than a pane.
+        // here when the drawer it just closed was covering Homebase rather than a pane.
         tabIndex={-1}
-        className="flex flex-1 items-center justify-center px-6 text-center"
+        className="flex min-w-0 flex-1 overflow-y-auto"
       >
-        <Text variant="note" tone="muted" className="max-w-sm">
-          {tree.status === 'loading'
-            ? 'Loading the workspace…'
-            : tree.childrenOf(null).length === 0
-              ? // Below `sm` the tree starts as a closed drawer (see `use-sidebar.ts`), so the
-                // control this sentence used to name - "create one" - is not on screen; naming the
-                // toggle that opens it instead is the honest answer, both here and in the sibling
-                // branch below.
-                narrow
-                ? 'Open the workspace tree to create your first note.'
-                : 'This workspace has no items yet. Create a note to begin.'
-              : narrow
-                ? 'Open the workspace tree to pick a note.'
-                : 'Select a note from the tree, or create one.'}
-        </Text>
+        {tree.status === 'loading' ? (
+          <Text variant="note" tone="muted" className="m-auto">
+            Loading the workspace…
+          </Text>
+        ) : (
+          <Homebase tree={tree} />
+        )}
       </div>
     );
   }

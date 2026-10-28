@@ -51,7 +51,7 @@ describe('the navigation rail', () => {
 
     const items = within(rail()).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual([
-      'Notes',
+      'Homebase',
       'My Day',
       'Daily notes',
       'Calendar',
@@ -64,7 +64,7 @@ describe('the navigation rail', () => {
       'Import',
       'Settings',
     ]);
-    expect(within(rail()).getByRole('link', { name: 'Notes' })).toHaveAttribute(
+    expect(within(rail()).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001',
     );
@@ -134,7 +134,7 @@ describe('the navigation rail', () => {
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
-    const notes = within(rail()).getByRole('link', { name: 'Notes' });
+    const notes = within(rail()).getByRole('link', { name: 'Homebase' });
     const calendar = within(rail()).getByRole('link', { name: 'Calendar' });
     const graph = within(rail()).getByRole('link', { name: 'Graph' });
     const bookmarks = within(rail()).getByRole('link', { name: 'Bookmarks' });
@@ -173,7 +173,7 @@ describe('the navigation rail', () => {
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
-    const notes = within(rail()).getByRole('link', { name: 'Notes' });
+    const notes = within(rail()).getByRole('link', { name: 'Homebase' });
     const myDay = within(rail()).getByRole('link', { name: 'My Day' });
     const daily = within(rail()).getByRole('link', { name: 'Daily notes' });
     const calendar = within(rail()).getByRole('link', { name: 'Calendar' });
@@ -278,7 +278,7 @@ describe('the navigation rail', () => {
 
     await screen.findByRole('heading', { name: 'Import template' });
 
-    const notes = within(rail()).getByRole('link', { name: 'Notes' });
+    const notes = within(rail()).getByRole('link', { name: 'Homebase' });
     const templates = within(rail()).getByRole('link', { name: 'Templates' });
     expect(templates).toHaveAttribute('aria-current', 'page');
     expect(templates).toHaveAttribute('tabindex', '0');
@@ -291,7 +291,7 @@ describe('the navigation rail', () => {
 
     await screen.findByRole('button', { name: 'Acquisition memo' });
 
-    expect(within(rail()).getByRole('link', { name: 'Notes' })).toHaveAttribute(
+    expect(within(rail()).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -374,9 +374,9 @@ describe('the navigation rail on a narrow screen', () => {
     renderAt(<App />);
 
     expect(screen.queryByRole('navigation', { name: /destinations/i })).not.toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /show the explorer/i }));
     expect(within(rail()).queryByRole('link')).not.toBeInTheDocument();
-    await userEvent.click(within(rail()).getByRole('button', { name: 'Notes' }));
+    await userEvent.click(within(rail()).getByRole('button', { name: 'Homebase' }));
     // Ten destinations and "New smart list", which the Smart lists section folds into this one menu.
     expect(
       screen.getByRole('menu', { name: 'Workspace pages' }).querySelectorAll('a'),
@@ -385,7 +385,10 @@ describe('the navigation rail on a narrow screen', () => {
       'href',
       '/w/00000000-0000-4000-8000-000000000001/new/query',
     );
-    expect(screen.getByRole('menuitem', { name: 'Notes' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('menuitem', { name: 'Homebase' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(screen.getByRole('menuitem', { name: 'Graph' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('menuitem', { name: 'Import' })).toBeVisible();
   });
@@ -396,14 +399,14 @@ describe('the navigation rail on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
 
-    await user.click(within(rail()).getByRole('button', { name: 'Notes' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Homebase' }));
     await user.click(screen.getByRole('menuitem', { name: 'Graph' }));
 
     expect(await screen.findByRole('heading', { name: 'Graph' })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
   });
 
   it('dismisses the tree drawer before opening the import dialog', async () => {
@@ -412,13 +415,13 @@ describe('the navigation rail on a narrow screen', () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
-    expect(await screen.findByRole('complementary', { name: /workspace/i })).toBeVisible();
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
+    expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
 
-    await user.click(within(rail()).getByRole('button', { name: 'Notes' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Homebase' }));
     await user.click(screen.getByRole('menuitem', { name: 'Import' }));
 
     expect(screen.getByRole('dialog', { name: 'Import' })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
   });
 });

@@ -71,7 +71,7 @@ export function SidebarDrawer({ onClose, children }: SidebarDrawerProps): ReactN
       <button
         type="button"
         tabIndex={-1}
-        aria-label="Close the workspace tree"
+        aria-label="Close the Explorer"
         onClick={onClose}
         className="absolute inset-0 z-0 cursor-pointer bg-neutral-900/40"
       />

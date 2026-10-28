@@ -89,7 +89,7 @@ export function BookmarksPage(): ReactElement {
       <BookmarksFrame>
         <EmptyPanel
           title="Nothing kept yet"
-          detail="Bookmark a note from the workspace tree, from the document itself, or from the command palette, and it will appear here."
+          detail="Bookmark a note from the Explorer, from the document itself, or from the command palette, and it will appear here."
         />
       </BookmarksFrame>
     );

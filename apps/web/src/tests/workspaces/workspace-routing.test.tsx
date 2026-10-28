@@ -175,7 +175,10 @@ describe('workspace-scoped routing', () => {
         'false',
       );
     });
-    expect(screen.getByRole('link', { name: 'Notes' })).toHaveAttribute('href', `/w/${SHARED_ID}`);
+    expect(screen.getByRole('link', { name: 'Homebase' })).toHaveAttribute(
+      'href',
+      `/w/${SHARED_ID}`,
+    );
   });
 
   it('renders honest empty and error states before mounting workspace resources', async () => {

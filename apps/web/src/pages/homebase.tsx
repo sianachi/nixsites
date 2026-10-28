@@ -1,0 +1,355 @@
+import { Blueprint, Icon, Segmented, Text, cn, focusRing } from '@nix/ui';
+import {
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  Columns2,
+  FilePlus,
+  FileText,
+  Grid3x3,
+  Shapes,
+  type LucideIcon,
+} from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router';
+
+import { NewItemDialog } from '../items/new-item-dialog';
+import type { WorkspaceTree } from '../items/use-workspace-tree';
+import { publishNotice } from '../lib/notices';
+import { recentItems } from '../lib/recent-items';
+import {
+  useGeneralPreferences,
+  type HomebaseLayout,
+} from '../settings/preferences/general-preferences';
+import { useOpenItem } from '../tabs/use-open-item';
+import { useTemplateLibrary } from '../templates/template-library-context';
+import { useWorkspace } from '../workspaces/workspace-context';
+
+const LAYOUTS = [
+  { value: 'page', label: 'Page' },
+  { value: 'desk', label: 'Desk' },
+] as const satisfies readonly { value: HomebaseLayout; label: string }[];
+
+/** The ISO 8601 week number of a local date: weeks start on Monday, week 1 holds 4 January. */
+export function isoWeek(date: Date): number {
+  const day = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+  const yearStart = Date.UTC(day.getUTCFullYear(), 0, 1);
+  return Math.ceil(((day.getTime() - yearStart) / 86_400_000 + 1) / 7);
+}
+
+function greeting(hour: number): string {
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function iconForType(type: string | undefined): LucideIcon {
+  if (type === 'canvas') return Shapes;
+  if (type === 'spreadsheet') return Grid3x3;
+  return FileText;
+}
+
+interface Action {
+  readonly key: string;
+  readonly label: string;
+  readonly detail: string;
+  readonly icon: LucideIcon;
+  readonly to?: string;
+  readonly onSelect?: () => void;
+}
+
+/**
+ * The workspace's start screen, shown while no item is open: a greeting, the actions people start
+ * a session with, and the items they opened last on this browser. Two arrangements of the same
+ * content, chosen in place; on a phone both are one column, so the choice is offered only wider.
+ */
+export function Homebase({ tree }: { readonly tree: WorkspaceTree }): ReactNode {
+  const { workspaceId, workspace } = useWorkspace();
+  const { openPreview } = useOpenItem();
+  const navigate = useNavigate();
+  const templateLibrary = useTemplateLibrary();
+  const layout = useGeneralPreferences((state) => state.homebaseLayout);
+  const setLayout = useGeneralPreferences((state) => state.setHomebaseLayout);
+  const [choosingStructure, setChoosingStructure] = useState(false);
+  const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
+
+  const now = new Date();
+  const home = `/w/${workspaceId}`;
+  const desk = layout === 'desk';
+
+  function createNote(): void {
+    void tree.create(null, 'Untitled note').then((outcome) => {
+      if (outcome.id !== null) openPreview(outcome.id);
+      else
+        publishNotice({
+          key: 'new-note-failed',
+          message: outcome.refusal ?? 'That could not be created.',
+        });
+    });
+  }
+
+  const actions: Action[] = [
+    {
+      key: 'note',
+      label: tree.isCreating ? 'Creating…' : 'New note',
+      detail: 'A blank page, opened at once',
+      icon: FilePlus,
+      onSelect: createNote,
+    },
+    {
+      key: 'structured',
+      label: 'Structured note',
+      detail: 'Board, list, tracker or form',
+      icon: Columns2,
+      onSelect: () => {
+        setChoosingStructure(true);
+      },
+    },
+    ...(workspace.canUseDailyNotes
+      ? [
+          {
+            key: 'daily',
+            label: "Today's note",
+            detail: `The page for ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' }).format(now)}`,
+            icon: CalendarClock,
+            to: `${home}/daily`,
+          },
+        ]
+      : []),
+    {
+      key: 'calendar',
+      label: 'Calendar',
+      detail: 'Events and dated items',
+      icon: CalendarDays,
+      to: `${home}/calendar`,
+    },
+    {
+      key: 'my-day',
+      label: 'My Day',
+      detail: "Today's tasks and habits",
+      icon: CalendarCheck,
+      to: `${home}/my-day`,
+    },
+  ];
+
+  const start = (
+    <section aria-labelledby="homebase-start" className="flex min-w-0 flex-col gap-3">
+      <Text as="h2" variant="h6" tone="muted" id="homebase-start">
+        Start something
+      </Text>
+      <ul
+        className={cn(
+          'grid grid-cols-2 gap-2',
+          desk ? 'md:grid-cols-1' : actions.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-4',
+        )}
+      >
+        {actions.map((action, index) => (
+          <li
+            key={action.key}
+            // Two across on a phone: New note takes a row, and so does a last tile left alone.
+            className={
+              index === 0 || (index === actions.length - 1 && index % 2 === 1)
+                ? 'col-span-2 sm:col-span-1'
+                : undefined
+            }
+          >
+            <ActionTile
+              action={action}
+              primary={index === 0}
+              desk={desk}
+              disabled={index === 0 && (tree.status !== 'ready' || tree.isCreating)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+
+  const recent = (
+    <section aria-labelledby="homebase-recent" className="flex min-w-0 flex-col gap-3">
+      <Text as="h2" variant="h6" tone="muted" id="homebase-recent">
+        Recently viewed
+      </Text>
+      {recents.length === 0 ? (
+        <Blueprint className="flex flex-col gap-1 p-4">
+          <Text as="p" variant="body">
+            Notes you open show up here.
+          </Text>
+          <Text as="p" variant="note" tone="muted">
+            Start with a new note, or pick one in the Explorer.
+          </Text>
+        </Blueprint>
+      ) : (
+        <ul className="border-t border-divider">
+          {recents.map((entry) => {
+            const item = tree.find(entry.itemId);
+            const parent = item?.parentId == null ? null : tree.find(item.parentId);
+            const title = (item?.title ?? entry.title) || 'Untitled';
+            return (
+              <li key={entry.itemId} className="border-b border-divider">
+                <button
+                  type="button"
+                  className={cn(
+                    'flex min-h-(--control-lg) w-full min-w-0 items-center gap-3 rounded-sm px-2 text-left hover:bg-surface',
+                    focusRing,
+                  )}
+                  onClick={() => {
+                    openPreview(entry.itemId);
+                  }}
+                >
+                  <Icon icon={iconForType(item?.type)} size="sm" className="shrink-0 text-muted" />
+                  <Text as="span" variant="body" truncate className="min-w-0 flex-1">
+                    {title}
+                  </Text>
+                  {parent == null ? null : (
+                    <Text
+                      as="span"
+                      variant="note"
+                      tone="muted"
+                      truncate
+                      className="max-w-40 shrink-0 max-sm:hidden"
+                    >
+                      {parent.title || 'Untitled'}
+                    </Text>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+
+  return (
+    <div
+      className={cn(
+        'mx-auto flex w-full min-w-0 flex-col gap-10 px-4 py-8 sm:px-8 sm:py-14',
+        desk ? 'max-w-5xl' : 'max-w-3xl',
+      )}
+    >
+      <header className="flex min-w-0 flex-col gap-2">
+        <Text variant="kicker" tone="muted" truncate>
+          {workspace.name}
+        </Text>
+        <div className="flex min-w-0 items-start gap-4">
+          <Text as="h1" variant="h1" className="min-w-0 flex-1">
+            {greeting(now.getHours())}
+          </Text>
+          <Segmented
+            label="Homebase layout"
+            options={LAYOUTS}
+            value={layout}
+            onChange={setLayout}
+            className="shrink-0 max-md:hidden"
+          />
+        </div>
+        {/* The date as a notebook page's header rule, the week number where a page number sits. */}
+        <div className="flex min-w-0 items-center gap-3">
+          <Text as="p" variant="body" tone="muted" className="shrink-0">
+            {new Intl.DateTimeFormat(undefined, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            }).format(now)}
+          </Text>
+          <span aria-hidden="true" className="h-px min-w-6 flex-1 bg-divider" />
+          <Text as="p" variant="kicker" tone="muted" className="shrink-0">
+            Week {isoWeek(now)}
+          </Text>
+        </div>
+      </header>
+
+      {desk ? (
+        <div className="grid min-w-0 gap-10 md:grid-cols-3">
+          <div className="min-w-0">{start}</div>
+          <div className="min-w-0 md:col-span-2">{recent}</div>
+        </div>
+      ) : (
+        <>
+          {start}
+          {recent}
+        </>
+      )}
+
+      {choosingStructure ? (
+        <NewItemDialog
+          mode={{ kind: 'structured' }}
+          childDestination={null}
+          templates={templateLibrary.templates}
+          templateStatus={templateLibrary.status}
+          onClose={() => {
+            setChoosingStructure(false);
+          }}
+          onStartStructured={(parentId, recipe) => {
+            const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
+            void navigate(`${home}/new/${recipe}${search}`);
+          }}
+          // The structured mode offers neither a plain item nor an upload.
+          onCreate={() => undefined}
+          onUpload={() => undefined}
+          onStartTemplate={(parentId, templateId) => {
+            const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
+            void navigate(`${home}/templates/${templateId}/create${search}`);
+          }}
+          onBrowseTemplates={() => {
+            void navigate(`${home}/templates`);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ActionTile({
+  action,
+  primary,
+  desk,
+  disabled,
+}: {
+  readonly action: Action;
+  readonly primary: boolean;
+  readonly desk: boolean;
+  readonly disabled: boolean;
+}): ReactNode {
+  const className = cn(
+    'flex h-full min-h-24 w-full min-w-0 flex-col gap-2 rounded-md border p-3 text-left',
+    desk && 'md:min-h-0 md:flex-row md:items-center md:gap-4 md:px-4',
+    primary
+      ? 'max-sm:min-h-0 max-sm:flex-row max-sm:items-center border-accent-fill bg-accent-fill hover:bg-accent-fill-hover disabled:opacity-45'
+      : 'border-divider hover:bg-surface',
+    focusRing,
+  );
+  const body = (
+    <>
+      <Icon
+        icon={action.icon}
+        size="md"
+        className={cn('shrink-0', primary ? 'text-background' : 'text-accent-text')}
+      />
+      <span className={cn('flex min-w-0 flex-col gap-0.5', !desk && 'sm:mt-auto')}>
+        <Text as="span" variant="h5" className={primary ? 'text-background' : ''}>
+          {action.label}
+        </Text>
+        <Text
+          as="span"
+          variant="note"
+          tone={primary ? 'default' : 'muted'}
+          className={primary ? 'text-background' : ''}
+        >
+          {action.detail}
+        </Text>
+      </span>
+    </>
+  );
+  return action.to === undefined ? (
+    <button type="button" className={className} disabled={disabled} onClick={action.onSelect}>
+      {body}
+    </button>
+  ) : (
+    <Link to={action.to} className={className}>
+      {body}
+    </Link>
+  );
+}

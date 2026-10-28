@@ -36,7 +36,7 @@ describe('Zen on workspace pages', () => {
     await user.click(enter);
 
     expect(screen.queryByRole('banner', { name: 'Workspace controls' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: /workspace/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(main.contains(document.activeElement)).toBe(true);
     });
@@ -102,12 +102,12 @@ describe('Zen on workspace pages', () => {
     const user = userEvent.setup();
     stubViewport(320);
     renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings`);
-    await user.click(await screen.findByRole('button', { name: 'Show the workspace tree' }));
+    await user.click(await screen.findByRole('button', { name: 'Show the Explorer' }));
     await user.click(screen.getByRole('link', { name: 'Skip to content' }));
     await waitFor(() => {
       expect(screen.getByRole('main')).toHaveFocus();
     });
-    expect(screen.getByRole('button', { name: 'Show the workspace tree' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show the Explorer' })).toBeInTheDocument();
   });
 
   it('lets Escape close a search dialog before it leaves Zen', async () => {

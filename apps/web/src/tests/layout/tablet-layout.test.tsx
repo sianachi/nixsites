@@ -26,11 +26,11 @@ it.each([768, 820, 912])(
     await screen.findByRole('textbox', { name: 'Note title' });
     expect(screen.queryByRole('button', { name: 'Children' })).not.toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'Open documents' })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Workspace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Explorer' })).not.toBeInTheDocument();
     const navigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    await userEvent.click(within(navigation).getByRole('button', { name: 'Workspace' }));
+    await userEvent.click(within(navigation).getByRole('button', { name: 'Explorer' }));
     expect(await screen.findByRole('button', { name: 'Tablet document' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Close the workspace tree' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Close the Explorer' }));
     expect(screen.getByRole('textbox', { name: 'Note title' })).toBeVisible();
   },
 );
@@ -55,7 +55,7 @@ it.each([768, 1024, 1180])(
 it('retains a fixed workspace and removes the bottom bar on landscape tablets', async () => {
   stubViewport(1024);
   renderAt(<App />, `/?item=${note.id}`);
-  expect(await screen.findByRole('complementary', { name: 'Workspace' })).toBeVisible();
+  expect(await screen.findByRole('complementary', { name: 'Explorer' })).toBeVisible();
   expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
 });
 

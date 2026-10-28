@@ -153,7 +153,7 @@ describe('opening an item beside another', () => {
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /show the workspace tree/i }));
+    await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     await screen.findByRole('button', { name: 'Engineering' });
 
     // `'narrow'` is a fact about this viewport, true of every row at once - unlike the pane limit

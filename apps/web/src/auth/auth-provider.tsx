@@ -1,5 +1,6 @@
 import { stop as stopAudio } from '../audio/audio-store';
 import { clearAudioPositions } from '../lib/audio-positions';
+import { clearRecentItems } from '../lib/recent-items';
 import { forgetThumbnails } from '../lib/thumbnail-cache';
 import { clearPendingDailyTemplate } from '../lib/pending-daily-template';
 import { clearPetDrafts } from '../pets/pet-drafts';
@@ -411,6 +412,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       clearSuggestionDismissals();
       stopAudio();
       clearAudioPositions();
+      clearRecentItems();
       clearPetDrafts();
       clearPendingDailyTemplate();
       void forgetThumbnails();
@@ -470,6 +472,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         clearSuggestionDismissals();
         stopAudio();
         clearAudioPositions();
+        clearRecentItems();
         clearPetDrafts();
         clearPendingDailyTemplate();
         await forgetThumbnails();
