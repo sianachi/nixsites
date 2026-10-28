@@ -69,24 +69,24 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !validUUID(payload.NotificationID) {
-		return nil, failure("notify_payload_invalid", errors.New("the durable notify request is invalid"))
+		return nil, jobrunner.Fail("notify_payload_invalid", errors.New("the durable notify request is invalid"))
 	}
 	if job.Kind != "notify.push" {
-		return nil, failure("notify_kind_mismatch", errors.New("job kind does not match notify.push"))
+		return nil, jobrunner.Fail("notify_kind_mismatch", errors.New("job kind does not match notify.push"))
 	}
 	if handler.api == nil || handler.transport == nil || handler.privateKey == nil {
-		return nil, failure("notify_configuration_invalid", errors.New("the notify worker is not configured"))
+		return nil, jobrunner.Fail("notify_configuration_invalid", errors.New("the notify worker is not configured"))
 	}
 	delivery, err := handler.api.GetNotificationDelivery(ctx, payload.NotificationID)
 	if err != nil {
-		return nil, transient("notify_delivery_unavailable", err)
+		return nil, jobrunner.Retry("notify_delivery_unavailable", err)
 	}
 	if delivery == nil {
-		return nil, failure("notify_delivery_invalid", errors.New("the notification delivery payload is invalid"))
+		return nil, jobrunner.Fail("notify_delivery_invalid", errors.New("the notification delivery payload is invalid"))
 	}
 	plaintext, err := json.Marshal(delivery.Payload)
 	if err != nil {
-		return nil, failure("notify_payload_encode_failed", err)
+		return nil, jobrunner.Fail("notify_payload_encode_failed", err)
 	}
 	result := Result{NotificationID: payload.NotificationID}
 	results := make([]workerapi.NotificationDeliveryResult, len(delivery.Subscriptions))
@@ -116,7 +116,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	}
 	if len(results) > 0 {
 		if err := handler.report(ctx, payload.NotificationID, results); err != nil {
-			return nil, transient("notify_results_unavailable", err)
+			return nil, jobrunner.Retry("notify_results_unavailable", err)
 		}
 	}
 	return result, nil
@@ -201,12 +201,4 @@ func validUUID(value string) bool {
 		}
 	}
 	return value != "00000000-0000-0000-0000-000000000000"
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: fmt.Sprintf("%s", err), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: fmt.Sprintf("%s", err), Cause: err, Retryable: true}
 }

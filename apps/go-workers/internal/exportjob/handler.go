@@ -71,39 +71,39 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !validPayload(payload) {
-		return nil, failure("export_payload_invalid", errors.New("the durable export request is invalid"))
+		return nil, jobrunner.Fail("export_payload_invalid", errors.New("the durable export request is invalid"))
 	}
 	format := payload.Format
 	if job.Kind != "export."+format {
-		return nil, failure("export_kind_mismatch", errors.New("job kind does not match export format"))
+		return nil, jobrunner.Fail("export_kind_mismatch", errors.New("job kind does not match export format"))
 	}
 	if handler.api == nil || handler.source == nil || handler.destination == nil || strings.TrimSpace(handler.secret) == "" {
-		return nil, failure("export_configuration_invalid", errors.New("the exporter is not configured"))
+		return nil, jobrunner.Fail("export_configuration_invalid", errors.New("the exporter is not configured"))
 	}
 	executionJobID, _, executionBound := workerapi.Execution(ctx)
 	if !executionBound || executionJobID != job.ID {
-		return nil, failure("export_execution_invalid", errors.New("the exporter is not bound to the claimed execution"))
+		return nil, jobrunner.Fail("export_execution_invalid", errors.New("the exporter is not bound to the claimed execution"))
 	}
 	source, err := handler.api.GetExportSource(ctx, job.ID)
 	if err != nil {
-		return nil, transient("export_source_unavailable", err)
+		return nil, jobrunner.Retry("export_source_unavailable", err)
 	}
 	if source.ExportID != job.ID || source.Format != format || source.SourceURL == "" || source.BearerToken == "" || !source.DelegationExpires.After(time.Now()) {
-		return nil, failure("export_source_invalid", errors.New("the source capability does not match the export job"))
+		return nil, jobrunner.Fail("export_source_invalid", errors.New("the source capability does not match the export job"))
 	}
 	download, err := handler.source.DownloadAuthorized(ctx, source.SourceURL, handler.limits.MaxBytes, source.BearerToken, handler.secret)
 	if err != nil {
-		return nil, transient("export_source_unavailable", err)
+		return nil, jobrunner.Retry("export_source_unavailable", err)
 	}
 	input, readErr := nixarchive.OpenBundleStream(download.Body, handler.limits)
 	if readErr != nil {
 		_ = download.Body.Close()
-		return nil, failure("export_bundle_invalid", readErr)
+		return nil, jobrunner.Fail("export_bundle_invalid", readErr)
 	}
 	file, err := worktemp.Create("nix-export-*")
 	if err != nil {
 		_ = download.Body.Close()
-		return nil, failure("export_write_failed", err)
+		return nil, jobrunner.Fail("export_write_failed", err)
 	}
 	path := file.Name()
 	defer func() { _ = os.Remove(path) }()
@@ -161,33 +161,33 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	closeErr := file.Close()
 	var sourceErr *bundleStreamError
 	if errors.As(writeErr, &sourceErr) {
-		return nil, failure("export_bundle_invalid", sourceErr.err)
+		return nil, jobrunner.Fail("export_bundle_invalid", sourceErr.err)
 	}
 	if writeErr != nil {
-		return nil, failure("export_write_failed", writeErr)
+		return nil, jobrunner.Fail("export_write_failed", writeErr)
 	}
 	if closeSourceErr != nil {
-		return nil, transient("export_source_unavailable", closeSourceErr)
+		return nil, jobrunner.Retry("export_source_unavailable", closeSourceErr)
 	}
 	if closeErr != nil {
-		return nil, failure("export_write_failed", closeErr)
+		return nil, jobrunner.Fail("export_write_failed", closeErr)
 	}
 	stat, err := os.Stat(path)
 	if err != nil {
-		return nil, failure("export_write_failed", err)
+		return nil, jobrunner.Fail("export_write_failed", err)
 	}
 	checksum := hex.EncodeToString(digest.Sum(nil))
 	output, err := os.Open(path)
 	if err != nil {
-		return nil, failure("export_write_failed", err)
+		return nil, jobrunner.Fail("export_write_failed", err)
 	}
 	defer output.Close()
 	destination, err := handler.api.GetExportDestination(ctx, job.ID, stat.Size(), checksum)
 	if err != nil {
-		return nil, transient("export_destination_unavailable", err)
+		return nil, jobrunner.Retry("export_destination_unavailable", err)
 	}
 	if destination.ExportID != job.ID || !validGUID(destination.AttemptID) || destination.Format != format || destination.ObjectKey == "" || destination.UploadURL == "" || destination.ReadURL == "" || destination.DeleteURL == "" || !destination.CapabilityExpires.After(time.Now()) {
-		return nil, failure("export_destination_invalid", errors.New("the destination capability does not match the export job"))
+		return nil, jobrunner.Fail("export_destination_invalid", errors.New("the destination capability does not match the export job"))
 	}
 	if err := handler.destination.UploadCreateOnlyVerified(ctx, destination.UploadURL, contentType(format), output, stat.Size(), checksum); err != nil {
 		if errors.Is(err, objecttransfer.ErrAlreadyExists) {
@@ -196,12 +196,12 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 				return handler.result(destination.AttemptID, format, destination.ObjectKey, input.Manifest, projectionLoss, stat.Size(), checksum), nil
 			}
 			if errors.Is(verifyErr, errExistingResultMismatch) {
-				return nil, failure("export_result_conflict", verifyErr)
+				return nil, jobrunner.Fail("export_result_conflict", verifyErr)
 			}
-			return nil, transient("export_result_verification_unavailable", verifyErr)
+			return nil, jobrunner.Retry("export_result_verification_unavailable", verifyErr)
 		}
 		handler.deleteBestEffort(ctx, destination.DeleteURL)
-		return nil, transient("export_upload_failed", err)
+		return nil, jobrunner.Retry("export_upload_failed", err)
 	}
 	return handler.result(destination.AttemptID, format, destination.ObjectKey, input.Manifest, projectionLoss, stat.Size(), checksum), nil
 }
@@ -219,17 +219,17 @@ func (handler *Handler) exportFileVersions(
 		}
 		history, err := handler.api.GetExportFileHistory(ctx, exportID, item.ID)
 		if err != nil {
-			return nil, nil, transient("export_file_history_unavailable", err)
+			return nil, nil, jobrunner.Retry("export_file_history_unavailable", err)
 		}
 		if history == nil || history.ItemID != item.ID || len(history.Versions) == 0 || len(history.Versions) > nixarchive.MaxFileVersionsPerItem {
-			return nil, nil, failure("export_file_history_invalid", errors.New("the file history does not match the export bundle"))
+			return nil, nil, jobrunner.Fail("export_file_history_invalid", errors.New("the file history does not match the export bundle"))
 		}
 		currentCount := 0
 		for index, version := range history.Versions {
 			if version.Version != index+1 || version.ByteLength < 0 || version.ByteLength > 100<<20 ||
 				!validDigest(version.SHA256) || strings.TrimSpace(version.FileName) == "" ||
 				strings.TrimSpace(version.MediaType) == "" || version.DownloadURL == "" || !version.ExpiresAt.After(time.Now()) {
-				return nil, nil, failure("export_file_history_invalid", errors.New("a file version capability is invalid"))
+				return nil, nil, jobrunner.Fail("export_file_history_invalid", errors.New("a file version capability is invalid"))
 			}
 			if version.Current {
 				currentCount++
@@ -243,7 +243,7 @@ func (handler *Handler) exportFileVersions(
 			urls = append(urls, version.DownloadURL)
 		}
 		if currentCount != 1 || !history.Versions[len(history.Versions)-1].Current {
-			return nil, nil, failure("export_file_history_invalid", errors.New("the file history does not identify exactly one current version"))
+			return nil, nil, jobrunner.Fail("export_file_history_invalid", errors.New("the file history does not identify exactly one current version"))
 		}
 	}
 	return entries, urls, nil
@@ -531,12 +531,4 @@ func truncateUTF8(value string, maximum int) string {
 		end--
 	}
 	return strings.TrimSpace(value[:end])
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: fmt.Sprintf("%s", err), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: fmt.Sprintf("%s", err), Cause: err, Retryable: true}
 }

@@ -83,7 +83,7 @@ func New(
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return nil, failure("template_payload_invalid", err)
+		return nil, jobrunner.Fail("template_payload_invalid", err)
 	}
 	switch job.Kind {
 	case "template.preview":
@@ -91,7 +91,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	case "template.commit":
 		return handler.commit(ctx, payload.ImportID)
 	default:
-		return nil, failure("template_kind_mismatch", errors.New("job kind is not a template import operation"))
+		return nil, jobrunner.Fail("template_kind_mismatch", errors.New("job kind is not a template import operation"))
 	}
 }
 
@@ -111,7 +111,7 @@ func (handler *Handler) preview(ctx context.Context, importID string) (any, erro
 		if errors.Is(err, objecttransfer.ErrTooLarge) {
 			return nil, handler.reject(ctx, importID, "template_source_too_large", err)
 		}
-		return nil, transient("template_source_unavailable", err)
+		return nil, jobrunner.Retry("template_source_unavailable", err)
 	}
 	defer source.remove()
 	if source.size != preview.DeclaredByteLength {
@@ -132,7 +132,7 @@ func (handler *Handler) preview(ctx context.Context, importID string) (any, erro
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, transient("template_plan_upload_failed", err)
+		return nil, jobrunner.Retry("template_plan_upload_failed", err)
 	}
 	profile, err := templateProfile(plan.Profile)
 	if err != nil {
@@ -160,7 +160,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 	}
 	if commit != nil && commit.CompletedResult != nil {
 		if err := validateTerminalResult(importID, commit.CompletedResult); err != nil {
-			return nil, failure("template_completion_invalid", err)
+			return nil, jobrunner.Fail("template_completion_invalid", err)
 		}
 		return commitResult(commit.CompletedResult), nil
 	}
@@ -175,7 +175,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 		if errors.Is(err, objecttransfer.ErrTooLarge) {
 			return nil, handler.reject(ctx, importID, "template_source_too_large", err)
 		}
-		return nil, transient("template_source_unavailable", err)
+		return nil, jobrunner.Retry("template_source_unavailable", err)
 	}
 	defer source.remove()
 	if source.size != commit.DeclaredByteLength || !strings.EqualFold(source.sha256, commit.SourceSHA256) {
@@ -189,7 +189,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 		if errors.Is(err, objecttransfer.ErrTooLarge) {
 			return nil, handler.reject(ctx, importID, "template_plan_invalid", err)
 		}
-		return nil, transient("template_plan_unavailable", err)
+		return nil, jobrunner.Retry("template_plan_unavailable", err)
 	}
 	defer planned.remove()
 	if planned.size != commit.PlanByteLength || !strings.EqualFold(planned.sha256, commit.PlanSHA256) {
@@ -197,7 +197,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 	}
 	planBody, err := os.ReadFile(planned.path)
 	if err != nil {
-		return nil, transient("template_plan_unavailable", err)
+		return nil, jobrunner.Retry("template_plan_unavailable", err)
 	}
 	plan, err := importplan.DecodeTemplate(planBody, commit.PlanSHA256, handler.limits)
 	if err != nil {
@@ -237,7 +237,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 				return nil, err
 			}
 			if !errors.As(err, &response) || response.Status >= 500 {
-				return nil, transient("template_body_write_failed", err)
+				return nil, jobrunner.Retry("template_body_write_failed", err)
 			}
 			return nil, handler.reject(ctx, importID, "template_body_invalid", err)
 		}
@@ -258,7 +258,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 		return nil, handler.apiError(ctx, importID, "template_completion_failed", err)
 	}
 	if err := validateResult(importID, result, stage, plan, writtenIDs); err != nil {
-		return nil, failure("template_completion_invalid", err)
+		return nil, jobrunner.Fail("template_completion_invalid", err)
 	}
 	return commitResult(result), nil
 }
@@ -266,7 +266,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 func (handler *Handler) transferTemplateFiles(ctx context.Context, importID, archivePath string, plan importplan.TemplatePlan, stage *workerapi.TemplateImportStage) error {
 	archives, err := importplan.OpenNixArchiveFiles(archivePath, handler.limits)
 	if err != nil {
-		return failure("template_file_archive_invalid", err)
+		return jobrunner.Fail("template_file_archive_invalid", err)
 	}
 	defer archives.Close()
 	expected := make(map[string]workerapi.TemplateImportStageFile, len(plan.Files))
@@ -297,10 +297,10 @@ func (handler *Handler) transferTemplateFiles(ctx context.Context, importID, arc
 			mapping, hasMapping := transfers[key]
 			if !hasDescriptor || !hasMapping || mapping.TransferID != file.TransferID || mapping.TargetItemID != file.TargetItemID ||
 				file.FileName != descriptor.FileName || file.MediaType != descriptor.MediaType || file.ByteLength != descriptor.ByteLength || !strings.EqualFold(file.SHA256, descriptor.SHA256) {
-				return failure("template_file_capability_invalid", errors.New("Core returned a file capability that does not match the validated archive"))
+				return jobrunner.Fail("template_file_capability_invalid", errors.New("Core returned a file capability that does not match the validated archive"))
 			}
 			if _, duplicate := seen[key]; duplicate {
-				return failure("template_file_capability_invalid", errors.New("Core returned a duplicate template file transfer"))
+				return jobrunner.Fail("template_file_capability_invalid", errors.New("Core returned a duplicate template file transfer"))
 			}
 			seen[key] = struct{}{}
 			if file.Ready {
@@ -310,7 +310,7 @@ func (handler *Handler) transferTemplateFiles(ctx context.Context, importID, arc
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				return transient("template_file_transfer_failed", err)
+				return jobrunner.Retry("template_file_transfer_failed", err)
 			}
 			if err := handler.api.CompleteTemplateImportFileBatch(ctx, importID, []string{file.TransferID}); err != nil {
 				return handler.apiError(ctx, importID, "template_file_transfer_completion_failed", err)
@@ -318,7 +318,7 @@ func (handler *Handler) transferTemplateFiles(ctx context.Context, importID, arc
 		}
 		if page.Complete {
 			if len(seen) != len(expected) {
-				return failure("template_file_capability_invalid", errors.New("Core omitted one or more staged archive file versions"))
+				return jobrunner.Fail("template_file_capability_invalid", errors.New("Core omitted one or more staged archive file versions"))
 			}
 			return nil
 		}
@@ -669,7 +669,7 @@ func (handler *Handler) apiError(ctx context.Context, importID, code string, err
 			return handler.reject(ctx, importID, code, err)
 		}
 	}
-	return transient(code, err)
+	return jobrunner.Retry(code, err)
 }
 
 func (handler *Handler) reject(ctx context.Context, importID, code string, cause error) error {
@@ -684,15 +684,7 @@ func (handler *Handler) reject(ctx context.Context, importID, code string, cause
 			return err
 		}
 	}
-	return failure(code, cause)
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+	return jobrunner.Fail(code, cause)
 }
 
 type localObject struct {

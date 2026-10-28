@@ -31,3 +31,13 @@ func (err *JobError) Error() string {
 }
 
 func (err *JobError) Unwrap() error { return err.Cause }
+
+// Fail wraps err as a permanent job failure with a stable code.
+func Fail(code string, err error) error {
+	return &JobError{Code: code, Detail: err.Error(), Cause: err}
+}
+
+// Retry wraps err as a failure the queue should redeliver.
+func Retry(code string, err error) error {
+	return &JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+}

@@ -78,7 +78,7 @@ func New(
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return nil, failure("import_payload_invalid", err)
+		return nil, jobrunner.Fail("import_payload_invalid", err)
 	}
 	if job.Kind == "import.commit" {
 		return handler.commit(ctx, payload.ImportID)
@@ -86,7 +86,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	if strings.HasPrefix(job.Kind, "import.preview.") {
 		return handler.preview(ctx, payload.ImportID, strings.TrimPrefix(job.Kind, "import.preview."))
 	}
-	return nil, failure("import_kind_mismatch", errors.New("job kind is not a document import operation"))
+	return nil, jobrunner.Fail("import_kind_mismatch", errors.New("job kind is not a document import operation"))
 }
 
 func (handler *Handler) preview(ctx context.Context, importID, kindFormat string) (any, error) {
@@ -99,7 +99,7 @@ func (handler *Handler) preview(ctx context.Context, importID, kindFormat string
 	}
 	source, err := handler.download(ctx, preview.SourceURL, handler.limits.MaxSourceBytes)
 	if err != nil {
-		return nil, transient("import_source_unavailable", err)
+		return nil, jobrunner.Retry("import_source_unavailable", err)
 	}
 	defer source.remove()
 	if source.size != preview.DeclaredByteLength {
@@ -117,7 +117,7 @@ func (handler *Handler) preview(ctx context.Context, importID, kindFormat string
 		return nil, handler.reject(ctx, importID, "import_plan_invalid", err)
 	}
 	if err := handler.transfer.Upload(ctx, preview.PlanUploadURL, "application/json", bytes.NewReader(planBytes), int64(len(planBytes)), planDigest); err != nil {
-		return nil, transient("import_plan_upload_failed", err)
+		return nil, jobrunner.Retry("import_plan_upload_failed", err)
 	}
 	assets := assetCount(plan)
 	completion := workerapi.CompleteDocumentImportPreview{
@@ -140,7 +140,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 	}
 	source, err := handler.download(ctx, commit.SourceURL, handler.limits.MaxSourceBytes)
 	if err != nil {
-		return nil, transient("import_source_unavailable", err)
+		return nil, jobrunner.Retry("import_source_unavailable", err)
 	}
 	defer source.remove()
 	if source.size != commit.DeclaredByteLength || !strings.EqualFold(source.sha256, commit.SourceSHA256) {
@@ -148,7 +148,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 	}
 	planned, err := handler.download(ctx, commit.PlanURL, handler.limits.MaxPlanBytes)
 	if err != nil {
-		return nil, transient("import_plan_unavailable", err)
+		return nil, jobrunner.Retry("import_plan_unavailable", err)
 	}
 	defer planned.remove()
 	if planned.size != commit.PlanByteLength || !strings.EqualFold(planned.sha256, commit.PlanSHA256) {
@@ -156,7 +156,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 	}
 	planBody, err := os.ReadFile(planned.path)
 	if err != nil {
-		return nil, transient("import_plan_unavailable", err)
+		return nil, jobrunner.Retry("import_plan_unavailable", err)
 	}
 	plan, err := importplan.Decode(planBody, commit.PlanSHA256, handler.limits)
 	if err != nil {
@@ -248,10 +248,10 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 			return nil, err
 		}
 		if errors.As(err, &response) && response.Status >= 500 {
-			return nil, transient("import_body_write_failed", err)
+			return nil, jobrunner.Retry("import_body_write_failed", err)
 		}
 		if !errors.As(err, &response) {
-			return nil, transient("import_body_write_failed", err)
+			return nil, jobrunner.Retry("import_body_write_failed", err)
 		}
 		return nil, handler.reject(ctx, importID, "import_body_invalid", err)
 	}
@@ -264,7 +264,7 @@ func (handler *Handler) commit(ctx context.Context, importID string) (any, error
 		return nil, handler.reject(ctx, importID, "import_finalize_failed", err)
 	}
 	if result.Status != "completed" || result.RootItemID == nil || *result.RootItemID != stage.RootItemID {
-		return nil, failure("import_finalize_invalid", errors.New("Core did not confirm the published root"))
+		return nil, jobrunner.Fail("import_finalize_invalid", errors.New("Core did not confirm the published root"))
 	}
 	return CommitResult{ImportID: importID, RootItemID: stage.RootItemID, Items: len(plan.Items), Assets: assetCount(plan)}, nil
 }
@@ -323,7 +323,7 @@ func (handler *Handler) uploadFile(ctx context.Context, importID string, source 
 			return err
 		}
 	} else if uploadErr != nil {
-		return transient("import_file_upload_failed", uploadErr)
+		return jobrunner.Retry("import_file_upload_failed", uploadErr)
 	} else {
 		actual := hex.EncodeToString(digest.Sum(nil))
 		if !strings.EqualFold(actual, item.File.SHA256) {
@@ -340,7 +340,7 @@ func (handler *Handler) uploadFile(ctx context.Context, importID string, source 
 func (handler *Handler) transferArchiveFileVersions(ctx context.Context, importID, archivePath string, descriptors []nixarchive.FileVersionEntry, stage *workerapi.DocumentImportStage) error {
 	archives, err := importplan.OpenNixArchiveFiles(archivePath, handler.limits)
 	if err != nil {
-		return failure("import_file_archive_invalid", err)
+		return jobrunner.Fail("import_file_archive_invalid", err)
 	}
 	defer archives.Close()
 	expected := make(map[string]nixarchive.FileVersionEntry, len(descriptors))
@@ -383,7 +383,7 @@ func (handler *Handler) transferArchiveFileVersions(ctx context.Context, importI
 				return errors.New("Core omitted archive file-version capabilities")
 			}
 			if err := handler.copyArchiveFileVersion(ctx, archives, file); err != nil {
-				return transient("import_file_transfer_failed", err)
+				return jobrunner.Retry("import_file_transfer_failed", err)
 			}
 			if err := handler.api.CompleteDocumentImportFileBatch(ctx, importID, []string{file.TransferID}); err != nil {
 				return apiFailure("import_file_completion_failed", err)
@@ -431,18 +431,18 @@ func fileVersionKey(itemID string, version int) string { return itemID + "/" + s
 func (handler *Handler) verifyPublishedFile(ctx context.Context, sourceURL string, size int64, expectedDigest string) error {
 	download, err := handler.transfer.Download(ctx, sourceURL, handler.limits.MaxSourceBytes)
 	if err != nil {
-		return transient("import_file_verification_failed", err)
+		return jobrunner.Retry("import_file_verification_failed", err)
 	}
 	written, copyErr := io.Copy(io.Discard, download.Body)
 	closeErr := download.Body.Close()
 	if copyErr != nil {
-		return transient("import_file_verification_failed", copyErr)
+		return jobrunner.Retry("import_file_verification_failed", copyErr)
 	}
 	if closeErr != nil {
-		return transient("import_file_verification_failed", closeErr)
+		return jobrunner.Retry("import_file_verification_failed", closeErr)
 	}
 	if written != size || objecttransfer.VerifyDigest(download.Digest, expectedDigest) != nil {
-		return failure("import_file_publication_conflict", errors.New("the immutable destination contains different bytes"))
+		return jobrunner.Fail("import_file_publication_conflict", errors.New("the immutable destination contains different bytes"))
 	}
 	return nil
 }
@@ -453,7 +453,7 @@ func (handler *Handler) reject(ctx context.Context, importID, code string, cause
 	if err := handler.api.RejectDocumentImport(cleanupContext, importID, code); err != nil {
 		return apiFailure("import_rejection_failed", err)
 	}
-	return failure(code, cause)
+	return jobrunner.Fail(code, cause)
 }
 
 type localObject struct {
@@ -571,9 +571,9 @@ func apiFailure(code string, err error) error {
 		return err
 	}
 	if errors.As(err, &response) && response.Status < 500 {
-		return failure(code, err)
+		return jobrunner.Fail(code, err)
 	}
-	return transient(code, err)
+	return jobrunner.Retry(code, err)
 }
 
 func retryableOrLeaseLost(err error) bool {
@@ -583,14 +583,6 @@ func retryableOrLeaseLost(err error) bool {
 	}
 	var typed *jobrunner.JobError
 	return errors.As(err, &typed) && typed.Retryable
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
 }
 
 func nonNil(values []string) []string {

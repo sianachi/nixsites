@@ -69,7 +69,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || !canonicalUUID(payload.LinkID) {
-		return nil, failure("calendar_payload_invalid", errors.New("the durable calendar sync request is invalid"))
+		return nil, jobrunner.Fail("calendar_payload_invalid", errors.New("the durable calendar sync request is invalid"))
 	}
 	session, err := handler.api.StartCalendarSession(ctx, payload.LinkID)
 	if err != nil {
@@ -77,7 +77,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	}
 	provider, ok := handler.providers[session.Provider]
 	if !ok {
-		return nil, failure("calendar_provider_unsupported", fmt.Errorf("no calendar provider client is configured for %q", session.Provider))
+		return nil, jobrunner.Fail("calendar_provider_unsupported", fmt.Errorf("no calendar provider client is configured for %q", session.Provider))
 	}
 
 	applied, conflicts, full, pullErr := handler.pull(ctx, provider, payload.LinkID, session)
@@ -112,11 +112,11 @@ func (handler *Handler) pull(ctx context.Context, provider Provider, linkID stri
 		page, pullErr := provider.Pull(ctx, session.AccessToken, session.ExternalCalendarID, cursor, session.WindowStart, session.WindowEnd, pageToken)
 		if pullErr != nil {
 			handler.logProviderError(ctx, linkID, "pull", pullErr)
-			return applied, conflicts, full, transient("calendar_pull_failed", pullErr)
+			return applied, conflicts, full, jobrunner.Retry("calendar_pull_failed", pullErr)
 		}
 		if page.FullResyncRequired {
 			if restarted {
-				return applied, conflicts, full, failure("calendar_pull_failed", errors.New("the calendar provider repeatedly rejected a full resync"))
+				return applied, conflicts, full, jobrunner.Fail("calendar_pull_failed", errors.New("the calendar provider repeatedly rejected a full resync"))
 			}
 			restarted = true
 			cursor, pageToken, full = "", "", true
@@ -311,28 +311,20 @@ func canonicalUUID(value string) bool {
 func apiFailure(code string, err error) error {
 	var response *workerapi.ResponseError
 	if !errors.As(err, &response) {
-		return transient(code, err)
+		return jobrunner.Retry(code, err)
 	}
 	switch {
 	case response.Status == http.StatusConflict && response.Code == "worker.execution_refused":
 		return err
 	case response.Status == http.StatusConflict && response.Code == "calendar.link_unavailable":
-		return failure("calendar_link_unavailable", err)
+		return jobrunner.Fail("calendar_link_unavailable", err)
 	case response.Status == http.StatusConflict && response.Code == "calendar.needs_reauth":
-		return failure("calendar_needs_reauth", err)
+		return jobrunner.Fail("calendar_needs_reauth", err)
 	case response.Status == http.StatusRequestTimeout || response.Status == http.StatusTooManyRequests || response.Status >= 500:
-		return transient(code, err)
+		return jobrunner.Retry(code, err)
 	case response.Status >= 400:
-		return failure(code, err)
+		return jobrunner.Fail(code, err)
 	default:
-		return transient(code, err)
+		return jobrunner.Retry(code, err)
 	}
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func transient(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
 }

@@ -42,17 +42,17 @@ func New(api *workerapi.Client, transfer *objecttransfer.Client) *Handler {
 func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, error) {
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return nil, failure("template_file_copy_payload_invalid", err)
+		return nil, jobrunner.Fail("template_file_copy_payload_invalid", err)
 	}
 	if job.Kind != Kind {
-		return nil, failure("template_file_copy_kind_mismatch", errors.New("job kind is not template.files.copy"))
+		return nil, jobrunner.Fail("template_file_copy_kind_mismatch", errors.New("job kind is not template.files.copy"))
 	}
 	if handler.api == nil || handler.transfer == nil {
-		return nil, failure("template_file_copy_configuration_invalid", errors.New("the template file copier is not configured"))
+		return nil, jobrunner.Fail("template_file_copy_configuration_invalid", errors.New("the template file copier is not configured"))
 	}
 	jobID, _, bound := workerapi.Execution(ctx)
 	if !bound || jobID != job.ID {
-		return nil, failure("template_file_copy_execution_invalid", errors.New("the copier is not bound to the claimed execution"))
+		return nil, jobrunner.Fail("template_file_copy_execution_invalid", errors.New("the copier is not bound to the claimed execution"))
 	}
 
 	var after string
@@ -66,7 +66,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 			return nil, apiFailure("template_file_copy_plan_unavailable", err)
 		}
 		if plan.OwnerKind != payload.OwnerKind || plan.OwnerID != payload.OwnerID {
-			return nil, failure("template_file_copy_plan_invalid", errors.New("Core returned a transfer plan for a different stage"))
+			return nil, jobrunner.Fail("template_file_copy_plan_invalid", errors.New("Core returned a transfer plan for a different stage"))
 		}
 		for _, transfer := range plan.Transfers {
 			if err := ctx.Err(); err != nil {
@@ -204,26 +204,18 @@ func apiFailure(code string, err error) error {
 		return err
 	}
 	if errors.As(err, &response) && response.Status < 500 && response.Status != 429 {
-		return failure(code, err)
+		return jobrunner.Fail(code, err)
 	}
-	return retry(code, err)
+	return jobrunner.Retry(code, err)
 }
 
 func transferFailure(code string, err error) error {
 	// A mismatching immutable object is a durable conflict. Other capability and transport
 	// failures can recover after Core issues a fresh bounded capability on the next execution.
 	if strings.Contains(err.Error(), "does not match") {
-		return failure(code, err)
+		return jobrunner.Fail(code, err)
 	}
-	return retry(code, err)
-}
-
-func failure(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err}
-}
-
-func retry(code string, err error) error {
-	return &jobrunner.JobError{Code: code, Detail: err.Error(), Cause: err, Retryable: true}
+	return jobrunner.Retry(code, err)
 }
 
 var _ jobrunner.Handler = (*Handler)(nil)
