@@ -35,7 +35,7 @@ import {
   resolveSession,
   type SessionDeps,
 } from './shared.ts';
-import { printResult, printTable, type OutputOptions } from '../output.ts';
+import { humanReadable, printResult, printTable, type OutputOptions } from '../output.ts';
 import type { Session } from '../session.ts';
 
 const FREQS = ['daily', 'weekly', 'monthly'] as const;
@@ -496,10 +496,6 @@ async function readRuleFile(path: string | undefined): Promise<RuleFile | undefi
   if (path === undefined) return undefined;
   const text = path === '-' ? await readStdin() : await readFile(path, 'utf8');
   return parseRuleFile(text, path === '-' ? 'stdin' : path);
-}
-
-function humanReadable(output: OutputOptions): boolean {
-  return output.isTty && !output.json;
 }
 
 // Session-level operations, shared with the MCP server.

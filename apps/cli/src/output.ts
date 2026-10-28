@@ -38,8 +38,12 @@ export function printResult(
   options: OutputOptions,
   write: (line: string) => void = (line) => process.stdout.write(line),
 ): void {
-  const pretty = options.isTty && !options.json;
-  write(`${JSON.stringify(data, null, pretty ? 2 : undefined)}\n`);
+  write(`${JSON.stringify(data, null, humanReadable(options) ? 2 : undefined)}\n`);
+}
+
+/** Whether a person is watching: a terminal, and `--json` not asked for. */
+export function humanReadable(output: OutputOptions): boolean {
+  return output.isTty && !output.json;
 }
 
 /**

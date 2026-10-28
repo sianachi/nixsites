@@ -110,7 +110,7 @@ import {
 import { downloadFile, listFileVersions, probeFile, uploadFile } from './commands/files.ts';
 import { getOperation } from './commands/operations.ts';
 import { seed, stressRun } from './commands/stress.ts';
-import { outputOptions, printError, printResult, ExitCode } from './output.ts';
+import { outputOptions, printError, printResult, ExitCode, type OutputOptions } from './output.ts';
 import { runWorkspaceMcpServer } from './mcp.ts';
 import { petEval } from './commands/pet-eval.ts';
 import { petEvalChat } from './commands/pet-eval-chat.ts';
@@ -192,6 +192,15 @@ async function run(body: () => Promise<void>): Promise<void> {
   }
 }
 
+/** {@link run} with the global profile and output shape read from the command. */
+function act(
+  command: Command,
+  body: (profile: string | undefined, output: OutputOptions) => Promise<void>,
+): Promise<void> {
+  const flags = globalFlags(command);
+  return run(() => body(flags.profile, outputOptions(flags.json)));
+}
+
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -210,12 +219,11 @@ export function buildProgram(): Command {
     .command('health')
     .description('Check public Core HTTP liveness and service identity without signing in.')
     .requiredOption('--api-url <url>', "Core's origin, e.g. http://localhost:5014")
-    .action(async (options: { apiUrl: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readHealth(options.apiUrl, outputOptions(flags.json)));
-    });
+    .action((options: { apiUrl: string }, command: Command) =>
+      act(command, (profile, output) => readHealth(options.apiUrl, output)),
+    );
 
-  registerConversationCommands(program, { flags: globalFlags, run, output: outputOptions });
+  registerConversationCommands(program, act);
 
   const auth = program.command('auth').description('Sign in, check who you are, and sign out.');
   const pet = program
@@ -257,10 +265,9 @@ export function buildProgram(): Command {
       },
       0,
     )
-    .action(async (operation: string, options: PetOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => petCommand(flags.profile, operation, options, outputOptions(flags.json)));
-    });
+    .action((operation: string, options: PetOptions, command: Command) =>
+      act(command, (profile, output) => petCommand(profile, operation, options, output)),
+    );
 
   // `--workspace`, `--pet` and `--api-url` are already declared on `pet` above and are read
   // back here through `optsWithGlobals()`: declaring them again on this nested command would
@@ -277,10 +284,9 @@ export function buildProgram(): Command {
     )
     .option('--approve', 'claim, run and post the outcome', false)
     .option('--decline', 'claim and post a declined outcome without running it', false)
-    .action(async (toolId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
+    .action((toolId: string, _options: unknown, command: Command) => {
       const options: PetToolRunOptions = command.optsWithGlobals();
-      await run(() => petToolRun(flags.profile, toolId, options, outputOptions(flags.json)));
+      return act(command, (profile, output) => petToolRun(profile, toolId, options, output));
     });
 
   pet
@@ -296,8 +302,7 @@ export function buildProgram(): Command {
       false,
     )
     .option('--keep', 'chat: leave each fixture in place afterwards', false)
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
+    .action((_options: unknown, command: Command) => {
       const options: {
         suite: string;
         scenario?: string;
@@ -310,23 +315,16 @@ export function buildProgram(): Command {
         workspace?: string;
         pet?: string;
       } = command.optsWithGlobals();
-      if (options.suite === 'chat') {
-        const runs = Number(options.runs);
-        if (!Number.isInteger(runs) || runs < 1 || runs > 10)
-          throw new Error('--runs must be a whole number from 1 to 10.');
-        await run(() =>
-          petEvalChat(
-            flags.profile,
-            { ...options, suite: 'chat', runs },
-            outputOptions(flags.json),
-          ),
-        );
-        return;
-      }
-      if (options.suite !== 'design') throw new Error('Choose --suite design or --suite chat.');
-      await run(() =>
-        petEval(flags.profile, { ...options, suite: 'design' }, outputOptions(flags.json)),
-      );
+      return act(command, (profile, output) => {
+        if (options.suite === 'chat') {
+          const runs = Number(options.runs);
+          if (!Number.isInteger(runs) || runs < 1 || runs > 10)
+            throw new Error('--runs must be a whole number from 1 to 10.');
+          return petEvalChat(profile, { ...options, suite: 'chat', runs }, output);
+        }
+        if (options.suite !== 'design') throw new Error('Choose --suite design or --suite chat.');
+        return petEval(profile, { ...options, suite: 'design' }, output);
+      });
     });
 
   auth
@@ -339,40 +337,37 @@ export function buildProgram(): Command {
     .option('--collab-url <url>', 'the collaboration service URL (defaults from the API URL)')
     .option('--media-url <url>', 'legacy media URL retained in the profile for compatibility')
     .option('--no-default', 'store the profile without making it the default')
-    .action(async (options: LoginOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: LoginOptions, command: Command) =>
+      act(command, (profile, output) =>
         login(
           {
             apiUrl: options.apiUrl,
             token: options.token,
             browserUrl: options.browserUrl,
             browser: options.browser,
-            profileName: flags.profile ?? 'default',
+            profileName: profile ?? 'default',
             collabUrl: options.collabUrl,
             mediaUrl: options.mediaUrl,
             makeDefault: options.default !== false,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   auth
     .command('status')
     .description('Show who the current profile acts as.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => status(flags.profile, outputOptions(flags.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => status(profile, output)),
+    );
 
   auth
     .command('logout')
     .description('Revoke a browser-approved CLI session and remove its local profile.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => logout(flags.profile, outputOptions(flags.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => logout(profile, output)),
+    );
 
   const ws = program.command('ws').description('The workspaces a token can reach.');
 
@@ -381,277 +376,179 @@ export function buildProgram(): Command {
     .description('Inspect a durable operation visible to the current profile.')
     .command('get <operationId>')
     .description('Read the current state of an authorized operation.')
-    .action(async (operationId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getOperation(flags.profile, operationId, outputOptions(flags.json)));
-    });
+    .action((operationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getOperation(profile, operationId, output)),
+    );
 
   ws.command('list')
     .description('List one page of workspaces the profile can reach.')
     .option('--limit <count>', 'maximum rows in this page', parseInteger, 50)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(async (options: PageCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listWorkspaces(flags.profile, options, outputOptions(flags.json)));
-    });
+    .action((options: PageCliOptions, command: Command) =>
+      act(command, (profile, output) => listWorkspaces(profile, options, output)),
+    );
 
   ws.command('graph <workspaceId>')
     .description('Read the workspace graph, including its item and link limits.')
-    .action(async (workspaceId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readWorkspaceGraph(flags.profile, workspaceId, outputOptions(flags.json)));
-    });
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => readWorkspaceGraph(profile, workspaceId, output)),
+    );
 
   ws.command('daily-settings <workspaceId>')
     .description('Read daily-note settings, or save all settings from a JSON file.')
     .option('--file <path>', 'JSON settings file to save')
-    .action(async (workspaceId: string, options: { file?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        dailyNoteSettings(flags.profile, workspaceId, options.file, outputOptions(flags.json)),
-      );
-    });
+    .action((workspaceId: string, options: { file?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        dailyNoteSettings(profile, workspaceId, options.file, output),
+      ),
+    );
   ws.command('daily <workspaceId> <date>')
     .description('Open or create the workspace daily note for yyyy-MM-dd.')
-    .action(async (workspaceId: string, date: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => openDailyNote(flags.profile, workspaceId, date, outputOptions(flags.json)));
-    });
+    .action((workspaceId: string, date: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => openDailyNote(profile, workspaceId, date, output)),
+    );
 
   ws.command('create <name>')
     .description('Create a shared workspace.')
-    .action(async (name: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => createWorkspace(flags.profile, name, outputOptions(flags.json)));
-    });
+    .action((name: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => createWorkspace(profile, name, output)),
+    );
   ws.command('rename <workspaceId> <name>')
     .description('Rename a workspace.')
-    .action(async (workspaceId: string, name: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => renameWorkspace(flags.profile, workspaceId, name, outputOptions(flags.json)));
-    });
+    .action((workspaceId: string, name: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => renameWorkspace(profile, workspaceId, name, output)),
+    );
   ws.command('archive <workspaceId>')
     .description('Archive a workspace so it is out of everyday navigation.')
     .option('--yes', 'confirm this destructive operation', false)
-    .action(async (workspaceId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        archiveWorkspace(
-          flags.profile,
-          workspaceId,
-          options.yes === true,
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((workspaceId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        archiveWorkspace(profile, workspaceId, options.yes === true, output),
+      ),
+    );
   ws.command('restore <workspaceId>')
     .description('Restore an archived workspace.')
-    .action(async (workspaceId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => restoreWorkspace(flags.profile, workspaceId, outputOptions(flags.json)));
-    });
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => restoreWorkspace(profile, workspaceId, output)),
+    );
   ws.command('purge <workspaceId>')
     .description('Permanently delete an archived workspace and its stored files.')
     .option('--yes', 'confirm this irreversible operation', false)
-    .action(async (workspaceId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        purgeWorkspace(flags.profile, workspaceId, options.yes === true, outputOptions(flags.json)),
-      );
-    });
+    .action((workspaceId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        purgeWorkspace(profile, workspaceId, options.yes === true, output),
+      ),
+    );
   ws.command('invitations <workspaceId>')
     .description('List invitation history.')
     .option('--limit <count>', 'maximum rows in this page', parseInteger, 50)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(async (workspaceId: string, options: PageCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        listWorkspaceInvitations(flags.profile, workspaceId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((workspaceId: string, options: PageCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        listWorkspaceInvitations(profile, workspaceId, options, output),
+      ),
+    );
   ws.command('invitees <workspaceId>')
     .description('List active users and their workspace invitation eligibility.')
     .option('--query <text>', 'search people by name or email')
     .option('--limit <count>', 'maximum rows in this page', parseInteger, 50)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(
-      async (
-        workspaceId: string,
-        options: PageCliOptions & { query?: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          listWorkspaceInvitees(flags.profile, workspaceId, options, outputOptions(flags.json)),
-        );
-      },
+    .action((workspaceId: string, options: PageCliOptions & { query?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        listWorkspaceInvitees(profile, workspaceId, options, output),
+      ),
     );
   ws.command('invite <workspaceId> <principalId>')
     .requiredOption('--role <role>', 'owner, editor, or viewer')
     .description('Invite a collaborator.')
     .action(
-      async (
-        workspaceId: string,
-        principalId: string,
-        options: { role: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          inviteWorkspaceMember(
-            flags.profile,
-            workspaceId,
-            principalId,
-            options.role,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (workspaceId: string, principalId: string, options: { role: string }, command: Command) =>
+        act(command, (profile, output) =>
+          inviteWorkspaceMember(profile, workspaceId, principalId, options.role, output),
+        ),
     );
   ws.command('accept-invite <workspaceId> <invitationId>')
     .description('Accept an invitation addressed to the current principal.')
-    .action(
-      async (workspaceId: string, invitationId: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          acceptWorkspaceInvitation(
-            flags.profile,
-            workspaceId,
-            invitationId,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((workspaceId: string, invitationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        acceptWorkspaceInvitation(profile, workspaceId, invitationId, output),
+      ),
     );
   ws.command('decline-invite <workspaceId> <invitationId>')
     .description('Decline an invitation and remove provisional access.')
     .option('--yes', 'confirm this destructive operation', false)
     .action(
-      async (
-        workspaceId: string,
-        invitationId: string,
-        options: ConfirmCliOptions,
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      (workspaceId: string, invitationId: string, options: ConfirmCliOptions, command: Command) =>
+        act(command, (profile, output) =>
           declineWorkspaceInvitation(
-            flags.profile,
+            profile,
             workspaceId,
             invitationId,
             options.yes === true,
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
   ws.command('revoke-invite <workspaceId> <invitationId>')
     .description('Revoke a pending invitation.')
     .option('--yes', 'confirm this destructive operation', false)
     .action(
-      async (
-        workspaceId: string,
-        invitationId: string,
-        options: ConfirmCliOptions,
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      (workspaceId: string, invitationId: string, options: ConfirmCliOptions, command: Command) =>
+        act(command, (profile, output) =>
           revokeWorkspaceInvitation(
-            flags.profile,
+            profile,
             workspaceId,
             invitationId,
             options.yes === true,
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
   ws.command('members <workspaceId>')
     .description('List principal and group workspace grants.')
     .option('--limit <count>', 'maximum rows in this page', parseInteger, 50)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(async (workspaceId: string, options: PageCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        listWorkspaceMembers(flags.profile, workspaceId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((workspaceId: string, options: PageCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        listWorkspaceMembers(profile, workspaceId, options, output),
+      ),
+    );
   ws.command('principals <workspaceId>')
     .description('List active direct and group-derived principals available for assignment.')
     .option('--query <text>', 'filter display names by text')
     .option('--limit <count>', 'maximum rows in this page', parseInteger, 50)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(
-      async (
-        workspaceId: string,
-        options: PageCliOptions & { query?: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          listWorkspaceAssignablePrincipals(
-            flags.profile,
-            workspaceId,
-            options,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((workspaceId: string, options: PageCliOptions & { query?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        listWorkspaceAssignablePrincipals(profile, workspaceId, options, output),
+      ),
     );
   ws.command('role <workspaceId> <principalId>')
     .requiredOption('--role <role>', 'owner, editor, or viewer')
     .description('Change a member role.')
     .action(
-      async (
-        workspaceId: string,
-        principalId: string,
-        options: { role: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          changeWorkspaceMemberRole(
-            flags.profile,
-            workspaceId,
-            principalId,
-            options.role,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (workspaceId: string, principalId: string, options: { role: string }, command: Command) =>
+        act(command, (profile, output) =>
+          changeWorkspaceMemberRole(profile, workspaceId, principalId, options.role, output),
+        ),
     );
   ws.command('remove <workspaceId> <principalId>')
     .description('Remove a workspace member.')
     .option('--yes', 'confirm this destructive operation', false)
     .action(
-      async (
-        workspaceId: string,
-        principalId: string,
-        options: ConfirmCliOptions,
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          removeWorkspaceMember(
-            flags.profile,
-            workspaceId,
-            principalId,
-            options.yes === true,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (workspaceId: string, principalId: string, options: ConfirmCliOptions, command: Command) =>
+        act(command, (profile, output) =>
+          removeWorkspaceMember(profile, workspaceId, principalId, options.yes === true, output),
+        ),
     );
   ws.command('leave <workspaceId>')
     .description('Leave a workspace.')
     .option('--yes', 'confirm this destructive operation', false)
-    .action(async (workspaceId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        leaveWorkspace(flags.profile, workspaceId, options.yes === true, outputOptions(flags.json)),
-      );
-    });
+    .action((workspaceId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        leaveWorkspace(profile, workspaceId, options.yes === true, output),
+      ),
+    );
 
   program
     .command('mcp')
@@ -699,15 +596,14 @@ export function buildProgram(): Command {
     .option('--idempotency-key <key>', 'reuse a key to resume the same draft copy')
     .option('--no-wait', 'return a resumable receipt while files copy in the background')
     .action(
-      async (
+      (
         templateId: string,
         options: { idempotencyKey?: string; wait?: boolean },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           beginTemplateDraft(
-            flags.profile,
+            profile,
             templateId,
             {
               ...(options.idempotencyKey === undefined
@@ -715,117 +611,85 @@ export function buildProgram(): Command {
                 : { idempotencyKey: options.idempotencyKey }),
               noWait: options.wait === false,
             },
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
   draft
     .command('show <templateId> <operationId>')
     .description('Read the current draft tree and metadata.')
-    .action(
-      async (templateId: string, operationId: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          getTemplateDraft(flags.profile, templateId, operationId, outputOptions(flags.json)),
-        );
-      },
+    .action((templateId: string, operationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getTemplateDraft(profile, templateId, operationId, output)),
     );
   draft
     .command('update <templateId> <operationId>')
     .description('Patch draft title, description, or initialization from a JSON file.')
     .requiredOption('--file <path>', 'JSON object containing the draft metadata patch')
     .action(
-      async (
-        templateId: string,
-        operationId: string,
-        options: { file: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          updateTemplateDraftFromFile(
-            flags.profile,
-            templateId,
-            operationId,
-            options.file,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (templateId: string, operationId: string, options: { file: string }, command: Command) =>
+        act(command, (profile, output) =>
+          updateTemplateDraftFromFile(profile, templateId, operationId, options.file, output),
+        ),
     );
   draft
     .command('update-item <templateId> <operationId> <sourceId>')
     .description('Patch one draft item from a JSON file.')
     .requiredOption('--file <path>', 'JSON object containing the item patch')
     .action(
-      async (
+      (
         templateId: string,
         operationId: string,
         sourceId: string,
         options: { file: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           updateTemplateDraftItemFromFile(
-            flags.profile,
+            profile,
             templateId,
             operationId,
             sourceId,
             options.file,
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
   draft
     .command('save <templateId> <operationId>')
     .description('Publish the completed draft as the new template revision.')
-    .action(
-      async (templateId: string, operationId: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          saveTemplateDraft(flags.profile, templateId, operationId, outputOptions(flags.json)),
-        );
-      },
+    .action((templateId: string, operationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        saveTemplateDraft(profile, templateId, operationId, output),
+      ),
     );
   draft
     .command('discard <templateId> <operationId>')
     .description('Discard an unfinished draft and its copied bodies.')
-    .action(
-      async (templateId: string, operationId: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          discardTemplateDraft(flags.profile, templateId, operationId, outputOptions(flags.json)),
-        );
-      },
+    .action((templateId: string, operationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        discardTemplateDraft(profile, templateId, operationId, output),
+      ),
     );
   template
     .command('resume <receiptPath>')
     .description('Poll a template file-copy job and replay its original idempotent command.')
-    .action(async (receiptPath: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        resumeTemplateOperation(flags.profile, receiptPath, outputOptions(flags.json)),
-      );
-    });
+    .action((receiptPath: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => resumeTemplateOperation(profile, receiptPath, output)),
+    );
 
   template
     .command('list <workspaceId>')
     .description('List templates visible in a workspace.')
-    .action(async (workspaceId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listTemplates(flags.profile, workspaceId, outputOptions(flags.json)));
-    });
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => listTemplates(profile, workspaceId, output)),
+    );
 
   template
     .command('show <templateId>')
     .description('Read one template and its initialization questions.')
-    .action(async (templateId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getTemplate(flags.profile, templateId, outputOptions(flags.json)));
-    });
+    .action((templateId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getTemplate(profile, templateId, output)),
+    );
 
   template
     .command('capture <workspaceId> <sourceItemId>')
@@ -837,7 +701,7 @@ export function buildProgram(): Command {
     .option('--include-children', 'copy readable descendants', false)
     .option('--no-wait', 'return a resumable receipt while files copy in the background')
     .action(
-      async (
+      (
         workspaceId: string,
         sourceItemId: string,
         options: {
@@ -849,11 +713,10 @@ export function buildProgram(): Command {
           wait?: boolean;
         },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           captureTemplate(
-            flags.profile,
+            profile,
             {
               workspaceId,
               sourceItemId,
@@ -865,13 +728,12 @@ export function buildProgram(): Command {
                 ? {}
                 : { idempotencyKey: options.idempotencyKey }),
             },
-            outputOptions(flags.json),
+            output,
             undefined,
             undefined,
             options.wait !== false,
           ),
-        );
-      },
+        ),
     );
 
   template
@@ -883,7 +745,7 @@ export function buildProgram(): Command {
     .option('--idempotency-key <key>', 'reuse a key to resume a pending draft update')
     .option('--no-wait', 'return a resumable receipt while files copy in the background')
     .action(
-      async (
+      (
         templateId: string,
         options: {
           file: string;
@@ -893,11 +755,10 @@ export function buildProgram(): Command {
           wait?: boolean;
         },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           updateTemplateInitialization(
-            flags.profile,
+            profile,
             templateId,
             options.file,
             {
@@ -907,12 +768,11 @@ export function buildProgram(): Command {
                 ? {}
                 : { idempotencyKey: options.idempotencyKey }),
             },
-            outputOptions(flags.json),
+            output,
             undefined,
             options.wait !== false,
           ),
-        );
-      },
+        ),
     );
 
   template
@@ -932,7 +792,7 @@ export function buildProgram(): Command {
     .option('--idempotency-key <key>', 'reuse a key to resume a pending application')
     .option('--no-wait', 'return a resumable receipt while files copy in the background')
     .action(
-      async (
+      (
         templateId: string,
         options: {
           mode: 'merge' | 'create';
@@ -945,11 +805,10 @@ export function buildProgram(): Command {
           wait?: boolean;
         },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           applyTemplate(
-            flags.profile,
+            profile,
             {
               templateId,
               mode: options.mode,
@@ -966,12 +825,11 @@ export function buildProgram(): Command {
                 ? {}
                 : { idempotencyKey: options.idempotencyKey }),
             },
-            outputOptions(flags.json),
+            output,
             undefined,
             options.wait !== false,
           ),
-        );
-      },
+        ),
     );
 
   template
@@ -989,7 +847,7 @@ export function buildProgram(): Command {
     )
     .option('--expected-revision <revision>', 'preview only this template revision', parseInteger)
     .action(
-      async (
+      (
         templateId: string,
         options: {
           mode: 'merge' | 'create';
@@ -1000,11 +858,10 @@ export function buildProgram(): Command {
           expectedRevision?: number;
         },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           preflightTemplate(
-            flags.profile,
+            profile,
             {
               templateId,
               mode: options.mode,
@@ -1018,10 +875,9 @@ export function buildProgram(): Command {
                 ? {}
                 : { expectedRevision: options.expectedRevision }),
             },
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
 
   template
@@ -1029,67 +885,48 @@ export function buildProgram(): Command {
     .description('Upload a portable template archive and print its validated preview and digest.')
     .option('--idempotency-key <key>', 'reuse a key to resume the same archive preview')
     .action(
-      async (
-        workspaceId: string,
-        path: string,
-        options: { idempotencyKey?: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          previewTemplateArchive(
-            flags.profile,
-            workspaceId,
-            path,
-            options,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (workspaceId: string, path: string, options: { idempotencyKey?: string }, command: Command) =>
+        act(command, (profile, output) =>
+          previewTemplateArchive(profile, workspaceId, path, options, output),
+        ),
     );
 
   template
     .command('import-commit <importId> <digest>')
     .description('Publish a previewed template archive using the exact digest returned by import.')
-    .action(async (importId: string, digest: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        commitTemplateArchive(flags.profile, importId, digest, outputOptions(flags.json)),
-      );
-    });
+    .action((importId: string, digest: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => commitTemplateArchive(profile, importId, digest, output)),
+    );
 
   template
     .command('import-get <importId>')
     .description('Read the current state of an authorized template archive import.')
-    .action(async (importId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getTemplateImport(flags.profile, importId, outputOptions(flags.json)));
-    });
+    .action((importId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getTemplateImport(profile, importId, output)),
+    );
 
   template
     .command('import-cancel <importId>')
     .description('Cancel an authorized template archive import and its pending worker execution.')
     .option('--yes', 'confirm cancellation of this import', false)
-    .action(async (importId: string, options: { yes?: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      if (options.yes !== true) {
-        throw new Error('Pass --yes to confirm cancellation of this template archive import.');
-      }
-      await run(() =>
-        cancelTemplateArchiveImport(flags.profile, importId, outputOptions(flags.json)),
-      );
-    });
+    .action((importId: string, options: { yes?: boolean }, command: Command) =>
+      act(command, (profile, output) => {
+        if (options.yes !== true) {
+          throw new Error('Pass --yes to confirm cancellation of this template archive import.');
+        }
+        return cancelTemplateArchiveImport(profile, importId, output);
+      }),
+    );
 
   template
     .command('export <templateId>')
     .description('Download a portable template archive from the authorized Collab service.')
     .requiredOption('-o, --out <path>', 'write the archive here')
-    .action(async (templateId: string, options: { out: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        exportTemplateArchive(flags.profile, templateId, options.out, outputOptions(flags.json)),
-      );
-    });
+    .action((templateId: string, options: { out: string }, command: Command) =>
+      act(command, (profile, output) =>
+        exportTemplateArchive(profile, templateId, options.out, output),
+      ),
+    );
 
   const note = program
     .command('note')
@@ -1102,44 +939,38 @@ export function buildProgram(): Command {
     .command('read <itemId>')
     .description('Read a note body as Markdown.')
     .option('--raw', 'print only the Markdown text, even when piped', false)
-    .action(async (itemId: string, options: { raw?: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        readNote(flags.profile, itemId, { raw: options.raw === true }, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: { raw?: boolean }, command: Command) =>
+      act(command, (profile, output) =>
+        readNote(profile, itemId, { raw: options.raw === true }, output),
+      ),
+    );
 
   note
     .command('write <itemId>')
     .description('Replace a note body with Markdown from --file or stdin.')
     .option('--file <path>', 'read the Markdown from this file instead of stdin')
-    .action(async (itemId: string, options: { file?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        writeNote(flags.profile, itemId, { file: options.file }, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: { file?: string }, command: Command) =>
+      act(command, (profile, output) => writeNote(profile, itemId, { file: options.file }, output)),
+    );
 
   const canvas = program.command('canvas').description("A canvas's durable elements, as JSON.");
 
   canvas
     .command('read <itemId>')
     .description('Read a canvas scene, including element metadata and deletion tombstones.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readCanvas(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => readCanvas(profile, itemId, output)),
+    );
 
   canvas
     .command('write <itemId>')
     .description('Merge JSON scene elements from --file or stdin; omitted elements are retained.')
     .option('--file <path>', 'read the scene from this file instead of stdin')
-    .action(async (itemId: string, options: { file?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        writeCanvas(flags.profile, itemId, { file: options.file }, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: { file?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        writeCanvas(profile, itemId, { file: options.file }, output),
+      ),
+    );
 
   const history = program
     .command('history')
@@ -1150,81 +981,53 @@ export function buildProgram(): Command {
     .description('List revisions, newest first.')
     .option('--limit <n>', 'maximum revisions in this page (default 50, max 100)', parseInteger)
     .option('--before <seq>', 'page backwards from this sequence number, exclusive', parseInteger)
-    .action(
-      async (itemId: string, options: { limit?: number; before?: number }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          listHistory(
-            flags.profile,
-            itemId,
-            { limit: options.limit, before: options.before },
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, options: { limit?: number; before?: number }, command: Command) =>
+      act(command, (profile, output) =>
+        listHistory(profile, itemId, { limit: options.limit, before: options.before }, output),
+      ),
     );
 
   history
     .command('show <itemId> <seq>')
     .description('Show the document as it stood at one revision.')
     .option('--markdown', 'render as Markdown instead of plaintext', false)
-    .action(
-      async (itemId: string, seq: string, options: { markdown?: boolean }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          showHistory(
-            flags.profile,
-            itemId,
-            parseSeqArg(seq),
-            { markdown: options.markdown === true },
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, seq: string, options: { markdown?: boolean }, command: Command) =>
+      act(command, (profile, output) =>
+        showHistory(
+          profile,
+          itemId,
+          parseSeqArg(seq),
+          { markdown: options.markdown === true },
+          output,
+        ),
+      ),
     );
 
   history
     .command('restore <itemId> <seq>')
     .description('Replace the current document with its state at an earlier revision.')
     .option('--yes', 'confirm this operation', false)
-    .action(async (itemId: string, seq: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        restoreHistory(
-          flags.profile,
-          itemId,
-          parseSeqArg(seq),
-          options.yes === true,
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((itemId: string, seq: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        restoreHistory(profile, itemId, parseSeqArg(seq), options.yes === true, output),
+      ),
+    );
 
   history
     .command('name <itemId> <seq> <name>')
     .description('Name a revision, pinning it so retention can never remove it.')
-    .action(
-      async (itemId: string, seq: string, name: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          nameHistoryVersion(
-            flags.profile,
-            itemId,
-            parseSeqArg(seq),
-            name,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, seq: string, name: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        nameHistoryVersion(profile, itemId, parseSeqArg(seq), name, output),
+      ),
     );
 
   history
     .command('versions <itemId>')
     .description("List a document's named versions.")
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listHistoryVersions(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => listHistoryVersions(profile, itemId, output)),
+    );
 
   const viewsCmd = program
     .command('views')
@@ -1233,44 +1036,35 @@ export function buildProgram(): Command {
   viewsCmd
     .command('get <itemId>')
     .description("List a container's views, which can render, and which opens by default.")
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getViews(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getViews(profile, itemId, output)),
+    );
 
   viewsCmd
     .command('inspect <itemId>')
     .description('Read the saved view configuration, including embedded widgets.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => inspectViews(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => inspectViews(profile, itemId, output)),
+    );
 
   viewsCmd
     .command('set <itemId>')
     .description("Replace a container's view set from a JSON file.")
     .requiredOption('--file <path>', 'a JSON object { "views": [...], "default": <id|null> }')
-    .action(async (itemId: string, options: { file: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setViews(flags.profile, itemId, options.file, outputOptions(flags.json)));
-    });
+    .action((itemId: string, options: { file: string }, command: Command) =>
+      act(command, (profile, output) => setViews(profile, itemId, options.file, output)),
+    );
 
   program
     .command('query <itemId>')
     .description("Run one of a container's views and print the children it shows.")
     .requiredOption('--view <viewId>', "which of the container's views to run")
     .requiredOption('--today <yyyy-mm-dd>', "the caller's own day, for relative rules")
-    .action(async (itemId: string, options: { view: string; today: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        runQuery(
-          flags.profile,
-          itemId,
-          { view: options.view, today: options.today },
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((itemId: string, options: { view: string; today: string }, command: Command) =>
+      act(command, (profile, output) =>
+        runQuery(profile, itemId, { view: options.view, today: options.today }, output),
+      ),
+    );
 
   const schema = program.command('schema').description("An item's declared property schema.");
 
@@ -1281,36 +1075,32 @@ export function buildProgram(): Command {
   structureRead
     .command('read <itemId>')
     .description('Read an item’s effective fields, views and bounded child count.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readStructureOutline(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => readStructureOutline(profile, itemId, output)),
+    );
 
   const blueprint = program.command('blueprint').description('Inspect and build a blueprint.');
   blueprint
     .command('catalog')
     .description('Print the generated structure catalog.')
     .option('--text', 'print the rendered catalog text the pet reads', false)
-    .action(async (options: { text: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => blueprintCatalog(options.text, outputOptions(flags.json)));
-    });
+    .action((options: { text: boolean }, command: Command) =>
+      act(command, (profile, output) => blueprintCatalog(options.text, output)),
+    );
   blueprint
     .command('validate <file>')
     .description('Validate a blueprint without writing it.')
     .option('--parent <id>', 'destination item whose fields are inherited')
-    .action(async (file: string, options: { parent?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => blueprintValidate(flags.profile, file, options, outputOptions(flags.json)));
-    });
+    .action((file: string, options: { parent?: string }, command: Command) =>
+      act(command, (profile, output) => blueprintValidate(profile, file, options, output)),
+    );
   blueprint
     .command('describe <file>')
     .description('Preview a blueprint without writing it.')
     .option('--parent <id>', 'destination item whose fields are inherited')
-    .action(async (file: string, options: { parent?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => blueprintDescribe(flags.profile, file, options, outputOptions(flags.json)));
-    });
+    .action((file: string, options: { parent?: string }, command: Command) =>
+      act(command, (profile, output) => blueprintDescribe(profile, file, options, output)),
+    );
   blueprint
     .command('build <file>')
     .description('Build a blueprint as a draft and print its write ledger.')
@@ -1318,14 +1108,11 @@ export function buildProgram(): Command {
     .option('--workspace <id>', 'workspace for the Pet drafts sandbox')
     .option('--yes', 'confirm the blueprint build', false)
     .action(
-      async (
+      (
         file: string,
         options: { parent?: string; workspace?: string; yes?: boolean },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => blueprintBuild(flags.profile, file, options, outputOptions(flags.json)));
-      },
+      ) => act(command, (profile, output) => blueprintBuild(profile, file, options, output)),
     );
   blueprint
     .command('save <rootId> <spec-file>')
@@ -1333,45 +1120,40 @@ export function buildProgram(): Command {
     .option('--yes', 'confirm template capture', false)
     .requiredOption('--idempotency-key <key>', 'stable key for safe retries')
     .action(
-      async (
+      (
         rootId: string,
         specFile: string,
         options: { yes?: boolean; idempotencyKey: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          blueprintSave(flags.profile, rootId, specFile, options, outputOptions(flags.json)),
-        );
-      },
+      ) =>
+        act(command, (profile, output) =>
+          blueprintSave(profile, rootId, specFile, options, output),
+        ),
     );
 
   schema
     .command('get <itemId>')
     .description('Read the property schema resolved at an item.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getSchema(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getSchema(profile, itemId, output)),
+    );
 
   schema
     .command('set <itemId>')
     .description("Replace an item's declared schema from a JSON file.")
     .requiredOption('--file <path>', 'a JSON object { "properties": [...], "inherit": bool }')
-    .action(async (itemId: string, options: { file: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setSchema(flags.profile, itemId, options.file, outputOptions(flags.json)));
-    });
+    .action((itemId: string, options: { file: string }, command: Command) =>
+      act(command, (profile, output) => setSchema(profile, itemId, options.file, output)),
+    );
 
   const props = program.command('props').description("An item's property values.");
 
   props
     .command('set <itemId> [pairs...]')
     .description('Merge key=value property values onto an item (a null value clears a key).')
-    .action(async (itemId: string, pairs: string[], _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setProps(flags.profile, itemId, pairs, outputOptions(flags.json)));
-    });
+    .action((itemId: string, pairs: string[], _options: unknown, command: Command) =>
+      act(command, (profile, output) => setProps(profile, itemId, pairs, output)),
+    );
 
   const recur = program.command('recur').description("An item's recurrence rule.");
 
@@ -1383,15 +1165,14 @@ export function buildProgram(): Command {
     .option('--weekdays <days>', 'comma-separated mo,tu,we,th,fr,sa,su - weekly rules only')
     .option('--until <yyyy-mm-dd>', 'the last day the item is due, inclusive (default: no end)')
     .action(
-      async (
+      (
         itemId: string,
         options: { freq: string; interval?: string; weekdays?: string; until?: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           setRecurrence(
-            flags.profile,
+            profile,
             itemId,
             {
               freq: options.freq,
@@ -1399,30 +1180,27 @@ export function buildProgram(): Command {
               weekdays: options.weekdays,
               until: options.until,
             },
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
 
   recur
     .command('clear <itemId>')
     .description("Remove an item's recurrence rule; it stops repeating.")
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => clearRecurrence(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => clearRecurrence(profile, itemId, output)),
+    );
 
   recur
     .command('complete <itemId>')
     .description('Mark one occurrence of a recurring item complete.')
     .requiredOption('--on <yyyy-mm-dd>', 'the day of the occurrence to complete')
-    .action(async (itemId: string, options: { on: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        completeRecurrence(flags.profile, itemId, { on: options.on }, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: { on: string }, command: Command) =>
+      act(command, (profile, output) =>
+        completeRecurrence(profile, itemId, { on: options.on }, output),
+      ),
+    );
 
   program
     .command('calendar')
@@ -1430,16 +1208,15 @@ export function buildProgram(): Command {
     .requiredOption('--workspace <id>', 'the workspace to read')
     .requiredOption('--from <yyyy-mm-dd>', 'the first day to include, inclusive')
     .requiredOption('--to <yyyy-mm-dd>', 'the last day to include, inclusive')
-    .action(async (options: { workspace: string; from: string; to: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: { workspace: string; from: string; to: string }, command: Command) =>
+      act(command, (profile, output) =>
         runCalendar(
-          flags.profile,
+          profile,
           { workspaceId: options.workspace, from: options.from, to: options.to },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   program
     .command('my-day')
@@ -1447,10 +1224,9 @@ export function buildProgram(): Command {
       "Print what to do today in one workspace: tasks due, overdue or assigned, and today's habits, with coverage.",
     )
     .requiredOption('--workspace <id>', 'the workspace to read')
-    .action(async (options: { workspace: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => runMyDay(flags.profile, options.workspace, outputOptions(flags.json)));
-    });
+    .action((options: { workspace: string }, command: Command) =>
+      act(command, (profile, output) => runMyDay(profile, options.workspace, output)),
+    );
 
   const money = program
     .command('finance')
@@ -1465,20 +1241,16 @@ export function buildProgram(): Command {
     .option('--opening-cash <amount>', 'cash the day before the start month', '0')
     .option('--emergency-months <months>', 'months of outgoings to hold', '3')
     .option('--timezone <iana>', 'where today is decided', 'Europe/London')
-    .action(async (rootId: string, options: financeCommands.SetupOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.setup(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: financeCommands.SetupOptions, command: Command) =>
+      act(command, (profile, output) => financeCommands.setup(profile, rootId, options, output)),
+    );
 
   money
     .command('get <rootId>')
     .description('Read settings, accounts, budget lines and closed months.')
-    .action(async (rootId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => financeCommands.get(flags.profile, rootId, outputOptions(flags.json)));
-    });
+    .action((rootId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => financeCommands.get(profile, rootId, output)),
+    );
 
   const accountFlags = (target: Command): Command =>
     target
@@ -1494,34 +1266,24 @@ export function buildProgram(): Command {
       .option('--archived', 'keep for history only');
 
   accountFlags(money.command('account-add <rootId>').description('Add an account.')).action(
-    async (rootId: string, options: financeCommands.AccountOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.addAccount(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    },
+    (rootId: string, options: financeCommands.AccountOptions, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.addAccount(profile, rootId, options, output),
+      ),
   );
 
   accountFlags(
     money.command('account-set <rootId> <accountId>').description('Change an account.'),
   ).action(
-    async (
+    (
       rootId: string,
       accountId: string,
       options: financeCommands.AccountOptions,
       command: Command,
-    ) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.setAccount(
-          flags.profile,
-          rootId,
-          accountId,
-          options,
-          outputOptions(flags.json),
-        ),
-      );
-    },
+    ) =>
+      act(command, (profile, output) =>
+        financeCommands.setAccount(profile, rootId, accountId, options, output),
+      ),
   );
 
   const lineFlags = (target: Command): Command =>
@@ -1543,28 +1305,17 @@ export function buildProgram(): Command {
       .option('--archived', 'plan no further');
 
   lineFlags(money.command('line-add <rootId>').description('Add a budget line.')).action(
-    async (rootId: string, options: financeCommands.LineOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.addLine(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    },
+    (rootId: string, options: financeCommands.LineOptions, command: Command) =>
+      act(command, (profile, output) => financeCommands.addLine(profile, rootId, options, output)),
   );
 
   lineFlags(
     money.command('line-set <rootId> <lineId>').description('Change a budget line.'),
   ).action(
-    async (
-      rootId: string,
-      lineId: string,
-      options: financeCommands.LineOptions,
-      command: Command,
-    ) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.setLine(flags.profile, rootId, lineId, options, outputOptions(flags.json)),
-      );
-    },
+    (rootId: string, lineId: string, options: financeCommands.LineOptions, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.setLine(profile, rootId, lineId, options, output),
+      ),
   );
 
   money
@@ -1576,12 +1327,9 @@ export function buildProgram(): Command {
     .option('--line <lineId>', 'budget line it counts against')
     .option('--date <yyyy-mm-dd>', 'day it happened; defaults to today')
     .option('--cleared', 'seen on a statement')
-    .action(async (rootId: string, options: financeCommands.AddOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.add(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: financeCommands.AddOptions, command: Command) =>
+      act(command, (profile, output) => financeCommands.add(profile, rootId, options, output)),
+    );
 
   money
     .command('transaction-set <rootId> <transactionId>')
@@ -1594,23 +1342,15 @@ export function buildProgram(): Command {
     .option('--unassigned', 'remove its budget line assignment')
     .requiredOption('--cleared <true|false>', 'whether it has been seen on a statement')
     .action(
-      async (
+      (
         rootId: string,
         transactionId: string,
         options: financeCommands.SetTransactionOptions,
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.setTransaction(
-            flags.profile,
-            rootId,
-            transactionId,
-            options,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      ) =>
+        act(command, (profile, output) =>
+          financeCommands.setTransaction(profile, rootId, transactionId, options, output),
+        ),
     );
 
   money
@@ -1629,13 +1369,10 @@ export function buildProgram(): Command {
     .option('--source <source>', 'manual, scheduled or import')
     .option('--min-amount <amount>', 'minimum amount magnitude')
     .option('--max-amount <amount>', 'maximum amount magnitude')
-    .action(
-      async (rootId: string, options: financeCommands.TransactionsOptions, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.transactions(flags.profile, rootId, options, outputOptions(flags.json)),
-        );
-      },
+    .action((rootId: string, options: financeCommands.TransactionsOptions, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.transactions(profile, rootId, options, output),
+      ),
     );
 
   money
@@ -1645,16 +1382,12 @@ export function buildProgram(): Command {
     .option('--to <yyyy-mm>', 'last month; defaults to --from')
     .option('--account <accountId>', "only this account's lines, with its own totals")
     .action(
-      async (
+      (
         rootId: string,
         options: { from?: string; to?: string; account?: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.budget(flags.profile, rootId, options, outputOptions(flags.json)),
-        );
-      },
+      ) =>
+        act(command, (profile, output) => financeCommands.budget(profile, rootId, options, output)),
     );
 
   money
@@ -1666,95 +1399,62 @@ export function buildProgram(): Command {
     .option('--description <text>', 'what to call the transaction; defaults to the line name')
     .option('--date <yyyy-mm-dd>', 'day to record it on, inside the month')
     .action(
-      async (
+      (
         rootId: string,
         lineId: string,
         value: string,
         options: financeCommands.ActualOptions,
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.actual(
-            flags.profile,
-            rootId,
-            lineId,
-            value,
-            options,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      ) =>
+        act(command, (profile, output) =>
+          financeCommands.actual(profile, rootId, lineId, value, options, output),
+        ),
     );
 
   money
     .command('transaction-delete <rootId> <transactionId>')
     .description('Delete a transaction in an open month; it can be restored like any item.')
-    .action(async (rootId: string, transactionId: string, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.deleteTransaction(
-          flags.profile,
-          rootId,
-          transactionId,
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((rootId: string, transactionId: string, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.deleteTransaction(profile, rootId, transactionId, output),
+      ),
+    );
 
   money
     .command('accounts <rootId>')
     .description('Every account with the figure that matters for it in a month.')
     .option('--month <yyyy-mm>', 'defaults to the current month')
-    .action(async (rootId: string, options: { month?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.accounts(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: { month?: string }, command: Command) =>
+      act(command, (profile, output) => financeCommands.accounts(profile, rootId, options, output)),
+    );
 
   money
     .command('loan <rootId> <accountId>')
     .description('A loan schedule, and what a different overpayment buys.')
     .option('--overpayment <amount>', 'try this overpayment each month')
     .action(
-      async (
-        rootId: string,
-        accountId: string,
-        options: { overpayment?: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.loan(
-            flags.profile,
-            rootId,
-            accountId,
-            options,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+      (rootId: string, accountId: string, options: { overpayment?: string }, command: Command) =>
+        act(command, (profile, output) =>
+          financeCommands.loan(profile, rootId, accountId, options, output),
+        ),
     );
 
   money
     .command('cashflow <rootId>')
     .description('Cash month by month across the horizon.')
-    .action(async (rootId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => financeCommands.cashFlow(flags.profile, rootId, outputOptions(flags.json)));
-    });
+    .action((rootId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => financeCommands.cashFlow(profile, rootId, output)),
+    );
 
   money
     .command('dashboard <rootId>')
     .description("The month's position, cards, loans, what to watch and what is due soon.")
     .option('--month <yyyy-mm>', 'defaults to the current month')
-    .action(async (rootId: string, options: { month?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.dashboard(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: { month?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.dashboard(profile, rootId, options, output),
+      ),
+    );
 
   money
     .command('month <rootId> <month>')
@@ -1762,28 +1462,25 @@ export function buildProgram(): Command {
     .option('--close', 'close the month')
     .option('--reopen', 'reopen the month')
     .action(
-      async (
+      (
         rootId: string,
         value: string,
         options: { close?: boolean; reopen?: boolean },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          financeCommands.month(flags.profile, rootId, value, options, outputOptions(flags.json)),
-        );
-      },
+      ) =>
+        act(command, (profile, output) =>
+          financeCommands.month(profile, rootId, value, options, output),
+        ),
     );
 
   money
     .command('post <rootId> <month>')
     .description("Post every scheduled line's planned amount for the month, once.")
-    .action(async (rootId: string, value: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.postScheduled(flags.profile, rootId, value, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, value: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.postScheduled(profile, rootId, value, output),
+      ),
+    );
 
   money
     .command('import <rootId>')
@@ -1791,12 +1488,11 @@ export function buildProgram(): Command {
     .requiredOption('--account <accountId>', 'the account the statement is for')
     .requiredOption('--file <path>', 'the CSV file')
     .option('--commit', 'write what the preview would')
-    .action(async (rootId: string, options: financeCommands.ImportOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.importStatement(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: financeCommands.ImportOptions, command: Command) =>
+      act(command, (profile, output) =>
+        financeCommands.importStatement(profile, rootId, options, output),
+      ),
+    );
 
   money
     .command('seed <rootId>')
@@ -1804,12 +1500,9 @@ export function buildProgram(): Command {
       'Set up a root from a plan file: settings, accounts, lines, actuals and month closes.',
     )
     .requiredOption('--file <path>', 'the plan JSON')
-    .action(async (rootId: string, options: { file: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        financeCommands.seed(flags.profile, rootId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((rootId: string, options: { file: string }, command: Command) =>
+      act(command, (profile, output) => financeCommands.seed(profile, rootId, options, output)),
+    );
 
   const habit = program.command('habit').description('Configure and record a habit tracker.');
 
@@ -1823,7 +1516,7 @@ export function buildProgram(): Command {
     .requiredOption('--target <number>', 'target quantity per scheduled day')
     .requiredOption('--unit <unit>', 'unit label, for example minutes or glasses')
     .action(
-      async (
+      (
         habitId: string,
         options: {
           frequency: string;
@@ -1834,29 +1527,24 @@ export function buildProgram(): Command {
           unit: string;
         },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => setHabit(flags.profile, habitId, options, outputOptions(flags.json)));
-      },
+      ) => act(command, (profile, output) => setHabit(profile, habitId, options, output)),
     );
 
   habit
     .command('status <habitId> <status>')
     .description('Set active, paused, or archived; recorded history is retained.')
-    .action(async (habitId: string, status: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setHabitStatus(flags.profile, habitId, status, outputOptions(flags.json)));
-    });
+    .action((habitId: string, status: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => setHabitStatus(profile, habitId, status, output)),
+    );
 
   habit
     .command('get <habitId>')
     .description('Read habit settings, check-ins, and weekly progress for a date window.')
     .requiredOption('--from <yyyy-mm-dd>', 'first day to include')
     .requiredOption('--to <yyyy-mm-dd>', 'last day to include')
-    .action(async (habitId: string, options: { from: string; to: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readHabit(flags.profile, habitId, options, outputOptions(flags.json)));
-    });
+    .action((habitId: string, options: { from: string; to: string }, command: Command) =>
+      act(command, (profile, output) => readHabit(profile, habitId, options, output)),
+    );
 
   habit
     .command('check-in <habitId>')
@@ -1865,24 +1553,20 @@ export function buildProgram(): Command {
     .option('--quantity <number>', 'quantity completed on that day')
     .option('--completed', 'mark the day complete', true)
     .action(
-      async (
+      (
         habitId: string,
         options: { on: string; quantity?: string; completed: boolean },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => checkIn(flags.profile, habitId, options, outputOptions(flags.json)));
-      },
+      ) => act(command, (profile, output) => checkIn(profile, habitId, options, output)),
     );
 
   habit
     .command('undo <habitId>')
     .description('Remove the check-in for one scheduled day.')
     .requiredOption('--on <yyyy-mm-dd>', 'scheduled day')
-    .action(async (habitId: string, options: { on: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => undoCheckIn(flags.profile, habitId, options.on, outputOptions(flags.json)));
-    });
+    .action((habitId: string, options: { on: string }, command: Command) =>
+      act(command, (profile, output) => undoCheckIn(profile, habitId, options.on, output)),
+    );
 
   const inbox = program
     .command('notifications')
@@ -1893,26 +1577,23 @@ export function buildProgram(): Command {
     .description('List one page of your notifications, newest first.')
     .option('--unread', 'only unread notifications', false)
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(async (options: { unread: boolean; cursor?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listNotifications(flags.profile, options, outputOptions(flags.json)));
-    });
+    .action((options: { unread: boolean; cursor?: string }, command: Command) =>
+      act(command, (profile, output) => listNotifications(profile, options, output)),
+    );
 
   inbox
     .command('read <notificationId>')
     .description('Mark one notification read.')
-    .action(async (notificationId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readNotification(flags.profile, notificationId, outputOptions(flags.json)));
-    });
+    .action((notificationId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => readNotification(profile, notificationId, output)),
+    );
 
   inbox
     .command('read-all')
     .description('Mark every notification read.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => readAllNotifications(flags.profile, outputOptions(flags.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => readAllNotifications(profile, output)),
+    );
 
   const prefs = inbox
     .command('prefs')
@@ -1921,10 +1602,9 @@ export function buildProgram(): Command {
   prefs
     .command('get')
     .description('Print your preferences.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getPreferences(flags.profile, outputOptions(flags.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => getPreferences(profile, output)),
+    );
 
   prefs
     .command('set')
@@ -1941,10 +1621,9 @@ export function buildProgram(): Command {
       [],
     )
     .option('--unmute <containerId>', 'unmute a container (repeatable)', collectOption, [])
-    .action(async (options: PreferenceFlags, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setPreferences(flags.profile, options, outputOptions(flags.json)));
-    });
+    .action((options: PreferenceFlags, command: Command) =>
+      act(command, (profile, output) => setPreferences(profile, options, output)),
+    );
 
   const calsync = program
     .command('calsync')
@@ -1955,35 +1634,30 @@ export function buildProgram(): Command {
   calsync
     .command('connections')
     .description('The accounts connected for calendar sync.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        runCalendarSync(flags.profile, executeListConnections, outputOptions(flags.json)),
-      );
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => runCalendarSync(profile, executeListConnections, output)),
+    );
 
   calsync
     .command('calendars <connectionId>')
     .description("A connected account's calendars, read live from the provider.")
-    .action(async (connectionId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => {
+    .action((connectionId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => {
         parseCalendarSyncId(connectionId, 'The connection');
         return runCalendarSync(
-          flags.profile,
+          profile,
           (session) => executeListCalendars(session, connectionId),
-          outputOptions(flags.json),
+          output,
         );
-      });
-    });
+      }),
+    );
 
   calsync
     .command('links')
     .description('The calendars linked into your workspaces.')
-    .action(async (_options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => runCalendarSync(flags.profile, executeListLinks, outputOptions(flags.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, (profile, output) => runCalendarSync(profile, executeListLinks, output)),
+    );
 
   calsync
     .command('link <connectionId> <externalCalendarId>')
@@ -1992,23 +1666,21 @@ export function buildProgram(): Command {
     .requiredOption('--title <title>', 'the name of the item that holds the events')
     .option('--direction <two_way|import_only>', 'which way changes travel', 'two_way')
     .action(
-      async (
+      (
         connectionId: string,
         externalCalendarId: string,
         options: { workspace: string; title: string; direction: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => {
+      ) =>
+        act(command, (profile, output) => {
           parseCalendarSyncId(connectionId, 'The connection');
           parseCalendarSyncId(options.workspace, '--workspace');
           return runCalendarSync(
-            flags.profile,
+            profile,
             (session) => executeCreateLink(session, connectionId, externalCalendarId, options),
-            outputOptions(flags.json),
+            output,
           );
-        });
-      },
+        }),
     );
 
   calsync
@@ -2016,22 +1688,15 @@ export function buildProgram(): Command {
     .description("Change a link's direction, or pause and resume it.")
     .option('--direction <two_way|import_only>', 'which way changes travel')
     .option('--status <active|paused>', 'whether the link syncs')
-    .action(
-      async (
-        linkId: string,
-        options: { direction?: string; status?: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => {
-          parseCalendarSyncId(linkId, 'The link');
-          return runCalendarSync(
-            flags.profile,
-            (session) => executeUpdateLink(session, linkId, options),
-            outputOptions(flags.json),
-          );
-        });
-      },
+    .action((linkId: string, options: { direction?: string; status?: string }, command: Command) =>
+      act(command, (profile, output) => {
+        parseCalendarSyncId(linkId, 'The link');
+        return runCalendarSync(
+          profile,
+          (session) => executeUpdateLink(session, linkId, options),
+          output,
+        );
+      }),
     );
 
   calsync
@@ -2041,17 +1706,16 @@ export function buildProgram(): Command {
         'are kept as ordinary items or moved to the trash, as --items says.',
     )
     .requiredOption('--items <keep|trash>', 'what becomes of the notes the link created')
-    .action(async (linkId: string, options: { items: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => {
+    .action((linkId: string, options: { items: string }, command: Command) =>
+      act(command, (profile, output) => {
         parseCalendarSyncId(linkId, 'The link');
         return runCalendarSync(
-          flags.profile,
+          profile,
           (session) => executeUnlink(session, linkId, options.items),
-          outputOptions(flags.json),
+          output,
         );
-      });
-    });
+      }),
+    );
 
   calsync
     .command('workspace-links')
@@ -2060,17 +1724,16 @@ export function buildProgram(): Command {
         "workspace's owner and tenant administrators.",
     )
     .requiredOption('--workspace <id>', 'the workspace to read')
-    .action(async (options: { workspace: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => {
+    .action((options: { workspace: string }, command: Command) =>
+      act(command, (profile, output) => {
         parseCalendarSyncId(options.workspace, '--workspace');
         return runCalendarSync(
-          flags.profile,
+          profile,
           (session) => executeListWorkspaceLinks(session, options.workspace),
-          outputOptions(flags.json),
+          output,
         );
-      });
-    });
+      }),
+    );
 
   calsync
     .command('workspace-unlink <containerItemId>')
@@ -2081,17 +1744,12 @@ export function buildProgram(): Command {
     .requiredOption('--workspace <id>', 'the workspace the item is in')
     .requiredOption('--items <keep|trash>', 'what becomes of the notes the link created')
     .action(
-      async (
-        containerItemId: string,
-        options: { workspace: string; items: string },
-        command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() => {
+      (containerItemId: string, options: { workspace: string; items: string }, command: Command) =>
+        act(command, (profile, output) => {
           parseCalendarSyncId(containerItemId, 'The item');
           parseCalendarSyncId(options.workspace, '--workspace');
           return runCalendarSync(
-            flags.profile,
+            profile,
             (session) =>
               executeUnlinkWorkspaceLink(
                 session,
@@ -2099,41 +1757,30 @@ export function buildProgram(): Command {
                 containerItemId,
                 options.items,
               ),
-            outputOptions(flags.json),
+            output,
           );
-        });
-      },
+        }),
     );
 
   calsync
     .command('sync <linkId>')
     .description('Ask for a sync round now.')
-    .action(async (linkId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => {
+    .action((linkId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => {
         parseCalendarSyncId(linkId, 'The link');
-        return runCalendarSync(
-          flags.profile,
-          (session) => executeSyncLink(session, linkId),
-          outputOptions(flags.json),
-        );
-      });
-    });
+        return runCalendarSync(profile, (session) => executeSyncLink(session, linkId), output);
+      }),
+    );
 
   calsync
     .command('log <linkId>')
     .description("The newest entries of a link's sync log.")
-    .action(async (linkId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => {
+    .action((linkId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => {
         parseCalendarSyncId(linkId, 'The link');
-        return runCalendarSync(
-          flags.profile,
-          (session) => executeLinkLog(session, linkId),
-          outputOptions(flags.json),
-        );
-      });
-    });
+        return runCalendarSync(profile, (session) => executeLinkLog(session, linkId), output);
+      }),
+    );
 
   const remind = program
     .command('remind')
@@ -2146,18 +1793,16 @@ export function buildProgram(): Command {
         '(2026-10-01T08:00:00Z), a zoned time (...+01:00[Europe/London]) or relative (+90m, +2h, +1d).',
     )
     .option('--zone <iana>', 'the zone a local time is read in (default: your preference)')
-    .action(async (itemId: string, when: string, options: { zone?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => setReminder(flags.profile, itemId, when, options, outputOptions(flags.json)));
-    });
+    .action((itemId: string, when: string, options: { zone?: string }, command: Command) =>
+      act(command, (profile, output) => setReminder(profile, itemId, when, options, output)),
+    );
 
   remind
     .command('clear <itemId>')
     .description("Remove the item's reminder.")
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => clearReminder(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => clearReminder(profile, itemId, output)),
+    );
 
   const auto = program
     .command('automations')
@@ -2169,18 +1814,16 @@ export function buildProgram(): Command {
     .command('list')
     .description('List your rules in a workspace.')
     .requiredOption('--workspace <id>', 'the workspace to read')
-    .action(async (options: WorkspaceOption, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listAutomations(flags.profile, options.workspace, outputOptions(flags.json)));
-    });
+    .action((options: WorkspaceOption, command: Command) =>
+      act(command, (profile, output) => listAutomations(profile, options.workspace, output)),
+    );
 
   auto
     .command('get <ruleId>')
     .description('Print one rule; the output can be edited and passed back to update --file.')
-    .action(async (ruleId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getAutomation(flags.profile, ruleId, outputOptions(flags.json)));
-    });
+    .action((ruleId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getAutomation(profile, ruleId, output)),
+    );
 
   ruleFlags(
     auto
@@ -2188,20 +1831,18 @@ export function buildProgram(): Command {
       .description('Create a rule from flags or a JSON file.')
       .requiredOption('--workspace <id>', 'the workspace the rule belongs to')
       .option('--disabled', 'create it switched off'),
-  ).action(async (options: CreateAutomationOptions, command: Command) => {
-    const flags = globalFlags(command);
-    await run(() => createAutomation(flags.profile, options, outputOptions(flags.json)));
-  });
+  ).action((options: CreateAutomationOptions, command: Command) =>
+    act(command, (profile, output) => createAutomation(profile, options, output)),
+  );
 
   ruleFlags(
     auto
       .command('update <ruleId>')
       .description('Change a rule: flags replace the parts they name; --file replaces its members.')
       .option('--revision <n>', 'save only if the rule is still at this revision'),
-  ).action(async (ruleId: string, options: UpdateAutomationOptions, command: Command) => {
-    const flags = globalFlags(command);
-    await run(() => updateAutomation(flags.profile, ruleId, options, outputOptions(flags.json)));
-  });
+  ).action((ruleId: string, options: UpdateAutomationOptions, command: Command) =>
+    act(command, (profile, output) => updateAutomation(profile, ruleId, options, output)),
+  );
 
   for (const [name, enabled] of [
     ['enable', true],
@@ -2214,64 +1855,54 @@ export function buildProgram(): Command {
           ? 'Switch a rule on; this also clears an automatic disable after repeated failures.'
           : 'Switch a rule off and cancel its pending triggers.',
       )
-      .action(async (ruleId: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          setAutomationEnabled(flags.profile, ruleId, enabled, outputOptions(flags.json)),
-        );
-      });
+      .action((ruleId: string, _options: unknown, command: Command) =>
+        act(command, (profile, output) => setAutomationEnabled(profile, ruleId, enabled, output)),
+      );
   }
 
   auto
     .command('delete <ruleId>')
     .description('Delete a rule and its run log.')
     .option('--yes', 'confirm this destructive operation', false)
-    .action(async (ruleId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        deleteAutomation(flags.profile, ruleId, options.yes === true, outputOptions(flags.json)),
-      );
-    });
+    .action((ruleId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        deleteAutomation(profile, ruleId, options.yes === true, output),
+      ),
+    );
 
   auto
     .command('runs <ruleId>')
     .description("One page of a rule's run log, newest first.")
     .option('--cursor <cursor>', 'opaque cursor returned by the previous page')
-    .action(async (ruleId: string, options: { cursor?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        listAutomationRuns(flags.profile, ruleId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((ruleId: string, options: { cursor?: string }, command: Command) =>
+      act(command, (profile, output) => listAutomationRuns(profile, ruleId, options, output)),
+    );
 
   auto
     .command('run <ruleId>')
     .description('Run a rule now, as you; the result is the recorded run.')
     .option('--item <itemId>', 'the triggering item, for rules that act on one')
-    .action(async (ruleId: string, options: { item?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => runAutomation(flags.profile, ruleId, options, outputOptions(flags.json)));
-    });
+    .action((ruleId: string, options: { item?: string }, command: Command) =>
+      act(command, (profile, output) => runAutomation(profile, ruleId, options, output)),
+    );
 
   auto
     .command('test <ruleId>')
     .description('Dry-run a rule: whether it would run now and what its actions would do.')
     .option('--item <itemId>', 'the triggering item, for rules that act on one')
-    .action(async (ruleId: string, options: { item?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => testAutomation(flags.profile, ruleId, options, outputOptions(flags.json)));
-    });
+    .action((ruleId: string, options: { item?: string }, command: Command) =>
+      act(command, (profile, output) => testAutomation(profile, ruleId, options, output)),
+    );
 
   program
     .command('search <query>')
     .description('Full-text search across the items you can see.')
     .option('--limit <n>', 'cap the number of hits', (value) => Number.parseInt(value, 10))
-    .action(async (query: string, options: { limit?: number }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        runSearch(flags.profile, query, { limit: options.limit }, outputOptions(flags.json)),
-      );
-    });
+    .action((query: string, options: { limit?: number }, command: Command) =>
+      act(command, (profile, output) =>
+        runSearch(profile, query, { limit: options.limit }, output),
+      ),
+    );
 
   program
     .command('export <itemId>')
@@ -2280,21 +1911,19 @@ export function buildProgram(): Command {
     .option('--scope <scope>', 'item | subtree', 'item')
     .option('-o, --out <file>', 'write the export here instead of stdout')
     .action(
-      async (
+      (
         itemId: string,
         options: { format: string; scope: string; out?: string },
         command: Command,
-      ) => {
-        const flags = globalFlags(command);
-        await run(() =>
+      ) =>
+        act(command, (profile, output) =>
           runExport(
-            flags.profile,
+            profile,
             itemId,
             { format: options.format, scope: options.scope, out: options.out },
-            outputOptions(flags.json),
+            output,
           ),
-        );
-      },
+        ),
     );
 
   program
@@ -2306,23 +1935,20 @@ export function buildProgram(): Command {
     .option('--parent <id>', 'the container to import under (default: workspace root)')
     .option('--dry-run', 'print the mapping report without creating anything', false)
     .option('--no-wait', 'return a resumable receipt after the preview is queued')
-    .action(
-      async (path: string, options: ImportCliOptions & { wait?: boolean }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          runImport(
-            flags.profile,
-            {
-              path,
-              workspaceId: options.workspace,
-              parentId: options.parent,
-              dryRun: options.dryRun === true,
-              noWait: options.wait === false,
-            },
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((path: string, options: ImportCliOptions & { wait?: boolean }, command: Command) =>
+      act(command, (profile, output) =>
+        runImport(
+          profile,
+          {
+            path,
+            workspaceId: options.workspace,
+            parentId: options.parent,
+            dryRun: options.dryRun === true,
+            noWait: options.wait === false,
+          },
+          output,
+        ),
+      ),
     );
 
   const documentImport = program
@@ -2331,37 +1957,31 @@ export function buildProgram(): Command {
   documentImport
     .command('get <importId>')
     .description('Read durable document import state.')
-    .action(async (importId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(async () => {
-        printResult(await getDocumentImport(flags.profile, importId), outputOptions(flags.json));
-      });
-    });
+    .action((importId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        printResult(await getDocumentImport(profile, importId), output);
+      }),
+    );
   documentImport
     .command('commit <importId>')
     .description('Commit a preview-ready document import.')
     .option('--no-wait', 'return a resumable receipt while the import commits')
-    .action(async (importId: string, options: { wait?: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(async () => {
-        printResult(
-          await commitDocumentImport(flags.profile, importId, options.wait !== false),
-          outputOptions(flags.json),
-        );
-      });
-    });
+    .action((importId: string, options: { wait?: boolean }, command: Command) =>
+      act(command, async (profile, output) => {
+        printResult(await commitDocumentImport(profile, importId, options.wait !== false), output);
+      }),
+    );
   documentImport
     .command('cancel <importId>')
     .description('Cancel a durable document import.')
     .option('--yes', 'confirm cancellation of this import', false)
-    .action(async (importId: string, options: { yes?: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      if (options.yes !== true)
-        throw new Error('Pass --yes to confirm cancellation of this import.');
-      await run(async () => {
-        printResult(await cancelDocumentImport(flags.profile, importId), outputOptions(flags.json));
-      });
-    });
+    .action((importId: string, options: { yes?: boolean }, command: Command) =>
+      act(command, async (profile, output) => {
+        if (options.yes !== true)
+          throw new Error('Pass --yes to confirm cancellation of this import.');
+        printResult(await cancelDocumentImport(profile, importId), output);
+      }),
+    );
 
   const file = program
     .command('file')
@@ -2370,70 +1990,47 @@ export function buildProgram(): Command {
     .command('probe <itemId>')
     .description('Check preview or thumbnail delivery, including byte-range support.')
     .option('--thumbnail', 'check the generated JPEG thumbnail', false)
-    .action(async (itemId: string, options: { thumbnail: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        probeFile(flags.profile, itemId, options.thumbnail, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: { thumbnail: boolean }, command: Command) =>
+      act(command, (profile, output) => probeFile(profile, itemId, options.thumbnail, output)),
+    );
   file
     .command('upload <path>')
     .requiredOption('--workspace <id>', 'the workspace to upload into')
     .option('--parent <id>', 'the parent item')
-    .action(
-      async (path: string, options: { workspace: string; parent?: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          uploadFile(
-            flags.profile,
-            {
-              path,
-              workspaceId: options.workspace,
-              ...(options.parent === undefined ? {} : { parentId: options.parent }),
-            },
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((path: string, options: { workspace: string; parent?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        uploadFile(
+          profile,
+          {
+            path,
+            workspaceId: options.workspace,
+            ...(options.parent === undefined ? {} : { parentId: options.parent }),
+          },
+          output,
+        ),
+      ),
     );
   file
     .command('replace <itemId> <path>')
     .requiredOption('--workspace <id>', 'the item workspace')
-    .action(
-      async (itemId: string, path: string, options: { workspace: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          uploadFile(
-            flags.profile,
-            { path, workspaceId: options.workspace, targetItemId: itemId },
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, path: string, options: { workspace: string }, command: Command) =>
+      act(command, (profile, output) =>
+        uploadFile(profile, { path, workspaceId: options.workspace, targetItemId: itemId }, output),
+      ),
     );
   file
     .command('versions <itemId>')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => listFileVersions(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => listFileVersions(profile, itemId, output)),
+    );
   file
     .command('download <itemId>')
     .requiredOption('-o, --out <path>', 'output file')
     .option('--version <id>', 'historical version id')
-    .action(
-      async (itemId: string, options: { out: string; version?: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          downloadFile(
-            flags.profile,
-            itemId,
-            options.out,
-            options.version,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, options: { out: string; version?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        downloadFile(profile, itemId, options.out, options.version, output),
+      ),
     );
 
   const stress = program.command('stress').description('Seed and exercise a workspace at scale.');
@@ -2453,11 +2050,10 @@ export function buildProgram(): Command {
       "a property each child carries; '#n' is the child's index and '#n%<k>' its index modulo k, " +
         'so a seed produces a spread rather than one repeated value',
     )
-    .action(async (options: SeedCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: SeedCliOptions, command: Command) =>
+      act(command, (profile, output) =>
         seed(
-          flags.profile,
+          profile,
           {
             workspaceId: options.workspace,
             count: options.count,
@@ -2466,10 +2062,10 @@ export function buildProgram(): Command {
             type: options.type,
             properties: options.prop,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   stress
     .command('run')
@@ -2507,11 +2103,10 @@ export function buildProgram(): Command {
     )
     .option('--view <viewId>', "query-storm/chart-storm: which of the container's views to run")
     .option('--today <yyyy-mm-dd>', "query-storm: the caller's own day, for relative rules")
-    .action(async (options: RunCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: RunCliOptions, command: Command) =>
+      act(command, (profile, output) =>
         stressRun(
-          flags.profile,
+          profile,
           {
             scenario: options.scenario,
             iterations: options.iterations,
@@ -2530,10 +2125,10 @@ export function buildProgram(): Command {
             viewId: options.view,
             today: options.today,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   const item = program.command('item').description('Read and write the item tree.');
 
@@ -2543,28 +2138,26 @@ export function buildProgram(): Command {
     .requiredOption('--workspace <id>', 'the workspace to list within')
     .option('--parent <id>', 'the container whose children to list (default: workspace roots)')
     .option('--deleted', 'include soft-deleted items', false)
-    .action(async (options: LsOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: LsOptions, command: Command) =>
+      act(command, (profile, output) =>
         listItems(
-          flags.profile,
+          profile,
           {
             workspaceId: options.workspace,
             parentId: options.parent,
             includeDeleted: options.deleted === true,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   item
     .command('get <itemId>')
     .description('Read one item by id.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => getItem(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => getItem(profile, itemId, output)),
+    );
 
   item
     .command('create')
@@ -2573,40 +2166,30 @@ export function buildProgram(): Command {
     .requiredOption('--title <title>', 'the item title')
     .option('--type <type>', 'the body kind', 'note')
     .option('--parent <id>', 'the parent container (default: workspace root)')
-    .action(async (options: CreateItemOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((options: CreateItemOptions, command: Command) =>
+      act(command, (profile, output) =>
         createItem(
-          flags.profile,
+          profile,
           {
             workspaceId: options.workspace,
             type: options.type,
             title: options.title,
             parentId: options.parent,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   item
     .command('edit <itemId>')
     .description('Rename an item.')
     .requiredOption('--workspace <id>', "the item's workspace")
     .requiredOption('--title <title>', 'the new title')
-    .action(
-      async (itemId: string, options: { workspace: string; title: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          renameItem(
-            flags.profile,
-            itemId,
-            options.workspace,
-            options.title,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((itemId: string, options: { workspace: string; title: string }, command: Command) =>
+      act(command, (profile, output) =>
+        renameItem(profile, itemId, options.workspace, options.title, output),
+      ),
     );
 
   item
@@ -2619,11 +2202,10 @@ export function buildProgram(): Command {
       '--destination-workspace <id>',
       'a writable destination workspace; omitted keeps the current workspace',
     )
-    .action(async (itemId: string, options: MvOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
+    .action((itemId: string, options: MvOptions, command: Command) =>
+      act(command, (profile, output) =>
         moveItem(
-          flags.profile,
+          profile,
           itemId,
           {
             workspaceId: options.workspace,
@@ -2631,32 +2213,26 @@ export function buildProgram(): Command {
             afterId: options.after ?? null,
             destinationWorkspaceId: options.destinationWorkspace,
           },
-          outputOptions(flags.json),
+          output,
         ),
-      );
-    });
+      ),
+    );
 
   item
     .command('rm <itemId>')
     .description('Soft-delete an item; it can be restored until it is purged.')
     .requiredOption('--workspace <id>', "the item's workspace")
-    .action(async (itemId: string, options: WorkspaceOption, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        deleteItem(flags.profile, itemId, options.workspace, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: WorkspaceOption, command: Command) =>
+      act(command, (profile, output) => deleteItem(profile, itemId, options.workspace, output)),
+    );
 
   item
     .command('restore <itemId>')
     .description('Restore a soft-deleted item.')
     .requiredOption('--workspace <id>', "the item's workspace")
-    .action(async (itemId: string, options: WorkspaceOption, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        restoreItem(flags.profile, itemId, options.workspace, outputOptions(flags.json)),
-      );
-    });
+    .action((itemId: string, options: WorkspaceOption, command: Command) =>
+      act(command, (profile, output) => restoreItem(profile, itemId, options.workspace, output)),
+    );
 
   item
     .command('protect <itemId>')
@@ -2666,11 +2242,8 @@ export function buildProgram(): Command {
     )
     .option('--delete <on|off>', 'whether the item is protected from deletion')
     .option('--children <on|off>', 'whether the item refuses new children')
-    .action(
-      async (itemId: string, options: { delete?: string; children?: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() => protect(flags.profile, itemId, options, outputOptions(flags.json)));
-      },
+    .action((itemId: string, options: { delete?: string; children?: string }, command: Command) =>
+      act(command, (profile, output) => protect(profile, itemId, options, output)),
     );
 
   // A lock withholds an item's body until its password is presented; it does not encrypt it.
@@ -2682,10 +2255,9 @@ export function buildProgram(): Command {
   lock
     .command('status <itemId>')
     .description('Whether the body is locked, and until when this profile has it open.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => lockStatus(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => lockStatus(profile, itemId, output)),
+    );
 
   lock
     .command('set <itemId>')
@@ -2694,46 +2266,41 @@ export function buildProgram(): Command {
         'password and then the new one, one per line.',
     )
     .option('--change', 'change the password of an existing lock', false)
-    .action(async (itemId: string, options: { change: boolean }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(async () => {
-        const passwords = readPasswords(await readStdin(), options.change ? 2 : 1);
-        const [first = '', second] = passwords;
+    .action((itemId: string, options: { change: boolean }, command: Command) =>
+      act(command, async (profile, output) => {
+        const [first = '', second] = readPasswords(await readStdin(), options.change ? 2 : 1);
         await (options.change
-          ? setLock(flags.profile, itemId, second ?? '', first, outputOptions(flags.json))
-          : setLock(flags.profile, itemId, first, undefined, outputOptions(flags.json)));
-      });
-    });
+          ? setLock(profile, itemId, second ?? '', first, output)
+          : setLock(profile, itemId, first, undefined, output));
+      }),
+    );
 
   lock
     .command('remove <itemId>')
     .description('Remove the lock, given its password on stdin.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(async () => {
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
         const [password = ''] = readPasswords(await readStdin(), 1);
-        await removeLock(flags.profile, itemId, password, outputOptions(flags.json));
-      });
-    });
+        await removeLock(profile, itemId, password, output);
+      }),
+    );
 
   lock
     .command('open <itemId>')
     .description('Unlock the body for this profile, given the password on stdin.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(async () => {
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
         const [password = ''] = readPasswords(await readStdin(), 1);
-        await openLock(flags.profile, itemId, password, outputOptions(flags.json));
-      });
-    });
+        await openLock(profile, itemId, password, output);
+      }),
+    );
 
   lock
     .command('close <itemId>')
     .description('Lock the body again for this profile before its unlock runs out.')
-    .action(async (itemId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => closeLock(flags.profile, itemId, outputOptions(flags.json)));
-    });
+    .action((itemId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => closeLock(profile, itemId, output)),
+    );
 
   // Sites publish an item's subtree as a static website. Core decides who may manage them; the
   // publish of a site that is not live, auto mode, a rollback, an unpublish and a delete each need
@@ -2745,29 +2312,21 @@ export function buildProgram(): Command {
     .description('Make an item a draft site. Nothing is public until it is published.')
     .requiredOption('--slug <slug>', 'the first label of the default hostname')
     .option('--layout <layout>', 'docs or blog', 'docs')
-    .action(
-      async (rootItemId: string, options: { slug: string; layout: string }, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          siteCommands.createSite(flags.profile, rootItemId, options, outputOptions(flags.json)),
-        );
-      },
+    .action((rootItemId: string, options: { slug: string; layout: string }, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.createSite(profile, rootItemId, options, output),
+      ),
     );
 
   site
     .command('get [siteId]')
     .description('Read a site, by id or by its root item.')
     .option('--item <itemId>', 'the root item instead of the site id')
-    .action(async (siteId: string | undefined, options: { item?: string }, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.getSite(
-          flags.profile,
-          { siteId, itemId: options.item },
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((siteId: string | undefined, options: { item?: string }, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.getSite(profile, { siteId, itemId: options.item }, output),
+      ),
+    );
 
   site
     .command('update <siteId>')
@@ -2807,12 +2366,9 @@ export function buildProgram(): Command {
     )
     .option('--undated <itemId>', 'stop treating a collection as dated; repeat', collectOptional)
     .option('--yes', 'confirm switching to auto mode', false)
-    .action(async (siteId: string, options: siteCommands.UpdateSiteOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.updateSite(flags.profile, siteId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((siteId: string, options: siteCommands.UpdateSiteOptions, command: Command) =>
+      act(command, (profile, output) => siteCommands.updateSite(profile, siteId, options, output)),
+    );
 
   site
     .command('publish <siteId>')
@@ -2827,103 +2383,71 @@ export function buildProgram(): Command {
     .option('--yes', 'confirm the content becomes public', false)
     .option('--wait', 'wait until the build is live or has failed', false)
     .option('--timeout <seconds>', 'how long --wait waits', '600')
-    .action(async (siteId: string, options: siteCommands.PublishOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.publishSite(flags.profile, siteId, options, outputOptions(flags.json)),
-      );
-    });
+    .action((siteId: string, options: siteCommands.PublishOptions, command: Command) =>
+      act(command, (profile, output) => siteCommands.publishSite(profile, siteId, options, output)),
+    );
 
   site
     .command('builds <siteId>')
     .description("A site's builds, newest first.")
-    .action(async (siteId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => siteCommands.listBuilds(flags.profile, siteId, outputOptions(flags.json)));
-    });
+    .action((siteId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => siteCommands.listBuilds(profile, siteId, output)),
+    );
 
   site
     .command('build <siteId> <buildId>')
     .description('One build: status, page count and what could not be published.')
-    .action(async (siteId: string, buildId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.getBuild(flags.profile, siteId, buildId, outputOptions(flags.json)),
-      );
-    });
+    .action((siteId: string, buildId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => siteCommands.getBuild(profile, siteId, buildId, output)),
+    );
 
   site
     .command('pages <siteId>')
     .description("A site's page paths.")
-    .action(async (siteId: string, _options: unknown, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() => siteCommands.listPages(flags.profile, siteId, outputOptions(flags.json)));
-    });
+    .action((siteId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => siteCommands.listPages(profile, siteId, output)),
+    );
 
   site
     .command('path <siteId> <itemId> <path>')
     .description('Set and pin one page path; the old path becomes a permanent redirect.')
-    .action(
-      async (siteId: string, itemId: string, path: string, _options: unknown, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          siteCommands.setPath(flags.profile, siteId, itemId, path, outputOptions(flags.json)),
-        );
-      },
+    .action((siteId: string, itemId: string, path: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.setPath(profile, siteId, itemId, path, output),
+      ),
     );
 
   site
     .command('rollback <siteId> <buildId>')
     .description('Serve a previous build again, exactly as it was then.')
     .option('--yes', 'confirm re-serving that content', false)
-    .action(
-      async (siteId: string, buildId: string, options: ConfirmCliOptions, command: Command) => {
-        const flags = globalFlags(command);
-        await run(() =>
-          siteCommands.rollbackSite(
-            flags.profile,
-            siteId,
-            buildId,
-            options.yes === true,
-            outputOptions(flags.json),
-          ),
-        );
-      },
+    .action((siteId: string, buildId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.rollbackSite(profile, siteId, buildId, options.yes === true, output),
+      ),
     );
 
   site
     .command('unpublish <siteId>')
     .description('Take the site down and delete its builds. Copies others made may remain.')
     .option('--yes', 'confirm this destructive operation', false)
-    .action(async (siteId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.unpublishSite(
-          flags.profile,
-          siteId,
-          options.yes === true,
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((siteId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.unpublishSite(profile, siteId, options.yes === true, output),
+      ),
+    );
 
-  registerSiteHostingCommands(site, { flags: globalFlags, run, output: outputOptions });
+  registerSiteHostingCommands(site, act);
 
   site
     .command('delete <siteId>')
     .description('Delete a site that is not live.')
     .option('--yes', 'confirm this destructive operation', false)
-    .action(async (siteId: string, options: ConfirmCliOptions, command: Command) => {
-      const flags = globalFlags(command);
-      await run(() =>
-        siteCommands.deleteSite(
-          flags.profile,
-          siteId,
-          options.yes === true,
-          outputOptions(flags.json),
-        ),
-      );
-    });
+    .action((siteId: string, options: ConfirmCliOptions, command: Command) =>
+      act(command, (profile, output) =>
+        siteCommands.deleteSite(profile, siteId, options.yes === true, output),
+      ),
+    );
 
   return program;
 }

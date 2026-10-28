@@ -153,17 +153,17 @@ function latestAssistant(connection: PetConnection, seen: ReadonlySet<string>) {
   );
 }
 
-async function runtime(
+export async function runtime(
   session: Session,
   workspaceId: string,
   petId: string,
-  operation: 'reset' | 'send' | 'read' | 'tool_claim' | 'tool_result',
+  operation: 'reset' | 'send' | 'read' | 'interrupt' | 'tool_claim' | 'tool_result',
   extra: Partial<Parameters<typeof pets.runtime>[0]> = {},
 ): Promise<PetConnection> {
   return session.client.execute(pets.runtime({ operation, workspaceId, petId, ...extra }));
 }
 
-async function postLocalToolResult(
+export async function postLocalToolResult(
   session: Session,
   workspaceId: string,
   petId: string,
@@ -205,7 +205,7 @@ function localValidation(tool: PetToolCall): ValidationReport {
 /** Runs one scripted design conversation without executing a proposed blueprint build. A
  * build with problems is declined with them listed once, as the web panel does, and the next
  * build is scored. */
-export async function runDesignScenario(
+async function runDesignScenario(
   scenario: DesignScenario,
   options: PetEvalOptions & { workspace: string; pet: string },
   runner: EvalRuntime,

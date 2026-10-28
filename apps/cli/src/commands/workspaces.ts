@@ -13,7 +13,7 @@ import {
   dailyNoteSettingsSchema,
   type AssignableWorkspaceRole,
 } from '@nix/api-client';
-import { resolveSession, type SessionDeps } from './shared.ts';
+import { assertConfirmed, resolveSession, type SessionDeps } from './shared.ts';
 import { printResult, type OutputOptions } from '../output.ts';
 
 /** Lists one bounded page of workspaces the profile can reach. */
@@ -304,12 +304,6 @@ function validatePage(page: WorkspacePageOptions): WorkspacePageOptions {
     throw new Error('Cursor must not exceed 512 characters.');
   }
   return { limit, ...(page.cursor === undefined ? {} : { cursor: page.cursor }) };
-}
-
-function assertConfirmed(confirmed: boolean): void {
-  if (!confirmed) {
-    throw new Error('This destructive operation requires --yes.');
-  }
 }
 
 function assertUiRole(role: string): asserts role is AssignableWorkspaceRole {

@@ -97,14 +97,6 @@ export function createPatTokenProvider(options: SessionOptions): TokenProvider {
   };
 }
 
-/** Uses a caller-supplied short-lived bearer as-is; Core remains the authority for its identity. */
-export function createBearerTokenProvider(token: string): TokenProvider {
-  return {
-    getAccessToken: () => token,
-    refreshAccessToken: () => Promise.resolve(token),
-  };
-}
-
 /** Refreshes a browser-approved CLI session without extending its absolute lifetime. */
 export function createInteractiveTokenProvider(options: SessionOptions): TokenProvider {
   const session = options.profile.interactiveSession;
@@ -198,9 +190,10 @@ export interface Session {
  * @returns The session.
  */
 export function openSession(options: SessionOptions): Session {
-  const tokens =
-    options.bearerToken !== undefined
-      ? createBearerTokenProvider(options.bearerToken)
+  const bearer = options.bearerToken;
+  const tokens: TokenProvider =
+    bearer !== undefined
+      ? { getAccessToken: () => bearer, refreshAccessToken: () => Promise.resolve(bearer) }
       : options.profile.interactiveSession === undefined
         ? createPatTokenProvider(options)
         : createInteractiveTokenProvider(options);

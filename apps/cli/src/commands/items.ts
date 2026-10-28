@@ -24,14 +24,7 @@ interface ItemView {
   readonly lifecycleState: string;
 }
 
-function view(item: {
-  id: string;
-  title: string;
-  type: string;
-  parentId: string | null;
-  hasChildren: boolean;
-  lifecycleState: string;
-}): ItemView {
+function view(item: ItemView): ItemView {
   return {
     id: item.id,
     title: item.title,
@@ -47,9 +40,7 @@ interface ItemDetailView extends ItemView {
   readonly properties: Readonly<Record<string, unknown>>;
 }
 
-function detailView(
-  item: Parameters<typeof view>[0] & { properties: Record<string, unknown> },
-): ItemDetailView {
+function detailView(item: ItemDetailView): ItemDetailView {
   return { ...view(item), properties: item.properties };
 }
 

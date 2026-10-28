@@ -171,7 +171,7 @@ export async function seed(
 }
 
 /** The scenarios `stress run` knows. Others are named where planned so an unknown one rejects clearly. */
-export const KNOWN_SCENARIOS = [
+const KNOWN_SCENARIOS = [
   'read-storm',
   'search-storm',
   'query-storm',
@@ -179,7 +179,7 @@ export const KNOWN_SCENARIOS = [
   'chart-storm',
   'collab-edit',
 ] as const;
-export type Scenario = (typeof KNOWN_SCENARIOS)[number];
+type Scenario = (typeof KNOWN_SCENARIOS)[number];
 
 export interface RunOptions {
   readonly scenario: string;

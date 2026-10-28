@@ -6,7 +6,9 @@
  * signed in at all or a named one does not exist.
  */
 
+import type { Command } from 'commander';
 import { resolveProfile } from '../config.ts';
+import type { OutputOptions } from '../output.ts';
 import { openSession, type FetchImpl, type Session } from '../session.ts';
 
 /** The seams a command exposes for tests: a fetch to stub, and a config environment to redirect. */
@@ -14,6 +16,12 @@ export interface SessionDeps {
   readonly fetchImpl?: FetchImpl;
   readonly env?: NodeJS.ProcessEnv;
 }
+
+/** Runs a command body with the global profile and output shape, printing any failure. */
+export type Act = (
+  command: Command,
+  body: (profile: string | undefined, output: OutputOptions) => Promise<void>,
+) => Promise<void>;
 
 /**
  * Resolves the named profile (or the default) and opens a session for it.
@@ -60,6 +68,12 @@ export async function requireAccessToken(session: Session): Promise<string> {
     throw new Error('Could not obtain a session for this profile.');
   }
   return token;
+}
+
+export function assertConfirmed(confirmed: boolean): void {
+  if (!confirmed) {
+    throw new Error('This destructive operation requires --yes.');
+  }
 }
 
 /** Reads all of stdin as UTF-8, for commands that take their input piped in. */

@@ -19,20 +19,14 @@ import {
   propertyDefinitionSchema,
   type PropertyDefinition,
 } from '@nix/api-client';
-import {
-  createCompanionBodies,
-  defaultClock,
-  defaultIds,
-  readStructure,
-  type ReadStructureResult,
-} from '@nix/companion';
+import { readStructure, type ReadStructureResult } from '@nix/companion';
 // The light subpath: `parseScalar` is the shared value rule for `props set` and import's front
 // matter, and pulling it must not load the Markdown mapping into every command.
 import { parseScalar } from '@nix/markdown/front-matter';
 import type { Session } from '../session.ts';
 import { resolveSession, type SessionDeps } from './shared.ts';
 import { printResult, type OutputOptions } from '../output.ts';
-import { collabClientFor } from './templates.ts';
+import { portsFor } from './blueprint.ts';
 
 /** Reads an item's effective property schema and prints what it declares, inherits and resolves to. */
 export async function getSchema(
@@ -62,17 +56,8 @@ export async function readStructureOutline(
   output: OutputOptions,
   deps: SessionDeps = {},
 ): Promise<void> {
-  printResult(await readStructureData(profileName, itemId, deps), output);
-}
-
-/** Shared data adapter for the CLI command and its MCP mirror. */
-export async function readStructureData(
-  profileName: string | undefined,
-  itemId: string,
-  deps: SessionDeps = {},
-): Promise<ReadStructureResult> {
   const session = await resolveSession(profileName, deps);
-  return readStructureForSession(session, itemId);
+  printResult(await readStructureForSession(session, itemId), output);
 }
 
 /** Executes the shared outline reader with a previously resolved authenticated session. */
@@ -81,19 +66,7 @@ export async function readStructureForSession(
   itemId: string,
 ): Promise<ReadStructureResult> {
   const item = await session.client.query(items.itemById(itemId), { forceRefresh: true });
-  const collab = collabClientFor(session);
-  return readStructure(
-    {
-      core: session.client,
-      collab,
-      bodies: createCompanionBodies(collab),
-      clock: defaultClock(),
-      ids: defaultIds(),
-    },
-    item.workspaceId,
-    itemId,
-    AbortSignal.timeout(90_000),
-  );
+  return readStructure(portsFor(session), item.workspaceId, itemId, AbortSignal.timeout(90_000));
 }
 
 /** Replaces an item's declared schema from a JSON file `{ "properties": [...], "inherit": bool }`. */

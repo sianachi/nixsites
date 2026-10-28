@@ -8,8 +8,8 @@ import {
   type ConversationMessages,
 } from '@nix/api-client';
 import type { Session } from '../session.ts';
-import { printResult, type OutputOptions } from '../output.ts';
-import { parseUuid, readStdin, resolveSession } from './shared.ts';
+import { printResult } from '../output.ts';
+import { parseUuid, readStdin, resolveSession, type Act } from './shared.ts';
 
 export function executeCreateConversation(
   session: Session,
@@ -68,15 +68,6 @@ export function executeConversationSources(
   );
 }
 
-interface Wiring {
-  readonly flags: (command: Command) => {
-    readonly profile: string | undefined;
-    readonly json: boolean;
-  };
-  readonly run: (body: () => Promise<void>) => Promise<void>;
-  readonly output: (json: boolean) => OutputOptions;
-}
-
 export function parseConversationInteger(value: string): number {
   const parsed = Number(value);
   if (value.trim() === '' || !Number.isSafeInteger(parsed) || parsed < 0)
@@ -84,18 +75,16 @@ export function parseConversationInteger(value: string): number {
   return parsed;
 }
 
-export function registerConversationCommands(program: Command, wiring: Wiring): void {
+export function registerConversationCommands(program: Command, act: Act): void {
   const chat = program
     .command('chat')
     .description(
       'Create, read and continue durable conversation notes. Core checks source and destination access.',
     );
-  async function show(command: Command, action: (session: Session) => Promise<unknown>) {
-    const flags = wiring.flags(command);
-    await wiring.run(async () => {
-      printResult(await action(await resolveSession(flags.profile)), wiring.output(flags.json));
+  const show = (command: Command, action: (session: Session) => Promise<unknown>) =>
+    act(command, async (profile, output) => {
+      printResult(await action(await resolveSession(profile)), output);
     });
-  }
   for (const operation of ['create', 'import']) {
     chat
       .command(`${operation} <workspaceId>`)

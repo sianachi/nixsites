@@ -24,15 +24,11 @@ import {
   resolveSession,
   type SessionDeps,
 } from './shared.ts';
-import { printResult, printTable, type OutputOptions } from '../output.ts';
+import { humanReadable, printResult, printTable, type OutputOptions } from '../output.ts';
 import type { Session } from '../session.ts';
 
 const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_MUTED = 200;
-
-function humanReadable(output: OutputOptions): boolean {
-  return output.isTty && !output.json;
-}
 
 export interface ListNotificationsOptions {
   readonly unread?: boolean | undefined;

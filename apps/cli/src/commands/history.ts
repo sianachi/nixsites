@@ -24,14 +24,10 @@ import {
   restoreRevision,
   type RevisionState,
 } from '../history.ts';
-import { requireAccessToken, resolveSession, type SessionDeps } from './shared.ts';
-import { printResult, printTable, type OutputOptions } from '../output.ts';
+import { assertConfirmed, requireAccessToken, resolveSession, type SessionDeps } from './shared.ts';
+import { humanReadable, printResult, printTable, type OutputOptions } from '../output.ts';
 
 /** True when a person is watching this run and has not asked for machine output anyway. */
-function humanReadable(output: OutputOptions): boolean {
-  return output.isTty && !output.json;
-}
-
 export interface ListHistoryOptions {
   readonly limit?: number | undefined;
   readonly before?: number | undefined;
@@ -126,12 +122,6 @@ export async function showHistory(
 }
 
 /** Requires `--yes`, the same confirmation gate `ws archive` and `ws purge` use. */
-function assertConfirmed(confirmed: boolean): void {
-  if (!confirmed) {
-    throw new Error('This destructive operation requires --yes.');
-  }
-}
-
 /**
  * Restores the document to its state at `seq`, as one new revision: `nixctl history restore <item>
  * <seq>`. History is never deleted by this - the restore is additive - but it does replace what

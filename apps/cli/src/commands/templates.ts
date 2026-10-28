@@ -68,24 +68,6 @@ async function readBoundedArchive(path: string): Promise<Uint8Array> {
 
 export type TemplatePreflightOptions = Omit<TemplateApplicationRequest, 'idempotencyKey'>;
 
-/** Resolves a setup preview against the current revision unless the caller pins one explicitly. */
-export async function executeTemplatePreflight(
-  session: Session,
-  input: TemplatePreflightOptions,
-): Promise<unknown> {
-  const detail = await session.client.query(templateResources.templateById(input.templateId));
-  return session.client.execute(
-    templateResources.preflightTemplate(input.templateId, {
-      mode: input.mode,
-      ...(input.targetItemId === undefined ? {} : { targetItemId: input.targetItemId }),
-      ...(input.parentItemId === undefined ? {} : { parentItemId: input.parentItemId }),
-      ...(input.title === undefined ? {} : { title: input.title }),
-      ...(input.inputs === undefined ? {} : { inputs: input.inputs }),
-      expectedRevision: input.expectedRevision ?? detail.revision,
-    }),
-  );
-}
-
 /** Uploads a portable template archive through Core's durable preview boundary. */
 export async function executeTemplateArchivePreview(
   session: Session,
@@ -246,18 +228,6 @@ export async function executeTemplateDraftUpdate(
   );
 }
 
-export async function executeTemplateDraftUpdateFromFile(
-  session: Session,
-  templateId: string,
-  operationId: string,
-  patchPath: string,
-): Promise<unknown> {
-  const patch = templateDraftMetadataPatchSchema.parse(
-    JSON.parse(await readFile(patchPath, 'utf8')),
-  );
-  return executeTemplateDraftUpdate(session, templateId, operationId, patch);
-}
-
 export async function executeTemplateDraftItemUpdate(
   session: Session,
   templateId: string,
@@ -268,17 +238,6 @@ export async function executeTemplateDraftItemUpdate(
   return collabClientFor(session).execute(
     templateResources.updateTemplateDraftItem(templateId, operationId, sourceId, input),
   );
-}
-
-export async function executeTemplateDraftItemUpdateFromFile(
-  session: Session,
-  templateId: string,
-  operationId: string,
-  sourceId: string,
-  patchPath: string,
-): Promise<unknown> {
-  const patch = templateDraftItemPatchSchema.parse(JSON.parse(await readFile(patchPath, 'utf8')));
-  return executeTemplateDraftItemUpdate(session, templateId, operationId, sourceId, patch);
 }
 
 export async function executeTemplateDraftSave(
@@ -418,15 +377,11 @@ export async function updateTemplateDraftFromFile(
   output: OutputOptions,
   deps: SessionDeps = {},
 ): Promise<void> {
-  printResult(
-    await executeTemplateDraftUpdateFromFile(
-      await resolveSession(profileName, deps),
-      templateId,
-      operationId,
-      patchPath,
-    ),
-    output,
+  const session = await resolveSession(profileName, deps);
+  const patch = templateDraftMetadataPatchSchema.parse(
+    JSON.parse(await readFile(patchPath, 'utf8')),
   );
+  printResult(await executeTemplateDraftUpdate(session, templateId, operationId, patch), output);
 }
 
 export async function updateTemplateDraftItemFromFile(
@@ -438,14 +393,10 @@ export async function updateTemplateDraftItemFromFile(
   output: OutputOptions,
   deps: SessionDeps = {},
 ): Promise<void> {
+  const session = await resolveSession(profileName, deps);
+  const patch = templateDraftItemPatchSchema.parse(JSON.parse(await readFile(patchPath, 'utf8')));
   printResult(
-    await executeTemplateDraftItemUpdateFromFile(
-      await resolveSession(profileName, deps),
-      templateId,
-      operationId,
-      sourceId,
-      patchPath,
-    ),
+    await executeTemplateDraftItemUpdate(session, templateId, operationId, sourceId, patch),
     output,
   );
 }
@@ -788,8 +739,20 @@ export async function preflightTemplate(
   output: OutputOptions,
   deps: SessionDeps = {},
 ): Promise<void> {
+  // Resolves the preview against the current revision unless the caller pins one explicitly.
   const session = await resolveSession(profileName, deps);
-  printResult(await executeTemplatePreflight(session, input), output);
+  const detail = await session.client.query(templateResources.templateById(input.templateId));
+  const preview = await session.client.execute(
+    templateResources.preflightTemplate(input.templateId, {
+      mode: input.mode,
+      ...(input.targetItemId === undefined ? {} : { targetItemId: input.targetItemId }),
+      ...(input.parentItemId === undefined ? {} : { parentItemId: input.parentItemId }),
+      ...(input.title === undefined ? {} : { title: input.title }),
+      ...(input.inputs === undefined ? {} : { inputs: input.inputs }),
+      expectedRevision: input.expectedRevision ?? detail.revision,
+    }),
+  );
+  printResult(preview, output);
 }
 
 export async function previewTemplateArchive(

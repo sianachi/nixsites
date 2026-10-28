@@ -11,12 +11,12 @@
 
 import { sites, type Site, type SiteServeMode } from '@nix/api-client';
 import type { Command } from 'commander';
-import { resolveSession, type SessionDeps } from './shared.ts';
+import { resolveSession, type Act, type SessionDeps } from './shared.ts';
 import { printResult, type OutputOptions } from '../output.ts';
 
 const SERVE_MODES: readonly SiteServeMode[] = ['serve', 'redirect'];
 
-export function serveModeOf(value: string): SiteServeMode {
+function serveModeOf(value: string): SiteServeMode {
   const mode = SERVE_MODES.find((candidate) => candidate === value);
   if (mode === undefined) throw new Error("The serve mode is 'serve' or 'redirect'.");
   return mode;
@@ -42,26 +42,12 @@ async function show(
   profileName: string | undefined,
   run: (session: Awaited<ReturnType<typeof resolveSession>>) => Promise<Site>,
   output: OutputOptions,
-  deps: SessionDeps,
+  deps: SessionDeps = {},
 ): Promise<void> {
   const session = await resolveSession(profileName, deps);
   const site = await run(session);
   if (output.json || !output.isTty) printResult(site.hostnames, output);
   else process.stdout.write(`${describeHostnames(site)}\n`);
-}
-
-export async function listHostnames(
-  profileName: string | undefined,
-  siteId: string,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  await show(
-    profileName,
-    (session) => session.client.query(sites.getSite(siteId), { forceRefresh: true }),
-    output,
-    deps,
-  );
 }
 
 export async function addHostname(
@@ -99,54 +85,6 @@ export async function removeHostname(
   );
 }
 
-export async function verifyHostname(
-  profileName: string | undefined,
-  siteId: string,
-  hostname: string,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  await show(
-    profileName,
-    (session) => session.client.execute(sites.verifySiteHostname(siteId, hostname)),
-    output,
-    deps,
-  );
-}
-
-export async function setPrimaryHostname(
-  profileName: string | undefined,
-  siteId: string,
-  hostname: string,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  await show(
-    profileName,
-    (session) =>
-      session.client.execute(sites.updateSiteHostname(siteId, hostname, { primary: true })),
-    output,
-    deps,
-  );
-}
-
-export async function setServeMode(
-  profileName: string | undefined,
-  siteId: string,
-  hostname: string,
-  mode: string,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  const serveMode = serveModeOf(mode);
-  await show(
-    profileName,
-    (session) => session.client.execute(sites.updateSiteHostname(siteId, hostname, { serveMode })),
-    output,
-    deps,
-  );
-}
-
 export async function requestApproval(
   profileName: string | undefined,
   siteId: string,
@@ -163,28 +101,6 @@ export async function requestApproval(
   printResult(await session.client.execute(sites.requestSiteApproval(siteId, true)), output);
 }
 
-export async function listApprovals(
-  profileName: string | undefined,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  const session = await resolveSession(profileName, deps);
-  printResult(
-    await session.client.query(sites.listSiteApprovals(), { forceRefresh: true }),
-    output,
-  );
-}
-
-export async function approve(
-  profileName: string | undefined,
-  siteId: string,
-  output: OutputOptions,
-  deps: SessionDeps = {},
-): Promise<void> {
-  const session = await resolveSession(profileName, deps);
-  printResult(await session.client.execute(sites.approveSitePublish(siteId)), output);
-}
-
 export async function reject(
   profileName: string | undefined,
   siteId: string,
@@ -196,28 +112,23 @@ export async function reject(
   printResult(await session.client.execute(sites.rejectSitePublish(siteId, note)), output);
 }
 
-interface Wiring {
-  readonly flags: (command: Command) => {
-    readonly profile: string | undefined;
-    readonly json: boolean;
-  };
-  readonly run: (body: () => Promise<void>) => Promise<void>;
-  readonly output: (json: boolean) => OutputOptions;
-}
-
 /** Adds `hostnames` and `approvals` under the `site` command. */
-export function registerSiteHostingCommands(site: Command, wiring: Wiring): void {
-  const { flags, run, output } = wiring;
+export function registerSiteHostingCommands(site: Command, act: Act): void {
   const hostnames = site
     .command('hostnames')
     .description("A site's hostnames: custom domains, aliases and the primary.");
   hostnames
     .command('list <siteId>')
     .description('Each hostname with its status, and the DNS records still to create.')
-    .action(async (siteId: string, _options: unknown, command: Command) => {
-      const f = flags(command);
-      await run(() => listHostnames(f.profile, siteId, output(f.json)));
-    });
+    .action((siteId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        show(
+          profile,
+          (session) => session.client.query(sites.getSite(siteId), { forceRefresh: true }),
+          output,
+        ),
+      ),
+    );
   hostnames
     .command('add <siteId> <hostname>')
     .description('Attach a custom hostname; it is served once its TXT record verifies it.')
@@ -225,52 +136,56 @@ export function registerSiteHostingCommands(site: Command, wiring: Wiring): void
       '--mode <mode>',
       "while not primary: 'serve' (200, default) or 'redirect' (308 to the primary)",
     )
-    .action(
-      async (siteId: string, hostname: string, options: { mode?: string }, command: Command) => {
-        const f = flags(command);
-        await run(() => addHostname(f.profile, siteId, hostname, options, output(f.json)));
-      },
+    .action((siteId: string, hostname: string, options: { mode?: string }, command: Command) =>
+      act(command, (profile, output) => addHostname(profile, siteId, hostname, options, output)),
     );
   hostnames
     .command('remove <siteId> <hostname>')
     .description('Detach a custom hostname and delete the DNS records Nix created for it.')
     .option('--yes', 'confirm', false)
-    .action(
-      async (siteId: string, hostname: string, options: { yes?: boolean }, command: Command) => {
-        const f = flags(command);
-        await run(() =>
-          removeHostname(f.profile, siteId, hostname, options.yes === true, output(f.json)),
-        );
-      },
+    .action((siteId: string, hostname: string, options: { yes?: boolean }, command: Command) =>
+      act(command, (profile, output) =>
+        removeHostname(profile, siteId, hostname, options.yes === true, output),
+      ),
     );
   hostnames
     .command('verify <siteId> <hostname>')
     .description('Check the DNS records now.')
-    .action(async (siteId: string, hostname: string, _options: unknown, command: Command) => {
-      const f = flags(command);
-      await run(() => verifyHostname(f.profile, siteId, hostname, output(f.json)));
-    });
+    .action((siteId: string, hostname: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        show(
+          profile,
+          (session) => session.client.execute(sites.verifySiteHostname(siteId, hostname)),
+          output,
+        ),
+      ),
+    );
   hostnames
     .command('primary <siteId> <hostname>')
     .description('Make a hostname the canonical one (takes effect in pages at the next publish).')
-    .action(async (siteId: string, hostname: string, _options: unknown, command: Command) => {
-      const f = flags(command);
-      await run(() => setPrimaryHostname(f.profile, siteId, hostname, output(f.json)));
-    });
+    .action((siteId: string, hostname: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) =>
+        show(
+          profile,
+          (session) =>
+            session.client.execute(sites.updateSiteHostname(siteId, hostname, { primary: true })),
+          output,
+        ),
+      ),
+    );
   hostnames
     .command('mode <siteId> <hostname> <mode>')
     .description("How a non-primary hostname answers: 'serve' or 'redirect'.")
-    .action(
-      async (
-        siteId: string,
-        hostname: string,
-        mode: string,
-        _options: unknown,
-        command: Command,
-      ) => {
-        const f = flags(command);
-        await run(() => setServeMode(f.profile, siteId, hostname, mode, output(f.json)));
-      },
+    .action((siteId: string, hostname: string, mode: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => {
+        const serveMode = serveModeOf(mode);
+        return show(
+          profile,
+          (session) =>
+            session.client.execute(sites.updateSiteHostname(siteId, hostname, { serveMode })),
+          output,
+        );
+      }),
     );
 
   const approvals = site
@@ -282,30 +197,37 @@ export function registerSiteHostingCommands(site: Command, wiring: Wiring): void
       'Ask the operator to approve the first publish; it starts on its own once approved.',
     )
     .option('--yes', 'confirm the content may become public', false)
-    .action(async (siteId: string, options: { yes?: boolean }, command: Command) => {
-      const f = flags(command);
-      await run(() => requestApproval(f.profile, siteId, options.yes === true, output(f.json)));
-    });
+    .action((siteId: string, options: { yes?: boolean }, command: Command) =>
+      act(command, (profile, output) =>
+        requestApproval(profile, siteId, options.yes === true, output),
+      ),
+    );
   approvals
     .command('list')
     .description('Sites waiting for approval (operators only).')
-    .action(async (_options: unknown, command: Command) => {
-      const f = flags(command);
-      await run(() => listApprovals(f.profile, output(f.json)));
-    });
+    .action((_options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        const session = await resolveSession(profile);
+        printResult(
+          await session.client.query(sites.listSiteApprovals(), { forceRefresh: true }),
+          output,
+        );
+      }),
+    );
   approvals
     .command('approve <siteId>')
     .description('Approve; the publish runs as the manager who asked (operators only).')
-    .action(async (siteId: string, _options: unknown, command: Command) => {
-      const f = flags(command);
-      await run(() => approve(f.profile, siteId, output(f.json)));
-    });
+    .action((siteId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        const session = await resolveSession(profile);
+        printResult(await session.client.execute(sites.approveSitePublish(siteId)), output);
+      }),
+    );
   approvals
     .command('reject <siteId>')
     .description('Reject, with a note the managers see (operators only).')
     .option('--note <note>', 'why')
-    .action(async (siteId: string, options: { note?: string }, command: Command) => {
-      const f = flags(command);
-      await run(() => reject(f.profile, siteId, options.note, output(f.json)));
-    });
+    .action((siteId: string, options: { note?: string }, command: Command) =>
+      act(command, (profile, output) => reject(profile, siteId, options.note, output)),
+    );
 }

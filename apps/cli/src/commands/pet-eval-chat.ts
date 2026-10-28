@@ -4,7 +4,6 @@ import { checkOpenUi } from './openui-check.ts';
 import { z } from 'zod';
 import {
   items,
-  pets,
   references,
   views,
   type Item,
@@ -14,9 +13,6 @@ import {
 } from '@nix/api-client';
 import {
   canApplyWithoutAsking,
-  createCompanionBodies,
-  defaultClock,
-  defaultIds,
   describeToolCall,
   executeBuild,
   hasExternalLink,
@@ -39,7 +35,8 @@ import { printResult, printTable, type OutputOptions } from '../output.ts';
 import type { Session } from '../session.ts';
 import { executePetToolRun, petSessionFor } from './pets.ts';
 import type { SessionDeps } from './shared.ts';
-import { collabClientFor } from './templates.ts';
+import { portsFor } from './blueprint.ts';
+import { postLocalToolResult, runtime } from './pet-eval.ts';
 import {
   seedEvalTemplate,
   registerEvalTemplate,
@@ -138,17 +135,6 @@ export function substituteDates(text: string, today: string): string {
     base.setUTCDate(base.getUTCDate() + (offset ? Number(offset) : 0));
     return base.toISOString().slice(0, 10);
   });
-}
-
-function portsFor(session: Session): CompanionPorts {
-  const collab = collabClientFor(session);
-  return {
-    core: session.client,
-    collab,
-    bodies: createCompanionBodies(collab),
-    clock: defaultClock(),
-    ids: defaultIds(),
-  };
 }
 
 async function readJson(relative: string): Promise<unknown> {
@@ -465,37 +451,15 @@ export async function declineReason(
   return undefined;
 }
 
-async function runtime(
-  session: Session,
-  workspaceId: string,
-  petId: string,
-  operation: 'reset' | 'send' | 'read' | 'interrupt' | 'tool_claim' | 'tool_result',
-  extra: Partial<Parameters<typeof pets.runtime>[0]> = {},
-): Promise<PetConnection> {
-  return session.client.execute(pets.runtime({ operation, workspaceId, petId, ...extra }));
-}
-
-async function declineTool(
+function declineTool(
   session: Session,
   workspaceId: string,
   petId: string,
   tool: PetToolCall,
   reason: string,
 ): Promise<void> {
-  const requestId = crypto.randomUUID();
-  const claimed = await runtime(session, workspaceId, petId, 'tool_claim', {
-    toolId: tool.id,
-    requestId,
-  });
-  const receipt = claimed.tools?.find((entry) => entry.id === tool.id);
-  if (receipt?.status !== 'claimed' || receipt.claimId !== requestId)
-    throw new Error(`Tool ${tool.id} was claimed elsewhere.`);
-  await runtime(session, workspaceId, petId, 'tool_result', {
-    toolId: tool.id,
-    requestId,
-    toolResult: `${DECLINED_PREFIX}: ${reason}. Do not retry it.`,
-    toolSuccess: false,
-  });
+  const result = `${DECLINED_PREFIX}: ${reason}. Do not retry it.`;
+  return postLocalToolResult(session, workspaceId, petId, tool, result, false);
 }
 
 function matches(list: readonly string[], attempted: readonly string[]): string[] {

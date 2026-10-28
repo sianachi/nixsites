@@ -40,7 +40,7 @@ export interface BlueprintSaveOptions {
   readonly idempotencyKey?: string;
 }
 
-function portsFor(session: Session): CompanionPorts {
+export function portsFor(session: Session): CompanionPorts {
   const collab = collabClientFor(session);
   return {
     core: session.client,
