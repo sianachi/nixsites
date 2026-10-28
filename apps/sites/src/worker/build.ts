@@ -226,16 +226,21 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
   for (const reference of references) {
     if (!firstUse.has(reference.fileItemId)) firstUse.set(reference.fileItemId, reference);
   }
-  const fetched = await mapLimited([...firstUse.values()], FILE_CONCURRENCY, signal, (reference) =>
-    fetchFile(deps, execution, reference, signal),
+  const fetched = await mapLimited(
+    [...firstUse.values()],
+    FILE_CONCURRENCY,
+    signal,
+    async (reference) => ({
+      reference,
+      ...(await fetchFile(deps, execution, reference, signal)),
+    }),
   );
   const copies = new Map<string, unknown>();
-  for (const [index, reference] of [...firstUse.values()].entries()) {
-    const result = fetched[index] as FetchedFile;
-    if (result.skipped !== null) skipped.push(result.skipped);
-    if (result.image !== null) assets.set(reference.fileItemId, result.image);
-    if (result.download !== null) downloads.set(reference.fileItemId, result.download);
-    copies.set(reference.fileItemId, result.image ?? result.download);
+  for (const { reference, image, download, skipped: skip } of fetched) {
+    if (skip !== null) skipped.push(skip);
+    if (image !== null) assets.set(reference.fileItemId, image);
+    if (download !== null) downloads.set(reference.fileItemId, download);
+    copies.set(reference.fileItemId, image ?? download);
   }
   for (const reference of references) {
     if (firstUse.get(reference.fileItemId) === reference) continue;
