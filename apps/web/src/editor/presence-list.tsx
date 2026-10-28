@@ -74,6 +74,7 @@ export function PresenceList({ awareness }: PresenceListProps): ReactNode {
       {shown.map((peer) => (
         <span
           key={peer.clientId}
+          role="img"
           title={peer.name}
           aria-label={peer.name}
           style={
