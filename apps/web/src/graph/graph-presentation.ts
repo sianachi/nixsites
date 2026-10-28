@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { browserStorage } from '../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { GraphRepresentation } from './graph-representations';
 
 const schema = z.object({

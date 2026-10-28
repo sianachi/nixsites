@@ -5,7 +5,7 @@ import { useState, type ReactElement } from 'react';
 import {
   readOpenDailyOnLaunch,
   writeOpenDailyOnLaunch,
-} from '../../lib/daily-note-device-preferences';
+} from '@nix/web-foundation/lib/daily-note-device-preferences';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';
 import { useWorkspace } from '../../workspaces/workspace-context';

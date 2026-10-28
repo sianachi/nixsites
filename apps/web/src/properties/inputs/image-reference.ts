@@ -1,4 +1,4 @@
-import { isFetchableImageAddress } from '../../lib/image-address';
+import { isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 
 /**
  * The prefix marking a stored value as a reference to a file uploaded through this control,

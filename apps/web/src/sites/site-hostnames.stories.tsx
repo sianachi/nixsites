@@ -1,7 +1,7 @@
 import type { Site } from '@nix/api-client';
 import type { ReactElement } from 'react';
 
-import { settingsPanelWidth } from '../layout/regions';
+import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { SiteApprovalView } from './site-approval';
 import { SiteHostnamesView } from './site-hostnames';
 

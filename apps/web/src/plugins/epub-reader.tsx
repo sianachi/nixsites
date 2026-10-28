@@ -9,10 +9,10 @@ import {
   type ReactElement,
 } from 'react';
 
-import { EpubRefusal, parseEpub, type EpubBook } from '../lib/epub-archive';
-import { buildEpubChapterDocument, readEpubPalette } from '../lib/epub-chapter';
-import { readEpubProgress, writeEpubProgress } from '../lib/epub-progress';
-import { browserStorage } from '../lib/browser-storage';
+import { EpubRefusal, parseEpub, type EpubBook } from '@nix/web-foundation/lib/epub-archive';
+import { buildEpubChapterDocument, readEpubPalette } from '@nix/web-foundation/lib/epub-chapter';
+import { readEpubProgress, writeEpubProgress } from '@nix/web-foundation/lib/epub-progress';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 
 /**
  * An EPUB, read in place.

@@ -1,4 +1,4 @@
-import { isPointerCoarse } from '../../lib/pointer';
+import { isPointerCoarse } from '@nix/web-foundation/lib/pointer';
 import { type CellRef, cellKey } from '@nix/sheet';
 
 /**

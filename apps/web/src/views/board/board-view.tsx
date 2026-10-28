@@ -1,9 +1,9 @@
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { Field, Select, Icon, Text, cn } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import { PartialNotice } from '../../components/states/status-panels';
+import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 import { ShownItems } from '../core/item-selection-context';
 import {
   UNSET_LABEL,
@@ -14,10 +14,10 @@ import {
   type View,
 } from '../core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
-import { staleMembers, type StaleMember } from '../../lib/suggest/staleness';
-import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
+import { staleMembers, type StaleMember } from '@nix/web-foundation/lib/suggest/staleness';
+import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { suggestSourceOf } from '../suggest/suggest-source';
-import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import type { ContainerData } from '../core/use-container';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import { useViewState } from '../core/view-state';

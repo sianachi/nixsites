@@ -10,7 +10,7 @@ import {
   type SeriesHatch,
 } from '@nix/chart-render';
 
-import { formatCalendarDay } from '../../lib/date-format';
+import { formatCalendarDay } from '@nix/web-foundation/lib/date-format';
 import { UNSET_LABEL, type PropertyDefinition } from '../core/container-model';
 
 /**

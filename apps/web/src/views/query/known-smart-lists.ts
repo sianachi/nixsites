@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { z } from 'zod';
 import { create } from 'zustand';
 
-import { browserStorage } from '../../lib/browser-storage';
-import { onItemChildrenChanged } from '../../lib/item-children-changed';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import type { ContainerViews } from '../core/container-model';
 
 /**

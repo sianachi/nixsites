@@ -2,7 +2,7 @@ import { isNixApiError, items as coreItems, structure as coreStructure } from '@
 import { useMemo } from 'react';
 
 import { useApiClient } from '../../api/api-client-provider';
-import { notifyItemChildrenChanged } from '../../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useWorkspace } from '../../workspaces/workspace-context';
 import type { Item } from '../core/container-model';
 

@@ -1,5 +1,5 @@
 import { Button, Text, blueprintFrame, cn } from '@nix/ui';
-import { useCoarsePointer } from '../../layout/viewport';
+import { useCoarsePointer } from '@nix/web-foundation/layout/viewport';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 export interface SelectionBarProps {

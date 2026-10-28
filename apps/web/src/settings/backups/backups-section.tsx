@@ -2,8 +2,12 @@ import type { BackupRun, BackupStep } from '@nix/api-client';
 import { Button, Tag, Text } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
-import { formatDateTime, formatRelativeTime } from '../../lib/date-format';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
+import { formatDateTime, formatRelativeTime } from '@nix/web-foundation/lib/date-format';
 import { SettingsSection } from '../shared/settings-section';
 import { backupStepFacts } from './backup-facts';
 import { useBackupRuns } from './use-backup-runs';

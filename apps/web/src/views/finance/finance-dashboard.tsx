@@ -5,7 +5,11 @@ import {
   type FinanceDashboard as Dashboard,
 } from '@nix/api-client';
 import { useMemo, useState, type ReactNode } from 'react';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
 import type { FinanceSection } from './finance-view';
 import { Meter, Money } from './finance-shared';
 import { FinanceMonthSummary } from './finance-month-summary';

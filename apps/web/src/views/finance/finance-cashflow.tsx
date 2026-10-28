@@ -6,7 +6,11 @@ import {
   type Finance,
 } from '@nix/api-client';
 import { useMemo, type ReactNode } from 'react';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
 import { Money, SectionHeading, Tile, editableTextButton } from './finance-shared';
 import { formatMonth } from './money';
 import { useFinanceQuery, type FinanceState } from './use-finance';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { titleSimilarity, tokens, words } from '../../../lib/suggest/tokenize';
+import { titleSimilarity, tokens, words } from '@nix/web-foundation/lib/suggest/tokenize';
 
 describe('tokenize', () => {
   it('splits on non-letters in any script and drops function words', () => {

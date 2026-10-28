@@ -2,7 +2,7 @@ import { Button, Icon, cn } from '@nix/ui';
 import { CalendarClock } from 'lucide-react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
-import { publishNotice } from '../../../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { dayLabel, type CalendarDay } from '../../core/calendar-dates';
 import { readPropertyText, type Item } from '../../core/container-model';
 import { useItemOpenProps } from '../../core/item-open-click';

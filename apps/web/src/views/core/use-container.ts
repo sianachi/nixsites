@@ -10,8 +10,8 @@ import type { ZodType } from 'zod';
 
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../../workspaces/workspace-context';
-import { onItemChildrenChanged } from '../../lib/item-children-changed';
-import { useStaleWhileRevalidate } from '../../lib/use-stale-while-revalidate';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
+import { useStaleWhileRevalidate } from '@nix/web-foundation/lib/use-stale-while-revalidate';
 import { decorateItems, keepComputed } from '../../properties/computed';
 import {
   ContainerViewsSchema,

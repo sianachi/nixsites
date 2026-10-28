@@ -3,7 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement, type SyntheticEvent } from 'react';
 
-import { formatFullDate, formatTime } from '../lib/date-format';
+import { formatFullDate, formatTime } from '@nix/web-foundation/lib/date-format';
 import { proseRoot } from '../editor/prose';
 import { readingExtensions } from '../editor/reading-extensions';
 import { blockTexts, diffBlocks, type DiffEntry } from './block-diff';

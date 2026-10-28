@@ -7,7 +7,7 @@ import {
   forgetAudioPosition,
   readAudioPosition,
   rememberAudioPosition,
-} from '../../lib/audio-positions';
+} from '@nix/web-foundation/lib/audio-positions';
 
 /**
  * Resume points live in browser storage, which a person or an old build can leave holding

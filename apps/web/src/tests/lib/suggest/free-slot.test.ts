@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { nextFreeSlot } from '../../../lib/suggest/free-slot';
+import { nextFreeSlot } from '@nix/web-foundation/lib/suggest/free-slot';
 
 const HOUR = 60 * 60 * 1000;
 

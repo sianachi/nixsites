@@ -3,8 +3,8 @@ import { Plugin } from '@tiptap/pm/state';
 import { z } from 'zod';
 import { create } from 'zustand';
 
-import { browserStorage } from '../lib/browser-storage';
-import { writeStored } from '../lib/stored-setting';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { writeStored } from '@nix/web-foundation/lib/stored-setting';
 
 export const WritingModeSchema = z.enum(['prose', 'poetry', 'planning', 'collaboration']);
 export type WritingMode = z.infer<typeof WritingModeSchema>;

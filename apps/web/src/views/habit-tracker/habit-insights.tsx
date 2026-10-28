@@ -1,8 +1,8 @@
 import type { HabitTracker } from '@nix/api-client';
 import { Button, Field, Input, Select, Text } from '@nix/ui';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
-import { formatCalendarDay, formatShortDate } from '../../lib/date-format';
+import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
+import { formatCalendarDay, formatShortDate } from '@nix/web-foundation/lib/date-format';
 import { YearGrid } from '../chart/year-grid';
 import {
   HabitConsistency,

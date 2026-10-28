@@ -1,7 +1,7 @@
 import { Button, Text } from '@nix/ui';
 import { useId, useRef, type ReactNode } from 'react';
 
-import { EmptyPanel } from '../../components/states/status-panels';
+import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { View } from '../core/container-model';
 import type { ContainerData } from '../core/use-container';
 import { ContainerNotices, resolveLoadState } from '../core/view-chrome';

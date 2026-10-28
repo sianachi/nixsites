@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { completePhrase, MAX_EXTRA_WORDS, NgramModel, sentences } from '../../../lib/suggest/ngram';
+import {
+  completePhrase,
+  MAX_EXTRA_WORDS,
+  NgramModel,
+  sentences,
+} from '@nix/web-foundation/lib/suggest/ngram';
 
 function trained(text: string, maxEntries?: number): NgramModel {
   const model = new NgramModel(maxEntries);

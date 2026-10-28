@@ -5,7 +5,7 @@ import { petConnectionSchema, type NixClient } from '@nix/api-client';
 import type * as Companion from '@nix/companion';
 import { PetWorkTools } from '../../pets/work-tools/pet-work-tools';
 import { PetWorkToolCard } from '../../pets/work-tools/tool-card';
-import { onItemChildrenChanged } from '../../lib/item-children-changed';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { MemoryRouter } from 'react-router';
 import { useState, type ReactElement } from 'react';
 import * as Y from 'yjs';

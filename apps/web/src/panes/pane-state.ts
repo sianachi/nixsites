@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { announce } from '../a11y/announcer';
-import { useRoomForAnotherPane } from '../layout/viewport';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { useRoomForAnotherPane } from '@nix/web-foundation/layout/viewport';
 import {
   CHAT_PARAM,
   PANE_LIMIT,

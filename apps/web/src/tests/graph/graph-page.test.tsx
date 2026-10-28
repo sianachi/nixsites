@@ -7,7 +7,7 @@ import { renderAt, signedIn } from '../render-with-router';
 import { stubViewport } from '../stub-viewport';
 import { App } from '../../app';
 import { useGraphOpenPreference } from '../../graph/graph-open-preference';
-import { useTabStore } from '../../lib/tab-store';
+import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 
 /**
  * The graph destination.

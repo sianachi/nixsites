@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { median, staleMembers } from '../../../lib/suggest/staleness';
+import { median, staleMembers } from '@nix/web-foundation/lib/suggest/staleness';
 
 const DAY = 24 * 60 * 60 * 1000;
 

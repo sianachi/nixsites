@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useApiClient } from '../api/api-client-provider';
-import { notifyItemChildrenChanged } from '../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 /** The destinations are supplied by Core; browser membership data never decides write access. */
 export function WorkspaceItemTransfer({

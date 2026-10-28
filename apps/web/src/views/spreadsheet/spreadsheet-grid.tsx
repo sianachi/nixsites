@@ -10,8 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 
-import { FILL_SERIES_SHORTCUT } from '../../keyboard/shortcut-registry';
-import { formatShortcut } from '../../lib/shortcuts';
+import { FILL_SERIES_SHORTCUT } from '@nix/web-foundation/keyboard/shortcut-registry';
+import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
 import { type Item, type PropertyDefinition } from '../core/container-model';
 import type { PlanOutcome, PlanWrite } from '../core/use-container';
 import { type SortDirection } from '../core/view-state';

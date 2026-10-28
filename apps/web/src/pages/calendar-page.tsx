@@ -1,6 +1,6 @@
 import { useHiddenItems } from '../items/use-hidden-items';
-import { publishNotice } from '../lib/notices';
-import { useItemDialog } from '../lib/item-dialog-context';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 import { Button, Text } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
@@ -22,8 +22,8 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../components/states/status-panels';
-import { paneScroller } from '../layout/regions';
+} from '@nix/web-foundation/components/states/status-panels';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
 import type { CalendarDay } from '../views/core/calendar-dates';
 import { useWorkspace } from '../workspaces/workspace-context';

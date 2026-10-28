@@ -1,7 +1,7 @@
 import { Button, Dialog, Field, Input } from '@nix/ui';
 import type { Finance } from '@nix/api-client';
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
-import { localTimeZone } from '../../lib/date-format';
+import { localTimeZone } from '@nix/web-foundation/lib/date-format';
 import { WriteError } from './finance-shared';
 import { parseAmount } from './money';
 import type { FinanceState } from './use-finance';

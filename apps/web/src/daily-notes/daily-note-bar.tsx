@@ -4,10 +4,10 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useWorkspaceCalendar } from '../calendar/use-workspace-calendar';
-import { writeStored } from '../lib/stored-setting';
-import { browserStorage } from '../lib/browser-storage';
-import { useMobileKeyboard } from '../layout/use-mobile-keyboard';
-import { useNarrowViewport } from '../layout/viewport';
+import { writeStored } from '@nix/web-foundation/lib/stored-setting';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useOpenItem } from '../tabs/use-open-item';
 import { readTimestampValue, readerZone } from '../views/core/timestamps';
 import { useWorkspace } from '../workspaces/workspace-context';

@@ -43,7 +43,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { announce } from '../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '../api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
@@ -52,8 +52,8 @@ import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-op
 import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '../templates/use-templates';
 import type { TemplateSummary } from '../templates/template-api';
-import { publishNotice } from '../lib/notices';
-import { isApplePlatform } from '../lib/shortcuts';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
 import { useAutomateEntry } from '../automations/automate-entry';
 import { useMuteRemindersEntry } from '../settings/notifications/mute-reminders-entry';
 import { bookmarkEntry, copyLinkEntry, treeChildrenEntry } from './item-menu-entries';
@@ -76,7 +76,7 @@ import { capabilitiesOf } from '../views/core/view-capabilities';
 import type { TreeItem, WorkspaceTree } from './use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
-import type { ItemLandmarks } from '../lib/item-landmarks';
+import type { ItemLandmarks } from '@nix/web-foundation/lib/item-landmarks';
 
 /** Whether this is an Apple platform, for the one gesture whose modifier differs. */
 const APPLE = isApplePlatform();

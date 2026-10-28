@@ -1,10 +1,10 @@
 import { Button, Text, focusRing } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { noteColumn } from '../../layout/regions';
-import { useNarrowViewport } from '../../layout/viewport';
+import { noteColumn } from '@nix/web-foundation/layout/regions';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import type { ShellContext } from '../../shell/shell-context';
-import { useZenActive } from '../../lib/zen-mode';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 interface ItemHeaderProps {
   readonly reading: boolean;

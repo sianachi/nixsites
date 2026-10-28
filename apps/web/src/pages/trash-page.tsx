@@ -4,10 +4,14 @@ import { isNixApiError, items as coreItems, type Item } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../components/states/status-panels';
-import { paneScroller } from '../layout/regions';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useWorkspace } from '../workspaces/workspace-context';
-import { notifyItemChildrenChanged } from '../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 function Frame({ children }: { readonly children: ReactNode }): ReactElement {
   return (

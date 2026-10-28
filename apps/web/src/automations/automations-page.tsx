@@ -3,9 +3,13 @@ import { Button, Text, cn, focusRing } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../components/states/status-panels';
-import { paneScroller } from '../layout/regions';
-import { publishNotice } from '../lib/notices';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { draftFromRule, emptyDraft, ruleInputFromDraft } from './automation-draft';
 import { AutomationDetail } from './automation-detail';

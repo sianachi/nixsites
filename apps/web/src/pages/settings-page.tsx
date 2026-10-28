@@ -4,8 +4,8 @@ import { useEffect, useRef, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 
-import { useNarrowViewport } from '../layout/viewport';
-import { paneScroller } from '../layout/regions';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { AccessTokensSection } from '../settings/access-tokens/access-tokens-section';
 import { AdministratorsSection } from '../settings/administrators/administrators-section';
 import { SiteApprovalsSection } from '../settings/site-approvals/site-approvals-section';

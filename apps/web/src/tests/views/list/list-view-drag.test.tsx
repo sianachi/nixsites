@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { ItemCommandsProvider } from '../../../items/item-commands-context';
 import type { TreeItem, WorkspaceTree } from '../../../items/use-workspace-tree';
-import { onNotice, type Notice } from '../../../lib/notices';
+import { onNotice, type Notice } from '@nix/web-foundation/lib/notices';
 import { ContainerView } from '../../../views/core/container-view';
 import { aContainer } from '../../container-fixture';
 import { item } from '../../api-stub';

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { isTypingTarget, matchesShortcut } from '../lib/shortcuts';
-import { SHORTCUTS, type ShellShortcutId } from '../keyboard/shortcut-registry';
+import { isTypingTarget, matchesShortcut } from '@nix/web-foundation/lib/shortcuts';
+import { SHORTCUTS, type ShellShortcutId } from '@nix/web-foundation/keyboard/shortcut-registry';
 
 import type { WorkspaceTree } from '../items/use-workspace-tree';
 import type { PaneState } from '../panes/pane-state';

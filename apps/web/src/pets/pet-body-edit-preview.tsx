@@ -1,7 +1,7 @@
 import { Text, cn, focusRing } from '@nix/ui';
 import { useEffect, useRef, type ReactElement } from 'react';
 import type { PreviewBodyEdit } from '@nix/structure-spec';
-import { lineSegments, rangeSegments, type DiffSegment } from '../lib/text-diff';
+import { lineSegments, rangeSegments, type DiffSegment } from '@nix/web-foundation/lib/text-diff';
 
 const COPY = {
   pending: {

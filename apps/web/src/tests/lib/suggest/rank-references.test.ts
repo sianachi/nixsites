@@ -5,7 +5,7 @@ import {
   RECENCY_HALF_LIFE_MS,
   REFERENCE_WEIGHTS,
   type ReferenceCandidate,
-} from '../../../lib/suggest/rank-references';
+} from '@nix/web-foundation/lib/suggest/rank-references';
 
 const NOW = Date.parse('2026-10-01T12:00:00Z');
 

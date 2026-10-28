@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
-import { onItemChildrenChanged } from '../../lib/item-children-changed';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { sortItems, type Item } from '../core/container-model';
 import type { ContainerData } from '../core/use-container';
 import { titleOf, without, type Draft, type OutlineRow, type RowNote } from './outline-model';

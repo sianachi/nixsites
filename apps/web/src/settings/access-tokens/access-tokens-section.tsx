@@ -2,7 +2,7 @@ import { Button, Dialog, Table, Tag, Text } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 
-import { ErrorPanel } from '../../components/states/status-panels';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { SettingsSection } from '../shared/settings-section';
 import { AccessTokenCreateDialog } from './access-token-create-dialog';
 import { formatDay, tokenStatus, type TokenStatus } from './token-facts';

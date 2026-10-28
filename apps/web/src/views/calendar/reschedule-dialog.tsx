@@ -4,7 +4,7 @@ import { useRef, useState, type ReactNode } from 'react';
 
 import { readDateValue, type Item } from '../core/container-model';
 import { readTimestampValue, writeTimestampValue } from '../core/timestamps';
-import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { FreeSlotHint } from './free-slot-hint';
 import { suggestSlot } from './schedule-slot';
 import { durationLabel } from './span-gesture';

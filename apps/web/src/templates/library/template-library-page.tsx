@@ -19,7 +19,7 @@ import { templateFailure } from '../use-templates';
 import { TemplateCard } from './template-card';
 import { useWorkspace } from '../../workspaces/workspace-context';
 import { usePetSettings } from '../../api/use-pet-settings';
-import { useZenActive } from '../../lib/zen-mode';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 interface DuplicateAttempt {
   readonly idempotencyKey: string;

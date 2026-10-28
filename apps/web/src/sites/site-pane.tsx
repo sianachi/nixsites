@@ -7,7 +7,7 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../components/states/status-panels';
+} from '@nix/web-foundation/components/states/status-panels';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { failureMessage, lossDetail, pages, progressMessage } from './site-copy';
 import { SiteApproval } from './site-approval';

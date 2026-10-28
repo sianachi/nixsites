@@ -10,8 +10,8 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../components/states/status-panels';
-import { paneScroller } from '../layout/regions';
+} from '@nix/web-foundation/components/states/status-panels';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
 
 /**

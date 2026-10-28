@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Text } from '@nix/ui';
-import { useCoarsePointer, useNarrowViewport, useRoomForAnotherPane } from '../../layout/viewport';
+import {
+  useCoarsePointer,
+  useNarrowViewport,
+  useRoomForAnotherPane,
+} from '@nix/web-foundation/layout/viewport';
 import { useOptionalItemCommands } from '../../items/item-commands-context';
-import { useItemDialog } from '../../lib/item-dialog-context';
+import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 
-import { EmptyPanel, ErrorPanel } from '../../components/states/status-panels';
+import { EmptyPanel, ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { View } from './container-model';
 import { ListView } from '../list/list-view';
 import type { ContainerData } from './use-container';

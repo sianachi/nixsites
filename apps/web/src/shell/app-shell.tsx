@@ -1,6 +1,9 @@
 import { MobileNoteCapture } from '../items/mobile-note-capture';
-import { useMobileKeyboard, useVisualViewportHeight } from '../layout/use-mobile-keyboard';
-import { useBackDismiss } from '../layout/use-back-dismiss';
+import {
+  useMobileKeyboard,
+  useVisualViewportHeight,
+} from '@nix/web-foundation/layout/use-mobile-keyboard';
+import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { describeBulkDelete, executeBulkDelete } from '../items/bulk-delete';
 import { ItemCommandsProvider } from '../items/item-commands-context';
 import { ItemDialogProvider } from '../items/item-dialog-provider';
@@ -16,9 +19,9 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
 import { ImportDialog } from '../import/import-dialog';
-import { consumeInterruptedImportForWorkspace } from '../lib/import-interrupted-notice';
+import { consumeInterruptedImportForWorkspace } from '@nix/web-foundation/lib/import-interrupted-notice';
 import { useWorkspaceTree, type TreeItem } from '../items/use-workspace-tree';
-import { announce, useAnnouncement } from '../a11y/announcer';
+import { announce, useAnnouncement } from '@nix/web-foundation/a11y/announcer';
 import type { ShellContext } from './shell-context';
 import { focusPane } from '../panes/pane-params';
 import { usePanes } from '../panes/pane-state';
@@ -27,23 +30,23 @@ import { automationsHref } from '../automations/automation-url';
 import { CommandPalette } from '../search/command-palette';
 import { builtInCommands } from '../search/commands';
 import { useBookmarksLoader, useBookmarksStore, useIsKept } from '../bookmarks/use-bookmarks';
-import { MiniPlayer } from '../audio/mini-player';
+import { MiniPlayer } from '@nix/web-foundation/audio/mini-player';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useOpenDailyOnLaunch } from '../launch/use-open-daily-on-launch';
 import { useUiSettingsSync } from '../settings/shared/use-ui-settings-sync';
 import { DailyCaptureDialog } from '../daily-notes/daily-capture-dialog';
-import { useSessionStore } from '../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { CapabilitiesProvider } from '../session/capabilities-context';
 import { useCurrentPrincipal } from '../session/use-current-principal';
-import { paneClip } from '../layout/regions';
+import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
-import { useDrawerNavigation } from '../layout/viewport';
-import { useSidebar } from '../layout/use-sidebar';
+import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
+import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
 import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
 import { useTemplates } from '../templates/use-templates';
 import { TemplateLibraryProvider } from '../templates/template-library-context';
 import { ShellHeader } from './shell-header';
-import { KeyboardShortcutsDialog } from '../keyboard/keyboard-shortcuts-dialog';
+import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';
 import { NotificationInboxPanel } from './notifications/notification-inbox-panel';
@@ -53,16 +56,16 @@ import { ShellToasts, useShellToasts } from './shell-toasts';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { WorkspaceInvitationNotice } from '../workspaces/workspace-invitation-notice';
 import type { LaunchNavigationState } from '../launch/launch-intent';
-import { viewCommitted } from '../lib/view-transition';
-import { onNotice } from '../lib/notices';
-import { recordRecentItem } from '../lib/recent-items';
+import { viewCommitted } from '@nix/web-foundation/lib/view-transition';
+import { onNotice } from '@nix/web-foundation/lib/notices';
+import { recordRecentItem } from '@nix/web-foundation/lib/recent-items';
 import {
   claimZenSurface,
   onZenModeChanged,
   setZenMode,
   toggleZenMode,
   useZenActive,
-} from '../lib/zen-mode';
+} from '@nix/web-foundation/lib/zen-mode';
 
 /**
  * The application chrome: one workspace, always visible.
@@ -88,7 +91,7 @@ import {
  * `overflow-y-auto` makes it a scroll container on *both* axes - per CSS Overflow 3, one axis
  * leaving `visible` takes the other with it - so what actually keeps the horizontal axis quiet is
  * that every wide view brings its own `overflow-x-auto` and `min-w-0` lets the pane shrink to fit
- * around it. See `paneScroller` in `../layout/regions`.
+ * around it. See `paneScroller` in `@nix/web-foundation/layout/regions`.
  *
  * This was previously unimplemented rather than mis-tuned, and it failed in two directions at once.
  * The root was `min-h-dvh`, so `flex-1` never had a definite height and no descendant's

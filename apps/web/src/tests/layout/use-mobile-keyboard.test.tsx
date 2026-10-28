@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import { useMobileKeyboard } from '../../layout/use-mobile-keyboard';
+import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
 function Harness() {
   const visible = useMobileKeyboard(true);
   return (

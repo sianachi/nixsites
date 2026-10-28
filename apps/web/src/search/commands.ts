@@ -10,8 +10,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { formatShortcut } from '../lib/shortcuts';
-import { shortcutFor, type ShellShortcutId } from '../keyboard/shortcut-registry';
+import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
+import { shortcutFor, type ShellShortcutId } from '@nix/web-foundation/keyboard/shortcut-registry';
 
 /**
  * What the palette can do, as opposed to what it can find.

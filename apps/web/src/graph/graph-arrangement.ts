@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserStorage } from '../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { View } from './graph-camera';
 import type { Offset } from './graph-layout';
 

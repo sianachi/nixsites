@@ -1,13 +1,13 @@
 import * as Y from 'yjs';
 
-import { NgramModel } from '../lib/suggest/ngram';
+import { NgramModel } from '@nix/web-foundation/lib/suggest/ngram';
 import {
   bodyCacheAdmits,
   listBodyCacheScopes,
   onBodyForgetting,
   readBodyCache,
   type BodyForgetting,
-} from '../lib/body-cache';
+} from '@nix/web-foundation/lib/body-cache';
 import { FRAGMENT_NAME } from './collab-sync';
 
 /**

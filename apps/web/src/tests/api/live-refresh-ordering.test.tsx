@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '../../api/api-client-provider';
 import { useWorkspaceTree, type WorkspaceTree } from '../../items/use-workspace-tree';
-import { notifyItemChildrenChanged, onItemChildrenChanged } from '../../lib/item-children-changed';
+import {
+  notifyItemChildrenChanged,
+  onItemChildrenChanged,
+} from '@nix/web-foundation/lib/item-children-changed';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 import { json } from '../json-response';

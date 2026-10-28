@@ -9,9 +9,9 @@ import {
   subscribeDocumentIssues,
   updateDocumentIssues,
   type DocumentIssue,
-} from '../lib/document-issues';
+} from '@nix/web-foundation/lib/document-issues';
 import type { SyncState } from './collab-sync';
-import type { DraftState } from '../lib/draft-journal';
+import type { DraftState } from '@nix/web-foundation/lib/draft-journal';
 
 export const LOCAL_COPY_STALE = 'local_copy_stale';
 

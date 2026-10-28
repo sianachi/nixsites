@@ -1,6 +1,6 @@
 import { createNixClient } from '@nix/api-client';
 import { describe, expect, it, vi } from 'vitest';
-import { authorisedAudioUrl } from '../../audio/audio-source';
+import { authorisedAudioUrl } from '@nix/web-foundation/audio/audio-source';
 
 function source(url: string) {
   const client = createNixClient({

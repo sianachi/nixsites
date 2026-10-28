@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { EmptyPanel } from '../components/states/status-panels';
-import { paneScroller } from '../layout/regions';
+import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 
 import { Button } from '@nix/ui';
 

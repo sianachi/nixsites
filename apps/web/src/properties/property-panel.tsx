@@ -1,7 +1,7 @@
 import { Button, Text } from '@nix/ui';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-import { EmptyPanel, LoadingPanel } from '../components/states/status-panels';
+import { EmptyPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { Item, PropertyDefinition, PropertyValue } from '../views/core/container-model';
 import { PropertyInput } from './property-input';
 

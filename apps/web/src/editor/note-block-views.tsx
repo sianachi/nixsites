@@ -34,7 +34,7 @@ import {
   documentScope,
   onBodyForgetting,
   sealItemBodies,
-} from '../lib/body-cache';
+} from '@nix/web-foundation/lib/body-cache';
 import {
   useReference,
   useRefreshReference,

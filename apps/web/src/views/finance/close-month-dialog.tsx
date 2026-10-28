@@ -1,7 +1,7 @@
 import { Button, Dialog, Text } from '@nix/ui';
 import { finance as financeApi, type Finance, type MonthChecklist } from '@nix/api-client';
 import { useMemo, useState, type ReactNode } from 'react';
-import { LoadingPanel } from '../../components/states/status-panels';
+import { LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { Money, WriteError } from './finance-shared';
 import { formatMonth } from './money';
 import { useFinanceQuery, type FinanceState } from './use-finance';

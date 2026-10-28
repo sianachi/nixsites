@@ -7,7 +7,7 @@ import { aView } from '../../view-fixture';
 import type { PlanWrite } from '../../../views/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
 import { anItem } from '../suggest/suggest-fixtures';
-import { useViewSuggestionPreference } from '../../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 
 /**
  * The spreadsheet's offer to continue a series down a selection: shown for a real pattern, applied

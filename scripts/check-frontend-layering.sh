@@ -17,7 +17,8 @@
 #
 #   T0 leaf     lib/, a11y/    third-party and their own folder, nothing else
 #   T0 leaf     layout/        the above, plus lib/
-#   T1 feature  everything else under src/    T0, siblings, shell/ type-only
+#               (all three live in packages/web-foundation/src)
+#   T1 feature  everything else under apps/web/src    T0, siblings, shell/ type-only
 #   T2 shell    shell/         anything
 #   T3 root     app.tsx, main.tsx             anything
 #
@@ -37,6 +38,7 @@
 #   R3  lib/ imports nothing from the application.
 #   R4  nobody outside shell/, app.tsx and main.tsx imports shell/ for a value.
 #   R5  apps/web/src/app/ does not exist.
+#   R6  nothing under packages/web-* imports from apps/ (packages never import apps).
 #
 # Be clear about what this is worth. It catches the ordinary mistake - someone
 # adds `import { announce } from '../a11y/announcer'` to a layout/ file - and
@@ -55,7 +57,7 @@
 # `no-restricted-imports` zones, which have a TypeScript resolver and see the
 # whole graph. That is the same escalation check-layering.sh names for itself.
 #
-# Scope is apps/web/src. Tests may import whatever they need, so any directory
+# Scope is apps/web/src (R4, R5), packages/web-foundation/src (R1-R3) and packages/web-* (R6). Tests may import whatever they need, so any directory
 # named `tests` is pruned - the same call check-text-primitive.sh makes.
 #
 # Portable across BSD (macOS) and GNU grep: only -r, -n, -E and --include are
@@ -65,20 +67,27 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Usage: check-frontend-layering.sh [web-src [packages-dir]]. The arguments exist so the test suite
+# can point this at a fixture corpus; CI runs it bare from the repo root.
 if [ "$#" -gt 0 ]; then
   src="$1"
-  if [ ! -d "$src" ]; then
-    echo "check-frontend-layering: '$src' is not a directory." >&2
-    exit 2
-  fi
+  packages="${2:-}"
+  for dir in "$src" "$packages"; do
+    if [ -n "$dir" ] && [ ! -d "$dir" ]; then
+      echo "check-frontend-layering: '$dir' is not a directory." >&2
+      exit 2
+    fi
+  done
 else
   cd "$repo_root"
   src="apps/web/src"
+  packages="packages"
   if [ ! -d "$src" ]; then
     echo "check-frontend-layering: $src not found; nothing to check."
     exit 0
   fi
 fi
+foundation="${packages:+$packages/web-foundation/src}"
 
 # Every way a module can name another file: a static import, a re-export, and a
 # dynamic import(). All three are edges in the graph and all three are caught by
@@ -101,11 +110,11 @@ scan() {
 # R1: layout/ may reach lib/ and nothing else. Default-deny - match every `../`
 # and subtract the allowlist - so a folder added next year is forbidden without
 # anyone remembering to edit this script.
-layout_leaks="$(scan "$edge" "$src/layout" | grep -vE "(from|import\()[[:space:]]*'\.\./lib/" || true)"
+layout_leaks="$(scan "$edge" "$foundation/layout" | grep -vE "(from|import\()[[:space:]]*'\.\./lib/" || true)"
 
 # R2 and R3: absolute leaves. Any `../` at all is a finding.
-a11y_leaks="$(scan "$edge" "$src/a11y")"
-lib_leaks="$(scan "$edge" "$src/lib")"
+a11y_leaks="$(scan "$edge" "$foundation/a11y")"
+lib_leaks="$(scan "$edge" "$foundation/lib")"
 
 # R4: the shell is the composition tier, so a feature reaching into it inverts
 # the direction. A type-only import is erased at compile time and carries no
@@ -133,8 +142,22 @@ if [ -d "$src/app" ]; then
   app_folder="$src/app"
 fi
 
+# R6: a web package that reaches back into an app is a cycle waiting for a build step. Both the
+# relative spelling and the workspace name are caught.
+apps_imports=""
+if [ -n "$packages" ]; then
+  for dir in "$packages"/web-*/; do
+    found="$(scan "(from|import\()[[:space:]]*'([^']*/)?apps/|(from|import\()[[:space:]]*'@nix/web(/|')" "$dir")"
+    if [ -n "$found" ]; then
+      apps_imports="$apps_imports$found
+"
+    fi
+  done
+  apps_imports="$(printf '%s' "$apps_imports" | grep -v '^$' || true)"
+fi
+
 if [ -z "$layout_leaks" ] && [ -z "$a11y_leaks" ] && [ -z "$lib_leaks" ] &&
-  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ]; then
+  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ] && [ -z "$apps_imports" ]; then
   echo "check-frontend-layering: OK (the leaves are leaves; the shell is imported for a value only by the route table)."
   exit 0
 fi
@@ -155,6 +178,7 @@ report() {
 report "layout/ imports something other than lib/:" "$layout_leaks"
 report "a11y/ imports from the application:" "$a11y_leaks"
 report "lib/ imports from the application:" "$lib_leaks"
+report "a web package imports from apps/:" "$apps_imports"
 report "a feature imports shell/ for a value rather than a type:" "$shell_value_imports"
 if [ -n "$app_folder" ]; then
   report "the dissolved app/ folder is back:" "$app_folder"

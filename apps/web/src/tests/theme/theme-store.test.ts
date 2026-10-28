@@ -11,7 +11,7 @@ import {
   readStoredPreference,
   resolveGround,
   storePreference,
-} from '../../theme/theme-store';
+} from '@nix/web-foundation/theme/theme-store';
 
 /**
  * Which ground the application is drawn on.

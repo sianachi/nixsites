@@ -2,8 +2,8 @@ import type { Editor } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../../api/api-client-provider';
-import { announce } from '../../a11y/announcer';
-import { publishNotice } from '../../lib/notices';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import {
   anchorRange,
   applyInlineResult,

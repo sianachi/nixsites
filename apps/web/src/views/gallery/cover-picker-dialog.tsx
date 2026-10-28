@@ -1,8 +1,8 @@
 import { Button, Dialog, Field, Input, Text } from '@nix/ui';
 import { useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
 
-import { isImageFile } from '../../lib/file-kind';
-import { isFetchableImageAddress } from '../../lib/image-address';
+import { isImageFile } from '@nix/web-foundation/lib/file-kind';
+import { isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 
 export interface CoverPickerDialogProps {
   /** Named in the dialog's own title, so a grid of identical "Set cover" buttons is never opened

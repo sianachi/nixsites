@@ -45,7 +45,7 @@
 # So a green run says "no visible text element is dressing itself", not "every string goes through
 # the primitive".
 #
-# Scope:   *.tsx under apps/web/src, excluding src/tests
+# Scope:   *.tsx under apps/web/src and packages/web-*/src, excluding src/tests
 # Skipped: node_modules, dist
 # Exempt:  - a line containing a 'text-primitive-exempt' comment
 #          - a line whose preceding 6 lines contain one, so the reason can be a paragraph above the
@@ -55,7 +55,7 @@
 #          - a line that opens with '//' or '/*'
 #
 # Usage:   check-text-primitive.sh [root ...]
-#          With no arguments it scans apps/web/src from the repo root, which is what CI runs.
+#          With no arguments it scans apps/web/src and packages/web-*/src from the repo root, which is what CI runs.
 #          Explicit roots exist so the test suite can point this at a fixture corpus - see
 #          check-text-primitive.test.sh.
 #
@@ -83,6 +83,10 @@ else
     exit 0
   fi
   scan_roots+=('apps/web/src')
+  # Web packages carry the app's moved code, so they answer to the same rule; packages/ui does not.
+  for root in packages/web-*/src; do
+    [ -d "$root" ] && scan_roots+=("$root")
+  done
 fi
 
 # How far above a hit an exemption comment may sit. Six lines is enough for the four-line reasons

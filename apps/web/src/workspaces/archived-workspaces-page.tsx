@@ -4,8 +4,8 @@ import { useLayoutEffect, useState, type ReactNode, type SyntheticEvent } from '
 import { Link, useNavigate } from 'react-router';
 
 import { useApiClient } from '../api/api-client-provider';
-import { ErrorPanel, LoadingPanel } from '../components/states/status-panels';
-import { claimZenSurface, toggleZenMode, useZenActive } from '../lib/zen-mode';
+import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
+import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { useAccessibleWorkspaces } from './workspace-context';
 
 /** Lists workspaces outside everyday navigation so archived work remains recoverable. */

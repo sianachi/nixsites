@@ -1,7 +1,7 @@
 import { Button, Input, Select, Text } from '@nix/ui';
 import { useId, useState, type ReactNode } from 'react';
 
-import { ErrorPanel } from '../../components/states/status-panels';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { Administration, AssignableRole, CurrentWorkspace } from './shared';
 
 const label = (person: { displayName: string; email: string | null }): string =>

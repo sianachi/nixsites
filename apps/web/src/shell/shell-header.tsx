@@ -4,10 +4,10 @@ import { type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 
 import type { CurrentPrincipalState } from '../session/use-current-principal';
-import { formatShortcut } from '../lib/shortcuts';
+import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
 import { WorkspaceSwitcher } from '../workspaces/workspace-switcher';
-import { shortcutFor } from '../keyboard/shortcut-registry';
-import { toggleZenMode } from '../lib/zen-mode';
+import { shortcutFor } from '@nix/web-foundation/keyboard/shortcut-registry';
+import { toggleZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { NotificationBell } from './notifications/notification-bell';
 import { ProfileMenu } from './profile-menu';
 

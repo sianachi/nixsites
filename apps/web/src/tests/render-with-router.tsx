@@ -2,9 +2,9 @@ import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import { useSessionStore } from '../lib/session-store';
-import { bodyCacheAccountEpoch, openBodyCache } from '../lib/body-cache';
-import { browserStorage } from '../lib/browser-storage';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { bodyCacheAccountEpoch, openBodyCache } from '@nix/web-foundation/lib/body-cache';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { vi } from 'vitest';
 import { memoryStorage } from './memory-storage';
 import { stubHealthyCollaboration } from './healthy-collaboration';

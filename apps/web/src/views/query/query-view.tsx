@@ -7,8 +7,8 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../../components/states/status-panels';
-import { inferFilters, type InferredFilters } from '../../lib/suggest/infer-filters';
+} from '@nix/web-foundation/components/states/status-panels';
+import { inferFilters, type InferredFilters } from '@nix/web-foundation/lib/suggest/infer-filters';
 import { useItemOpenProps } from '../core/item-open-click';
 import {
   applyTitleSearch,

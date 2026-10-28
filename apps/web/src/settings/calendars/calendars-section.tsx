@@ -4,8 +4,8 @@ import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 
-import { useNarrowViewport } from '../../layout/viewport';
-import { ErrorPanel } from '../../components/states/status-panels';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import {
   connectionTag,
   formatMoment,

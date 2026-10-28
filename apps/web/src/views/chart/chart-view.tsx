@@ -2,7 +2,11 @@ import type { ItemChart } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
 import type { PropertyDefinition } from '../core/container-model';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { Drawing } from './chart-drawing';

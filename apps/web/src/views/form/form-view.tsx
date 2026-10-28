@@ -18,7 +18,7 @@ import { useOptionalWorkspace } from '../../workspaces/workspace-context';
 import { rememberSubmission, usualValues, type UsualValue } from './form-memory';
 import { MemberNames } from '../suggest/member-name';
 import { valueText } from '../suggest/value-text';
-import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { UsualValueHint, UsualValuesSummary } from './usual-value-hint';
 import { FormResults } from './form-results';
 import { reportFormValidity } from './form-validity';

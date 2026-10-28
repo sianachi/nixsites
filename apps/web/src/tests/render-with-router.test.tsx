@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as bodies from '../lib/body-cache';
+import * as bodies from '@nix/web-foundation/lib/body-cache';
 import { memoryStorage } from './memory-storage';
 import { prepareHealthyAdmission, resetSession, signedIn } from './render-with-router';
 

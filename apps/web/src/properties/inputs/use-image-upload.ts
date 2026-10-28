@@ -1,7 +1,7 @@
 import { files as fileResources, type NixClient } from '@nix/api-client';
 import { useState } from 'react';
 
-import { isImageFile, mediaTypeForFile } from '../../lib/file-kind';
+import { isImageFile, mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 import { useOptionalWorkspace } from '../../workspaces/workspace-context';
 import type { PropertyOwner } from '../../views/core/container-model';
 

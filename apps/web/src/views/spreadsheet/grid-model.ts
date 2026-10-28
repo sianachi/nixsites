@@ -11,7 +11,7 @@ import {
   type View,
 } from '../core/container-model';
 import { dayFor, formatTime, readTimestampValue, readerZone } from '../core/timestamps';
-import { continueSeries, type SeriesKind } from '../../lib/suggest/fill-series';
+import { continueSeries, type SeriesKind } from '@nix/web-foundation/lib/suggest/fill-series';
 
 /**
  * The spreadsheet view's geometry and coercion, as pure functions.

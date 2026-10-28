@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router';
 
 import { parsePanes } from '../panes/pane-state';
 import { tabsForPane } from './tab-ownership';
-import { useTabStore, type OpenTab } from '../lib/tab-store';
+import { useTabStore, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 
 /**
  * The tab strip a pane actually draws.

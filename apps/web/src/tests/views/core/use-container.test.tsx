@@ -7,7 +7,7 @@ import { ApiClientProvider } from '../../../api/api-client-provider';
 import { useContainer } from '../../../views/core/use-container';
 import { WorkspaceProvider } from '../../../workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../../api-stub';
-import { notifyItemChildrenChanged } from '../../../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useQueryResults } from '../../../views/query/use-query-results';
 import { useWorkspaceTree } from '../../../items/use-workspace-tree';
 import { requestUrl } from '../../request-url';

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { viewCommitted, withViewTransition } from '../../lib/view-transition';
+import { viewCommitted, withViewTransition } from '@nix/web-foundation/lib/view-transition';
 
 afterEach(() => {
   vi.useRealTimers();

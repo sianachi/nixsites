@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserSessionStorage } from '../../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import {
   PropertyDefinitionSchema,
   ViewSchema,

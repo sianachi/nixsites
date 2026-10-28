@@ -8,9 +8,9 @@ import {
   type DocumentImportPlan,
 } from '@nix/api-client';
 
-import { useSessionStore } from '../../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { ImportDialog } from '../../import/import-dialog';
-import { consumeInterruptedImportForWorkspace } from '../../lib/import-interrupted-notice';
+import { consumeInterruptedImportForWorkspace } from '@nix/web-foundation/lib/import-interrupted-notice';
 import * as run from '../../import/import-run';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';

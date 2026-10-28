@@ -11,7 +11,11 @@ import type { View } from '../../../views/core/container-model';
 import { QueryView } from '../../../views/query/query-view';
 import { ViewTools } from '../../../views/core/view-tools';
 import { useViewState } from '../../../views/core/view-state';
-import { hiddenItemsKey, readHiddenItems, writeHiddenItems } from '../../../lib/view-hidden-items';
+import {
+  hiddenItemsKey,
+  readHiddenItems,
+  writeHiddenItems,
+} from '@nix/web-foundation/lib/view-hidden-items';
 
 /**
  * The query view, driven against a stubbed run endpoint: the five states, the container names on

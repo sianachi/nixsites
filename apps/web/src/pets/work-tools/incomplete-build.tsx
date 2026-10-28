@@ -2,7 +2,7 @@ import { items, type NixClient } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 import { z } from 'zod';
-import { notifyItemChildrenChanged } from '../../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { buildOutcome } from './receipts';
 
 /** What is left to do about a blueprint build that stopped part way: how far it got, and a way to

@@ -1,5 +1,5 @@
-import { writeStored } from '../lib/stored-setting';
-import { browserStorage } from '../lib/browser-storage';
+import { writeStored } from '@nix/web-foundation/lib/stored-setting';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 
 const LAST_WORKSPACE_KEY = 'nix.last-workspace-id';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

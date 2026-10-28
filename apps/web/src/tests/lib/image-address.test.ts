@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { imageAddressSchema, isFetchableImageAddress } from '../../lib/image-address';
+import { imageAddressSchema, isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 
 describe('the shared image-address policy', () => {
   it.each(['https://images.example.test/plan.png', 'http://images.example.test/plan.png'])(

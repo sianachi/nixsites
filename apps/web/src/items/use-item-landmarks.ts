@@ -1,8 +1,8 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-import { useSessionStore } from '../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { useWorkspace } from '../workspaces/workspace-context';
-import { publishNotice } from '../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import {
   emptyItemLandmarks,
   itemLandmarksKey,
@@ -11,7 +11,7 @@ import {
   writeItemLandmark,
   type ItemLandmark,
   type ItemLandmarks,
-} from '../lib/item-landmarks';
+} from '@nix/web-foundation/lib/item-landmarks';
 
 interface ItemLandmarksPreference {
   readonly scope: string | null;

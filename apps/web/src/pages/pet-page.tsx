@@ -5,11 +5,15 @@ import { Link, Navigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { useApiClient } from '../api/api-client-provider';
 
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../components/states/status-panels';
-import { useNarrowViewport } from '../layout/viewport';
-import { paneColumn } from '../layout/regions';
-import { useZenActive } from '../lib/zen-mode';
-import { chatTabId, useTabStore } from '../lib/tab-store';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { paneColumn } from '@nix/web-foundation/layout/regions';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
+import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { Conversation } from '../pets/conversation/conversation';
 import { usePetRuntime } from '../pets/use-pet-runtime';
 import { usePetSettings } from '../api/use-pet-settings';

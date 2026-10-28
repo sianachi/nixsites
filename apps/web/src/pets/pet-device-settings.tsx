@@ -7,7 +7,7 @@ import {
   readPetSurface,
   writeDevicePreference,
   type PetSurface,
-} from '../lib/device-preferences';
+} from '@nix/web-foundation/lib/device-preferences';
 
 /** The device-only rows of the Behaviour group; `children` leads the first row. */
 export function PetDeviceSettings({

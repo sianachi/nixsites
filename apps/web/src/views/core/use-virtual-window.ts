@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
-import { usePaneViewport } from '../../layout/pane-viewport';
+import { usePaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import {
   localViewport,
   variableOffsets,

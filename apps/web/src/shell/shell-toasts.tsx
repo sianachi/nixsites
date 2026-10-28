@@ -1,5 +1,5 @@
 import { Toast } from '@nix/ui';
-import { useNarrowViewport } from '../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useState, type ReactNode, type RefObject } from 'react';
 
 export interface ShellToast {

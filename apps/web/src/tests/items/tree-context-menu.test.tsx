@@ -5,10 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '../../api/api-client-provider';
 import { AuthProvider } from '../../auth/auth-provider';
-import { useSessionStore } from '../../lib/session-store';
-import { browserStorage } from '../../lib/browser-storage';
-import { hiddenItemsKey, writeHiddenItems } from '../../lib/view-hidden-items';
-import { itemLandmarksKey } from '../../lib/item-landmarks';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-hidden-items';
+import { itemLandmarksKey } from '@nix/web-foundation/lib/item-landmarks';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';

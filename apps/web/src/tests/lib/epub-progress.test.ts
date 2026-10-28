@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { EPUB_PROGRESS_LIMIT, readEpubProgress, writeEpubProgress } from '../../lib/epub-progress';
+import {
+  EPUB_PROGRESS_LIMIT,
+  readEpubProgress,
+  writeEpubProgress,
+} from '@nix/web-foundation/lib/epub-progress';
 import { memoryStorage } from '../memory-storage';
 
 describe('remembering EPUB chapters', () => {

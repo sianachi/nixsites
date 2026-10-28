@@ -3,7 +3,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { NavigateFunction } from 'react-router';
 
 import type { CollabSync } from '../../editor/collab-sync';
-import { browserSessionStorage } from '../../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { TemplateDetail, TemplateEditDraft } from '../template-api';
 import type { TemplateLibrary } from '../use-templates';
 import type { StudioMode, TemplateDraft } from '../template-studio-model';

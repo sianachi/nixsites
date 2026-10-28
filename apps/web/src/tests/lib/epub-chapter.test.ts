@@ -1,7 +1,10 @@
 import { strToU8 } from 'fflate';
 import { expect, it } from 'vitest';
-import { buildEpubChapterDocument, EPUB_CHAPTER_POLICY } from '../../lib/epub-chapter';
-import type { EpubBook } from '../../lib/epub-archive';
+import {
+  buildEpubChapterDocument,
+  EPUB_CHAPTER_POLICY,
+} from '@nix/web-foundation/lib/epub-chapter';
+import type { EpubBook } from '@nix/web-foundation/lib/epub-archive';
 it('rebuilds hostile chapters with inert links, no active content and a network-denying policy', () => {
   const source =
     '<html><head><base href="https://attacker.invalid"><meta http-equiv="refresh" content="0;url=https://attacker.invalid"></head><body onload="alert(1)"><script>alert(1)</script><iframe src="https://attacker.invalid"></iframe><form action="https://attacker.invalid"><input></form><a href="https://example.com">link</a><a href="javascript:alert(1)">bad</a><img src="https://attacker.invalid/a" onerror="alert(1)"><p>Readable text</p></body></html>';

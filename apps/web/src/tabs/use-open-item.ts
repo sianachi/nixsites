@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 import { useLocation, useNavigate, useSearchParams, type NavigateFunction } from 'react-router';
 
-import { announce } from '../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { usePaneIndex } from '../panes/pane-context';
 import { focusPane } from '../panes/pane-params';
 import { BESIDE_REFUSAL_COPY, parsePanes, usePanes, type BesideRefusal } from '../panes/pane-state';
 import { useSelectedItem, writeSelectedItem } from '../routing/selected-item';
 import { ownerOfItem } from './tab-ownership';
-import { useTabStore, type OpenTab } from '../lib/tab-store';
-import { withViewTransition } from '../lib/view-transition';
+import { useTabStore, type OpenTab } from '@nix/web-foundation/lib/tab-store';
+import { withViewTransition } from '@nix/web-foundation/lib/view-transition';
 
 /**
  * The one door a document is opened through - previewed, pinned, or opened beside - and the

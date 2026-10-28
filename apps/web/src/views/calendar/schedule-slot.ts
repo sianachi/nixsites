@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 
-import { nextFreeSlot, type Span } from '../../lib/suggest/free-slot';
+import { nextFreeSlot, type Span } from '@nix/web-foundation/lib/suggest/free-slot';
 import type { Item } from '../core/container-model';
 import { readTimestampValue } from '../core/timestamps';
 

@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { ThemeChoice } from '../../theme/theme-choice';
-import { STORAGE_KEY } from '../../theme/theme-store';
+import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
+import { STORAGE_KEY } from '@nix/web-foundation/theme/theme-store';
 
 /**
  * Choosing the ground, driven the way somebody uses it.

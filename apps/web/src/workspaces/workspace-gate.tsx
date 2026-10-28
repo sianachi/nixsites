@@ -1,4 +1,4 @@
-import { useSessionStore } from '../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { readLastLocation } from '../pwa/last-location';
 import { Button } from '@nix/ui';
 import type { ReactNode } from 'react';
@@ -9,7 +9,7 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../components/states/status-panels';
+} from '@nix/web-foundation/components/states/status-panels';
 import { SHARE_PARAMETERS } from '../launch/launch-intent';
 import { readLastWorkspaceId } from './last-workspace';
 import { useAccessibleWorkspaces, WorkspaceProvider } from './workspace-context';

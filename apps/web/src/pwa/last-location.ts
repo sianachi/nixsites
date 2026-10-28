@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { writeStored } from '../lib/stored-setting';
-import { browserStorage } from '../lib/browser-storage';
+import { writeStored } from '@nix/web-foundation/lib/stored-setting';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 
 const savedLocation = z.object({ workspaceId: z.uuid(), path: z.string().max(4096) });
 const key = (subject: string): string => `nix.last-location:${subject}`;

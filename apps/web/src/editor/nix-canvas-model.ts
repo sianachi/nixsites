@@ -1,7 +1,7 @@
 import type { BoundElement, ExcalidrawElement, FileId } from '@excalidraw/excalidraw/element/types';
 import type { BinaryFileData, DataURL } from '@excalidraw/excalidraw/types';
 
-import { isFetchableImageAddress } from '../lib/image-address';
+import { isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 import type { CanvasElement } from './canvas-binding';
 
 /** Metadata Nix owns inside an otherwise ordinary Excalidraw element. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DUPLICATE_THRESHOLD, similarTitles } from '../../../lib/suggest/duplicates';
+import { DUPLICATE_THRESHOLD, similarTitles } from '@nix/web-foundation/lib/suggest/duplicates';
 
 describe('the duplicate title check', () => {
   const candidates = [

@@ -1,5 +1,5 @@
-import { publishNotice } from '../lib/notices';
-import { flushPendingWork } from '../lib/pending-work';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+import { flushPendingWork } from '@nix/web-foundation/lib/pending-work';
 
 let registration: ServiceWorkerRegistration | undefined;
 const listeners = new Set<() => void>();

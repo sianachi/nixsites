@@ -1,4 +1,4 @@
-import type { StaleMember } from '../../lib/suggest/staleness';
+import type { StaleMember } from '@nix/web-foundation/lib/suggest/staleness';
 import {
   readSelectValue,
   type Item,

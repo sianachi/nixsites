@@ -1,7 +1,7 @@
 import { Button, Select, Tag, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
+import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { Administration, AssignableRole, Confirmation } from './shared';
 
 const ROW = 'flex flex-wrap items-center gap-2 py-1.5';

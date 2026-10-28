@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CurrentPrincipalState } from '../../session/use-current-principal';
 import { ProfileMenu } from '../../shell/profile-menu';
-import { useSessionStore } from '../../lib/session-store';
-import * as bodies from '../../lib/body-cache';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import * as bodies from '@nix/web-foundation/lib/body-cache';
 import * as collaboration from '../../editor/collab-sync';
-import * as drafts from '../../lib/draft-journal';
+import * as drafts from '@nix/web-foundation/lib/draft-journal';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 const profile = { subject: 'menu-person', name: 'Ada Person', email: 'ada@example.test' };

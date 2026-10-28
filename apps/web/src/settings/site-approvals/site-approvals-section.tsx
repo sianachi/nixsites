@@ -2,10 +2,10 @@ import type { SiteApprovalEntry } from '@nix/api-client';
 import { Button, Dialog, Field, Table, Text, Textarea } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
-import { ErrorPanel } from '../../components/states/status-panels';
-import { useNarrowViewport } from '../../layout/viewport';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { SettingsSection } from '../shared/settings-section';
-import { formatDateTime } from '../../lib/date-format';
+import { formatDateTime } from '@nix/web-foundation/lib/date-format';
 import { useSiteApprovals } from './use-site-approvals';
 
 interface Deciding {

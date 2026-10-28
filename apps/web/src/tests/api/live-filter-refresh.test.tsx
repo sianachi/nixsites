@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { ApiClientOverrideProvider } from '../../api/api-client-provider';
-import { onItemChildrenChanged } from '../../lib/item-children-changed';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { ViewSchema } from '../../views/core/container-model';
 import { useContainer } from '../../views/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';

@@ -3,7 +3,7 @@ import { createElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useTabStore } from '../../lib/tab-store';
+import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useDocumentTabs } from '../../tabs/use-document-tabs';
 
 beforeEach(() => {

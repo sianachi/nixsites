@@ -17,7 +17,7 @@ import type { View } from '../core/container-model';
 import { ContainerView } from '../core/container-view';
 import { HabitInsights } from './habit-insights';
 import { habitDateRange, habitDays, shiftHabitDay } from './habit-progress';
-import { formatShortDate } from '../../lib/date-format';
+import { formatShortDate } from '@nix/web-foundation/lib/date-format';
 
 const today = formatShortDate(new Date(), 'Europe/London');
 const HABIT = 'd1111111-1111-4111-8111-111111111111';

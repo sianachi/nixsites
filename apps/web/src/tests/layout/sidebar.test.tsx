@@ -11,7 +11,7 @@ import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MAXIMUM_WIDTH,
   SIDEBAR_MINIMUM_WIDTH,
-} from '../../layout/regions';
+} from '@nix/web-foundation/layout/regions';
 import {
   readCollapsed,
   readWidth,
@@ -19,7 +19,7 @@ import {
   storeWidth,
   STORAGE_KEY,
   WIDTH_STORAGE_KEY,
-} from '../../layout/use-sidebar';
+} from '@nix/web-foundation/layout/use-sidebar';
 
 /**
  * Collapsing the workspace tree.

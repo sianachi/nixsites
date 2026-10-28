@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app';
 import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
-import { setZenMode } from '../../lib/zen-mode';
+import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { memoryStorage } from '../memory-storage';
 import { requestUrl } from '../request-url';
 

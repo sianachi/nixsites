@@ -2,7 +2,7 @@ import { Button, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
-import type { ItemLandmark } from '../lib/item-landmarks';
+import type { ItemLandmark } from '@nix/web-foundation/lib/item-landmarks';
 
 export default { title: 'Nix/Items/Item landmarks', parameters: { layout: 'padded' } };
 

@@ -1,6 +1,6 @@
 import { Button, Text } from '@nix/ui';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { flushPendingWork } from '../lib/pending-work';
+import { flushPendingWork } from '@nix/web-foundation/lib/pending-work';
 import { getWaitingWorker, subscribeToWorker } from './register-service-worker';
 
 export function PwaControls(): ReactNode {

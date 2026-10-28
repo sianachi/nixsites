@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { browserStorage } from '../../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 
 /**
  * Column widths a person has dragged in a grid-type view, kept per device.

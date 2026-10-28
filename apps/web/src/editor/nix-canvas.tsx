@@ -43,8 +43,8 @@ import {
 import type { Awareness } from 'y-protocols/awareness';
 
 import { useApiClient } from '../api/api-client-provider';
-import { isImageFile, mediaTypeForFile } from '../lib/file-kind';
-import type { Ground } from '../theme/theme-store';
+import { isImageFile, mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
+import type { Ground } from '@nix/web-foundation/theme/theme-store';
 import { supersedes, type CanvasElement } from './canvas-binding';
 import {
   canvasFileItemIds,

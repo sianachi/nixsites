@@ -8,7 +8,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
-import { itemSubtreeIds, onItemChildrenChanged } from '../lib/item-children-changed';
+import {
+  itemSubtreeIds,
+  onItemChildrenChanged,
+} from '@nix/web-foundation/lib/item-children-changed';
 
 export type GraphStatus = 'loading' | 'ready' | 'error';
 

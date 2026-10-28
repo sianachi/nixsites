@@ -5,7 +5,7 @@ import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { Button } from '@nix/ui';
 
-import { WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT } from '../layout/regions';
+import { WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT } from '@nix/web-foundation/layout/regions';
 import { ColumnWidthControls } from './column-width';
 import { MoveBlock } from './move-block';
 import { proseRoot } from './prose';

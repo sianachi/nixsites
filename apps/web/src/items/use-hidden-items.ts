@@ -1,6 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 
-import { useSessionStore } from '../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import {
   hiddenItemsKey,
   hiddenItemsRevision,
@@ -8,8 +8,8 @@ import {
   readHiddenItems,
   subscribeHiddenItems,
   writeHiddenItems,
-} from '../lib/view-hidden-items';
-import { publishNotice } from '../lib/notices';
+} from '@nix/web-foundation/lib/view-hidden-items';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useOptionalWorkspace } from '../workspaces/workspace-context';
 
 const EMPTY: readonly string[] = [];

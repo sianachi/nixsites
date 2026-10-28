@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatClock } from '../../audio/clock';
+import { formatClock } from '@nix/web-foundation/audio/clock';
 
 /** The clock face of the audio player: a wrong digit here is read aloud by the slider's label. */
 describe('formatClock', () => {

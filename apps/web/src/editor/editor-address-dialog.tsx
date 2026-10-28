@@ -3,8 +3,8 @@ import { Button, Dialog, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { z } from 'zod';
 
-import { imageAddressSchema } from '../lib/image-address';
-import { isImageFile } from '../lib/file-kind';
+import { imageAddressSchema } from '@nix/web-foundation/lib/image-address';
+import { isImageFile } from '@nix/web-foundation/lib/file-kind';
 
 /** Which editor command is waiting for an address. */
 export type EditorAddressKind = 'image' | 'link';

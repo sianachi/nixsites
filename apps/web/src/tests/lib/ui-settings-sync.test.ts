@@ -4,7 +4,7 @@ import type { NixClient } from '@nix/api-client';
 import { useKeyboardModeStore } from '../../editor/keyboard-mode-store';
 import { useTextWidthPreference } from '../../editor/text-width-preference';
 import { memoryStorage } from '../memory-storage';
-import { hydrateUiSettings, resetUiSettingsSync } from '../../lib/ui-settings-sync';
+import { hydrateUiSettings, resetUiSettingsSync } from '@nix/web-foundation/lib/ui-settings-sync';
 
 const ME = '11111111-1111-4111-8111-111111111111';
 const SOMEONE_ELSE = '22222222-2222-4222-8222-222222222222';

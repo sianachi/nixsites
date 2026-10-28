@@ -106,7 +106,7 @@ case "$NIX_INGRESS_CLOUDFLARE_ONLY" in
   false) export INGRESS_MIDDLEWARES= CLIENT_IP_HEADER=X-Forwarded-For ;;
   *) echo "NIX_INGRESS_CLOUDFLARE_ONLY must be true or false" >&2; exit 1 ;;
 esac
-# The web app's public front door (apps/web/src/lib/web-config.ts): a landing page for anonymous
+# The web app's public front door (packages/web-foundation/src/lib/web-config.ts): a landing page for anonymous
 # visitors at / and a /demo over sample data in the browser. Both off unless the install asks.
 export NIX_WEB_LANDING="${NIX_WEB_LANDING:-false}" NIX_WEB_DEMO="${NIX_WEB_DEMO:-false}"
 case "$NIX_WEB_LANDING:$NIX_WEB_DEMO" in

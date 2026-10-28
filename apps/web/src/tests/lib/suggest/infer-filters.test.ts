@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { inferFilters, type ExampleRecord } from '../../../lib/suggest/infer-filters';
+import { inferFilters, type ExampleRecord } from '@nix/web-foundation/lib/suggest/infer-filters';
 
 function record(id: string, properties: Record<string, unknown>): ExampleRecord {
   return { id, properties };

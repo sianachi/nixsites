@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import { PaneViewport } from '../../layout/pane-viewport';
+import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { storyContainer, storyItem } from '../core/story-container';
 import { RecordViewStory, recordStoryView } from '../list/record-view-story';
 import { GalleryView } from './gallery-view';

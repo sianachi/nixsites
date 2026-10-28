@@ -2,8 +2,8 @@ import { Icon, Text } from '@nix/ui';
 import { FileText, type LucideIcon } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
-import { selectIsBusy, useSessionStore } from '../lib/session-store';
-import { ThemeChoice } from '../theme/theme-choice';
+import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import { findViewKind } from '../views/core/view-kinds';
 
 export interface LandingPageProps {

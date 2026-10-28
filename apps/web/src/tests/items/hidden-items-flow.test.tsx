@@ -7,7 +7,7 @@ import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { memoryStorage } from '../memory-storage';
 import { stubViewport } from '../stub-viewport';
-import { hiddenItemsKey, writeHiddenItems } from '../../lib/view-hidden-items';
+import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-hidden-items';
 
 const NOTE = item({ id: '1e1e1e1e-1111-4111-8111-1e1e1e1e1e1e', title: 'Meeting notes' });
 

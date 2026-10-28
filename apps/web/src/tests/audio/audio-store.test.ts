@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAudio } from './fake-audio';
-import type * as AudioStore from '../../audio/audio-store';
+import type * as AudioStore from '@nix/web-foundation/audio/audio-store';
 import { memoryStorage } from '../memory-storage';
-import { readAudioPosition, rememberAudioPosition } from '../../lib/audio-positions';
+import { readAudioPosition, rememberAudioPosition } from '@nix/web-foundation/lib/audio-positions';
 
 let store: typeof AudioStore;
 const track = { itemId: 'recording', title: 'Recording', url: 'https://files.example.test/one' };
@@ -13,7 +13,7 @@ beforeEach(async () => {
   FakeAudio.instances = [];
   vi.stubGlobal('Audio', FakeAudio);
   vi.stubGlobal('MediaError', { MEDIA_ERR_NETWORK: 2 });
-  store = await import('../../audio/audio-store');
+  store = await import('@nix/web-foundation/audio/audio-store');
 });
 afterEach(() => {
   store.stop();

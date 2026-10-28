@@ -10,11 +10,15 @@ import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/p
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey } from 'y-prosemirror';
 
-import { announce } from '../a11y/announcer';
-import { recordPick } from '../lib/frecency';
-import { candidatesIn, locateMentions, type MentionCandidate } from '../lib/suggest/ref-mentions';
-import { readDismissals, rememberDismissal } from '../lib/suggestion-dismissals';
-import { choiceOrderOn } from '../lib/suggestion-preferences';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { recordPick } from '@nix/web-foundation/lib/frecency';
+import {
+  candidatesIn,
+  locateMentions,
+  type MentionCandidate,
+} from '@nix/web-foundation/lib/suggest/ref-mentions';
+import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
+import { choiceOrderOn } from '@nix/web-foundation/lib/suggestion-preferences';
 import { linkedTargets, linkFrecencyNamespace } from './reference-menu';
 import { vimStatusMode } from './vim-motions';
 

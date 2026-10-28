@@ -21,7 +21,7 @@ import {
   type PropertyDefinition,
   type View,
 } from '../../../views/core/container-model';
-import { onItemChildrenChanged } from '../../../lib/item-children-changed';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import type * as WorkspaceContextModule from '../../../workspaces/workspace-context';
 import { describeInferredRule } from '../../../views/query/query-by-example';
 import { QueryView } from '../../../views/query/query-view';

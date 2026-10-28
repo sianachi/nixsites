@@ -1,8 +1,8 @@
-import { noteColumn } from '../layout/regions';
-import { PaneViewport } from '../layout/pane-viewport';
-import type { DraftState } from '../lib/draft-journal';
+import { noteColumn } from '@nix/web-foundation/layout/regions';
+import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
+import type { DraftState } from '@nix/web-foundation/lib/draft-journal';
 import { MobileNoteToolbar, type MobileNoteDetails } from './mobile-note-toolbar';
-import { useDrawerNavigation } from '../layout/viewport';
+import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
 import { nixEditingExtensions, readWidth } from '@nix/editor-schema';
 import {
   files as fileResources,
@@ -43,15 +43,15 @@ import { ItemBlockView, PageBreakView, NoteSourcesProvider } from './note-block-
 import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
-import { useSessionStore } from '../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { BubbleMenu } from './bubble-menu';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import { EditorToolbar } from './toolbar';
 import { MARKDOWN_ORIGIN, snapshotMarkdown, type MarkdownSnapshot } from './markdown-mode';
 import { MarkdownLossesDialog, MarkdownModePanel } from './markdown-mode-panel';
-import { announce } from '../a11y/announcer';
-import { playRecordingFrom } from '../audio/play-from';
-import { parseAudioTimestamp } from '../lib/audio-timestamp-link';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { playRecordingFrom } from '@nix/web-foundation/audio/play-from';
+import { parseAudioTimestamp } from '@nix/web-foundation/lib/audio-timestamp-link';
 import { EditorAddressDialog, type EditorAddressKind } from './editor-address-dialog';
 import { EmacsKeymap, emacsStatus } from './emacs-keymap';
 import { GhostText, setGhostTextContext } from './ghost-text';
@@ -62,7 +62,7 @@ import { useMentionPreference } from './mention-preference';
 import { setMentionContext, UnlinkedMentions } from './unlinked-mentions';
 import { MoveBlock } from './move-block';
 import { useKeyboardModeStore } from './keyboard-mode-store';
-import { documentScope } from '../lib/body-cache';
+import { documentScope } from '@nix/web-foundation/lib/body-cache';
 import { FRAGMENT_NAME, startCollabSync, type CollabSync, type SyncState } from './collab-sync';
 import { PresenceList } from './presence-list';
 import { remoteCursor } from './remote-cursor';
@@ -82,7 +82,7 @@ import { InlineAiPanel } from './inline-ai/inline-ai-panel';
 import { useInlineAi } from './inline-ai/use-inline-ai';
 import { renderToggleButton, toggleSummaryView } from './toggle-button';
 import { setVimEnabled, vimModeLabel, vimStatus, VimMotions } from './vim-motions';
-import { isImageFile, mediaTypeForFile } from '../lib/file-kind';
+import { isImageFile, mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 import { MermaidCodeBlockView } from '../plugins/mermaid-code-block-view';
 import {
   MermaidCaptureContext,

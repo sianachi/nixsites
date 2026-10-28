@@ -10,9 +10,9 @@ import {
   type Ref,
 } from 'react';
 
-import { announce } from '../a11y/announcer';
-import { LINK_MENTION_SHORTCUT } from '../keyboard/shortcut-registry';
-import { formatShortcut, isApplePlatform } from '../lib/shortcuts';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { LINK_MENTION_SHORTCUT } from '@nix/web-foundation/keyboard/shortcut-registry';
+import { formatShortcut, isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
 import {
   activeMention,
   dismissMention,

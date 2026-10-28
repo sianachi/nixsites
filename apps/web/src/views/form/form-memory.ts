@@ -1,4 +1,4 @@
-import { frecencyScores, recordPick } from '../../lib/frecency';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import type { PropertyDefinition, PropertyValue } from '../core/container-model';
 
 /**

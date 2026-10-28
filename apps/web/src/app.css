@@ -29,6 +29,7 @@
  * stop arriving.
  */
 @source '../../../packages/ui/src';
+@source '../../../packages/web-foundation/src';
 
 /*
  * Fonts are self-hosted, served from our own origin, and only the weights the

@@ -22,7 +22,7 @@ import {
 } from '@nix/api-client';
 import type { MarkdownImportScan } from '@nix/markdown/scan';
 
-import { mediaTypeForFile } from '../lib/file-kind';
+import { mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 import { writeImportedBody } from './note-body-writer';
 import { rewriteLocalImageReferences } from './local-image-references';
 import type { PlannedNode } from './import-plan';

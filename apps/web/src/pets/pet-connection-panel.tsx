@@ -2,7 +2,7 @@ import { isCanceledError, pets, type PetConnection } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useApiClient } from '../api/api-client-provider';
-import { isAborted } from '../lib/guards';
+import { isAborted } from '@nix/web-foundation/lib/guards';
 import { useChangeFocus } from './use-change-focus';
 
 export function PetConnectionPanel({

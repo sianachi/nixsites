@@ -14,7 +14,7 @@ import { PetChatViewport } from '../../pets/pet-chat-viewport';
 import { PetMessageText } from '../../pets/pet-message-text';
 import { earlierPieces } from '../../openui/fence';
 import { useAccessibleWorkspaces } from '../../workspaces/workspace-context';
-import { isAborted } from '../../lib/guards';
+import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export function ChatView({
   itemId,

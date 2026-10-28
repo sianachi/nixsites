@@ -2,13 +2,13 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '../../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import {
   hiddenItemsKey,
   readHiddenItems,
   subscribeHiddenItems,
   writeHiddenItems,
-} from '../../lib/view-hidden-items';
+} from '@nix/web-foundation/lib/view-hidden-items';
 import { useHiddenItems, useHiddenItemPredicate } from '../../items/use-hidden-items';
 import { ViewItemVisibility } from '../../views/core/view-item-visibility';
 import { aContainer } from '../container-fixture';

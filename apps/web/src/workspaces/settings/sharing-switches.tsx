@@ -3,7 +3,7 @@ import { Checkbox, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
 import { useApiClient } from '../../api/api-client-provider';
-import { publishNotice } from '../../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspace-context';
 
 /** Who may join this workspace, and whether several people may edit a file at once. Owners only. */

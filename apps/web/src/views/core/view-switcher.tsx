@@ -3,7 +3,7 @@ import { FileText, List as ListIcon, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { createContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { DOCUMENT_VIEW, type View } from './container-model';
 import { findViewKind } from './view-kinds';
 

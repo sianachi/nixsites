@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '../../api/api-client-provider';
 import type { PublicForm } from '../../pages/public-form-api';
 import { PublicFormPage } from '../../pages/public-form-page';
-import { setZenMode } from '../../lib/zen-mode';
+import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { renderAt } from '../render-with-router';
 
 const FORM: PublicForm = {

@@ -1,7 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { PaneViewport } from '../../layout/pane-viewport';
+import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 
 /** The pane div itself carries no role to query by - it is a scroller, not a control. */
 function findPane(container: HTMLElement): HTMLElement {

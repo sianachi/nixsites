@@ -17,7 +17,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../../api/api-client-provider';
-import { useStaleWhileRevalidate } from '../../lib/use-stale-while-revalidate';
+import { useStaleWhileRevalidate } from '@nix/web-foundation/lib/use-stale-while-revalidate';
 
 export type FinanceLoadState = 'loading' | 'ready' | 'unconfigured' | 'error';
 

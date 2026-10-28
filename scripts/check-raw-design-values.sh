@@ -109,7 +109,7 @@ length_pattern='[0-9a-zA-Z_]-\[[^]]*[0-9](px|rem)([^0-9a-zA-Z_]|$)'
 # 'min-h-[520px]' for the calendar grid: these are the dimensions of one box in
 # one arrangement, and ADR-0008 scopes the token sheet to the type scale, the
 # control heights and the spacing step. A panel's width is none of those and is
-# not going to become one, which apps/web/src/layout/regions.ts already argues at
+# not going to become one, which packages/web-foundation/src/layout/regions.ts already argues at
 # length for the two it owns.
 #
 # So the guard does not ask for them. The alternative was thirteen permanent

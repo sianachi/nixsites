@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { claimZenSurface, setZenMode, useZenActive, zenModeOn } from '../../lib/zen-mode';
+import {
+  claimZenSurface,
+  setZenMode,
+  useZenActive,
+  zenModeOn,
+} from '@nix/web-foundation/lib/zen-mode';
 afterEach(() => {
   setZenMode(false);
 });

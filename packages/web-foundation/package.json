@@ -1,0 +1,79 @@
+{
+  "name": "@nix/web-foundation",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Web app foundations: framework-agnostic helpers, layout regions, a11y, keyboard, theme, audio and shared state components",
+  "exports": {
+    "./audio/audio-player": {
+      "types": "./src/audio/audio-player.tsx",
+      "default": "./src/audio/audio-player.tsx"
+    },
+    "./audio/mini-player": {
+      "types": "./src/audio/mini-player.tsx",
+      "default": "./src/audio/mini-player.tsx"
+    },
+    "./components/error-boundary": {
+      "types": "./src/components/error-boundary.tsx",
+      "default": "./src/components/error-boundary.tsx"
+    },
+    "./components/states/async-section": {
+      "types": "./src/components/states/async-section.tsx",
+      "default": "./src/components/states/async-section.tsx"
+    },
+    "./components/states/status-panels": {
+      "types": "./src/components/states/status-panels.tsx",
+      "default": "./src/components/states/status-panels.tsx"
+    },
+    "./keyboard/keyboard-shortcuts-dialog": {
+      "types": "./src/keyboard/keyboard-shortcuts-dialog.tsx",
+      "default": "./src/keyboard/keyboard-shortcuts-dialog.tsx"
+    },
+    "./layout/pane-viewport": {
+      "types": "./src/layout/pane-viewport.tsx",
+      "default": "./src/layout/pane-viewport.tsx"
+    },
+    "./layout/sidebar-divider": {
+      "types": "./src/layout/sidebar-divider.tsx",
+      "default": "./src/layout/sidebar-divider.tsx"
+    },
+    "./layout/sidebar-drawer": {
+      "types": "./src/layout/sidebar-drawer.tsx",
+      "default": "./src/layout/sidebar-drawer.tsx"
+    },
+    "./theme/theme-choice": {
+      "types": "./src/theme/theme-choice.tsx",
+      "default": "./src/theme/theme-choice.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "fflate": "^0.8.3",
+    "lucide-react": "^1.27.0",
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}

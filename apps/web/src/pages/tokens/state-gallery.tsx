@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react';
 import { Link } from 'react-router';
 
-import { AsyncSection } from '../../components/states/async-section';
-import type { AsyncStatus } from '../../lib/async-status';
-import { empty, failed, loading, partial, ready } from '../../lib/async-status';
+import { AsyncSection } from '@nix/web-foundation/components/states/async-section';
+import type { AsyncStatus } from '@nix/web-foundation/lib/async-status';
+import { empty, failed, loading, partial, ready } from '@nix/web-foundation/lib/async-status';
 import { Blueprint, Card, Text, cn, focusRing } from '@nix/ui';
 
 import {

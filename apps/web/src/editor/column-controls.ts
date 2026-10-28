@@ -11,7 +11,7 @@ import { Plugin, PluginKey, TextSelection, type EditorState } from '@tiptap/pm/s
 import { dropPoint } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 
-import { announce } from '../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { COLUMN_HANDLE_INSET } from './prose';
 
 /**

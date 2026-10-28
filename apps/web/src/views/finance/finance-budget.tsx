@@ -26,8 +26,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
-import { useNarrowViewport } from '../../layout/viewport';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { BudgetActualDialog } from './budget-actual-dialog';
 import { LineDialog } from './finance-setup';
 import { Money, SectionHeading, editableTextButton } from './finance-shared';

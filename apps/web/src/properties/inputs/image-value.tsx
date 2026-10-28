@@ -19,7 +19,7 @@ import {
 } from 'react';
 
 import { useOptionalApiClient } from '../../api/api-client-provider';
-import { isFetchableImageAddress } from '../../lib/image-address';
+import { isFetchableImageAddress } from '@nix/web-foundation/lib/image-address';
 import { readPropertyText } from '../../views/core/container-model';
 
 import {

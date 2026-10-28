@@ -1,11 +1,11 @@
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { type MenuEntry, type TableColumn, type TableRowDrag, type TableSort } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 import { dropRefusal } from '../../items/bulk-move';
 import { useOptionalItemCommands } from '../../items/item-commands-context';
 
-import { PartialNotice } from '../../components/states/status-panels';
+import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 
 import {
   type Item,

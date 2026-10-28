@@ -1,7 +1,7 @@
 import { Button, Checkbox, Field, Input, Select, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 import type { HabitTracker, SetHabitInput } from '@nix/api-client';
-import { localTimeZone } from '../../lib/date-format';
+import { localTimeZone } from '@nix/web-foundation/lib/date-format';
 import { dateText, WEEKDAYS } from './habit-days';
 
 export function HabitSetup({

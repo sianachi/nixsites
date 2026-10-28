@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { forgetThumbnails } from '../../lib/thumbnail-cache';
+import { forgetThumbnails } from '@nix/web-foundation/lib/thumbnail-cache';
 import { useFileThumbnail, fileThumbnailKind } from '../../thumbnails/use-file-thumbnail';
 
 const client = vi.hoisted(() => ({ query: vi.fn() }));

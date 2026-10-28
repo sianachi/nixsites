@@ -4,7 +4,7 @@ import { useApiClient } from '../api/api-client-provider';
 import { Button, Input, Text, focusRing } from '@nix/ui';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import { paneScroller } from '../layout/regions';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { addGroup } from './arrangement';
 import { useAccessibleWorkspaces } from './workspace-context';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';

@@ -2,7 +2,7 @@ import type { Site, SiteBuild } from '@nix/api-client';
 import { fireEvent, within } from '@testing-library/dom';
 import type { ReactElement } from 'react';
 
-import { settingsPanelWidth } from '../layout/regions';
+import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { SiteExclusionsPicker } from './site-exclusions';
 import { SitePagesList } from './site-pages-list';
 import { SitePaneView } from './site-pane';

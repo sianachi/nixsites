@@ -1,9 +1,9 @@
 import { Button, Field, Input, Select, Table, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { SettingsSection } from '../shared/settings-section';
-import { ErrorPanel } from '../../components/states/status-panels';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { useWorkspaceAssignablePrincipals } from '../../workspaces/use-workspace-assignable-principals';
 import { formatDay } from '../access-tokens/token-facts';
 import { useCapabilities } from '../../session/capabilities-context';

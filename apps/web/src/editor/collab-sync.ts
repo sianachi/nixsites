@@ -1,4 +1,4 @@
-import { registerPendingWork } from '../lib/pending-work';
+import { registerPendingWork } from '@nix/web-foundation/lib/pending-work';
 import {
   bodyCacheFenceVersion,
   bodyCacheSealed,
@@ -7,8 +7,12 @@ import {
   indexedBodyCache,
   onBodyForgetting,
   type BodyCacheStore,
-} from '../lib/body-cache';
-import { createDraftJournal, type DraftState, type DraftRecord } from '../lib/draft-journal';
+} from '@nix/web-foundation/lib/body-cache';
+import {
+  createDraftJournal,
+  type DraftState,
+  type DraftRecord,
+} from '@nix/web-foundation/lib/draft-journal';
 import { SCHEMA_VERSION } from '@nix/editor-schema';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';

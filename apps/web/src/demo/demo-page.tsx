@@ -6,9 +6,13 @@ import { MemoryRouter } from 'react-router';
 import { ApiClientOverrideProvider } from '../api/api-client-provider';
 import { AppRoutes } from '../app';
 import { AuthOverrideProvider, type AuthContextValue } from '../auth/auth-provider';
-import { useSessionStore } from '../lib/session-store';
-import { AppErrorBoundary } from '../components/error-boundary';
-import { bodyCacheAccountEpoch, clearBodyCache, openBodyCache } from '../lib/body-cache';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
+import {
+  bodyCacheAccountEpoch,
+  clearBodyCache,
+  openBodyCache,
+} from '@nix/web-foundation/lib/body-cache';
 import { installDemoCollab } from './demo-collab';
 import { createDemoFetch, DEMO_ENTRY, DEMO_NOTES, DEMO_PROFILE } from './demo-core';
 

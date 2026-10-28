@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { clearPetDrafts, usePetDraft } from '../../lib/pet-drafts';
+import { clearPetDrafts, usePetDraft } from '@nix/web-foundation/lib/pet-drafts';
 afterEach(clearPetDrafts);
 it('shares the draft across surfaces, isolates workspace and pet, and clears it for sign-out', () => {
   const a = renderHook(() => usePetDraft('workspace', 'pet'));

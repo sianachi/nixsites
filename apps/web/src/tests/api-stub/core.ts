@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { useSessionStore } from '../../lib/session-store';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import type { TemplateInitialization } from '@nix/api-client';
 import { item, STUB_WORKSPACE_ID } from './resources/items';
 import type { StubItem } from './resources/items';

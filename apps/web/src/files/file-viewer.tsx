@@ -5,12 +5,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { cacheKeysOverlap, useCacheInvalidation } from '../api/use-cache-invalidation';
-import { useOverlayDetails } from '../layout/viewport';
+import { useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { findBuiltInFileViewer } from '../plugins/built-in-file-viewers';
 import { FileDetails } from './file-details';
 import { fileKindLabel, formatBytes } from './file-facts';
-import { quietTopControl, useNearTopEdge } from '../lib/use-near-top-edge';
-import { useZenActive } from '../lib/zen-mode';
+import { quietTopControl, useNearTopEdge } from '@nix/web-foundation/lib/use-near-top-edge';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 /**
  * The file page: the file, first.

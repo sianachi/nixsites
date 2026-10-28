@@ -6,7 +6,7 @@ import {
 import { z } from 'zod';
 
 import { EffectiveSchemaSchema, ViewSchema } from '../views/core/container-model';
-import { browserSessionStorage } from '../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import { type TemplateEditDraft } from './template-api';
 import { type TemplateItemEdits } from './draft/template-draft-editor';
 

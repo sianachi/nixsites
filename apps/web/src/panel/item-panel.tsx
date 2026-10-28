@@ -2,8 +2,8 @@ import { Button, Icon, Segmented, Text, cn, focusRing } from '@nix/ui';
 import { PanelRightClose } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import { ErrorPanel } from '../components/states/status-panels';
-import { settingsPanelWidth } from '../layout/regions';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
+import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
 import { PropertyPanel } from '../properties/property-panel';
 import { useSitesVisible } from '../settings/publishing/publishing-preference';

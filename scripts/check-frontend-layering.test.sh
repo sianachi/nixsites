@@ -17,23 +17,32 @@ trap 'rm -rf "$work_dir"' EXIT
 passed=0
 failed=0
 
+# The leaves live in the web-foundation package; features and the shell stay in the app tree.
+f="$work_dir/packages/web-foundation/src"
+
 # A tree with every tier present and nothing in it that violates a rule. Each case below starts
 # from this and adds exactly one file, so a failure names the rule rather than the fixture.
 reset_tree() {
-  rm -rf "${work_dir:?}/src"
-  mkdir -p "$work_dir/src/layout" "$work_dir/src/a11y" "$work_dir/src/lib" \
+  rm -rf "${work_dir:?}/src" "${work_dir:?}/packages"
+  mkdir -p "$f/layout" "$f/a11y" "$f/lib" \
     "$work_dir/src/shell" "$work_dir/src/items" "$work_dir/src/tests"
-  printf "export const paneClip = 'min-h-0';\n" >"$work_dir/src/layout/regions.ts"
-  printf "export function announce(): void {}\n" >"$work_dir/src/a11y/announcer.ts"
-  printf "export function browserStorage(): void {}\n" >"$work_dir/src/lib/browser-storage.ts"
+  printf "export const paneClip = 'min-h-0';\n" >"$f/layout/regions.ts"
+  printf "export function announce(): void {}\n" >"$f/a11y/announcer.ts"
+  printf "export function browserStorage(): void {}\n" >"$f/lib/browser-storage.ts"
   printf "export interface ShellContext { readonly id: string }\n" >"$work_dir/src/shell/shell-context.ts"
   printf "export function Sidebar(): null { return null; }\n" >"$work_dir/src/items/workspace-sidebar.tsx"
 }
 
-# add <relative path> ; body on stdin
+# add <relative path> ; body on stdin. A leaf folder (layout, a11y, lib) goes to the package,
+# anything else to the app; a path starting with packages/ is taken as given.
 add() {
-  mkdir -p "$(dirname "$work_dir/src/$1")"
-  cat >"$work_dir/src/$1"
+  case "$1" in
+    layout/* | a11y/* | lib/*) target="$f/$1" ;;
+    packages/*) target="$work_dir/$1" ;;
+    *) target="$work_dir/src/$1" ;;
+  esac
+  mkdir -p "$(dirname "$target")"
+  cat >"$target"
 }
 
 # expect <exit code> <description> [expected substring of output ...]
@@ -44,7 +53,7 @@ expect() {
 
   output=""
   got_code=0
-  output="$("$guard" "$work_dir/src" 2>&1)" || got_code=$?
+  output="$("$guard" "$work_dir/src" "$work_dir/packages" 2>&1)" || got_code=$?
 
   problem=""
   if [ "$got_code" -ne "$want_code" ]; then
@@ -183,6 +192,29 @@ reset_tree
 mkdir -p "$work_dir/src/app"
 printf "export const App = 0;\n" >"$work_dir/src/app/index.ts"
 expect 1 "an app/ folder coming back fails" "the dissolved app/ folder is back"
+
+# --- R6: packages never import apps -----------------------------------------
+
+reset_tree
+add packages/web-foundation/src/lib/uses-app.ts <<'FIXTURE'
+import { Sidebar } from '../../../../apps/web/src/items/workspace-sidebar';
+export const s = Sidebar;
+FIXTURE
+expect 1 "a web package importing apps/ by path fails" "a web package imports from apps/" "uses-app.ts"
+
+reset_tree
+add packages/web-other/src/uses-app.ts <<'FIXTURE'
+import { App } from '@nix/web/app';
+export const a = App;
+FIXTURE
+expect 1 "any web-* package importing @nix/web fails" "a web package imports from apps/"
+
+reset_tree
+add packages/web-other/src/fine.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+export const a = announce;
+FIXTURE
+expect 0 "a web package importing another package is fine"
 
 # --- tests/ are out of scope -------------------------------------------------
 

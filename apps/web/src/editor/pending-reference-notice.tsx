@@ -6,7 +6,7 @@ import {
   clearPendingReference,
   onPendingReferenceChanged,
   pendingReference,
-} from '../lib/pending-reference';
+} from '@nix/web-foundation/lib/pending-reference';
 
 /**
  * A reference asked for elsewhere, waiting to be placed in this note.

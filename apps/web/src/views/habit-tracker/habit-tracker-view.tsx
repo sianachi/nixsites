@@ -9,12 +9,12 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../../components/states/status-panels';
+} from '@nix/web-foundation/components/states/status-panels';
 import { useHabits } from './use-habits';
 import type { HabitTracker } from '@nix/api-client';
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../../workspaces/workspace-context';
-import { browserStorage } from '../../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { HabitChartWidgets, type HabitWidgetConfig } from './habit-chart-widgets';
 import { HabitInsights } from './habit-insights';
 import { HabitRow } from './habit-row';

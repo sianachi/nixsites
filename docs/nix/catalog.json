@@ -402,8 +402,8 @@
         "apps/web/src/views/core/view-kinds.tsx",
         "apps/web/src/views/core/use-container.ts",
         "apps/web/src/views/core/view-state.ts",
-        "apps/web/src/theme/theme-store.ts",
-        "apps/web/src/theme/use-theme.ts",
+        "packages/web-foundation/src/theme/theme-store.ts",
+        "packages/web-foundation/src/theme/use-theme.ts",
         "apps/web/index.html",
         "packages/design-tokens/src/theme.css",
         "backend/src/Nix.Api/Domain/Views/ViewDefinition.cs",
@@ -418,7 +418,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON",
         "depends_on": "Core schemas, view configurations and child queries",
-        "source_paths": "apps/web/src/views/core/view-kinds.tsx\napps/web/src/views/core/use-container.ts\napps/web/src/views/core/view-state.ts\napps/web/src/theme/theme-store.ts\napps/web/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "apps/web/src/views/core/view-kinds.tsx\napps/web/src/views/core/use-container.ts\napps/web/src/views/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "localProofItemId": "01a12247-5982-7d31-b237-89650eca2ca2"
     },
@@ -439,8 +439,8 @@
         "apps/web/src/editor/canvas-binding.ts",
         "apps/web/package.json",
         "apps/web/src/plugins/media-viewer.tsx",
-        "apps/web/src/audio/audio-source.ts",
-        "apps/web/src/audio/audio-player.tsx",
+        "packages/web-foundation/src/audio/audio-source.ts",
+        "packages/web-foundation/src/audio/audio-player.tsx",
         "apps/web/src/shell/app-shell.tsx",
         "apps/web/src/search/commands.ts",
         "packages/export/src/index.ts",
@@ -453,7 +453,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, S3 capabilities, WebSocket/Yjs",
         "depends_on": "Core metadata, object storage and collaboration",
-        "source_paths": "apps/web/src/files/file-viewer.tsx\napps/web/src/files/file-facts.ts\napps/web/src/plugins/file-viewer-registry.tsx\napps/web/src/plugins/built-in-file-viewers.ts\napps/web/src/plugins/mermaid-js-viewer.tsx\napps/web/src/editor/nix-canvas.tsx\napps/web/src/editor/nix-canvas-model.ts\napps/web/src/editor/nix-canvas-library.ts\napps/web/src/editor/canvas-binding.ts\napps/web/package.json\napps/web/src/plugins/media-viewer.tsx\napps/web/src/audio/audio-source.ts\napps/web/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "apps/web/src/files/file-viewer.tsx\napps/web/src/files/file-facts.ts\napps/web/src/plugins/file-viewer-registry.tsx\napps/web/src/plugins/built-in-file-viewers.ts\napps/web/src/plugins/mermaid-js-viewer.tsx\napps/web/src/editor/nix-canvas.tsx\napps/web/src/editor/nix-canvas-model.ts\napps/web/src/editor/nix-canvas-library.ts\napps/web/src/editor/canvas-binding.ts\napps/web/package.json\napps/web/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "relatedWorktreeSources": [
         {

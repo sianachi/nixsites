@@ -9,7 +9,7 @@ import { EMPTY_MARKDOWN_IMPORT_SCAN } from '@nix/markdown/scan';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
-import { ErrorPanel, PartialNotice } from '../components/states/status-panels';
+import { ErrorPanel, PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 import {
   planImport,
   screenPaths,
@@ -17,8 +17,8 @@ import {
   type PathReason,
   type PlannedNode,
 } from './import-plan';
-import { useSessionStore } from '../lib/session-store';
-import { recordInterruptedImport } from '../lib/import-interrupted-notice';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { recordInterruptedImport } from '@nix/web-foundation/lib/import-interrupted-notice';
 import { runImportPlan, undoImport, type ImportRunReport } from './import-run';
 import { useWorkspace } from '../workspaces/workspace-context';
 

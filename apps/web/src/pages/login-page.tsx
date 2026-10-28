@@ -2,8 +2,8 @@ import { Blueprint, Button, Icon, Text } from '@nix/ui';
 import { ArrowRight } from 'lucide-react';
 import { useLayoutEffect, type ReactNode } from 'react';
 
-import { selectIsBusy, useSessionStore } from '../lib/session-store';
-import { claimZenSurface, toggleZenMode, useZenActive } from '../lib/zen-mode';
+import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 export interface LoginPageProps {
   /** Starts the redirect to the identity provider. */

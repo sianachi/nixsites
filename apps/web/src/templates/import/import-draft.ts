@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserSessionStorage } from '../../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import { TemplateImportPreviewSchema, type TemplateImportPreview } from '../template-api';
 
 const draftKey = (workspaceId: string): string => `nix:template-import:${workspaceId}`;

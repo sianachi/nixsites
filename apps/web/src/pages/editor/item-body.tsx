@@ -2,8 +2,8 @@ import { Button, Skeleton, SkeletonLines, Text } from '@nix/ui';
 import { Suspense, lazy, type ReactNode } from 'react';
 
 import { FileViewer } from '../../files/file-viewer';
-import { paneColumn, paneScroller } from '../../layout/regions';
-import { PaneViewport } from '../../layout/pane-viewport';
+import { paneColumn, paneScroller } from '@nix/web-foundation/layout/regions';
+import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { LockedBody } from '../../locks/locked-body';
 import type { useItemLock } from '../../locks/use-item-lock';
 import { PaneProvider } from '../../panes/pane-context';

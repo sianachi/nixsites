@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '../../../api/api-client-provider';
 import { CreateItemControl } from '../../../views/core/create-item-control';
 import type { CreateSuggestSource } from '../../../views/suggest/suggest-source';
-import { useViewSuggestionPreference } from '../../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { CATEGORY, WORKSPACE_ID, billsAndErrands } from './suggest-fixtures';
 
 /**

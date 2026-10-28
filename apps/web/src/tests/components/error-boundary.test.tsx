@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppErrorBoundary } from '../../components/error-boundary';
+import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 
 // React reports every caught render error to the console. That is wanted
 // behaviour, so it is silenced for the duration of these suites rather than

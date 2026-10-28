@@ -2,7 +2,7 @@ import { Button, Dialog, Listbox, Text, Textarea, useListbox } from '@nix/ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type * as Y from 'yjs';
 
-import { announce } from '../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useNoteLinkSearch } from './markdown-link-search';
 import {
   applyMarkdown,

@@ -3,7 +3,7 @@ import type { StructureFingerprint, WorkspaceToolOutcome } from '@nix/companion'
 import type { WorkspaceToolArgs } from '@nix/companion/tool-args';
 import type { PreviewModel } from '@nix/structure-spec';
 
-import { notifyItemChildrenChanged } from '../../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 export interface PreparedPreview {
   model: PreviewModel;

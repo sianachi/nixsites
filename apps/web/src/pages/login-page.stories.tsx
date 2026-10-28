@@ -1,7 +1,7 @@
 import { useEffect, type ReactElement } from 'react';
 
-import { useSessionStore } from '../lib/session-store';
-import { setZenMode } from '../lib/zen-mode';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { LoginPage } from './login-page';
 
 export default { title: 'Nix/Pages/Sign in', parameters: { layout: 'fullscreen' } };

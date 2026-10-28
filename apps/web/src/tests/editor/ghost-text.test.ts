@@ -7,7 +7,7 @@ import type { Plugin } from '@tiptap/pm/state';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resetAnnouncements, useAnnouncement } from '../../a11y/announcer';
+import { resetAnnouncements, useAnnouncement } from '@nix/web-foundation/a11y/announcer';
 import {
   currentGhostText,
   documentText,

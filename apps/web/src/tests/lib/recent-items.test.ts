@@ -7,7 +7,7 @@ import {
   clearRecentItems,
   recentItems,
   recordRecentItem,
-} from '../../lib/recent-items';
+} from '@nix/web-foundation/lib/recent-items';
 
 const ids = (workspaceId: string): string[] =>
   recentItems(workspaceId).map((entry) => entry.itemId);

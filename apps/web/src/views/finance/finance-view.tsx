@@ -2,7 +2,11 @@ import { Button, Icon, Text } from '@nix/ui';
 import type { Finance } from '@nix/api-client';
 import { TriangleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
 import type { View } from '../core/container-model';
 import type { ContainerData } from '../core/use-container';
 import { CloseMonthDialog } from './close-month-dialog';

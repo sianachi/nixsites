@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 
 import { useApiClient } from '../api/api-client-provider';
-import { onItemChildrenChanged } from '../lib/item-children-changed';
+import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 /**
  * What the reader has kept, held once for the whole application.

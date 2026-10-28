@@ -9,12 +9,16 @@ import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '../../editor/note-editor';
 import { useHiddenItems } from '../../items/use-hidden-items';
-import { historyPanelWidth, paneClip, settingsPanelWidth } from '../../layout/regions';
-import { useNarrowViewport, useOverlayDetails } from '../../layout/viewport';
+import {
+  historyPanelWidth,
+  paneClip,
+  settingsPanelWidth,
+} from '@nix/web-foundation/layout/regions';
+import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
-import { browserStorage } from '../../lib/browser-storage';
-import { toggleZenMode, useZenActive } from '../../lib/zen-mode';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '../../panes/pane-context';
 import { readPanelOpen, storePanelOpen } from '../../panel/panel-state';
 import type { Pane } from '../../panel/item-panel';

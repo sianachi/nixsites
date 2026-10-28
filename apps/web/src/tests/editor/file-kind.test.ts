@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isImageFile, mediaTypeForFile } from '../../lib/file-kind';
+import { isImageFile, mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 
 describe('dropped file classification', () => {
   it('recognizes image extensions when the browser omits a MIME type', () => {

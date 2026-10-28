@@ -4,9 +4,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useApiClient } from '../api/api-client-provider';
 import { useWorkspace } from '../workspaces/workspace-context';
-import { useNarrowViewport } from '../layout/viewport';
-import { useMobileKeyboard } from '../layout/use-mobile-keyboard';
-import { useBackDismiss } from '../layout/use-back-dismiss';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
+import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { openPanelPosition } from './panel-position';
 import { PetAvatar } from './pet-avatar';
 import { publishPetAttention } from './pet-attention';
@@ -14,9 +14,13 @@ import { useOpenChat } from '../tabs/use-open-chat';
 import { usePanes } from '../panes/pane-state';
 import { usePetSettings } from '../api/use-pet-settings';
 import { usePetRuntime } from './use-pet-runtime';
-import { readDevicePreference, readPetPosition, writePetPosition } from '../lib/device-preferences';
+import {
+  readDevicePreference,
+  readPetPosition,
+  writePetPosition,
+} from '@nix/web-foundation/lib/device-preferences';
 import { chatOpensAsPage, launcherFloats, pageIsAvailable } from './pet-surface';
-import { useZenActive } from '../lib/zen-mode';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePetSurface } from './use-pet-surface';
 import { PetWorkTools } from './work-tools/pet-work-tools';
 import { Conversation } from './conversation/conversation';

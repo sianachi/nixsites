@@ -1,6 +1,6 @@
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { Blueprint, Button, Text } from '@nix/ui';
-import { publishNotice } from '../../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useState, type ReactNode } from 'react';
 
 import { ShownItems } from '../core/item-selection-context';

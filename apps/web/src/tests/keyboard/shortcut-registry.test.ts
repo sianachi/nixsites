@@ -4,8 +4,8 @@ import {
   FILL_SERIES_SHORTCUT,
   LINK_MENTION_SHORTCUT,
   SHORTCUTS,
-} from '../../keyboard/shortcut-registry';
-import { formatShortcut } from '../../lib/shortcuts';
+} from '@nix/web-foundation/keyboard/shortcut-registry';
+import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
 
 describe('the shortcut registry', () => {
   it('lists linking an underlined item name under the editor', () => {

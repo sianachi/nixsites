@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { App } from '../../../app';
-import { setZenMode } from '../../../lib/zen-mode';
+import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { renderAt, signedIn } from '../../render-with-router';
 import { stubViewport } from '../../stub-viewport';
 

@@ -2,7 +2,7 @@ import { Button, Icon } from '@nix/ui';
 import { Minimize2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { setZenMode } from '../lib/zen-mode';
+import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 
 /**
  * The way out of Zen: small, quiet, and always there for whoever goes looking.

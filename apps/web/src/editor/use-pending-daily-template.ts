@@ -6,7 +6,7 @@ import {
   clearPendingDailyTemplate,
   onPendingDailyTemplateChanged,
   pendingDailyTemplate,
-} from '../lib/pending-daily-template';
+} from '@nix/web-foundation/lib/pending-daily-template';
 
 /**
  * Whether the shared fragment holds nothing a writer would call content: no blocks but empty

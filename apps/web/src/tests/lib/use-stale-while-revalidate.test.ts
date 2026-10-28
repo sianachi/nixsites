@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { useStaleWhileRevalidate } from '../../lib/use-stale-while-revalidate';
+import { useStaleWhileRevalidate } from '@nix/web-foundation/lib/use-stale-while-revalidate';
 
 /**
  * The bookkeeping every stale-while-revalidate hook shared before it was extracted here: a first

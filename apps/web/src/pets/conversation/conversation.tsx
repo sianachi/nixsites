@@ -7,8 +7,8 @@ import { Button, Text, focusRing } from '@nix/ui';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useApiClient } from '../../api/api-client-provider';
-import { useNarrowViewport } from '../../layout/viewport';
-import { useZenActive } from '../../lib/zen-mode';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '../../panes/pane-context';
 import { selectedItemParam } from '../../panes/pane-params';
 import { NewChatNote } from '../../views/chat/new-chat-note';
@@ -21,10 +21,10 @@ import {
   writeConversationModel,
   writeReadWithoutAsking,
   writeWorkspaceAccess,
-} from '../../lib/device-preferences';
+} from '@nix/web-foundation/lib/device-preferences';
 import { toolOutcomeSentence } from '../work-tools/receipts';
 import { type PetAnimationState } from '../pet-avatar';
-import { usePetDraft } from '../../lib/pet-drafts';
+import { usePetDraft } from '@nix/web-foundation/lib/pet-drafts';
 import { PetConnectionPanel } from '../pet-connection-panel';
 import { type UsePetRuntimeResult } from '../use-pet-runtime';
 import { Composer } from './composer/composer';

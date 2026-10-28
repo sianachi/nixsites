@@ -4,8 +4,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { useApiClient } from '../api/api-client-provider';
 import { useAuth } from '../auth/auth-provider';
-import { ErrorPanel } from '../components/states/status-panels';
-import { publishNotice } from '../lib/notices';
+import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { createNote } from './create-note';
 import { MAX_LAUNCH_FILES, receiveLaunchFiles, type LaunchedFiles } from './launch-files';

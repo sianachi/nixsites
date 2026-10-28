@@ -1,7 +1,7 @@
 import { Button, Dialog, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowLeft, ArrowRight, Check, Eye } from 'lucide-react';
 import { useEffect, type ReactNode, type RefObject } from 'react';
-import { useZenActive } from '../lib/zen-mode';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 import { TemplateBlueprint } from './template-studio-facts';
 import type { TemplateDetail } from './template-api';

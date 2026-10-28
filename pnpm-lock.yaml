@@ -218,6 +218,9 @@ importers:
       '@nix/view-render':
         specifier: workspace:*
         version: link:../../packages/view-render
+      '@nix/web-foundation':
+        specifier: workspace:*
+        version: link:../../packages/web-foundation
       '@openuidev/lang-core':
         specifier: 1.0.1
         version: 1.0.1(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(zod@4.5.4)
@@ -789,6 +792,52 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(lightningcss@1.32.0)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))
+
+  packages/web-foundation:
+    dependencies:
+      '@nix/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@nix/ui':
+        specifier: workspace:*
+        version: link:../ui
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
+      lucide-react:
+        specifier: ^1.27.0
+        version: 1.27.0(react@19.2.8)
+      yjs:
+        specifier: ^13.6.31
+        version: 13.6.31
+      zod:
+        specifier: ^4.4.3
+        version: 4.5.4
+      zustand:
+        specifier: ^5.0.14
+        version: 5.0.14(@types/react@19.2.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.17
+      eslint-plugin-jsx-a11y:
+        specifier: ^6.10.2
+        version: 6.10.2(eslint@9.39.5(jiti@2.7.0))
+      eslint-plugin-react-hooks:
+        specifier: ^7.1.1
+        version: 7.1.1(eslint@9.39.5(jiti@2.7.0))
+      globals:
+        specifier: ^17.7.0
+        version: 17.7.0
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      typescript-eslint:
+        specifier: ^8.38.0
+        version: 8.65.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      vite:
+        specifier: ^7.3.6
+        version: 7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
 packages:
 

@@ -1,7 +1,7 @@
 import type { NixClient } from '@nix/api-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { playRecordingFrom } from '../../audio/play-from';
+import { playRecordingFrom } from '@nix/web-foundation/audio/play-from';
 
 const AUDIO = 'b1000000-0000-4000-8000-000000000001';
 const store = vi.hoisted(() => ({
@@ -11,13 +11,13 @@ const store = vi.hoisted(() => ({
   resume: vi.fn(),
   url: vi.fn(),
 }));
-vi.mock('../../audio/audio-store', () => ({
+vi.mock('@nix/web-foundation/audio/audio-store', () => ({
   getAudioState: () => ({ track: store.track }),
   play: store.play,
   seek: store.seek,
   resume: store.resume,
 }));
-vi.mock('../../audio/audio-source', () => ({ authorisedAudioUrl: store.url }));
+vi.mock('@nix/web-foundation/audio/audio-source', () => ({ authorisedAudioUrl: store.url }));
 
 const client = {
   query: vi.fn(() => Promise.resolve({ current: { fileName: 'Meeting 2026-10-05 14.30.weba' } })),

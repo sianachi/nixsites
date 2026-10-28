@@ -1,4 +1,4 @@
-import { formatTime } from '../../lib/date-format';
+import { formatTime } from '@nix/web-foundation/lib/date-format';
 /** What a body is called in lock copy, by the kind that draws it. */
 export function bodyNoun(bodyKind: string): string {
   switch (bodyKind) {

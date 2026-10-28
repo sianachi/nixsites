@@ -2,7 +2,7 @@ import { Blueprint, Button, Field, Input, Select, Text, focusRing } from '@nix/u
 import type { ReactNode } from 'react';
 
 import type { CollabSync } from '../editor/collab-sync';
-import { formatDateTime } from '../lib/date-format';
+import { formatDateTime } from '@nix/web-foundation/lib/date-format';
 import type { PropertyDefinition } from '../views/core/container-model';
 import type { TemplateDetail, TemplateEditDraft, TemplateInitialization } from './template-api';
 import { TemplateDraftEditor, type TemplateItemEdit } from './draft/template-draft-editor';

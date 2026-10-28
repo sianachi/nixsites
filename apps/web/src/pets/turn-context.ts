@@ -1,5 +1,5 @@
 import { items, locks, type NixClient, type pets } from '@nix/api-client';
-import { localTimeZone } from '../lib/date-format';
+import { localTimeZone } from '@nix/web-foundation/lib/date-format';
 
 /** The most containers a conversation's first message describes; Core and the worker refuse more. */
 export const WORKSPACE_MAP_LIMIT = 40;

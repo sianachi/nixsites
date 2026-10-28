@@ -1,4 +1,4 @@
-import { useDrawerNavigation } from '../layout/viewport';
+import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
 import { Dialog, Icon, Input, Listbox, Text, useListbox, type ListboxOption } from '@nix/ui';
 import { search, type SearchHit } from '@nix/api-client';
 import { FileText, Search } from 'lucide-react';

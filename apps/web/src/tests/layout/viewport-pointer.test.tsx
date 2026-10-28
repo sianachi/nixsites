@@ -1,7 +1,11 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useCanHover, useCoarsePointer, useNarrowViewport } from '../../layout/viewport';
+import {
+  useCanHover,
+  useCoarsePointer,
+  useNarrowViewport,
+} from '@nix/web-foundation/layout/viewport';
 import { stubViewport } from '../stub-viewport';
 
 function stubPointer(coarse: boolean): void {

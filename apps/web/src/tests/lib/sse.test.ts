@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { MAX_SSE_RECORD_CHARS, readSse, type SseRecord } from '../../lib/sse';
+import { MAX_SSE_RECORD_CHARS, readSse, type SseRecord } from '@nix/web-foundation/lib/sse';
 
 /**
  * The SSE framer against byte streams cut where a network would cut them.

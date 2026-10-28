@@ -2,7 +2,7 @@ import { useEffect, type Dispatch, type SetStateAction } from 'react';
 
 import { isCanceledError, isNixApiError, type NixClient } from '@nix/api-client';
 
-import { browserSessionStorage } from '../../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import {
   beginTemplateEditDraft,
   resumeTemplateFileTransfer,

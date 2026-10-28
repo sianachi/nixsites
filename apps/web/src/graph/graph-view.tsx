@@ -12,8 +12,8 @@ import {
   type ReactElement,
 } from 'react';
 
-import { prefersReducedMotion } from '../lib/motion';
-import { isPointerCoarse } from '../lib/pointer';
+import { prefersReducedMotion } from '@nix/web-foundation/lib/motion';
+import { isPointerCoarse } from '@nix/web-foundation/lib/pointer';
 import {
   cameraOf,
   fitCamera,

@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PropertyInput } from '../../properties/property-input';
-import { frecencyScores, recordPick } from '../../lib/frecency';
-import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
+import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import type { PropertyDefinition } from '../../views/core/container-model';
 import { memoryStorage } from '../memory-storage';
 

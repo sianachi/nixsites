@@ -5,17 +5,17 @@ import { usePageGuidePreference } from '../../editor/page-guide-preference';
 import { Button, Field, Select, Text } from '@nix/ui';
 import { useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 
-import { announce } from '../../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';
 import { KeyboardModeSchema, useKeyboardModeStore } from '../../editor/keyboard-mode-store';
-import { LINK_MENTION_SHORTCUT } from '../../keyboard/shortcut-registry';
-import { formatShortcut } from '../../lib/shortcuts';
-import { clearSuggestionDismissals } from '../../lib/suggestion-dismissals';
+import { LINK_MENTION_SHORTCUT } from '@nix/web-foundation/keyboard/shortcut-registry';
+import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
+import { clearSuggestionDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
 import {
   useChoiceOrderPreference,
   useViewSuggestionPreference,
-} from '../../lib/suggestion-preferences';
+} from '@nix/web-foundation/lib/suggestion-preferences';
 
 const modeHint = {
   standard: 'The editor and platform shortcuts shown throughout Nix',

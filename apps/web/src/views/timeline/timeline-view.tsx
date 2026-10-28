@@ -1,9 +1,9 @@
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-import { PartialNotice } from '../../components/states/status-panels';
+import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 import { todayDay } from '../calendar/model/day-math';
 import { ShownItems } from '../core/item-selection-context';
 import { dayText, type CalendarDay } from '../core/calendar-dates';

@@ -3,7 +3,7 @@ import type { PreviewModel } from '@nix/structure-spec';
 import { Text } from '@nix/ui';
 import { lazy, Suspense, type ReactNode } from 'react';
 
-import { AppErrorBoundary } from '../../components/error-boundary';
+import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import { programIn } from '../../openui/fence';
 import { previewProgram } from '../../openui/preview-program';
 

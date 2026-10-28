@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RescheduleDialog } from '../../../views/calendar/reschedule-dialog';
-import { useViewSuggestionPreference } from '../../../lib/suggestion-preferences';
+import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { anItem } from '../suggest/suggest-fixtures';
 
 /**

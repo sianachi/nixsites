@@ -2,8 +2,8 @@ import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 
-import { initializeExcalidrawAssets } from './lib/excalidraw-assets';
-import { loadWebConfig, WebConfigContext } from './lib/web-config';
+import { initializeExcalidrawAssets } from '@nix/web-foundation/lib/excalidraw-assets';
+import { loadWebConfig, WebConfigContext } from '@nix/web-foundation/lib/web-config';
 import { registerServiceWorker } from './pwa/register-service-worker';
 import './app.css';
 

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { notifyItemChildrenChanged, onItemChildrenChanged } from '../../lib/item-children-changed';
+import {
+  notifyItemChildrenChanged,
+  onItemChildrenChanged,
+} from '@nix/web-foundation/lib/item-children-changed';
 
 afterEach(() => {
   vi.useRealTimers();

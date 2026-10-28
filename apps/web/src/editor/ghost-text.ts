@@ -4,8 +4,8 @@ import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/p
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey } from 'y-prosemirror';
 
-import { announce } from '../a11y/announcer';
-import { completePhrase, NgramModel } from '../lib/suggest/ngram';
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { completePhrase, NgramModel } from '@nix/web-foundation/lib/suggest/ngram';
 import { learnBody, libraryModels } from './phrase-library';
 import { findTrigger as findReferenceTrigger } from './reference-menu';
 import { findSlashTrigger } from './slash-menu';

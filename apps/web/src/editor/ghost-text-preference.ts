@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import { browserStorage } from '../lib/browser-storage';
-import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
-import { writeStored } from '../lib/stored-setting';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { registerSyncedSetting, settingChanged } from '@nix/web-foundation/lib/ui-settings-sync';
+import { writeStored } from '@nix/web-foundation/lib/stored-setting';
 
 /**
  * Whether the note editor suggests phrase completions as muted text at the caret: a browser-local

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspace } from '../../workspaces/workspace-context';
-import { isAborted } from '../../lib/guards';
+import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export interface DailyNoteSettingsState {
   readonly saved: DailyNoteSettings | null;

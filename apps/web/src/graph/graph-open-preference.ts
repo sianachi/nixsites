@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { create } from 'zustand';
 
-import { browserStorage } from '../lib/browser-storage';
-import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { registerSyncedSetting, settingChanged } from '@nix/web-foundation/lib/ui-settings-sync';
 
 /**
  * How a node opened from the graph is presented: synced to the account as `graph.openMode`. The

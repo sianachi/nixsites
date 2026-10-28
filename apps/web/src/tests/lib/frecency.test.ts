@@ -9,7 +9,7 @@ import {
   MAX_ENTRIES,
   recordPick,
   withPick,
-} from '../../lib/frecency';
+} from '@nix/web-foundation/lib/frecency';
 import { memoryStorage } from '../memory-storage';
 
 const NOW = 1_800_000_000_000;

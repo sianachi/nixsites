@@ -4,8 +4,8 @@ import {
   trainValueModel,
   type SuggestionEvidence,
   type ValueModel,
-} from '../../lib/suggest/naive-bayes';
-import { tokens } from '../../lib/suggest/tokenize';
+} from '@nix/web-foundation/lib/suggest/naive-bayes';
+import { tokens } from '@nix/web-foundation/lib/suggest/tokenize';
 import type { Item, PropertyDefinition, PropertyValue } from '../core/container-model';
 
 /**

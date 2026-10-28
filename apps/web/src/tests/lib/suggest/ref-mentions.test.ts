@@ -5,7 +5,7 @@ import {
   locateMentions,
   MAX_MENTIONS_PER_BLOCK,
   type MentionCandidate,
-} from '../../../lib/suggest/ref-mentions';
+} from '@nix/web-foundation/lib/suggest/ref-mentions';
 
 const ATLAS: MentionCandidate = { itemId: 'atlas', title: 'Atlas', phrase: 'Atlas' };
 const PROJECT_ATLAS: MentionCandidate = {

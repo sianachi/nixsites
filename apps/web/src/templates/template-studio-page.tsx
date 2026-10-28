@@ -11,7 +11,7 @@ import { emptyTemplateInitialization, isCanceledError } from '@nix/api-client';
 
 import { useApiClient } from '../api/api-client-provider';
 import type { CollabSync } from '../editor/collab-sync';
-import { browserSessionStorage } from '../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../shell/shell-context';
 import { useWorkspace } from '../workspaces/workspace-context';
 import {

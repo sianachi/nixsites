@@ -20,9 +20,9 @@ import {
   readBodyCache,
   writeBodyCache,
   type BodyCacheRecord,
-} from '../../lib/body-cache';
-import { frecencyScores, recordPick } from '../../lib/frecency';
-import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
+} from '@nix/web-foundation/lib/body-cache';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
+import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { memoryStorage } from '../memory-storage';
 
 const ADA = 'subject-ada';
@@ -193,7 +193,7 @@ describe('the document body store', () => {
     await writeBodyCache(record(refused));
     await sealBodyCache(refused);
     vi.resetModules();
-    const anotherTab = await import('../../lib/body-cache');
+    const anotherTab = await import('@nix/web-foundation/lib/body-cache');
 
     expect(anotherTab.bodyCacheAdmits(refused)).toBe(false);
     await anotherTab.writeBodyCache(record(refused));

@@ -24,8 +24,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { frecencyScores, recordPick } from '../lib/frecency';
-import { useChoiceOrderPreference } from '../lib/suggestion-preferences';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
+import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { INLINE_AI_COMMANDS, INLINE_AI_GROUP } from './inline-ai/inline-ai-commands';
 import type { InlineKind } from './inline-ai/inline-ai-stream';
 import {

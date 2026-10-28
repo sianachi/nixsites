@@ -3,7 +3,7 @@ import { Button, Tag, Text, cn, focusRing, type TagTone } from '@nix/ui';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 
-import { formatDateTime } from '../lib/date-format';
+import { formatDateTime } from '@nix/web-foundation/lib/date-format';
 import { describeRunOrigin, describeRunReason, describeRunStatus } from './automation-draft';
 
 /**

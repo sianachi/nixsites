@@ -2,8 +2,8 @@ import type { MenuAction, MenuEntry } from '@nix/ui';
 import { Link, Star } from 'lucide-react';
 
 import { useBookmarksStore } from '../bookmarks/use-bookmarks';
-import { copyItemLink } from '../lib/item-link';
-import { publishNotice } from '../lib/notices';
+import { copyItemLink } from '@nix/web-foundation/lib/item-link';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import type { HiddenItemsPreference } from './use-hidden-items';
 
 /**

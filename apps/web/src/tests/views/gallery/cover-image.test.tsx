@@ -2,7 +2,7 @@ import { NixApiError } from '@nix/api-client';
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { forgetThumbnails } from '../../../lib/thumbnail-cache';
+import { forgetThumbnails } from '@nix/web-foundation/lib/thumbnail-cache';
 import { fileImageReference } from '../../../properties/inputs/image-reference';
 import { CoverImage } from '../../../views/gallery/cover-image';
 

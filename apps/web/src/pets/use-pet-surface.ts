@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { readPetSurface, type PetSurface } from '../lib/device-preferences';
+import { readPetSurface, type PetSurface } from '@nix/web-foundation/lib/device-preferences';
 
 function subscribe(onChange: () => void): () => void {
   // `nix-pet-device-changed` covers this tab's own writes; `storage` covers another tab's.

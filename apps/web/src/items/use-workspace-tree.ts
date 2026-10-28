@@ -2,7 +2,7 @@ import {
   itemSubtreeIds,
   notifyItemChildrenChanged,
   onItemChildrenChanged,
-} from '../lib/item-children-changed';
+} from '@nix/web-foundation/lib/item-children-changed';
 import { isCanceledError, isNixApiError, items as coreItems, type Item } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 

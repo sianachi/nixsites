@@ -1,8 +1,8 @@
 import { Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { PartialNotice } from '../components/states/status-panels';
-import { publishNotice } from '../lib/notices';
+import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { ConfirmationDialog } from './settings/confirmation-dialog';
 import { InviteSection } from './settings/invite-section';
 import { PeopleList } from './settings/people-list';

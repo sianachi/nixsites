@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check, Eye } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import type { PropertyDefinition } from '../core/container-model';
-import { useZenActive } from '../../lib/zen-mode';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import {
   STEPS,
   validateDraft,

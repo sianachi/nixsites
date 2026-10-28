@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
-import { AudioPlayer } from '../audio/audio-player';
-import { authorisedAudioUrl } from '../audio/audio-source';
+import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
+import { authorisedAudioUrl } from '@nix/web-foundation/audio/audio-source';
 import {
   bareMediaType,
   fileExtension,

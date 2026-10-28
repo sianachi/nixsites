@@ -1,8 +1,8 @@
 import { PaneDivider } from '@nix/ui';
 import { useRef, useState, type ReactNode } from 'react';
 
-import { WIDE_ENOUGH_FOR_COMPANION_BESIDE } from '../../layout/regions';
-import { useMediaQuery } from '../../layout/viewport';
+import { WIDE_ENOUGH_FOR_COMPANION_BESIDE } from '@nix/web-foundation/layout/regions';
+import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
 
 interface CompanionViewPairProps {
   readonly itemId: string;

@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
 import { useInstallNix } from '../pwa/install-nix';
-import { ThemeChoice } from '../theme/theme-choice';
+import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '../session/use-current-principal';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { usePendingSignOut } from './use-pending-sign-out';

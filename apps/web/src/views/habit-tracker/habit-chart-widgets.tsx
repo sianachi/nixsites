@@ -1,8 +1,8 @@
 import { Button, Field, Input, Select, Text, cn, focusRing } from '@nix/ui';
 import type { HabitTracker } from '@nix/api-client';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
-import { formatShortDate } from '../../lib/date-format';
+import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
+import { formatShortDate } from '@nix/web-foundation/lib/date-format';
 import { useHabits } from './use-habits';
 import {
   HabitConsistency,

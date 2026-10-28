@@ -2,7 +2,7 @@ import { type NotificationDto } from '@nix/api-client';
 import { Button, Dialog, Text } from '@nix/ui';
 import type { ReactElement } from 'react';
 
-import { formatRelativeTime } from '../../lib/date-format';
+import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
 import type { NotificationsInboxState } from './use-notifications-inbox';
 
 export interface NotificationInboxPanelProps {

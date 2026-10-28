@@ -1,7 +1,7 @@
 import { items, type NixClient } from '@nix/api-client';
 
 import { writeImportedBody } from '../import/note-body-writer';
-import { notifyItemChildrenChanged } from '../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 export type CreatedNote =
   | { readonly ok: true; readonly itemId: string; readonly bodyError: string | null }

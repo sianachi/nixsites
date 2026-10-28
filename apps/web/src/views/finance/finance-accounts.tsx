@@ -7,7 +7,11 @@ import {
   type LoanSchedule,
 } from '@nix/api-client';
 import { useMemo, useState, type ReactNode } from 'react';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
 import { AccountDialog, accountTypeLabel } from './finance-setup';
 import { Meter, Money, SectionHeading, Tile, WriteError } from './finance-shared';
 import { formatMonth, formatPercent, parseAmount } from './money';

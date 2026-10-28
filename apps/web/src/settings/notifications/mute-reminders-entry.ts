@@ -8,7 +8,7 @@ import type { MenuEntry } from '@nix/ui';
 import { Bell, BellOff } from 'lucide-react';
 
 import { useOptionalApiClient } from '../../api/api-client-provider';
-import { publishNotice } from '../../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { preferencesInputFrom } from '../shared/preference-defaults';
 
 /**

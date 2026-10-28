@@ -8,7 +8,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
-import { isAborted } from '../lib/guards';
+import { isAborted } from '@nix/web-foundation/lib/guards';
 import { EMPTY_ARRANGEMENT } from './arrangement';
 
 export interface WorkspaceArrangementState {

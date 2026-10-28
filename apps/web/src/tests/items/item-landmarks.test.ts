@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryStorage } from '../memory-storage';
 
-import { browserStorage } from '../../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import {
   itemLandmarksKey,
   readItemLandmarks,
   subscribeItemLandmarks,
   writeItemLandmark,
-} from '../../lib/item-landmarks';
+} from '@nix/web-foundation/lib/item-landmarks';
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());

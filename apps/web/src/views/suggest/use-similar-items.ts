@@ -8,7 +8,7 @@ import {
   similarTitles,
   type SimilarTitle,
   type TitledCandidate,
-} from '../../lib/suggest/duplicates';
+} from '@nix/web-foundation/lib/suggest/duplicates';
 
 /**
  * Whether a title being typed for a new item already names something - here, or anywhere in the

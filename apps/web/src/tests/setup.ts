@@ -6,9 +6,9 @@ import { afterEach, beforeEach, vi } from 'vitest';
 
 import { stubCoreApi } from './api-stub';
 import { stubViewport } from './stub-viewport';
-import { resetAnnouncements } from '../a11y/announcer';
+import { resetAnnouncements } from '@nix/web-foundation/a11y/announcer';
 import { resetSession } from './render-with-router';
-import { browserStorage, browserSessionStorage } from '../lib/browser-storage';
+import { browserStorage, browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 
 /**
  * jsdom implements `<dialog>` as far as its `open` attribute and stops: `showModal` and `close` do

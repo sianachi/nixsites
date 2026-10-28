@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { continueSeries } from '../../../lib/suggest/fill-series';
+import { continueSeries } from '@nix/web-foundation/lib/suggest/fill-series';
 
 describe('continuing a series', () => {
   it('continues an arithmetic number series, keeping the seed precision', () => {

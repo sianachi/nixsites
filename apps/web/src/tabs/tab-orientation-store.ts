@@ -1,7 +1,7 @@
 import type { TabsOrientation } from '@nix/ui';
 import { create } from 'zustand';
 
-import { browserStorage } from '../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 
 /**
  * Whether every pane's tab strip is a row above its content or a rail beside it.

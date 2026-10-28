@@ -7,7 +7,7 @@ import {
   formatShortDate,
   formatTime,
   localTimeZone,
-} from '../../lib/date-format';
+} from '@nix/web-foundation/lib/date-format';
 
 // 2026-09-22T14:05:00Z: a fixed instant, chosen so the reader-locale formatters below stay in the
 // same calendar day across every zone this file exercises.

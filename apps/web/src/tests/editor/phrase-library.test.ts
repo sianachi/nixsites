@@ -12,7 +12,7 @@ import {
   pruneBodyCache,
   sealItemBodies,
   writeBodyCache,
-} from '../../lib/body-cache';
+} from '@nix/web-foundation/lib/body-cache';
 import { GhostText, setGhostTextContext } from '../../editor/ghost-text';
 import {
   learnBody,
@@ -22,7 +22,7 @@ import {
   resetPhraseLibrary,
   warmPhraseLibrary,
 } from '../../editor/phrase-library';
-import { completePhrase } from '../../lib/suggest/ngram';
+import { completePhrase } from '@nix/web-foundation/lib/suggest/ngram';
 import { memoryStorage } from '../memory-storage';
 
 const ADA = 'subject-ada';

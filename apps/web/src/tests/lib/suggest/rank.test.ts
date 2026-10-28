@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { rankByScore } from '../../../lib/suggest/rank';
+import { rankByScore } from '@nix/web-foundation/lib/suggest/rank';
 
 describe('ranking by score', () => {
   const identity = (option: string): string => option;

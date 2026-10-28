@@ -1,8 +1,8 @@
 import { useState } from 'react';
 
-import { frecencyScores, recordPick } from '../lib/frecency';
-import { rankByScore } from '../lib/suggest/rank';
-import { useChoiceOrderPreference } from '../lib/suggestion-preferences';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
+import { rankByScore } from '@nix/web-foundation/lib/suggest/rank';
+import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { useOptionalWorkspace } from '../workspaces/workspace-context';
 
 /**

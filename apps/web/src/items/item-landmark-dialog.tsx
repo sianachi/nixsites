@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import { DEFAULT_LANDMARK, type ItemLandmark } from '../lib/item-landmarks';
+import { DEFAULT_LANDMARK, type ItemLandmark } from '@nix/web-foundation/lib/item-landmarks';
 
 const ICONS: Record<ItemLandmark['icon'], { readonly label: string; readonly icon: LucideIcon }> = {
   page: { label: 'Page', icon: FileText },

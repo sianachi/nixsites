@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { browserSessionStorage } from '../lib/browser-storage';
-import { readOpenDailyOnLaunch } from '../lib/daily-note-device-preferences';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
+import { readOpenDailyOnLaunch } from '@nix/web-foundation/lib/daily-note-device-preferences';
 import { useWorkspace } from '../workspaces/workspace-context';
 
 /** Present once the browser session has had its start; sessionStorage is what scopes it to one. */

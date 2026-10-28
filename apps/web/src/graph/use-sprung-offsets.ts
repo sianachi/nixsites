@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { prefersReducedMotion } from '../lib/motion';
+import { prefersReducedMotion } from '@nix/web-foundation/lib/motion';
 import type { Offset } from './graph-layout';
 import { atRest, AT_HOME, bodyAt, stepSpring, type Body } from './graph-spring';
 

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-import { paneScroller } from '../layout/regions';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { ColorSpecimen } from './tokens/color-specimen';
 import { RhythmSpecimen } from './tokens/rhythm-specimen';
 import { ShapeSpecimen, SpacingSpecimen } from './tokens/scale-specimen';

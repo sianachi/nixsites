@@ -6,7 +6,7 @@ import {
   useNarrowViewport,
   useOverlayDetails,
   useRoomForAnotherPane,
-} from '../../layout/viewport';
+} from '@nix/web-foundation/layout/viewport';
 import { App } from '../../app';
 import { item, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';

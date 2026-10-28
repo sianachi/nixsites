@@ -1,7 +1,11 @@
 import { defineFunction } from '@openuidev/react-lang';
 import { z } from 'zod';
 
-import { formatCalendarDay, formatShortDate, localTimeZone } from '../lib/date-format';
+import {
+  formatCalendarDay,
+  formatShortDate,
+  localTimeZone,
+} from '@nix/web-foundation/lib/date-format';
 
 /**
  * Date functions a program may call as `@Name(...)`. Days are `yyyy-MM-dd` strings, the form

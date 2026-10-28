@@ -7,7 +7,11 @@ import {
 } from '@nix/api-client';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useOptionalApiClient } from '../../api/api-client-provider';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
 import { Money, SectionHeading, WriteError } from './finance-shared';
 import { shiftMonth } from './money';
 import { useFinanceQuery, type FinanceState } from './use-finance';

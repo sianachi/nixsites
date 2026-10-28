@@ -1,20 +1,20 @@
-import { stop as stopAudio } from '../audio/audio-store';
-import { clearAudioPositions } from '../lib/audio-positions';
-import { clearRecentItems } from '../lib/recent-items';
-import { forgetThumbnails } from '../lib/thumbnail-cache';
-import { clearPendingDailyTemplate } from '../lib/pending-daily-template';
-import { clearPetDrafts } from '../lib/pet-drafts';
+import { stop as stopAudio } from '@nix/web-foundation/audio/audio-store';
+import { clearAudioPositions } from '@nix/web-foundation/lib/audio-positions';
+import { clearRecentItems } from '@nix/web-foundation/lib/recent-items';
+import { forgetThumbnails } from '@nix/web-foundation/lib/thumbnail-cache';
+import { clearPendingDailyTemplate } from '@nix/web-foundation/lib/pending-daily-template';
+import { clearPetDrafts } from '@nix/web-foundation/lib/pet-drafts';
 import {
   bodyCacheAccountEpoch,
   bodyCacheCleanupCurrent,
   clearBodyCache,
   openBodyCache,
   sealAccountBodies,
-} from '../lib/body-cache';
-import { clearFrecency } from '../lib/frecency';
-import { clearSuggestionDismissals } from '../lib/suggestion-dismissals';
-import { clearDrafts } from '../lib/draft-journal';
-import { clearInterruptedImport } from '../lib/import-interrupted-notice';
+} from '@nix/web-foundation/lib/body-cache';
+import { clearFrecency } from '@nix/web-foundation/lib/frecency';
+import { clearSuggestionDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
+import { clearDrafts } from '@nix/web-foundation/lib/draft-journal';
+import { clearInterruptedImport } from '@nix/web-foundation/lib/import-interrupted-notice';
 import {
   createContext,
   use,
@@ -27,9 +27,9 @@ import {
 } from 'react';
 import { z } from 'zod';
 
-import { browserStorage } from '../lib/browser-storage';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
-import { useSessionStore, type SessionProfile } from '../lib/session-store';
+import { useSessionStore, type SessionProfile } from '@nix/web-foundation/lib/session-store';
 
 /**
  * Unsubscribes this device from push and tells Core to forget the subscription, before the

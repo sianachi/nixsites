@@ -60,7 +60,7 @@ import { Button } from './Button';
  * **When not to use this.** A disclosure that must render as a sibling of an ancestor the user
  * still needs on screen - a header with its own toggle and search, say - cannot use `showModal()`:
  * the top layer is anchored to the viewport, and covering the viewport is precisely what such a
- * disclosure exists not to do. `apps/web/src/layout/sidebar-drawer.tsx` is that exception, applying
+ * disclosure exists not to do. `packages/web-foundation/src/layout/sidebar-drawer.tsx` is that exception, applying
  * `inert` to what it covers instead of trapping focus; see ADR-0029 for the full reasoning and the
  * Escape-layering convention a non-modal overlay of this kind has to follow.
  */
@@ -317,7 +317,7 @@ export function Dialog(props: DialogProps): ReactNode {
         'bg-background text-foreground',
         // design-token-exempt: 560px is a comfortable reading measure for a modal, not a step on
         // any scale - the same category as the shell's sidebar and panel widths, which
-        // apps/web/src/layout/regions.ts keeps out of the token sheet for the same reason. Making it a
+        // packages/web-foundation/src/layout/regions.ts keeps out of the token sheet for the same reason. Making it a
         // token would have the design system carry one number used in one place, and the gutter
         // beside it already comes from `--spacing`.
         'w-[min(560px,calc(100vw-var(--spacing)*8))]',

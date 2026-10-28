@@ -10,7 +10,11 @@ import {
   type ReactNode,
 } from 'react';
 
-import { EmptyPanel, ErrorPanel, LoadingPanel } from '../../components/states/status-panels';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
 import { ShownItems, useOptionalItemSelection } from '../core/item-selection-context';
 import { CreateItemControl } from '../core/create-item-control';
 import { useItemContextActions } from '../core/use-item-context-actions';

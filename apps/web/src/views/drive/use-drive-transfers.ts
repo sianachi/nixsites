@@ -1,7 +1,7 @@
 import { files as fileResources, isNixApiError } from '@nix/api-client';
 import { useCallback } from 'react';
 
-import { announce } from '../../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '../../api/api-client-provider';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { useWorkspace } from '../../workspaces/workspace-context';

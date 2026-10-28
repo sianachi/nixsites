@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { useState } from 'react';
-import { useBackDismiss } from '../../layout/use-back-dismiss';
+import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 
 /** Waits for a real `popstate` to have actually run, rather than asserting immediately: the
  * `history.back()` a hook's own cleanup runs (to remove its entry once it closes by its own

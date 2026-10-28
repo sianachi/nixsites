@@ -4,8 +4,8 @@ import { act } from '@testing-library/react';
 import { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { frecencyScores } from '../../lib/frecency';
-import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
+import { frecencyScores } from '@nix/web-foundation/lib/frecency';
+import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { linkFrecencyNamespace } from '../../editor/reference-menu';
 import {
   activeMention,
@@ -20,7 +20,7 @@ import {
   UnlinkedMentions,
   type MentionLookup,
 } from '../../editor/unlinked-mentions';
-import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
+import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';
 
 /**

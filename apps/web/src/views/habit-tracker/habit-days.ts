@@ -1,4 +1,4 @@
-import { formatShortDate } from '../../lib/date-format';
+import { formatShortDate } from '@nix/web-foundation/lib/date-format';
 
 export const WEEKDAYS = [
   'Monday',

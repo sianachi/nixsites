@@ -12,8 +12,8 @@ import {
   rankSlashCommands,
   SlashMenu,
 } from '../../editor/slash-menu';
-import { frecencyScores, recordPick } from '../../lib/frecency';
-import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
+import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
+import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';
 
 describe('the slash menu', () => {

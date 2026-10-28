@@ -18,7 +18,11 @@ import {
   type FinanceTransactions,
 } from '@nix/api-client';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { ErrorPanel, LoadingPanel, PartialNotice } from '../../components/states/status-panels';
+import {
+  ErrorPanel,
+  LoadingPanel,
+  PartialNotice,
+} from '@nix/web-foundation/components/states/status-panels';
 import { Money, WriteError } from './finance-shared';
 import { TransactionDialog } from './finance-transactions';
 import { formatDay, formatMoney, formatMonth, parseAmount } from './money';

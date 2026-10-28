@@ -1,7 +1,7 @@
 import { type Decorator, type Preview } from '@storybook/react-vite';
 import { createElement } from 'react';
 
-import { initializeExcalidrawAssets } from '../../../apps/web/src/lib/excalidraw-assets';
+import { initializeExcalidrawAssets } from '../../web-foundation/src/lib/excalidraw-assets';
 
 // The product typeface, self-hosted (no font CDN, ever) - the same weights
 // apps/web imports in its Tailwind entry, so stories render in the letterforms

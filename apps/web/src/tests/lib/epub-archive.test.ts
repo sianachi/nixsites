@@ -5,7 +5,7 @@ import {
   resolveArchivePath,
   EpubRefusal,
   EPUB_MAX_ENTRY_BYTES,
-} from '../../lib/epub-archive';
+} from '@nix/web-foundation/lib/epub-archive';
 export function bookZip(
   chapter = '<html xmlns="http://www.w3.org/1999/xhtml"><head/><body><p>Chapter text</p></body></html>',
   extras: Record<string, Uint8Array> = {},

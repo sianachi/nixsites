@@ -4,7 +4,7 @@ import {
   authorisedBytesGeneration,
   recallAuthorisedBytes,
   rememberAuthorisedBytes,
-} from '../lib/thumbnail-cache';
+} from '@nix/web-foundation/lib/thumbnail-cache';
 
 /**
  * A file's stored thumbnail, as bytes.

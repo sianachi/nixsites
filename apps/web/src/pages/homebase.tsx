@@ -18,8 +18,8 @@ import { Link, useNavigate } from 'react-router';
 
 import { NewItemDialog } from '../items/new-item-dialog';
 import type { WorkspaceTree } from '../items/use-workspace-tree';
-import { publishNotice } from '../lib/notices';
-import { recentItems } from '../lib/recent-items';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+import { recentItems } from '@nix/web-foundation/lib/recent-items';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { useWorkspace } from '../workspaces/workspace-context';

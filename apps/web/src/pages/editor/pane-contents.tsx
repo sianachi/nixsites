@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
 
-import { paneClip, paneColumn } from '../../layout/regions';
-import { useNarrowViewport } from '../../layout/viewport';
-import { useZenActive } from '../../lib/zen-mode';
+import { paneClip, paneColumn } from '@nix/web-foundation/layout/regions';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { paneElementId } from '../../panes/pane-params';
 import type { PaneState } from '../../panes/pane-state';
 import type { ShellContext } from '../../shell/shell-context';
 import { DocumentTabStrip } from '../../tabs/document-tab-strip';
 import { useTabOrientationStore } from '../../tabs/tab-orientation-store';
 import type { TabTransferPayload } from '../../tabs/tab-transfer';
-import { useTabStore } from '../../lib/tab-store';
+import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { Text } from '@nix/ui';
 import { useWorkspace } from '../../workspaces/workspace-context';

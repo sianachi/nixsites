@@ -4,10 +4,13 @@ import { Outlet, useParams } from 'react-router';
 
 import { useApiClient } from '../api/api-client-provider';
 import { cacheKeysOverlap } from '../api/use-cache-invalidation';
-import { cancelItemChildrenRefresh, notifyItemChildrenChanged } from '../lib/item-children-changed';
-import { useSessionStore } from '../lib/session-store';
-import { pruneBodyCache } from '../lib/body-cache';
-import { useTabStore } from '../lib/tab-store';
+import {
+  cancelItemChildrenRefresh,
+  notifyItemChildrenChanged,
+} from '@nix/web-foundation/lib/item-children-changed';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { pruneBodyCache } from '@nix/web-foundation/lib/body-cache';
+import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { rememberLastWorkspaceId } from './last-workspace';
 
 export type WorkspaceListStatus = 'loading' | 'ready' | 'partial' | 'empty' | 'error';

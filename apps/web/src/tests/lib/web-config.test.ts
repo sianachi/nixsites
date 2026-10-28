@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { loadWebConfig, WEB_CONFIG_OFF } from '../../lib/web-config';
+import { loadWebConfig, WEB_CONFIG_OFF } from '@nix/web-foundation/lib/web-config';
 
 /** The install's front-door switches: on only when the file says so, off on anything else. */
 describe('loadWebConfig', () => {

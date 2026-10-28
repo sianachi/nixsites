@@ -13,9 +13,9 @@ import { PanelLeft, PanelTop, Pin, X } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { useMediaQuery } from '../layout/viewport';
+import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
 import { copyLinkEntry } from '../items/item-menu-entries';
-import { publishNotice } from '../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { CHAT_PARAM, paneParam } from '../panes/pane-params';
 import type { PaneState } from '../panes/pane-state';
 import type { ShellContext } from '../shell/shell-context';
@@ -28,7 +28,12 @@ import {
   type TabTransferPayload,
 } from './tab-transfer';
 import { useTabOrientationStore } from './tab-orientation-store';
-import { chatScopeOfTab, chatTabId, isChatTabId, useTabStore } from '../lib/tab-store';
+import {
+  chatScopeOfTab,
+  chatTabId,
+  isChatTabId,
+  useTabStore,
+} from '@nix/web-foundation/lib/tab-store';
 import { useDocumentTabs } from './use-document-tabs';
 import { useOpenChat } from './use-open-chat';
 import { useOpenItem } from './use-open-item';

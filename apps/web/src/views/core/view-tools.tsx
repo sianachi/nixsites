@@ -3,7 +3,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useContext, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { FilterRulesEditor } from '../query/filter-rules-editor';
 import { TITLE_COLUMN_KEY } from './columns';
 import { BelowRowSlot } from './view-switcher';

@@ -1,4 +1,4 @@
-import { notifyItemChildrenChanged } from '../lib/item-children-changed';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { files, items, search, type SearchResults } from '@nix/api-client';
 import { Button, Checkbox, Dialog, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';

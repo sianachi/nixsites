@@ -5,8 +5,8 @@ import {
   suggestValue,
   trainValueModel,
   type LabelledExample,
-} from '../../../lib/suggest/naive-bayes';
-import { tokens } from '../../../lib/suggest/tokenize';
+} from '@nix/web-foundation/lib/suggest/naive-bayes';
+import { tokens } from '@nix/web-foundation/lib/suggest/tokenize';
 
 /**
  * The title-to-value classifier, trained on small hand-built corpora of the kind a container of

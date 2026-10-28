@@ -8,7 +8,7 @@ import { useApiClient } from '../api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '../properties/property-input';
 import { type PropertyValue } from '../views/core/container-model';
 import { reportFormValidity } from '../views/form/form-validity';
-import { claimZenSurface, toggleZenMode, useZenActive } from '../lib/zen-mode';
+import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import {
   publicFormByToken,
   submitPublicForm,

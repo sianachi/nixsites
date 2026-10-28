@@ -7,7 +7,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '../../api/api-client-provider';
-import { isAborted } from '../../lib/guards';
+import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export interface NotificationPreferencesState {
   readonly saved: PrincipalPreferencesResponse | null;

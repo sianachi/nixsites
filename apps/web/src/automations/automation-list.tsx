@@ -3,7 +3,7 @@ import { Checkbox, ContextMenu, Text, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { formatRelativeTime } from '../lib/date-format';
+import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
 import { describeDisabledReason, draftFromRule, summarizeTrigger } from './automation-draft';
 
 /**

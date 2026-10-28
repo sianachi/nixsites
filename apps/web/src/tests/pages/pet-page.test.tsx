@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PetPage } from '../../pages/pet-page';
-import { chatTabId, useTabStore } from '../../lib/tab-store';
+import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { stubViewport } from '../stub-viewport';
 import type { PetProfile } from '@nix/api-client';
 

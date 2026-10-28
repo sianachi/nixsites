@@ -1,4 +1,4 @@
-import { useNarrowViewport } from '../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { usePetAttention, type PetAttention } from './pet-attention';
 import { pageIsAvailable } from './pet-surface';
 import { usePetSettings } from '../api/use-pet-settings';

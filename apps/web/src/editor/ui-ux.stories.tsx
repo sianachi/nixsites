@@ -2,7 +2,7 @@ import { nixEditingExtensions } from '@nix/editor-schema';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useState, type ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
-import { AudioPlayer } from '../audio/audio-player';
+import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
 import { PetDeviceSettings } from '../pets/pet-device-settings';
 import { EpubReader } from '../plugins/epub-reader';
 import { PropertyInput } from '../properties/property-input';

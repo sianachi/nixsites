@@ -1,7 +1,7 @@
 import type { NixClient } from '@nix/api-client';
 
-import { readSse } from '../../lib/sse';
-import { isRecord } from '../../lib/guards';
+import { readSse } from '@nix/web-foundation/lib/sse';
+import { isRecord } from '@nix/web-foundation/lib/guards';
 
 /**
  * The inline writing request, as the Core endpoint defines it: one POST that answers with a

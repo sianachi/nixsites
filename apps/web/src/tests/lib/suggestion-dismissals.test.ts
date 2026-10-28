@@ -5,7 +5,7 @@ import {
   MAXIMUM_DISMISSALS,
   readDismissals,
   rememberDismissal,
-} from '../../lib/suggestion-dismissals';
+} from '@nix/web-foundation/lib/suggestion-dismissals';
 import { memoryStorage } from '../memory-storage';
 
 /** An in-memory `Storage`: the test environment's global is not a usable one. */

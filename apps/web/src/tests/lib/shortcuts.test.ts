@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatShortcut, isTypingTarget, matchesShortcut } from '../../lib/shortcuts';
+import { formatShortcut, isTypingTarget, matchesShortcut } from '@nix/web-foundation/lib/shortcuts';
 
 function press(
   key: string,

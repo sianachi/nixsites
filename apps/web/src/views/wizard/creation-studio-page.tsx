@@ -2,7 +2,7 @@ import { Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router';
 
-import { browserSessionStorage } from '../../lib/browser-storage';
+import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../../shell/shell-context';
 import { useWorkspace } from '../../workspaces/workspace-context';
 import { useContainer } from '../core/use-container';

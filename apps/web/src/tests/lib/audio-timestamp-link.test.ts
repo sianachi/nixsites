@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseAudioTimestamp } from '../../lib/audio-timestamp-link';
+import { parseAudioTimestamp } from '@nix/web-foundation/lib/audio-timestamp-link';
 
 const ORIGIN = 'https://nix.example';
 const WORKSPACE = '00000000-0000-4000-8000-000000000001';

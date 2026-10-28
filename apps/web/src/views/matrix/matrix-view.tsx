@@ -2,7 +2,7 @@ import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
-import { useNarrowViewport } from '../../layout/viewport';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import type { Item, View } from '../core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
 import type { ContainerData } from '../core/use-container';

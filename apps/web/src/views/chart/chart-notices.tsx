@@ -1,7 +1,7 @@
 import type { ItemChart } from '@nix/api-client';
 import type { ReactNode } from 'react';
 
-import { PartialNotice } from '../../components/states/status-panels';
+import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 import { countOf, isChartPeriod, MAXIMUM_SERIES, type ChartLabels } from './chart-model';
 
 /** Everything the chart cannot show, said before it is drawn. */

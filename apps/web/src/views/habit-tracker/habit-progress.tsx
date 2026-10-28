@@ -1,7 +1,7 @@
 import type { HabitTracker } from '@nix/api-client';
 import { Button, cn, focusRing, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
-import { formatShortDate } from '../../lib/date-format';
+import { formatShortDate } from '@nix/web-foundation/lib/date-format';
 
 export function shiftHabitDay(day: string, offset: number): string {
   const date = new Date(`${day}T00:00:00Z`);

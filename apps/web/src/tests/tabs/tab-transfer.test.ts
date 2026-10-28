@@ -8,7 +8,7 @@ import {
   writeTabTransfer,
   type TabTransferPayload,
 } from '../../tabs/tab-transfer';
-import type { OpenTab } from '../../lib/tab-store';
+import type { OpenTab } from '@nix/web-foundation/lib/tab-store';
 
 const ALPHA = '0a0a0a0a-0000-4000-8000-00000000000a';
 const BRAVO = '0b0b0b0b-0000-4000-8000-00000000000b';

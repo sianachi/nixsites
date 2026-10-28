@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineSegments, rangeSegments } from '../../lib/text-diff';
+import { lineSegments, rangeSegments } from '@nix/web-foundation/lib/text-diff';
 
 describe('rangeSegments', () => {
   it('splits text around the changed run and drops empty runs', () => {

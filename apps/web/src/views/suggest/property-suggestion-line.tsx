@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { SuggestionEvidence } from '../../lib/suggest/naive-bayes';
+import type { SuggestionEvidence } from '@nix/web-foundation/lib/suggest/naive-bayes';
 import { SuggestionAction, SuggestionHint } from './suggestion-hint';
 
 /**

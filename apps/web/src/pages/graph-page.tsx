@@ -10,20 +10,20 @@ import {
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
-} from '../components/states/status-panels';
+} from '@nix/web-foundation/components/states/status-panels';
 import { GraphExplorer } from '../graph/graph-explorer';
 import {
   GRAPH_OPEN_MODE_LABELS,
   GraphOpenModeSchema,
   useGraphOpenPreference,
 } from '../graph/graph-open-preference';
-import { useItemDialog } from '../lib/item-dialog-context';
+import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 import { useWorkspaceGraph } from '../graph/use-workspace-graph';
-import { paneScroller } from '../layout/regions';
-import { useNarrowViewport } from '../layout/viewport';
-import { notifyItemChildrenChanged } from '../lib/item-children-changed';
-import { publishNotice } from '../lib/notices';
-import { offerReference } from '../lib/pending-reference';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+import { offerReference } from '@nix/web-foundation/lib/pending-reference';
 import { useOpenItem } from '../tabs/use-open-item';
 import { resolveOpenMode } from '../views/core/open-policy';
 

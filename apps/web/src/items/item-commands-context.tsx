@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-import { announce } from '../a11y/announcer';
+import { announce } from '@nix/web-foundation/a11y/announcer';
 import { planBulkDelete, type BulkDeletePlan } from './bulk-delete';
-import { publishNotice } from '../lib/notices';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { describeBulkMove, dropRefusal, executeBulkMove, planBulkMove } from './bulk-move';
 import { DeleteItemsDialog } from './delete-items-dialog';
 import { MoveItemsDialog } from './move-items-dialog';
