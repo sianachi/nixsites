@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { cleanup, configure } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 import { stubCoreApi } from './api-stub';
@@ -78,10 +78,13 @@ configure({ asyncUtilTimeout: 5_000 });
 
 // user-event's default `delay: 0` parks a macrotask between every keystroke and click. Nothing in
 // this suite relies on that yield (a test that does passes its own `delay`), and a long typed
-// string or a chain of clicks otherwise pays for each one under a loaded CI runner.
+// string or a chain of clicks otherwise pays for each one under a loaded CI runner. The
+// pointer-events check walks computed styles up the tree on every action; no stylesheet is loaded
+// here, so it never has anything to find.
 const setupUser = userEvent.setup.bind(userEvent);
 Object.assign(userEvent, {
-  setup: (options?: Parameters<typeof setupUser>[0]) => setupUser({ delay: null, ...options }),
+  setup: (options?: Parameters<typeof setupUser>[0]) =>
+    setupUser({ delay: null, pointerEventsCheck: PointerEventsCheckLevel.Never, ...options }),
 });
 
 /**

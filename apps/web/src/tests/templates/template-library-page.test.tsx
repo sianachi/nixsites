@@ -13,6 +13,7 @@ import {
 } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { requestUrl } from '../request-url';
+import { findByAriaLabel } from '../by-aria-label';
 
 beforeEach(() => {
   signedIn();
@@ -144,7 +145,7 @@ describe('the workspace template library', () => {
       screen.getByRole('combobox', { name: 'Companion placement' }),
       'beside',
     );
-    const preview = screen.getByLabelText('Template preview');
+    const preview = await findByAriaLabel('Template preview');
     expect(within(preview).getByText('Fields').parentElement).toHaveTextContent('7');
     expect(within(preview).getByText('Views').parentElement).toHaveTextContent('9');
     expect(within(preview).getByText('interactive form')).toBeVisible();

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../app';
 import { item, STUB_TEMPLATES, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
+import { findByAriaLabel } from '../by-aria-label';
 
 const SOURCE = item({
   id: 'a9999999-9999-4999-8999-999999999999',
@@ -66,7 +67,7 @@ describe('the template studio', () => {
 
     expect(await screen.findByRole('heading', { name: 'Save as template' })).toBeVisible();
     expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Team project');
-    const preview = await screen.findByLabelText('Template preview');
+    const preview = await findByAriaLabel('Template preview');
     await waitFor(() => {
       expect(within(preview).getByText('Fields').parentElement).toHaveTextContent('1');
       expect(within(preview).getByText('Views').parentElement).toHaveTextContent('1');
@@ -91,7 +92,7 @@ describe('the template studio', () => {
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}/templates/new?sourceItem=${SOURCE.id}`);
 
     await screen.findByRole('heading', { name: 'Save as template' });
-    const preview = await screen.findByLabelText('Template preview');
+    const preview = await findByAriaLabel('Template preview');
     expect(preview.previousElementSibling).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
     expect(preview).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto', '@4xl/studio:flex-none');
     expect(screen.getAllByRole('main')).toHaveLength(1);
