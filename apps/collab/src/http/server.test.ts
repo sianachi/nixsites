@@ -742,196 +742,114 @@ describe('version history', () => {
     return { pool, touched: () => touched };
   }
 
-  describe('GET /documents/:itemId/history', () => {
-    it('refuses a request with no bearer token', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history`,
-      });
+  const AUTH = { authorization: 'Bearer valid' };
 
-      expect(response.statusCode).toBe(401);
-    });
+  interface Call {
+    method: 'GET' | 'POST' | 'DELETE';
+    url: string;
+    payload?: object;
+  }
 
-    it('refuses a before cursor that is not a sequence', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history?before=soon`,
-        headers: { authorization: 'Bearer valid' },
-      });
+  it.each<[string, Call]>([
+    ['history list', { method: 'GET', url: `/documents/${ITEM}/history` }],
+    ['named versions list', { method: 'GET', url: `/documents/${ITEM}/versions` }],
+  ])('refuses a request with no bearer token: %s', async (_name, call) => {
+    const response = await track(server({ authorizer: granting })).inject(call);
 
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
-    });
-
-    it('lets a reader list history - reading never needed canWrite', async () => {
-      const { pool, touched } = observing();
-      const response = await track(server({ pool, authorizer: readOnly })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(touched()).toBe(true);
-      expect(response.statusCode).not.toBe(403);
-    });
+    expect(response.statusCode).toBe(401);
   });
 
-  describe('GET /documents/:itemId/history/:seq', () => {
-    it('refuses a seq that is not a non-negative integer', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history/not-a-seq`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
-    });
-
-    it('refuses a negative seq', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history/-1`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
-    });
-
-    it('lets a reader ask for a state - reading never needed canWrite', async () => {
-      const { pool, touched } = observing();
-      const response = await track(server({ pool, authorizer: readOnly })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/history/3`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(touched()).toBe(true);
-      expect(response.statusCode).not.toBe(403);
-    });
-  });
-
-  describe('POST /documents/:itemId/history/:seq/restore', () => {
-    it('refuses a restore from a reader who may not write', async () => {
-      const response = await track(server({ authorizer: readOnly })).inject({
-        method: 'POST',
-        url: `/documents/${ITEM}/history/1/restore`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      // The pool proxy guarantees a refused restore never reached the log, same as the
-      // ordinary update path.
-      expect(response.statusCode).toBe(403);
-      expect(response.json<{ code: string }>().code).toBe('read_only');
-    });
-
-    it('refuses a seq that is not a non-negative integer, before touching the database', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'POST',
-        url: `/documents/${ITEM}/history/not-a-seq/restore`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
-    });
-  });
-
-  describe('GET /documents/:itemId/versions', () => {
-    it('refuses a request with no bearer token', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/versions`,
-      });
-
-      expect(response.statusCode).toBe(401);
-    });
-
-    it('lets a reader list named versions - reading never needed canWrite', async () => {
-      const { pool, touched } = observing();
-      const response = await track(server({ pool, authorizer: readOnly })).inject({
-        method: 'GET',
-        url: `/documents/${ITEM}/versions`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(touched()).toBe(true);
-      expect(response.statusCode).not.toBe(403);
-    });
-  });
-
-  describe('POST /documents/:itemId/versions', () => {
-    it('refuses naming from a reader who may not write', async () => {
-      const response = await track(server({ authorizer: readOnly })).inject({
+  it.each<[string, Call, string]>([
+    [
+      'a before cursor that is not a sequence',
+      { method: 'GET', url: `/documents/${ITEM}/history?before=soon` },
+      'history_seq_invalid',
+    ],
+    [
+      'a state seq that is not a non-negative integer',
+      { method: 'GET', url: `/documents/${ITEM}/history/not-a-seq` },
+      'history_seq_invalid',
+    ],
+    [
+      'a negative state seq',
+      { method: 'GET', url: `/documents/${ITEM}/history/-1` },
+      'history_seq_invalid',
+    ],
+    [
+      'a restore seq that is not a non-negative integer, before touching the database',
+      { method: 'POST', url: `/documents/${ITEM}/history/not-a-seq/restore` },
+      'history_seq_invalid',
+    ],
+    [
+      'naming a seq that is not a non-negative integer',
+      {
         method: 'POST',
         url: `/documents/${ITEM}/versions`,
-        headers: { authorization: 'Bearer valid' },
-        payload: { seq: 1, name: 'Draft' },
-      });
-
-      expect(response.statusCode).toBe(403);
-      expect(response.json<{ code: string }>().code).toBe('read_only');
-    });
-
-    it('refuses a seq that is not a non-negative integer', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'POST',
-        url: `/documents/${ITEM}/versions`,
-        headers: { authorization: 'Bearer valid' },
         payload: { seq: 'not-a-seq', name: 'Draft' },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
-    });
-
-    it('refuses an empty name', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
+      },
+      'history_seq_invalid',
+    ],
+    [
+      'an empty name',
+      { method: 'POST', url: `/documents/${ITEM}/versions`, payload: { seq: 1, name: '   ' } },
+      'version_name_invalid',
+    ],
+    [
+      'a name over 120 characters',
+      {
         method: 'POST',
         url: `/documents/${ITEM}/versions`,
-        headers: { authorization: 'Bearer valid' },
-        payload: { seq: 1, name: '   ' },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('version_name_invalid');
-    });
-
-    it('refuses a name over 120 characters', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'POST',
-        url: `/documents/${ITEM}/versions`,
-        headers: { authorization: 'Bearer valid' },
         payload: { seq: 1, name: 'x'.repeat(121) },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('version_name_invalid');
+      },
+      'version_name_invalid',
+    ],
+    [
+      'removing a name by a seq that is not a non-negative integer',
+      { method: 'DELETE', url: `/documents/${ITEM}/versions/not-a-seq` },
+      'history_seq_invalid',
+    ],
+  ])('refuses %s', async (_name, call, code) => {
+    const response = await track(server({ authorizer: granting })).inject({
+      ...call,
+      headers: AUTH,
     });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ code: string }>().code).toBe(code);
   });
 
-  describe('DELETE /documents/:itemId/versions/:seq', () => {
-    it('refuses removing a name from a reader who may not write', async () => {
-      const response = await track(server({ authorizer: readOnly })).inject({
-        method: 'DELETE',
-        url: `/documents/${ITEM}/versions/1`,
-        headers: { authorization: 'Bearer valid' },
-      });
-
-      expect(response.statusCode).toBe(403);
-      expect(response.json<{ code: string }>().code).toBe('read_only');
+  // The pool proxy guarantees a refused write never reached the log, same as the ordinary
+  // update path.
+  it.each<[string, Call]>([
+    ['a restore', { method: 'POST', url: `/documents/${ITEM}/history/1/restore` }],
+    [
+      'naming',
+      { method: 'POST', url: `/documents/${ITEM}/versions`, payload: { seq: 1, name: 'Draft' } },
+    ],
+    ['removing a name', { method: 'DELETE', url: `/documents/${ITEM}/versions/1` }],
+  ])('refuses %s from a reader who may not write', async (_name, call) => {
+    const response = await track(server({ authorizer: readOnly })).inject({
+      ...call,
+      headers: AUTH,
     });
 
-    it('refuses a seq that is not a non-negative integer', async () => {
-      const response = await track(server({ authorizer: granting })).inject({
-        method: 'DELETE',
-        url: `/documents/${ITEM}/versions/not-a-seq`,
-        headers: { authorization: 'Bearer valid' },
-      });
+    expect(response.statusCode).toBe(403);
+    expect(response.json<{ code: string }>().code).toBe('read_only');
+  });
 
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ code: string }>().code).toBe('history_seq_invalid');
+  it.each<[string, string]>([
+    ['list history', `/documents/${ITEM}/history`],
+    ['ask for a state', `/documents/${ITEM}/history/3`],
+    ['list named versions', `/documents/${ITEM}/versions`],
+  ])('lets a reader %s - reading never needed canWrite', async (_name, url) => {
+    const { pool, touched } = observing();
+    const response = await track(server({ pool, authorizer: readOnly })).inject({
+      method: 'GET',
+      url,
+      headers: AUTH,
     });
+
+    expect(touched()).toBe(true);
+    expect(response.statusCode).not.toBe(403);
   });
 });
