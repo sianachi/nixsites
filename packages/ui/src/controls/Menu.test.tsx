@@ -189,24 +189,17 @@ describe('Menu', () => {
     expect(button).toHaveFocus();
   });
 
-  it('ArrowDown on the trigger opens the menu onto its first item', async () => {
+  it.each([
+    ['ArrowDown', 'first', 'New workspace'],
+    ['ArrowUp', 'last', 'Delete workspace'],
+  ])('%s on the trigger opens the menu onto its %s item', async (key, _end, name) => {
     const user = userEvent.setup();
     render(<Menu label="Workspace actions" items={ACTION_ITEMS} children={trigger()} />);
 
     screen.getByRole('button', { name: 'Actions' }).focus();
-    await user.keyboard('{ArrowDown}');
+    await user.keyboard(`{${key}}`);
 
-    expect(screen.getByRole('menuitem', { name: 'New workspace' })).toHaveFocus();
-  });
-
-  it('ArrowUp on the trigger opens the menu onto its last item', async () => {
-    const user = userEvent.setup();
-    render(<Menu label="Workspace actions" items={ACTION_ITEMS} children={trigger()} />);
-
-    screen.getByRole('button', { name: 'Actions' }).focus();
-    await user.keyboard('{ArrowUp}');
-
-    expect(screen.getByRole('menuitem', { name: 'Delete workspace' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name })).toHaveFocus();
   });
 
   it('ArrowDown and ArrowUp move focus between items and wrap at the ends', async () => {

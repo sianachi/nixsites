@@ -97,21 +97,14 @@ describe('nixctl recur set', () => {
     await done();
   });
 
-  it('refuses an interval below 1 before any request', async () => {
+  it.each([
+    ['below 1', '0'],
+    ['above 366', '400'],
+  ])('refuses an interval %s before any request', async (_case, interval) => {
     const { env, done } = await withProfile();
     await expect(
       captureJson((json) =>
-        setRecurrence('default', ITEM, { freq: 'daily', interval: '0' }, json, { env }),
-      ),
-    ).rejects.toThrow(/--interval must be a whole number between 1 and 366/);
-    await done();
-  });
-
-  it('refuses an interval above 366 before any request', async () => {
-    const { env, done } = await withProfile();
-    await expect(
-      captureJson((json) =>
-        setRecurrence('default', ITEM, { freq: 'daily', interval: '400' }, json, { env }),
+        setRecurrence('default', ITEM, { freq: 'daily', interval }, json, { env }),
       ),
     ).rejects.toThrow(/--interval must be a whole number between 1 and 366/);
     await done();

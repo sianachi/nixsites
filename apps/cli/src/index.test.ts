@@ -74,24 +74,15 @@ describe('pet --after validation', () => {
     expect(options?.after).toBe(42);
   });
 
-  it('rejects a negative --after before petCommand ever runs', async () => {
+  it.each([
+    ['a negative', '-1'],
+    ['a non-integer', '1.5'],
+  ])('rejects %s --after before petCommand ever runs', async (_case, after) => {
     const program = buildProgram();
     overrideExitRecursively(program);
 
     await expect(
-      program.parseAsync(['pet', 'watch', '--workspace', 'w1', '--pet', 'p1', '--after', '-1'], {
-        from: 'user',
-      }),
-    ).rejects.toThrow(/non-negative integer/);
-    expect(petCommand).not.toHaveBeenCalled();
-  });
-
-  it('rejects a non-integer --after before petCommand ever runs', async () => {
-    const program = buildProgram();
-    overrideExitRecursively(program);
-
-    await expect(
-      program.parseAsync(['pet', 'watch', '--workspace', 'w1', '--pet', 'p1', '--after', '1.5'], {
+      program.parseAsync(['pet', 'watch', '--workspace', 'w1', '--pet', 'p1', '--after', after], {
         from: 'user',
       }),
     ).rejects.toThrow(/non-negative integer/);

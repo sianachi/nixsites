@@ -164,43 +164,27 @@ describe('Tabs', () => {
     expect(screen.getByTitle('Close Roadmap (Delete)')).toBeInTheDocument();
   });
 
-  it('closes the focused tab from the keyboard with Backspace as well', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
+  it.each(['Backspace', 'Delete'])(
+    'closes the focused tab from the keyboard with %s',
+    async (key) => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
 
-    render(
-      <Tabs
-        label="Open documents"
-        items={OPEN}
-        activeId="a"
-        onActivate={vi.fn()}
-        onClose={onClose}
-      />,
-    );
-    screen.getByRole('tab', { name: 'Roadmap' }).focus();
+      render(
+        <Tabs
+          label="Open documents"
+          items={OPEN}
+          activeId="a"
+          onActivate={vi.fn()}
+          onClose={onClose}
+        />,
+      );
+      screen.getByRole('tab', { name: 'Roadmap' }).focus();
 
-    await user.keyboard('{Backspace}');
-    expect(onClose).toHaveBeenCalledWith('b');
-  });
-
-  it('closes the focused tab from the keyboard with Delete', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-
-    render(
-      <Tabs
-        label="Open documents"
-        items={OPEN}
-        activeId="a"
-        onActivate={vi.fn()}
-        onClose={onClose}
-      />,
-    );
-    screen.getByRole('tab', { name: 'Roadmap' }).focus();
-
-    await user.keyboard('{Delete}');
-    expect(onClose).toHaveBeenCalledWith('b');
-  });
+      await user.keyboard(`{${key}}`);
+      expect(onClose).toHaveBeenCalledWith('b');
+    },
+  );
 
   it('ignores Delete on a tab marked not closable', async () => {
     const user = userEvent.setup();
