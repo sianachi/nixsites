@@ -4,14 +4,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { WritingModeControl } from '../../editor/writing-mode-control';
+import { WritingModeControl } from '@nix/web-editor/editor/writing-mode-control';
 import {
   loadWritingMode,
   setEditorWritingMode,
   useWritingModePreference,
   WritingModeKeymap,
   WRITING_MODE_STORAGE_KEY,
-} from '../../editor/writing-mode';
+} from '@nix/web-editor/editor/writing-mode';
 import { memoryStorage } from '../memory-storage';
 
 let editor: Editor | undefined;

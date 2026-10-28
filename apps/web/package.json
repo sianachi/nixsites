@@ -27,6 +27,7 @@
     "@nix/structure-spec": "workspace:*",
     "@nix/ui": "workspace:*",
     "@nix/view-render": "workspace:*",
+    "@nix/web-editor": "workspace:*",
     "@nix/web-foundation": "workspace:*",
     "@nix/web-platform": "workspace:*",
     "@openuidev/lang-core": "1.0.1",

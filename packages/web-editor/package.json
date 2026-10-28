@@ -1,0 +1,203 @@
+{
+  "name": "@nix/web-editor",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Web app editor: the note and canvas editors, their toolbars and menus, and the file viewer plugins",
+  "exports": {
+    "./editor/bubble-menu": {
+      "types": "./src/editor/bubble-menu.tsx",
+      "default": "./src/editor/bubble-menu.tsx"
+    },
+    "./editor/canvas-browser": {
+      "types": "./src/editor/canvas-browser.tsx",
+      "default": "./src/editor/canvas-browser.tsx"
+    },
+    "./editor/canvas-editor": {
+      "types": "./src/editor/canvas-editor.tsx",
+      "default": "./src/editor/canvas-editor.tsx"
+    },
+    "./editor/document-issue-dialog": {
+      "types": "./src/editor/document-issue-dialog.tsx",
+      "default": "./src/editor/document-issue-dialog.tsx"
+    },
+    "./editor/editor-address-dialog": {
+      "types": "./src/editor/editor-address-dialog.tsx",
+      "default": "./src/editor/editor-address-dialog.tsx"
+    },
+    "./editor/inline-ai/inline-ai-panel": {
+      "types": "./src/editor/inline-ai/inline-ai-panel.tsx",
+      "default": "./src/editor/inline-ai/inline-ai-panel.tsx"
+    },
+    "./editor/item-insert-dialog": {
+      "types": "./src/editor/item-insert-dialog.tsx",
+      "default": "./src/editor/item-insert-dialog.tsx"
+    },
+    "./editor/markdown-mode-panel": {
+      "types": "./src/editor/markdown-mode-panel.tsx",
+      "default": "./src/editor/markdown-mode-panel.tsx"
+    },
+    "./editor/mention-bubble": {
+      "types": "./src/editor/mention-bubble.tsx",
+      "default": "./src/editor/mention-bubble.tsx"
+    },
+    "./editor/mobile-note-toolbar": {
+      "types": "./src/editor/mobile-note-toolbar.tsx",
+      "default": "./src/editor/mobile-note-toolbar.tsx"
+    },
+    "./editor/nix-canvas": {
+      "types": "./src/editor/nix-canvas.tsx",
+      "default": "./src/editor/nix-canvas.tsx"
+    },
+    "./editor/note-block-views": {
+      "types": "./src/editor/note-block-views.tsx",
+      "default": "./src/editor/note-block-views.tsx"
+    },
+    "./editor/note-editor": {
+      "types": "./src/editor/note-editor.tsx",
+      "default": "./src/editor/note-editor.tsx"
+    },
+    "./editor/note-image-size": {
+      "types": "./src/editor/note-image-size.tsx",
+      "default": "./src/editor/note-image-size.tsx"
+    },
+    "./editor/note-image-view": {
+      "types": "./src/editor/note-image-view.tsx",
+      "default": "./src/editor/note-image-view.tsx"
+    },
+    "./editor/page-guides-overlay": {
+      "types": "./src/editor/page-guides-overlay.tsx",
+      "default": "./src/editor/page-guides-overlay.tsx"
+    },
+    "./editor/pending-reference-notice": {
+      "types": "./src/editor/pending-reference-notice.tsx",
+      "default": "./src/editor/pending-reference-notice.tsx"
+    },
+    "./editor/presence-list": {
+      "types": "./src/editor/presence-list.tsx",
+      "default": "./src/editor/presence-list.tsx"
+    },
+    "./editor/reference-menu": {
+      "types": "./src/editor/reference-menu.tsx",
+      "default": "./src/editor/reference-menu.tsx"
+    },
+    "./editor/reference-resolution": {
+      "types": "./src/editor/reference-resolution.tsx",
+      "default": "./src/editor/reference-resolution.tsx"
+    },
+    "./editor/reference-view": {
+      "types": "./src/editor/reference-view.tsx",
+      "default": "./src/editor/reference-view.tsx"
+    },
+    "./editor/slash-menu": {
+      "types": "./src/editor/slash-menu.tsx",
+      "default": "./src/editor/slash-menu.tsx"
+    },
+    "./editor/table-menu": {
+      "types": "./src/editor/table-menu.tsx",
+      "default": "./src/editor/table-menu.tsx"
+    },
+    "./editor/table-size-picker": {
+      "types": "./src/editor/table-size-picker.tsx",
+      "default": "./src/editor/table-size-picker.tsx"
+    },
+    "./editor/text-width-control": {
+      "types": "./src/editor/text-width-control.tsx",
+      "default": "./src/editor/text-width-control.tsx"
+    },
+    "./editor/toolbar": {
+      "types": "./src/editor/toolbar.tsx",
+      "default": "./src/editor/toolbar.tsx"
+    },
+    "./editor/writing-mode-control": {
+      "types": "./src/editor/writing-mode-control.tsx",
+      "default": "./src/editor/writing-mode-control.tsx"
+    },
+    "./plugins/csv-viewer": {
+      "types": "./src/plugins/csv-viewer.tsx",
+      "default": "./src/plugins/csv-viewer.tsx"
+    },
+    "./plugins/epub-reader": {
+      "types": "./src/plugins/epub-reader.tsx",
+      "default": "./src/plugins/epub-reader.tsx"
+    },
+    "./plugins/epub-viewer": {
+      "types": "./src/plugins/epub-viewer.tsx",
+      "default": "./src/plugins/epub-viewer.tsx"
+    },
+    "./plugins/file-viewer-registry": {
+      "types": "./src/plugins/file-viewer-registry.tsx",
+      "default": "./src/plugins/file-viewer-registry.tsx"
+    },
+    "./plugins/markdown-viewer": {
+      "types": "./src/plugins/markdown-viewer.tsx",
+      "default": "./src/plugins/markdown-viewer.tsx"
+    },
+    "./plugins/media-viewer": {
+      "types": "./src/plugins/media-viewer.tsx",
+      "default": "./src/plugins/media-viewer.tsx"
+    },
+    "./plugins/mermaid-code-block-view": {
+      "types": "./src/plugins/mermaid-code-block-view.tsx",
+      "default": "./src/plugins/mermaid-code-block-view.tsx"
+    },
+    "./plugins/mermaid-js-viewer": {
+      "types": "./src/plugins/mermaid-js-viewer.tsx",
+      "default": "./src/plugins/mermaid-js-viewer.tsx"
+    },
+    "./plugins/text-viewer": {
+      "types": "./src/plugins/text-viewer.tsx",
+      "default": "./src/plugins/text-viewer.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@nix/api-client": "workspace:*",
+    "@nix/editor-schema": "workspace:*",
+    "@nix/markdown": "workspace:*",
+    "@nix/site-render": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@tiptap/core": "^3.29.0",
+    "@tiptap/extension-drag-handle-react": "^3.29.2",
+    "@tiptap/extension-node-range": "^3.29.2",
+    "@tiptap/extensions": "^3.29.0",
+    "@tiptap/pm": "^3.29.0",
+    "@tiptap/react": "^3.29.0",
+    "lib0": "^0.2.117",
+    "lucide-react": "^1.27.0",
+    "mermaid": "^11.17.2",
+    "react-dom": "^19.2.8",
+    "react-router": "^7.18.1",
+    "y-prosemirror": "^1.3.7",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}

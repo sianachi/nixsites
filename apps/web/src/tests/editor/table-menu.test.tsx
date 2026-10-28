@@ -6,9 +6,9 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ColumnWidthControls } from '../../editor/column-width';
-import { TableControls } from '../../editor/table-controls';
-import { TableMenu } from '../../editor/table-menu';
+import { ColumnWidthControls } from '@nix/web-editor/editor/column-width';
+import { TableControls } from '@nix/web-editor/editor/table-controls';
+import { TableMenu } from '@nix/web-editor/editor/table-menu';
 
 /**
  * The floating table menu.

@@ -17,7 +17,7 @@ import {
   vimStatus,
   vimStatusMode,
   VimMotions,
-} from '../../editor/vim-motions';
+} from '@nix/web-editor/editor/vim-motions';
 
 let editors: Editor[] = [];
 

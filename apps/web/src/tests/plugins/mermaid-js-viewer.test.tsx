@@ -3,8 +3,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MermaidViewer } from '../../plugins/mermaid-js-viewer';
-import { renderMermaid, subscribeToMermaidTheme } from '../../plugins/mermaid-render';
+import { MermaidViewer } from '@nix/web-editor/plugins/mermaid-js-viewer';
+import { renderMermaid, subscribeToMermaidTheme } from '@nix/web-editor/plugins/mermaid-render';
 
 const mermaid = vi.hoisted(() => ({
   initialize: vi.fn(),

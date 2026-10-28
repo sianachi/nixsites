@@ -13,7 +13,7 @@ import {
   sealItemBodies,
   writeBodyCache,
 } from '@nix/web-foundation/lib/body-cache';
-import { GhostText, setGhostTextContext } from '../../editor/ghost-text';
+import { GhostText, setGhostTextContext } from '@nix/web-editor/editor/ghost-text';
 import {
   learnBody,
   libraryModels,
@@ -21,7 +21,7 @@ import {
   proseTextOfUpdate,
   resetPhraseLibrary,
   warmPhraseLibrary,
-} from '../../editor/phrase-library';
+} from '@nix/web-editor/editor/phrase-library';
 import { completePhrase } from '@nix/web-foundation/lib/suggest/ngram';
 import { memoryStorage } from '../memory-storage';
 

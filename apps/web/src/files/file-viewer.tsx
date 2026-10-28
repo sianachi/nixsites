@@ -9,7 +9,7 @@ import {
   useCacheInvalidation,
 } from '@nix/web-platform/api/use-cache-invalidation';
 import { useOverlayDetails } from '@nix/web-foundation/layout/viewport';
-import { findBuiltInFileViewer } from '../plugins/built-in-file-viewers';
+import { findBuiltInFileViewer } from '@nix/web-editor/plugins/built-in-file-viewers';
 import { FileDetails } from './file-details';
 import { fileKindLabel, formatBytes } from './file-facts';
 import { quietTopControl, useNearTopEdge } from '@nix/web-foundation/lib/use-near-top-edge';

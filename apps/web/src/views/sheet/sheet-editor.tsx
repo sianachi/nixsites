@@ -7,9 +7,16 @@ import * as Y from 'yjs';
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { documentScope } from '@nix/web-foundation/lib/body-cache';
-import { startCollabSync, type CollabSync, type SyncState } from '../../editor/collab-sync';
-import { PresenceList } from '../../editor/presence-list';
-import { DocumentIssueDialog, LOCAL_COPY_STALE } from '../../editor/document-issue-dialog';
+import {
+  startCollabSync,
+  type CollabSync,
+  type SyncState,
+} from '@nix/web-editor/editor/collab-sync';
+import { PresenceList } from '@nix/web-editor/editor/presence-list';
+import {
+  DocumentIssueDialog,
+  LOCAL_COPY_STALE,
+} from '@nix/web-editor/editor/document-issue-dialog';
 import { SheetGrid } from './sheet-grid';
 import { useSheet } from './use-sheet';
 

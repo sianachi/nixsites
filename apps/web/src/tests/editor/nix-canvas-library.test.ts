@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { prepareCanvasLibraryItems } from '../../editor/nix-canvas-library';
+import { prepareCanvasLibraryItems } from '@nix/web-editor/editor/nix-canvas-library';
 
 function element(overrides: Readonly<Record<string, unknown>> = {}): Record<string, unknown> {
   return {

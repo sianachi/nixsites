@@ -11,7 +11,7 @@ import {
   findSlashTrigger,
   rankSlashCommands,
   SlashMenu,
-} from '../../editor/slash-menu';
+} from '@nix/web-editor/editor/slash-menu';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';

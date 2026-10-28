@@ -11,7 +11,6 @@ import {
 } from '@tiptap/react';
 import {
   createContext,
-  lazy,
   Suspense,
   useContext,
   useCallback,
@@ -42,8 +41,7 @@ import {
 } from './reference-resolution';
 import { NoteImageView } from './note-image-view';
 
-// An embedded artifact brings the OpenUI renderer, loaded only when one is embedded.
-const ArtifactView = lazy(() => import('../openui/artifact-view'));
+import { ArtifactSlot } from './artifact-view-slot';
 import { ReferenceView } from './reference-view';
 import { proseClasses, proseRoot } from './prose';
 
@@ -450,7 +448,7 @@ export function ItemBlockView(
       targetId !== null ? (
         // An embedded artifact runs live, with the artifact's own shared state.
         <Suspense fallback={<Text variant="note">Loading the artifact…</Text>}>
-          <ArtifactView key={targetId} itemId={targetId} />
+          <ArtifactSlot key={targetId} itemId={targetId} />
         </Suspense>
       ) : null}
     </NodeViewWrapper>

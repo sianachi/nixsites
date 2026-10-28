@@ -4,7 +4,7 @@ import { Slice } from '@tiptap/pm/model';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ColumnControls, columnDropTarget } from '../../editor/column-controls';
+import { ColumnControls, columnDropTarget } from '@nix/web-editor/editor/column-controls';
 
 /**
  * The browser half of columns: how the structure is named, where a dropped block lands, what the

@@ -2,7 +2,7 @@ import { Button } from '@nix/ui';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { NavigateFunction } from 'react-router';
 
-import type { CollabSync } from '../../editor/collab-sync';
+import type { CollabSync } from '@nix/web-editor/editor/collab-sync';
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { TemplateDetail, TemplateEditDraft } from '../template-api';
 import type { TemplateLibrary } from '../use-templates';

@@ -1,8 +1,8 @@
 import { markdownToDocument } from '@nix/markdown';
 import { describe, expect, it } from 'vitest';
 
-import { insertNoteLink } from '../../editor/markdown-mode';
-import { findTrigger } from '../../editor/reference-menu';
+import { insertNoteLink } from '@nix/web-editor/editor/markdown-mode';
+import { findTrigger } from '@nix/web-editor/editor/reference-menu';
 
 describe('the [[ note-link picker in Markdown mode', () => {
   const typed = 'See [[quarter';

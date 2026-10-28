@@ -7,8 +7,8 @@ import {
   DEFAULT_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   changeColumnWidthTr,
-} from '../../editor/column-width';
-import { tableContext } from '../../editor/table-controls';
+} from '@nix/web-editor/editor/column-width';
+import { tableContext } from '@nix/web-editor/editor/table-controls';
 import { paragraph } from '../paragraph-fixture';
 
 /**

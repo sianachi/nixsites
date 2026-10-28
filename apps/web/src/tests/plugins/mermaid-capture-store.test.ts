@@ -2,7 +2,7 @@ import type * as ApiClient from '@nix/api-client';
 import type { NixClient } from '@nix/api-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { storeCapture } from '../../plugins/mermaid-capture';
+import { storeCapture } from '@nix/web-editor/plugins/mermaid-capture';
 
 const api = vi.hoisted(() => ({ uploadAndCompleteFile: vi.fn() }));
 vi.mock('@nix/api-client', async (original) => {

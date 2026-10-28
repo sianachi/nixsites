@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NixClient } from '@nix/api-client';
 
-import { useKeyboardModeStore } from '../../editor/keyboard-mode-store';
-import { useTextWidthPreference } from '../../editor/text-width-preference';
+import { useKeyboardModeStore } from '@nix/web-editor/editor/keyboard-mode-store';
+import { useTextWidthPreference } from '@nix/web-editor/editor/text-width-preference';
 import { memoryStorage } from '../memory-storage';
 import { hydrateUiSettings, resetUiSettingsSync } from '@nix/web-foundation/lib/ui-settings-sync';
 

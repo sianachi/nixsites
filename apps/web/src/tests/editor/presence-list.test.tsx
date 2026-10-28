@@ -3,7 +3,7 @@ import * as awarenessProtocol from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { PresenceList } from '../../editor/presence-list';
+import { PresenceList } from '@nix/web-editor/editor/presence-list';
 
 /**
  * The roster's honesty: who is here now, read from awareness, with the viewer themself

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFileViewerRegistry } from '../../plugins/file-viewer-registry';
-import { isMermaidFile, mermaidJsViewerPlugin } from '../../plugins/mermaid-js-viewer';
+import { createFileViewerRegistry } from '@nix/web-editor/plugins/file-viewer-registry';
+import { isMermaidFile, mermaidJsViewerPlugin } from '@nix/web-editor/plugins/mermaid-js-viewer';
 
 describe('file viewer plugins', () => {
   it('selects the first matching plugin and leaves unknown files to the host', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { remoteCursor } from '../../editor/remote-cursor';
+import { remoteCursor } from '@nix/web-editor/editor/remote-cursor';
 
 describe('a collaborator’s caret', () => {
   it('is a thin line with a floating initials circle, not a name block in the text', () => {

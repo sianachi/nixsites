@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { NoteImageView } from '../../editor/note-image-view';
+import { NoteImageView } from '@nix/web-editor/editor/note-image-view';
 
 const apiClient = vi.hoisted(() => ({}));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => apiClient }));

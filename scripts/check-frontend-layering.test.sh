@@ -234,6 +234,21 @@ FIXTURE
 expect 0 "platform importing foundation passes"
 
 reset_tree
+add packages/web-editor/src/editor/up.ts <<'FIXTURE'
+import { x } from '@nix/web-other/x';
+export const u = x;
+FIXTURE
+expect 1 "editor importing a package other than foundation or platform fails" "imports a package above it" "up.ts"
+
+reset_tree
+add packages/web-editor/src/editor/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+export const d = [announce, useApiClient];
+FIXTURE
+expect 0 "editor importing foundation and platform passes"
+
+reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';
 export const a = announce;

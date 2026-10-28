@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditorAddressDialog } from '../../editor/editor-address-dialog';
+import { EditorAddressDialog } from '@nix/web-editor/editor/editor-address-dialog';
 
 function ImageDialog(props: {
   readonly onCancel?: () => void;

@@ -8,8 +8,8 @@ import {
   MermaidCaptureContext,
   sha256Hex,
   type MermaidCaptureUpload,
-} from '../../plugins/mermaid-capture';
-import { MermaidCodeBlockView } from '../../plugins/mermaid-code-block-view';
+} from '@nix/web-editor/plugins/mermaid-capture';
+import { MermaidCodeBlockView } from '@nix/web-editor/plugins/mermaid-code-block-view';
 
 const mermaid = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn(), parse: vi.fn() }));
 vi.mock('mermaid', () => ({ default: mermaid }));

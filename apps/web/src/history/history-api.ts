@@ -6,7 +6,7 @@
  * not Core, exactly like the note body itself - so this module reaches it the way
  * `../import/note-body-writer.ts` does: a plain `fetch` against `/collab`, a bearer token the
  * caller already holds (from `useAuth().getAccessToken()`), and no dependency on `@nix/api-client`,
- * which speaks to Core alone. `../editor/collab-sync.ts` is the WebSocket half of this same
+ * which speaks to Core alone. `@nix/web-editor/editor/collab-sync.ts` is the WebSocket half of this same
  * boundary; this is its REST half.
  *
  * **Every response is validated**, in the style of `packages/api-client/src/schemas/*.ts`: a Zod

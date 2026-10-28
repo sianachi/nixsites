@@ -2,12 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { TextWidthControl } from '../../editor/text-width-control';
+import { TextWidthControl } from '@nix/web-editor/editor/text-width-control';
 import {
   loadTextWidth,
   TEXT_WIDTH_STORAGE_KEY,
   useTextWidthPreference,
-} from '../../editor/text-width-preference';
+} from '@nix/web-editor/editor/text-width-preference';
 import { memoryStorage } from '../memory-storage';
 
 beforeEach(() => {

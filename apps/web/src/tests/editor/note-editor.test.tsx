@@ -6,12 +6,12 @@ import * as Y from 'yjs';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import type * as apiClient from '@nix/api-client';
-import type * as collabSync from '../../editor/collab-sync';
+import type * as collabSync from '@nix/web-editor/editor/collab-sync';
 import type * as apiClientProvider from '@nix/web-platform/api/api-client-provider';
-import { useKeyboardModeStore } from '../../editor/keyboard-mode-store';
-import { useWritingModePreference } from '../../editor/writing-mode';
-import { useTextWidthPreference } from '../../editor/text-width-preference';
-import { NoteEditor } from '../../editor/note-editor';
+import { useKeyboardModeStore } from '@nix/web-editor/editor/keyboard-mode-store';
+import { useWritingModePreference } from '@nix/web-editor/editor/writing-mode';
+import { useTextWidthPreference } from '@nix/web-editor/editor/text-width-preference';
+import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import type * as reactRouter from 'react-router';
 import { stubViewport } from '../stub-viewport';
 
@@ -62,8 +62,8 @@ function property(value: unknown, key: string): unknown {
   return result;
 }
 
-vi.mock('../../editor/collab-sync', async () => {
-  const actual = await vi.importActual<typeof collabSync>('../../editor/collab-sync');
+vi.mock('@nix/web-editor/editor/collab-sync', async () => {
+  const actual = await vi.importActual<typeof collabSync>('@nix/web-editor/editor/collab-sync');
   return {
     ...actual,
     startCollabSync: (options: Parameters<typeof collabSync.startCollabSync>[0]) => {
@@ -76,7 +76,7 @@ vi.mock('../../editor/collab-sync', async () => {
 
 // BubbleMenu has its own real-editor suite. Its only extra work here would be measuring a text
 // selection through `coordsAtPos`, a browser-layout API jsdom cannot implement.
-vi.mock('../../editor/bubble-menu', () => ({ BubbleMenu: () => null }));
+vi.mock('@nix/web-editor/editor/bubble-menu', () => ({ BubbleMenu: () => null }));
 
 // Reference navigation has its own suite and requires a Router. This file inspects the reference
 // node in Yjs, so rendering its routing control would add no coverage here.
@@ -84,7 +84,7 @@ vi.mock('@nix/web-platform/routing/selected-item', () => ({
   useSelectedItem: () => ({ select: vi.fn() }),
 }));
 
-vi.mock('../../editor/reference-view', () => ({ ReferenceView: () => null }));
+vi.mock('@nix/web-editor/editor/reference-view', () => ({ ReferenceView: () => null }));
 
 vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),

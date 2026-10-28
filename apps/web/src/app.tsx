@@ -33,6 +33,10 @@ import { ArchivedWorkspacesPage } from './workspaces/archived-workspaces-page';
 import { AccessibleWorkspacesProvider } from './workspaces/workspace-context';
 import { PetCompanion } from './pets/pet-companion';
 import { LaunchPage } from './launch/launch-page';
+import { provideArtifactView } from '@nix/web-editor/editor/artifact-view-slot';
+
+// An embedded artifact brings the OpenUI renderer, loaded only when one is embedded.
+provideArtifactView(lazy(() => import('./openui/artifact-view')));
 
 // Loaded when somebody opens /tokens, not before: the specimens are about 35 kB of design-lane
 // reference material - every ramp step, every type scale, every rhythm demo - and nobody working

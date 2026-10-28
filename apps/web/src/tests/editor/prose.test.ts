@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest';
 
 import { TEXT_COLORS, TOGGLE_LEVELS, nixSchema } from '@nix/editor-schema';
 
-import { calloutClass, headingClass, proseClasses, proseRoot } from '../../editor/prose';
+import { calloutClass, headingClass, proseClasses, proseRoot } from '@nix/web-editor/editor/prose';
 import {
   DOCUMENT_HEADING_STEP,
   DOCUMENT_BODY_STEP,
   DOCUMENT_SECONDARY_STEP,
   TOGGLE_SUMMARY_STEP,
-} from '../../editor/prose-type';
+} from '@nix/web-editor/editor/prose-type';
 
 /**
  * The document's appearance, as class strings.
@@ -27,7 +27,18 @@ import {
  * regex sweep is a better guard than any number of examples.
  */
 
-const editorDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'editor');
+const editorDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'web-editor',
+  'src',
+  'editor',
+);
 
 /**
  * Both files, read as one string.

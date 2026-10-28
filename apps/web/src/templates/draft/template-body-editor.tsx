@@ -1,14 +1,14 @@
 import { Text } from '@nix/ui';
 import { lazy, Suspense, type ReactNode } from 'react';
 
-import type { CollabSync } from '../../editor/collab-sync';
-import { NoteEditor } from '../../editor/note-editor';
+import type { CollabSync } from '@nix/web-editor/editor/collab-sync';
+import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import { SheetEditor } from '../../views/sheet/sheet-editor';
 import type { TemplateItem } from '../template-api';
 import { templateDraftDocumentPath } from './draft-model';
 
 const TemplateCanvasEditor = lazy(async () => {
-  const module = await import('../../editor/canvas-editor');
+  const module = await import('@nix/web-editor/editor/canvas-editor');
   return { default: module.CanvasEditor };
 });
 

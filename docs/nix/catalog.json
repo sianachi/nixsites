@@ -370,16 +370,16 @@
       "itemId": "ca297523-ec3d-5eb1-a3e2-91ede231e52d",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/web/src/editor/note-editor.tsx",
-        "apps/web/src/editor/canvas-editor.tsx",
-        "apps/web/src/editor/canvas-binding.ts",
-        "apps/web/src/editor/collab-sync.ts",
-        "apps/web/src/editor/body-cache.ts",
-        "apps/web/src/editor/draft-journal.ts",
+        "packages/web-editor/src/editor/note-editor.tsx",
+        "packages/web-editor/src/editor/canvas-editor.tsx",
+        "packages/web-editor/src/editor/canvas-binding.ts",
+        "packages/web-editor/src/editor/collab-sync.ts",
+        "packages/web-editor/src/editor/body-cache.ts",
+        "packages/web-editor/src/editor/draft-journal.ts",
         "apps/web/src/views/sheet/sheet-editor.tsx",
         "packages/editor-schema/src/index.ts",
-        "apps/web/src/editor/toolbar.tsx",
-        "apps/web/src/editor/page-guides.ts",
+        "packages/web-editor/src/editor/toolbar.tsx",
+        "packages/web-editor/src/editor/page-guides.ts",
         "apps/web/src/tests/editor/toolbar.test.tsx"
       ],
       "words": 957,
@@ -389,7 +389,7 @@
         "runtime": "Browser",
         "transports": "WebSocket/Yjs, HTTP/JSON, IndexedDB",
         "depends_on": "Core, collaboration, Yjs and local body copies",
-        "source_paths": "apps/web/src/editor/note-editor.tsx\napps/web/src/editor/canvas-editor.tsx\napps/web/src/editor/canvas-binding.ts\napps/web/src/editor/collab-sync.ts\napps/web/src/editor/body-cache.ts\napps/web/src/editor/draft-journal.ts\napps/web/src/views/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\napps/web/src/editor/toolbar.tsx\napps/web/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
+        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-editor/src/editor/body-cache.ts\npackages/web-editor/src/editor/draft-journal.ts\napps/web/src/views/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
       },
       "localProofItemId": "01a12247-5982-793f-8300-50c278ae2111"
     },
@@ -430,15 +430,15 @@
       "sources": [
         "apps/web/src/files/file-viewer.tsx",
         "apps/web/src/files/file-facts.ts",
-        "apps/web/src/plugins/file-viewer-registry.tsx",
-        "apps/web/src/plugins/built-in-file-viewers.ts",
-        "apps/web/src/plugins/mermaid-js-viewer.tsx",
-        "apps/web/src/editor/nix-canvas.tsx",
-        "apps/web/src/editor/nix-canvas-model.ts",
-        "apps/web/src/editor/nix-canvas-library.ts",
-        "apps/web/src/editor/canvas-binding.ts",
+        "packages/web-editor/src/plugins/file-viewer-registry.tsx",
+        "packages/web-editor/src/plugins/built-in-file-viewers.ts",
+        "packages/web-editor/src/plugins/mermaid-js-viewer.tsx",
+        "packages/web-editor/src/editor/nix-canvas.tsx",
+        "packages/web-editor/src/editor/nix-canvas-model.ts",
+        "packages/web-editor/src/editor/nix-canvas-library.ts",
+        "packages/web-editor/src/editor/canvas-binding.ts",
         "apps/web/package.json",
-        "apps/web/src/plugins/media-viewer.tsx",
+        "packages/web-editor/src/plugins/media-viewer.tsx",
         "packages/web-foundation/src/audio/audio-source.ts",
         "packages/web-foundation/src/audio/audio-player.tsx",
         "apps/web/src/shell/app-shell.tsx",
@@ -453,20 +453,20 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, S3 capabilities, WebSocket/Yjs",
         "depends_on": "Core metadata, object storage and collaboration",
-        "source_paths": "apps/web/src/files/file-viewer.tsx\napps/web/src/files/file-facts.ts\napps/web/src/plugins/file-viewer-registry.tsx\napps/web/src/plugins/built-in-file-viewers.ts\napps/web/src/plugins/mermaid-js-viewer.tsx\napps/web/src/editor/nix-canvas.tsx\napps/web/src/editor/nix-canvas-model.ts\napps/web/src/editor/nix-canvas-library.ts\napps/web/src/editor/canvas-binding.ts\napps/web/package.json\napps/web/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "apps/web/src/files/file-viewer.tsx\napps/web/src/files/file-facts.ts\npackages/web-editor/src/plugins/file-viewer-registry.tsx\npackages/web-editor/src/plugins/built-in-file-viewers.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx\npackages/web-editor/src/editor/nix-canvas.tsx\npackages/web-editor/src/editor/nix-canvas-model.ts\npackages/web-editor/src/editor/nix-canvas-library.ts\npackages/web-editor/src/editor/canvas-binding.ts\napps/web/package.json\npackages/web-editor/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "relatedWorktreeSources": [
         {
           "branch": "feature/mermaid-diagram-workflow",
-          "path": "apps/web/src/plugins/mermaid-render.ts"
+          "path": "packages/web-editor/src/plugins/mermaid-render.ts"
         },
         {
           "branch": "feature/mermaid-diagram-workflow",
-          "path": "apps/web/src/plugins/mermaid-js-viewer.tsx"
+          "path": "packages/web-editor/src/plugins/mermaid-js-viewer.tsx"
         },
         {
           "branch": "feature/mermaid-diagram-workflow",
-          "path": "apps/web/src/plugins/mermaid-js-viewer.stories.tsx"
+          "path": "packages/web-editor/src/plugins/mermaid-js-viewer.stories.tsx"
         },
         {
           "branch": "feature/mermaid-diagram-workflow",
@@ -556,7 +556,7 @@
         "apps/collab/src/auth/token.ts",
         "apps/collab/src/auth/authorize.ts",
         "apps/collab/src/db/tenant-scope.ts",
-        "apps/web/src/editor/collab-sync.ts",
+        "packages/web-editor/src/editor/collab-sync.ts",
         "apps/collab/src/db/worker-executions.ts",
         "apps/collab/src/index.ts"
       ],
@@ -567,7 +567,7 @@
         "runtime": "Node.js",
         "transports": "WebSocket/Yjs, HTTP/internal, PostgreSQL",
         "depends_on": "Core permission authority and Postgres body storage",
-        "source_paths": "apps/collab/src/http/server.ts\napps/collab/src/http/context.ts\napps/collab/src/http/routes/updates.ts\napps/collab/src/http/routes/history.ts\napps/collab/src/http/routes/exports.ts\napps/collab/src/ws/server.ts\napps/collab/src/ws/session-auth.ts\napps/collab/src/auth/token.ts\napps/collab/src/auth/authorize.ts\napps/collab/src/db/tenant-scope.ts\napps/web/src/editor/collab-sync.ts\napps/collab/src/db/worker-executions.ts\napps/collab/src/index.ts"
+        "source_paths": "apps/collab/src/http/server.ts\napps/collab/src/http/context.ts\napps/collab/src/http/routes/updates.ts\napps/collab/src/http/routes/history.ts\napps/collab/src/http/routes/exports.ts\napps/collab/src/ws/server.ts\napps/collab/src/ws/session-auth.ts\napps/collab/src/auth/token.ts\napps/collab/src/auth/authorize.ts\napps/collab/src/db/tenant-scope.ts\npackages/web-editor/src/editor/collab-sync.ts\napps/collab/src/db/worker-executions.ts\napps/collab/src/index.ts"
       },
       "localProofItemId": "01a12247-5982-734e-9a0e-9014ff3fab95"
     },
@@ -1047,7 +1047,7 @@
         "packages/export/src/reader.ts",
         "apps/cli/src/commands/import.ts",
         "apps/cli/src/commands/export.ts",
-        "apps/web/src/plugins/mermaid-js-viewer.tsx"
+        "packages/web-editor/src/plugins/mermaid-js-viewer.tsx"
       ],
       "words": 684,
       "properties": {
@@ -1056,7 +1056,7 @@
         "runtime": "Offline",
         "transports": "Local files, HTTP/JSON, S3 capabilities",
         "depends_on": "Native archives, Go documentation TUI and Nix import/export",
-        "source_paths": "apps/go-workers/cmd/nix-docs/main.go\napps/go-workers/internal/docsbrowser\napps/go-workers/internal/importplan/parse.go\npackages/export/src/archive.ts\npackages/export/src/reader.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/export.ts\napps/web/src/plugins/mermaid-js-viewer.tsx"
+        "source_paths": "apps/go-workers/cmd/nix-docs/main.go\napps/go-workers/internal/docsbrowser\napps/go-workers/internal/importplan/parse.go\npackages/export/src/archive.ts\npackages/export/src/reader.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/export.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx"
       },
       "documentationFeatureSources": [
         "apps/go-workers/cmd/nix-docs/main.go",
@@ -1068,7 +1068,7 @@
         "packages/export/src/reader.ts",
         "apps/cli/src/commands/import.ts",
         "apps/cli/src/commands/export.ts",
-        "apps/web/src/plugins/mermaid-js-viewer.tsx"
+        "packages/web-editor/src/plugins/mermaid-js-viewer.tsx"
       ],
       "localProofItemId": "01a12247-5982-7036-8b86-5b252a4372a2"
     },
@@ -1172,9 +1172,9 @@
       "sources": [
         "apps/web/src/offline",
         "packages/web-platform/src/auth/auth-provider.tsx",
-        "apps/web/src/editor/body-cache.ts",
-        "apps/web/src/editor/draft-journal.ts",
-        "apps/web/src/editor/collab-sync.ts",
+        "packages/web-editor/src/editor/body-cache.ts",
+        "packages/web-editor/src/editor/draft-journal.ts",
+        "packages/web-editor/src/editor/collab-sync.ts",
         "backend/src/Nix.Api/Features/Items/CreateItem.cs"
       ],
       "words": 1007,
@@ -1772,7 +1772,7 @@
         "original_bytes": 7610,
         "original_sha256": "1f488e7250cbf8acf82a3a045d14fa5217d3c00fc4bba11c1d17bde1a7bd351d",
         "decision_status": "Proposed",
-        "recorded_status": "Proposed, 2026-09-29. The change it describes is on `main` as of 2026-10-08 (`apps/web/src/pwa`,\n`apps/web/src/launch`, `apps/web/src/editor/body-cache.ts`, the service worker). Recording the\nowner's acceptance in this status line is still owed."
+        "recorded_status": "Proposed, 2026-09-29. The change it describes is on `main` as of 2026-10-08 (`apps/web/src/pwa`,\n`apps/web/src/launch`, `packages/web-editor/src/editor/body-cache.ts`, the service worker). Recording the\nowner's acceptance in this status line is still owed."
       },
       "localProofItemId": "01a12244-4dfc-7593-865e-773d5e2b8224",
       "localProofSourceItemId": "01a12244-4dfc-7784-a9e6-b960b4099e70"

@@ -4,10 +4,13 @@ import { useState, type ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
 import { PetDeviceSettings } from '../pets/pet-device-settings';
-import { EpubReader } from '../plugins/epub-reader';
+import { EpubReader } from '@nix/web-editor/plugins/epub-reader';
 import { PropertyInput } from '../properties/property-input';
-import { InlineAiPanel } from './inline-ai/inline-ai-panel';
-import type { InlineAiController, InlinePanelState } from './inline-ai/use-inline-ai';
+import { InlineAiPanel } from '@nix/web-editor/editor/inline-ai/inline-ai-panel';
+import type {
+  InlineAiController,
+  InlinePanelState,
+} from '@nix/web-editor/editor/inline-ai/use-inline-ai';
 
 export default { title: 'Nix/UI UX pass', parameters: { layout: 'padded' } };
 
