@@ -3,6 +3,7 @@ import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 
 import { moveTopLevelBlockTr } from '../../editor/move-block';
+import { paragraph } from '../paragraph-fixture';
 
 /**
  * `MoveBlock`'s transform, at the layer that has no DOM.
@@ -13,10 +14,6 @@ import { moveTopLevelBlockTr } from '../../editor/move-block';
  * document's edge refuses rather than swapping with nothing, and that the selection lands back
  * inside whichever block moved rather than wherever the byte count happened to leave it.
  */
-
-function paragraph(text: string): unknown {
-  return { type: 'paragraph', content: [{ type: 'text', text }] };
-}
 
 function heading(text: string, level = 1): unknown {
   return { type: 'heading', attrs: { level }, content: [{ type: 'text', text }] };

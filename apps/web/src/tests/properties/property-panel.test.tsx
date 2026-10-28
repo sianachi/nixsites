@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../render-with-router';
-import type { Item, PropertyDefinition } from '../../views/core/container-model';
+import type { Item } from '../../views/core/container-model';
 import { PropertyPanel } from '../../properties/property-panel';
+import { propertyOf } from '../property-fixture';
 
 /**
  * An item's properties, editable from the item.
@@ -14,10 +15,6 @@ import { PropertyPanel } from '../../properties/property-panel';
  * a board, which writes exactly one property - so a note with an owner and a due date could have
  * neither set without a board configured for each.
  */
-
-function propertyOf(overrides: Partial<PropertyDefinition> & { key: string }): PropertyDefinition {
-  return { label: overrides.key, type: 'text', options: [], required: false, ...overrides };
-}
 
 function itemWith(properties: Record<string, unknown>): Item {
   return {

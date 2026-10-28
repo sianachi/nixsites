@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import type { Item, PropertyDefinition } from '../../../views/core/container-model';
+import type { PropertyDefinition } from '../../../views/core/container-model';
 import { ListView } from '../../../views/list/list-view';
 import { aContainer } from '../../container-fixture';
 import type { ContainerData } from '../../../views/core/use-container';
-import { schemaOf } from '../../view-fixture';
+import { item, schemaOf } from '../../view-fixture';
 
 /**
  * Alt+Arrow cell-to-cell movement (`../../../views/list/cell-nav.ts`), driven the way a keyboard
@@ -17,27 +17,6 @@ import { schemaOf } from '../../view-fixture';
  * "a plain ArrowLeft moves the caret, not the cell". Everything else can be right and that one
  * thing wrong, and the whole point of gating this behind Alt is lost.
  */
-
-function item(
-  id: string,
-  title: string,
-  seq: number,
-  properties: Record<string, unknown> = {},
-): Item {
-  return {
-    id,
-    workspaceId: 'workspace-1',
-    parentId: 'folder-1',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq,
-    lifecycleState: 'active',
-    properties,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  };
-}
 
 function property(
   key: string,

@@ -9,6 +9,7 @@ import {
   changeColumnWidthTr,
 } from '../../editor/column-width';
 import { tableContext } from '../../editor/table-controls';
+import { paragraph } from '../paragraph-fixture';
 
 /**
  * `changeColumnWidthTr`'s transform, at the layer that has no DOM - the counterpart to
@@ -21,10 +22,6 @@ import { tableContext } from '../../editor/table-controls';
  * than writing a zero that would render the same as never having been touched but read back
  * differently.
  */
-
-function paragraph(text: string): unknown {
-  return { type: 'paragraph', content: [{ type: 'text', text }] };
-}
 
 function cell(
   kind: 'tableCell' | 'tableHeader',

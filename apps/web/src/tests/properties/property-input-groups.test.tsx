@@ -2,14 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Item, PropertyDefinition } from '../../views/core/container-model';
+import type { Item } from '../../views/core/container-model';
 import { PropertyInput } from '../../properties/property-input';
+import { propertyOf } from '../property-fixture';
 
 process.env.TZ = 'Pacific/Honolulu';
-
-function propertyOf(overrides: Partial<PropertyDefinition> & { key: string }): PropertyDefinition {
-  return { label: overrides.key, type: 'text', options: [], required: false, ...overrides };
-}
 
 function itemWith(properties: Record<string, unknown>): Item {
   return {

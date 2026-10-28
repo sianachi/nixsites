@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
-import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
+import type { EffectiveSchema, View } from '../../../views/core/container-model';
 import { renderAt } from '../../render-with-router';
-import { aView } from '../../view-fixture';
+import { aView, datedItem } from '../../view-fixture';
 import type { ContainerData } from '../../../views/core/use-container';
 
 /**
@@ -39,28 +39,12 @@ function viewOf(overrides: Partial<View> = {}): View {
   });
 }
 
-function itemOf(id: string, title: string, properties: Record<string, unknown>): Item {
-  return {
-    id,
-    workspaceId: 'a1000000-0000-4000-8000-000000000001',
-    parentId: 'c1000000-0000-4000-8000-000000000001',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq: 1000,
-    lifecycleState: 'active',
-    properties: { title, ...properties },
-    createdAt: '2026-03-01T00:00:00.000Z',
-    updatedAt: '2026-03-01T00:00:00.000Z',
-  };
-}
-
 /** 09:00 in London on Tuesday the 17th. For a reader in Honolulu that is 23:00 on Monday the 16th. */
-const LONDON_STANDUP = itemOf('item-standup', 'Standup', {
+const LONDON_STANDUP = datedItem('item-standup', 'Standup', {
   starts: '2026-03-17T09:00:00+00:00[Europe/London]',
 });
 
-const ALL_DAY = itemOf('item-review', 'Review', { starts: '2026-03-17', due: '2026-03-17' });
+const ALL_DAY = datedItem('item-review', 'Review', { starts: '2026-03-17', due: '2026-03-17' });
 
 function render(container: Partial<ContainerData> = {}, view: View = viewOf(), url = '/'): void {
   renderAt(

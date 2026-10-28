@@ -5,7 +5,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import { aView, schemaOf } from '../../view-fixture';
+import { aView, itemOf, schemaOf } from '../../view-fixture';
 import { aContainer, views } from '../../container-fixture';
 import { fileImageReference } from '../../../properties/inputs/image-reference';
 import type {
@@ -88,21 +88,6 @@ const OWNER: PropertyDefinition = {
   options: [],
   required: false,
 };
-
-function itemOf(overrides: Partial<Item> & { id: string; title: string }): Item {
-  return {
-    workspaceId: 'a1000000-0000-4000-8000-000000000001',
-    parentId: 'c1000000-0000-4000-8000-000000000001',
-    type: 'note',
-    hasChildren: false,
-    seq: 1000,
-    lifecycleState: 'active',
-    properties: {},
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
 
 function viewOf(overrides: Partial<View> = {}): View {
   return aView({

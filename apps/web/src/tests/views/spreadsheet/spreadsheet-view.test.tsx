@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
 import { aContainer } from '../../container-fixture';
-import { aView, property, schemaOf } from '../../view-fixture';
+import { aView, item, property, schemaOf } from '../../view-fixture';
 import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
 import type { ContainerData } from '../../../views/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
@@ -16,27 +16,6 @@ import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
  * and the clipboard. Cells stay windowed with `aria-activedescendant` naming the active one. Only the active property
  * mounts its typed editor, so these tests assert on cell labels, controls and the writes they make.
  */
-
-function item(
-  id: string,
-  title: string,
-  seq: number,
-  properties: Record<string, unknown> = {},
-): Item {
-  return {
-    id,
-    workspaceId: 'workspace-1',
-    parentId: 'folder-1',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq,
-    lifecycleState: 'active',
-    properties,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  };
-}
 
 const SCHEMA = schemaOf(property('status', 'Status', 'text'), property('count', 'Count', 'number'));
 

@@ -1,4 +1,9 @@
-import type { EffectiveSchema, PropertyDefinition, View } from '../views/core/container-model';
+import type {
+  EffectiveSchema,
+  Item,
+  PropertyDefinition,
+  View,
+} from '../views/core/container-model';
 
 /**
  * A view, with only the fields a test cares about spelled out.
@@ -45,4 +50,56 @@ export function property(key: string, label: string, type: string): PropertyDefi
 /** An effective schema that declares exactly these properties. */
 export function schemaOf(...properties: readonly PropertyDefinition[]): EffectiveSchema {
   return { properties: [...properties], declared: [...properties], inherit: true };
+}
+
+export function item(
+  id: string,
+  title: string,
+  seq: number,
+  properties: Record<string, unknown> = {},
+): Item {
+  return {
+    id,
+    workspaceId: 'workspace-1',
+    parentId: 'folder-1',
+    type: 'note',
+    title,
+    hasChildren: false,
+    seq,
+    lifecycleState: 'active',
+    properties,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  };
+}
+
+export function itemOf(overrides: Partial<Item> & { id: string; title: string }): Item {
+  return {
+    workspaceId: 'a1000000-0000-4000-8000-000000000001',
+    parentId: 'c1000000-0000-4000-8000-000000000001',
+    type: 'note',
+    hasChildren: false,
+    seq: 1000,
+    lifecycleState: 'active',
+    properties: {},
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+export function datedItem(id: string, title: string, properties: Record<string, unknown>): Item {
+  return {
+    id,
+    workspaceId: 'a1000000-0000-4000-8000-000000000001',
+    parentId: 'c1000000-0000-4000-8000-000000000001',
+    type: 'note',
+    title,
+    hasChildren: false,
+    seq: 1000,
+    lifecycleState: 'active',
+    properties: { title, ...properties },
+    createdAt: '2026-03-01T00:00:00.000Z',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+  };
 }

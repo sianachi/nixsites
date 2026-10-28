@@ -9,7 +9,7 @@ import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
 import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
 import { renderAt } from '../../render-with-router';
-import { aView } from '../../view-fixture';
+import { aView, datedItem } from '../../view-fixture';
 import { readerZone, writeTimestampValue } from '../../../views/core/timestamps';
 
 /**
@@ -43,28 +43,12 @@ function weekView(): View {
   });
 }
 
-function itemOf(id: string, title: string, properties: Record<string, unknown>): Item {
-  return {
-    id,
-    workspaceId: 'a1000000-0000-4000-8000-000000000001',
-    parentId: 'c1000000-0000-4000-8000-000000000001',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq: 1000,
-    lifecycleState: 'active',
-    properties: { title, ...properties },
-    createdAt: '2026-03-01T00:00:00.000Z',
-    updatedAt: '2026-03-01T00:00:00.000Z',
-  };
-}
-
-const STANDUP = itemOf('item-standup', 'Standup', {
+const STANDUP = datedItem('item-standup', 'Standup', {
   starts: '2026-03-16T09:00:00-10:00[Pacific/Honolulu]',
 });
 
 /** A plain date and no time: an all-day item, drawn as a chip in the band above the hours. */
-const OFFSITE = itemOf('item-offsite', 'Offsite', { starts: '2026-03-16' });
+const OFFSITE = datedItem('item-offsite', 'Offsite', { starts: '2026-03-16' });
 
 function renderWeek(): void {
   const view = weekView();
@@ -438,14 +422,14 @@ describe('the all-day create control by keyboard', () => {
  * length through to `placeOn`, which is what these cover.
  */
 describe('a timed item with an end', () => {
-  const MEETING = itemOf('item-meeting', 'Meeting', {
+  const MEETING = datedItem('item-meeting', 'Meeting', {
     starts: '2026-03-16T09:00:00-10:00[Pacific/Honolulu]',
     ends: '2026-03-16T10:30:00-10:00[Pacific/Honolulu]',
   });
 
   // Starts late on the 16th and ends after midnight on the 17th - a day this one-day grid never
   // draws a column for.
-  const OVERNIGHT = itemOf('item-overnight', 'Overnight', {
+  const OVERNIGHT = datedItem('item-overnight', 'Overnight', {
     starts: '2026-03-16T23:00:00-10:00[Pacific/Honolulu]',
     ends: '2026-03-17T01:00:00-10:00[Pacific/Honolulu]',
   });
@@ -492,7 +476,7 @@ describe('a timed item with an end', () => {
   });
 
   it('gives a span under the minimum duration a floor height so its Reschedule button is not clipped', () => {
-    const BRIEF = itemOf('item-brief', 'Brief', {
+    const BRIEF = datedItem('item-brief', 'Brief', {
       starts: '2026-03-16T09:00:00-10:00[Pacific/Honolulu]',
       ends: '2026-03-16T09:15:00-10:00[Pacific/Honolulu]',
     });
@@ -507,7 +491,9 @@ describe('a timed item with an end', () => {
 
   it('draws a point with no explicit height, exactly as it always has', () => {
     renderDay([
-      itemOf('item-standup', 'Standup', { starts: '2026-03-16T09:00:00-10:00[Pacific/Honolulu]' }),
+      datedItem('item-standup', 'Standup', {
+        starts: '2026-03-16T09:00:00-10:00[Pacific/Honolulu]',
+      }),
     ]);
 
     expect(cardOf('Standup').style.height).toBe('');

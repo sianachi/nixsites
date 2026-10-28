@@ -2,13 +2,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Item, PropertyDefinition } from '../../views/core/container-model';
+import type { Item } from '../../views/core/container-model';
 import { PropertyInput } from '../../properties/property-input';
 import {
   useWorkspaceMembers,
   type WorkspaceMember,
   type WorkspaceMembersState,
 } from '../../settings/members/use-workspace-members';
+import { propertyOf } from '../property-fixture';
 
 // A date-or-time property is read and written in the reader's own zone, so it needs one fixed for
 // the round trip to be predictable - the same reason collated-calendar.test.tsx fixes one.
@@ -33,10 +34,6 @@ vi.mock('../../settings/members/use-workspace-members', () => ({
  * unknown-type one: the contract calls a property type a string on purpose, so meeting one this
  * build has never heard of has to show the value rather than swallow it.
  */
-
-function propertyOf(overrides: Partial<PropertyDefinition> & { key: string }): PropertyDefinition {
-  return { label: overrides.key, type: 'text', options: [], required: false, ...overrides };
-}
 
 function itemWith(properties: Record<string, unknown>): Item {
   return {

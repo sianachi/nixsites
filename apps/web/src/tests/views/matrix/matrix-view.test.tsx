@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import { aView } from '../../view-fixture';
+import { aView, item } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
 import type {
   EffectiveSchema,
@@ -14,27 +14,6 @@ import type {
 } from '../../../views/core/container-model';
 import type { ContainerData } from '../../../views/core/use-container';
 import { MatrixView } from '../../../views/matrix/matrix-view';
-
-function item(
-  id: string,
-  title: string,
-  seq: number,
-  properties: Record<string, unknown> = {},
-): Item {
-  return {
-    id,
-    workspaceId: 'workspace-1',
-    parentId: 'folder-1',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq,
-    lifecycleState: 'active',
-    properties,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  };
-}
 
 const URGENCY: PropertyDefinition = {
   key: 'urgency',

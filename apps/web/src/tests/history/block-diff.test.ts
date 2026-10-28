@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { blockTexts, diffBlocks } from '../../history/block-diff';
-
-function paragraph(text: string): unknown {
-  return { type: 'paragraph', content: [{ type: 'text', text }] };
-}
+import { paragraph } from '../paragraph-fixture';
 
 function heading(level: number, text: string): unknown {
   return { type: 'heading', attrs: { level }, content: [{ type: 'text', text }] };

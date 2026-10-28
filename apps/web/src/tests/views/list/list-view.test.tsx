@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
 import { stubViewport } from '../../stub-viewport';
-import { aView, property, schemaOf } from '../../view-fixture';
+import { aView, item, property, schemaOf } from '../../view-fixture';
 import type {
   EffectiveSchema,
   Item,
@@ -24,27 +24,6 @@ import type { ContainerData } from '../../../views/core/use-container';
  * Every test renders at a URL rather than setting up state, because the URL *is* the state - a
  * test that reached past it would be testing a component this application does not have.
  */
-
-function item(
-  id: string,
-  title: string,
-  seq: number,
-  properties: Record<string, unknown> = {},
-): Item {
-  return {
-    id,
-    workspaceId: 'workspace-1',
-    parentId: 'folder-1',
-    type: 'note',
-    title,
-    hasChildren: false,
-    seq,
-    lifecycleState: 'active',
-    properties,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  };
-}
 
 function viewOf(overrides: Partial<View> = {}): View {
   return aView(overrides);
