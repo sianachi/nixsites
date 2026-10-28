@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
 )
@@ -68,7 +69,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	var payload workerapi.CalendarSyncPayload
 	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil || !canonicalUUID(payload.LinkID) {
+	if err := decoder.Decode(&payload); err != nil || !broker.IsCanonicalUUID(payload.LinkID) {
 		return nil, jobrunner.Fail("calendar_payload_invalid", errors.New("the durable calendar sync request is invalid"))
 	}
 	session, err := handler.api.StartCalendarSession(ctx, payload.LinkID)
@@ -240,7 +241,7 @@ func toWireEvent(event ProviderEvent) workerapi.CalendarEvent {
 		ReadOnly:   event.ReadOnly,
 		UpdatedAt:  event.UpdatedAt,
 	}
-	if canonicalUUID(event.NixItemID) {
+	if broker.IsCanonicalUUID(event.NixItemID) {
 		stamp := event.NixItemID
 		wire.NixItemID = &stamp
 	}
@@ -285,21 +286,6 @@ func fromWireChange(change workerapi.CalendarChange) (PushEvent, error) {
 
 func truncate(value string, maximum int) string {
 	return truncateText(value, maximum)
-}
-
-func canonicalUUID(value string) bool {
-	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
-		return false
-	}
-	for position, character := range value {
-		if position == 8 || position == 13 || position == 18 || position == 23 {
-			continue
-		}
-		if character < '0' || character > '9' && character < 'a' || character > 'f' {
-			return false
-		}
-	}
-	return value != "00000000-0000-0000-0000-000000000000"
 }
 
 // apiFailure classifies a Core worker-executions error. A refused execution (the lease moved on)

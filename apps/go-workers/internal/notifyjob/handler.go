@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
 	"github.com/sianachi/Nix/apps/go-workers/internal/webpush"
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
@@ -68,7 +69,7 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 	var payload Payload
 	decoder := json.NewDecoder(strings.NewReader(string(job.Payload)))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil || !validUUID(payload.NotificationID) {
+	if err := decoder.Decode(&payload); err != nil || !broker.IsCanonicalUUID(payload.NotificationID) {
 		return nil, jobrunner.Fail("notify_payload_invalid", errors.New("the durable notify request is invalid"))
 	}
 	if job.Kind != "notify.push" {
@@ -186,19 +187,4 @@ func (handler *Handler) deliver(ctx context.Context, subscription workerapi.Noti
 func decodeBase64URL(value string) ([]byte, error) {
 	trimmed := strings.TrimRight(value, "=")
 	return base64.RawURLEncoding.DecodeString(trimmed)
-}
-
-func validUUID(value string) bool {
-	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
-		return false
-	}
-	for position, character := range value {
-		if position == 8 || position == 13 || position == 18 || position == 23 {
-			continue
-		}
-		if character < '0' || character > '9' && character < 'a' || character > 'f' {
-			return false
-		}
-	}
-	return value != "00000000-0000-0000-0000-000000000000"
 }

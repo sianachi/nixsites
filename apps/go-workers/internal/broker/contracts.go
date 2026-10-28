@@ -133,7 +133,7 @@ func ParseEnvelope(body []byte, maxBytes int) (Envelope, error) {
 	}
 	if envelope.CausationDepth < 0 || envelope.CausationDepth > 4 ||
 		envelope.CausationDepth == 0 && envelope.CausationID != nil ||
-		envelope.CausationDepth > 0 && (envelope.CausationID == nil || !isCanonicalUUID(*envelope.CausationID)) {
+		envelope.CausationDepth > 0 && (envelope.CausationID == nil || !IsCanonicalUUID(*envelope.CausationID)) {
 		return Envelope{}, ErrInvalidMessage
 	}
 	return envelope, nil
@@ -155,7 +155,7 @@ func (envelope Envelope) Command() (CommandReference, error) {
 
 // WorkspaceEvent validates the scope and routing invariants for plugin workspace events.
 func (envelope Envelope) WorkspaceEvent() (WorkspaceEvent, error) {
-	if envelope.MessageType != WorkspaceMessageType || !isCanonicalUUID(envelope.MessageID) || !isCanonicalUUID(envelope.TenantID) || envelope.WorkspaceID == nil || !isCanonicalUUID(*envelope.WorkspaceID) || envelope.ItemID == nil || !isCanonicalUUID(*envelope.ItemID) || envelope.CorrelationID != envelope.MessageID {
+	if envelope.MessageType != WorkspaceMessageType || !IsCanonicalUUID(envelope.MessageID) || !IsCanonicalUUID(envelope.TenantID) || envelope.WorkspaceID == nil || !IsCanonicalUUID(*envelope.WorkspaceID) || envelope.ItemID == nil || !IsCanonicalUUID(*envelope.ItemID) || envelope.CorrelationID != envelope.MessageID {
 		return WorkspaceEvent{}, ErrInvalidMessage
 	}
 	switch envelope.Kind {
@@ -186,7 +186,8 @@ func boundedText(value string, limit int) bool {
 	return value != "" && value == strings.TrimSpace(value) && len(value) <= limit
 }
 
-func isCanonicalUUID(value string) bool {
+// IsCanonicalUUID reports whether value is a lowercase, non-nil UUID in canonical form.
+func IsCanonicalUUID(value string) bool {
 	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
 		return false
 	}

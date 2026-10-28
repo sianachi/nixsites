@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
 	"github.com/sianachi/Nix/apps/go-workers/internal/objecttransfer"
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
@@ -166,7 +167,7 @@ func decodePayload(raw json.RawMessage) (Payload, error) {
 	if err := requirePayloadEOF(decoder); err != nil {
 		return Payload{}, err
 	}
-	if payload.OwnerKind != "operation" && payload.OwnerKind != "application" || !validUUID(payload.OwnerID) {
+	if payload.OwnerKind != "operation" && payload.OwnerKind != "application" || !broker.IsCanonicalUUID(payload.OwnerID) {
 		return Payload{}, errors.New("template file copy owner is invalid")
 	}
 	return payload, nil
@@ -181,21 +182,6 @@ func requirePayloadEOF(decoder *json.Decoder) error {
 		return err
 	}
 	return nil
-}
-
-func validUUID(value string) bool {
-	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
-		return false
-	}
-	for index, character := range value {
-		if index == 8 || index == 13 || index == 18 || index == 23 {
-			continue
-		}
-		if character < '0' || character > '9' && character < 'a' || character > 'f' {
-			return false
-		}
-	}
-	return value != "00000000-0000-0000-0000-000000000000"
 }
 
 func apiFailure(code string, err error) error {

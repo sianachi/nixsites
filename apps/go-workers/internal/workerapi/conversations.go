@@ -7,10 +7,12 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 )
 
 func (client *Client) ExecuteConversationTool(ctx context.Context, conversationID, tenantID, principalID, requestID string, arguments json.RawMessage) (string, bool, bool, error) {
-	if !canonicalUUID(conversationID) || !canonicalUUID(tenantID) || !canonicalUUID(principalID) || !canonicalUUID(requestID) || !json.Valid(arguments) || len(arguments) > 40000 {
+	if !broker.IsCanonicalUUID(conversationID) || !broker.IsCanonicalUUID(tenantID) || !broker.IsCanonicalUUID(principalID) || !broker.IsCanonicalUUID(requestID) || !json.Valid(arguments) || len(arguments) > 40000 {
 		return "", false, false, errors.New("invalid conversation tool request")
 	}
 	body, err := json.Marshal(struct {
