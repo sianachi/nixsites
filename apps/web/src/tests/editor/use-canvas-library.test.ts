@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCanvasLibrary } from '../../editor/use-canvas-library';
 import { ApiClientProvider } from '../../api/api-client-provider';
+import { requestUrl } from '../request-url';
 
 /**
  * A stable reference, not an inline arrow inside the factory: `useAuth()` is a dependency of the
@@ -56,7 +57,7 @@ describe('the caller’s own canvas library', () => {
     // which returns `any` and makes the surrounding object literal an unsafe assignment. The
     // headers are a plain object here, so asserting them is both stricter and simpler.
     const [input, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit | undefined];
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     expect(url).toContain('/api/v1/me/canvas-library');
     const headers = new Headers(
       init?.headers ?? (input instanceof Request ? input.headers : undefined),
@@ -98,7 +99,7 @@ describe('the caller’s own canvas library', () => {
     });
 
     const [input, init] = fetchMock.mock.calls[1] as [RequestInfo | URL, RequestInit | undefined];
-    const path = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const path = requestUrl(input);
     expect(path).toContain('/api/v1/me/canvas-library');
     const request = input instanceof Request ? input : undefined;
     expect(init?.method ?? request?.method).toBe('PUT');

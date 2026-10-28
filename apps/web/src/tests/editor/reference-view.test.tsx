@@ -9,6 +9,7 @@ import { AuthProvider } from '../../auth/auth-provider';
 import { ReferenceResolutionProvider } from '../../editor/reference-resolution';
 import { ReferenceView } from '../../editor/reference-view';
 import { renderAt, signedIn } from '../render-with-router';
+import { requestUrl } from '../request-url';
 
 /**
  * How a reference is drawn once the server has been asked about it, and what it does when clicked.
@@ -57,7 +58,7 @@ function stubReferences(): void {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       const ids = (/ids=([^&]*)/.exec(url)?.[1] ?? '')
         .split(',')
         .filter((id) => id.length > 0)

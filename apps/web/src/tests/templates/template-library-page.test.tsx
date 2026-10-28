@@ -12,10 +12,7 @@ import {
   type StubTemplate,
 } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
-
-function requestUrl(input: RequestInfo | URL): string {
-  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-}
+import { requestUrl } from '../request-url';
 
 beforeEach(() => {
   signedIn();

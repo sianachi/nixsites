@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientProvider } from '../../api/api-client-provider';
 import { AuthProvider } from '../../auth/auth-provider';
 import { ReferenceResolutionProvider, useReference } from '../../editor/reference-resolution';
+import { requestUrl } from '../request-url';
 
 /**
  * What a reference resolves to, and - the part that matters - what it refuses to resolve to.
@@ -68,7 +69,7 @@ function stubReferences(
         return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
       }
 
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       if (url.endsWith('/auth/session')) {
         return Promise.resolve(
           new Response(

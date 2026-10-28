@@ -11,6 +11,7 @@ import {
   type StubWorkspace,
 } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
+import { requestUrl } from '../request-url';
 
 const OWNER_ID = '44444444-bbbb-4bbb-8bbb-444444444444';
 const EDITOR_ID = '55555555-bbbb-4bbb-8bbb-555555555555';
@@ -192,10 +193,7 @@ describe('workspace management', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-        const url = new URL(
-          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
-          location.origin,
-        );
+        const url = new URL(requestUrl(input), location.origin);
         if (url.pathname.endsWith('/invitees') && url.searchParams.has('cursor')) {
           return Promise.resolve(
             new Response(JSON.stringify({ title: 'Unavailable', status: 503 }), {
@@ -516,8 +514,7 @@ describe('workspace management', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const request = input instanceof Request ? input : null;
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = requestUrl(input);
         const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
         if (method === 'GET' && new URL(url, location.origin).pathname === '/api/v1/workspaces') {
           listRequests += 1;
@@ -570,8 +567,7 @@ describe('workspace management', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const request = input instanceof Request ? input : null;
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = requestUrl(input);
         const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
         if (method === 'GET' && new URL(url, location.origin).pathname === '/api/v1/workspaces') {
           listRequests += 1;
@@ -643,7 +639,7 @@ function fetchCalls(): readonly { readonly url: string; readonly method: string 
   return (
     fetch as unknown as { mock: { calls: [RequestInfo | URL, RequestInit | undefined][] } }
   ).mock.calls.map(([input, init]) => ({
-    url: typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+    url: requestUrl(input),
     method: (init?.method ?? 'GET').toUpperCase(),
   }));
 }

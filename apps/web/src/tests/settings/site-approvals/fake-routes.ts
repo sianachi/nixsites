@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { requestUrl } from '../../request-url';
 
 export interface Call {
   readonly method: string;
@@ -14,7 +15,7 @@ export function layerRoutes(handler: Handler): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
     const path = new URL(url, globalThis.location.origin).pathname;
     const raw =

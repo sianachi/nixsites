@@ -3,6 +3,7 @@ import { useSessionStore } from '../../auth/session-store';
 import type { TemplateInitialization } from '@nix/api-client';
 import { item, STUB_WORKSPACE_ID } from './resources/items';
 import type { StubItem } from './resources/items';
+import { requestUrl } from '../request-url';
 
 /**
  * A stand-in for Core, for tests about what the application renders.
@@ -904,7 +905,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       const request = input instanceof Request ? input : null;
       const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
       const requestHeaders = new Headers(init?.headers ?? request?.headers);

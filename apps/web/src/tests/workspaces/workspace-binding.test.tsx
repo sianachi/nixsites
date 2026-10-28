@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app';
 import { STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
 import { signedIn } from '../render-with-router';
+import { requestUrl } from '../request-url';
 
 const SHARED: StubWorkspace = {
   ...STUB_WORKSPACE,
@@ -39,8 +40,7 @@ describe('workspace binding under StrictMode', () => {
         'fetch',
         vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
           const request = input instanceof Request ? input : null;
-          const url =
-            typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+          const url = requestUrl(input);
           const path = new URL(url, location.origin).pathname;
           const signal = init?.signal ?? request?.signal;
           if (path.includes(`/workspaces/${STUB_WORKSPACE.id}/`) && matchesResource(path)) {
@@ -106,8 +106,7 @@ describe('workspace binding under StrictMode', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = requestUrl(input);
         const match = /\/api\/v1\/workspaces\/([0-9a-f-]{36})\/templates$/.exec(
           new URL(url, location.origin).pathname,
         );

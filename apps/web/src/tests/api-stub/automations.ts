@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import { STUB_WORKSPACE_ID } from './resources/items';
+import { requestUrl } from '../request-url';
 
 /**
  * The automation routes (ADR-0051 section 6), layered over the Core stub.
@@ -121,7 +122,7 @@ export function stubAutomations(options: StubAutomationOptions = {}): StubAutoma
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       const request = input instanceof Request ? input : null;
       const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
       const path = new URL(url, globalThis.location.origin).pathname;

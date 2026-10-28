@@ -7,6 +7,7 @@ import { item, STUB_WORKSPACE, stubCoreApi } from '../../api-stub';
 import { renderAt, signedIn } from '../../render-with-router';
 import { aView } from '../../view-fixture';
 import { memoryStorage } from '../../memory-storage';
+import { requestUrl } from '../../request-url';
 
 const DESTINATION = item({
   id: '4a4a4a4a-4444-4444-8444-4a4a4a4a4a4a',
@@ -17,10 +18,6 @@ beforeEach(() => {
   signedIn();
   vi.stubGlobal('sessionStorage', memoryStorage());
 });
-
-function requestUrl(input: RequestInfo | URL): string {
-  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-}
 
 function jsonRequestBody(init: RequestInit | undefined): unknown {
   if (typeof init?.body !== 'string') throw new Error('Expected the setup request to carry JSON.');

@@ -7,6 +7,7 @@ import { App } from '../../app';
 import { ConfirmLaunch } from '../../launch/launch-page';
 import { STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
+import { requestUrl } from '../request-url';
 
 /**
  * The installed app's launch addresses, driven through the address bar exactly as a shortcut, the
@@ -41,7 +42,7 @@ function recordWrites(): { readonly creates: string[]; readonly bodies: string[]
   const bodies: string[] = [];
   const core = globalThis.fetch;
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     if (/\/collab\/documents\/[^/]+\/updates$/u.test(url)) {
       bodies.push(typeof init?.body === 'string' ? init.body : '');
       return Promise.resolve(new Response(null, { status: 204 }));

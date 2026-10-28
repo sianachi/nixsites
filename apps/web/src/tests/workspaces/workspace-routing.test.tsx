@@ -7,6 +7,7 @@ import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-st
 import { renderAt, signedIn } from '../render-with-router';
 import { setZenMode } from '../../lib/zen-mode';
 import { memoryStorage } from '../memory-storage';
+import { requestUrl } from '../request-url';
 
 const SHARED_ID = '00000000-0000-4000-8000-000000000002';
 const INACCESSIBLE_ID = '00000000-0000-4000-8000-000000000099';
@@ -196,7 +197,7 @@ function workspaceListRequests(): readonly unknown[] {
   return (
     fetch as unknown as { mock: { calls: [RequestInfo | URL, RequestInit | undefined][] } }
   ).mock.calls.filter(([input, init]) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     const method = (
       init?.method ?? (input instanceof Request ? input.method : 'GET')
     ).toUpperCase();

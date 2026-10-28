@@ -10,6 +10,7 @@ import { item, STUB_WORKSPACE } from '../../api-stub';
 import { notifyItemChildrenChanged } from '../../../lib/item-children-changed';
 import { useQueryResults } from '../../../views/query/use-query-results';
 import { useWorkspaceTree } from '../../../items/use-workspace-tree';
+import { requestUrl } from '../../request-url';
 
 const getAccessToken = (): Promise<string> => Promise.resolve('token');
 
@@ -51,7 +52,7 @@ describe('container loading', () => {
 
   beforeEach(() => {
     fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       if (url.includes('cursor=')) return new Promise<Response>(() => undefined);
       if (url.endsWith('/schema')) {
         return Promise.resolve(
@@ -258,7 +259,7 @@ describe('container loading', () => {
   it('reports a parsed API shape that fails the container boundary as partial telemetry', async () => {
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       if (url.endsWith('/schema')) {
         return Promise.resolve(
           new Response(JSON.stringify({ properties: [], declared: [], inherit: true })),

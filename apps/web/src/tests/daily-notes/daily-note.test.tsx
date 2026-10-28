@@ -5,14 +5,11 @@ import { App } from '../../app';
 import { localDailyNoteDate, parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
+import { requestUrl } from '../request-url';
 
 beforeEach(() => {
   signedIn();
 });
-
-function requestUrl(input: RequestInfo | URL): string {
-  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-}
 
 describe('daily notes', () => {
   it('uses the local calendar date in the familiar daily-note format', () => {

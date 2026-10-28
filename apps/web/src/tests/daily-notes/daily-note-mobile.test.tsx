@@ -6,6 +6,7 @@ import { App } from '../../app';
 import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { stubViewport } from '../stub-viewport';
+import { requestUrl } from '../request-url';
 
 const daily = item({
   id: '2d2d2d2d-2222-4222-8222-2d2d2d2d2d2d',
@@ -14,11 +15,7 @@ const daily = item({
 });
 
 function requestUrls(): string[] {
-  return vi
-    .mocked(fetch)
-    .mock.calls.map(([input]) =>
-      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
-    );
+  return vi.mocked(fetch).mock.calls.map(([input]) => requestUrl(input));
 }
 
 beforeEach(() => {

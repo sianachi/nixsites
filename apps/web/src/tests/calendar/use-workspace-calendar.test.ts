@@ -7,6 +7,7 @@ import { ApiClientProvider } from '../../api/api-client-provider';
 import { useWorkspaceCalendar } from '../../calendar/use-workspace-calendar';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
+import { requestUrl } from '../request-url';
 
 /**
  * Creating a dated entry from the collated calendar.
@@ -143,7 +144,7 @@ function stubFetch(options: FetchStubOptions = {}): FetchStub {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = requestUrl(input);
       const request = input instanceof Request ? input : null;
       const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
       const requestBody =
