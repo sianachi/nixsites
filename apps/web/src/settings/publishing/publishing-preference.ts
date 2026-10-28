@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { writeStored } from '../../editor/stored-setting';
 import { browserStorage } from '../../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../../lib/ui-settings-sync';
 import { useCapabilities } from '../../session/capabilities-context';
@@ -25,12 +26,7 @@ export const usePublishingPreference = create<{
 }>((set) => ({
   enabled: read(),
   setEnabled: (enabled) => {
-    try {
-      if (enabled) browserStorage()?.setItem(KEY, '1');
-      else browserStorage()?.removeItem(KEY);
-    } catch {
-      // Blocked storage still lets the choice hold for this session.
-    }
+    writeStored(KEY, enabled ? '1' : null);
     set({ enabled });
     settingChanged('sites.publishingEnabled', enabled);
   },

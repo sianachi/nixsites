@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { writeStored } from '../../editor/stored-setting';
 import { browserStorage } from '../../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../../lib/ui-settings-sync';
 
@@ -53,18 +54,8 @@ function store(key: string, syncKey: 'editor.viewSuggestions' | 'editor.choiceOr
     setting: read(browserStorage(), key),
     saved: true,
     setSetting: (setting) => {
-      let saved = false;
-      try {
-        const storage = browserStorage();
-        if (setting === 'off') {
-          storage?.setItem(key, setting);
-        } else {
-          storage?.removeItem(key);
-        }
-        saved = storage !== undefined;
-      } catch {
-        /* The choice still works for this session. */
-      }
+      // A blocked write still lets the choice hold for this session.
+      const saved = writeStored(key, setting === 'off' ? 'off' : null);
       set({ setting, saved });
       settingChanged(syncKey, setting);
     },
@@ -91,11 +82,6 @@ registerSyncedSetting('editor.choiceOrder', {
   },
   defaultValue: 'on',
 });
-
-/** Selector: true when view suggestions are on. */
-export function viewSuggestionsOn(): boolean {
-  return useViewSuggestionPreference.getState().setting === 'on';
-}
 
 /** Selector: true when pick-history ordering is on. */
 export function choiceOrderOn(): boolean {

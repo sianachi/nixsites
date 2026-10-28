@@ -1,6 +1,5 @@
 import { Button, Textarea } from '@nix/ui';
 import { useEffect, useRef, type ReactElement } from 'react';
-import { composerRows } from '../composer/composer-rows';
 
 /** The last user message, edited where it sits. Enter sends (Shift+Enter breaks the line on a
  * keyboard), Escape cancels; focus lands in the field when it opens. */
@@ -60,4 +59,12 @@ export function PetMessageEditor({
       </div>
     </div>
   );
+}
+
+/** The composer's textarea grows with its content between one and six rows, rather than
+ * scrolling internally past a fixed height. Counting hard line breaks is a close enough
+ * approximation of wrapped-line count for a message box this size, without measuring layout. */
+function composerRows(text: string): number {
+  const lines = text.split('\n').length;
+  return Math.min(6, Math.max(1, lines));
 }

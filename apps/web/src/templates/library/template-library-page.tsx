@@ -1,5 +1,5 @@
 import { isCanceledError } from '@nix/api-client';
-import { Button, Dialog, Field, Icon, Input, Text } from '@nix/ui';
+import { Blueprint, Button, Dialog, Field, Icon, Input, Text } from '@nix/ui';
 import { FileUp, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -16,7 +16,6 @@ import {
   type TemplateSummary,
 } from '../template-api';
 import { templateFailure } from '../use-templates';
-import { LibraryNotice } from './library-notice';
 import { TemplateCard } from './template-card';
 import { useWorkspace } from '../../workspaces/workspace-context';
 import { usePetSettings } from '../../pets/use-pet-settings';
@@ -398,5 +397,25 @@ export function TemplateLibraryPage(): ReactNode {
         )}
       </Dialog>
     </div>
+  );
+}
+
+function LibraryNotice({
+  title,
+  detail,
+  children,
+}: {
+  readonly title: string;
+  readonly detail: string;
+  readonly children?: ReactNode;
+}): ReactNode {
+  return (
+    <Blueprint className="flex flex-col items-start gap-3 p-3">
+      <Text variant="h4" as="h2">
+        {title}
+      </Text>
+      <Text tone="muted">{detail}</Text>
+      {children}
+    </Blueprint>
   );
 }
