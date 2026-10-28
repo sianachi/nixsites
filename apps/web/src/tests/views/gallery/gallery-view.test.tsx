@@ -23,7 +23,7 @@ const WORKSPACE = 'a1000000-0000-4000-8000-000000000001';
 // which none of the read-only tests above exercise. They still render through these mocks rather
 // than the real hooks, because the real ones throw outside their providers, and this suite renders
 // `GalleryView` as a bare leaf the way `drive-view.test.tsx` does for the same reason.
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));

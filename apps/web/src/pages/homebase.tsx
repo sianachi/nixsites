@@ -22,7 +22,7 @@ import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { recentItems } from '@nix/web-foundation/lib/recent-items';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '../templates/template-library-context';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /** The ISO 8601 week number of a local date: weeks start on Monday, week 1 holds 4 January. */
 export function isoWeek(date: Date): number {

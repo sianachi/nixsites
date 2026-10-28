@@ -13,7 +13,7 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PetChatViewport } from '../../pets/pet-chat-viewport';
 import { PetMessageText } from '../../pets/pet-message-text';
 import { earlierPieces } from '../../openui/fence';
-import { useAccessibleWorkspaces } from '../../workspaces/workspace-context';
+import { useAccessibleWorkspaces } from '@nix/web-workspaces/workspaces/workspace-context';
 import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export function ChatView({

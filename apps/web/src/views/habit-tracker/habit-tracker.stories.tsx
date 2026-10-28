@@ -11,7 +11,7 @@ import { useState, type ReactElement } from 'react';
 import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { ContainerData } from '../core/use-container';
 import type { View } from '../core/container-model';
 import { ContainerView } from '../core/container-view';

@@ -12,7 +12,7 @@ import type { TabTransferPayload } from '../../tabs/tab-transfer';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { Text } from '@nix/ui';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { PetConversationPane } from '../pet-page';
 import { NotFoundItem } from './not-found-item';
 import { OpenItem } from './open-item';

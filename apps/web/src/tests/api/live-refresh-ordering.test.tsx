@@ -10,7 +10,7 @@ import {
   notifyItemChildrenChanged,
   onItemChildrenChanged,
 } from '@nix/web-foundation/lib/item-children-changed';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 import { json } from '../json-response';
 

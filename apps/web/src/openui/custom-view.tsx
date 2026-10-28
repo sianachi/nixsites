@@ -2,7 +2,7 @@ import { Button, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 import type { ViewRendererProps } from '../views/core/view-kinds';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import OpenUiBlock from './openui-block';
 import { ProgramEditor } from './program-editor';
 import { withContainer } from './starter-program';

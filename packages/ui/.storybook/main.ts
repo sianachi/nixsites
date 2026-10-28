@@ -45,7 +45,7 @@ const config: StorybookConfig = {
     '../../../apps/web/src/views/suggest/*.stories.tsx',
     '../../../apps/web/src/properties/*.stories.tsx',
     '../../../apps/web/src/automations/*.stories.tsx',
-    '../../../apps/web/src/launch/*.stories.tsx',
+    '../../../packages/web-workspaces/src/launch/*.stories.tsx',
     '../../../apps/web/src/recording/*.stories.tsx',
     '../../../apps/web/src/speech/*.stories.tsx',
     '../../../apps/web/src/sites/*.stories.tsx',

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { toViewRequest, type PropertyDefinition, type View } from '../views/core/container-model';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * The workspace tree: the items, their shape, and the writes the shell performs on them.

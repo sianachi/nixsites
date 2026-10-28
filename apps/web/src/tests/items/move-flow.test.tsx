@@ -10,7 +10,7 @@ import { ItemCommandsProvider } from '../../items/item-commands-context';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { ContainerView } from '../../views/core/container-view';
 import { useContainer } from '../../views/core/use-container';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { aView } from '../view-fixture';
 

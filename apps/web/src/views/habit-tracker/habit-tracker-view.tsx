@@ -13,7 +13,7 @@ import {
 import { useHabits } from './use-habits';
 import type { HabitTracker } from '@nix/api-client';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { HabitChartWidgets, type HabitWidgetConfig } from './habit-chart-widgets';
 import { HabitInsights } from './habit-insights';

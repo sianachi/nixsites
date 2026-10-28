@@ -4,7 +4,7 @@ import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { STARTER_PROGRAM } from '../../openui/starter-program';
-import { useOptionalWorkspace } from '../../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { uniqueIdentifier } from '../wizard/creation-studio-model';
 import { STRUCTURED_RECIPES } from '../wizard/structured-recipes';
 import type { View } from './container-model';

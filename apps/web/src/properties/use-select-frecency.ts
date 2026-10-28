@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { rankByScore } from '@nix/web-foundation/lib/suggest/rank';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import { useOptionalWorkspace } from '../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * The options this person picked most often in a choice control, offered again ahead of the

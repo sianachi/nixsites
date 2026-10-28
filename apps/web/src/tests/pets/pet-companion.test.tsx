@@ -8,7 +8,7 @@ import { NixApiError, type PetProfile } from '@nix/api-client';
 
 const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));
 const petSettings = vi.hoisted(

@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { Item } from '../core/container-model';
 import type { ContainerData } from '../core/use-container';
 

@@ -3,7 +3,7 @@ import { useEffect, type ReactElement } from 'react';
 import { Link } from 'react-router';
 
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useDailyNoteSettings } from './use-daily-note-settings';
 
 /**

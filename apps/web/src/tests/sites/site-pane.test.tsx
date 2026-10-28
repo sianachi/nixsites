@@ -30,7 +30,7 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
   useOptionalApiClient: () => client,
 }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE_ID, workspace: { canRename } }),
 }));
 

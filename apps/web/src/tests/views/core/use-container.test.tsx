@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { useContainer } from '../../../views/core/use-container';
-import { WorkspaceProvider } from '../../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../../api-stub';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useQueryResults } from '../../../views/query/use-query-results';

@@ -30,7 +30,7 @@ const ROW_TWO = 'cccccccc-3333-4333-8333-cccccccccccc';
 const WORKSPACE = 'dddddddd-4444-4444-8444-dddddddddddd';
 const TRACKER = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee';
 
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));

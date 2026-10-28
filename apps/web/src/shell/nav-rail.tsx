@@ -29,7 +29,7 @@ import {
 import { petAttentionText } from '../pets/pet-attention';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { usePetNavEntry } from '../pets/use-pet-nav-entry';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * The navigation rail: the handful of ways to look at the whole workspace at once.

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
-import * as workspaces from '../../workspaces/workspace-context';
+import * as workspaces from '@nix/web-workspaces/workspaces/workspace-context';
 
 afterEach(() => {
   vi.restoreAllMocks();

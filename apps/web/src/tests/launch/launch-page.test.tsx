@@ -4,7 +4,7 @@ import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { ConfirmLaunch } from '../../launch/launch-page';
+import { ConfirmLaunch } from '@nix/web-workspaces/launch/launch-page';
 import { STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { requestUrl } from '../request-url';

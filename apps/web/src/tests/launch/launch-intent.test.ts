@@ -5,7 +5,7 @@ import {
   parseLaunchIntent,
   sharedNoteDocument,
   sharedNoteTitle,
-} from '../../launch/launch-intent';
+} from '@nix/web-workspaces/launch/launch-intent';
 
 function share(query: string) {
   const intent = parseLaunchIntent('share', new URLSearchParams(query));

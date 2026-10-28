@@ -10,7 +10,7 @@ import {
   writeHiddenItems,
 } from '@nix/web-foundation/lib/view-hidden-items';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { useOptionalWorkspace } from '../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 const EMPTY: readonly string[] = [];
 

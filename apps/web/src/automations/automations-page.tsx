@@ -10,7 +10,7 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { draftFromRule, emptyDraft, ruleInputFromDraft } from './automation-draft';
 import { AutomationDetail } from './automation-detail';
 import { AutomationList } from './automation-list';

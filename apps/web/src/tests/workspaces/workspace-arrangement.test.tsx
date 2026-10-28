@@ -10,7 +10,7 @@ import {
   assignToGroup,
   removeGroup,
   togglePin,
-} from '../../workspaces/arrangement';
+} from '@nix/web-workspaces/workspaces/arrangement';
 
 const SHARED: StubWorkspace = {
   ...STUB_WORKSPACE,

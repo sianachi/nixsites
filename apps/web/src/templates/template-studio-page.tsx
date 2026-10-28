@@ -13,7 +13,7 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import type { CollabSync } from '../editor/collab-sync';
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../shell/shell-context';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   applyStoredTemplate,
   captureTemplate,

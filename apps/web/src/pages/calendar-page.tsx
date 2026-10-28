@@ -26,7 +26,7 @@ import {
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
 import type { CalendarDay } from '../views/core/calendar-dates';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * The calendar destination: every calendar in the workspace, drawn as one.

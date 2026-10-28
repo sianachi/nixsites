@@ -8,7 +8,7 @@ import {
 } from '@nix/web-foundation/lib/daily-note-device-preferences';
 import { PreferenceToggle } from '../shared/preference-toggle';
 import { SettingsSection } from '../shared/settings-section';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useDailyNoteSettings } from './use-daily-note-settings';
 
 const FOLDER_OPTIONS: readonly { value: DailyNoteSettings['folders']; label: string }[] = [

@@ -5,7 +5,7 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 import { mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 import { fileImageReference } from '../../properties/inputs/image-reference';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { readPropertyText } from '../core/container-model';
 import { ShownItems } from '../core/item-selection-context';
 import { CreateItemControl } from '../core/create-item-control';

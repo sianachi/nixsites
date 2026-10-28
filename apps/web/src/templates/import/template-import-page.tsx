@@ -23,7 +23,7 @@ import {
   type FileIdentity,
 } from './import-draft';
 import { templateFailure } from '../use-templates';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 export function TemplateImportPage(): ReactNode {
   const zen = useZenActive();

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { NewChatNote } from './new-chat-note';
 
 export default { title: 'Nix/Views/New chat note', parameters: { layout: 'fullscreen' } };

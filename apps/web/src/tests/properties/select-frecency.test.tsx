@@ -15,7 +15,7 @@ import { memoryStorage } from '../memory-storage';
 
 const WORKSPACE = { current: 'dddddddd-4444-4444-8444-dddddddddddd' as string | null };
 
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () =>
     WORKSPACE.current === null ? null : { workspaceId: WORKSPACE.current },
 }));

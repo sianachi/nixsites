@@ -29,7 +29,7 @@ vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   }),
 }));
 
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE_ID }),
 }));
 

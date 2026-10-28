@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceCalendar } from '../../calendar/use-workspace-calendar';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 import { requestUrl } from '../request-url';
 

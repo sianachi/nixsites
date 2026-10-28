@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { Item } from '../core/container-model';
 
 /**

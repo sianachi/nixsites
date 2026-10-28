@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import {
   emptyItemLandmarks,

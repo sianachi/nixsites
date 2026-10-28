@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
-import { WorkspaceSwitcher } from '../workspaces/workspace-switcher';
+import { WorkspaceSwitcher } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { shortcutFor } from '@nix/web-foundation/keyboard/shortcut-registry';
 import { toggleZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { NotificationBell } from './notifications/notification-bell';

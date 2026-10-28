@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { ExportDialog } from '../../export/export-dialog';
-import { ImportDialog } from '../../import/import-dialog';
+import { ImportDialog } from '@nix/web-workspaces/import/import-dialog';
 import { MobileItemMove } from '../../items/mobile-item-move';
 import { LockDialog } from '../../locks/lock-dialog';
 import type { useItemLock } from '../../locks/use-item-lock';

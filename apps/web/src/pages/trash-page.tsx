@@ -10,7 +10,7 @@ import {
   LoadingPanel,
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 
 function Frame({ children }: { readonly children: ReactNode }): ReactElement {

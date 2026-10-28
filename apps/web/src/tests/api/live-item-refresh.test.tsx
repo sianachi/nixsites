@@ -17,7 +17,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useContainer } from '../../views/core/use-container';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 
 const PARENT = item({

@@ -55,7 +55,7 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => ({ execute }),
   useOptionalApiClient: () => null,
 }));
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: 'workspace-1' }),
   useOptionalWorkspace: () => null,
 }));

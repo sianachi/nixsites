@@ -7,7 +7,7 @@ import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useInstallNix } from '@nix/web-platform/pwa/install-nix';
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { usePendingSignOut } from './use-pending-sign-out';
 
 /**

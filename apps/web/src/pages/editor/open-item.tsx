@@ -34,7 +34,7 @@ import { useContainer } from '../../views/core/use-container';
 import { useViewState } from '../../views/core/view-state';
 import { ViewSwitcher } from '../../views/core/view-switcher';
 import { useRememberSmartList } from '../../views/query/known-smart-lists';
-import { useOptionalWorkspace } from '../../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { itemActionEntries } from './item-actions';
 import { ItemBody } from './item-body';
 import { ItemDialogs, type ItemDialogName } from './item-dialogs';

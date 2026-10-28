@@ -21,7 +21,7 @@ import type { LucideIcon } from 'lucide-react';
 import { lazy, Suspense, type ReactNode } from 'react';
 
 import { Text } from '@nix/ui';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { ChatView } from '../chat/chat-view';
 import { BoardView } from '../board/board-view';
 import { normalizeChartView } from '../chart/chart-options';

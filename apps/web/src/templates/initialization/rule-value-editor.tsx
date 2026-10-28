@@ -2,7 +2,7 @@ import { Button, Checkbox, Field, Input, Select, Textarea } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import type { TreeItem } from '../../items/use-workspace-tree';
-import { useWorkspaceAssignablePrincipals } from '../../workspaces/use-workspace-assignable-principals';
+import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
 import { TemplateItemPicker } from '../template-item-picker';
 import type { TargetOption } from './initialization-targets';
 

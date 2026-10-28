@@ -15,7 +15,7 @@ import type { NavigateFunction } from 'react-router';
 import { treeChildrenEntry } from '../../items/item-menu-entries';
 import type { useHiddenItems } from '../../items/use-hidden-items';
 import type { useItemLock } from '../../locks/use-item-lock';
-import type { useOptionalWorkspace } from '../../workspaces/workspace-context';
+import type { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { ItemDialogName } from './item-dialogs';
 import { clockTime } from './lock-copy';
 

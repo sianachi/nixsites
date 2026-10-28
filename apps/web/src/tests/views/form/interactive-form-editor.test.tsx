@@ -17,7 +17,7 @@ import { renderAt } from '../../render-with-router';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { memoryStorage } from '../../memory-storage';
 
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: 'preview-workspace' }),
 }));
 

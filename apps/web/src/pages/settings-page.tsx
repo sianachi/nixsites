@@ -18,7 +18,7 @@ import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { EditorPreferencesSection } from '../settings/editor/editor-preferences-section';
 import { PreferencesSection } from '../settings/preferences/PreferencesSection';
 import { NotificationsSection } from '../settings/notifications/notifications-section';
-import { WorkspaceManagementSection } from '../workspaces/workspace-management-section';
+import { WorkspaceManagementSection } from '@nix/web-workspaces/workspaces/workspace-management-section';
 import { PetSettingsSection } from '../pets/pet-settings-section';
 import { useCapabilities, type Capabilities } from '@nix/web-platform/session/capabilities-context';
 import {

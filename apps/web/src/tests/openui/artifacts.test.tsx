@@ -19,7 +19,7 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useOptionalApiClient: () => client,
 }));
 vi.mock('@nix/companion', () => ({ createCompanionBodies: () => bodies }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useAccessibleWorkspaces: () => ({
     workspaces: [{ id: workspace, name: 'Home', kind: 'personal', lifecycleState: 'active' }],
   }),

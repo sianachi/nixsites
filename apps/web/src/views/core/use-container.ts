@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ZodType } from 'zod';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useStaleWhileRevalidate } from '@nix/web-foundation/lib/use-stale-while-revalidate';
 import { decorateItems, keepComputed } from '../../properties/computed';

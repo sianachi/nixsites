@@ -15,7 +15,7 @@ const petSettings = vi.hoisted((): { provider: PetProfile['provider']; enabled: 
 }));
 const mock = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), send: vi.fn(), hook: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => mock }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));
 vi.mock('@nix/web-platform/api/use-pet-settings', () => ({

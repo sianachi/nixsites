@@ -14,7 +14,7 @@ import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-cha
 import { ViewSchema } from '../../views/core/container-model';
 import { useContainer } from '../../views/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 
 const PARENT = item({

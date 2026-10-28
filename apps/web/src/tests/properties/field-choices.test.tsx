@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({ client: null as NixClient | null }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useOptionalApiClient: () => state.client,
 }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: STUB_WORKSPACE_ID }),
 }));
 

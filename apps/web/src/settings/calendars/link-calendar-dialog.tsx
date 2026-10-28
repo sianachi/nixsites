@@ -2,7 +2,7 @@ import type { CalendarConnection, ExternalCalendar } from '@nix/api-client';
 import { Button, Dialog, Field, Input, Select, Text } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { CalendarSyncState } from './use-calendar-sync';
 
 interface LinkCalendarDialogProps {

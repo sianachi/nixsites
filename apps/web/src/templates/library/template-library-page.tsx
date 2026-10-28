@@ -17,7 +17,7 @@ import {
 } from '../template-api';
 import { templateFailure } from '../use-templates';
 import { TemplateCard } from './template-card';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 

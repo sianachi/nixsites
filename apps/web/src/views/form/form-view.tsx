@@ -14,7 +14,7 @@ import type { ContainerData } from '../core/use-container';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useOptionalWorkspace } from '../../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { rememberSubmission, usualValues, type UsualValue } from './form-memory';
 import { MemberNames } from '../suggest/member-name';
 import { valueText } from '../suggest/value-text';

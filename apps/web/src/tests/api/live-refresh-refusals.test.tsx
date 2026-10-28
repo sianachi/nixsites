@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 
 const parent = item({

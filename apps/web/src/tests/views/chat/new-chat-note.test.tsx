@@ -10,7 +10,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import {
   AccessibleWorkspacesProvider,
   WorkspaceProvider,
-} from '../../../workspaces/workspace-context';
+} from '@nix/web-workspaces/workspaces/workspace-context';
 import { NewChatNote } from '../../../views/chat/new-chat-note';
 import { item, STUB_WORKSPACE } from '../../api-stub';
 

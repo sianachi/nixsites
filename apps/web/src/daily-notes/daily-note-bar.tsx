@@ -10,7 +10,7 @@ import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboar
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useOpenItem } from '../tabs/use-open-item';
 import { readTimestampValue, readerZone } from '../views/core/timestamps';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   dailyNoteLabel,
   localDailyNoteDate,

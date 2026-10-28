@@ -112,7 +112,7 @@ const { moveMock, reloadMock, fetchFileContentMock, beginUploadMock, uploadAndCo
     ),
   }));
 
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
   useOptionalWorkspace: () => null,
 }));

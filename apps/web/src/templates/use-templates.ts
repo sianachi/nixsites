@@ -10,7 +10,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 export type TemplateLibraryStatus = 'loading' | 'ready' | 'error';
 

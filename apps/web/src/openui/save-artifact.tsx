@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ChatDestination } from '../views/chat/new-chat-note';
-import { useAccessibleWorkspaces } from '../workspaces/workspace-context';
+import { useAccessibleWorkspaces } from '@nix/web-workspaces/workspaces/workspace-context';
 import { fenced, fencedState } from './fence';
 
 /**

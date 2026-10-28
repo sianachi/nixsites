@@ -8,7 +8,7 @@ import {
   LoadingPanel,
   PartialNotice,
 } from '@nix/web-foundation/components/states/status-panels';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { failureMessage, lossDetail, pages, progressMessage } from './site-copy';
 import { SiteApproval } from './site-approval';
 import { SiteExclusionsPicker } from './site-exclusions';

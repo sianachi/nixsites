@@ -3,7 +3,7 @@ import { ArrowDown, ArrowLeft, ArrowUp } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { MobileDestinationPicker } from './mobile-destination-picker';
 import { WorkspaceItemTransfer } from './workspace-item-transfer';
-import { useOptionalWorkspace } from '../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { siblingMoveTarget } from './sibling-move-target';
 import type { TreeItem, WorkspaceTree } from './use-workspace-tree';
 

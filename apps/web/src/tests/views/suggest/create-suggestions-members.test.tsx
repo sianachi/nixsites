@@ -34,7 +34,7 @@ vi.mock('../../../settings/members/use-workspace-members', () => ({
   },
 }));
 
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE_ID }),
 }));
 

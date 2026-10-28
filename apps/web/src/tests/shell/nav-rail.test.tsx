@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as importRun from '../../import/import-run';
+import * as importRun from '@nix/web-workspaces/import/import-run';
 import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { stubViewport } from '../stub-viewport';

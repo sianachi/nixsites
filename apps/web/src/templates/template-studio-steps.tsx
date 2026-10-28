@@ -10,7 +10,7 @@ import { TemplateFact, TemplateFacts } from './template-studio-facts';
 import type { StudioMode, TemplateDraft } from './template-studio-model';
 import { StudioNotice } from './template-studio-notice';
 import { TemplateInitializationEditor } from './initialization/template-initialization-editor';
-import { useWorkspaceAssignablePrincipals } from '../workspaces/use-workspace-assignable-principals';
+import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
 import type { TreeItem } from '../items/use-workspace-tree';
 import { TemplateItemPicker } from './template-item-picker';
 

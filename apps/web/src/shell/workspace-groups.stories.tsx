@@ -5,10 +5,13 @@ import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { WorkspaceProvider } from '../workspaces/workspace-context';
-import { WorkspaceSwitcher } from '../workspaces/workspace-switcher';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
+import { WorkspaceSwitcher } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { NewChatNote } from '../views/chat/new-chat-note';
-import { WorkspaceGroupsPage, WorkspaceGroupPage } from '../workspaces/workspace-group-page';
+import {
+  WorkspaceGroupsPage,
+  WorkspaceGroupPage,
+} from '@nix/web-workspaces/workspaces/workspace-group-page';
 
 export default { title: 'Nix/Workspaces/Groups', parameters: { layout: 'fullscreen' } };
 

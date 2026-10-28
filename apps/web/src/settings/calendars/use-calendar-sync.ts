@@ -11,7 +11,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * The caller's calendar sync: the accounts they have connected at Google and Microsoft, and the

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { rewriteLocalImageReferences } from '../../import/local-image-references';
+import { rewriteLocalImageReferences } from '@nix/web-workspaces/import/local-image-references';
 
 const SOURCE = {
   type: 'doc',

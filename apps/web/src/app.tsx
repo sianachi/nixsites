@@ -23,16 +23,19 @@ import { TrashPage } from './pages/trash-page';
 import { CreationStudioPage } from './views/wizard/creation-studio-page';
 import { RequireSession } from './shell/require-session';
 import { AppShell } from './shell/app-shell';
-import { LegacyWorkspaceRedirect, WorkspaceGate } from './workspaces/workspace-gate';
+import {
+  LegacyWorkspaceRedirect,
+  WorkspaceGate,
+} from '@nix/web-workspaces/workspaces/workspace-gate';
 import {
   WorkspaceGroupPage,
   WorkspaceGroupsPage,
   LegacyWorkspaceGroupRedirect,
-} from './workspaces/workspace-group-page';
-import { ArchivedWorkspacesPage } from './workspaces/archived-workspaces-page';
-import { AccessibleWorkspacesProvider } from './workspaces/workspace-context';
+} from '@nix/web-workspaces/workspaces/workspace-group-page';
+import { ArchivedWorkspacesPage } from '@nix/web-workspaces/workspaces/archived-workspaces-page';
+import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { PetCompanion } from './pets/pet-companion';
-import { LaunchPage } from './launch/launch-page';
+import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
 
 // Loaded when somebody opens /tokens, not before: the specimens are about 35 kB of design-lane
 // reference material - every ramp step, every type scale, every rhythm demo - and nobody working

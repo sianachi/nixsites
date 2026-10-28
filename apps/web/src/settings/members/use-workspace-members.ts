@@ -7,7 +7,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 export type { WorkspaceMember };
 export type WorkspaceMembersStatus = 'loading' | 'ready' | 'error';

@@ -2,8 +2,8 @@ import { files as fileResources, NixApiError, NixErrorKind, type NixClient } fro
 import { EMPTY_MARKDOWN_IMPORT_SCAN } from '@nix/markdown/scan';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { runImportPlan } from '../../import/import-run';
-import type { PlannedNode } from '../../import/import-plan';
+import { runImportPlan } from '@nix/web-workspaces/import/import-run';
+import type { PlannedNode } from '@nix/web-workspaces/import/import-plan';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 

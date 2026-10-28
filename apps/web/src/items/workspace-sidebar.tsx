@@ -45,7 +45,7 @@ import {
 } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
 import { useBookmarksStore } from '../bookmarks/use-bookmarks';
 import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';

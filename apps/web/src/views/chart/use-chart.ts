@@ -11,7 +11,7 @@ import {
   cacheKeysOverlap,
   useCacheInvalidation,
 } from '@nix/web-platform/api/use-cache-invalidation';
-import { useOptionalWorkspace } from '../../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * One chart view's buckets, refreshed on demand and whenever its configuration changes.

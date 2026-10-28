@@ -7,7 +7,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export interface DailyNoteSettingsState {

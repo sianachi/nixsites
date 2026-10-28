@@ -1772,7 +1772,7 @@
         "original_bytes": 7610,
         "original_sha256": "1f488e7250cbf8acf82a3a045d14fa5217d3c00fc4bba11c1d17bde1a7bd351d",
         "decision_status": "Proposed",
-        "recorded_status": "Proposed, 2026-09-29. The change it describes is on `main` as of 2026-10-08 (`apps/web/src/pwa`,\n`apps/web/src/launch`, `apps/web/src/editor/body-cache.ts`, the service worker). Recording the\nowner's acceptance in this status line is still owed."
+        "recorded_status": "Proposed, 2026-09-29. The change it describes is on `main` as of 2026-10-08 (`apps/web/src/pwa`,\n`packages/web-workspaces/src/launch`, `apps/web/src/editor/body-cache.ts`, the service worker). Recording the\nowner's acceptance in this status line is still owed."
       },
       "localProofItemId": "01a12244-4dfc-7593-865e-773d5e2b8224",
       "localProofSourceItemId": "01a12244-4dfc-7784-a9e6-b960b4099e70"

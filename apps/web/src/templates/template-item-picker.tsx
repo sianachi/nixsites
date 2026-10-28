@@ -3,7 +3,7 @@ import { Button, Field, Input, Select, Text } from '@nix/ui';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { TreeItem } from '../items/use-workspace-tree';
 
 interface ItemChoice {

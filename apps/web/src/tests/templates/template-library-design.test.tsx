@@ -17,7 +17,7 @@ vi.mock('../../templates/template-library-context', () => ({
   }),
 }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => ({}) }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));
 

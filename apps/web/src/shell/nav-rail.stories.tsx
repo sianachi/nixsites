@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useKnownSmartListsStore } from '../views/query/known-smart-lists';
-import { WorkspaceProvider } from '../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { NavRail } from './nav-rail';
 
 export default { title: 'Nix/Shell/Navigation rail', parameters: { layout: 'fullscreen' } };

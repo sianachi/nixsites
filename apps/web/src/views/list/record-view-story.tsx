@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { View } from '../core/container-model';
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111';

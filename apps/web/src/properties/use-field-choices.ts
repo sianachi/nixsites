@@ -2,7 +2,7 @@ import { items, type Item } from '@nix/api-client';
 import { useEffect, useState } from 'react';
 
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useOptionalWorkspace } from '../workspaces/workspace-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { PropertyDefinition } from '../views/core/container-model';
 
 /** Only scalar text and text choices contribute; objects never become suggestion labels. */

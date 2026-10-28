@@ -25,7 +25,7 @@ import {
   type View,
 } from '../../../views/core/container-model';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
-import type * as WorkspaceContextModule from '../../../workspaces/workspace-context';
+import type * as WorkspaceContextModule from '@nix/web-workspaces/workspaces/workspace-context';
 import { describeInferredRule } from '../../../views/query/query-by-example';
 import { QueryView } from '../../../views/query/query-view';
 
@@ -38,7 +38,7 @@ import { QueryView } from '../../../views/query/query-view';
 const SMART_LIST = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
 const WORKSPACE = 'dddddddd-4444-4444-8444-dddddddddddd';
 
-vi.mock('../../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));
@@ -154,7 +154,7 @@ describe('query by example', () => {
 
   it('saves the reviewed rules through the view write and re-runs the list', async () => {
     const { WorkspaceProvider } = await vi.importActual<typeof WorkspaceContextModule>(
-      '../../../workspaces/workspace-context',
+      '@nix/web-workspaces/workspaces/workspace-context',
     );
     const client = createNixClient({
       baseUrl: window.location.origin,

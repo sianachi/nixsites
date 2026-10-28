@@ -18,7 +18,7 @@ import { PropertyInput } from '../../properties/property-input';
 
 const WORKSPACE = 'a1000000-0000-4000-8000-000000000001';
 
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));
 

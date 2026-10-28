@@ -17,7 +17,7 @@ import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { Conversation } from '../pets/conversation/conversation';
 import { usePetRuntime } from '../pets/use-pet-runtime';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 // On this page nothing sits behind a launcher, so there is no badge for a decision to set.
 function ignoreDecisions(): void {

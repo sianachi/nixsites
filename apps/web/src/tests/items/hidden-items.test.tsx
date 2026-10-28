@@ -17,7 +17,7 @@ import { memoryStorage } from '../memory-storage';
 import { signedIn } from '../render-with-router';
 
 const workspace = vi.hoisted(() => ({ id: 'workspace-a' }));
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: workspace.id }),
 }));
 

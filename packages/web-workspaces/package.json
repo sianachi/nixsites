@@ -1,0 +1,108 @@
+{
+  "name": "@nix/web-workspaces",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Workspaces, document import and launch: workspace context and switcher, administration, import dialog and runner, launch page",
+  "exports": {
+    "./import/import-dialog": {
+      "types": "./src/import/import-dialog.tsx",
+      "default": "./src/import/import-dialog.tsx"
+    },
+    "./launch/launch-page": {
+      "types": "./src/launch/launch-page.tsx",
+      "default": "./src/launch/launch-page.tsx"
+    },
+    "./workspaces/archived-workspaces-page": {
+      "types": "./src/workspaces/archived-workspaces-page.tsx",
+      "default": "./src/workspaces/archived-workspaces-page.tsx"
+    },
+    "./workspaces/settings/confirmation-dialog": {
+      "types": "./src/workspaces/settings/confirmation-dialog.tsx",
+      "default": "./src/workspaces/settings/confirmation-dialog.tsx"
+    },
+    "./workspaces/settings/create-workspace-form": {
+      "types": "./src/workspaces/settings/create-workspace-form.tsx",
+      "default": "./src/workspaces/settings/create-workspace-form.tsx"
+    },
+    "./workspaces/settings/invite-section": {
+      "types": "./src/workspaces/settings/invite-section.tsx",
+      "default": "./src/workspaces/settings/invite-section.tsx"
+    },
+    "./workspaces/settings/people-list": {
+      "types": "./src/workspaces/settings/people-list.tsx",
+      "default": "./src/workspaces/settings/people-list.tsx"
+    },
+    "./workspaces/settings/sharing-switches": {
+      "types": "./src/workspaces/settings/sharing-switches.tsx",
+      "default": "./src/workspaces/settings/sharing-switches.tsx"
+    },
+    "./workspaces/settings/workspace-overview": {
+      "types": "./src/workspaces/settings/workspace-overview.tsx",
+      "default": "./src/workspaces/settings/workspace-overview.tsx"
+    },
+    "./workspaces/workspace-context": {
+      "types": "./src/workspaces/workspace-context.tsx",
+      "default": "./src/workspaces/workspace-context.tsx"
+    },
+    "./workspaces/workspace-gate": {
+      "types": "./src/workspaces/workspace-gate.tsx",
+      "default": "./src/workspaces/workspace-gate.tsx"
+    },
+    "./workspaces/workspace-group-page": {
+      "types": "./src/workspaces/workspace-group-page.tsx",
+      "default": "./src/workspaces/workspace-group-page.tsx"
+    },
+    "./workspaces/workspace-groups-section": {
+      "types": "./src/workspaces/workspace-groups-section.tsx",
+      "default": "./src/workspaces/workspace-groups-section.tsx"
+    },
+    "./workspaces/workspace-invitation-notice": {
+      "types": "./src/workspaces/workspace-invitation-notice.tsx",
+      "default": "./src/workspaces/workspace-invitation-notice.tsx"
+    },
+    "./workspaces/workspace-management-section": {
+      "types": "./src/workspaces/workspace-management-section.tsx",
+      "default": "./src/workspaces/workspace-management-section.tsx"
+    },
+    "./workspaces/workspace-switcher": {
+      "types": "./src/workspaces/workspace-switcher.tsx",
+      "default": "./src/workspaces/workspace-switcher.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/editor-schema": "workspace:*",
+    "@nix/markdown": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "react-router": "^7.18.1",
+    "y-prosemirror": "^1.3.7",
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@types/react": "^19.2.17",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6"
+  }
+}

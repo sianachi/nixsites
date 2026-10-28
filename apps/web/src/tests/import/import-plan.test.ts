@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_MARKDOWN_IMPORT_SCAN } from '@nix/markdown/scan';
 
-import { planImport, screenPaths, type ParseBody } from '../../import/import-plan';
+import { planImport, screenPaths, type ParseBody } from '@nix/web-workspaces/import/import-plan';
 
 /** The happy parser: everything is a valid body. Tests that need a failure inject their own. */
 const parseOk: ParseBody = () => ({

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useContainer } from '../../views/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
 import { aView } from '../view-fixture';
 

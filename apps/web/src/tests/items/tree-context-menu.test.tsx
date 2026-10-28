@@ -12,7 +12,7 @@ import { itemLandmarksKey } from '@nix/web-foundation/lib/item-landmarks';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
-import { WorkspaceProvider } from '../../workspaces/workspace-context';
+import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { STUB_WORKSPACE } from '../api-stub';
 import { memoryStorage } from '../memory-storage';
 import { signedIn } from '../render-with-router';

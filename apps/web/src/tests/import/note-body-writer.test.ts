@@ -3,7 +3,7 @@ import { yXmlFragmentToProseMirrorRootNode } from 'y-prosemirror';
 import * as Y from 'yjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { writeImportedBody } from '../../import/note-body-writer';
+import { writeImportedBody } from '@nix/web-workspaces/import/note-body-writer';
 
 const ITEM = '11111111-1111-4111-8111-111111111111';
 const DOC = {

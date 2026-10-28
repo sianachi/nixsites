@@ -24,7 +24,7 @@
  * The Markdown tree - paths, front matter, and bodies - is held in memory for that lane. Worker
  * document uploads and object downloads are streamed and bounded.
  *
- * The web application carries a twin of this run loop (`apps/web/src/import/import-run.ts`): the
+ * The web application carries a twin of this run loop (`packages/web-workspaces/src/import/import-run.ts`): the
  * transports differ, but the bucket names, the stop policy, and "the root is the first thing
  * created" must stay in step between the two, so a change to any of those here owes the same
  * change there.

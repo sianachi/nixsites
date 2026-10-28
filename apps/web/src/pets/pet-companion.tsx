@@ -3,7 +3,7 @@ import { Button } from '@nix/ui';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspace } from '../workspaces/workspace-context';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';

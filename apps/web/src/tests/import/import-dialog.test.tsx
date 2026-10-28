@@ -9,9 +9,9 @@ import {
 } from '@nix/api-client';
 
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { ImportDialog } from '../../import/import-dialog';
+import { ImportDialog } from '@nix/web-workspaces/import/import-dialog';
 import { consumeInterruptedImportForWorkspace } from '@nix/web-foundation/lib/import-interrupted-notice';
-import * as run from '../../import/import-run';
+import * as run from '@nix/web-workspaces/import/import-run';
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -21,7 +21,7 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => ({}) as unknown,
 }));
 
-vi.mock('../../workspaces/workspace-context', () => ({
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '00000000-0000-4000-8000-000000000001' }),
 }));
 
