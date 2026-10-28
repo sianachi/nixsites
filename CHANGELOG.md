@@ -36,6 +36,8 @@ follows semantic versioning (`0.x` pre-1.0).
   a menu beside it, the three switches are one Options group, members and pending invitations
   are one People list with a single invite row, and save messages are toasts. New workspace and
   Arrange workspaces moved to the workspace switcher.
+- The workspace switcher has a search box: type to filter workspaces by name, Enter opens the
+  first match.
 - Pets settings are compact: saved pets are avatar tiles, the identity fields share a row, the
   model shows as a status line once connected, instructions fold away, behaviour and device
   settings are one group, and Save appears only when something changed.

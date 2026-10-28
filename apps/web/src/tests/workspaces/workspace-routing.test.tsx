@@ -57,6 +57,33 @@ describe('workspace-scoped routing', () => {
     expect(within(menu).getByRole('button', { name: 'Arrange workspaces…' })).toBeVisible();
   });
 
+  it('searches workspaces by name and opens the first match on Enter', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
+    renderAt(<App />);
+
+    await user.click(await screen.findByRole('button', { name: 'Workspace menu' }));
+    const search = screen.getByRole('searchbox', { name: 'Search workspaces' });
+    expect(search).toHaveFocus();
+
+    await user.type(search, 'RESEARCH');
+    const menu = screen.getByRole('region', { name: 'Workspaces' });
+    const matches = within(menu).getByRole('list', { name: 'Matching workspaces' });
+    expect(within(matches).getAllByRole('link', { name: SHARED.name })).toHaveLength(1);
+    expect(within(menu).queryByRole('link', { name: STUB_WORKSPACE.name })).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'nothing like it');
+    expect(within(menu).getByRole('status')).toHaveTextContent(/no workspace matches/i);
+
+    await user.clear(search);
+    await user.type(search, 'shared{Enter}');
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: 'Workspaces' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Workspace menu' })).toHaveTextContent(SHARED.name);
+  });
+
   it('opens the personal workspace from a legacy route when no accessible workspace was remembered', async () => {
     stubCoreApi({ workspaces: [SHARED, STUB_WORKSPACE] });
     renderAt(<App />, '/graph');
