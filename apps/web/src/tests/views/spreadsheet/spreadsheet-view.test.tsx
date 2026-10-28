@@ -6,13 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
 import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
-import type {
-  EffectiveSchema,
-  Item,
-  PropertyDefinition,
-  View,
-} from '../../../views/core/container-model';
+import { aView, property, schemaOf } from '../../view-fixture';
+import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
 import type { ContainerData } from '../../../views/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
 
@@ -41,14 +36,6 @@ function item(
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   };
-}
-
-function property(key: string, label: string, type: string): PropertyDefinition {
-  return { key, label, type, options: [], required: false };
-}
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
 }
 
 const SCHEMA = schemaOf(property('status', 'Status', 'text'), property('count', 'Count', 'number'));

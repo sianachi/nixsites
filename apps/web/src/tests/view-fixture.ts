@@ -1,4 +1,4 @@
-import type { View } from '../views/core/container-model';
+import type { EffectiveSchema, PropertyDefinition, View } from '../views/core/container-model';
 
 /**
  * A view, with only the fields a test cares about spelled out.
@@ -35,4 +35,14 @@ export function aView(overrides: Partial<View> = {}): View {
     filters: [],
     ...overrides,
   };
+}
+
+/** A text-ish property definition with nothing configured. */
+export function property(key: string, label: string, type: string): PropertyDefinition {
+  return { key, label, type, options: [], required: false };
+}
+
+/** An effective schema that declares exactly these properties. */
+export function schemaOf(...properties: readonly PropertyDefinition[]): EffectiveSchema {
+  return { properties: [...properties], declared: [...properties], inherit: true };
 }

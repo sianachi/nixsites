@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
 import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aView, schemaOf } from '../../view-fixture';
 import type {
   EffectiveSchema,
   PropertyDefinition,
@@ -26,10 +26,6 @@ function property(
   overrides: Partial<PropertyDefinition> = {},
 ): PropertyDefinition {
   return { key, label, type, options: [], required: false, ...overrides };
-}
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
 }
 
 const SCHEMA = schemaOf(

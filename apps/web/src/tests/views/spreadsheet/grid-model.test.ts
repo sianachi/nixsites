@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { rangeToTsv } from '../../../views/sheet/clipboard';
-import type {
-  EffectiveSchema,
-  Item,
-  PropertyDefinition,
-} from '../../../views/core/container-model';
+import type { Item } from '../../../views/core/container-model';
 import {
   cellDisplay,
   cellText,
@@ -18,7 +14,7 @@ import {
   resolveColumns,
   type SpreadsheetColumn,
 } from '../../../views/spreadsheet/grid-model';
-import { aView } from '../../view-fixture';
+import { aView, property, schemaOf } from '../../view-fixture';
 
 function item(id: string, title: string, properties: Record<string, unknown> = {}): Item {
   return {
@@ -34,14 +30,6 @@ function item(id: string, title: string, properties: Record<string, unknown> = {
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   };
-}
-
-function property(key: string, label: string, type: string): PropertyDefinition {
-  return { key, label, type, options: [], required: false };
-}
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
 }
 
 const SCHEMA = schemaOf(

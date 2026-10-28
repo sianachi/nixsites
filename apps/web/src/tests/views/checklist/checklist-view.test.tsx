@@ -4,14 +4,9 @@ import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import { aView } from '../../view-fixture';
+import { aView, property, schemaOf } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
-import type {
-  EffectiveSchema,
-  Item,
-  PropertyDefinition,
-  View,
-} from '../../../views/core/container-model';
+import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
 import { ChecklistView, resolveDoneProperty } from '../../../views/checklist/checklist-view';
 import { ItemSelectionContext } from '../../../views/core/item-selection-context';
 import { useItemSelection } from '../../../views/core/use-item-selection';
@@ -38,17 +33,9 @@ function item(
   };
 }
 
-function property(key: string, label: string, type: string): PropertyDefinition {
-  return { key, label, type, options: [], required: false };
-}
-
 const DONE = property('done', 'Done', 'checkbox');
 const WHERE = property('aisle', 'Aisle', 'text');
 const COMPLETE = property('completion', 'Complete', 'completion');
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
-}
 
 const LINES = [
   item('milk', 'Milk', 1, { done: true, aisle: 'Dairy' }),

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
 import { stubViewport } from '../../stub-viewport';
-import { aView } from '../../view-fixture';
+import { aView, property, schemaOf } from '../../view-fixture';
 import type {
   EffectiveSchema,
   Item,
@@ -44,14 +44,6 @@ function item(
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   };
-}
-
-function property(key: string, label: string, type: string): PropertyDefinition {
-  return { key, label, type, options: [], required: false };
-}
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
 }
 
 function viewOf(overrides: Partial<View> = {}): View {

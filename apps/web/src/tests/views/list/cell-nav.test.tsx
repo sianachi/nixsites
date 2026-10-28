@@ -3,14 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import type {
-  EffectiveSchema,
-  Item,
-  PropertyDefinition,
-} from '../../../views/core/container-model';
+import type { Item, PropertyDefinition } from '../../../views/core/container-model';
 import { ListView } from '../../../views/list/list-view';
 import { aContainer } from '../../container-fixture';
 import type { ContainerData } from '../../../views/core/use-container';
+import { schemaOf } from '../../view-fixture';
 
 /**
  * Alt+Arrow cell-to-cell movement (`../../../views/list/cell-nav.ts`), driven the way a keyboard
@@ -49,10 +46,6 @@ function property(
   options: readonly string[] = [],
 ): PropertyDefinition {
   return { key, label, type, options: [...options], required: false };
-}
-
-function schemaOf(...properties: PropertyDefinition[]): EffectiveSchema {
-  return { properties, declared: properties, inherit: true };
 }
 
 function containerData(overrides: Partial<ContainerData> = {}): ContainerData {

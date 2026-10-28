@@ -4,7 +4,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '../../render-with-router';
-import { aView } from '../../view-fixture';
+import { aView, schemaOf } from '../../view-fixture';
 import { stubViewport } from '../../stub-viewport';
 import { BoardView } from '../../../views/board/board-view';
 import type {
@@ -44,10 +44,6 @@ const OWNER: PropertyDefinition = {
   options: [],
   required: false,
 };
-
-function schemaOf(...properties: readonly PropertyDefinition[]): EffectiveSchema {
-  return { properties: [...properties], declared: [...properties], inherit: true };
-}
 
 function itemOf(overrides: Partial<Item> & { id: string; title: string }): Item {
   return {
