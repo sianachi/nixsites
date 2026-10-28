@@ -289,6 +289,26 @@ public interface IItemTree
         DateTimeOffset at,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Moves every child of an item (trashed ones too) to a new parent, after that parent's
+    /// current children and in their present order, rewriting the closure for all of them at once.
+    /// </summary>
+    /// <param name="workspaceId">The workspace.</param>
+    /// <param name="itemId">The item whose children move.</param>
+    /// <param name="newParentId">The new parent, or <see langword="null"/> for the workspace root.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="at">When.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when the tree and its closure agree again.</returns>
+    public ValueTask ReparentChildrenAsync(
+        WorkspaceId workspaceId,
+        ItemId itemId,
+        ItemId? newParentId,
+        Nix.Domain.Identity.PrincipalId actor,
+        DateTimeOffset at,
+        CancellationToken cancellationToken) =>
+        ValueTask.FromException(new NotSupportedException("This item tree does not support moving children in bulk."));
+
     /// <summary>Transfers a subtree within this tenant without replacing its durable identities.</summary>
     /// <returns>Null on success, or a safe reason the atomic transfer was refused.</returns>
     public ValueTask<string?> TransferWorkspaceAsync(

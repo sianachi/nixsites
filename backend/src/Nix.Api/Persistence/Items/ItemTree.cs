@@ -505,6 +505,48 @@ public sealed partial class ItemTree(
     }
 
     /// <inheritdoc />
+    public async ValueTask ReparentChildrenAsync(
+        WorkspaceId workspaceId,
+        ItemId itemId,
+        ItemId? newParentId,
+        PrincipalId actor,
+        DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
+        // ReparentAsync's detach, attach and update, once for the whole set. The children are
+        // found by their parent pointer, so the update that changes it comes last.
+        await _sql.ExecuteAsync(
+            ClosureSql.DetachChildren,
+            [Uuid("tenant_id", Tenant.Value), Uuid("workspace_id", workspaceId.Value), Uuid("item_id", itemId.Value)],
+            cancellationToken).ConfigureAwait(false);
+
+        if (newParentId is { } parentId)
+        {
+            await _sql.ExecuteAsync(
+                ClosureSql.AttachChildren,
+                [
+                    Uuid("tenant_id", Tenant.Value),
+                    Uuid("workspace_id", workspaceId.Value),
+                    Uuid("item_id", itemId.Value),
+                    Uuid("parent_id", parentId.Value),
+                ],
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await _sql.ExecuteAsync(
+            ClosureSql.ReparentChildren,
+            [
+                Uuid("tenant_id", Tenant.Value),
+                Uuid("workspace_id", workspaceId.Value),
+                Uuid("item_id", itemId.Value),
+                NullableUuid("parent_id", newParentId?.Value),
+                Uuid("actor", actor.Value),
+                new NpgsqlParameter("at", NpgsqlDbType.TimestampTz) { Value = at },
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async ValueTask SetLifecycleAsync(
         ItemId id,
         ItemLifecycleState state,

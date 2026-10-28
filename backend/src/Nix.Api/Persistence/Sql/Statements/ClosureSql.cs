@@ -313,4 +313,87 @@ public static class ClosureSql
           AND item.template_id IS NULL
           AND item.lifecycle_state = 'active'
         """;
+
+    /// <summary>
+    /// <see cref="DetachSubtree"/> for every child of <c>@item_id</c> at once.
+    /// </summary>
+    /// <remarks>
+    /// The edges to cut are those from a moved subtree to the parent's own ancestors (the parent
+    /// included), which is every ancestor outside the subtrees; naming them through the parent's
+    /// closure rows keeps the match to a handful of ancestors instead of the moved set.
+    /// </remarks>
+    public const string DetachChildren = """
+        DELETE FROM item_closure
+        WHERE tenant_id = @tenant_id
+          AND descendant_id IN (
+              SELECT descendant_id
+              FROM item_closure
+              WHERE tenant_id = @tenant_id
+                AND ancestor_id IN (
+                    SELECT id FROM item
+                    WHERE tenant_id = @tenant_id AND workspace_id = @workspace_id AND parent_id = @item_id)
+          )
+          AND ancestor_id IN (
+              SELECT ancestor_id
+              FROM item_closure
+              WHERE tenant_id = @tenant_id AND descendant_id = @item_id
+          )
+        """;
+
+    /// <summary>
+    /// <see cref="AttachSubtree"/> for every child of <c>@item_id</c> at once, under
+    /// <c>@parent_id</c>. Runs while the children still name <c>@item_id</c> as their parent.
+    /// </summary>
+    public const string AttachChildren = """
+        INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
+        SELECT subtree.descendant_id,
+               destination.ancestor_id,
+               @tenant_id,
+               @workspace_id,
+               destination.depth + subtree.depth + 1
+        FROM item_closure AS destination
+        CROSS JOIN item_closure AS subtree
+        WHERE destination.descendant_id = @parent_id
+          AND destination.tenant_id = @tenant_id
+          AND subtree.tenant_id = @tenant_id
+          AND subtree.ancestor_id IN (
+              SELECT id FROM item
+              WHERE tenant_id = @tenant_id AND workspace_id = @workspace_id AND parent_id = @item_id)
+        """;
+
+    /// <summary>
+    /// Moves every child of <c>@item_id</c> to <c>@parent_id</c> (NULL for the root) in order of
+    /// position, giving each the next sibling position the way one
+    /// <see cref="NextSiblingSequence"/> call per child would.
+    /// </summary>
+    /// <remarks>
+    /// Only active, non-template children count towards the running maximum, as in
+    /// <see cref="NextSiblingSequence"/>; a trashed child therefore takes the position the next
+    /// active one then shares, exactly as the one-at-a-time allocation did.
+    /// </remarks>
+    public const string ReparentChildren = """
+        UPDATE item
+        SET parent_id = @parent_id,
+            seq = moved.seq,
+            last_modified_by = @actor,
+            last_modified_at = @at
+        FROM (
+            SELECT child.id,
+                   (SELECT coalesce(max(sibling.seq), 0)
+                    FROM item AS sibling
+                    WHERE sibling.tenant_id = @tenant_id
+                      AND sibling.workspace_id = @workspace_id
+                      AND sibling.parent_id IS NOT DISTINCT FROM @parent_id
+                      AND sibling.template_id IS NULL
+                      AND sibling.lifecycle_state = 'active')
+                   + 1000 * (1 + count(*) FILTER (WHERE child.template_id IS NULL AND child.lifecycle_state = 'active')
+                                 OVER (ORDER BY child.seq, child.id ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)) AS seq
+            FROM item AS child
+            WHERE child.tenant_id = @tenant_id
+              AND child.workspace_id = @workspace_id
+              AND child.parent_id = @item_id
+        ) AS moved
+        WHERE item.id = moved.id
+          AND item.tenant_id = @tenant_id
+        """;
 }

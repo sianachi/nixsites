@@ -62,19 +62,7 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
         }
         var context = _session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var now = _clock.GetUtcNow();
-        while (true)
-        {
-            var children = await _tree.ListChildrenAsync(item.WorkspaceId, item.Id, true, null, ListItemsHandler.MaximumPageSize, cancellationToken).ConfigureAwait(false);
-            if (children.Count == 0)
-            {
-                break;
-            }
-            foreach (var child in children)
-            {
-                var seq = await _tree.NextSiblingSequenceAsync(item.WorkspaceId, item.ParentId, cancellationToken).ConfigureAwait(false);
-                await _tree.ReparentAsync(child.Id, item.ParentId, seq, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
-            }
-        }
+        await _tree.ReparentChildrenAsync(item.WorkspaceId, item.Id, item.ParentId, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
         await _tree.SetLifecycleAsync(item.Id, ItemLifecycleState.Purged, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
         return Result.Success(item.Id);
     }

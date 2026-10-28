@@ -188,6 +188,93 @@ public sealed class ItemClosurePropertyTests : IAsyncLifetime
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Moving_all_children_at_once_matches_moving_them_one_by_one(bool underParent)
+    {
+        var workspace = WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId);
+        var actor = PrincipalId.From(M0SchemaSeed.Alpha.PrincipalId);
+        var at = DateTimeOffset.UtcNow;
+        var parents = new Dictionary<ItemId, ItemId?> { [ItemId.From(M0SchemaSeed.Alpha.ItemId)] = null };
+        var container = ItemId.Create();
+        ItemId? destination = null;
+        var children = new List<ItemId>();
+
+        var build = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (build.ConfigureAwait(false))
+        {
+            var tree = build.Resolve<IItemTree>();
+            async Task<ItemId> AddAsync(ItemId? parent, long seq)
+            {
+                var id = ItemId.Create();
+                await tree.InsertAsync(NewItem(id, workspace, parent, actor, seq), Cancellation);
+                parents[id] = parent;
+                return id;
+            }
+
+            if (underParent)
+            {
+                destination = await AddAsync(null, 1000);
+                await AddAsync(destination, 5000);
+                await AddAsync(destination, 9000);
+            }
+
+            parents[container] = destination;
+            await tree.InsertAsync(NewItem(container, workspace, destination, actor, 2000), Cancellation);
+            for (var index = 0; index < 6; index++)
+            {
+                children.Add(await AddAsync(container, 1000 + index * 1000));
+            }
+
+            await AddAsync(children[0], 1000);
+            await AddAsync(children[2], 1000);
+            foreach (var trashed in new[] { children[1], children[4] })
+            {
+                await tree.SetLifecycleAsync(trashed, ItemLifecycleState.Deleted, actor, at, Cancellation);
+            }
+
+            await build.CommitAsync(Cancellation);
+        }
+
+        async Task<List<string>> RunAsync(bool batch)
+        {
+            var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+            await using (work.ConfigureAwait(false))
+            {
+                var tree = work.Resolve<IItemTree>();
+                if (batch)
+                {
+                    await tree.ReparentChildrenAsync(workspace, container, destination, actor, at, Cancellation);
+                }
+                else
+                {
+                    foreach (var child in await tree.ListChildrenAsync(workspace, container, true, null, 200, Cancellation))
+                    {
+                        var seq = await tree.NextSiblingSequenceAsync(workspace, destination, Cancellation);
+                        await tree.ReparentAsync(child.Id, destination, seq, actor, at, Cancellation);
+                    }
+                }
+
+                foreach (var child in children)
+                {
+                    parents[child] = destination;
+                }
+
+                await AssertClosureMatchesAsync(work, parents, batch ? "after the batch" : "after one by one");
+                var siblings = (await tree.ListChildrenAsync(workspace, destination, true, null, 200, Cancellation))
+                    .Select(item => $"{item.Id}|{item.ParentId}|{item.Seq}|{item.LifecycleState}|{item.LastModifiedAt.UtcTicks}")
+                    .ToList();
+                return siblings;
+            }
+        }
+
+        var oneByOne = await RunAsync(batch: false);
+        var all = await RunAsync(batch: true);
+        Assert.Equal(oneByOne.Order(StringComparer.Ordinal), all.Order(StringComparer.Ordinal));
+        Assert.Contains(all, line => line.StartsWith(children[0].ToString(), StringComparison.Ordinal));
+    }
+
     private static Item NewItem(
         ItemId id,
         WorkspaceId workspace,
