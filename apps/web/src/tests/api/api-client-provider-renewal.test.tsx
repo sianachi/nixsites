@@ -8,9 +8,9 @@ import { z } from 'zod';
 
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
 import { AuthProvider } from '../../auth/auth-provider';
-import { useSessionStore } from '../../auth/session-store';
-import * as bodies from '../../editor/body-cache';
-import * as drafts from '../../editor/draft-journal';
+import { useSessionStore } from '../../lib/session-store';
+import * as bodies from '../../lib/body-cache';
+import * as drafts from '../../lib/draft-journal';
 import { memoryStorage } from '../memory-storage';
 import { json } from '../json-response';
 

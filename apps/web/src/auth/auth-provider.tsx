@@ -3,18 +3,18 @@ import { clearAudioPositions } from '../lib/audio-positions';
 import { clearRecentItems } from '../lib/recent-items';
 import { forgetThumbnails } from '../lib/thumbnail-cache';
 import { clearPendingDailyTemplate } from '../lib/pending-daily-template';
-import { clearPetDrafts } from '../pets/pet-drafts';
+import { clearPetDrafts } from '../lib/pet-drafts';
 import {
   bodyCacheAccountEpoch,
   bodyCacheCleanupCurrent,
   clearBodyCache,
   openBodyCache,
   sealAccountBodies,
-} from '../editor/body-cache';
+} from '../lib/body-cache';
 import { clearFrecency } from '../lib/frecency';
 import { clearSuggestionDismissals } from '../lib/suggestion-dismissals';
-import { clearDrafts } from '../editor/draft-journal';
-import { clearInterruptedImport } from '../import/import-interrupted-notice';
+import { clearDrafts } from '../lib/draft-journal';
+import { clearInterruptedImport } from '../lib/import-interrupted-notice';
 import {
   createContext,
   use,
@@ -29,7 +29,7 @@ import { z } from 'zod';
 
 import { browserStorage } from '../lib/browser-storage';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
-import { useSessionStore, type SessionProfile } from './session-store';
+import { useSessionStore, type SessionProfile } from '../lib/session-store';
 
 /**
  * Unsubscribes this device from push and tells Core to forget the subscription, before the

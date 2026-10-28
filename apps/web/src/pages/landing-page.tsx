@@ -2,7 +2,7 @@ import { Icon, Text } from '@nix/ui';
 import { FileText, type LucideIcon } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
-import { selectIsBusy, useSessionStore } from '../auth/session-store';
+import { selectIsBusy, useSessionStore } from '../lib/session-store';
 import { ThemeChoice } from '../theme/theme-choice';
 import { findViewKind } from '../views/core/view-kinds';
 

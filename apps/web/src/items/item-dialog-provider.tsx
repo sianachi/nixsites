@@ -7,7 +7,7 @@ import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { LocalViewStateContext } from '../views/core/view-state';
 import type { WorkspaceTree } from './use-workspace-tree';
-import { ItemDialogContext } from './item-dialog-context';
+import { ItemDialogContext } from '../lib/item-dialog-context';
 
 export function ItemDialogProvider({
   tree,

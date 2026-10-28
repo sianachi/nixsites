@@ -5,7 +5,7 @@ import * as syncProtocol from 'y-protocols/sync';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BodyCacheRecord, BodyCacheStore } from '../../editor/body-cache';
+import type { BodyCacheRecord, BodyCacheStore } from '../../lib/body-cache';
 import {
   flushLocalDraftsForAccount,
   startCollabSync,
@@ -24,8 +24,8 @@ import {
   sealAccountBodies,
   reopenRefusedItemBodies,
   writeBodyCache,
-} from '../../editor/body-cache';
-import { clearDrafts, listDraftScopes, readDrafts, writeDraft } from '../../editor/draft-journal';
+} from '../../lib/body-cache';
+import { clearDrafts, listDraftScopes, readDrafts, writeDraft } from '../../lib/draft-journal';
 
 /**
  * The local copy's promises: it paints before the connection opens without being sent back as an

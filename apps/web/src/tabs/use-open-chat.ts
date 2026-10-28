@@ -7,7 +7,7 @@ import { usePaneIndex } from '../panes/pane-context';
 import { CHAT_PARAM, focusPane, paneParam } from '../panes/pane-params';
 import { parsePanes } from '../panes/pane-state';
 import { ownerOfItem } from './tab-ownership';
-import { chatTabId, useTabStore } from './tab-store';
+import { chatTabId, useTabStore } from '../lib/tab-store';
 
 /**
  * Opens the companion conversation as a tab in a pane: `null` is the workspace conversation, an

@@ -22,7 +22,7 @@ import {
   readViewSuggestionSetting,
   useChoiceOrderPreference,
   useViewSuggestionPreference,
-} from '../../../settings/editor/suggestion-preferences';
+} from '../../../lib/suggestion-preferences';
 
 describe('editor preferences', () => {
   beforeEach(() => {

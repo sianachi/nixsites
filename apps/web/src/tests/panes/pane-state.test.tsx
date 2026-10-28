@@ -3,10 +3,11 @@ import { MemoryRouter, useLocation, useNavigate, useSearchParams } from 'react-r
 import { describe, expect, it, vi } from 'vitest';
 
 import { stubViewport } from '../stub-viewport';
-import { clearViewState, parseFilters, parseViewState } from '../../views/core/view-state';
+import { parseFilters, parseViewState } from '../../views/core/view-state';
 import { closePaneParams, parsePanes, usePanes } from '../../panes/pane-state';
 import {
   PANE_LIMIT,
+  clearViewState,
   paneFilterPrefix,
   paneParam,
   parseSizes,

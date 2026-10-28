@@ -7,6 +7,7 @@ import { AutomationsPage } from './automations/automations-page';
 import { ApiClientProvider } from './api/api-client-provider';
 import { AppErrorBoundary } from './components/error-boundary';
 import { DailyNotePage } from './daily-notes/daily-note-page';
+import { NewChatNote } from './views/chat/new-chat-note';
 import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
@@ -108,7 +109,10 @@ export function AppRoutes(): ReactElement {
       <Route element={<RequireSession />}>
         <Route element={<AccessibleWorkspacesProvider />}>
           <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
-          <Route path="/workspaces/groups/:groupId" element={<WorkspaceGroupPage />} />
+          <Route
+            path="/workspaces/groups/:groupId"
+            element={<WorkspaceGroupPage NewChatNote={NewChatNote} />}
+          />
           <Route path="/workspaces/archived" element={<ArchivedWorkspacesPage />} />
           <Route
             path="/w/:workspaceId"

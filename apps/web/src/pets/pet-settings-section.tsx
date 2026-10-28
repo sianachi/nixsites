@@ -9,7 +9,7 @@ import { Button, Checkbox, Field, Icon, Input, Menu, Select, Text, Textarea } fr
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { useId, useState, type ReactElement } from 'react';
 import { newPet, petCatalog } from './catalog';
-import { usePetSettings } from './use-pet-settings';
+import { usePetSettings } from '../api/use-pet-settings';
 import { PetAvatar } from './pet-avatar';
 import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';

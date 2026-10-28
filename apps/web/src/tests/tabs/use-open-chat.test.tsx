@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation, useSearchParams } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { PaneProvider } from '../../panes/pane-context';
-import { useTabStore } from '../../tabs/tab-store';
+import { useTabStore } from '../../lib/tab-store';
 import { useOpenChat } from '../../tabs/use-open-chat';
 import { stubViewport } from '../stub-viewport';
 

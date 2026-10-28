@@ -1,4 +1,4 @@
-import { writeStored } from '../editor/stored-setting';
+import { writeStored } from '../lib/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 
 const LAST_WORKSPACE_KEY = 'nix.last-workspace-id';

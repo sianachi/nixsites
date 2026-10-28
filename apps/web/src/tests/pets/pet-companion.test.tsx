@@ -17,7 +17,7 @@ const petSettings = vi.hoisted(
     provider: 'chatgpt',
   }),
 );
-vi.mock('../../pets/use-pet-settings', () => ({
+vi.mock('../../api/use-pet-settings', () => ({
   usePetSettings: () => ({
     saved: {
       revision: 1,

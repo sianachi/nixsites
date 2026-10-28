@@ -18,7 +18,7 @@ vi.mock('../../auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: canvasHarness.getAccessToken }),
 }));
 
-vi.mock('../../auth/session-store', () => ({
+vi.mock('../../lib/session-store', () => ({
   useSessionStore: (selector: (state: { profile: { name: string } }) => unknown) =>
     selector({ profile: { name: 'Test person' } }),
 }));

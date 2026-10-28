@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { browserSessionStorage } from '../../lib/browser-storage';
-import { chatTabId, useTabStore } from '../../tabs/tab-store';
+import { chatTabId, useTabStore } from '../../lib/tab-store';
 
 function tabs(pane: number): readonly { itemId: string; pinned: boolean }[] {
   return useTabStore.getState().byPane[pane] ?? [];

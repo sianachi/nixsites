@@ -1,6 +1,6 @@
 import { noteColumn } from '../layout/regions';
 import { PaneViewport } from '../layout/pane-viewport';
-import type { DraftState } from './draft-journal';
+import type { DraftState } from '../lib/draft-journal';
 import { MobileNoteToolbar, type MobileNoteDetails } from './mobile-note-toolbar';
 import { useDrawerNavigation } from '../layout/viewport';
 import { nixEditingExtensions, readWidth } from '@nix/editor-schema';
@@ -43,7 +43,7 @@ import { ItemBlockView, PageBreakView, NoteSourcesProvider } from './note-block-
 import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { BubbleMenu } from './bubble-menu';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import { EditorToolbar } from './toolbar';
@@ -62,7 +62,7 @@ import { useMentionPreference } from './mention-preference';
 import { setMentionContext, UnlinkedMentions } from './unlinked-mentions';
 import { MoveBlock } from './move-block';
 import { useKeyboardModeStore } from './keyboard-mode-store';
-import { documentScope } from './body-cache';
+import { documentScope } from '../lib/body-cache';
 import { FRAGMENT_NAME, startCollabSync, type CollabSync, type SyncState } from './collab-sync';
 import { PresenceList } from './presence-list';
 import { remoteCursor } from './remote-cursor';

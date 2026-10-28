@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { clearViewState } from '../../views/core/view-state';
-import { parseSelectedItem, selectedItemSearch } from '../../routing/selected-item';
+import { clearViewState, parseSelectedItem } from '../../panes/pane-params';
+import { selectedItemSearch } from '../../routing/selected-item';
 
 describe('the selected item parameter', () => {
   it('reads an identifier out of the URL', () => {

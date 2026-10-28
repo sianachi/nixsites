@@ -1,5 +1,5 @@
-import * as bodies from '../../editor/body-cache';
-import * as drafts from '../../editor/draft-journal';
+import * as bodies from '../../lib/body-cache';
+import * as drafts from '../../lib/draft-journal';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IDBFactory } from 'fake-indexeddb';
@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../../auth/auth-provider';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import * as registerServiceWorker from '../../pwa/register-service-worker';
 import { workspaces } from '@nix/api-client';
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';

@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 
 import { parsePanes } from '../../panes/pane-state';
 import { tabsForPane } from '../../tabs/tab-ownership';
-import { useTabStore } from '../../tabs/tab-store';
+import { useTabStore } from '../../lib/tab-store';
 import { useTabTransfer } from '../../tabs/use-tab-transfer';
 
 const ALPHA = '0a0a0a0a-0000-4000-8000-00000000000a';

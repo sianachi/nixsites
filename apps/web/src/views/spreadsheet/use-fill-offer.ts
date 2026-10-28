@@ -1,7 +1,7 @@
 import { type CellRange } from '@nix/sheet';
 import { useState } from 'react';
 
-import { useViewSuggestionPreference } from '../../settings/editor/suggestion-preferences';
+import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
 import { type Item } from '../core/container-model';
 import { seriesFillOffer, type SpreadsheetColumn } from './grid-model';
 

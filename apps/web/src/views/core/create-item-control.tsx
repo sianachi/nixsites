@@ -2,7 +2,7 @@ import { Icon, Input, Text } from '@nix/ui';
 import { Plus } from 'lucide-react';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { useViewSuggestionPreference } from '../../settings/editor/suggestion-preferences';
+import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
 import type { CreateSuggestSource } from '../suggest/suggest-source';
 import type { PropertyValue } from './container-model';
 

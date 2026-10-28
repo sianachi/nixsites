@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { writeStored } from '../../editor/stored-setting';
+import { writeStored } from '../../lib/stored-setting';
 import { browserStorage } from '../../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../../lib/ui-settings-sync';
 import { useCapabilities } from '../../session/capabilities-context';

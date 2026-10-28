@@ -4,7 +4,7 @@ import { PANE_LIMIT } from '../panes/pane-params';
 import { closePaneParams, parsePanes } from '../panes/pane-state';
 import { writeSelectedItem } from '../routing/selected-item';
 import { ownerOfItem, tabsForPane } from './tab-ownership';
-import { isChatTabId, type OpenTab } from './tab-store';
+import { isChatTabId, type OpenTab } from '../lib/tab-store';
 
 export const TAB_TRANSFER_MIME = 'application/x-nix-document-tab';
 

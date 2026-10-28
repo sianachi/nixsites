@@ -5,8 +5,8 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
 import { useAuth } from '../../auth/auth-provider';
-import { useSessionStore } from '../../auth/session-store';
-import { documentScope } from '../../editor/body-cache';
+import { useSessionStore } from '../../lib/session-store';
+import { documentScope } from '../../lib/body-cache';
 import { startCollabSync, type CollabSync, type SyncState } from '../../editor/collab-sync';
 import { PresenceList } from '../../editor/presence-list';
 import { DocumentIssueDialog, LOCAL_COPY_STALE } from '../../editor/document-issue-dialog';

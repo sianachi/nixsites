@@ -7,7 +7,7 @@ import {
   onBodyForgetting,
   readBodyCache,
   type BodyForgetting,
-} from './body-cache';
+} from '../lib/body-cache';
 import { FRAGMENT_NAME } from './collab-sync';
 
 /**

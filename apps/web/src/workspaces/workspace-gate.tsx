@@ -1,4 +1,4 @@
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { readLastLocation } from '../pwa/last-location';
 import { Button } from '@nix/ui';
 import type { ReactNode } from 'react';

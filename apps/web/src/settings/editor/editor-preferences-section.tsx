@@ -12,7 +12,10 @@ import { KeyboardModeSchema, useKeyboardModeStore } from '../../editor/keyboard-
 import { LINK_MENTION_SHORTCUT } from '../../keyboard/shortcut-registry';
 import { formatShortcut } from '../../lib/shortcuts';
 import { clearSuggestionDismissals } from '../../lib/suggestion-dismissals';
-import { useChoiceOrderPreference, useViewSuggestionPreference } from './suggestion-preferences';
+import {
+  useChoiceOrderPreference,
+  useViewSuggestionPreference,
+} from '../../lib/suggestion-preferences';
 
 const modeHint = {
   standard: 'The editor and platform shortcuts shown throughout Nix',

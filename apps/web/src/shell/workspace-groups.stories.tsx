@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { ApiClientOverrideProvider } from '../api/api-client-provider';
 import { WorkspaceProvider } from '../workspaces/workspace-context';
 import { WorkspaceSwitcher } from '../workspaces/workspace-switcher';
+import { NewChatNote } from '../views/chat/new-chat-note';
 import { WorkspaceGroupsPage, WorkspaceGroupPage } from '../workspaces/workspace-group-page';
 
 export default { title: 'Nix/Workspaces/Groups', parameters: { layout: 'fullscreen' } };
@@ -85,7 +86,7 @@ function Example({
                 {hub ? (
                   <WorkspaceGroupsPage />
                 ) : management ? (
-                  <WorkspaceGroupPage />
+                  <WorkspaceGroupPage NewChatNote={NewChatNote} />
                 ) : (
                   <WorkspaceSwitcher />
                 )}
@@ -106,7 +107,7 @@ function Example({
                   workspaceRemoved: noop,
                 }}
               >
-                <WorkspaceGroupPage />
+                <WorkspaceGroupPage NewChatNote={NewChatNote} />
               </WorkspaceProvider>
             }
           />

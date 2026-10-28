@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { browserStorage } from '../lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '../lib/ui-settings-sync';
-import { writeStored } from './stored-setting';
+import { writeStored } from '../lib/stored-setting';
 
 /**
  * Whether the note editor underlines item titles written in the text but not linked: a

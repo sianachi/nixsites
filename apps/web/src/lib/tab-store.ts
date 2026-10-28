@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { z } from 'zod';
 
-import { browserSessionStorage } from '../lib/browser-storage';
+import { browserSessionStorage } from './browser-storage';
 
 /**
  * Which documents are open in each pane's tab strip, held in memory rather than the address.

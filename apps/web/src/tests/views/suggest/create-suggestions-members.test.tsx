@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CreateItemControl } from '../../../views/core/create-item-control';
 import type { PropertyDefinition } from '../../../views/core/container-model';
-import { useViewSuggestionPreference } from '../../../settings/editor/suggestion-preferences';
+import { useViewSuggestionPreference } from '../../../lib/suggestion-preferences';
 import { WORKSPACE_ID, anItem } from './suggest-fixtures';
 
 /**

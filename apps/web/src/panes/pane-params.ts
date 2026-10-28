@@ -161,3 +161,76 @@ export function focusPane(index: number): void {
     document.getElementById(paneElementId(index))?.focus();
   });
 }
+
+// Parameter names and URL helpers below sit here, not with their features, so routing and views can
+// both build on panes without panes reaching back up to them.
+
+export const VIEW_PARAM = 'view';
+export const MODE_PARAM = 'mode';
+export const SORT_PARAM = 'sort';
+export const DIRECTION_PARAM = 'dir';
+export const SEARCH_PARAM = 'search';
+
+/**
+ * Strips every parameter that belongs to the item being left.
+ *
+ * A view id, a sort and a filter set all name properties of one item's configuration. Carried onto
+ * a different item they are at best meaningless - that item has no view by that id, so it falls
+ * back to its body - and at worst wrong, because two items can easily both have a view called
+ * `by-status` and the second would open on a board nobody asked for, sorted by a property it may
+ * not have.
+ *
+ * Exported so item navigation can call it. It lives here rather than there because this module owns
+ * the parameter names, and a second list of them somewhere else is a list that goes stale.
+ *
+ * **Scoped to one pane.** Deleting the unprefixed names unconditionally - which is what this did
+ * before there were panes, and what a naive port would have kept doing - means navigating in the
+ * second pane silently discards the first pane's view, sort and filters. That is the single most
+ * likely defect in this whole area, so it has a test of its own.
+ */
+export function clearViewState(params: URLSearchParams, pane = 0): void {
+  params.delete(paneParam(VIEW_PARAM, pane));
+  params.delete(paneParam(MODE_PARAM, pane));
+  params.delete(paneParam(SORT_PARAM, pane));
+  params.delete(paneParam(DIRECTION_PARAM, pane));
+  params.delete(paneParam(SEARCH_PARAM, pane));
+
+  const prefix = paneFilterPrefix(pane);
+  for (const name of [...params.keys()]) {
+    if (name.startsWith(prefix)) {
+      params.delete(name);
+    }
+  }
+}
+
+export const SELECTED_ITEM_PARAM = 'item';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Reads one raw parameter value. Exported so it is testable without a router.
+ *
+ * A value that is not an identifier is dropped rather than passed on: the URL is the most hostile
+ * runtime boundary there is, anybody can type into it, and a malformed one should leave the shell
+ * with nothing open rather than sending a nonsense identifier to Core.
+ */
+export function parseSelectedItem(raw: string | null, pane = 0): string | null {
+  if (raw === null || raw.length === 0) {
+    return null;
+  }
+
+  if (!UUID.test(raw)) {
+    console.warn(
+      `Ignoring unrecognised "${paneParam(SELECTED_ITEM_PARAM, pane)}" search parameter:`,
+      raw,
+    );
+    return null;
+  }
+
+  return raw;
+}
+
+/** The name of the parameter naming a pane's open item. */
+export function selectedItemParam(pane: number): string {
+  return paneParam(SELECTED_ITEM_PARAM, pane);
+}

@@ -1,7 +1,7 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor } from '@tiptap/react';
 
-import { readDevicePreference } from '../../pets/device-preferences';
+import { readDevicePreference } from '../../lib/device-preferences';
 
 import { MAX_SELECTION_CHARS, truncateUtf8, utf8Length, type InlineKind } from './inline-ai-stream';
 

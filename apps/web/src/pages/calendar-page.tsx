@@ -1,6 +1,6 @@
 import { useHiddenItems } from '../items/use-hidden-items';
 import { publishNotice } from '../lib/notices';
-import { useItemDialog } from '../items/item-dialog-context';
+import { useItemDialog } from '../lib/item-dialog-context';
 import { Button, Text } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';

@@ -3,7 +3,7 @@ import { type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
-import { useSessionStore, type Unreachable } from '../auth/session-store';
+import { useSessionStore, type Unreachable } from '../lib/session-store';
 import { useWebConfig } from '../lib/web-config';
 import { LandingPage } from '../pages/landing-page';
 import { LoginPage } from '../pages/login-page';

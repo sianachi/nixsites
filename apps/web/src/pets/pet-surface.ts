@@ -1,4 +1,4 @@
-import { type PetSurface } from './device-preferences';
+import { type PetSurface } from '../lib/device-preferences';
 
 /** Whether a tap on the launcher goes to the chat page rather than opening the floating panel. */
 export function chatOpensAsPage(surface: PetSurface, narrow: boolean): boolean {

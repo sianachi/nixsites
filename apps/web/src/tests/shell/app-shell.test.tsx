@@ -6,7 +6,7 @@ import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { stubViewport } from '../stub-viewport';
 import { App } from '../../app';
-import { recordInterruptedImport } from '../../import/import-interrupted-notice';
+import { recordInterruptedImport } from '../../lib/import-interrupted-notice';
 
 /**
  * The shell's information architecture.

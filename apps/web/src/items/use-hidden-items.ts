@@ -1,6 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import {
   hiddenItemsKey,
   hiddenItemsRevision,

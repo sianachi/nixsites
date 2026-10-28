@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router';
 import { announce } from '../a11y/announcer';
 import { paneElementId } from '../panes/pane-params';
 import { planTabTransfer, type TabTransferPayload, type TabTransferRefusal } from './tab-transfer';
-import { useTabStore } from './tab-store';
+import { useTabStore } from '../lib/tab-store';
 
 const REFUSAL_COPY: Readonly<Record<TabTransferRefusal, string>> = {
   'same-pane': 'That tab is already in this pane.',

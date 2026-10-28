@@ -2,8 +2,8 @@ import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import { useSessionStore } from '../auth/session-store';
-import { bodyCacheAccountEpoch, openBodyCache } from '../editor/body-cache';
+import { useSessionStore } from '../lib/session-store';
+import { bodyCacheAccountEpoch, openBodyCache } from '../lib/body-cache';
 import { browserStorage } from '../lib/browser-storage';
 import { vi } from 'vitest';
 import { memoryStorage } from './memory-storage';

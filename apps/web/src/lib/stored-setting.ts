@@ -1,4 +1,4 @@
-import { browserStorage } from '../lib/browser-storage';
+import { browserStorage } from './browser-storage';
 
 /**
  * Writes one browser-local preference, or removes it when `value` is null (only the alternative

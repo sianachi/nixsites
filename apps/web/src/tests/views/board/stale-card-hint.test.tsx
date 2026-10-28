@@ -7,7 +7,7 @@ import { aView } from '../../view-fixture';
 import { BoardView } from '../../../views/board/board-view';
 import type { Item, PropertyDefinition } from '../../../views/core/container-model';
 import { clearSuggestionDismissals } from '../../../lib/suggestion-dismissals';
-import { useViewSuggestionPreference } from '../../../settings/editor/suggestion-preferences';
+import { useViewSuggestionPreference } from '../../../lib/suggestion-preferences';
 import { anItem } from '../suggest/suggest-fixtures';
 import { memoryStorage } from '../../memory-storage';
 

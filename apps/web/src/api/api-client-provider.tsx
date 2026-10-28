@@ -2,8 +2,8 @@ import { createNixClient, NixApiError, type NixClient } from '@nix/api-client';
 import { createContext, use, useEffect, useMemo, type ReactNode } from 'react';
 
 import { useAuth } from '../auth/auth-provider';
-import { useSessionStore } from '../auth/session-store';
-import { bodyCacheAccountEpoch } from '../editor/body-cache';
+import { useSessionStore } from '../lib/session-store';
+import { bodyCacheAccountEpoch } from '../lib/body-cache';
 import { connectCacheInvalidationChannel } from './cache-invalidation-channel';
 
 const ApiClientContext = createContext<NixClient | null>(null);

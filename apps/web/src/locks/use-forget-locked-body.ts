@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-import { useSessionStore } from '../auth/session-store';
-import { reopenRefusedItemBodies, sealItemBodies } from '../editor/body-cache';
+import { useSessionStore } from '../lib/session-store';
+import { reopenRefusedItemBodies, sealItemBodies } from '../lib/body-cache';
 import { useOptionalWorkspace } from '../workspaces/workspace-context';
 import type { ItemLockView } from './use-item-lock';
 

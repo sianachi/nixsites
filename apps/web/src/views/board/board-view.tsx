@@ -17,7 +17,7 @@ import { CreateItemControl } from '../core/create-item-control';
 import { staleMembers, type StaleMember } from '../../lib/suggest/staleness';
 import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
 import { suggestSourceOf } from '../suggest/suggest-source';
-import { useViewSuggestionPreference } from '../../settings/editor/suggestion-preferences';
+import { useViewSuggestionPreference } from '../../lib/suggestion-preferences';
 import type { ContainerData } from '../core/use-container';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import { useViewState } from '../core/view-state';

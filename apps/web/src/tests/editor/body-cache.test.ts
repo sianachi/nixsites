@@ -20,7 +20,7 @@ import {
   readBodyCache,
   writeBodyCache,
   type BodyCacheRecord,
-} from '../../editor/body-cache';
+} from '../../lib/body-cache';
 import { frecencyScores, recordPick } from '../../lib/frecency';
 import { readDismissals, rememberDismissal } from '../../lib/suggestion-dismissals';
 import { memoryStorage } from '../memory-storage';
@@ -193,7 +193,7 @@ describe('the document body store', () => {
     await writeBodyCache(record(refused));
     await sealBodyCache(refused);
     vi.resetModules();
-    const anotherTab = await import('../../editor/body-cache');
+    const anotherTab = await import('../../lib/body-cache');
 
     expect(anotherTab.bodyCacheAdmits(refused)).toBe(false);
     await anotherTab.writeBodyCache(record(refused));

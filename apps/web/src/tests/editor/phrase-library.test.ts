@@ -12,7 +12,7 @@ import {
   pruneBodyCache,
   sealItemBodies,
   writeBodyCache,
-} from '../../editor/body-cache';
+} from '../../lib/body-cache';
 import { GhostText, setGhostTextContext } from '../../editor/ghost-text';
 import {
   learnBody,

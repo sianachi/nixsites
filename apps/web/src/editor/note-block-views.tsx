@@ -29,7 +29,12 @@ import { useAuth } from '../auth/auth-provider';
 import { useApiClient } from '../api/api-client-provider';
 import { useSelectedItem } from '../routing/selected-item';
 import { startCollabSync, FRAGMENT_NAME, type SyncState, type CollabSync } from './collab-sync';
-import { discardBodyCache, documentScope, onBodyForgetting, sealItemBodies } from './body-cache';
+import {
+  discardBodyCache,
+  documentScope,
+  onBodyForgetting,
+  sealItemBodies,
+} from '../lib/body-cache';
 import {
   useReference,
   useRefreshReference,

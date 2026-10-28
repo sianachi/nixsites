@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PetPage } from '../../pages/pet-page';
-import { chatTabId, useTabStore } from '../../tabs/tab-store';
+import { chatTabId, useTabStore } from '../../lib/tab-store';
 import { stubViewport } from '../stub-viewport';
 import type { PetProfile } from '@nix/api-client';
 
@@ -18,7 +18,7 @@ vi.mock('../../api/api-client-provider', () => ({ useApiClient: () => mock }));
 vi.mock('../../workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));
-vi.mock('../../pets/use-pet-settings', () => ({
+vi.mock('../../api/use-pet-settings', () => ({
   usePetSettings: () => ({
     saved: {
       settings: {

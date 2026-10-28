@@ -7,7 +7,7 @@ import {
   type PetSettingsResponse,
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApiClient } from '../api/api-client-provider';
+import { useApiClient } from './api-client-provider';
 import { isAborted } from '../lib/guards';
 
 interface PetSettingsState {

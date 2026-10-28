@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import * as Y from 'yjs';
 
-import { browserStorage } from '../lib/browser-storage';
-import { clearFrecency } from '../lib/frecency';
-import { clearRecentItems } from '../lib/recent-items';
-import { clearSuggestionDismissals } from '../lib/suggestion-dismissals';
+import { browserStorage } from './browser-storage';
+import { clearFrecency } from './frecency';
+import { clearRecentItems } from './recent-items';
+import { clearSuggestionDismissals } from './suggestion-dismissals';
 
 /**
  * Complete confirmed document copies for the signed-in account. Offline access uses the last

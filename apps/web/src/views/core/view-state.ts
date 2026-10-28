@@ -10,7 +10,16 @@ import { useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { usePaneIndex } from '../../panes/pane-context';
-import { paneFilterPrefix, paneParam } from '../../panes/pane-params';
+import {
+  DIRECTION_PARAM,
+  MODE_PARAM,
+  SEARCH_PARAM,
+  SORT_PARAM,
+  VIEW_PARAM,
+  clearViewState,
+  paneFilterPrefix,
+  paneParam,
+} from '../../panes/pane-params';
 
 /**
  * Which view is on screen, and how it is sorted and filtered - held in the URL.
@@ -30,12 +39,6 @@ import { paneFilterPrefix, paneParam } from '../../panes/pane-params';
  * button with history nobody wanted. Changing view pushes, because Back meaning "the board I was
  * just looking at" is what everybody expects.
  */
-
-const VIEW_PARAM = 'view';
-const MODE_PARAM = 'mode';
-const SORT_PARAM = 'sort';
-const DIRECTION_PARAM = 'dir';
-export const SEARCH_PARAM = 'search';
 
 const SortDirectionSchema = z.enum(['ascending', 'descending']);
 
@@ -137,38 +140,6 @@ export function parseFilters(params: URLSearchParams, pane = 0): readonly ViewFi
   }
 
   return [...byKey].map(([propertyKey, values]) => ({ propertyKey, values }));
-}
-
-/**
- * Strips every parameter that belongs to the item being left.
- *
- * A view id, a sort and a filter set all name properties of one item's configuration. Carried onto
- * a different item they are at best meaningless - that item has no view by that id, so it falls
- * back to its body - and at worst wrong, because two items can easily both have a view called
- * `by-status` and the second would open on a board nobody asked for, sorted by a property it may
- * not have.
- *
- * Exported so item navigation can call it. It lives here rather than there because this module owns
- * the parameter names, and a second list of them somewhere else is a list that goes stale.
- *
- * **Scoped to one pane.** Deleting the unprefixed names unconditionally - which is what this did
- * before there were panes, and what a naive port would have kept doing - means navigating in the
- * second pane silently discards the first pane's view, sort and filters. That is the single most
- * likely defect in this whole area, so it has a test of its own.
- */
-export function clearViewState(params: URLSearchParams, pane = 0): void {
-  params.delete(paneParam(VIEW_PARAM, pane));
-  params.delete(paneParam(MODE_PARAM, pane));
-  params.delete(paneParam(SORT_PARAM, pane));
-  params.delete(paneParam(DIRECTION_PARAM, pane));
-  params.delete(paneParam(SEARCH_PARAM, pane));
-
-  const prefix = paneFilterPrefix(pane);
-  for (const name of [...params.keys()]) {
-    if (name.startsWith(prefix)) {
-      params.delete(name);
-    }
-  }
 }
 
 /** Reads the whole view state out of a query string. Exported for testing without a router. */

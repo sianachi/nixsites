@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '../components/states/status-panels';
 import { publishNotice } from '../lib/notices';
-import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { ConfirmationDialog } from './settings/confirmation-dialog';
 import { InviteSection } from './settings/invite-section';
 import { PeopleList } from './settings/people-list';
@@ -13,7 +12,12 @@ import { WorkspaceOverview } from './settings/workspace-overview';
 import { useWorkspace } from './workspace-context';
 import { useWorkspaceAdministration } from './use-workspace-administration';
 
-export function WorkspaceManagementSection(): ReactNode {
+// The daily-notes switch belongs to settings/, which sits above workspaces/, so the page passes it in.
+export function WorkspaceManagementSection({
+  dailyNotesSwitch,
+}: {
+  readonly dailyNotesSwitch: ReactNode;
+}): ReactNode {
   const { workspace } = useWorkspace();
   const [inviteeQuery, setInviteeQuery] = useState('');
   const administration = useWorkspaceAdministration(inviteeQuery);
@@ -44,7 +48,7 @@ export function WorkspaceManagementSection(): ReactNode {
         <Text id="workspace-options-heading" variant="h4" as="h3">
           Options
         </Text>
-        <DailyNotesSwitch />
+        {dailyNotesSwitch}
         <SharingSwitches />
         {workspace.canRename ? null : (
           <Text variant="note">Only a workspace owner or an administrator can change these.</Text>

@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import * as Y from 'yjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as bodyCache from '../../editor/body-cache';
-import * as drafts from '../../editor/draft-journal';
+import * as bodyCache from '../../lib/body-cache';
+import * as drafts from '../../lib/draft-journal';
 
 const ALICE = 'cleanup-alice';
 const BOB = 'cleanup-bob';
@@ -171,7 +171,7 @@ describe('offline cleanup lifecycle', () => {
     'preserves $subject after a delayed $operation from an earlier account lifecycle',
     async ({ operation, subject }) => {
       vi.resetModules();
-      const otherBodyCache = await import('../../editor/body-cache');
+      const otherBodyCache = await import('../../lib/body-cache');
       const gate = delayCleanupConnections();
       const work =
         operation === 'seal'
@@ -200,8 +200,8 @@ describe('offline cleanup lifecycle', () => {
 
   it('keeps a newly admitted account’s bodies and drafts during delayed cleanup', async () => {
     vi.resetModules();
-    const otherBodyCache = await import('../../editor/body-cache');
-    const otherDrafts = await import('../../editor/draft-journal');
+    const otherBodyCache = await import('../../lib/body-cache');
+    const otherDrafts = await import('../../lib/draft-journal');
     const gate = delayCleanupConnections();
     const cleanup = Promise.all([
       otherBodyCache.clearBodyCache(ALICE),
@@ -226,8 +226,8 @@ describe('offline cleanup lifecycle', () => {
   it('cancels an old cleanup after signing back into the same account and retains its fresh notes', async () => {
     const previousEpoch = bodyCache.bodyCacheAccountEpoch(ALICE);
     vi.resetModules();
-    const otherBodyCache = await import('../../editor/body-cache');
-    const otherDrafts = await import('../../editor/draft-journal');
+    const otherBodyCache = await import('../../lib/body-cache');
+    const otherDrafts = await import('../../lib/draft-journal');
     const gate = delayCleanupConnections();
     const cleanup = Promise.allSettled([
       otherBodyCache.clearBodyCache(ALICE),

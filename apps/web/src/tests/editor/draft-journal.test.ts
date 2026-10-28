@@ -11,13 +11,8 @@ import {
   readDrafts,
   writeDraft,
   listDraftScopes,
-} from '../../editor/draft-journal';
-import {
-  clearBodyCache,
-  documentScope,
-  openBodyCache,
-  sealItemBodies,
-} from '../../editor/body-cache';
+} from '../../lib/draft-journal';
+import { clearBodyCache, documentScope, openBodyCache, sealItemBodies } from '../../lib/body-cache';
 
 function storage(): DraftJournalStore {
   const records = new Map<string, DraftRecord>();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { writeStored } from '../editor/stored-setting';
+import { writeStored } from '../lib/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 
 const savedLocation = z.object({ workspaceId: z.uuid(), path: z.string().max(4096) });

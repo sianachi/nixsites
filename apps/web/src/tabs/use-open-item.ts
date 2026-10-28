@@ -7,7 +7,7 @@ import { focusPane } from '../panes/pane-params';
 import { BESIDE_REFUSAL_COPY, parsePanes, usePanes, type BesideRefusal } from '../panes/pane-state';
 import { useSelectedItem, writeSelectedItem } from '../routing/selected-item';
 import { ownerOfItem } from './tab-ownership';
-import { useTabStore, type OpenTab } from './tab-store';
+import { useTabStore, type OpenTab } from '../lib/tab-store';
 import { withViewTransition } from '../lib/view-transition';
 
 /**

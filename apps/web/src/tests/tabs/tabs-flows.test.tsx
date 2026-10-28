@@ -7,7 +7,7 @@ import { App } from '../../app';
 import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
 import { renderAt, signedIn } from '../render-with-router';
 import { useTabOrientationStore } from '../../tabs/tab-orientation-store';
-import { useTabStore } from '../../tabs/tab-store';
+import { useTabStore } from '../../lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { stubViewport } from '../stub-viewport';
 

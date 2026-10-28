@@ -3,10 +3,10 @@ import { useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 
 import { useAuth } from '../auth/auth-provider';
-import { useSessionStore } from '../auth/session-store';
-import { bodyCacheAccountEpoch } from '../editor/body-cache';
+import { useSessionStore } from '../lib/session-store';
+import { bodyCacheAccountEpoch } from '../lib/body-cache';
 import { flushLocalDraftsForAccount } from '../editor/collab-sync';
-import { listDraftScopes } from '../editor/draft-journal';
+import { listDraftScopes } from '../lib/draft-journal';
 
 interface SignOutIntent {
   readonly subject: string;

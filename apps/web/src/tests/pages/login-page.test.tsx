@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import { setZenMode } from '../../lib/zen-mode';
 import { LoginPage } from '../../pages/login-page';
 

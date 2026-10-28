@@ -7,8 +7,8 @@ import {
   indexedBodyCache,
   onBodyForgetting,
   type BodyCacheStore,
-} from './body-cache';
-import { createDraftJournal, type DraftState, type DraftRecord } from './draft-journal';
+} from '../lib/body-cache';
+import { createDraftJournal, type DraftState, type DraftRecord } from '../lib/draft-journal';
 import { SCHEMA_VERSION } from '@nix/editor-schema';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';

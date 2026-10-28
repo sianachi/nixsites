@@ -14,6 +14,7 @@ import { ApiSection } from '../settings/api/api-section';
 import { McpSection } from '../settings/mcp/mcp-section';
 import { CalendarsSection } from '../settings/calendars/calendars-section';
 import { DailyNotesSection } from '../settings/daily-notes/daily-notes-section';
+import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { EditorPreferencesSection } from '../settings/editor/editor-preferences-section';
 import { PreferencesSection } from '../settings/preferences/PreferencesSection';
 import { NotificationsSection } from '../settings/notifications/notifications-section';
@@ -72,7 +73,7 @@ const settingsSections: readonly { id: SettingsTab; label: string; group: Group;
 function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
   switch (props.id) {
     case 'workspace':
-      return <WorkspaceManagementSection />;
+      return <WorkspaceManagementSection dailyNotesSwitch={<DailyNotesSwitch />} />;
     case 'editor':
       return <EditorPreferencesSection />;
     case 'preferences':

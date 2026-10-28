@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import { writeStored } from '../../editor/stored-setting';
-import { browserStorage } from '../../lib/browser-storage';
-import { registerSyncedSetting, settingChanged } from '../../lib/ui-settings-sync';
+import { writeStored } from './stored-setting';
+import { browserStorage } from './browser-storage';
+import { registerSyncedSetting, settingChanged } from './ui-settings-sync';
 
 /**
  * The two off switches for the model-free suggestions outside the note body: browser-local

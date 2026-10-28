@@ -13,7 +13,7 @@ import {
   SlashMenu,
 } from '../../editor/slash-menu';
 import { frecencyScores, recordPick } from '../../lib/frecency';
-import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';
 
 describe('the slash menu', () => {

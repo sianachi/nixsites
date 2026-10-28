@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useWorkspaceCalendar } from '../calendar/use-workspace-calendar';
-import { writeStored } from '../editor/stored-setting';
+import { writeStored } from '../lib/stored-setting';
 import { browserStorage } from '../lib/browser-storage';
 import { useMobileKeyboard } from '../layout/use-mobile-keyboard';
 import { useNarrowViewport } from '../layout/viewport';

@@ -5,7 +5,7 @@ import { expect, it, vi } from 'vitest';
 import { TemplateLibraryPage } from '../../templates/library/template-library-page';
 
 const settings = vi.hoisted(() => ({ enabled: true }));
-vi.mock('../../pets/use-pet-settings', () => ({
+vi.mock('../../api/use-pet-settings', () => ({
   usePetSettings: () => ({ saved: { settings: { enabled: settings.enabled } } }),
 }));
 vi.mock('../../templates/template-library-context', () => ({

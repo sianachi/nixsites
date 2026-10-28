@@ -2,9 +2,8 @@ import { readLastWorkspaceId } from './last-workspace';
 import { conversations, type Conversation } from '@nix/api-client';
 import { useApiClient } from '../api/api-client-provider';
 import { Button, Input, Text, focusRing } from '@nix/ui';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import { NewChatNote } from '../views/chat/new-chat-note';
 import { paneScroller } from '../layout/regions';
 import { addGroup } from './arrangement';
 import { useAccessibleWorkspaces } from './workspace-context';
@@ -72,7 +71,17 @@ export function WorkspaceGroupsPage(): ReactNode {
   );
 }
 
-export function WorkspaceGroupPage(): ReactNode {
+// New-chat lives in views/, which sits above workspaces/, so the route passes it in.
+export function WorkspaceGroupPage({
+  NewChatNote,
+}: {
+  readonly NewChatNote: ComponentType<{
+    readonly groupId: string;
+    readonly sourceWorkspaceIds: readonly string[];
+    readonly initialPrompt: string;
+    readonly onClose: () => void;
+  }>;
+}): ReactNode {
   const { groupId = '' } = useParams();
   const { workspaces, status } = useAccessibleWorkspaces();
   const { arrangement, loading, error } = useWorkspaceArrangement();

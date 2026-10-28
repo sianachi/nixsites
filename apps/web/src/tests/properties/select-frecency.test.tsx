@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PropertyInput } from '../../properties/property-input';
 import { frecencyScores, recordPick } from '../../lib/frecency';
-import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
 import type { PropertyDefinition } from '../../views/core/container-model';
 import { memoryStorage } from '../memory-storage';
 

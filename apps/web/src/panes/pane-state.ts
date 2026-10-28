@@ -3,19 +3,21 @@ import { useSearchParams } from 'react-router';
 
 import { announce } from '../a11y/announcer';
 import { useRoomForAnotherPane } from '../layout/viewport';
-import { parseSelectedItem, selectedItemParam } from '../routing/selected-item';
-import { clearViewState, SEARCH_PARAM } from '../views/core/view-state';
 import {
   CHAT_PARAM,
   PANE_LIMIT,
+  SEARCH_PARAM,
   SIZES_PARAM,
   SPLIT_PARAM,
+  clearViewState,
   focusPane,
   paneFilterPrefix,
   paneParam,
   parseChatScope,
+  parseSelectedItem,
   parseSizes,
   parseSplit,
+  selectedItemParam,
   sizesToParam,
   splitToParam,
   type SplitOrientation,

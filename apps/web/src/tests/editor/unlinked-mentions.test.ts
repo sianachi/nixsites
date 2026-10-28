@@ -20,7 +20,7 @@ import {
   UnlinkedMentions,
   type MentionLookup,
 } from '../../editor/unlinked-mentions';
-import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';
 
 /**

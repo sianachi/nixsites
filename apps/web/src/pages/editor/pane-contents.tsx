@@ -9,7 +9,7 @@ import type { ShellContext } from '../../shell/shell-context';
 import { DocumentTabStrip } from '../../tabs/document-tab-strip';
 import { useTabOrientationStore } from '../../tabs/tab-orientation-store';
 import type { TabTransferPayload } from '../../tabs/tab-transfer';
-import { useTabStore } from '../../tabs/tab-store';
+import { useTabStore } from '../../lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { Text } from '@nix/ui';
 import { useWorkspace } from '../../workspaces/workspace-context';

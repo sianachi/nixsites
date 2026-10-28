@@ -2,7 +2,7 @@ import { Blueprint, Button, Icon, Text } from '@nix/ui';
 import { ArrowRight } from 'lucide-react';
 import { useLayoutEffect, type ReactNode } from 'react';
 
-import { selectIsBusy, useSessionStore } from '../auth/session-store';
+import { selectIsBusy, useSessionStore } from '../lib/session-store';
 import { claimZenSurface, toggleZenMode, useZenActive } from '../lib/zen-mode';
 
 export interface LoginPageProps {

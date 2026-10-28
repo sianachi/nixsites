@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserSessionStorage } from '../lib/browser-storage';
+import { browserSessionStorage } from './browser-storage';
 
 /**
  * A short record of an import torn down mid-run, so the person who caused it - not necessarily the
@@ -12,9 +12,6 @@ import { browserSessionStorage } from '../lib/browser-storage';
  * exactly the moment identity is uncertain, and someone else signing in next on a shared machine -
  * even a co-member of the same workspace - must not be shown another person's import. A deliberate
  * sign-out clears it outright (see `clearInterruptedImport`).
- *
- * Lives in `import/` rather than `lib/` because the shape - what an interrupted *import* looked
- * like - belongs to this feature; only the storage accessor itself is a shared leaf.
  */
 
 const STORAGE_KEY = 'nix:import-interrupted';

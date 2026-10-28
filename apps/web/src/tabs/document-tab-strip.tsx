@@ -28,7 +28,7 @@ import {
   type TabTransferPayload,
 } from './tab-transfer';
 import { useTabOrientationStore } from './tab-orientation-store';
-import { chatScopeOfTab, chatTabId, isChatTabId, useTabStore } from './tab-store';
+import { chatScopeOfTab, chatTabId, isChatTabId, useTabStore } from '../lib/tab-store';
 import { useDocumentTabs } from './use-document-tabs';
 import { useOpenChat } from './use-open-chat';
 import { useOpenItem } from './use-open-item';

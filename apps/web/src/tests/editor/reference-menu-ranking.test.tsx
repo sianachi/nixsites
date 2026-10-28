@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '../../api/api-client-provider';
 import { CANDIDATE_POOL, linkFrecencyNamespace, ReferenceMenu } from '../../editor/reference-menu';
 import { frecencyScores, recordPick } from '../../lib/frecency';
-import { useChoiceOrderPreference } from '../../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../../lib/suggestion-preferences';
 import { memoryStorage } from '../memory-storage';
 
 /**

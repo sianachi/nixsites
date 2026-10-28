@@ -17,8 +17,8 @@ import {
   type PathReason,
   type PlannedNode,
 } from './import-plan';
-import { useSessionStore } from '../auth/session-store';
-import { recordInterruptedImport } from './import-interrupted-notice';
+import { useSessionStore } from '../lib/session-store';
+import { recordInterruptedImport } from '../lib/import-interrupted-notice';
 import { runImportPlan, undoImport, type ImportRunReport } from './import-run';
 import { useWorkspace } from '../workspaces/workspace-context';
 

@@ -9,10 +9,10 @@ import { EmptyPanel, ErrorPanel, LoadingPanel } from '../components/states/statu
 import { useNarrowViewport } from '../layout/viewport';
 import { paneColumn } from '../layout/regions';
 import { useZenActive } from '../lib/zen-mode';
-import { chatTabId, useTabStore } from '../tabs/tab-store';
+import { chatTabId, useTabStore } from '../lib/tab-store';
 import { Conversation } from '../pets/conversation/conversation';
 import { usePetRuntime } from '../pets/use-pet-runtime';
-import { usePetSettings } from '../pets/use-pet-settings';
+import { usePetSettings } from '../api/use-pet-settings';
 import { useWorkspace } from '../workspaces/workspace-context';
 
 // On this page nothing sits behind a launcher, so there is no badge for a decision to set.

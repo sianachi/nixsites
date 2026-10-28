@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '../api/api-client-provider';
 import { WorkspaceProvider } from '../workspaces/workspace-context';
+import { DailyNotesSwitch } from '../settings/daily-notes/daily-notes-switch';
 import { WorkspaceManagementSection } from '../workspaces/workspace-management-section';
 
 export default { title: 'Nix/Workspaces/Settings', parameters: { layout: 'fullscreen' } };
@@ -113,7 +114,7 @@ function Example(): ReactNode {
                 }}
               >
                 <div className="p-4">
-                  <WorkspaceManagementSection />
+                  <WorkspaceManagementSection dailyNotesSwitch={<DailyNotesSwitch />} />
                 </div>
               </WorkspaceProvider>
             }

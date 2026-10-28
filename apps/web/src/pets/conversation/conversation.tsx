@@ -10,7 +10,7 @@ import { useApiClient } from '../../api/api-client-provider';
 import { useNarrowViewport } from '../../layout/viewport';
 import { useZenActive } from '../../lib/zen-mode';
 import { usePaneIndex } from '../../panes/pane-context';
-import { selectedItemParam } from '../../routing/selected-item';
+import { selectedItemParam } from '../../panes/pane-params';
 import { NewChatNote } from '../../views/chat/new-chat-note';
 import { SaveInsightNote } from '../../views/chat/save-insight-note';
 import { petProviderLabels } from '../catalog';
@@ -21,10 +21,10 @@ import {
   writeConversationModel,
   writeReadWithoutAsking,
   writeWorkspaceAccess,
-} from '../device-preferences';
+} from '../../lib/device-preferences';
 import { toolOutcomeSentence } from '../work-tools/receipts';
 import { type PetAnimationState } from '../pet-avatar';
-import { usePetDraft } from '../pet-drafts';
+import { usePetDraft } from '../../lib/pet-drafts';
 import { PetConnectionPanel } from '../pet-connection-panel';
 import { type UsePetRuntimeResult } from '../use-pet-runtime';
 import { Composer } from './composer/composer';

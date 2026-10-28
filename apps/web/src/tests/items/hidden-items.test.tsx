@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import {
   hiddenItemsKey,
   readHiddenItems,

@@ -2,8 +2,14 @@ import { useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { usePaneIndex } from '../panes/pane-context';
-import { CHAT_PARAM, paneParam } from '../panes/pane-params';
-import { clearViewState } from '../views/core/view-state';
+import {
+  CHAT_PARAM,
+  SELECTED_ITEM_PARAM,
+  clearViewState,
+  paneParam,
+  parseSelectedItem,
+  selectedItemParam,
+} from '../panes/pane-params';
 
 /**
  * Which item is open, held in the URL.
@@ -20,38 +26,6 @@ import { clearViewState } from '../views/core/view-state';
  * first - whose parameter is the plain `item` this has always used. So every existing link keeps
  * working and every existing caller is unchanged; a second pane simply addresses `item2`.
  */
-
-export const SELECTED_ITEM_PARAM = 'item';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Reads one raw parameter value. Exported so it is testable without a router.
- *
- * A value that is not an identifier is dropped rather than passed on: the URL is the most hostile
- * runtime boundary there is, anybody can type into it, and a malformed one should leave the shell
- * with nothing open rather than sending a nonsense identifier to Core.
- */
-export function parseSelectedItem(raw: string | null, pane = 0): string | null {
-  if (raw === null || raw.length === 0) {
-    return null;
-  }
-
-  if (!UUID.test(raw)) {
-    console.warn(
-      `Ignoring unrecognised "${paneParam(SELECTED_ITEM_PARAM, pane)}" search parameter:`,
-      raw,
-    );
-    return null;
-  }
-
-  return raw;
-}
-
-/** The name of the parameter naming a pane's open item. */
-export function selectedItemParam(pane: number): string {
-  return paneParam(SELECTED_ITEM_PARAM, pane);
-}
 
 /** Builds the search string for an item, for use as a <Link> target. */
 export function selectedItemSearch(itemId: string): string {

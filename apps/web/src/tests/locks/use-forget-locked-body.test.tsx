@@ -1,8 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '../../auth/session-store';
-import * as bodies from '../../editor/body-cache';
+import { useSessionStore } from '../../lib/session-store';
+import * as bodies from '../../lib/body-cache';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import * as workspaces from '../../workspaces/workspace-context';
 

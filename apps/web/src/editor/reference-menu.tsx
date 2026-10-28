@@ -12,7 +12,7 @@ import type { Editor } from '@tiptap/react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { frecencyScores, recordPick } from '../lib/frecency';
-import { choiceOrderOn } from '../settings/editor/suggestion-preferences';
+import { choiceOrderOn } from '../lib/suggestion-preferences';
 import { rankReferences } from '../lib/suggest/rank-references';
 import {
   fetchCandidates,

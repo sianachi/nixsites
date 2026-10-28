@@ -12,7 +12,7 @@ import { usePanes } from '../panes/pane-state';
 import { usePaneCycling } from '../panes/use-pane-cycling';
 import type { ShellContext } from '../shell/shell-context';
 import type { TabTransferPayload } from '../tabs/tab-transfer';
-import { useTabStore } from '../tabs/tab-store';
+import { useTabStore } from '../lib/tab-store';
 import { useTabTransfer } from '../tabs/use-tab-transfer';
 import { useTemplateLibrary } from '../templates/template-library-context';
 import { PaneContents } from './editor/pane-contents';

@@ -1,5 +1,5 @@
 import type { PaneState } from '../panes/pane-state';
-import { chatTabId, itemIsPinned, type OpenTab } from './tab-store';
+import { chatTabId, itemIsPinned, type OpenTab } from '../lib/tab-store';
 
 /**
  * Finds the one addressed pane that owns a document.

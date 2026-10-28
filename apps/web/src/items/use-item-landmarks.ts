@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { useWorkspace } from '../workspaces/workspace-context';
 import { publishNotice } from '../lib/notices';
 import {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { frecencyScores, recordPick } from '../lib/frecency';
 import { rankByScore } from '../lib/suggest/rank';
-import { useChoiceOrderPreference } from '../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../lib/suggestion-preferences';
 import { useOptionalWorkspace } from '../workspaces/workspace-context';
 
 /**

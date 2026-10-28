@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { browserStorage } from '../lib/browser-storage';
-import { writeStored } from './stored-setting';
+import { writeStored } from '../lib/stored-setting';
 
 const KEY = 'nix.mobile-toolbar-visibility';
 export type ToolbarVisibility = 'always' | 'while-writing';

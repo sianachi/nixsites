@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 import { frecencyScores, recordPick } from '../lib/frecency';
-import { useChoiceOrderPreference } from '../settings/editor/suggestion-preferences';
+import { useChoiceOrderPreference } from '../lib/suggestion-preferences';
 import { INLINE_AI_COMMANDS, INLINE_AI_GROUP } from './inline-ai/inline-ai-commands';
 import type { InlineKind } from './inline-ai/inline-ai-stream';
 import {

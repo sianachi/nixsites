@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import { WebConfigContext } from '../../lib/web-config';
 import { stubCoreApi } from '../api-stub';
 import { renderAt } from '../render-with-router';

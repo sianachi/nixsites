@@ -11,7 +11,7 @@ import {
   type DocumentIssue,
 } from '../lib/document-issues';
 import type { SyncState } from './collab-sync';
-import type { DraftState } from './draft-journal';
+import type { DraftState } from '../lib/draft-journal';
 
 export const LOCAL_COPY_STALE = 'local_copy_stale';
 

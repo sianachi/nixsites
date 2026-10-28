@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import { json } from '../json-response';
 
 const auth = vi.hoisted(() => ({

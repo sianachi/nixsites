@@ -10,7 +10,7 @@ import { memo, useEffect, useRef, useState, type ComponentProps, type ReactEleme
 import { readActionReceipt, writeActionReceipt } from '../action-receipts';
 import { writeMayRunWithoutAsking } from '../approval/write-gate';
 import type { EditedRequest } from '../approval/edit-request';
-import { readReadWithoutAsking } from '../device-preferences';
+import { readReadWithoutAsking } from '../../lib/device-preferences';
 import { createFileReader } from '../pet-file-reader';
 import {
   APPLYING_WITHOUT_ASKING,

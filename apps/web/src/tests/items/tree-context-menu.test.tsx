@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '../../api/api-client-provider';
 import { AuthProvider } from '../../auth/auth-provider';
-import { useSessionStore } from '../../auth/session-store';
+import { useSessionStore } from '../../lib/session-store';
 import { browserStorage } from '../../lib/browser-storage';
 import { hiddenItemsKey, writeHiddenItems } from '../../lib/view-hidden-items';
 import { itemLandmarksKey } from '../../lib/item-landmarks';

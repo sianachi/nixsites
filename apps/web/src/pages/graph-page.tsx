@@ -17,7 +17,7 @@ import {
   GraphOpenModeSchema,
   useGraphOpenPreference,
 } from '../graph/graph-open-preference';
-import { useItemDialog } from '../items/item-dialog-context';
+import { useItemDialog } from '../lib/item-dialog-context';
 import { useWorkspaceGraph } from '../graph/use-workspace-graph';
 import { paneScroller } from '../layout/regions';
 import { useNarrowViewport } from '../layout/viewport';

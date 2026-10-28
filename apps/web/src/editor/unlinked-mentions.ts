@@ -14,7 +14,7 @@ import { announce } from '../a11y/announcer';
 import { recordPick } from '../lib/frecency';
 import { candidatesIn, locateMentions, type MentionCandidate } from '../lib/suggest/ref-mentions';
 import { readDismissals, rememberDismissal } from '../lib/suggestion-dismissals';
-import { choiceOrderOn } from '../settings/editor/suggestion-preferences';
+import { choiceOrderOn } from '../lib/suggestion-preferences';
 import { linkedTargets, linkFrecencyNamespace } from './reference-menu';
 import { vimStatusMode } from './vim-motions';
 

@@ -4,9 +4,9 @@ import * as Y from 'yjs';
 import { useNavigate, useParams } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { createCanvasBinding, type CanvasElement } from './canvas-binding';
-import { documentScope } from './body-cache';
+import { documentScope } from '../lib/body-cache';
 import { startCollabSync, type CollabSync, type SyncState } from './collab-sync';
 import { sceneFingerprint } from './nix-canvas-model';
 import { PresenceList } from './presence-list';
@@ -14,7 +14,7 @@ import { DocumentIssueDialog, LOCAL_COPY_STALE } from './document-issue-dialog';
 import { Button, Text } from '@nix/ui';
 import { CanvasBrowser } from './canvas-browser';
 import { useNarrowViewport } from '../layout/viewport';
-import { useItemDialog } from '../items/item-dialog-context';
+import { useItemDialog } from '../lib/item-dialog-context';
 const NixCanvas = lazy(async () => {
   const module = await import('./nix-canvas');
   return { default: module.NixCanvas };

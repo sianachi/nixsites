@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetAnnouncements, useAnnouncement } from '../../a11y/announcer';
 import { PaneProvider } from '../../panes/pane-context';
-import { useTabStore } from '../../tabs/tab-store';
+import { useTabStore } from '../../lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { stubViewport } from '../stub-viewport';
 

@@ -1,6 +1,6 @@
 import { useEffect, type ReactElement } from 'react';
 
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { setZenMode } from '../lib/zen-mode';
 import { LoginPage } from './login-page';
 

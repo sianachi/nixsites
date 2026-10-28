@@ -1,7 +1,7 @@
 import type { PetProfile } from '@nix/api-client';
 
-import { writeStored } from '../editor/stored-setting';
-import { browserStorage } from '../lib/browser-storage';
+import { writeStored } from './stored-setting';
+import { browserStorage } from './browser-storage';
 
 /** One stored value, or null when absent or storage is blocked. */
 function readLocal(key: string): string | null {

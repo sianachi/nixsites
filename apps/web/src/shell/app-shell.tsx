@@ -16,7 +16,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { useAuth } from '../auth/auth-provider';
 import { ImportDialog } from '../import/import-dialog';
-import { consumeInterruptedImportForWorkspace } from '../import/import-interrupted-notice';
+import { consumeInterruptedImportForWorkspace } from '../lib/import-interrupted-notice';
 import { useWorkspaceTree, type TreeItem } from '../items/use-workspace-tree';
 import { announce, useAnnouncement } from '../a11y/announcer';
 import type { ShellContext } from './shell-context';
@@ -32,7 +32,7 @@ import { useOpenItem } from '../tabs/use-open-item';
 import { useOpenDailyOnLaunch } from '../launch/use-open-daily-on-launch';
 import { useUiSettingsSync } from '../settings/shared/use-ui-settings-sync';
 import { DailyCaptureDialog } from '../daily-notes/daily-capture-dialog';
-import { useSessionStore } from '../auth/session-store';
+import { useSessionStore } from '../lib/session-store';
 import { CapabilitiesProvider } from '../session/capabilities-context';
 import { useCurrentPrincipal } from '../session/use-current-principal';
 import { paneClip } from '../layout/regions';

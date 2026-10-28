@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, Text } from '@nix/ui';
 import { useCoarsePointer, useNarrowViewport, useRoomForAnotherPane } from '../../layout/viewport';
 import { useOptionalItemCommands } from '../../items/item-commands-context';
-import { useItemDialog } from '../../items/item-dialog-context';
+import { useItemDialog } from '../../lib/item-dialog-context';
 
 import { EmptyPanel, ErrorPanel } from '../../components/states/status-panels';
 import type { View } from './container-model';
