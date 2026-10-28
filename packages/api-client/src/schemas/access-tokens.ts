@@ -23,8 +23,6 @@ export const accessTokenSchema = z.object({
   lastUsedAt: z.string().nullable(),
 });
 
-export type AccessToken = z.infer<typeof accessTokenSchema>;
-
 export const accessTokenListSchema = z.object({
   tokens: z.array(accessTokenSchema),
 });

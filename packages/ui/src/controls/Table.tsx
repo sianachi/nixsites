@@ -45,7 +45,7 @@ import {
  * get backwards.
  */
 
-export type TableSortDirection = 'ascending' | 'descending';
+type TableSortDirection = 'ascending' | 'descending';
 
 export interface TableSort {
   /** The `key` of the sorted column. */

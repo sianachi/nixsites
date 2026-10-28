@@ -8,14 +8,8 @@
  * hold; a second engine on either side is the bug.
  */
 
-export { type FormulaNode } from './ast.js';
-export {
-  type SheetBudgetReport,
-  type SheetEvaluation,
-  type SheetInput,
-  evaluateSheet,
-} from './engine.js';
-export { SHEET_ITEM_TYPE, SHEET_LIMITS, SHEET_SCHEMA_VERSION, type SheetLimits } from './limits.js';
+export { type SheetBudgetReport, evaluateSheet } from './engine.js';
+export { SHEET_ITEM_TYPE, SHEET_LIMITS, SHEET_SCHEMA_VERSION } from './limits.js';
 export {
   SHEET_CELLS_KEY,
   SHEET_COLUMN_WIDTH,
@@ -24,7 +18,6 @@ export {
   type SheetMeta,
   clampColumnWidth,
   growExtents,
-  readCellEntry,
   readCells,
   readMeta,
   setColumnWidth,
@@ -32,16 +25,12 @@ export {
   sheetMetaMap,
   writeCell,
 } from './model.js';
-export { parseFormula, parseFormulaResult, type FormulaParseResult } from './parser.js';
 export { FORMULA_FUNCTION_NAMES } from './evaluator.js';
 export {
   PROPERTY_FORMULA_HELP,
   PROPERTY_FORMULA_LIMITS,
   type PropertyFormula,
-  type PropertyFormulaEvaluation,
-  type PropertyFormulaLimits,
   type PropertyFormulaPlan,
-  type PropertyReader,
   evaluateFormulaPlan,
   evaluatePropertyFormulas,
   formulaFieldNames,
@@ -49,36 +38,22 @@ export {
   planPropertyFormulas,
 } from './properties.js';
 export {
-  type A1Ref,
   type CellRange,
   type CellRef,
   cellKey,
   columnLetters,
   isInBounds,
-  lettersToColumn,
   normalizeRange,
-  parseA1,
   parseCellKey,
   rangeContains,
 } from './refs.js';
-export {
-  type SheetRejection,
-  type SheetSnapshot,
-  type SheetSnapshotInput,
-  checkSheetDocument,
-  checkSheetSnapshot,
-  sheetSnapshot,
-} from './validate.js';
+export { checkSheetDocument, checkSheetSnapshot, sheetSnapshot } from './validate.js';
 export {
   type CellValue,
   SHEET_ERROR_CODES,
   SHEET_ERROR_HELP,
   type SheetErrorCode,
-  type SheetErrorValue,
-  compareValues,
   formatCellValue,
-  formatNumber,
   isSheetError,
-  literalValue,
   sheetError,
 } from './values.js';

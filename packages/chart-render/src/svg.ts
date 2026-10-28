@@ -45,7 +45,7 @@ export interface ChartTable {
   readonly rows: readonly { readonly label: string; readonly values: readonly string[] }[];
 }
 
-export interface ChartLegendEntry {
+interface ChartLegendEntry {
   readonly label: string;
   /** A 12 by 12 swatch drawn the way the series is. */
   readonly swatch: string;
@@ -75,7 +75,7 @@ const TOP = 8;
 const AXIS = 28;
 const EVERY_LABEL = 6;
 
-export function escapeXml(value: string): string {
+function escapeXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

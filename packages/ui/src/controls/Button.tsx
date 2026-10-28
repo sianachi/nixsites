@@ -65,8 +65,6 @@ import {
  * tablet has a mouse attached.
  */
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'icon';
-
 /**
  * The boxed variants' inset: 1.2 of the design system's third spacing step,
  * exactly as its `.btn` writes it, and derived from `--spacing` so a change of

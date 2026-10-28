@@ -36,8 +36,6 @@ const workspaceQueryRowSchema = z.object({
   group: z.string().nullable(),
 });
 
-export type WorkspaceQueryRow = z.infer<typeof workspaceQueryRowSchema>;
-
 /** One group of a grouped query, in display order. */
 const queryGroupSchema = z.object({
   /** The group's value, or null for "no value". */
@@ -88,8 +86,6 @@ const aggregateGroupSchema = z.object({
   /** How many of them held a value that is not a number and were left out of the fold. */
   skipped: z.int(),
 });
-
-export type AggregateGroup = z.infer<typeof aggregateGroupSchema>;
 
 export const workspaceAggregateSchema = z.object({
   workspaceId: z.uuid(),

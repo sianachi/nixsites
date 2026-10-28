@@ -8,12 +8,5 @@
 
 export * from './model.js';
 export * from './geometry.js';
-export {
-  escapeXml,
-  renderChartSvg,
-  type ChartLegendEntry,
-  type ChartRenderOptions,
-  type ChartTable,
-  type RenderedChart,
-} from './svg.js';
-export type { ChartBucketInput, ChartCellInput, ChartInput, ChartSeriesInput } from './types.js';
+export { renderChartSvg, type ChartTable } from './svg.js';
+export type { ChartInput } from './types.js';

@@ -37,7 +37,7 @@ import { focusRing, inkWashStates } from '../primitives/interaction';
  * prop and not an `as` element: react-router's `Link` takes `to`, so swapping the tag alone would
  * hand it an `href` it ignores and produce a link that goes nowhere.
  */
-export interface NavLinkRenderProps {
+interface NavLinkRenderProps {
   readonly href: string;
   readonly className: string;
   /** Present only on the item the router matched. */
@@ -57,7 +57,7 @@ export interface NavItem {
   readonly icon?: LucideIcon;
 }
 
-export type NavOrientation = 'horizontal' | 'vertical';
+type NavOrientation = 'horizontal' | 'vertical';
 
 export interface NavProps {
   /**

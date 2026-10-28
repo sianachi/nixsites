@@ -54,7 +54,7 @@ export const MARK_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze(
 });
 
 /** The image node existed at version 1; this attribute is only safe from version 3 onward. */
-export const ATTRIBUTE_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze({
+const ATTRIBUTE_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze({
   'image.fileItemId': 3,
   'paragraph.textAlign': 5,
   'heading.textAlign': 5,
@@ -69,7 +69,7 @@ export interface MinimumVersions {
 }
 
 /** The shipped tables. The default for every production caller. */
-export const MIN_VERSIONS: MinimumVersions = Object.freeze({
+const MIN_VERSIONS: MinimumVersions = Object.freeze({
   nodes: NODE_MIN_VERSION,
   marks: MARK_MIN_VERSION,
 });

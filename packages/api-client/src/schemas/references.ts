@@ -4,13 +4,11 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 import { searchHitSchema } from './search.js';
 
-export const referenceResolutionSchema = z.object({
+const referenceResolutionSchema = z.object({
   id: z.uuid(),
   readable: z.boolean(),
   item: searchHitSchema.nullable(),
 });
-
-export type ReferenceResolution = z.infer<typeof referenceResolutionSchema>;
 
 export const referencesSchema = z.object({
   references: z.array(referenceResolutionSchema),
@@ -28,7 +26,7 @@ const _referencesContract = referencesSchema satisfies z.ZodType<
 >;
 void _referencesContract;
 
-export const backlinkSchema = z.object({
+const backlinkSchema = z.object({
   source: searchHitSchema,
   occurrences: z.union([z.int(), z.string().regex(/^-?\d+$/)]),
 });

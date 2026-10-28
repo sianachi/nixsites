@@ -13,13 +13,11 @@ import { searchHitSchema } from './search.js';
 
 const integer = z.union([z.int(), z.string().regex(/^-?\d+$/)]);
 
-export const relatedItemSchema = z.object({
+const relatedItemSchema = z.object({
   item: searchHitSchema,
   /** How many readable, unlocked documents link to both this item and the one asked about. */
   sharedSources: integer,
 });
-
-export type RelatedItem = z.infer<typeof relatedItemSchema>;
 
 export const relatedItemsSchema = z.object({
   /** Most shared sources first, then by title. */
@@ -30,7 +28,7 @@ export const relatedItemsSchema = z.object({
 
 export type RelatedItems = z.infer<typeof relatedItemsSchema>;
 
-export const mentionSchema = z.object({
+const mentionSchema = z.object({
   item: searchHitSchema,
   /** The words that matched, exactly as they appear in the text that was sent (NFC-normalised). */
   phrase: z.string(),

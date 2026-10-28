@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const templateImportDigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
-export const templateImportProfileSchema = z.object({
+const templateImportProfileSchema = z.object({
   kind: z.literal('template'),
   version: z.literal(1),
   key: z.string(),
@@ -21,7 +21,7 @@ export const templateImportPreviewSchema = z.object({
   viewCount: z.number().int().nonnegative(),
 });
 
-export const templateImportResultSchema = z.object({
+const templateImportResultSchema = z.object({
   operationId: z.uuid().nullable(),
   templateId: z.uuid(),
   stableKey: z.string(),

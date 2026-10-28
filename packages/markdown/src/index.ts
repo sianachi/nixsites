@@ -11,20 +11,8 @@
  * Neither constructs a ProseMirror instance at its boundary - plain JSON in, plain JSON out.
  */
 
-export { markdownConverter } from './converter.js';
-export {
-  splitFrontMatter,
-  parseScalar,
-  noteFromMarkdown,
-  type FrontMatterSplit,
-  type NoteFromMarkdown,
-} from './front-matter.js';
-export {
-  EMPTY_MARKDOWN_IMPORT_SCAN,
-  isLocalImageTarget,
-  isPersistableImageTarget,
-  type MarkdownImportScan,
-} from './scan.js';
+export { splitFrontMatter, parseScalar, noteFromMarkdown } from './front-matter.js';
+export { EMPTY_MARKDOWN_IMPORT_SCAN, type MarkdownImportScan } from './scan.js';
 export { documentToMarkdown, escapeInline } from './to-markdown.js';
 export { markdownToDocument, type FromMarkdownResult } from './from-markdown.js';
-export { MARKDOWN_LOSSES, type MarkdownLoss, type ToMarkdownResult } from './losses.js';
+export { type MarkdownLoss } from './losses.js';

@@ -22,7 +22,7 @@ const nonnegativeInt32Schema = z
   .transform(Number)
   .pipe(z.int().nonnegative().max(2_147_483_647));
 
-export const templateOriginSchema = z.enum(['seed', 'user', 'managed']);
+const templateOriginSchema = z.enum(['seed', 'user', 'managed']);
 
 /** A value a template asks for when a person creates a fresh instance. */
 export const templateInputSchema = z
@@ -88,7 +88,7 @@ export const templateInitializationRuleSchema = z.discriminatedUnion('kind', [
     .strict(),
 ]);
 
-export const templateReferenceRuleSchema = z.discriminatedUnion('policy', [
+const templateReferenceRuleSchema = z.discriminatedUnion('policy', [
   z.object({ sourceItemId: z.uuid(), policy: z.literal('retain') }).strict(),
   z.object({ sourceItemId: z.uuid(), policy: z.literal('omit') }).strict(),
   z
@@ -187,7 +187,7 @@ export type TemplateInitializationRule = z.infer<typeof templateInitializationRu
 export type TemplateReferenceRule = z.infer<typeof templateReferenceRuleSchema>;
 export type TemplateInitialization = z.infer<typeof templateInitializationSchema>;
 
-export const templateInputValuesSchema = z
+const templateInputValuesSchema = z
   .record(z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/), z.string().max(4_096))
   .superRefine((values, context) => {
     if (Object.keys(values).length > 100) {
@@ -302,7 +302,7 @@ export const emptyTemplateInitialization: TemplateInitialization = {
   references: [],
 };
 
-export const templateCapabilitiesSchema = z.object({
+const templateCapabilitiesSchema = z.object({
   canEdit: z.boolean(),
   canDelete: z.boolean(),
   canExport: z.boolean(),
@@ -536,7 +536,7 @@ const _templateDetailContract = templateDetailSchema satisfies z.ZodType<Templat
 void _templateDetailContract;
 
 /** The form accepts omitted nullable values; the wire schema normalizes them to explicit nulls. */
-export const templatePreflightInputSchema = z.object({
+const templatePreflightInputSchema = z.object({
   mode: z.enum(['merge', 'create']),
   targetItemId: z.uuid().nullable().optional(),
   parentItemId: z.uuid().nullable().optional(),

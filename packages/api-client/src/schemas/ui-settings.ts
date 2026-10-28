@@ -17,7 +17,7 @@ const settingShapes = {
 } as const;
 
 /** Stored settings: a key the person never set is absent, and keys a newer server adds are dropped. */
-export const uiSettingsSchema = z.object(settingShapes).partial();
+const uiSettingsSchema = z.object(settingShapes).partial();
 
 /** A patch: a value sets the key, `null` deletes it, an absent key is left alone. */
 export const uiSettingsPatchSchema = z.object({

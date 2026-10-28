@@ -18,149 +18,60 @@
  */
 
 export { createNixClient } from './client.js';
-export type {
-  BinaryResult,
-  CallOptions,
-  NixClient,
-  NixClientConfig,
-  PaginateOptions,
-  QueryResult,
-} from './client.js';
+export type { CallOptions, NixClient } from './client.js';
 
-export { defineBinaryQuery, defineCommand, definePagedQuery, defineQuery } from './endpoints.js';
+export { defineCommand, defineQuery } from './endpoints.js';
 export type {
   BinaryQueryEndpoint,
-  BinaryQuerySpec,
   CommandEndpoint,
-  CommandMethod,
-  CommandSpec,
   PagedQueryEndpoint,
-  PagedQuerySpec,
   QueryEndpoint,
-  QueryParameters,
-  QuerySpec,
 } from './endpoints.js';
 
 export {
   NixApiError,
-  NixErrorCode,
   NixErrorKind,
   httpStatusCode,
   isCanceledError,
   isNixApiError,
 } from './errors.js';
-export type { NixApiErrorOptions } from './errors.js';
 
-export { createInMemoryTokenStore, createRefreshCoordinator } from './auth.js';
-export type { RefreshCoordinator, TokenProvider, TokenStore } from './auth.js';
+export { createInMemoryTokenStore } from './auth.js';
+export type { TokenProvider } from './auth.js';
 
-export { cacheKeyToString, createMemoryCacheStore } from './cache.js';
-export type {
-  CacheEntry,
-  CacheKey,
-  CacheReadOptions,
-  CacheReadResult,
-  CacheStore,
-  ServerCache,
-  ServerCacheOptions,
-} from './cache.js';
-
-export type {
-  CacheRevalidateErrorEvent,
-  NixTelemetry,
-  ParseErrorEvent,
-  ParseIssue,
-  RequestErrorEvent,
-} from './telemetry.js';
+export { cacheKeyToString } from './cache.js';
+export type { CacheEntry, CacheKey } from './cache.js';
 
 export {
-  CURSOR_PARAM,
-  PAGE_SIZE_PARAM,
-  cursorPageSchema,
-  itemTypeSchema,
-  itemLifecycleStateSchema,
-  itemSequenceSchema,
   KNOWN_ITEM_TYPES,
   itemChartSchema,
   itemQueryResultsSchema,
   viewConfigurationSchema,
   itemSchema,
-  noContentSchema,
-  problemDetailsSchema,
-  effectiveSchemaSchema,
   propertyDefinitionSchema,
-  searchHitSchema,
-  searchResultsSchema,
-  graphNodeSchema,
-  graphLinkSchema,
-  shelfSchema,
-  currentPrincipalSchema,
-  backlinkSchema,
-  backlinksSchema,
-  referenceResolutionSchema,
-  referencesSchema,
-  mentionSchema,
-  mentionsSchema,
-  relatedItemSchema,
-  relatedItemsSchema,
   emptyTemplateInitialization,
   templateApplicationRequestSchema,
-  templateApplicationResultSchema,
   templateCaptureRequestSchema,
-  templateCaptureResultSchema,
   templateDraftItemPatchSchema,
   templateDraftMetadataPatchSchema,
-  templateDraftSchema,
   templateInitializationRuleSchema,
   templateInitializationSchema,
   templateInputSchema,
-  templateInputValuesSchema,
-  templateReferenceRuleSchema,
-  templateCapabilitiesSchema,
   templateCatalogSchema,
   templateDetailSchema,
-  templateImportDigestSchema,
   templateImportPreviewSchema,
-  templateImportProfileSchema,
-  templateImportResultSchema,
-  templateImportSchema,
-  templateImportUploadSchema,
-  templateItemSchema,
-  templateOriginSchema,
-  templatePreflightInputSchema,
-  templatePreflightRequestSchema,
-  templatePreflightSchema,
   templateSummarySchema,
-  workspaceAggregateSchema,
-  workspaceCalendarSchema,
-  workspaceGraphSchema,
-  workspaceQueryResultsSchema,
-  completeOccurrenceResultSchema,
-  recurrenceFreqSchema,
-  recurrenceRuleSchema,
-  recurrenceWeekdaySchema,
-  setRecurrenceResultSchema,
-  dailyNoteSchema,
   dailyNoteSettingsSchema,
-  workspaceInvitationSchema,
-  workspaceMemberSchema,
-  workspacePrincipalSchema,
-  workspaceSchema,
 } from './schemas/index.js';
 export type {
   CursorPage,
   CalendarEntry,
   EffectiveSchema,
   ChartBucket,
-  ChartCell,
-  ChartSeries,
   ItemChart,
   ItemQueryResults,
-  AggregateGroup,
   QueryGroup,
   WorkspaceAggregate,
-  WorkspaceQueryResults,
-  WorkspaceQueryRow,
   PropertyDefinition,
   ViewConfiguration,
   QueryResultRow,
@@ -168,28 +79,21 @@ export type {
   SearchResults,
   Mention,
   Mentions,
-  RelatedItem,
-  RelatedItems,
   KeptItem,
-  CalendarEntryKind,
   GraphLink,
   GraphNode,
   Item,
   ItemLock,
-  KnownItemType,
   ProblemDetails,
-  Shelf,
   CurrentPrincipal,
   Backlink,
   Backlinks,
-  ReferenceResolution,
   References,
   TemplateInitialization,
   TemplateInitializationRule,
   TemplateInput,
   TemplateReferenceRule,
   TemplateApplicationRequest,
-  TemplateApplicationResult,
   TemplateCaptureRequest,
   TemplateCaptureResult,
   TemplateDraft,
@@ -199,24 +103,16 @@ export type {
   TemplateImportPreview,
   TemplateImportProfile,
   TemplateImportResult,
-  TemplateImportUpload,
   TemplateItem,
   TemplatePreflight,
-  TemplatePreflightInput,
   TemplateSummary,
-  UnplaceableCalendar,
   WorkspaceCalendar,
   MyDay,
-  MyDayCoverageCode,
   MyDayHabitRow,
   MyDayTaskRow,
   WorkspaceGraph,
-  CompleteOccurrenceResult,
   RecurrenceFreq,
-  RecurrenceRule,
   RecurrenceWeekday,
-  SetRecurrenceResult,
-  DailyNote,
   DailyNoteSettings,
   Workspace,
   WorkspaceInvitation,
@@ -241,35 +137,14 @@ export type {
  */
 export type {
   AppendViewSetupRequestContract,
-  CanvasLibraryContract,
-  ChangeWorkspaceMemberRoleRequestContract,
   ContainerViewsContract,
   CreateItemRequestContract,
   CreateStructuredItemRequestContract,
-  CreateWorkspaceInvitationRequestContract,
-  CreateWorkspaceRequestContract,
-  DailyNoteContract,
-  DailyNoteSettingsContract,
-  SaveDailyNoteSettingsRequestContract,
   SetViewsRequestContract,
-  StructuredItemContract,
-  CurrentPrincipalContract,
   EffectiveSchemaContract,
   PropertyDefinitionContract,
-  RecoverWorkspaceRequestContract,
-  RenameWorkspaceRequestContract,
-  TemplateCatalogContract,
-  TemplateDetailContract,
-  TemplateItemContract,
-  TemplatePreflightContract,
-  PetInlineRequestContract,
-  TemplatePreflightRequestContract,
-  TemplateSummaryContract,
   ViewContract,
   ViewRequestContract,
-  WorkspaceInvitationContract,
-  WorkspaceInviteeContract,
-  WorkspaceMemberContract,
 } from './contracts.js';
 
 /**
@@ -280,19 +155,9 @@ export * as accessTokens from './resources/access-tokens.js';
 export * as health from './resources/health.js';
 export * as principal from './resources/principal.js';
 export * as pets from './resources/pets.js';
-export {
-  petProfileSchema,
-  petSettingsSchema,
-  petSettingsResponseSchema,
-  petConnectionSchema,
-  petProviderSchema,
-  petProviderKeySchema,
-  petProvidersResponseSchema,
-} from './schemas/pets.js';
+export { petSettingsSchema, petConnectionSchema, petProviderSchema } from './schemas/pets.js';
 export type {
-  PetProvider,
   PetProviderKey,
-  PetProvidersResponse,
   PetProfile,
   PetSettings,
   PetSettingsResponse,
@@ -300,68 +165,31 @@ export type {
   PetMessage,
 } from './schemas/pets.js';
 export * as workspaceArrangement from './resources/workspace-arrangement.js';
-export {
-  workspaceGroupSchema,
-  workspaceArrangementInputSchema,
-  workspaceArrangementResponseSchema,
-} from './schemas/workspace-arrangement.js';
 export type {
   WorkspaceGroup,
   WorkspaceArrangementInput,
   WorkspaceArrangementResponse,
 } from './schemas/workspace-arrangement.js';
 export * as uiSettings from './resources/ui-settings.js';
-export {
-  uiSettingsSchema,
-  uiSettingsPatchSchema,
-  uiSettingsResponseSchema,
-} from './schemas/ui-settings.js';
-export type { UiSettings, UiSettingsPatch, UiSettingsResponse } from './schemas/ui-settings.js';
+export type { UiSettings, UiSettingsPatch } from './schemas/ui-settings.js';
 export * as notifications from './resources/notifications.js';
-export {
-  preferencesInputSchema,
-  principalPreferencesResponseSchema,
-  notificationKindSchema,
-  notificationDtoSchema,
-  notificationsPageResponseSchema,
-  notificationReadResponseSchema,
-  pushSubscriptionDtoSchema,
-  pushPublicKeyResponseSchema,
-} from './schemas/notifications.js';
 export type {
   PreferencesInput,
   PrincipalPreferencesResponse,
-  NotificationKind,
   NotificationDto,
   NotificationsPageResponse,
-  NotificationReadResponse,
-  PushSubscriptionDto,
-  PushPublicKeyResponse,
 } from './schemas/notifications.js';
 export * as automations from './resources/automations.js';
-export {
-  automationRuleInputSchema,
-  automationRuleResponseSchema,
-  automationListResponseSchema,
-  automationRunResponseSchema,
-  automationRunsPageResponseSchema,
-  automationActionPreviewSchema,
-  automationTestResponseSchema,
-} from './schemas/automations.js';
 export type {
   AutomationRuleInput,
   AutomationRuleResponse,
-  AutomationListResponse,
   AutomationRunResponse,
   AutomationRunsPageResponse,
-  AutomationActionPreview,
   AutomationTestResponse,
 } from './schemas/automations.js';
 export * as calendarSync from './resources/calendar-sync.js';
-export { CALENDAR_PROVIDERS } from './schemas/calendar-sync.js';
 export type {
   CalendarConnection,
-  CalendarConnections,
   CalendarLink,
   CalendarSyncLogEntry,
   ExternalCalendar,
@@ -386,14 +214,7 @@ export * as canvasLibrary from './resources/canvas-library.js';
 export * as itemChart from './resources/item-chart.js';
 export * as itemQuery from './resources/item-query.js';
 export * as workspaceQuery from './resources/workspace-query.js';
-export type {
-  QueryAggregateFunction,
-  QueryFilterRule,
-  QueryPreset,
-  WorkspaceAggregateQuery,
-  WorkspaceQuery,
-  WorkspaceQueryMatch,
-} from './resources/workspace-query.js';
+export type { WorkspaceAggregateQuery, WorkspaceQueryMatch } from './resources/workspace-query.js';
 export * as workspaceCalendar from './resources/workspace-calendar.js';
 export * as myDay from './resources/my-day.js';
 export * as workspaceGraph from './resources/workspace-graph.js';
@@ -406,29 +227,8 @@ export * as imports from './resources/imports.js';
 export * as operations from './resources/operations.js';
 export * as exports from './resources/exports.js';
 export * as plugins from './resources/plugins.js';
-export type {
-  FileDownloadCapability,
-  FileRecord,
-  FileThumbnail,
-  FileThumbnailCapability,
-  FileUpload,
-  FileUploadStatus,
-  FileVersion,
-} from './schemas/files.js';
-export {
-  fileDownloadCapabilitySchema,
-  fileRecordSchema,
-  fileThumbnailCapabilitySchema,
-  fileThumbnailSchema,
-  fileUploadSchema,
-  fileUploadStatusSchema,
-  fileVersionSchema,
-} from './schemas/files.js';
-export type {
-  DocumentImport,
-  DocumentImportPlan,
-  DocumentImportUpload,
-} from './schemas/imports.js';
+export type { FileRecord, FileThumbnail, FileVersion } from './schemas/files.js';
+export type { DocumentImport, DocumentImportPlan } from './schemas/imports.js';
 export type { Operation } from './schemas/operations.js';
 export type {
   Export,
@@ -437,118 +237,56 @@ export type {
   ExportFormatCatalog,
   ExportStatus,
 } from './schemas/exports.js';
-export type {
-  PluginCapability,
-  PluginComponentUpload,
-  PluginInstallation,
-} from './schemas/plugins.js';
-export {
-  pluginCapabilitySchema,
-  pluginComponentUploadSchema,
-  pluginInstallationSchema,
-} from './schemas/plugins.js';
 export {
   exportDownloadCapabilitySchema,
   exportFormatCatalogSchema,
   exportFormatSchema,
-  exportSchema,
   exportStatusSchema,
 } from './schemas/exports.js';
 export * as companionBodies from './resources/companion-bodies.js';
 export * as backups from './resources/backups.js';
-export type { BackupRun, BackupRunList, BackupStep } from './schemas/backups.js';
+export type { BackupRun, BackupStep } from './schemas/backups.js';
 export * as sites from './resources/sites.js';
 export * as tenantRoles from './resources/tenant-roles.js';
-export type { TenantRoleGrant } from './schemas/tenant-roles.js';
-export type {
-  CreateSiteInput,
-  PublishSiteInput,
-  UpdateSiteHostnameInput,
-  UpdateSiteInput,
-} from './resources/sites.js';
+export type { UpdateSiteInput } from './resources/sites.js';
 export type {
   Site,
   SiteBuild,
-  SiteBuildList,
-  SiteBuildStatus,
   SiteDatedCollection,
   SiteApproval,
   SiteApprovalEntry,
-  SiteApprovalList,
-  SiteDnsRecord,
   SiteHostname,
   SiteLayout,
-  SiteList,
   SiteNavLink,
-  SiteOperator,
-  SiteOperatorList,
   SitePage,
-  SitePageList,
   SiteRepublishMode,
   SiteServeMode,
-  SiteSettings,
-  SiteStatus,
 } from './schemas/sites.js';
-export { siteBuildSchema, siteSchema, siteSettingsSchema } from './schemas/sites.js';
 export type { PetToolCall } from './schemas/pets.js';
 
 export * as habits from './resources/habits.js';
-export {
-  habitSettingsSchema,
-  habitCheckInSchema,
-  habitWeekSummarySchema,
-  habitTrackerSchema,
-  habitStatusResponseSchema,
-  type HabitSettings,
-  type HabitCheckIn,
-  type HabitWeekSummary,
-  type HabitTracker,
-  type HabitStatusResponse,
-} from './schemas/habits.js';
-export type { SetHabitInput, HabitCheckInInput, SetHabitStatusInput } from './resources/habits.js';
+export { type HabitTracker } from './schemas/habits.js';
+export type { SetHabitInput } from './resources/habits.js';
 
 export * as finance from './resources/finance.js';
 export {
-  financeSchema,
-  financeAccountSchema,
-  budgetLineSchema,
-  financeTransactionSchema,
-  financeTransactionsSchema,
-  budgetGridSchema,
-  budgetActualSchema,
-  financeAccountsSchema,
-  loanScheduleSchema,
-  cashFlowSchema,
-  financeDashboardSchema,
-  financeMonthSchema,
-  monthChecklistSchema,
-  postScheduledSchema,
-  financeImportSchema,
   type Finance,
-  type FinanceSettings,
   type FinanceAccountType,
   type FinanceAccount,
-  type BudgetFlow,
   type BudgetLine,
   type FinanceTransaction,
   type FinanceTransactions,
   type BudgetCell,
-  type MonthFigures,
   type BudgetGrid,
   type BudgetActual,
-  type CardMonth,
-  type LoanSummary,
   type FinanceAccounts,
   type LoanSchedule,
   type CashFlowMonth,
   type CashFlow,
-  type WatchItem,
   type Upcoming,
   type FinanceDashboard,
-  type FinanceMonth,
   type MonthChecklist,
   type PostScheduled,
-  type FinanceImportRow,
   type FinanceImport,
 } from './schemas/finance.js';
 export type {
@@ -557,7 +295,6 @@ export type {
   BudgetLineInput,
   FinanceTransactionInput,
   BudgetActualInput,
-  FinanceTransactionsQuery,
   FinanceImportInput,
 } from './resources/finance.js';
 

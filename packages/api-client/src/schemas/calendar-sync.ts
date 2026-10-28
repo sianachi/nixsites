@@ -9,9 +9,6 @@
 import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
-/** The providers Core can connect, in the order the settings screen offers them. */
-export const CALENDAR_PROVIDERS = ['google', 'microsoft'] as const;
-
 /** An int32 the contract may spell as a number or a digit string. */
 const int32Schema = z.union([z.number(), z.string()]);
 

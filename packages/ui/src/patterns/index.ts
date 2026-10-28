@@ -8,11 +8,4 @@
  * See `primitives/index.ts` for why each layer carries its own barrel.
  */
 
-export {
-  Listbox,
-  useListbox,
-  type ListboxController,
-  type ListboxKeyEvent,
-  type ListboxOption,
-  type ListboxProps,
-} from './Listbox';
+export { Listbox, useListbox, type ListboxController, type ListboxOption } from './Listbox';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const petProfileSchema = z.object({
+const petProfileSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1).max(80),
   appearance: z.enum(['owl', 'cat', 'fox', 'eye-of-ra', 'demiurge']),
@@ -114,6 +114,5 @@ export type PetConnection = z.infer<typeof petConnectionSchema>;
 export type PetMessage = z.infer<typeof petMessageSchema>;
 export type PetToolCall = NonNullable<z.infer<typeof petConnectionSchema>['tools']>[number];
 
-export type PetProvider = z.infer<typeof petProviderSchema>;
 export type PetProviderKey = z.infer<typeof petProviderKeySchema>;
 export type PetProvidersResponse = z.infer<typeof petProvidersResponseSchema>;

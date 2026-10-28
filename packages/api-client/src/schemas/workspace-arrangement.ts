@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 
-export const workspaceGroupSchema = z.object({
+const workspaceGroupSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1).max(80),
   workspaceIds: z.array(z.uuid()).max(200),

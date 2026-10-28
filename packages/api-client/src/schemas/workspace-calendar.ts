@@ -38,8 +38,6 @@ import type { components } from '../generated/api.js';
 /** Which of the two dated property types placed an entry. */
 const calendarEntryKindSchema = z.enum(['date', 'timestamp']);
 
-export type CalendarEntryKind = z.infer<typeof calendarEntryKindSchema>;
-
 /** One dated item, and where its date came from. */
 const calendarEntrySchema = z.object({
   itemId: z.uuid(),
@@ -107,8 +105,6 @@ const unplaceableCalendarSchema = z.object({
   itemId: z.uuid().nullable(),
   itemTitle: z.string().nullable(),
 });
-
-export type UnplaceableCalendar = z.infer<typeof unplaceableCalendarSchema>;
 
 /**
  * A ceiling the server applied, echoed back.

@@ -32,9 +32,6 @@ export type PropertyDefinitionContract = components['schemas']['PropertyDefiniti
 /** The signed-in caller, as `GET /api/v1/me` returns it. */
 export type CurrentPrincipalContract = components['schemas']['CurrentPrincipalResponse'];
 
-/** The caller's own canvas library, as `GET /api/v1/me/canvas-library` returns it. */
-export type CanvasLibraryContract = components['schemas']['CanvasLibraryResponse'];
-
 /** One template card in the workspace template catalog. */
 export type TemplateSummaryContract = components['schemas']['TemplateSummaryResponse'];
 
@@ -64,12 +61,6 @@ export type AppendViewSetupRequestContract = components['schemas']['AppendViewSe
 export type ReplaceViewSetupRequestContract = components['schemas']['ReplaceViewSetupRequest'];
 export type ViewRequestContract = components['schemas']['ViewRequest'];
 
-/** Workspace administration responses and writes, generated from the Release B contract. */
-export type WorkspaceMemberContract = components['schemas']['WorkspaceMemberResponse'];
-export type WorkspaceInvitationContract = components['schemas']['WorkspaceInvitationResponse'];
-export type WorkspaceInviteeContract = components['schemas']['WorkspaceInviteeResponse'];
-export type DailyNoteContract = components['schemas']['DailyNoteResponse'];
-export type DailyNoteSettingsContract = components['schemas']['DailyNoteSettingsResponse'];
 export type SaveDailyNoteSettingsRequestContract =
   components['schemas']['SaveDailyNoteSettingsRequest'];
 export type CreateWorkspaceRequestContract = components['schemas']['CreateWorkspaceRequest'];
@@ -79,6 +70,3 @@ export type ChangeWorkspaceMemberRoleRequestContract =
 export type CreateWorkspaceInvitationRequestContract =
   components['schemas']['CreateWorkspaceInvitationRequest'];
 export type RecoverWorkspaceRequestContract = components['schemas']['RecoverWorkspaceRequest'];
-
-/** The inline writing request the editor posts to the companion, generated from the contract. */
-export type PetInlineRequestContract = components['schemas']['PetInlineRequest'];

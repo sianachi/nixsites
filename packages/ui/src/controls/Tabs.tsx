@@ -53,7 +53,7 @@ export interface TabItem {
 
 export type TabsOrientation = 'horizontal' | 'vertical';
 
-export interface TabsDrag {
+interface TabsDrag {
   readonly onStart: (id: string, event: DragEvent<HTMLElement>) => void;
   readonly onEnd: () => void;
 }

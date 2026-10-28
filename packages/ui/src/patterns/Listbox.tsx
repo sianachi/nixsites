@@ -39,7 +39,7 @@ import { Text } from '../primitives/Text';
  * its own would swallow the typing - and hands this a DOM event off `editor.view.dom`. Both shapes
  * satisfy it, and neither has to be converted.
  */
-export interface ListboxKeyEvent {
+interface ListboxKeyEvent {
   readonly key: string;
   preventDefault: () => void;
 }

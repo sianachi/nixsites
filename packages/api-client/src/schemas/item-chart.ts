@@ -119,8 +119,6 @@ export const itemChartSchema = z.object({
 });
 
 export type ChartBucket = z.infer<typeof chartBucketSchema>;
-export type ChartCell = z.infer<typeof chartCellSchema>;
-export type ChartSeries = z.infer<typeof chartSeriesSchema>;
 export type ItemChart = z.infer<typeof itemChartSchema>;
 
 /**

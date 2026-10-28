@@ -163,7 +163,7 @@ export function compareValues(a: CellValue, b: CellValue): number | SheetErrorVa
  * A number as the grid displays it. Fifteen significant digits, the way
  * spreadsheets hide binary floating point noise: 0.1 + 0.2 renders as 0.3.
  */
-export function formatNumber(value: number): string {
+function formatNumber(value: number): string {
   if (Number.isInteger(value) && Math.abs(value) < 1e15) {
     return String(value);
   }

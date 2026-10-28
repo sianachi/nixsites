@@ -335,7 +335,6 @@ export const financeImportSchema = z.object({
   problem: z.string().nullable(),
 });
 
-export type FinanceSettings = z.infer<typeof financeSettingsSchema>;
 export type FinanceAccountType = z.infer<typeof financeAccountTypeSchema>;
 export type FinanceAccount = z.infer<typeof financeAccountSchema>;
 export type BudgetFlow = z.infer<typeof budgetFlowSchema>;
@@ -344,22 +343,17 @@ export type FinanceTransaction = z.infer<typeof financeTransactionSchema>;
 export type Finance = z.infer<typeof financeSchema>;
 export type FinanceTransactions = z.infer<typeof financeTransactionsSchema>;
 export type BudgetCell = z.infer<typeof budgetCellSchema>;
-export type MonthFigures = z.infer<typeof monthFiguresSchema>;
 export type BudgetGrid = z.infer<typeof budgetGridSchema>;
 export type BudgetActual = z.infer<typeof budgetActualSchema>;
-export type CardMonth = z.infer<typeof cardMonthSchema>;
-export type LoanSummary = z.infer<typeof loanSummarySchema>;
 export type FinanceAccounts = z.infer<typeof financeAccountsSchema>;
 export type LoanSchedule = z.infer<typeof loanScheduleSchema>;
 export type CashFlowMonth = z.infer<typeof cashFlowMonthSchema>;
 export type CashFlow = z.infer<typeof cashFlowSchema>;
-export type WatchItem = z.infer<typeof watchItemSchema>;
 export type Upcoming = z.infer<typeof upcomingSchema>;
 export type FinanceDashboard = z.infer<typeof financeDashboardSchema>;
 export type FinanceMonth = z.infer<typeof financeMonthSchema>;
 export type MonthChecklist = z.infer<typeof monthChecklistSchema>;
 export type PostScheduled = z.infer<typeof postScheduledSchema>;
-export type FinanceImportRow = z.infer<typeof financeImportRowSchema>;
 export type FinanceImport = z.infer<typeof financeImportSchema>;
 
 // Keep boundary parsing tied to the explicitly generated Core contract.

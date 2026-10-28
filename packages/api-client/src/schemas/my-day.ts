@@ -28,8 +28,6 @@ const myDayCoverageCodeSchema = z.enum([
   'habit_history_limit',
 ]);
 
-export type MyDayCoverageCode = z.infer<typeof myDayCoverageCodeSchema>;
-
 const coverageSchema = z.object({
   kind: z.enum(['complete', 'partial']),
   reasons: z.array(z.object({ code: myDayCoverageCodeSchema, omitted: z.int().nullable() })),

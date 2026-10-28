@@ -3,7 +3,7 @@ import type { Transaction } from '@tiptap/pm/state';
 
 export const TEXT_ALIGNMENTS = ['left', 'center', 'right'] as const;
 export type TextAlignment = (typeof TEXT_ALIGNMENTS)[number];
-export const ALIGNED_TEXT_BLOCKS = ['paragraph', 'heading', 'detailsSummary'] as const;
+const ALIGNED_TEXT_BLOCKS = ['paragraph', 'heading', 'detailsSummary'] as const;
 
 /** Unknown values stay in the document, but never become arbitrary CSS. */
 export function readTextAlignment(value: unknown): TextAlignment | null {

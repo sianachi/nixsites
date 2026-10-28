@@ -23,7 +23,7 @@ import { focusRing } from '../primitives/interaction';
  * `<Button>` grows to, rather than the roughly 27px the compact padding leaves it under a fine one.
  */
 
-export interface SegmentedOption<TValue extends string> {
+interface SegmentedOption<TValue extends string> {
   readonly value: TValue;
   readonly label: string;
 }

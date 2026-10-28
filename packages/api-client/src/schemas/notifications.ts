@@ -23,9 +23,9 @@ export const principalPreferencesResponseSchema = z.object({
   mutedContainerIds: z.array(z.uuid()),
 });
 
-export const notificationKindSchema = z.enum(['reminder', 'automation', 'calendar', 'system']);
+const notificationKindSchema = z.enum(['reminder', 'automation', 'calendar', 'system']);
 
-export const notificationDtoSchema = z.object({
+const notificationDtoSchema = z.object({
   id: z.uuid(),
   kind: notificationKindSchema,
   title: z.string().max(200),
@@ -61,7 +61,6 @@ export const pushPublicKeyResponseSchema = z.object({
 
 export type PreferencesInput = z.infer<typeof preferencesInputSchema>;
 export type PrincipalPreferencesResponse = z.infer<typeof principalPreferencesResponseSchema>;
-export type NotificationKind = z.infer<typeof notificationKindSchema>;
 export type NotificationDto = z.infer<typeof notificationDtoSchema>;
 export type NotificationsPageResponse = z.infer<typeof notificationsPageResponseSchema>;
 export type NotificationReadResponse = z.infer<typeof notificationReadResponseSchema>;

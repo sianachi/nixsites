@@ -7,7 +7,7 @@ import { Button } from './Button';
 
 const DEFAULT_DURATION_MS = 8000;
 
-export interface ToastAction {
+interface ToastAction {
   /** What the action does, e.g. "Undo". Rendered as the button's label. */
   readonly label: string;
   /** Invoked on activation. The toast is dismissed immediately afterwards, whatever this does. */

@@ -8,38 +8,19 @@
  * one, so the two can land in either order without a conflict.
  */
 
-export { Blueprint, blueprintFrame, type BlueprintProps } from './Blueprint';
+export { Blueprint, blueprintFrame } from './Blueprint';
+export { Text, fieldLabel } from './Text';
+export { Icon, ICON_STROKE_WIDTH } from './Icon';
+export { Duotone } from './Duotone';
+export { Skeleton, SkeletonLines } from './Skeleton';
+export { placeFloatingMenu, readViewportBounds } from './placement';
 export {
-  Text,
-  fieldLabel,
-  type TextProps,
-  type TextVariant,
-  type TextTone,
-  type TextElement,
-  type TextRole,
-} from './Text';
-export { Icon, ICON_STROKE_WIDTH, type IconProps, type IconSize } from './Icon';
-export { Duotone, type DuotoneProps } from './Duotone';
-export { Skeleton, SkeletonLines, type SkeletonLinesProps, type SkeletonProps } from './Skeleton';
-export {
-  placeFloatingMenu,
-  readViewportBounds,
-  type FloatingMenuAnchor,
-  type FloatingMenuOptions,
-  type FloatingMenuPlacement,
-  type FloatingMenuViewport,
-} from './placement';
-export {
-  accentFillStates,
-  accentWashStates,
   chromeSurface,
   disabledState,
   dragHandleLineStates,
-  fieldFocus,
   focusRing,
   focusRingInset,
   gridRangeCell,
   inkWashStates,
   isEditableTarget,
-  listboxActiveOption,
 } from './interaction';

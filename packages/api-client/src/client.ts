@@ -70,12 +70,12 @@ export interface CallOptions {
 }
 
 /** Options for walking cursor-paginated queries. */
-export interface PaginateOptions extends CallOptions {
+interface PaginateOptions extends CallOptions {
   /** Stop after this many network pages, even when a cursor remains. */
   readonly maxPages?: number | undefined;
 }
 
-export interface QueryResult<TData> {
+interface QueryResult<TData> {
   readonly data: TData;
   readonly servedFromCache: boolean;
   /**
@@ -86,7 +86,7 @@ export interface QueryResult<TData> {
   readonly revalidation: Promise<void> | null;
 }
 
-export interface BinaryResult {
+interface BinaryResult {
   readonly blob: Blob;
   readonly headers: Readonly<Record<string, string>>;
 }

@@ -29,7 +29,7 @@ const avatarVariants = cva(
   },
 );
 
-export type AvatarSize = 'sm' | 'md';
+type AvatarSize = 'sm' | 'md';
 
 export interface AvatarProps {
   readonly name: string;

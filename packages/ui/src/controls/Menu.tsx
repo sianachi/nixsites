@@ -87,7 +87,7 @@ export interface MenuAction {
   readonly onSelect: () => void;
 }
 
-export interface MenuLink {
+interface MenuLink {
   readonly kind: 'link';
   readonly key?: string;
   readonly label: string;
@@ -105,7 +105,7 @@ export interface MenuLink {
   readonly onSelect?: () => void;
 }
 
-export interface MenuSeparator {
+interface MenuSeparator {
   readonly kind: 'separator';
 }
 
@@ -128,7 +128,7 @@ interface MenuContentHelpers {
  * A function rather than a plain node when that content needs to close the menu itself - a link
  * to another page, say - since only the menu knows how.
  */
-export interface MenuContent {
+interface MenuContent {
   readonly kind: 'content';
   readonly key?: string;
   readonly content: ReactNode | ((helpers: MenuContentHelpers) => ReactNode);

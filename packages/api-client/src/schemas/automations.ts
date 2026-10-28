@@ -10,7 +10,7 @@ import type { components } from '../generated/api.js';
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 const jsonArraySchema = z.array(z.unknown());
 
-export const automationRuleInputSchema = z.object({
+const automationRuleInputSchema = z.object({
   name: z.string().min(1).max(200),
   enabled: z.boolean(),
   scopeItemId: z.uuid().nullable(),
@@ -56,7 +56,7 @@ export const automationRunsPageResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
-export const automationActionPreviewSchema = z.object({
+const automationActionPreviewSchema = z.object({
   index: z.int().min(0),
   type: z.string(),
   itemId: z.uuid().nullable(),
@@ -76,7 +76,6 @@ export type AutomationRuleResponse = z.infer<typeof automationRuleResponseSchema
 export type AutomationListResponse = z.infer<typeof automationListResponseSchema>;
 export type AutomationRunResponse = z.infer<typeof automationRunResponseSchema>;
 export type AutomationRunsPageResponse = z.infer<typeof automationRunsPageResponseSchema>;
-export type AutomationActionPreview = z.infer<typeof automationActionPreviewSchema>;
 export type AutomationTestResponse = z.infer<typeof automationTestResponseSchema>;
 
 // Keep boundary parsing tied to the explicitly generated Core contract.

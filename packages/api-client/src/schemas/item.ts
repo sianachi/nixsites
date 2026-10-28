@@ -37,10 +37,9 @@ export const itemTypeSchema = z.string();
  * were listed here and created nowhere - MVP-6 brings files back when there is a body to draw.
  */
 export const KNOWN_ITEM_TYPES = ['note', 'canvas', 'spreadsheet', 'artifact'] as const;
-export type KnownItemType = (typeof KNOWN_ITEM_TYPES)[number];
 
 /** Where an item sits in the deletion lifecycle. Open for the same reason as the kind. */
-export const itemLifecycleStateSchema = z.string();
+const itemLifecycleStateSchema = z.string();
 
 /**
  * Sibling position.
@@ -59,7 +58,7 @@ export const itemLifecycleStateSchema = z.string();
  * the boundary, rather than throwing - or worse, silently misordering - inside a sort comparator
  * downstream.
  */
-export const itemSequenceSchema = z.union([z.int(), z.string().regex(/^-?\d+$/)]);
+const itemSequenceSchema = z.union([z.int(), z.string().regex(/^-?\d+$/)]);
 
 /**
  * The item's property values, keyed by the schema's property keys.

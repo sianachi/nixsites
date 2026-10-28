@@ -25,7 +25,7 @@ const siteNavLinkSchema = z.object({
   path: z.string(),
 });
 
-export const siteSettingsSchema = z.object({
+const siteSettingsSchema = z.object({
   name: z.string(),
   description: z.string(),
   accent: z.string(),
@@ -153,11 +153,9 @@ const siteOperatorSchema = z.object({
 
 export const siteOperatorListSchema = z.object({ operators: z.array(siteOperatorSchema) });
 
-export type SiteOperator = z.infer<typeof siteOperatorSchema>;
 export type SiteOperatorList = z.infer<typeof siteOperatorListSchema>;
 
 export type SiteLayout = z.infer<typeof siteLayoutSchema>;
-export type SiteStatus = z.infer<typeof siteStatusSchema>;
 export type SiteRepublishMode = z.infer<typeof siteRepublishModeSchema>;
 export type SiteBuildStatus = z.infer<typeof siteBuildStatusSchema>;
 export type SiteNavLink = z.infer<typeof siteNavLinkSchema>;
@@ -165,7 +163,6 @@ export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 export type SiteDatedCollection = z.infer<typeof siteDatedCollectionSchema>;
 export type SiteHostname = z.infer<typeof siteHostnameSchema>;
 export type SiteServeMode = z.infer<typeof siteServeModeSchema>;
-export type SiteDnsRecord = z.infer<typeof siteDnsRecordSchema>;
 export type SiteApproval = z.infer<typeof siteApprovalSchema>;
 export type SiteApprovalEntry = z.infer<typeof siteApprovalEntrySchema>;
 export type SiteApprovalList = z.infer<typeof siteApprovalListSchema>;

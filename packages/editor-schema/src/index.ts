@@ -9,7 +9,7 @@
 
 export type {} from './augmentations.js';
 export { CALLOUT_TONES, Callout, type CalloutTone } from './callout.js';
-export { Column, ColumnBlock, MAX_COLUMNS, readWidth } from './columns.js';
+export { Column, ColumnBlock, readWidth } from './columns.js';
 /**
  * Columns, in the two tiers a consumer may bind to.
  *
@@ -34,14 +34,13 @@ export {
 export {
   Details,
   DetailsContent,
-  DetailsSummary,
   TOGGLE_LEVELS,
   readToggleLevel,
   type ToggleLevel,
 } from './details.js';
-export { CommentMark, TEXT_COLORS, TextColorMark, type TextColor } from './marks.js';
+export { TEXT_COLORS, type TextColor } from './marks.js';
 export { isAllowedLinkAddress } from './link-address.js';
-export { REFERENCE_KINDS, Reference, type ReferenceKind } from './references.js';
+export { REFERENCE_KINDS, Reference } from './references.js';
 export { nixEditingExtensions, nixExtensions } from './extensions.js';
 export {
   SCHEMA_VERSION,
@@ -51,22 +50,7 @@ export {
   parseDocument,
   type ParseResult,
 } from './schema.js';
-export { FIXTURE_DOCUMENT, MARK_FIXTURES, NODE_FIXTURES, VERSION_1_DOCUMENT } from './fixtures.js';
-export {
-  BASE_SCHEMA_VERSION,
-  ATTRIBUTE_MIN_VERSION,
-  MARK_MIN_VERSION,
-  MIN_VERSIONS,
-  NODE_MIN_VERSION,
-  requiredSchemaVersion,
-  type MinimumVersions,
-} from './versions.js';
+export { FIXTURE_DOCUMENT, NODE_FIXTURES, VERSION_1_DOCUMENT } from './fixtures.js';
+export { BASE_SCHEMA_VERSION, requiredSchemaVersion } from './versions.js';
 
-export {
-  TEXT_ALIGNMENTS,
-  ALIGNED_TEXT_BLOCKS,
-  readTextAlignment,
-  TextAlignmentAttributes,
-  TextAlignmentEditing,
-  type TextAlignment,
-} from './text-alignment.js';
+export { TEXT_ALIGNMENTS, readTextAlignment } from './text-alignment.js';

@@ -24,7 +24,7 @@ export const themeCss: string = readFileSync(join(packageDir, 'src', 'theme.css'
  *
  * Returned as a half-open range so a caller can either keep it or cut it out.
  */
-export function blockAt(css: string, from: number): { start: number; end: number } {
+function blockAt(css: string, from: number): { start: number; end: number } {
   let index = css.indexOf('{', from);
   const start = index;
   let depth = 0;

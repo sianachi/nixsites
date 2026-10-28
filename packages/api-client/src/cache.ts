@@ -47,7 +47,7 @@ export interface CacheEntry<TData> {
 }
 
 /** The storage contract a Zustand slice can implement verbatim. */
-export interface CacheStore {
+interface CacheStore {
   read(key: string): CacheEntry<unknown> | undefined;
   write(key: string, entry: CacheEntry<unknown>): void;
   remove(key: string): void;
@@ -55,7 +55,7 @@ export interface CacheStore {
   clear(): void;
 }
 
-export function createMemoryCacheStore(): CacheStore {
+function createMemoryCacheStore(): CacheStore {
   const entries = new Map<string, CacheEntry<unknown>>();
   return {
     read: (key) => entries.get(key),
@@ -72,14 +72,14 @@ export function createMemoryCacheStore(): CacheStore {
   };
 }
 
-export interface CacheReadOptions {
+interface CacheReadOptions {
   readonly signal?: AbortSignal | undefined;
   /** Skip the cached value and go to the network, still de-duplicated. */
   readonly forceRefresh?: boolean | undefined;
   readonly staleAfterMs?: number | undefined;
 }
 
-export interface CacheReadResult<TData> {
+interface CacheReadResult<TData> {
   readonly data: TData;
   readonly servedFromCache: boolean;
   /** Present only when a stale entry was served and a refresh is behind it. */

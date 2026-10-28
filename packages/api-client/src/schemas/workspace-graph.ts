@@ -20,7 +20,7 @@ import type { components } from '../generated/api.js';
 import { itemTypeSchema } from './item.js';
 
 /** One item, as a graph drawing needs it. */
-export const graphNodeSchema = z.object({
+const graphNodeSchema = z.object({
   id: z.uuid(),
 
   /**
@@ -50,7 +50,7 @@ export const graphNodeSchema = z.object({
 export type GraphNode = z.infer<typeof graphNodeSchema>;
 
 /** One reference edge. Both ends are nodes of the same response. */
-export const graphLinkSchema = z.object({
+const graphLinkSchema = z.object({
   sourceId: z.uuid(),
   targetId: z.uuid(),
 

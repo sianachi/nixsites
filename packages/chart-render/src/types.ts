@@ -5,12 +5,12 @@
  * parsed value is assignable here without this package depending on the client (or on Zod).
  */
 
-export interface ChartCellInput {
+interface ChartCellInput {
   readonly children: number;
   readonly total: number | null;
 }
 
-export interface ChartBucketInput {
+interface ChartBucketInput {
   readonly value: string | null;
   readonly children: number;
   readonly total: number | null;

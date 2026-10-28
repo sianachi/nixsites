@@ -13,12 +13,12 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** The closed set of frequencies a recurrence rule may repeat on. */
-export const recurrenceFreqSchema = z.enum(['daily', 'weekly', 'monthly', 'yearly']);
+const recurrenceFreqSchema = z.enum(['daily', 'weekly', 'monthly', 'yearly']);
 
 export type RecurrenceFreq = z.infer<typeof recurrenceFreqSchema>;
 
 /** The closed set of weekday tokens a weekly rule may name. */
-export const recurrenceWeekdaySchema = z.enum(['mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']);
+const recurrenceWeekdaySchema = z.enum(['mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']);
 
 export type RecurrenceWeekday = z.infer<typeof recurrenceWeekdaySchema>;
 
@@ -29,7 +29,7 @@ export type RecurrenceWeekday = z.infer<typeof recurrenceWeekdaySchema>;
 const recurrenceIntervalSchema = z.union([z.int(), z.string().regex(/^-?\d+$/)]);
 
 /** A recurrence rule as Core stores and returns it. */
-export const recurrenceRuleSchema = z.object({
+const recurrenceRuleSchema = z.object({
   freq: recurrenceFreqSchema,
   interval: recurrenceIntervalSchema,
   weekdays: z.array(recurrenceWeekdaySchema),
@@ -43,8 +43,6 @@ export const recurrenceRuleSchema = z.object({
   /** Individual days completed ahead of the watermark, kept only while the rule still lands on them. */
   completed: z.array(z.string()),
 });
-
-export type RecurrenceRule = z.infer<typeof recurrenceRuleSchema>;
 
 /** What `PUT /items/{id}/recurrence` returns: the rule as it now stands, or null when cleared. */
 export const setRecurrenceResultSchema = z.object({

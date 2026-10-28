@@ -20,7 +20,7 @@ export interface ParseIssue {
   readonly code: string;
 }
 
-export interface ParseErrorEvent {
+interface ParseErrorEvent {
   /** Stable label for the call site, e.g. `items.get`. */
   readonly operation: string;
   /** HTTP status the unparseable payload arrived with, when it was a response. */
@@ -28,7 +28,7 @@ export interface ParseErrorEvent {
   readonly issues: readonly ParseIssue[];
 }
 
-export interface RequestErrorEvent {
+interface RequestErrorEvent {
   readonly method: string;
   readonly path: string;
   readonly status: number | undefined;
@@ -37,7 +37,7 @@ export interface RequestErrorEvent {
   readonly kind: string;
 }
 
-export interface CacheRevalidateErrorEvent {
+interface CacheRevalidateErrorEvent {
   readonly key: readonly string[];
   readonly error: unknown;
 }

@@ -28,7 +28,7 @@ import type { QueryValue } from './http.js';
 export type QueryParameters = Readonly<Record<string, QueryValue | undefined>>;
 
 /** Write methods. GET is deliberately absent: reads are queries. */
-export type CommandMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type CommandMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface BinaryQueryEndpoint {
   readonly kind: 'binary-query';

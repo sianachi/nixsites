@@ -12,8 +12,6 @@
  * MVP-9's plugin seam arrives.
  */
 
-export { renderView, DRAWN_VIEW_KINDS } from './render.js';
-export { ROW_CEILING } from './kinds.js';
-export type { RenderRequest, RenderedView, ViewRow } from './types.js';
+export { renderView } from './render.js';
 
 export { chatTranscript } from './chat.js';

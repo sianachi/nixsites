@@ -10,7 +10,7 @@
  * blank rectangle where the board was rather than an error anybody sees.
  */
 
-export function escape(value: string): string {
+function escape(value: string): string {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

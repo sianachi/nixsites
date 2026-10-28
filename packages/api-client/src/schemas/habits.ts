@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** Habit schedules use local calendar days; Sunday is 0 and Saturday is 6. */
-export const habitSettingsSchema = z.object({
+const habitSettingsSchema = z.object({
   frequency: z.enum(['daily', 'weekly']),
   weekdays: z.array(z.int().min(0).max(6)),
   timezone: z.string(),
@@ -21,7 +21,7 @@ export const habitCheckInSchema = z.object({
   quantity: z.number().nonnegative().nullable(),
 });
 
-export const habitWeekSummarySchema = z.object({
+const habitWeekSummarySchema = z.object({
   weekStart: z.iso.date(),
   planned: z.int().nonnegative(),
   completed: z.int().nonnegative(),
@@ -74,9 +74,7 @@ export const habitStatusResponseSchema = z.object({
   status: z.enum(['active', 'paused', 'archived']),
 });
 
-export type HabitSettings = z.infer<typeof habitSettingsSchema>;
 export type HabitCheckIn = z.infer<typeof habitCheckInSchema>;
-export type HabitWeekSummary = z.infer<typeof habitWeekSummarySchema>;
 export type HabitTracker = z.infer<typeof habitTrackerSchema>;
 export type HabitStatusResponse = z.infer<typeof habitStatusResponseSchema>;
 

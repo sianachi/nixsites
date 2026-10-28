@@ -65,7 +65,7 @@ import { cn } from '../lib/cn';
 export type TextVariant =
   'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body' | 'bodySmall' | 'note' | 'caption' | 'kicker';
 
-export type TextTone = 'default' | 'muted' | 'accent';
+type TextTone = 'default' | 'muted' | 'accent';
 
 /**
  * The roles a paragraph of text may take.
@@ -80,7 +80,7 @@ export type TextTone = 'default' | 'muted' | 'accent';
  * paragraph is a button, and `role="listitem"` on one belongs to a list this component does not
  * render. Widening the union is one line and one reviewer looking at it, which is the point.
  */
-export type TextRole = 'alert' | 'status' | 'note' | 'presentation';
+type TextRole = 'alert' | 'status' | 'note' | 'presentation';
 
 /**
  * The caps label that names a control, as a class string rather than a variant.
@@ -100,7 +100,7 @@ export type TextRole = 'alert' | 'status' | 'note' | 'presentation';
  */
 export const fieldLabel = 'font-heading text-xs uppercase tracking-wider text-muted';
 
-export type TextElement =
+type TextElement =
   | 'h1'
   | 'h2'
   | 'h3'

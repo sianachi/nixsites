@@ -7,7 +7,7 @@ const positiveIntegerSchema = z.union([
 ]);
 const digestSchema = z.string().regex(/^[0-9A-F]{64}$/);
 
-export const pluginCapabilitySchema = z.literal('items.read-metadata');
+const pluginCapabilitySchema = z.literal('items.read-metadata');
 
 export const pluginInstallationSchema = z.object({
   id: z.uuid(),

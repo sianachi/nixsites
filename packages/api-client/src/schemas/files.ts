@@ -2,11 +2,11 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** The pixel size of a version's stored thumbnail. */
-export const fileThumbnailSchema = z.object({
+const fileThumbnailSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 });
-export const fileVersionSchema = z.object({
+const fileVersionSchema = z.object({
   id: z.uuid(),
   version: z.number().int().positive(),
   fileName: z.string(),
