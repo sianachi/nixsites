@@ -393,7 +393,6 @@ describe('rescheduling by dragging', () => {
     const writes = stubCoreApi({ calendarEntries: ENTRIES });
     const { container } = renderAt(<App />, '/calendar');
 
-    await screen.findByRole('tree', { name: /workspace graph/i }).catch(() => null);
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Filing deadline/i });
 
