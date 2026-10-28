@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { fileNameFrom, saveArchive } from '../../export/export-archive';
+import { fileNameFrom, saveArchive } from '@nix/web-platform/export/export-archive';
 import { useTemplateLibrary } from '../template-library-context';
 import {
   beginAndPreviewTemplate,

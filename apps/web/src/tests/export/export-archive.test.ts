@@ -6,7 +6,7 @@ import {
   requestArchive,
   saveArchive,
   type ArchiveOutcome,
-} from '../../export/export-archive';
+} from '@nix/web-platform/export/export-archive';
 
 const EXPORT_ID = 'a1111111-1111-4111-8111-111111111111';
 const ITEM_ID = 'a2222222-2222-4222-8222-222222222222';
