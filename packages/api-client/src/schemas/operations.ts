@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-export const operationStatusSchema = z.enum([
-  'queued',
-  'running',
-  'completed',
-  'failed',
-  'cancelled',
-]);
+const operationStatusSchema = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']);
 
 export const operationSchema = z.object({
   id: z.uuid(),

@@ -7,10 +7,10 @@ const countSchema = z
   .transform(Number);
 const instantSchema = z.iso.datetime({ offset: true });
 
-export const siteLayoutSchema = z.enum(['docs', 'blog']);
-export const siteStatusSchema = z.enum(['draft', 'published', 'unpublished']);
-export const siteRepublishModeSchema = z.enum(['manual', 'auto', 'on_release']);
-export const siteBuildStatusSchema = z.enum([
+const siteLayoutSchema = z.enum(['docs', 'blog']);
+const siteStatusSchema = z.enum(['draft', 'published', 'unpublished']);
+const siteRepublishModeSchema = z.enum(['manual', 'auto', 'on_release']);
+const siteBuildStatusSchema = z.enum([
   'queued',
   'building',
   'sealed',
@@ -20,7 +20,7 @@ export const siteBuildStatusSchema = z.enum([
   'purged',
 ]);
 
-export const siteNavLinkSchema = z.object({
+const siteNavLinkSchema = z.object({
   label: z.string(),
   path: z.string(),
 });
@@ -41,7 +41,7 @@ export const siteSettingsSchema = z.object({
   spacing: z.enum(['compact', 'comfortable', 'airy']).default('comfortable'),
 });
 
-export const siteDatedCollectionSchema = z.object({
+const siteDatedCollectionSchema = z.object({
   itemId: z.uuid(),
   dateProperty: z.string().min(1),
   tagsProperty: z.string().nullable(),
@@ -49,17 +49,17 @@ export const siteDatedCollectionSchema = z.object({
   summaryProperty: z.string().nullable(),
 });
 
-export const siteServeModeSchema = z.enum(['serve', 'redirect']);
-export const siteHostnameStatusSchema = z.enum(['verified', 'failing', 'pending', 'checking']);
+const siteServeModeSchema = z.enum(['serve', 'redirect']);
+const siteHostnameStatusSchema = z.enum(['verified', 'failing', 'pending', 'checking']);
 
-export const siteDnsRecordSchema = z.object({
+const siteDnsRecordSchema = z.object({
   type: z.enum(['TXT', 'CNAME']),
   name: z.string(),
   value: z.string(),
   purpose: z.enum(['verification', 'routing']),
 });
 
-export const siteHostnameSchema = z.object({
+const siteHostnameSchema = z.object({
   hostname: z.string().min(1),
   url: z.url(),
   kind: z.enum(['default', 'custom']),
@@ -73,7 +73,7 @@ export const siteHostnameSchema = z.object({
   records: z.array(siteDnsRecordSchema),
 });
 
-export const siteApprovalSchema = z.object({
+const siteApprovalSchema = z.object({
   state: z.enum(['pending', 'approved', 'rejected']),
   requestedAt: instantSchema,
   decidedAt: instantSchema.nullable(),
@@ -142,7 +142,7 @@ export const siteApprovalEntrySchema = z.object({
 
 export const siteApprovalListSchema = z.object({ approvals: z.array(siteApprovalEntrySchema) });
 
-export const siteOperatorSchema = z.object({
+const siteOperatorSchema = z.object({
   principalId: z.uuid(),
   displayName: z.string(),
   /** `configured` operators come from deployment configuration and cannot be removed here. */

@@ -5,22 +5,22 @@ import { type A1Ref } from './refs.js';
  * the evaluator walks them against a cell reader and an op budget.
  */
 
-export interface NumberNode {
+interface NumberNode {
   readonly kind: 'number';
   readonly value: number;
 }
 
-export interface StringNode {
+interface StringNode {
   readonly kind: 'string';
   readonly value: string;
 }
 
-export interface BooleanNode {
+interface BooleanNode {
   readonly kind: 'boolean';
   readonly value: boolean;
 }
 
-export interface RefNode {
+interface RefNode {
   readonly kind: 'ref';
   readonly ref: A1Ref;
 }
@@ -32,26 +32,26 @@ export interface RefNode {
  * token for bracketed text, which no stored sheet formula can contain - so the
  * node is inert on that surface and `readField` may be absent there.
  */
-export interface FieldNode {
+interface FieldNode {
   readonly kind: 'field';
   readonly name: string;
 }
 
-export interface RangeNode {
+interface RangeNode {
   readonly kind: 'range';
   readonly start: A1Ref;
   readonly end: A1Ref;
 }
 
-export type UnaryOperator = '-' | '+';
+type UnaryOperator = '-' | '+';
 
-export interface UnaryNode {
+interface UnaryNode {
   readonly kind: 'unary';
   readonly op: UnaryOperator;
   readonly operand: FormulaNode;
 }
 
-export interface PercentNode {
+interface PercentNode {
   readonly kind: 'percent';
   readonly operand: FormulaNode;
 }
@@ -59,14 +59,14 @@ export interface PercentNode {
 export type BinaryOperator =
   '+' | '-' | '*' | '/' | '^' | '&' | '=' | '<>' | '<' | '<=' | '>' | '>=';
 
-export interface BinaryNode {
+interface BinaryNode {
   readonly kind: 'binary';
   readonly op: BinaryOperator;
   readonly left: FormulaNode;
   readonly right: FormulaNode;
 }
 
-export interface CallNode {
+interface CallNode {
   readonly kind: 'call';
   readonly name: string;
   readonly args: readonly FormulaNode[];

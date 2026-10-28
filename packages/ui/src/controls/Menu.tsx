@@ -111,7 +111,7 @@ export interface MenuSeparator {
 
 /** Handed to a `content` entry's render function - the one thing bespoke content cannot do for
  * itself, since it did not open the menu. */
-export interface MenuContentHelpers {
+interface MenuContentHelpers {
   /** Drops the panel without returning focus to the trigger - the click already moved it. */
   readonly close: () => void;
 }

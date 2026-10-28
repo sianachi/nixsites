@@ -13,13 +13,11 @@
 import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
-export const viewSummarySchema = z.object({
+const viewSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   kind: z.string(),
 });
-
-export type ViewSummary = z.infer<typeof viewSummarySchema>;
 
 export const containerViewsSchema = z.object({
   views: z.array(viewSummarySchema),

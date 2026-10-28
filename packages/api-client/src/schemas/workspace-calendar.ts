@@ -36,12 +36,12 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** Which of the two dated property types placed an entry. */
-export const calendarEntryKindSchema = z.enum(['date', 'timestamp']);
+const calendarEntryKindSchema = z.enum(['date', 'timestamp']);
 
 export type CalendarEntryKind = z.infer<typeof calendarEntryKindSchema>;
 
 /** One dated item, and where its date came from. */
-export const calendarEntrySchema = z.object({
+const calendarEntrySchema = z.object({
   itemId: z.uuid(),
 
   /**
@@ -100,7 +100,7 @@ export type CalendarEntry = z.infer<typeof calendarEntrySchema>;
  * anchor the series to), and `unreadable_rule` (the stored rule could not be read). `itemId` and
  * `itemTitle` are set only for the series reasons - a container-level reason names no single item.
  */
-export const unplaceableCalendarSchema = z.object({
+const unplaceableCalendarSchema = z.object({
   containerId: z.uuid(),
   containerTitle: z.string().nullable(),
   reason: z.string(),

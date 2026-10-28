@@ -15,13 +15,13 @@ export const CALENDAR_PROVIDERS = ['google', 'microsoft'] as const;
 /** An int32 the contract may spell as a number or a digit string. */
 const int32Schema = z.union([z.number(), z.string()]);
 
-export const calendarProviderSchema = z.object({
+const calendarProviderSchema = z.object({
   provider: z.string(),
   /** Whether this deployment is configured to connect the provider at all. */
   available: z.boolean(),
 });
 
-export const calendarConnectionSchema = z.object({
+const calendarConnectionSchema = z.object({
   id: z.string(),
   provider: z.string(),
   accountEmail: z.string(),
@@ -48,7 +48,7 @@ export const authorizeCalendarSchema = z.object({
 
 export type AuthorizeCalendar = z.infer<typeof authorizeCalendarSchema>;
 
-export const externalCalendarSchema = z.object({
+const externalCalendarSchema = z.object({
   id: z.string(),
   name: z.string(),
   primary: z.boolean(),
@@ -98,7 +98,7 @@ export const syncCalendarLinkSchema = z.object({
 
 export type SyncCalendarLink = z.infer<typeof syncCalendarLinkSchema>;
 
-export const calendarSyncLogEntrySchema = z.object({
+const calendarSyncLogEntrySchema = z.object({
   id: z.string(),
   at: z.string(),
   /** `pull` or `push`. */
@@ -119,7 +119,7 @@ export const calendarSyncLogPageSchema = z.object({
 
 export type CalendarSyncLogPage = z.infer<typeof calendarSyncLogPageSchema>;
 
-export const workspaceCalendarLinkSchema = z.object({
+const workspaceCalendarLinkSchema = z.object({
   /** The container a calendar is linked into. */
   containerItemId: z.string(),
   title: z.string(),

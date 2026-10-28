@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** One item an ad-hoc query matched. */
-export const workspaceQueryRowSchema = z.object({
+const workspaceQueryRowSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
 
@@ -39,7 +39,7 @@ export const workspaceQueryRowSchema = z.object({
 export type WorkspaceQueryRow = z.infer<typeof workspaceQueryRowSchema>;
 
 /** One group of a grouped query, in display order. */
-export const queryGroupSchema = z.object({
+const queryGroupSchema = z.object({
   /** The group's value, or null for "no value". */
   key: z.string().nullable(),
 
@@ -75,7 +75,7 @@ export const workspaceQueryResultsSchema = z.object({
 export type WorkspaceQueryResults = z.infer<typeof workspaceQueryResultsSchema>;
 
 /** One group of an aggregate. */
-export const aggregateGroupSchema = z.object({
+const aggregateGroupSchema = z.object({
   key: z.string().nullable(),
   label: z.string().nullable(),
 

@@ -12,7 +12,7 @@
  * means by building on the engine that ships rather than a second one.
  */
 
-export type TokenType =
+type TokenType =
   | 'number'
   | 'string'
   | 'ref'

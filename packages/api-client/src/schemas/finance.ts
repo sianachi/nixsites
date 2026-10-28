@@ -7,7 +7,7 @@ import type { components } from '../generated/api.js';
 const month = z.string().regex(/^\d{4}-\d{2}$/);
 const uuid = z.uuid();
 
-export const financeSettingsSchema = z.object({
+const financeSettingsSchema = z.object({
   currency: z.string().length(3),
   startMonth: month,
   endMonth: month,
@@ -17,19 +17,13 @@ export const financeSettingsSchema = z.object({
   timezone: z.string(),
 });
 
-export const financeContainersSchema = z.object({
+const financeContainersSchema = z.object({
   accounts: uuid,
   lines: uuid,
   transactions: uuid,
 });
 
-export const financeAccountTypeSchema = z.enum([
-  'current',
-  'savings',
-  'debit',
-  'credit_card',
-  'loan',
-]);
+const financeAccountTypeSchema = z.enum(['current', 'savings', 'debit', 'credit_card', 'loan']);
 
 export const financeAccountSchema = z.object({
   id: uuid,
@@ -45,7 +39,7 @@ export const financeAccountSchema = z.object({
   archived: z.boolean(),
 });
 
-export const budgetFlowSchema = z.enum(['income', 'expense']);
+const budgetFlowSchema = z.enum(['income', 'expense']);
 
 export const budgetLineSchema = z.object({
   id: uuid,
@@ -62,7 +56,7 @@ export const budgetLineSchema = z.object({
   position: z.number(),
 });
 
-export const financeSourceSchema = z.enum(['manual', 'scheduled', 'import']);
+const financeSourceSchema = z.enum(['manual', 'scheduled', 'import']);
 
 export const financeTransactionSchema = z.object({
   id: uuid,
@@ -101,7 +95,7 @@ export const financeTransactionsSchema = z.object({
   net: z.number().optional(),
 });
 
-export const budgetCellSchema = z.object({
+const budgetCellSchema = z.object({
   month,
   plan: z.number(),
   actual: z.number(),
@@ -109,7 +103,7 @@ export const budgetCellSchema = z.object({
   transactions: z.int().nonnegative(),
 });
 
-export const monthFiguresSchema = z.object({
+const monthFiguresSchema = z.object({
   income: z.number(),
   paidThisMonth: z.number(),
   cardSpend: z.number(),
@@ -154,9 +148,9 @@ export const budgetActualSchema = z.object({
   transaction: financeTransactionSchema.nullable(),
 });
 
-export const figureSourceSchema = z.enum(['plan', 'actual']);
+const figureSourceSchema = z.enum(['plan', 'actual']);
 
-export const cardMonthSchema = z.object({
+const cardMonthSchema = z.object({
   accountId: uuid,
   name: z.string(),
   month,
@@ -170,7 +164,7 @@ export const cardMonthSchema = z.object({
   settlesFrom: uuid.nullable(),
 });
 
-export const loanSummarySchema = z.object({
+const loanSummarySchema = z.object({
   opening: z.number(),
   apr: z.number(),
   payment: z.number(),
@@ -217,7 +211,7 @@ export const loanScheduleSchema = z.object({
   ),
 });
 
-export const cashFlowMonthSchema = z.object({
+const cashFlowMonthSchema = z.object({
   month,
   source: figureSourceSchema,
   income: z.number(),
@@ -243,7 +237,7 @@ export const cashFlowSchema = z.object({
   months: z.array(cashFlowMonthSchema),
 });
 
-export const watchItemSchema = z.object({
+const watchItemSchema = z.object({
   lineId: uuid.nullable(),
   name: z.string(),
   section: z.string(),
@@ -252,7 +246,7 @@ export const watchItemSchema = z.object({
   variance: z.number(),
 });
 
-export const upcomingSchema = z.object({
+const upcomingSchema = z.object({
   kind: z.enum(['line', 'card']),
   lineId: uuid.nullable(),
   accountId: uuid.nullable(),
@@ -318,7 +312,7 @@ export const postScheduledSchema = z.object({
   skipped: z.int().nonnegative(),
 });
 
-export const financeImportRowSchema = z.object({
+const financeImportRowSchema = z.object({
   row: z.int().positive(),
   date: z.iso.date().nullable(),
   amount: z.number().nullable(),

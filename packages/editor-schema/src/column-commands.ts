@@ -425,7 +425,7 @@ export function moveBlockToColumnTr(
 }
 
 /** One repair the normaliser has found, at the position where it found it. */
-export type ColumnFault =
+type ColumnFault =
   | { readonly kind: 'unwrap'; readonly pos: number; readonly row: PMNode }
   | { readonly kind: 'nested'; readonly pos: number; readonly row: PMNode }
   | { readonly kind: 'refill'; readonly pos: number }

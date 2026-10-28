@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
-export const backupStepSchema = z.enum(['local', 'offsite']);
-export const backupStatusSchema = z.enum(['succeeded', 'failed']);
+const backupStepSchema = z.enum(['local', 'offsite']);
+const backupStatusSchema = z.enum(['succeeded', 'failed']);
 
 /** One recorded step of a nightly backup. `error` is a fixed phrase and exit code: show it as text. */
 export const backupRunSchema = z.object({

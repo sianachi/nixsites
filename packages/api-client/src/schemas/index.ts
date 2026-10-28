@@ -33,9 +33,6 @@ export {
   type WorkspaceGraph,
 } from './workspace-graph.js';
 export {
-  calendarEntryKindSchema,
-  calendarEntrySchema,
-  unplaceableCalendarSchema,
   workspaceCalendarSchema,
   type CalendarEntry,
   type CalendarEntryKind,
@@ -43,17 +40,13 @@ export {
   type WorkspaceCalendar,
 } from './workspace-calendar.js';
 export {
-  myDayCoverageCodeSchema,
-  myDayHabitRowSchema,
   myDaySchema,
-  myDayTaskActionSchema,
-  myDayTaskRowSchema,
   type MyDay,
   type MyDayCoverageCode,
   type MyDayHabitRow,
   type MyDayTaskRow,
 } from './my-day.js';
-export { keptItemSchema, shelfSchema, type KeptItem, type Shelf } from './bookmarks.js';
+export { shelfSchema, type KeptItem, type Shelf } from './bookmarks.js';
 export {
   itemLockSchema,
   unlockItemResultSchema,
@@ -90,11 +83,9 @@ export {
 export {
   containerViewConfigurationsSchema,
   containerViewsSchema,
-  viewSummarySchema,
   viewConfigurationSchema,
   type ContainerViewConfigurations,
   type ContainerViews,
-  type ViewSummary,
   type ViewConfiguration,
 } from './views.js';
 export {
@@ -131,9 +122,6 @@ export {
   type TokenExchangeResponse,
 } from './access-tokens.js';
 export {
-  chartBucketSchema,
-  chartCellSchema,
-  chartSeriesSchema,
   itemChartSchema,
   type ChartBucket,
   type ChartCell,
@@ -142,16 +130,12 @@ export {
 } from './item-chart.js';
 export {
   itemQueryResultsSchema,
-  queryResultSchema,
   type ItemQueryResults,
   type QueryResultRow,
 } from './item-query.js';
 export {
-  aggregateGroupSchema,
-  queryGroupSchema,
   workspaceAggregateSchema,
   workspaceQueryResultsSchema,
-  workspaceQueryRowSchema,
   type AggregateGroup,
   type QueryGroup,
   type WorkspaceAggregate,
@@ -224,19 +208,11 @@ export {
   type RecurrenceWeekday,
   type SetRecurrenceResult,
 } from './recurrence.js';
-export {
-  fileRecordSchema,
-  fileUploadSchema,
-  fileVersionSchema,
-  type FileRecord,
-  type FileUpload,
-  type FileVersion,
-} from './files.js';
+export { type FileRecord, type FileVersion } from './files.js';
 export {
   exportDownloadCapabilitySchema,
   exportFormatCatalogSchema,
   exportFormatSchema,
-  exportSchema,
   exportStatusSchema,
   type Export,
   type ExportDownloadCapability,

@@ -70,10 +70,7 @@ function scalar(value: unknown): string {
   return '…';
 }
 
-export function definitionOf(
-  schema: SchemaSnapshot | null,
-  key: string,
-): PropertyDefinition | null {
+function definitionOf(schema: SchemaSnapshot | null, key: string): PropertyDefinition | null {
   return schema?.properties.find((property) => property.key === key) ?? null;
 }
 

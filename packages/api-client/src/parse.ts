@@ -36,7 +36,7 @@ function formatPath(path: readonly PropertyKey[]): string {
   return formatted === '' ? '(root)' : formatted;
 }
 
-export function toParseIssues(error: z.ZodError): readonly ParseIssue[] {
+function toParseIssues(error: z.ZodError): readonly ParseIssue[] {
   return error.issues.map((issue) => ({
     path: formatPath(issue.path),
     message: issue.message,
@@ -45,7 +45,7 @@ export function toParseIssues(error: z.ZodError): readonly ParseIssue[] {
 }
 
 /** Deep-freezes plain JSON structures so parsed data cannot be mutated inward. */
-export function freezeDeep<T>(value: T): T {
+function freezeDeep<T>(value: T): T {
   if (typeof value !== 'object' || value === null || Object.isFrozen(value)) return value;
   Object.freeze(value);
   for (const child of Object.values(value as Record<string, unknown>)) {

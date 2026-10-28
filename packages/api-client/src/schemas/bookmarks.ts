@@ -19,7 +19,7 @@ import type { components } from '../generated/api.js';
 import { itemTypeSchema } from './item.js';
 
 /** One item on the shelf. */
-export const keptItemSchema = z.object({
+const keptItemSchema = z.object({
   itemId: z.uuid(),
 
   /**

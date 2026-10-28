@@ -161,7 +161,7 @@ export interface TableProps<Row> {
 }
 
 /** The widths a header handle may reach, and how far one arrow keypress moves it. */
-export const TABLE_COLUMN_WIDTH = { min: 64, max: 800, step: 16 } as const;
+const TABLE_COLUMN_WIDTH = { min: 64, max: 800, step: 16 } as const;
 
 function clampTableWidth(width: number): number {
   return Math.min(TABLE_COLUMN_WIDTH.max, Math.max(TABLE_COLUMN_WIDTH.min, Math.round(width)));

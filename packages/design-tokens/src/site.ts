@@ -10,7 +10,7 @@
  * so the dark values are taken from the sheet's dark ground in the same way.
  */
 
-export interface SiteSyntax {
+interface SiteSyntax {
   readonly keyword: string;
   readonly string: string;
   readonly number: string;

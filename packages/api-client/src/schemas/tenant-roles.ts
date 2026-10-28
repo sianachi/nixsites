@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 import { cursorPageSchema } from './pagination.js';
 
-export const tenantRoleGrantSchema = z.object({
+const tenantRoleGrantSchema = z.object({
   subjectType: z.string(),
   subjectId: z.uuid(),
   subjectDisplayName: z.string(),

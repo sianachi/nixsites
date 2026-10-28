@@ -73,7 +73,7 @@ export const itemSequenceSchema = z.union([z.int(), z.string().regex(/^-?\d+$/)]
  * The title lives in here as well as in the flat field. The flat one is the promotion every client
  * needs to render a row; this is the storage it was promoted from.
  */
-export const itemPropertiesSchema = z.record(z.string(), z.unknown());
+const itemPropertiesSchema = z.record(z.string(), z.unknown());
 
 export const itemSchema = z.object({
   id: z.uuid(),

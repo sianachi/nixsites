@@ -10,12 +10,12 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** One series' share of one bucket. */
-export const chartCellSchema = z.object({
+const chartCellSchema = z.object({
   children: z.int(),
   total: z.number().nullable(),
 });
 
-export const chartBucketSchema = z.object({
+const chartBucketSchema = z.object({
   /**
    * The grouping property's value, or null for the children that have none.
    *
@@ -37,7 +37,7 @@ export const chartBucketSchema = z.object({
 });
 
 /** One series of a split chart. */
-export const chartSeriesSchema = z.object({
+const chartSeriesSchema = z.object({
   /** The splitting property's value; null for the children with none, and for "Other". */
   value: z.string().nullable(),
 

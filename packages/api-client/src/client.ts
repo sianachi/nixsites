@@ -92,7 +92,7 @@ export interface BinaryResult {
 }
 
 /** A POST whose response is read as it arrives rather than parsed whole. */
-export interface StreamRequest {
+interface StreamRequest {
   /** Path relative to the base URL; must start with `/`. */
   readonly path: string;
   /** Serialised as JSON. */

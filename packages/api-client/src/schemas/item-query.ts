@@ -12,7 +12,7 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /** One item a saved query matched. */
-export const queryResultSchema = z.object({
+const queryResultSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
 

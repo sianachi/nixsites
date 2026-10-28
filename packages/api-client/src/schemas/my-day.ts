@@ -17,7 +17,7 @@ import type { components } from '../generated/api.js';
 import { habitOccurrenceSchema } from './habits.js';
 
 /** Why a section may be missing rows. */
-export const myDayCoverageCodeSchema = z.enum([
+const myDayCoverageCodeSchema = z.enum([
   'candidate_limit',
   'row_limit',
   'invalid_schema',
@@ -49,13 +49,13 @@ const rowSource = {
  * `property` sets `key` to true on the item. `occurrence` completes the series' occurrence on
  * `occurredOn`; there is no occurrence undo.
  */
-export const myDayTaskActionSchema = z.object({
+const myDayTaskActionSchema = z.object({
   kind: z.enum(['property', 'occurrence']),
   key: z.string().nullable(),
   occurredOn: z.iso.date().nullable(),
 });
 
-export const myDayTaskRowSchema = z.object({
+const myDayTaskRowSchema = z.object({
   ...rowSource,
   section: z.enum(['today', 'overdue', 'assigned']),
   dueDay: z.iso.date().nullable(),
@@ -65,7 +65,7 @@ export const myDayTaskRowSchema = z.object({
   action: myDayTaskActionSchema,
 });
 
-export const myDayHabitRowSchema = z.object({
+const myDayHabitRowSchema = z.object({
   ...rowSource,
   /** The habit's saved zone, which decided `occurrence.date`. */
   timezone: z.string(),
