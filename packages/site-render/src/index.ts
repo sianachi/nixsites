@@ -7,7 +7,7 @@
  */
 
 export { SiteManifestError, parseSiteManifest, parseSitePages, type SitePage } from './manifest.js';
-export { collectFileReferences } from './references.js';
+export { collectFileReferences, type FileReference } from './references.js';
 export { UnsupportedImage, stripImageMetadata, type StrippedImage } from './images.js';
 export {
   MAX_DOWNLOAD_BYTES,
