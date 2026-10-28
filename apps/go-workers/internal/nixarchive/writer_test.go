@@ -320,3 +320,20 @@ func readZipEntryMust(t *testing.T, entry *zip.File) []byte {
 	}
 	return body
 }
+
+// Write writes the bundles in order through the streaming writer.
+func Write(output io.Writer, manifest Manifest, bundles []Bundle, maxBytes int64) error {
+	index := 0
+	return WriteStream(output, manifest, func() (Bundle, bool, error) {
+		if index == len(bundles) {
+			return Bundle{}, false, nil
+		}
+		index++
+		return bundles[index-1], true, nil
+	}, maxBytes)
+}
+
+// WriteStream writes a v1 archive, which has no file versions.
+func WriteStream(output io.Writer, manifest Manifest, next func() (Bundle, bool, error), maxBytes int64) error {
+	return WriteStreamWithFiles(output, manifest, next, nil, maxBytes)
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/sianachi/Nix/apps/go-workers/internal/plugintest"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func TestComponentDigestAndSignatureAreBoundToIdentityAndVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	invocation := signedInvocation(t, successModule())
+	invocation := signedInvocation(t, plugintest.SuccessModule())
 	invocation.Component.Version = "2.0.0"
 
 	err = runtime.Execute(t.Context(), invocation, &recordingHost{})
@@ -85,7 +86,7 @@ func TestInvocationRejectsDuplicateOrMalformedCapabilities(t *testing.T) {
 		"malformed": {"Items Read"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			invocation := signedInvocation(t, successModule())
+			invocation := signedInvocation(t, plugintest.SuccessModule())
 			invocation.Capabilities = capabilities
 			if err := runtime.Execute(t.Context(), invocation, &recordingHost{}); !errors.Is(err, ErrInvalidPlugin) {
 				t.Fatalf("Execute error = %v, want ErrInvalidPlugin", err)
@@ -104,7 +105,7 @@ func TestInvocationRequiresCanonicalNonzeroIdentifiers(t *testing.T) {
 		"00000000-0000-0000-0000-000000000000",
 		"11111111-1111-4111-8111-11111111111A",
 	} {
-		invocation := signedInvocation(t, successModule())
+		invocation := signedInvocation(t, plugintest.SuccessModule())
 		invocation.InstallationID = identifier
 		if err := runtime.Execute(t.Context(), invocation, &recordingHost{}); !errors.Is(err, ErrInvalidPlugin) {
 			t.Fatalf("Execute(%q) error = %v, want ErrInvalidPlugin", identifier, err)
@@ -118,7 +119,7 @@ func TestHostCallsRequireAnExactDurableGrant(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := &recordingHost{response: json.RawMessage(`{"title":"Current"}`)}
-	invocation := signedInvocation(t, hostCallModule())
+	invocation := signedInvocation(t, plugintest.HostCallModule())
 
 	if err := runtime.Execute(t.Context(), invocation, host); err != nil {
 		t.Fatalf("execute granted host call: %v", err)
@@ -128,7 +129,7 @@ func TestHostCallsRequireAnExactDurableGrant(t *testing.T) {
 	}
 
 	host = &recordingHost{response: json.RawMessage(`{}`)}
-	invocation = signedInvocation(t, hostCallModule())
+	invocation = signedInvocation(t, plugintest.HostCallModule())
 	invocation.Capabilities = nil
 	if err := runtime.Execute(t.Context(), invocation, host); !errors.Is(err, ErrPluginFailed) {
 		t.Fatalf("denied Execute error = %v, want ErrPluginFailed", err)
@@ -152,7 +153,7 @@ func TestRuntimeLimitsRefuseUnboundedConfigurations(t *testing.T) {
 }
 
 func FuzzSignedComponentsStayBounded(f *testing.F) {
-	f.Add(successModule())
+	f.Add(plugintest.SuccessModule())
 	f.Add(infiniteLoopModule())
 	f.Add([]byte("not-wasm"))
 	limits := DefaultLimits()
@@ -213,18 +214,8 @@ func (host *recordingHost) Call(_ context.Context, _, _, capability string, requ
 	return host.response, nil
 }
 
-func successModule() []byte {
-	return []byte{
-		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-		0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f,
-		0x03, 0x02, 0x01, 0x00,
-		0x07, 0x10, 0x01, 0x0c, 'n', 'i', 'x', '_', 'o', 'n', '_', 'e', 'v', 'e', 'n', 't', 0x00, 0x00,
-		0x0a, 0x06, 0x01, 0x04, 0x00, 0x41, 0x00, 0x0b,
-	}
-}
-
 func infiniteLoopModule() []byte {
-	wasm := successModule()
+	wasm := plugintest.SuccessModule()
 	return append(append([]byte(nil), wasm[:len(wasm)-8]...),
 		0x0a, 0x0b, 0x01, 0x09, 0x00, 0x03, 0x40, 0x0c, 0x00, 0x0b, 0x41, 0x00, 0x0b)
 }
@@ -237,22 +228,5 @@ func eventSizeModule() []byte {
 		0x03, 0x02, 0x01, 0x00,
 		0x07, 0x10, 0x01, 0x0c, 'n', 'i', 'x', '_', 'o', 'n', '_', 'e', 'v', 'e', 'n', 't', 0x00, 0x01,
 		0x0a, 0x09, 0x01, 0x07, 0x00, 0x10, 0x00, 0x1a, 0x41, 0x00, 0x0b,
-	}
-}
-
-func hostCallModule() []byte {
-	return []byte{
-		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-		0x01, 0x0d, 0x02, 0x60, 0x04, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7f, 0x60, 0x00, 0x01, 0x7f,
-		0x02, 0x11, 0x01, 0x08, 'n', 'i', 'x', '_', 'h', 'o', 's', 't', 0x04, 'c', 'a', 'l', 'l', 0x00, 0x00,
-		0x03, 0x02, 0x01, 0x01,
-		0x05, 0x04, 0x01, 0x01, 0x01, 0x01,
-		0x07, 0x19, 0x02,
-		0x06, 'm', 'e', 'm', 'o', 'r', 'y', 0x02, 0x00,
-		0x0c, 'n', 'i', 'x', '_', 'o', 'n', '_', 'e', 'v', 'e', 'n', 't', 0x00, 0x01,
-		0x0a, 0x0e, 0x01, 0x0c, 0x00, 0x41, 0x00, 0x41, 0x0a, 0x41, 0x10, 0x41, 0x02, 0x10, 0x00, 0x0b,
-		0x0b, 0x17, 0x02,
-		0x00, 0x41, 0x00, 0x0b, 0x0a, 'i', 't', 'e', 'm', 's', '.', 'r', 'e', 'a', 'd',
-		0x00, 0x41, 0x10, 0x0b, 0x02, '{', '}',
 	}
 }

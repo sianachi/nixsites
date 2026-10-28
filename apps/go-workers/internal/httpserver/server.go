@@ -31,10 +31,6 @@ type Server struct {
 	deps Dependencies
 }
 
-func New(deps Dependencies) http.Handler {
-	return NewForRole(role.All, deps)
-}
-
 func NewForRole(service role.Service, deps Dependencies) http.Handler {
 	server := &Server{deps: deps}
 	mux := http.NewServeMux()

@@ -94,21 +94,3 @@ func (input *BundleStream) Next() (Bundle, bool, error) {
 	input.index++
 	return bundle, true, nil
 }
-
-func ReadBundleStream(reader io.Reader, limits stream.Limits) (Manifest, []Bundle, error) {
-	input, err := OpenBundleStream(reader, limits)
-	if err != nil {
-		return Manifest{}, nil, err
-	}
-	bundles := make([]Bundle, 0, len(input.Manifest.Items))
-	for {
-		bundle, ok, err := input.Next()
-		if err != nil {
-			return Manifest{}, nil, err
-		}
-		if !ok {
-			return input.Manifest, bundles, nil
-		}
-		bundles = append(bundles, bundle)
-	}
-}

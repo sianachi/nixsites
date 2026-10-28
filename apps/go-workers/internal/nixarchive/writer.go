@@ -13,51 +13,11 @@ import (
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
-// Write writes a validated, lossless archive while retaining only the current bundle in memory.
-// The zip central directory is emitted by archive/zip at Close; payloads are written entry by entry.
-func Write(output io.Writer, manifest Manifest, bundles []Bundle, maxBytes int64) error {
-	index := 0
-	return WriteStream(output, manifest, func() (Bundle, bool, error) {
-		if index == len(bundles) {
-			return Bundle{}, false, nil
-		}
-		bundle := bundles[index]
-		index++
-		return bundle, true, nil
-	}, maxBytes)
-}
-
 // FileSource is one immutable file version selected by the manifest. Bytes are supplied as a
 // reader so callers can stream from object storage without buffering the full file in memory.
 type FileSource struct {
 	Entry  FileVersionEntry
 	Reader io.ReadCloser
-}
-
-// WriteWithFiles writes a v2 archive while retaining only one item bundle and one file stream.
-func WriteWithFiles(output io.Writer, manifest Manifest, bundles []Bundle, files []FileSource, maxBytes int64) error {
-	itemIndex := 0
-	fileIndex := 0
-	return WriteStreamWithFiles(output, manifest, func() (Bundle, bool, error) {
-		if itemIndex == len(bundles) {
-			return Bundle{}, false, nil
-		}
-		bundle := bundles[itemIndex]
-		itemIndex++
-		return bundle, true, nil
-	}, func() (FileVersionEntry, io.ReadCloser, bool, error) {
-		if fileIndex == len(files) {
-			return FileVersionEntry{}, nil, false, nil
-		}
-		file := files[fileIndex]
-		fileIndex++
-		return file.Entry, file.Reader, true, nil
-	}, maxBytes)
-}
-
-// WriteStream writes one validated bundle at a time and never retains the workspace body set.
-func WriteStream(output io.Writer, manifest Manifest, next func() (Bundle, bool, error), maxBytes int64) error {
-	return WriteStreamWithFiles(output, manifest, next, nil, maxBytes)
 }
 
 // WriteStreamWithFiles writes one bundle and one file version at a time. File content is streamed

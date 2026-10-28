@@ -128,3 +128,6 @@ func TestExportReturnsNdjsonRecords(t *testing.T) {
 		t.Fatalf("export response = %d %q", response.Code, body)
 	}
 }
+
+// New serves every role, as a test wants one handler for all of the routes.
+func New(deps Dependencies) http.Handler { return NewForRole(role.All, deps) }

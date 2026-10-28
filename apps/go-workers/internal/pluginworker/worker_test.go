@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/sianachi/Nix/apps/go-workers/internal/plugintest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -23,7 +24,7 @@ import (
 )
 
 func TestWorkerExecutesAndCompletesAPluginInvocation(t *testing.T) {
-	wasm := successModule()
+	wasm := plugintest.SuccessModule()
 	server := objectServer(t, wasm)
 	defer server.Close()
 	api := &fakeAPI{plans: []InvocationPlan{signedPlan(t, wasm, server.URL)}}
@@ -39,7 +40,7 @@ func TestWorkerExecutesAndCompletesAPluginInvocation(t *testing.T) {
 }
 
 func TestWorkerRecordsInvalidSignaturesWithoutRetryingTheEvent(t *testing.T) {
-	wasm := successModule()
+	wasm := plugintest.SuccessModule()
 	server := objectServer(t, wasm)
 	defer server.Close()
 	plan := signedPlan(t, wasm, server.URL)
@@ -56,7 +57,7 @@ func TestWorkerRecordsInvalidSignaturesWithoutRetryingTheEvent(t *testing.T) {
 }
 
 func TestWorkerRequeuesTransientArtifactFailures(t *testing.T) {
-	wasm := successModule()
+	wasm := plugintest.SuccessModule()
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		http.Error(response, "unavailable", http.StatusServiceUnavailable)
 	}))
@@ -73,7 +74,7 @@ func TestWorkerRequeuesTransientArtifactFailures(t *testing.T) {
 }
 
 func TestWorkerRequeuesTransientGrantedHostCallFailures(t *testing.T) {
-	wasm := hostCallModule()
+	wasm := plugintest.HostCallModule()
 	server := objectServer(t, wasm)
 	defer server.Close()
 	api := &fakeAPI{
@@ -91,7 +92,7 @@ func TestWorkerRequeuesTransientGrantedHostCallFailures(t *testing.T) {
 }
 
 func TestWorkerSettlesEveryLeasedInvocationBeforeRequeueing(t *testing.T) {
-	wasm := successModule()
+	wasm := plugintest.SuccessModule()
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/unavailable" {
 			http.Error(response, "unavailable", http.StatusServiceUnavailable)
@@ -201,33 +202,6 @@ func workspaceEnvelope() broker.Envelope {
 		Payload:          json.RawMessage(`{}`),
 		CorrelationID:    "77777777-7777-4777-8777-777777777777",
 		AggregateVersion: &version,
-	}
-}
-
-func successModule() []byte {
-	return []byte{
-		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-		0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f,
-		0x03, 0x02, 0x01, 0x00,
-		0x07, 0x10, 0x01, 0x0c, 'n', 'i', 'x', '_', 'o', 'n', '_', 'e', 'v', 'e', 'n', 't', 0x00, 0x00,
-		0x0a, 0x06, 0x01, 0x04, 0x00, 0x41, 0x00, 0x0b,
-	}
-}
-
-func hostCallModule() []byte {
-	return []byte{
-		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-		0x01, 0x0d, 0x02, 0x60, 0x04, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7f, 0x60, 0x00, 0x01, 0x7f,
-		0x02, 0x11, 0x01, 0x08, 'n', 'i', 'x', '_', 'h', 'o', 's', 't', 0x04, 'c', 'a', 'l', 'l', 0x00, 0x00,
-		0x03, 0x02, 0x01, 0x01,
-		0x05, 0x04, 0x01, 0x01, 0x01, 0x01,
-		0x07, 0x19, 0x02,
-		0x06, 'm', 'e', 'm', 'o', 'r', 'y', 0x02, 0x00,
-		0x0c, 'n', 'i', 'x', '_', 'o', 'n', '_', 'e', 'v', 'e', 'n', 't', 0x00, 0x01,
-		0x0a, 0x0e, 0x01, 0x0c, 0x00, 0x41, 0x00, 0x41, 0x0a, 0x41, 0x10, 0x41, 0x02, 0x10, 0x00, 0x0b,
-		0x0b, 0x17, 0x02,
-		0x00, 0x41, 0x00, 0x0b, 0x0a, 'i', 't', 'e', 'm', 's', '.', 'r', 'e', 'a', 'd',
-		0x00, 0x41, 0x10, 0x0b, 0x02, '{', '}',
 	}
 }
 
