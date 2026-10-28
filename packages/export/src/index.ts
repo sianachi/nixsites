@@ -11,16 +11,9 @@
 
 export { exportFileName, writeArchive } from './archive.js';
 export {
-  ARCHIVE_FILE_BYTES_UNSUPPORTED,
-  ArchiveFileBytesUnsupportedError,
-} from './file-portability.js';
-export {
-  EXPORT_FORMATS,
-  type Branding,
   type ConvertRequest,
   type DocumentConverter,
   type ExportFormat,
-  type HostCapabilities,
   type LossNotice,
   type PrintPalette,
 } from './converter.js';
@@ -32,20 +25,13 @@ export {
   type LossSink,
 } from './loss.js';
 export {
-  PROSE_MARKS,
-  PROSE_NODES,
   readBoolean,
   readNumber,
   readString,
   visitProse,
   type NodeHandler,
   type NodeHandlers,
-  type ProseMark,
-  type ProseMarkName,
   type ProseNode,
-  type ProseNodeName,
-  type VisitContext,
-  type VisitRequest,
 } from './visit.js';
 export {
   ARCHIVE_FORMAT,
@@ -63,17 +49,8 @@ export {
   itemEntryName,
   type ArchiveFileBytes,
   type ArchiveFileVersionEntry,
-  type ArchiveItemEntry,
   type ArchiveManifest,
-  type CanvasBody,
-  type FilterRuleSnapshot,
-  type FormBlockSnapshot,
-  type FormConditionSnapshot,
-  type FormPageSnapshot,
-  type InteractiveFormSnapshot,
   type ItemBody,
-  type ProseBody,
-  type SheetBody,
   type TemplateArchiveProfile,
   type TemplateInitialization,
   type TemplateInitializationInput,
@@ -82,7 +59,6 @@ export {
   type ItemBundle,
   type LossEntry,
   type Omission,
-  type OmissionReason,
   type PropertyDefinition,
   type SchemaSnapshot,
   type ViewRowSnapshot,
@@ -90,7 +66,6 @@ export {
   type ViewsSnapshot,
 } from './manifest.js';
 export {
-  ArchiveReadError,
   TEMPLATE_ARCHIVE_LIMITS,
   TEMPLATE_IMPORT_REQUEST_BYTES,
   parseArchiveObject,
@@ -98,8 +73,6 @@ export {
   readArchive,
   requireTemplateProfile,
   validateTemplateArchive,
-  type ArchiveReadLimits,
-  type ReadArchiveOptions,
   type ReadArchiveResult,
 } from './reader.js';
-export { BundleStreamError, readBundleStream, type BundleStream } from './bundle-stream.js';
+export { readBundleStream, type BundleStream } from './bundle-stream.js';

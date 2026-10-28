@@ -40,7 +40,7 @@ export { mergeProperties } from './vocabulary/merge-properties.js';
 
 export * from './spec/index.js';
 
-export { buildCatalog, type Catalog } from './catalog/build.js';
+export { buildCatalog, renderCatalog, type Catalog } from './catalog/build.js';
 export {
   HABIT,
   LIMITS,

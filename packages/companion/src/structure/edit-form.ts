@@ -1,29 +1,9 @@
 import { views } from '@nix/api-client';
-import {
-  compileEditForm,
-  type FormEditSpec,
-  type Step,
-  type StructureProperty,
-  type StructureView,
-} from '@nix/structure-spec';
+import { compileEditForm, type Step } from '@nix/structure-spec';
 import type { CompanionPorts } from '../ports.js';
 import { toPropertyDefinitionRequest, toViewRequest } from './create-structured.js';
 
-export function compile(
-  spec: FormEditSpec,
-  context: {
-    itemId: string;
-    existing: {
-      declared: StructureProperty[];
-      inherit: boolean;
-      effective: StructureProperty[];
-      views: StructureView[];
-    };
-    view: StructureView;
-  },
-): Step[] {
-  return compileEditForm(spec, context);
-}
+export const compile = compileEditForm;
 
 export async function execute(
   ports: CompanionPorts,

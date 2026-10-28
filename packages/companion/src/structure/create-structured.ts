@@ -1,5 +1,7 @@
 import {
   items,
+  views,
+  type AppendViewSetupRequestContract,
   type CreateStructuredItemRequestContract,
   type ViewRequestContract,
 } from '@nix/api-client';
@@ -109,4 +111,26 @@ export async function execute(
   const created = items.createStructuredItem(workspaceId, body);
   const outcome = await ports.core.execute(created, { signal, forceRefresh: true });
   return { id: outcome.item.id, title: outcome.item.title, created: true };
+}
+
+/** Runs the single `appendViewSetup` step that add_view and add_fields both compile to. */
+export async function appendViewSetup(
+  ports: CompanionPorts,
+  steps: readonly Step[],
+  signal: AbortSignal,
+  operation: string,
+): Promise<unknown> {
+  const step = steps[0];
+  if (steps.length !== 1 || step?.kind !== 'appendViewSetup')
+    throw new Error(`${operation} compiled to an unexpected plan.`);
+  const body: AppendViewSetupRequestContract = {
+    properties: step.properties.map(toPropertyDefinitionRequest),
+    views: step.views.map(toViewRequest),
+    makeDefault: step.makeDefault,
+    publishInteractiveFormViewId: null,
+  };
+  return ports.core.execute(views.appendViewSetup(step.itemId, body), {
+    signal,
+    forceRefresh: true,
+  });
 }
