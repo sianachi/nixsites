@@ -35,7 +35,7 @@ import * as Y from 'yjs';
  */
 
 /** The origin local edits are transacted under, so undo can tell them apart. */
-export const LOCAL_ORIGIN = 'sheet-local';
+const LOCAL_ORIGIN = 'sheet-local';
 
 export interface SheetData {
   readonly cells: ReadonlyMap<string, string>;

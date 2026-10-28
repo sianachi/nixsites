@@ -32,7 +32,7 @@ export interface RowSelection {
   readonly drag: ((item: Item) => TableRowDrag) | undefined;
 }
 
-export interface WidthControl {
+interface WidthControl {
   readonly columnWidths: Readonly<Record<string, number>>;
   readonly onColumnResize: (columnKey: string, width: number) => void;
   readonly onColumnWidthReset: (columnKey: string) => void;

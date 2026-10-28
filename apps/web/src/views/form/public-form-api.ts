@@ -6,7 +6,7 @@ import {
 } from '@nix/api-client';
 import { z } from 'zod';
 
-export const PublicFormLinkSchema = z.object({
+const PublicFormLinkSchema = z.object({
   published: z.boolean(),
   url: z.string().nullable(),
   publishedAt: z.iso.datetime().nullable(),

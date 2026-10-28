@@ -7,7 +7,6 @@
  */
 
 export {
-  defaultInteractiveForm,
   findStructuredRecipe,
   keyForProperty,
   RECIPE_GROUPS,
@@ -15,4 +14,4 @@ export {
   STRUCTURED_RECIPES,
   viewForRecipe,
 } from '@nix/structure-spec';
-export type { RecipeGroup, StructuredRecipe, StructuredRecipeId } from '@nix/structure-spec';
+export type { StructuredRecipe, StructuredRecipeId } from '@nix/structure-spec';

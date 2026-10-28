@@ -15,7 +15,7 @@ import { useTimelineOpenProps } from './use-timeline-open-props';
  * swallow the marker. The hover and pressed steps come from the accent ramp, which is where every
  * other interactive surface in the product takes them from.
  */
-export const barStates = 'bg-accent/18 hover:bg-accent/25 active:bg-accent/35 transition-colors';
+const barStates = 'bg-accent/18 hover:bg-accent/25 active:bg-accent/35 transition-colors';
 
 export interface BarProps {
   readonly placed: Placed;

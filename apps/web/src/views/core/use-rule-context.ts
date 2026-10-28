@@ -21,7 +21,7 @@ const PRINCIPAL_KEY = ['me'] as const;
  * failed it never will be, and hiding every item over a rule nobody could check is a filter with
  * no visible reason.
  */
-export type PrincipalId = 'loading' | 'failed' | { readonly id: string };
+type PrincipalId = 'loading' | 'failed' | { readonly id: string };
 
 /** The rule context, and how far the reader's identity has got. */
 export interface ReaderRuleContext {

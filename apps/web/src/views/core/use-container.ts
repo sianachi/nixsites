@@ -41,7 +41,7 @@ export interface SchemaDraft {
  * broken board look identical if you let them.
  */
 
-export type ContainerStatus = 'loading' | 'ready' | 'partial' | 'error';
+type ContainerStatus = 'loading' | 'ready' | 'partial' | 'error';
 
 export interface ContainerData {
   /**
@@ -214,7 +214,7 @@ export interface PlanWrite {
 }
 
 /** One refused or failed row of a bulk write, named so a sentence can say which row. */
-export interface PlanRefusal {
+interface PlanRefusal {
   readonly label: string;
   readonly reason: string;
 }
@@ -235,7 +235,7 @@ export interface PlanOutcome {
  * operation the server should own end to end, and letting it run as a request storm would hold a
  * connection pool for minutes with no way to cancel.
  */
-export const MAXIMUM_PLAN_WRITES = 1000;
+const MAXIMUM_PLAN_WRITES = 1000;
 
 /** How many requests of one plan are in flight at once. */
 const PLAN_CONCURRENCY = 6;
@@ -247,7 +247,7 @@ const PLAN_CONCURRENCY = 6;
  * a large container is memory and parse time rather than DOM - but it is not free, and a container
  * past this size needs server-side querying rather than a bigger client buffer.
  */
-export const MAXIMUM_CHILDREN = 4000;
+const MAXIMUM_CHILDREN = 4000;
 
 /** The server's own page ceiling (`CursorPaging.MaximumPageSize`), asked for explicitly. */
 const PAGE_SIZE = 200;

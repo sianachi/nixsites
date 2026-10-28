@@ -244,7 +244,7 @@ export function coerceCellText(text: string, type: string | null): Coerced {
 }
 
 /** One row's worth of writes: the item, and the property changes going to it together. */
-export interface RowWrite {
+interface RowWrite {
   readonly item: Item;
   readonly bag: Record<string, PropertyValue>;
 }
@@ -354,7 +354,7 @@ export function fillPlan(
 }
 
 /** What a series fill would do to one column of the selection, for the sentence offering it. */
-export interface SeriesColumnFill {
+interface SeriesColumnFill {
   readonly column: SpreadsheetColumn;
   readonly kind: SeriesKind;
   readonly describe: string;
@@ -463,10 +463,10 @@ export function seriesFillPlan(
 }
 
 /** How many continued values an offer spells out; the sentence elides the rest. */
-export const SERIES_PREVIEW_VALUES = 3;
+const SERIES_PREVIEW_VALUES = 3;
 
 /** One column of a series-fill offer: what was found and the first values it would write. */
-export interface SeriesColumnOffer {
+interface SeriesColumnOffer {
   readonly column: SpreadsheetColumn;
   readonly kind: SeriesKind;
   readonly describe: string;

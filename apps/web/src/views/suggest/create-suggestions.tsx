@@ -38,7 +38,7 @@ export interface CreateSuggestionsProps {
 }
 
 /** The most property suggestions shown before the rest are folded behind "more". */
-export const VISIBLE_SUGGESTIONS = 2;
+const VISIBLE_SUGGESTIONS = 2;
 
 /**
  * The suggestions under a create field: likely property values, and a similar item that may already

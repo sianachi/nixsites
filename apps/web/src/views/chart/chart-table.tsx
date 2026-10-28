@@ -10,7 +10,7 @@ export interface ChartTableColumn {
   readonly values: readonly (number | null)[];
 }
 
-export interface ChartTableRow {
+interface ChartTableRow {
   readonly key: string;
   readonly label: string;
   readonly muted?: boolean;

@@ -15,7 +15,7 @@ export function spoken(date: string): string {
  * to be spoken as the second, which told somebody their item had no start when what it had was a
  * start nobody could read - and sent them looking for data that was sitting right there.
  */
-export function startPhrase(placed: Placed): string {
+function startPhrase(placed: Placed): string {
   if (placed.start !== null) {
     return `starts ${spoken(placed.start)}`;
   }
@@ -25,7 +25,7 @@ export function startPhrase(placed: Placed): string {
     : `a start stored as "${placed.startRaw}", which is not a date`;
 }
 
-export function endPhrase(placed: Placed): string {
+function endPhrase(placed: Placed): string {
   if (placed.end !== null) {
     return `ends ${spoken(placed.end)}`;
   }
@@ -68,6 +68,6 @@ export function describeDates(placed: Placed): string {
   return `${sentence(startPhrase(placed))}. ${sentence(endPhrase(placed))}.`;
 }
 
-export function sentence(phrase: string): string {
+function sentence(phrase: string): string {
   return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }

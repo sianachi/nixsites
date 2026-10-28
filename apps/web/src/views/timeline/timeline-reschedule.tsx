@@ -132,7 +132,7 @@ export function RescheduleFields({
  * than being overwritten. The label is plain English rather than the key, so a degraded schema does
  * not put a column name in front of somebody.
  */
-export function resolveDateProperty(
+function resolveDateProperty(
   schema: EffectiveSchema | null,
   key: string,
   fallbackLabel: string,

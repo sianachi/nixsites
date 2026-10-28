@@ -2,7 +2,7 @@ import { STRUCTURED_RECIPES } from '../wizard/structured-recipes';
 import type { View } from './container-model';
 
 /** The guided recipe that configures a view of this kind, if any does. */
-export function guidedRecipeFor(kind: string): (typeof STRUCTURED_RECIPES)[number] | null {
+function guidedRecipeFor(kind: string): (typeof STRUCTURED_RECIPES)[number] | null {
   return (
     STRUCTURED_RECIPES.find((recipe) => recipe.viewKind === kind && recipe.menu === 'structured') ??
     STRUCTURED_RECIPES.find((recipe) => recipe.viewKind === kind) ??

@@ -11,13 +11,13 @@ import type { ChangeEvent, FocusEvent, KeyboardEvent as ReactKeyboardEvent, Ref 
  * line breaks: a one-line input would strip them on the first keystroke. Enter still commits, as
  * in every spreadsheet; Alt+Enter or Shift+Enter starts a new line.
  */
-export const CELL_EDITOR_CLASSNAME =
+const CELL_EDITOR_CLASSNAME =
   'absolute z-10 min-w-0 bg-background px-2 py-1 text-lg outline-2 -outline-offset-2 outline-accent';
 
 /** The most lines a multi-line editor shows before it scrolls. */
 const MAX_LINES = 8;
 
-export interface CellEditorPosition {
+interface CellEditorPosition {
   top: string;
   left: string;
   width: string;

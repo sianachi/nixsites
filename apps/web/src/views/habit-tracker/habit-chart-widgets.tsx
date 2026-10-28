@@ -12,7 +12,7 @@ import {
   HabitQuantityTrend,
 } from './habit-progress';
 
-export type HabitWidgetKind = 'completion' | 'quantity' | 'heatmap';
+type HabitWidgetKind = 'completion' | 'quantity' | 'heatmap';
 
 export interface HabitWidgetConfig {
   readonly id: string;

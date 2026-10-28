@@ -139,7 +139,7 @@ export function describeUndrawable(
 }
 
 /** Both, because both name a day: a date is all-day, a timestamp is a moment that carries one. */
-export function placesOnAnAxis(property: PropertyDefinition): boolean {
+function placesOnAnAxis(property: PropertyDefinition): boolean {
   return isDateShaped(property.type);
 }
 

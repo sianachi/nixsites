@@ -25,8 +25,6 @@ import { readerToday } from '../core/timestamps';
  */
 
 /** Moved beside the zone it reads; re-exported because callers and tests import it from here. */
-export { readerToday };
-
 /**
  * Why a failed run failed, in words a reader can act on - keyed on the problem's `code`, not the
  * status alone, for the reason `use-workspace-graph.ts` records: a bodyless 404 is this build
@@ -59,7 +57,7 @@ function refusal(reason: unknown): string {
   return 'The smart list could not be loaded.';
 }
 
-export type QueryResultsStatus = 'loading' | 'ready' | 'error';
+type QueryResultsStatus = 'loading' | 'ready' | 'error';
 
 export interface QueryResultsState {
   readonly status: QueryResultsStatus;

@@ -28,7 +28,7 @@ import type { Item, PropertyDefinition, PropertyValue } from '../core/container-
  */
 
 /** The property types a title can be learned against. */
-export const LEARNABLE_TYPES: ReadonlySet<string> = new Set(['select', 'multi_select', 'assignee']);
+const LEARNABLE_TYPES: ReadonlySet<string> = new Set(['select', 'multi_select', 'assignee']);
 
 /** One property's trained model. */
 export interface PropertyModel {

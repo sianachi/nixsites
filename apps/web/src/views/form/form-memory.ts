@@ -34,16 +34,16 @@ const REMEMBERED_TYPES: ReadonlySet<string> = new Set([
  * The least decayed score before a value is offered: two submissions within one frecency half-life
  * (two weeks) clear it, one submission never does, and two a month apart no longer do.
  */
-export const MINIMUM_HABIT = 1.5;
+const MINIMUM_HABIT = 1.5;
 
 /** The share of all remembered picks the usual value must hold, so a split habit offers nothing. */
-export const MINIMUM_HABIT_SHARE = 0.5;
+const MINIMUM_HABIT_SHARE = 0.5;
 
-export function formMemoryNamespace(workspaceId: string, viewId: string, key: string): string {
+function formMemoryNamespace(workspaceId: string, viewId: string, key: string): string {
   return `form:${workspaceId}:${viewId}:${key}`;
 }
 
-export function isRemembered(property: PropertyDefinition): boolean {
+function isRemembered(property: PropertyDefinition): boolean {
   return !property.choiceSource && REMEMBERED_TYPES.has(property.type);
 }
 

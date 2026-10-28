@@ -7,7 +7,7 @@
  */
 
 /** The step a dragged start or end lands on. */
-export const SNAP_MINUTES = 15;
+const SNAP_MINUTES = 15;
 
 const MINUTES_PER_DAY = 24 * 60;
 

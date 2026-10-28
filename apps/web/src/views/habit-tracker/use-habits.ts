@@ -2,7 +2,7 @@ import { habits, isNixApiError, type HabitTracker, type SetHabitInput } from '@n
 import { useApiClient } from '../../api/api-client-provider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-export type HabitLoadState = 'loading' | 'ready' | 'partial' | 'error';
+type HabitLoadState = 'loading' | 'ready' | 'partial' | 'error';
 
 export interface HabitsState {
   readonly status: HabitLoadState;

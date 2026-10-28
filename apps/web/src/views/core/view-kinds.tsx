@@ -209,7 +209,7 @@ interface ViewChoiceOf<TField extends ChoiceField, TToken extends string> {
   readonly fallback: TToken;
 }
 
-export type ViewChoice = {
+type ViewChoice = {
   [TField in ChoiceField]: ViewChoiceOf<TField, ChoiceTokens[TField]>;
 }[ChoiceField];
 
@@ -292,9 +292,9 @@ const CARD_SIZE_LABELS: Record<CardSize, string> = {
  * numeric property. The server's `ChartMeasures` is the authority on the tokens; this is what a
  * person chooses from, and the `ChoiceTokens` join above is what stops the two lists drifting.
  */
-export const CHART_MEASURES = ['count', 'sum'] as const;
-export type ChartMeasure = (typeof CHART_MEASURES)[number];
-export const DEFAULT_CHART_MEASURE: ChartMeasure = 'count';
+const CHART_MEASURES = ['count', 'sum'] as const;
+type ChartMeasure = (typeof CHART_MEASURES)[number];
+const DEFAULT_CHART_MEASURE: ChartMeasure = 'count';
 
 const CHART_MEASURE_LABELS: Record<ChartMeasure, string> = {
   count: 'How many items',

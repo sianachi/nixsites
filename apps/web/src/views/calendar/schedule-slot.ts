@@ -24,10 +24,10 @@ import { readTimestampValue } from '../core/timestamps';
  * proposing something weeks away.
  */
 
-export const WORK_START_HOUR = 9;
-export const WORK_END_HOUR = 17;
-export const SEARCH_DAYS = 14;
-export const DEFAULT_DURATION_MINUTES = 60;
+const WORK_START_HOUR = 9;
+const WORK_END_HOUR = 17;
+const SEARCH_DAYS = 14;
+const DEFAULT_DURATION_MINUTES = 60;
 
 /** The longest duration taken from an item's own span; past a working day it is not a slot. */
 const MAXIMUM_DURATION_MINUTES = (WORK_END_HOUR - WORK_START_HOUR) * 60;

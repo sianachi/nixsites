@@ -41,7 +41,7 @@ function daysText(days: number): string {
   return days === 1 ? 'a day' : `${String(days)} days`;
 }
 
-export function daysPhrase(ms: number): string {
+function daysPhrase(ms: number): string {
   return daysText(wholeDays(ms, Math.floor));
 }
 
