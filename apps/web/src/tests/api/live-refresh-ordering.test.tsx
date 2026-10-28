@@ -9,6 +9,7 @@ import { useWorkspaceTree, type WorkspaceTree } from '../../items/use-workspace-
 import { notifyItemChildrenChanged, onItemChildrenChanged } from '../../lib/item-children-changed';
 import { WorkspaceProvider } from '../../workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '../api-stub';
+import { json } from '../json-response';
 
 const FIRST = item({
   id: 'a4000000-0000-4000-8000-000000000001',
@@ -37,15 +38,6 @@ const CREATED = item({
 });
 const treeKey: CacheKey = ['workspaces', STUB_WORKSPACE.id, 'items'];
 const collectionPath = '/api/v1/workspaces/' + STUB_WORKSPACE.id + '/items';
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': status >= 400 ? 'application/problem+json' : 'application/json',
-    },
-  });
-}
 
 function page(rows: readonly ReturnType<typeof item>[]): Response {
   return json({ items: rows, nextCursor: null });

@@ -12,6 +12,7 @@ import { useSessionStore } from '../../auth/session-store';
 import * as bodies from '../../editor/body-cache';
 import * as drafts from '../../editor/draft-journal';
 import { memoryStorage } from '../memory-storage';
+import { json } from '../json-response';
 
 const profile = { subject: 'renewal-person', name: 'Stored person', email: null };
 const command = defineCommand({
@@ -21,13 +22,6 @@ const command = defineCommand({
   body: { read: true },
   schema: z.object({ ok: z.literal(true) }),
 });
-
-function json(value: unknown, status = 200): Response {
-  return new Response(JSON.stringify(value), {
-    status,
-    headers: { 'Content-Type': status >= 400 ? 'application/problem+json' : 'application/json' },
-  });
-}
 
 function session(accessToken: string): Response {
   return json({

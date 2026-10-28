@@ -9,6 +9,7 @@ import {
   restoreRevision,
   type HistoryRequestConfig,
 } from '../../history/history-api';
+import { json } from '../json-response';
 
 /**
  * `history-api.ts` against a hand-rolled `fetch`: the URLs and headers it actually sends, what it
@@ -49,13 +50,6 @@ function fakeFetch(answer: (captured: Captured) => Response): {
       return Promise.resolve(answer(captured));
     },
   };
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': status >= 400 ? 'application/problem+json' : 'application/json' },
-  });
 }
 
 function config(

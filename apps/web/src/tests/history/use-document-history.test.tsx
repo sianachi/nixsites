@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useDocumentHistory } from '../../history/use-document-history';
+import { json } from '../json-response';
 
 /**
  * `useDocumentHistory` against a hand-rolled `fetch`: the initial page, paging further back,
@@ -28,13 +29,6 @@ function revision(seq: number, name: string | null = null): Record<string, unkno
     updateCount: 1,
     name,
   };
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': status >= 400 ? 'application/problem+json' : 'application/json' },
-  });
 }
 
 interface StubOptions {

@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 import { STUB_WORKSPACE_ID } from './resources/items';
 import { requestUrl } from '../request-url';
+import { json } from '../json-response';
 
 /**
  * The automation routes (ADR-0051 section 6), layered over the Core stub.
@@ -84,13 +85,6 @@ export function automationRule(
     updatedAt: '2026-09-30T09:00:00+00:00',
     ...overrides,
   };
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': status >= 400 ? 'application/problem+json' : 'application/json' },
-  });
 }
 
 function problem(status: number, code: string, detail: string): Response {

@@ -16,6 +16,7 @@ import { PropertyPanel } from '../../properties/property-panel';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useDriveFileInfo } from '../../views/drive/use-drive-file-info';
 import { item } from '../api-stub';
+import { json } from '../json-response';
 
 const NOTE = item({
   id: 'a5000000-0000-4000-8000-000000000001',
@@ -50,15 +51,6 @@ const FILE = {
   current: VERSION,
   versions: [VERSION],
 };
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': status >= 400 ? 'application/problem+json' : 'application/json',
-    },
-  });
-}
 
 function deferredResponse() {
   let finish: ((response: Response) => void) | undefined;

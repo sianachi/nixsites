@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
 import { useSessionStore } from '../../auth/session-store';
+import { json } from '../json-response';
 
 const auth = vi.hoisted(() => ({
   getAccessToken: vi.fn<(forceRefresh?: boolean) => Promise<string | null>>(),
@@ -25,13 +26,6 @@ const command = defineCommand({
   body: { read: true },
   schema: z.object({ ok: z.literal(true) }),
 });
-
-function json(value: unknown, status = 200): Response {
-  return new Response(JSON.stringify(value), {
-    status,
-    headers: { 'Content-Type': status >= 400 ? 'application/problem+json' : 'application/json' },
-  });
-}
 
 function ClientHarness({ onClient }: { readonly onClient: (client: NixClient) => void }) {
   const client = useApiClient();
