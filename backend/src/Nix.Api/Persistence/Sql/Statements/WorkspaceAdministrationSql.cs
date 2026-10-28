@@ -701,20 +701,24 @@ public static class WorkspaceAdministrationSql
         """;
 
     /// <summary>
-    /// Accepts the caller's pending invitation and grants its offered role. Refused, leaving the
-    /// invitation pending, while the workspace is closed to new members.
+    /// Accepts the caller's pending invitation and grants its offered role, never lowering a role
+    /// already held. Refused, leaving the invitation pending, while the workspace is closed to new
+    /// members; the share lock makes a concurrent close wait for this accept or win before it.
     /// </summary>
     public const string AcceptInvitation = """
-        WITH accepted AS (
+        WITH open_workspace AS MATERIALIZED (
+            SELECT w.workspace_id
+            FROM workspace w
+            WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+              AND NOT w.membership_locked
+            FOR SHARE
+        ), accepted AS (
             UPDATE workspace_invitation invitation
             SET status = 'accepted', accepted_at = @now, accepted_by_principal_id = @principal_id
+            FROM open_workspace
             WHERE invitation.tenant_id = @tenant_id AND invitation.workspace_id = @workspace_id
               AND invitation.invitation_id = @invitation_id AND invitation.status = 'pending'
               AND invitation.target_principal_id = @principal_id
-              AND NOT EXISTS (
-                  SELECT 1 FROM workspace w
-                  WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
-                    AND w.membership_locked)
             RETURNING invitation.invitation_id, invitation.role
         ), membership AS (
             INSERT INTO workspace_member (
@@ -723,7 +727,10 @@ public static class WorkspaceAdministrationSql
                    accepted.role, @principal_id, @now
             FROM accepted
             ON CONFLICT (workspace_id, subject_type, subject_id)
-            DO UPDATE SET role = EXCLUDED.role, granted_at = EXCLUDED.granted_at
+            DO UPDATE SET role = CASE
+                WHEN array_position(ARRAY['viewer', 'commenter', 'editor', 'owner'], EXCLUDED.role)
+                   > array_position(ARRAY['viewer', 'commenter', 'editor', 'owner'], workspace_member.role)
+                THEN EXCLUDED.role ELSE workspace_member.role END
             RETURNING workspace_id
         )
         SELECT invitation_id FROM accepted CROSS JOIN membership

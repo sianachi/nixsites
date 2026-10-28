@@ -375,6 +375,38 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Accepting_an_invitation_never_lowers_a_role_already_held()
+    {
+        // A recovery can make a pending invitee an owner; accepting the old viewer offer keeps that.
+        var invitationId = Guid.CreateVersion7();
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, null, $"""
+                INSERT INTO workspace_member
+                    (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
+                VALUES ('{Visible:D}', 'principal', '{Bob:D}', '{M0SchemaSeed.Alpha.TenantId:D}',
+                        'owner', '{Alice:D}', now());
+                INSERT INTO workspace_invitation
+                    (invitation_id, tenant_id, workspace_id, email_normalized, target_principal_id,
+                     role, invited_by_principal_id, status, invited_at)
+                VALUES ('{invitationId:D}', '{M0SchemaSeed.Alpha.TenantId:D}', '{Visible:D}',
+                        'bob-recovered@example.test', '{Bob:D}', 'viewer', '{Alice:D}', 'pending', now());
+                """);
+        }
+
+        var accepting = await _fixture.Application.BeginUnitOfWorkAsync(Context(Bob), Cancellation);
+        await using (accepting.ConfigureAwait(false))
+        {
+            var store = accepting.Resolve<WorkspaceAdministrationStore>();
+            Assert.True(await store.AcceptInvitationAsync(
+                WorkspaceId.From(Visible), invitationId, DateTimeOffset.UtcNow, Cancellation));
+            Assert.Equal("owner", (await store.FindPrincipalMemberAsync(
+                WorkspaceId.From(Visible), PrincipalId.From(Bob), Cancellation))?.Role);
+        }
+    }
+
+    [Fact]
     public async Task A_closed_workspace_refuses_new_invitations_and_holds_pending_ones()
     {
         await InsertHumanAsync(Charlie, "charlie", "charlie@example.test", verified: true);

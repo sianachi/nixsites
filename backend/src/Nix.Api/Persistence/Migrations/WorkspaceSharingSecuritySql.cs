@@ -28,9 +28,9 @@ public static class WorkspaceSharingSecuritySql
     {
         ArgumentNullException.ThrowIfNull(emit);
 
-        // Invite refused anyone who already had access, so a direct grant beside a pending
-        // invitation is always the provisional one. The migrator holds BYPASSRLS, as for every
-        // backfill before it.
+        // Only the exact grant an invitation wrote: by its inviter, at its instant, never owner.
+        // A recovery can make a pending invitee a real owner, and that row must survive. The
+        // migrator holds BYPASSRLS, as for every backfill before it.
         emit("""
             DELETE FROM workspace_member member
              USING workspace_invitation invitation
@@ -38,6 +38,9 @@ public static class WorkspaceSharingSecuritySql
                AND member.workspace_id = invitation.workspace_id
                AND member.subject_type = 'principal'
                AND member.subject_id = invitation.target_principal_id
+               AND member.granted_by = invitation.invited_by_principal_id
+               AND member.granted_at = invitation.invited_at
+               AND member.role <> 'owner'
                AND invitation.status = 'pending';
             """);
 
