@@ -1,12 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { Site } from '@nix/api-client';
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
+import { makeProfile } from './cli.test-helper.ts';
 import {
   addHostname,
   describeHostnames,
@@ -90,12 +87,7 @@ function site(): Record<string, unknown> {
   };
 }
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-hostnames-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('site hostnames and approvals', () => {
   it('adds a hostname with its serve mode and refuses an unknown mode before sending', async () => {

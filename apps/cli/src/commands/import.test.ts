@@ -5,9 +5,9 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
 import { runImport } from './import.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const COLLAB = 'http://nix.test:8100';
@@ -58,16 +58,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-import-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    { apiUrl: API, token: 'nixpat_abc', collabUrl: COLLAB },
-    { makeDefault: true, env },
-  );
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc', collabUrl: COLLAB });
 
 /** A source tree: two notes (one with front matter), a non-Markdown file, and a nested folder. */
 async function withSourceTree(): Promise<{ dir: string; done: () => Promise<void> }> {
@@ -82,22 +73,6 @@ async function withSourceTree(): Promise<{ dir: string; done: () => Promise<void
   await mkdir(join(dir, 'sub'));
   await writeFile(join(dir, 'sub', 'nested.md'), 'Nested body.\n', 'utf8');
   return { dir, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
 }
 
 /** The handlers a fully-green import needs; individual tests override the parts they break. */
@@ -141,7 +116,7 @@ describe('nixctl import --dry-run', () => {
     // No handlers beyond the token exchange are registered, and unhandled requests error: a dry
     // run that reached the network would fail this test by construction. It does not even need
     // the token.
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: true },
@@ -198,7 +173,7 @@ describe('nixctl import --dry-run', () => {
     await writeFile(join(dir, 'a.md'), 'A.', 'utf8');
     await writeFile(join(dir, 'Z.md'), 'Z.', 'utf8');
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: true },
@@ -277,7 +252,7 @@ describe('nixctl import', () => {
         return true;
       });
     try {
-      const printed = (await capture((json) =>
+      const printed = (await captureJson((json) =>
         runImport('default', { path: file, workspaceId: WS, dryRun: false, noWait: true }, json, {
           env,
         }),
@@ -449,7 +424,7 @@ describe('nixctl import', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: file, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -484,7 +459,7 @@ describe('nixctl import', () => {
     const bodyWrites = { count: 0 };
     server.use(...greenHandlers({ parents, propertyPatches, bodyWrites }));
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -547,7 +522,7 @@ describe('nixctl import', () => {
     const parents: (string | null)[] = [];
     server.use(...greenHandlers({ parents }));
 
-    await capture((json) =>
+    await captureJson((json) =>
       runImport('default', { path: file, workspaceId: WS, parentId: parent, dryRun: false }, json, {
         env,
       }),
@@ -586,7 +561,7 @@ describe('nixctl import', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -623,7 +598,7 @@ describe('nixctl import', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -668,7 +643,7 @@ describe('nixctl import', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -708,7 +683,7 @@ describe('nixctl import', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -750,7 +725,7 @@ describe('nixctl import', () => {
     await writeFile(file, 'plain text', 'utf8');
 
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         runImport(
           'default',
           { path: file, workspaceId: WS, parentId: undefined, dryRun: false },
@@ -773,7 +748,7 @@ describe('nixctl import', () => {
     await mkdir(join(dir, '.obsidian'));
     await writeFile(join(dir, '.obsidian', 'config.md'), 'tool config', 'utf8');
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runImport(
         'default',
         { path: dir, workspaceId: WS, parentId: undefined, dryRun: true },

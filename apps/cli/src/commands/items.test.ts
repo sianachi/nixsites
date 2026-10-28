@@ -1,13 +1,9 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
 import { createItem, deleteItem, getItem, listItems, renameItem } from './items.ts';
 import { listWorkspaces } from './workspaces.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
@@ -50,29 +46,9 @@ afterAll(() => {
 });
 
 /** Runs a command with stdout captured, returns the single JSON value it printed. */
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
 
 /** A temp config with one signed-in profile; the caller cleans up. */
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-items-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('the item commands over a stubbed workspace', () => {
   it("lists a workspace's children", async () => {
@@ -86,7 +62,7 @@ describe('the item commands over a stubbed workspace', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       listItems('default', { workspaceId: WORKSPACE, includeDeleted: false }, json, { env }),
     )) as { count: number; items: { title: string }[] };
 
@@ -106,7 +82,7 @@ describe('the item commands over a stubbed workspace', () => {
       ),
     );
 
-    const printed = (await capture((json) => getItem('default', ITEM, json, { env }))) as {
+    const printed = (await captureJson((json) => getItem('default', ITEM, json, { env }))) as {
       title: string;
       properties: Record<string, unknown>;
     };
@@ -125,7 +101,7 @@ describe('the item commands over a stubbed workspace', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       createItem('default', { workspaceId: WORKSPACE, type: 'note', title: 'Fresh' }, json, {
         env,
       }),
@@ -145,7 +121,7 @@ describe('the item commands over a stubbed workspace', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       renameItem('default', ITEM, WORKSPACE, 'Renamed', json, { env }),
     )) as { title: string };
 
@@ -160,7 +136,9 @@ describe('the item commands over a stubbed workspace', () => {
       http.delete(`${API}/api/v1/items/:itemId`, () => new HttpResponse(null, { status: 204 })),
     );
 
-    const printed = await capture((json) => deleteItem('default', ITEM, WORKSPACE, json, { env }));
+    const printed = await captureJson((json) =>
+      deleteItem('default', ITEM, WORKSPACE, json, { env }),
+    );
 
     expect(printed).toEqual({ id: ITEM, deleted: true });
     await done();
@@ -177,7 +155,9 @@ describe('the item commands over a stubbed workspace', () => {
       ),
     );
 
-    await expect(capture((json) => getItem('default', ITEM, json, { env }))).rejects.toMatchObject({
+    await expect(
+      captureJson((json) => getItem('default', ITEM, json, { env })),
+    ).rejects.toMatchObject({
       status: 404,
     });
     await done();
@@ -234,7 +214,7 @@ describe('ws list', () => {
       }),
     );
 
-    const printed = (await capture((json) => listWorkspaces('default', {}, json, { env }))) as {
+    const printed = (await captureJson((json) => listWorkspaces('default', {}, json, { env }))) as {
       count: number;
       nextCursor: string | null;
       workspaces: { name: string; kind: string; canManageMembers: boolean }[];

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
+import { captureJson } from './cli.test-helper.ts';
 import {
   acceptWorkspaceInvitation,
   dailyNoteSettings,
@@ -68,7 +69,7 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) => readWorkspaceGraph('default', WORKSPACE, json, profile.deps)),
+      await captureJson((json) => readWorkspaceGraph('default', WORKSPACE, json, profile.deps)),
     ).toEqual(graph);
     await profile.done();
   });
@@ -88,12 +89,14 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) => createWorkspace('default', 'Created', json, profile.deps)),
+      await captureJson((json) => createWorkspace('default', 'Created', json, profile.deps)),
     ).toMatchObject({
       name: 'Created',
     });
     expect(
-      await capture((json) => renameWorkspace('default', WORKSPACE, 'Renamed', json, profile.deps)),
+      await captureJson((json) =>
+        renameWorkspace('default', WORKSPACE, 'Renamed', json, profile.deps),
+      ),
     ).toMatchObject({ name: 'Renamed' });
     expect(bodies).toEqual([{ name: 'Created' }, { name: 'Renamed' }]);
     await profile.done();
@@ -115,13 +118,13 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) => archiveWorkspace('default', WORKSPACE, true, json, profile.deps)),
+      await captureJson((json) => archiveWorkspace('default', WORKSPACE, true, json, profile.deps)),
     ).toMatchObject({ lifecycleState: 'archived' });
     expect(
-      await capture((json) => restoreWorkspace('default', WORKSPACE, json, profile.deps)),
+      await captureJson((json) => restoreWorkspace('default', WORKSPACE, json, profile.deps)),
     ).toMatchObject({ lifecycleState: 'active' });
     expect(
-      await capture((json) => purgeWorkspace('default', WORKSPACE, true, json, profile.deps)),
+      await captureJson((json) => purgeWorkspace('default', WORKSPACE, true, json, profile.deps)),
     ).toEqual({ purging: true, workspaceId: WORKSPACE });
     await profile.done();
   });
@@ -144,18 +147,18 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         listWorkspaceInvitations('default', WORKSPACE, {}, json, profile.deps),
       ),
     ).toMatchObject({ count: 1 });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         inviteWorkspaceMember('default', WORKSPACE, PRINCIPAL, 'editor', json, profile.deps),
       ),
     ).toMatchObject({ id: INVITATION, status: 'pending' });
     expect(inviteBody).toEqual({ principalId: PRINCIPAL, role: 'editor' });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         revokeWorkspaceInvitation('default', WORKSPACE, INVITATION, true, json, profile.deps),
       ),
     ).toEqual({ revoked: true, invitationId: INVITATION });
@@ -180,7 +183,7 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         listWorkspaceInvitees('default', WORKSPACE, { query: ' person@ ' }, json, profile.deps),
       ),
     ).toMatchObject({
@@ -188,12 +191,12 @@ describe('workspace administration commands', () => {
       invitees: [{ principalId: PRINCIPAL, displayName: 'Collaborator' }],
     });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         acceptWorkspaceInvitation('default', WORKSPACE, INVITATION, json, profile.deps),
       ),
     ).toEqual({ accepted: true, invitationId: INVITATION });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         declineWorkspaceInvitation('default', WORKSPACE, INVITATION, true, json, profile.deps),
       ),
     ).toEqual({ declined: true, invitationId: INVITATION });
@@ -221,7 +224,9 @@ describe('workspace administration commands', () => {
     );
 
     expect(
-      await capture((json) => listWorkspaceMembers('default', WORKSPACE, {}, json, profile.deps)),
+      await captureJson((json) =>
+        listWorkspaceMembers('default', WORKSPACE, {}, json, profile.deps),
+      ),
     ).toMatchObject({
       count: 1,
       members: [
@@ -229,13 +234,13 @@ describe('workspace administration commands', () => {
       ],
     });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         changeWorkspaceMemberRole('default', WORKSPACE, PRINCIPAL, 'editor', json, profile.deps),
       ),
     ).toMatchObject({ role: 'editor' });
     expect(roleBody).toEqual({ role: 'editor' });
     expect(
-      await capture((json) =>
+      await captureJson((json) =>
         removeWorkspaceMember('default', WORKSPACE, PRINCIPAL, true, json, profile.deps),
       ),
     ).toEqual({ removed: true, principalId: PRINCIPAL });
@@ -269,20 +274,6 @@ describe('workspace administration commands', () => {
     );
   });
 });
-
-async function capture(body: (json: ReturnType<typeof outputOptions>) => Promise<void>) {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join('')) as unknown;
-}
 
 async function withProfile() {
   const dir = await mkdtemp(join(tmpdir(), 'nixctl-workspaces-'));
@@ -373,10 +364,14 @@ it('routes daily settings and dates to their distinct Core endpoints', async () 
     ),
   );
   expect(
-    await capture((json) => dailyNoteSettings('default', WORKSPACE, undefined, json, profile.deps)),
+    await captureJson((json) =>
+      dailyNoteSettings('default', WORKSPACE, undefined, json, profile.deps),
+    ),
   ).toEqual(settings);
   expect(
-    await capture((json) => openDailyNote('default', WORKSPACE, '2026-10-04', json, profile.deps)),
+    await captureJson((json) =>
+      openDailyNote('default', WORKSPACE, '2026-10-04', json, profile.deps),
+    ),
   ).toEqual({ itemId: PRINCIPAL, created: true });
   await profile.done();
 });

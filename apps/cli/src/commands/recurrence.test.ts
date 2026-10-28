@@ -1,12 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
 import { clearRecurrence, completeRecurrence, runCalendar, setRecurrence } from './recurrence.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const ITEM = '11111111-1111-4111-8111-111111111111';
@@ -41,28 +37,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-recurrence-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('nixctl recur set', () => {
   it('sends the parsed rule as the PUT body and prints the rule Core returns', async () => {
@@ -75,7 +50,7 @@ describe('nixctl recur set', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       setRecurrence(
         'default',
         ITEM,
@@ -107,7 +82,7 @@ describe('nixctl recur set', () => {
       }),
     );
 
-    await capture((json) => setRecurrence('default', ITEM, { freq: 'daily' }, json, { env }));
+    await captureJson((json) => setRecurrence('default', ITEM, { freq: 'daily' }, json, { env }));
 
     expect(sentBody).toEqual({ freq: 'daily', interval: 1, weekdays: null, until: null });
     await done();
@@ -117,7 +92,7 @@ describe('nixctl recur set', () => {
     const { env, done } = await withProfile();
     // onUnhandledRequest:'error' fails the test if this reaches the network; it must not.
     await expect(
-      capture((json) => setRecurrence('default', ITEM, { freq: 'fortnightly' }, json, { env })),
+      captureJson((json) => setRecurrence('default', ITEM, { freq: 'fortnightly' }, json, { env })),
     ).rejects.toThrow(/--freq must be one of/);
     await done();
   });
@@ -125,7 +100,7 @@ describe('nixctl recur set', () => {
   it('refuses an interval below 1 before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         setRecurrence('default', ITEM, { freq: 'daily', interval: '0' }, json, { env }),
       ),
     ).rejects.toThrow(/--interval must be a whole number between 1 and 366/);
@@ -135,7 +110,7 @@ describe('nixctl recur set', () => {
   it('refuses an interval above 366 before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         setRecurrence('default', ITEM, { freq: 'daily', interval: '400' }, json, { env }),
       ),
     ).rejects.toThrow(/--interval must be a whole number between 1 and 366/);
@@ -145,7 +120,7 @@ describe('nixctl recur set', () => {
   it('refuses a malformed --until date before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         setRecurrence('default', ITEM, { freq: 'daily', until: '2026-02-30' }, json, { env }),
       ),
     ).rejects.toThrow(/--until must be a real calendar day/);
@@ -155,7 +130,7 @@ describe('nixctl recur set', () => {
   it('refuses --weekdays on a non-weekly rule before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         setRecurrence('default', ITEM, { freq: 'daily', weekdays: 'mo,we' }, json, { env }),
       ),
     ).rejects.toThrow(/--weekdays only applies to --freq weekly/);
@@ -173,7 +148,7 @@ describe('nixctl recur set', () => {
       ),
     );
     await expect(
-      capture((json) => setRecurrence('default', ITEM, { freq: 'daily' }, json, { env })),
+      captureJson((json) => setRecurrence('default', ITEM, { freq: 'daily' }, json, { env })),
     ).rejects.toMatchObject({ status: 404 });
     await done();
   });
@@ -192,7 +167,9 @@ describe('nixctl recur clear', () => {
       }),
     );
 
-    const printed = (await capture((json) => clearRecurrence('default', ITEM, json, { env }))) as {
+    const printed = (await captureJson((json) =>
+      clearRecurrence('default', ITEM, json, { env }),
+    )) as {
       id: string;
       rule: unknown;
     };
@@ -212,7 +189,7 @@ describe('nixctl recur clear', () => {
       ),
     );
     await expect(
-      capture((json) => clearRecurrence('default', ITEM, json, { env })),
+      captureJson((json) => clearRecurrence('default', ITEM, json, { env })),
     ).rejects.toMatchObject({
       status: 403,
     });
@@ -234,7 +211,7 @@ describe('nixctl recur complete', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       completeRecurrence('default', ITEM, { on: '2026-08-17' }, json, { env }),
     )) as { id: string; occurredOn: string; rule: { completed: string[] } };
 
@@ -254,7 +231,7 @@ describe('nixctl recur complete', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       completeRecurrence('default', ITEM, { on: '2026-08-17' }, json, { env }),
     )) as { occurredOn: string };
 
@@ -265,7 +242,9 @@ describe('nixctl recur complete', () => {
   it('refuses a malformed --on date before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) => completeRecurrence('default', ITEM, { on: 'not-a-date' }, json, { env })),
+      captureJson((json) =>
+        completeRecurrence('default', ITEM, { on: 'not-a-date' }, json, { env }),
+      ),
     ).rejects.toThrow(/--on must be a real calendar day/);
     await done();
   });
@@ -281,7 +260,9 @@ describe('nixctl recur complete', () => {
       ),
     );
     await expect(
-      capture((json) => completeRecurrence('default', ITEM, { on: '2026-08-17' }, json, { env })),
+      captureJson((json) =>
+        completeRecurrence('default', ITEM, { on: '2026-08-17' }, json, { env }),
+      ),
     ).rejects.toMatchObject({ status: 404 });
     await done();
   });
@@ -357,7 +338,7 @@ describe('nixctl calendar', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runCalendar(
         'default',
         { workspaceId: WORKSPACE, from: '2026-08-01', to: '2026-08-31' },
@@ -394,7 +375,7 @@ describe('nixctl calendar', () => {
   it('refuses a malformed --from date before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         runCalendar(
           'default',
           { workspaceId: WORKSPACE, from: '2026-13-01', to: '2026-08-31' },
@@ -411,7 +392,7 @@ describe('nixctl calendar', () => {
   it('refuses a malformed --to date before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         runCalendar('default', { workspaceId: WORKSPACE, from: '2026-08-01', to: 'nope' }, json, {
           env,
         }),
@@ -431,7 +412,7 @@ describe('nixctl calendar', () => {
       ),
     );
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         runCalendar(
           'default',
           { workspaceId: WORKSPACE, from: '2026-08-01', to: '2026-08-31' },

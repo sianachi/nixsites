@@ -10,6 +10,7 @@ import { outputOptions } from '../output.ts';
 import { openSession } from '../session.ts';
 import { resolveSession } from './shared.ts';
 import { executeOperationGet } from './operations.ts';
+import { makeProfile } from './cli.test-helper.ts';
 import {
   applyTemplate,
   captureTemplate,
@@ -62,16 +63,7 @@ async function capture(
   }
 }
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-templates-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    { apiUrl: CORE, collabUrl: COLLAB, token: 'nixpat_abc' },
-    { makeDefault: true, env },
-  );
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: CORE, collabUrl: COLLAB, token: 'nixpat_abc' });
 
 function detail(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

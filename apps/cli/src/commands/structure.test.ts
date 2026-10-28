@@ -1,11 +1,9 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 import {
   getSchema,
   parseAssignments,
@@ -80,32 +78,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{
-  env: NodeJS.ProcessEnv;
-  dir: string;
-  done: () => Promise<void>;
-}> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-structure-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, dir, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('parseAssignments', () => {
   it('parses JSON values where they parse and plain strings otherwise', () => {
@@ -143,7 +116,7 @@ describe('nixctl props set', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       setProps('default', ITEM, ['status=done', 'count=5', 'archived=null'], json, { env }),
     )) as { id: string; set: string[] };
 
@@ -164,7 +137,7 @@ describe('nixctl props set', () => {
       ),
     );
     await expect(
-      capture((json) => setProps('default', ITEM, ['a=1'], json, { env })),
+      captureJson((json) => setProps('default', ITEM, ['a=1'], json, { env })),
     ).rejects.toMatchObject({
       status: 404,
     });
@@ -213,7 +186,7 @@ describe('nixctl structure read', () => {
       ),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       readStructureOutline('default', ITEM, json, { env }),
     )) as {
       item: { id: string; title: string };
@@ -245,7 +218,7 @@ describe('nixctl schema get', () => {
       ),
     );
 
-    const printed = (await capture((json) => getSchema('default', ITEM, json, { env }))) as {
+    const printed = (await captureJson((json) => getSchema('default', ITEM, json, { env }))) as {
       count: number;
       inherit: boolean;
       declared: unknown[];
@@ -286,7 +259,9 @@ describe('nixctl schema set', () => {
       }),
     );
 
-    const printed = (await capture((json) => setSchema('default', ITEM, file, json, { env }))) as {
+    const printed = (await captureJson((json) =>
+      setSchema('default', ITEM, file, json, { env }),
+    )) as {
       count: number;
       inherit: boolean;
     };
@@ -320,7 +295,7 @@ describe('nixctl schema set', () => {
       }),
     );
 
-    await capture((json) => setSchema('default', ITEM, file, json, { env }));
+    await captureJson((json) => setSchema('default', ITEM, file, json, { env }));
 
     expect(sentBody).toEqual({ properties: [rollup], inherit: true });
     await done();
@@ -346,7 +321,7 @@ describe('nixctl schema set', () => {
       }),
     );
 
-    await capture((json) => setSchema('default', ITEM, file, json, { env }));
+    await captureJson((json) => setSchema('default', ITEM, file, json, { env }));
 
     // Dropped on the way through, the property would reach Core as a formula with nothing to
     // evaluate - which Core refuses, naming a field the file did supply.
@@ -360,7 +335,7 @@ describe('nixctl schema set', () => {
     await writeFile(file, JSON.stringify({ properties: [] }), 'utf8');
     // onUnhandledRequest:'error' would fail the test if it reached the network; it must not.
     await expect(
-      capture((json) => setSchema('default', ITEM, file, json, { env })),
+      captureJson((json) => setSchema('default', ITEM, file, json, { env })),
     ).rejects.toThrow(/inherit/);
     await done();
   });

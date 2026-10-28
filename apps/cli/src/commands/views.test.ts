@@ -1,12 +1,10 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
 import { getViews, inspectViews, setViews } from './views.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const ITEM = '11111111-1111-4111-8111-111111111111';
@@ -50,32 +48,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{
-  env: NodeJS.ProcessEnv;
-  dir: string;
-  done: () => Promise<void>;
-}> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-views-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, dir, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('nixctl views get', () => {
   it('lists the views with their renderable flag and the default', async () => {
@@ -90,7 +63,7 @@ describe('nixctl views get', () => {
       ),
     );
 
-    const printed = (await capture((json) => getViews('default', ITEM, json, { env }))) as {
+    const printed = (await captureJson((json) => getViews('default', ITEM, json, { env }))) as {
       count: number;
       default: string;
       views: { id: string; kind: string; renderable: boolean }[];
@@ -115,9 +88,9 @@ describe('nixctl views get', () => {
       ),
     );
 
-    await expect(capture((json) => getViews('default', ITEM, json, { env }))).rejects.toMatchObject(
-      { status: 404 },
-    );
+    await expect(
+      captureJson((json) => getViews('default', ITEM, json, { env })),
+    ).rejects.toMatchObject({ status: 404 });
     await done();
   });
 });
@@ -142,7 +115,9 @@ describe('nixctl views set', () => {
       }),
     );
 
-    const printed = (await capture((json) => setViews('default', ITEM, file, json, { env }))) as {
+    const printed = (await captureJson((json) =>
+      setViews('default', ITEM, file, json, { env }),
+    )) as {
       count: number;
       default: string;
       views: { id: string; kind: string }[];
@@ -161,9 +136,9 @@ describe('nixctl views set', () => {
     const file = join(dir, 'bad.json');
     await writeFile(file, JSON.stringify({ default: null }), 'utf8');
     // onUnhandledRequest:'error' would fail if it reached the network; it must not.
-    await expect(capture((json) => setViews('default', ITEM, file, json, { env }))).rejects.toThrow(
-      /views/,
-    );
+    await expect(
+      captureJson((json) => setViews('default', ITEM, file, json, { env })),
+    ).rejects.toThrow(/views/);
     await done();
   });
 
@@ -184,7 +159,7 @@ describe('nixctl views set', () => {
       ),
     );
     await expect(
-      capture((json) => setViews('default', ITEM, file, json, { env })),
+      captureJson((json) => setViews('default', ITEM, file, json, { env })),
     ).rejects.toMatchObject({
       status: 422,
     });
@@ -208,7 +183,7 @@ describe('nixctl views inspect', () => {
       ),
     );
     try {
-      const printed = await capture((json) => inspectViews('default', ITEM, json, { env }));
+      const printed = await captureJson((json) => inspectViews('default', ITEM, json, { env }));
       expect(printed).toMatchObject({ views: [{ habitWidgets }] });
     } finally {
       await done();

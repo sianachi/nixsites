@@ -1,11 +1,7 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
+import { captureText, makeProfile } from './cli.test-helper.ts';
 import {
   applyPreferenceChanges,
   listNotifications,
@@ -70,29 +66,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-notifications-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-  isTTY = false,
-): Promise<string> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(false, { isTTY }));
-  } finally {
-    spy.mockRestore();
-  }
-  return lines.join('');
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('nixctl notifications list', () => {
   it('asks for unread only and the given cursor, and prints the page as Core returned it', async () => {
@@ -106,7 +80,7 @@ describe('nixctl notifications list', () => {
     );
 
     const printed = JSON.parse(
-      await capture((out) =>
+      await captureText((out) =>
         listNotifications('default', { unread: true, cursor: 'c-0' }, out, { env }),
       ),
     ) as { unread: number; nextCursor: string };
@@ -122,7 +96,10 @@ describe('nixctl notifications list', () => {
     const { env, done } = await withProfile();
     server.use(http.get(`${API}/api/v1/me/notifications`, () => HttpResponse.json(page())));
 
-    const printed = await capture((out) => listNotifications('default', {}, out, { env }), true);
+    const printed = await captureText(
+      (out) => listNotifications('default', {}, out, { env }),
+      true,
+    );
 
     expect(printed).toContain('Pay rent');
     expect(printed).toContain('unread 1; next page --cursor next-1');
@@ -142,7 +119,7 @@ describe('nixctl notifications read and read-all', () => {
     );
 
     const printed = JSON.parse(
-      await capture((out) => readNotification('default', NOTE, out, { env })),
+      await captureText((out) => readNotification('default', NOTE, out, { env })),
     ) as unknown;
 
     expect(path).toBe(`/api/v1/me/notifications/${NOTE}/read`);
@@ -153,7 +130,7 @@ describe('nixctl notifications read and read-all', () => {
   it('refuses an id that is not a UUID before any request', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((out) => readNotification('default', 'nope', out, { env })),
+      captureText((out) => readNotification('default', 'nope', out, { env })),
     ).rejects.toThrow('UUID');
     await done();
   });
@@ -165,7 +142,7 @@ describe('nixctl notifications read and read-all', () => {
     );
 
     const printed = JSON.parse(
-      await capture((out) => readAllNotifications('default', out, { env })),
+      await captureText((out) => readAllNotifications('default', out, { env })),
     ) as unknown;
 
     expect(printed).toEqual({ unread: 0 });
@@ -185,7 +162,7 @@ describe('nixctl notifications prefs set', () => {
       }),
     );
 
-    await capture((out) =>
+    await captureText((out) =>
       setPreferences(
         'default',
         { quiet: 'off', dueReminders: 'off', mute: [MUTED_B], unmute: [MUTED_A] },
@@ -211,7 +188,7 @@ describe('nixctl notifications prefs set', () => {
 
   it('refuses an empty change before any request', async () => {
     const { env, done } = await withProfile();
-    await expect(capture((out) => setPreferences('default', {}, out, { env }))).rejects.toThrow(
+    await expect(captureText((out) => setPreferences('default', {}, out, { env }))).rejects.toThrow(
       'Nothing to change',
     );
     await done();

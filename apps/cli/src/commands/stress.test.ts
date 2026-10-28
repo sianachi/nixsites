@@ -1,12 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
 import { percentile, seed, seededProperties, stressRun } from './stress.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const WS = '22222222-2222-4222-8222-222222222222';
@@ -53,28 +49,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-stress-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('nixctl stress seed', () => {
   it('creates a parent, then the requested children under it', async () => {
@@ -92,7 +67,7 @@ describe('nixctl stress seed', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       seed('default', { workspaceId: WS, count: 3 }, json, { env }),
     )) as { requested: number; created: number; stoppedEarly: boolean; parentId: string };
 
@@ -122,7 +97,7 @@ describe('nixctl stress seed', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       seed('default', { workspaceId: WS, count: 2, parentId: parent }, json, { env }),
     )) as { created: number; parentId: string };
 
@@ -156,7 +131,7 @@ describe('nixctl stress seed', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       seed('default', { workspaceId: WS, count: 10, parentId: parent }, json, { env }),
     )) as { created: number; stoppedEarly: boolean; reason: string };
 
@@ -169,7 +144,7 @@ describe('nixctl stress seed', () => {
   it('rejects a non-positive count before opening a session', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) => seed('default', { workspaceId: WS, count: 0 }, json, { env })),
+      captureJson((json) => seed('default', { workspaceId: WS, count: 0 }, json, { env })),
     ).rejects.toThrow(/positive integer/);
     await done();
   });
@@ -203,7 +178,7 @@ describe('nixctl stress run read-storm', () => {
     let tick = 0;
     const now = (): number => ticks[tick++] ?? 0;
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       stressRun('default', { scenario: 'read-storm', itemId: ITEM, iterations: 3 }, json, {
         env,
         now,
@@ -235,7 +210,7 @@ describe('nixctl stress run read-storm', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       stressRun('default', { scenario: 'read-storm', itemId: ITEM, iterations: 4 }, json, { env }),
     )) as { ok: number; errors: number; errorsByCode: Record<string, number> };
 
@@ -252,7 +227,7 @@ describe('nixctl stress run read-storm', () => {
   it('rejects an unknown scenario before opening a session', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         stressRun('default', { scenario: 'chaos', itemId: ITEM, iterations: 1 }, json, { env }),
       ),
     ).rejects.toThrow(/Unknown scenario/);
@@ -262,7 +237,7 @@ describe('nixctl stress run read-storm', () => {
   it('rejects read-storm with no --item', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         stressRun('default', { scenario: 'read-storm', iterations: 1 }, json, { env }),
       ),
     ).rejects.toThrow(/needs --item/);
@@ -287,7 +262,7 @@ describe('nixctl stress run search-storm', () => {
     let tick = 0;
     const now = (): number => ticks[tick++] ?? 0;
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       stressRun('default', { scenario: 'search-storm', query: 'soup', iterations: 3 }, json, {
         env,
         now,
@@ -306,7 +281,7 @@ describe('nixctl stress run search-storm', () => {
   it('rejects search-storm with no --query', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         stressRun('default', { scenario: 'search-storm', iterations: 1 }, json, { env }),
       ),
     ).rejects.toThrow(/needs --query/);
@@ -338,7 +313,7 @@ describe('nixctl stress run query-storm', () => {
     let tick = 0;
     const now = (): number => ticks[tick++] ?? 0;
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       stressRun(
         'default',
         {
@@ -364,7 +339,7 @@ describe('nixctl stress run query-storm', () => {
   it('rejects query-storm missing --view or --today', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((json) =>
+      captureJson((json) =>
         stressRun('default', { scenario: 'query-storm', itemId: ITEM, iterations: 1 }, json, {
           env,
         }),

@@ -5,8 +5,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { saveProfile } from '../config.ts';
 import { downloadFileValue, probeFileValue, uploadFileValue } from './files.ts';
+import { makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const WS = '22222222-2222-4222-8222-222222222222';
@@ -30,16 +30,8 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-files-profile-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    { apiUrl: API, token: 'nixpat_abc', collabUrl: 'http://nix.test:8100' },
-    { makeDefault: true, env },
-  );
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () =>
+  makeProfile({ apiUrl: API, token: 'nixpat_abc', collabUrl: 'http://nix.test:8100' });
 
 function operation() {
   return {

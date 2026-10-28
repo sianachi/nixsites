@@ -1,15 +1,12 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import * as Y from 'yjs';
 import { prosemirrorJSONToYDoc } from 'y-prosemirror';
 import { nixSchema } from '@nix/editor-schema';
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
 import { readNote, writeNote } from './notes.ts';
+import { captureStdout, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const COLLAB = 'http://nix.test:8100';
@@ -57,30 +54,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-notes-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    { apiUrl: API, token: 'nixpat_abc', collabUrl: COLLAB },
-    { makeDefault: true, env },
-  );
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function captureStdout(body: () => Promise<void>): Promise<string> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body();
-  } finally {
-    spy.mockRestore();
-  }
-  return lines.join('');
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc', collabUrl: COLLAB });
 
 describe('note read', () => {
   it('refuses a canvas with a pointer to a lossless export, rather than reading it as an empty note', async () => {

@@ -1,11 +1,10 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { ExitCode, outputOptions, toFailure } from '../output.ts';
+import { ExitCode, toFailure } from '../output.ts';
+import { captureText, makeProfile } from './cli.test-helper.ts';
 import {
   buildCreateRule,
   createAutomation,
@@ -282,33 +281,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{
-  env: NodeJS.ProcessEnv;
-  dir: string;
-  done: () => Promise<void>;
-}> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-automations-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, dir, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-  isTTY = false,
-): Promise<string> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(false, { isTTY }));
-  } finally {
-    spy.mockRestore();
-  }
-  return lines.join('');
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('nixctl automations against Core', () => {
   it('creates from flags, posting the built rule to the workspace', async () => {
@@ -322,7 +295,7 @@ describe('nixctl automations against Core', () => {
     );
 
     const printed = JSON.parse(
-      await capture((out) =>
+      await captureText((out) =>
         createAutomation(
           'default',
           {
@@ -365,7 +338,7 @@ describe('nixctl automations against Core', () => {
       ),
     );
 
-    const failure = await capture((out) =>
+    const failure = await captureText((out) =>
       createAutomation(
         'default',
         { workspace: WORKSPACE, name: 'n', schedule: 'daily', at: '08:00', notify: 'x' },
@@ -396,7 +369,7 @@ describe('nixctl automations against Core', () => {
       }),
     );
 
-    await capture((out) => updateAutomation('default', RULE, { file: path }, out, { env }));
+    await captureText((out) => updateAutomation('default', RULE, { file: path }, out, { env }));
 
     expect(sent).toMatchObject({ expectedRevision: 3, rule: { name: 'Edited' } });
     await done();
@@ -419,8 +392,8 @@ describe('nixctl automations against Core', () => {
       }),
     );
 
-    await capture((out) => setAutomationEnabled('default', RULE, true, out, { env }));
-    await capture((out) => setAutomationEnabled('default', RULE, true, out, { env }));
+    await captureText((out) => setAutomationEnabled('default', RULE, true, out, { env }));
+    await captureText((out) => setAutomationEnabled('default', RULE, true, out, { env }));
 
     expect(puts).toHaveLength(1);
     expect(puts[0]).toMatchObject({ expectedRevision: 4, rule: { enabled: true } });
@@ -430,7 +403,7 @@ describe('nixctl automations against Core', () => {
   it('deletes only with --yes', async () => {
     const { env, done } = await withProfile();
     await expect(
-      capture((out) => deleteAutomation('default', RULE, false, out, { env })),
+      captureText((out) => deleteAutomation('default', RULE, false, out, { env })),
     ).rejects.toThrow('--yes');
 
     let deleted = false;
@@ -441,7 +414,7 @@ describe('nixctl automations against Core', () => {
       }),
     );
     const printed = JSON.parse(
-      await capture((out) => deleteAutomation('default', RULE, true, out, { env })),
+      await captureText((out) => deleteAutomation('default', RULE, true, out, { env })),
     ) as unknown;
     expect(deleted).toBe(true);
     expect(printed).toEqual({ id: RULE, deleted: true });
@@ -475,11 +448,11 @@ describe('nixctl automations against Core', () => {
       ),
     );
 
-    await capture((out) => runAutomation('default', RULE, { item: ITEM }, out, { env }));
+    await captureText((out) => runAutomation('default', RULE, { item: ITEM }, out, { env }));
     const tested = JSON.parse(
-      await capture((out) => testAutomation('default', RULE, {}, out, { env })),
+      await captureText((out) => testAutomation('default', RULE, {}, out, { env })),
     ) as { reason: string };
-    const table = await capture(
+    const table = await captureText(
       (out) => listAutomationRuns('default', RULE, {}, out, { env }),
       true,
     );

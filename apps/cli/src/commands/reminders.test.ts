@@ -1,12 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
-import { outputOptions } from '../output.ts';
 import { clearReminder, resolveReminderWhen, setReminder } from './reminders.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const ITEM = '11111111-1111-4111-8111-111111111111';
@@ -100,26 +96,7 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-reminders-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
-
-async function capture(body: (json: ReturnType<typeof outputOptions>) => Promise<void>) {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join('')) as unknown;
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 function item(properties: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -160,7 +137,7 @@ describe('nixctl remind set and clear', () => {
       }),
     );
 
-    const printed = await capture((out) =>
+    const printed = await captureJson((out) =>
       setReminder('default', ITEM, '2026-10-01T09:00', {}, out, { env }),
     );
 
@@ -183,7 +160,7 @@ describe('nixctl remind set and clear', () => {
       }),
     );
 
-    await capture((out) =>
+    await captureJson((out) =>
       setReminder('default', ITEM, '2026-10-01T09:00', { zone: 'UTC' }, out, { env }),
     );
 
@@ -201,7 +178,7 @@ describe('nixctl remind set and clear', () => {
       }),
     );
 
-    const printed = await capture((out) => clearReminder('default', ITEM, out, { env }));
+    const printed = await captureJson((out) => clearReminder('default', ITEM, out, { env }));
 
     expect(sent).toEqual({ properties: { reminder: null } });
     expect(printed).toEqual({ id: ITEM, title: 'Pay rent', reminder: null });

@@ -1,11 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 import {
   mergeDated,
   parseDated,
@@ -86,28 +83,7 @@ function site(status = 'draft', datedCollections: unknown[] = []): Record<string
   };
 }
 
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
-
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-sites-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile('default', { apiUrl: API, token: 'nixpat_abc' }, { makeDefault: true, env });
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: API, token: 'nixpat_abc' });
 
 describe('the site commands over a stubbed Core', () => {
   it('refuses a first publish without --yes and sends nothing', async () => {
@@ -156,7 +132,7 @@ describe('the site commands over a stubbed Core', () => {
       }),
     );
 
-    const printed = await capture((json) =>
+    const printed = await captureJson((json) =>
       publishSite('default', SITE, { yes: true, wait: true }, json, { env, pollMs: 1 }),
     );
 
@@ -178,7 +154,7 @@ describe('the site commands over a stubbed Core', () => {
     );
 
     await expect(
-      capture((json) => publishSite('default', SITE, { wait: true }, json, { env, pollMs: 1 })),
+      captureJson((json) => publishSite('default', SITE, { wait: true }, json, { env, pollMs: 1 })),
     ).rejects.toThrow(/failed \(site_render_failed\)/);
     await done();
   });
@@ -206,7 +182,7 @@ describe('the site commands over a stubbed Core', () => {
       }),
     );
 
-    await capture((json) =>
+    await captureJson((json) =>
       updateSite(
         'default',
         SITE,
@@ -239,7 +215,7 @@ describe('the site commands over a stubbed Core', () => {
       }),
     );
 
-    await capture((json) =>
+    await captureJson((json) =>
       updateSite(
         'default',
         SITE,
@@ -278,7 +254,7 @@ describe('the site commands over a stubbed Core', () => {
       }),
     );
 
-    await capture((json) =>
+    await captureJson((json) =>
       updateSite('default', SITE, { noindex: true, author: ' Ada Writer ' }, json, { env }),
     );
 

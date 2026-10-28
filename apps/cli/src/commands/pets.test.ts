@@ -1,13 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
 import { executePetToolRun, petCommand, petToolRun } from './pets.ts';
 import { openSession } from '../session.ts';
+import { makeProfile } from './cli.test-helper.ts';
 
 const CORE = 'http://core.nix.test';
 const COLLAB = 'http://collab.nix.test';
@@ -292,16 +289,7 @@ describe('note-scoped pet commands', () => {
   });
 });
 
-async function withProfile(): Promise<{ env: NodeJS.ProcessEnv; done: () => Promise<void> }> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-pets-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    { apiUrl: CORE, collabUrl: COLLAB, token: 'nixpat_abc' },
-    { makeDefault: true, env },
-  );
-  return { env, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () => makeProfile({ apiUrl: CORE, collabUrl: COLLAB, token: 'nixpat_abc' });
 
 async function capture(body: () => Promise<void>): Promise<unknown> {
   const lines: string[] = [];

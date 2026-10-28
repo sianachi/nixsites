@@ -1,15 +1,14 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { saveProfile } from '../config.ts';
 import { outputOptions } from '../output.ts';
 import { runExport } from './export.ts';
+import { captureJson, makeProfile } from './cli.test-helper.ts';
 
 const API = 'http://nix.test';
 const DOWNLOAD = 'http://127.0.0.1:9446/export';
@@ -37,26 +36,14 @@ afterAll(() => {
   server.close();
 });
 
-async function withProfile(): Promise<{
-  env: NodeJS.ProcessEnv;
-  dir: string;
-  done: () => Promise<void>;
-}> {
-  const dir = await mkdtemp(join(tmpdir(), 'nixctl-export-'));
-  const env: NodeJS.ProcessEnv = { XDG_CONFIG_HOME: dir };
-  await saveProfile(
-    'default',
-    {
-      apiUrl: API,
-      token: 'nixpat_abc',
-      // Deliberately unreachable: any old format routing makes MSW fail the test as unhandled.
-      collabUrl: 'http://unused-collaboration.test',
-      mediaUrl: 'http://unused-media.test',
-    },
-    { makeDefault: true, env },
-  );
-  return { env, dir, done: () => rm(dir, { recursive: true, force: true }) };
-}
+const withProfile = () =>
+  makeProfile({
+    apiUrl: API,
+    token: 'nixpat_abc',
+    // Deliberately unreachable: any old format routing makes MSW fail the test as unhandled.
+    collabUrl: 'http://unused-collaboration.test',
+    mediaUrl: 'http://unused-media.test',
+  });
 
 function format(
   name: string,
@@ -142,22 +129,6 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-async function capture(
-  body: (json: ReturnType<typeof outputOptions>) => Promise<void>,
-): Promise<unknown> {
-  const lines: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    lines.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
-  try {
-    await body(outputOptions(true, { isTTY: false }));
-  } finally {
-    spy.mockRestore();
-  }
-  return JSON.parse(lines.join(''));
-}
-
 describe('nixctl export', () => {
   it('discovers md through Core, polls with bounded backoff, and streams a verified file', async () => {
     const profile = await withProfile();
@@ -227,7 +198,7 @@ describe('nixctl export', () => {
       }),
     );
 
-    const printed = (await capture((json) =>
+    const printed = (await captureJson((json) =>
       runExport('default', ITEM, { format: 'md', scope: 'subtree', out }, json, {
         env: profile.env,
         randomUUID: () => REQUEST_ID,
