@@ -116,12 +116,13 @@ export async function listRevisions(
   if (options.before !== undefined) {
     params.set('before', String(options.before));
   }
-  return request(
-    config,
-    `/documents/${config.itemId}/history?${params.toString()}`,
-    { method: 'GET' },
-    revisionPageSchema,
-  );
+  const response = await send(config, `/documents/${config.itemId}/history?${params.toString()}`, {
+    method: 'GET',
+  });
+  if (!response.ok) {
+    return { ok: false, refusal: await refusalFromResponse(response) };
+  }
+  return parse(response, revisionPageSchema);
 }
 
 /**
@@ -141,7 +142,10 @@ export async function fetchStateAt(
       ? { ok: true, value: null }
       : { ok: false, refusal };
   }
-  return settle(response, documentStateSchema);
+  if (!response.ok) {
+    return { ok: false, refusal: await refusalFromResponse(response) };
+  }
+  return parse(response, documentStateSchema);
 }
 
 /** POST `/documents/:itemId/history/:seq/restore`. Needs write access; attributed to the caller. */
@@ -149,24 +153,26 @@ export async function restoreRevision(
   config: HistoryRequestConfig,
   seq: number,
 ): Promise<HistoryResult<{ readonly headSeq: number }>> {
-  return request(
+  const response = await send(
     config,
     `/documents/${config.itemId}/history/${String(seq)}/restore`,
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
-    restoreResponseSchema,
   );
+  if (!response.ok) {
+    return { ok: false, refusal: await refusalFromResponse(response) };
+  }
+  return parse(response, restoreResponseSchema);
 }
 
 /** GET `/documents/:itemId/versions`. */
 export async function listNamedVersions(
   config: HistoryRequestConfig,
 ): Promise<HistoryResult<readonly NamedVersion[]>> {
-  const result = await request(
-    config,
-    `/documents/${config.itemId}/versions`,
-    { method: 'GET' },
-    namedVersionsResponseSchema,
-  );
+  const response = await send(config, `/documents/${config.itemId}/versions`, { method: 'GET' });
+  if (!response.ok) {
+    return { ok: false, refusal: await refusalFromResponse(response) };
+  }
+  const result = await parse(response, namedVersionsResponseSchema);
   return result.ok ? { ok: true, value: result.value.versions } : result;
 }
 
@@ -176,16 +182,15 @@ export async function nameVersion(
   seq: number,
   name: string,
 ): Promise<HistoryResult<NamedVersion>> {
-  return request(
-    config,
-    `/documents/${config.itemId}/versions`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ seq, name }),
-    },
-    namedVersionSchema,
-  );
+  const response = await send(config, `/documents/${config.itemId}/versions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ seq, name }),
+  });
+  if (!response.ok) {
+    return { ok: false, refusal: await refusalFromResponse(response) };
+  }
+  return parse(response, namedVersionSchema);
 }
 
 /** DELETE `/documents/:itemId/versions/:seq`. Needs write access. */
@@ -200,23 +205,6 @@ export async function deleteNamedVersion(
     return { ok: false, refusal: await refusalFromResponse(response) };
   }
   return { ok: true, value: true };
-}
-
-/** A call whose every non-2xx answer is a refusal and whose 2xx body is validated. */
-async function request<T>(
-  config: HistoryRequestConfig,
-  path: string,
-  init: Parameters<typeof send>[2],
-  schema: z.ZodType<T>,
-): Promise<HistoryResult<T>> {
-  return settle(await send(config, path, init), schema);
-}
-
-async function settle<T>(response: Response, schema: z.ZodType<T>): Promise<HistoryResult<T>> {
-  if (!response.ok) {
-    return { ok: false, refusal: await refusalFromResponse(response) };
-  }
-  return parse(response, schema);
 }
 
 /** Every request's shared shape: the base URL, the bearer token, the caller's abort signal. */
