@@ -96,11 +96,36 @@ describe('comment anchors', () => {
     expect(threadRange(target.state, thread({ anchorStart: '!!', anchorEnd: '!!' }))).toBeNull();
   });
 
-  it('re-anchors by the first occurrence of the quote inside a block', () => {
+  it('finds a quote only when it occurs exactly once, through inline code and hard breaks', () => {
     const target = makeEditor();
     expect(findQuote(target.state.doc, 'world')).toEqual({ from: 7, to: 12 });
     expect(findQuote(target.state.doc, 'Second')).toEqual({ from: 14, to: 20 });
     expect(findQuote(target.state.doc, 'absent')).toBeNull();
+
+    target.commands.setContent('<p>one <code>fn()</code> two</p><p>twice</p><p>twice</p>');
+    expect(findQuote(target.state.doc, 'twice')).toBeNull();
+    expect(findQuote(target.state.doc, 'one fn() two')).toEqual({ from: 1, to: 13 });
+    target.commands.setTextSelection({ from: 1, to: 13 });
+    expect(captureAnchor(target.view)?.quote).toBe('one fn() two');
+  });
+
+  it('keeps a highlight on its words through a local edit before it', () => {
+    const target = makeEditor();
+    target.commands.setTextSelection({ from: 7, to: 12 });
+    const anchor = captureAnchor(target.view);
+    if (anchor === null) throw new Error('Expected an anchor.');
+    const stored = thread({ anchorStart: anchor.start, anchorEnd: anchor.end, quote: 'world' });
+    patchComments(ITEM, { threads: [stored], ready: true });
+    target.view.dispatch(target.state.tr.setMeta('refresh', true));
+
+    // Yjs learns of a local edit only after its transaction is applied.
+    target.commands.insertContentAt(1, 'XY');
+    expect(target.view.dom.querySelector('[data-comment-thread]')?.textContent).toBe('world');
+
+    // A big delete before the range moves it rather than collapsing it.
+    target.commands.deleteRange({ from: 1, to: 6 });
+    expect(target.view.dom.querySelector('[data-comment-thread]')?.textContent).toBe('world');
+    expect(readComments(ITEM).detached).toEqual([]);
   });
 
   it('draws a highlight for each open anchored thread once the body is ready', () => {

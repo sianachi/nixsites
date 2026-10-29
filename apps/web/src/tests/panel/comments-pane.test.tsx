@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { CommentThread } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { patchComments } from '@nix/web-editor/editor/comment-anchors';
+import { patchComments, readComments } from '@nix/web-editor/editor/comment-anchors';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
@@ -86,6 +86,11 @@ beforeEach(() => {
       });
       return Promise.resolve(Response.json(OPEN));
     }
+    if (method === 'GET' && url.pathname.endsWith(`/items/${ITEM}/comments`)) {
+      return Promise.resolve(Response.json({ revision: 1, threads: [OPEN, RESOLVED] }));
+    }
+    // The long-poll: nothing new, so it never answers.
+    if (url.pathname.endsWith('/comments/watch')) return new Promise<Response>(() => undefined);
     return base(input, init);
   });
   patchComments(ITEM, {
@@ -193,5 +198,20 @@ describe('the comments pane', () => {
     expect(await screen.findByText('new words')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Jump' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+  });
+
+  it('loads threads by quote with no editor mounted, and forgets them on unmount', async () => {
+    patchComments(ITEM, { ready: false, editor: null, detached: [], suggestions: [] });
+    const view = renderAt(
+      <AuthProvider>
+        <ApiClientProvider>
+          <CommentsPane itemId={ITEM} />
+        </ApiClientProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText('quarterly review')).toBeVisible();
+    view.unmount();
+    expect(readComments(ITEM).threads).toEqual([]);
   });
 });

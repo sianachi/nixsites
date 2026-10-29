@@ -72,8 +72,14 @@ export function ItemPanel({
   ).length;
   const [ownPane, setOwnPane] = useState<Pane>('details');
   const requestedPane = steeredPane ?? ownPane;
+  // Comments are notes-only on the server; a canvas, sheet or file has no thread to show.
+  const commentsAvailable = details.item?.type === 'note';
   // Switching publishing off while the Site pane is open falls back to Details.
-  const pane = requestedPane === 'site' && !sitesEnabled ? 'details' : requestedPane;
+  const pane =
+    (requestedPane === 'site' && !sitesEnabled) ||
+    (requestedPane === 'comments' && !commentsAvailable)
+      ? 'details'
+      : requestedPane;
   const setPane = onPaneChange ?? setOwnPane;
 
   return (
@@ -93,11 +99,14 @@ export function ItemPanel({
       <div className="flex shrink-0 items-center gap-2 px-3 py-3">
         <Segmented
           label="What to configure"
-          options={PANES.filter((option) => sitesEnabled || option.value !== 'site').map(
+          options={PANES.filter(
             (option) =>
-              option.value === 'comments' && openComments > 0
-                ? { ...option, label: `Comments (${String(openComments)})` }
-                : option,
+              (sitesEnabled || option.value !== 'site') &&
+              (commentsAvailable || option.value !== 'comments'),
+          ).map((option) =>
+            option.value === 'comments' && openComments > 0
+              ? { ...option, label: `Comments (${String(openComments)})` }
+              : option,
           )}
           value={pane}
           onChange={setPane}

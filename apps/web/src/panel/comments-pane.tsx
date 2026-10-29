@@ -7,6 +7,7 @@ import {
   useItemComments,
   type CapturedAnchor,
 } from '@nix/web-editor/editor/comment-anchors';
+import { useCommentFeed } from '@nix/web-editor/editor/use-comment-sync';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
@@ -19,10 +20,11 @@ import type { SuggestionEntry } from '@nix/web-editor/editor/suggesting';
  * The comments on the open note: threads anchored to its text, a box for page-level comments, and
  * the suggestions made in suggestion mode.
  *
- * **The editor owns the live state.** Threads, suggestions and the editor handle arrive through
- * the comments store (`useCommentSync` fills it while the note is open); this pane only reads it,
- * sends the viewer's own actions, and asks the store to re-read afterwards. A viewer without
- * permission sees Core's refusal in words rather than a control that quietly does nothing.
+ * **The comments store holds the live state.** The pane joins the note's list/watch loop itself
+ * (`useCommentFeed`, shared with the editor), so threads load even when no editor is mounted - a
+ * note showing a view, or a locked one; anchored threads then appear by their quote. Suggestions
+ * and the editor handle arrive only from a mounted editor. A viewer without permission sees Core's
+ * refusal in words rather than a control that quietly does nothing.
  */
 
 const ERRORS: Readonly<Record<string, string>> = {
@@ -54,6 +56,7 @@ function authorLabel(comment: Comment): string {
 
 export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode {
   const client = useApiClient();
+  useCommentFeed(itemId);
   const state = useItemComments(itemId);
   const { principal } = useCurrentPrincipal();
   const [showResolved, setShowResolved] = useState(false);
@@ -116,13 +119,13 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
 
         {state.status === 'error' ? (
           <Text variant="note" tone="muted" role="status">
-            {state.errorCode === null
-              ? 'Comments could not be loaded.'
-              : (ERRORS[state.errorCode] ?? 'Comments could not be loaded.')}
+            {(state.errorCode === null ? null : ERRORS[state.errorCode]) ??
+              state.errorDetail ??
+              'Comments could not be loaded.'}
           </Text>
-        ) : state.status === 'loading' && !state.ready ? (
+        ) : state.status === 'loading' ? (
           <Text variant="note" tone="muted" role="status">
-            Comments appear once the note has loaded.
+            Loading comments…
           </Text>
         ) : null}
 

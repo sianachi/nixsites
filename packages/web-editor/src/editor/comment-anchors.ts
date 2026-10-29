@@ -1,7 +1,7 @@
 import type { CommentThread } from '@nix/api-client';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import {
   absolutePositionToRelativePosition,
@@ -12,7 +12,6 @@ import * as Y from 'yjs';
 import { create } from 'zustand';
 
 import type { SuggestionEntry } from './suggesting';
-import { mentionText } from './unlinked-mentions';
 
 /**
  * Comment threads drawn on the text they were made on.
@@ -45,6 +44,8 @@ export interface ItemComments {
   readonly status: 'loading' | 'ready' | 'error';
   /** The server's reason when `status` is `error` (for example `comments.forbidden`). */
   readonly errorCode: string | null;
+  /** The server's own words for the refusal (the lock message on a 423). */
+  readonly errorDetail: string | null;
   /** The body has synced, so anchors can be trusted to decode; before then nothing is drawn. */
   readonly ready: boolean;
   readonly activeThreadId: string | null;
@@ -65,6 +66,7 @@ const EMPTY: ItemComments = {
   revision: -1,
   status: 'loading',
   errorCode: null,
+  errorDetail: null,
   ready: false,
   activeThreadId: null,
   detached: [],
@@ -85,6 +87,14 @@ export function patchComments(itemId: string, patch: Partial<ItemComments>): voi
   useCommentsStore.setState((state) => ({
     items: { ...state.items, [itemId]: { ...(state.items[itemId] ?? EMPTY), ...patch } },
   }));
+}
+
+/** Forgets a note's entry once nothing shows it any more. */
+export function dropComments(itemId: string): void {
+  useCommentsStore.setState((state) => {
+    const { [itemId]: _gone, ...items } = state.items;
+    return { items };
+  });
 }
 
 export function readComments(itemId: string): ItemComments {
@@ -153,7 +163,11 @@ export function captureAnchor(view: EditorView): CapturedAnchor | null {
 }
 
 /** Where an encoded position sits in the document now, or null when it no longer resolves. */
-function decode(state: EditorState, encoded: string): number | null {
+function decode(
+  state: EditorState,
+  encoded: string,
+  doc: ProseMirrorNode = state.doc,
+): number | null {
   const bound = binding(state);
   if (bound === null) return null;
   try {
@@ -164,7 +178,7 @@ function decode(state: EditorState, encoded: string): number | null {
       Y.decodeRelativePosition(bytes),
       bound.mapping as never,
     );
-    return position === null ? null : Math.min(position, state.doc.content.size);
+    return position === null ? null : Math.min(position, doc.content.size);
   } catch {
     return null;
   }
@@ -174,10 +188,11 @@ function decode(state: EditorState, encoded: string): number | null {
 export function threadRange(
   state: EditorState,
   thread: CommentThread,
+  doc: ProseMirrorNode = state.doc,
 ): { from: number; to: number } | null {
   if (thread.anchorStart === null || thread.anchorEnd === null) return null;
-  const from = decode(state, thread.anchorStart);
-  const to = decode(state, thread.anchorEnd);
+  const from = decode(state, thread.anchorStart, doc);
+  const to = decode(state, thread.anchorEnd, doc);
   return from === null || to === null || from >= to ? null : { from, to };
 }
 
@@ -187,93 +202,138 @@ export function isAnchoredThread(thread: CommentThread): boolean {
 }
 
 /**
- * The first place `quote` occurs inside a single block.
- *
- * shortcut: first occurrence of the quote; match surrounding context if repeated phrases
- * mis-anchor. A quote that spans blocks is never found and stays detached.
+ * A block's text the way a selection is quoted: `captureAnchor` reads the same projection, so a
+ * quote taken from inline code, a mention or a hard break is found again. Every leaf is one
+ * space, so a string offset is a block offset.
+ */
+function blockQuoteText(block: ProseMirrorNode): string {
+  return block.textBetween(0, block.content.size, ' ', ' ');
+}
+
+/**
+ * Where `quote` occurs inside a single block, when it occurs exactly once in the document; a
+ * repeated phrase is ambiguous, so it stays detached rather than guessing. A quote that spans
+ * blocks is never found.
  */
 export function findQuote(
   doc: ProseMirrorNode,
   quote: string,
 ): { from: number; to: number } | null {
-  let found: { from: number; to: number } | null = null;
+  const hits: { from: number; to: number }[] = [];
   doc.descendants((node, pos) => {
-    if (found !== null) return false;
+    if (hits.length > 1) return false;
     if (!node.isTextblock) return true;
-    const index = mentionText(node).indexOf(quote);
-    if (index >= 0) found = { from: pos + 1 + index, to: pos + 1 + index + quote.length };
+    const text = blockQuoteText(node);
+    for (let index = text.indexOf(quote); index >= 0; index = text.indexOf(quote, index + 1)) {
+      hits.push({ from: pos + 1 + index, to: pos + 1 + index + quote.length });
+    }
     return false;
   });
-  return found;
+  return hits.length === 1 ? (hits[0] ?? null) : null;
 }
 
-export const commentAnchorsKey = new PluginKey('nixCommentAnchors');
+export const commentAnchorsKey = new PluginKey<Computed | null>('nixCommentAnchors');
 
 const HIGHLIGHT = 'bg-accent/15 rounded-sm cursor-pointer';
 const HIGHLIGHT_ACTIVE = 'bg-accent/35 rounded-sm cursor-pointer';
 
-interface Computed {
+export interface Computed {
   readonly threads: readonly CommentThread[];
   readonly activeThreadId: string | null;
-  readonly doc: ProseMirrorNode;
   readonly ranges: ReadonlyMap<string, { from: number; to: number }>;
   readonly detached: readonly string[];
   readonly decorations: DecorationSet;
 }
 
-function commentsPlugin(getItemId: () => string | null): Plugin {
-  let cache: Computed | null = null;
-
-  const compute = (state: EditorState): Computed | null => {
-    const itemId = getItemId();
-    if (itemId === null) return null;
-    const { threads, activeThreadId, ready } = readComments(itemId);
-    if (!ready) return null;
-    if (cache?.threads === threads && cache.activeThreadId === activeThreadId) {
-      if (cache.doc === state.doc) return cache;
+/** Decodes every open anchored thread from Yjs. */
+function computeFromYjs(
+  state: EditorState,
+  doc: ProseMirrorNode,
+  threads: readonly CommentThread[],
+  activeThreadId: string | null,
+): Computed {
+  const ranges = new Map<string, { from: number; to: number }>();
+  const detached: string[] = [];
+  const decorations: Decoration[] = [];
+  for (const thread of threads) {
+    // Resolved threads are not drawn, and a resolved one that lost its text is not worth fixing.
+    if (!isAnchoredThread(thread) || thread.resolvedAt !== null) continue;
+    const range = threadRange(state, thread, doc);
+    if (range === null) {
+      detached.push(thread.id);
+      continue;
     }
-    const ranges = new Map<string, { from: number; to: number }>();
-    const detached: string[] = [];
-    const decorations: Decoration[] = [];
-    for (const thread of threads) {
-      // Resolved threads are not drawn, and a resolved one that lost its text is not worth fixing.
-      if (!isAnchoredThread(thread) || thread.resolvedAt !== null) continue;
-      const range = threadRange(state, thread);
-      if (range === null) {
-        detached.push(thread.id);
-        continue;
-      }
-      ranges.set(thread.id, range);
-      decorations.push(
-        Decoration.inline(
-          range.from,
-          range.to,
-          {
-            class: thread.id === activeThreadId ? HIGHLIGHT_ACTIVE : HIGHLIGHT,
-            'data-comment-thread': thread.id,
-          },
-          { threadId: thread.id },
-        ),
-      );
-    }
-    cache = {
-      threads,
-      activeThreadId,
-      doc: state.doc,
-      ranges,
-      detached,
-      decorations: DecorationSet.create(state.doc, decorations),
-    };
-    return cache;
+    ranges.set(thread.id, range);
+    decorations.push(
+      Decoration.inline(
+        range.from,
+        range.to,
+        {
+          class: thread.id === activeThreadId ? HIGHLIGHT_ACTIVE : HIGHLIGHT,
+          'data-comment-thread': thread.id,
+        },
+        { threadId: thread.id },
+      ),
+    );
+  }
+  return {
+    threads,
+    activeThreadId,
+    ranges,
+    detached,
+    decorations: DecorationSet.create(doc, decorations),
   };
+}
 
-  return new Plugin({
+/**
+ * A local edit reaches Yjs only after the transaction is applied, so decoding anchors during the
+ * apply would read the document one edit behind. Local edits therefore map the ranges through the
+ * transaction; Yjs is read again only for changes it originated (`ySyncPluginKey`), a refresh, or
+ * new threads.
+ */
+function mapComputed(value: Computed, tr: Transaction): Computed {
+  const ranges = new Map<string, { from: number; to: number }>();
+  const detached = [...value.detached];
+  for (const [id, range] of value.ranges) {
+    const from = tr.mapping.map(range.from, 1);
+    const to = tr.mapping.map(range.to, -1);
+    if (from < to) ranges.set(id, { from, to });
+    else detached.push(id);
+  }
+  return {
+    ...value,
+    ranges,
+    detached,
+    decorations: value.decorations.map(tr.mapping, tr.doc),
+  };
+}
+
+function commentsPlugin(getItemId: () => string | null): Plugin<Computed | null> {
+  return new Plugin<Computed | null>({
     key: commentAnchorsKey,
+    state: {
+      init: () => null,
+      apply: (tr, value, old, state) => {
+        const itemId = getItemId();
+        if (itemId === null) return null;
+        const { threads, activeThreadId, ready } = readComments(itemId);
+        if (!ready) return null;
+        const fromYjs =
+          value === null ||
+          value.threads !== threads ||
+          value.activeThreadId !== activeThreadId ||
+          tr.getMeta(commentAnchorsKey) !== undefined ||
+          tr.getMeta(ySyncPluginKey) !== undefined;
+        // `old` carries the Yjs binding: plugins after this one are not in `state` yet.
+        if (fromYjs) return computeFromYjs(old, state.doc, threads, activeThreadId);
+        return tr.docChanged ? mapComputed(value, tr) : value;
+      },
+    },
     props: {
-      decorations: (state) => compute(state)?.decorations ?? null,
+      decorations: (state) => commentAnchorsKey.getState(state)?.decorations ?? null,
       handleClick: (view, position) => {
         const itemId = getItemId();
-        const hit = compute(view.state)?.decorations.find(position, position)[0];
+        const hit = commentAnchorsKey.getState(view.state)?.decorations.find(position, position)[0];
         const threadId = (hit?.spec as { threadId?: string } | undefined)?.threadId;
         if (itemId === null || threadId === undefined) return false;
         patchComments(itemId, { activeThreadId: threadId });
@@ -305,9 +365,8 @@ function commentsPlugin(getItemId: () => string | null): Plugin {
       return {
         update: () => {
           const itemId = getItemId();
-          if (itemId === null) return;
-          const computed = compute(view.state);
-          if (computed === null) return;
+          const computed = commentAnchorsKey.getState(view.state);
+          if (itemId === null || computed === null || computed === undefined) return;
           const current = readComments(itemId);
           if (
             computed.detached.length !== current.detached.length ||

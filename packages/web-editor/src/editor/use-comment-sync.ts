@@ -1,10 +1,17 @@
-import { comments, isCanceledError, isNixApiError, type CommentsResponse } from '@nix/api-client';
+import {
+  comments,
+  isCanceledError,
+  isNixApiError,
+  type CommentsResponse,
+  type NixClient,
+} from '@nix/api-client';
 import type { Editor } from '@tiptap/core';
 import { useEffect } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
   bindCommentItem,
+  dropComments,
   editorHandle,
   encodeRange,
   findQuote,
@@ -32,133 +39,195 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+interface Feed {
+  owners: number;
+  stop: () => void;
+}
+
+/** One list/watch loop per note, shared by every owner (the editor, the comments pane). */
+const feeds = new Map<string, Feed>();
+
+function runFeed(client: NixClient, itemId: string): () => void {
+  const controller = new AbortController();
+  const { signal } = controller;
+  // An older answer (a slow refresh passed by a newer long-poll) must not overwrite newer data.
+  const apply = (answer: CommentsResponse): void => {
+    if (signal.aborted || answer.revision < readComments(itemId).revision) return;
+    patchComments(itemId, {
+      threads: answer.threads,
+      revision: answer.revision,
+      status: 'ready',
+      errorCode: null,
+      errorDetail: null,
+    });
+  };
+  // An own action re-reads at once instead of waiting for the long-poll to notice.
+  patchComments(itemId, {
+    status: 'loading',
+    refresh: () => {
+      void client
+        .query(comments.list(itemId), { signal, forceRefresh: true })
+        .then(apply)
+        .catch(() => undefined);
+    },
+  });
+
+  void (async () => {
+    let revision = -1;
+    let failures = 0;
+    while (!signal.aborted) {
+      const asked = Date.now();
+      try {
+        // Both forced: the long-poll must reach the server, not a cached answer.
+        const answer =
+          revision < 0
+            ? await client.query(comments.list(itemId), { signal, forceRefresh: true })
+            : await client.query(comments.watch(itemId, revision), { signal, forceRefresh: true });
+        failures = 0;
+        // A long-poll that answers at once with nothing new must not become a busy loop.
+        const unchanged = answer.revision === revision;
+        if (unchanged) await sleep(Math.max(0, MIN_POLL_MS - (Date.now() - asked)), signal);
+        if (answer.revision !== revision || readComments(itemId).status !== 'ready') {
+          revision = answer.revision;
+          apply(answer);
+        }
+      } catch (reason) {
+        if (isCanceledError(reason) || signal.aborted) return;
+        const status = isNixApiError(reason) ? reason.status : undefined;
+        if (status !== undefined && FINAL.has(status)) {
+          patchComments(itemId, {
+            status: 'error',
+            errorCode: isNixApiError(reason) ? reason.code : null,
+            errorDetail: isNixApiError(reason) ? (reason.detail ?? null) : null,
+          });
+          return;
+        }
+        failures += 1;
+        if (readComments(itemId).status !== 'ready') patchComments(itemId, { status: 'error' });
+        const wait =
+          isNixApiError(reason) && reason.retryAfterSeconds !== undefined
+            ? reason.retryAfterSeconds * 1000
+            : Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
+        await sleep(wait, signal);
+      }
+    }
+  })();
+
+  return () => {
+    controller.abort();
+  };
+}
+
 /**
- * Keeps one note's comment threads and suggestions in the comments store while it is open.
+ * Keeps one note's comment threads in the comments store while an owner (the note editor or the
+ * comments pane) is mounted. Owners are counted: the loop starts with the first, stops and
+ * forgets the note's entry with the last.
  *
  * Threads are read once, then followed with the watch long-poll (it answers when the revision
- * passes the one held, or after about 20 seconds). `ready` gates the highlights: before the body
- * has synced every anchor would decode to nothing and look detached.
- *
- * Detached threads are re-anchored here, once each, by finding their quote in the text.
+ * passes the one held, or after about 20 seconds).
+ */
+export function useCommentFeed(itemId: string): void {
+  const client = useApiClient();
+  useEffect(() => {
+    const feed = feeds.get(itemId) ?? { owners: 0, stop: runFeed(client, itemId) };
+    feed.owners += 1;
+    feeds.set(itemId, feed);
+    return () => {
+      feed.owners -= 1;
+      if (feed.owners > 0) return;
+      feed.stop();
+      feeds.delete(itemId);
+      dropComments(itemId);
+    };
+  }, [client, itemId]);
+}
+
+/** The editors showing each note, so closing one pane leaves the other's handle in place. */
+const editors = new Map<string, Set<Editor>>();
+
+function publishEditor(itemId: string, editor: Editor): void {
+  if (editor.isDestroyed) return;
+  patchComments(itemId, {
+    suggestions: listSuggestions(editor.state.doc),
+    editor: editorHandle(editor),
+    ready: true,
+  });
+}
+
+/**
+ * Publishes the open editor into the comments store (suggestions, the handle the pane acts
+ * through) and re-anchors threads that lost their text. `ready` gates the highlights: before the
+ * body has synced every anchor would decode to nothing and look detached.
  */
 export function useCommentSync(editor: Editor, itemId: string, ready: boolean): void {
   const client = useApiClient();
 
   useEffect(() => {
     bindCommentItem(editor, itemId);
-    const controller = new AbortController();
-    const { signal } = controller;
-    const apply = (answer: CommentsResponse): void => {
-      patchComments(itemId, {
-        threads: answer.threads,
-        revision: answer.revision,
-        status: 'ready',
-        errorCode: null,
-      });
-    };
-    // An own action re-reads at once instead of waiting for the long-poll to notice.
-    patchComments(itemId, {
-      status: 'loading',
-      refresh: () => {
-        void client
-          .query(comments.list(itemId), { signal, forceRefresh: true })
-          .then(apply)
-          .catch(() => undefined);
-      },
-    });
-
-    void (async () => {
-      let revision = -1;
-      let failures = 0;
-      while (!signal.aborted) {
-        const asked = Date.now();
-        try {
-          const answer =
-            revision < 0
-              ? await client.query(comments.list(itemId), { signal, forceRefresh: true })
-              : await client.query(comments.watch(itemId, revision), { signal });
-          failures = 0;
-          // A long-poll that answers at once with nothing new must not become a busy loop.
-          const unchanged = answer.revision === revision;
-          if (unchanged) await sleep(Math.max(0, MIN_POLL_MS - (Date.now() - asked)), signal);
-          if (answer.revision !== revision || readComments(itemId).status !== 'ready') {
-            revision = answer.revision;
-            apply(answer);
-          }
-        } catch (reason) {
-          if (isCanceledError(reason) || controller.signal.aborted) return;
-          const status = isNixApiError(reason) ? reason.status : undefined;
-          if (status !== undefined && FINAL.has(status)) {
-            patchComments(itemId, {
-              status: 'error',
-              errorCode: isNixApiError(reason) ? reason.code : null,
-            });
-            return;
-          }
-          failures += 1;
-          if (readComments(itemId).status !== 'ready') patchComments(itemId, { status: 'error' });
-          const wait =
-            isNixApiError(reason) && reason.retryAfterSeconds !== undefined
-              ? reason.retryAfterSeconds * 1000
-              : Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
-          await sleep(wait, signal);
-        }
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [client, editor, itemId]);
+  }, [editor, itemId]);
 
   // The suggestions the document holds, and the handle the pane uses to act on them.
   useEffect(() => {
     if (!ready) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const publish = (): void => {
-      if (editor.isDestroyed) return;
-      patchComments(itemId, {
-        suggestions: listSuggestions(editor.state.doc),
-        editor: editorHandle(editor),
-      });
-    };
+    const owners = editors.get(itemId) ?? new Set<Editor>();
+    owners.add(editor);
+    editors.set(itemId, owners);
     const schedule = (): void => {
       clearTimeout(timer);
-      timer = setTimeout(publish, SUGGESTION_DEBOUNCE_MS);
+      timer = setTimeout(() => {
+        publishEditor(itemId, editor);
+      }, SUGGESTION_DEBOUNCE_MS);
     };
-    publish();
-    patchComments(itemId, { ready: true });
+    publishEditor(itemId, editor);
     editor.on('update', schedule);
     return () => {
       clearTimeout(timer);
       editor.off('update', schedule);
-      patchComments(itemId, { ready: false, editor: null });
+      owners.delete(editor);
+      const [next] = owners;
+      if (next !== undefined) {
+        publishEditor(itemId, next);
+      } else {
+        editors.delete(itemId);
+        patchComments(itemId, { ready: false, editor: null });
+      }
     };
   }, [editor, itemId, ready]);
 
-  // Re-anchor the threads that lost their text, once each; a viewer's 403 ends the attempts.
+  // Re-anchor the threads that lost their text, one at a time: a viewer's first 403 ends the
+  // attempts for the whole note, so the rest are never sent. Only detached threads get here
+  // (never anchored, or anchors that decode to nothing), and `findQuote` answers only for a
+  // quote that occurs exactly once.
   const { detached } = useItemComments(itemId);
   useEffect(() => {
     if (!ready || detached.length === 0) return;
-    const { threads } = readComments(itemId);
-    for (const id of detached) {
-      if (attempted.has(`${itemId}:${id}`) || refused.has(itemId)) continue;
-      attempted.add(`${itemId}:${id}`);
-      const quote = threads.find((thread) => thread.id === id)?.quote;
-      const found =
-        quote === null || quote === undefined ? null : findQuote(editor.state.doc, quote);
-      const range = found === null ? null : encodeRange(editor.state, found.from, found.to);
-      if (range === null) continue;
-      void client
-        .execute(comments.setAnchor(itemId, id, range.start, range.end))
-        .then(() => {
+    let cancelled = false;
+    void (async () => {
+      for (const id of detached) {
+        if (cancelled || refused.has(itemId)) return;
+        if (attempted.has(`${itemId}:${id}`)) continue;
+        attempted.add(`${itemId}:${id}`);
+        const quote = readComments(itemId).threads.find((thread) => thread.id === id)?.quote;
+        const found =
+          quote === null || quote === undefined ? null : findQuote(editor.state.doc, quote);
+        const range = found === null ? null : encodeRange(editor.state, found.from, found.to);
+        if (range === null) continue;
+        try {
+          await client.execute(comments.setAnchor(itemId, id, range.start, range.end));
           readComments(itemId).refresh();
-        })
-        .catch((reason: unknown) => {
+        } catch (reason) {
           if (isNixApiError(reason) && reason.status === 403) refused.add(itemId);
-        });
-    }
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [client, detached, editor, itemId, ready]);
+
+  // Last, so it cleans up last on unmount and no cleanup above writes into a forgotten entry.
+  useCommentFeed(itemId);
 }
 
 /** Threads already tried this session, so a failed or repeated re-anchor never loops. */
