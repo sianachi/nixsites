@@ -302,6 +302,8 @@ export function buildProgram(): Command {
       false,
     )
     .option('--keep', 'chat: leave each fixture in place afterwards', false)
+    .option('--baseline <file>', 'chat: fail only on a regression against this baseline')
+    .option('--write-baseline <file>', "chat: record this run's pass counts as a baseline")
     .action((_options: unknown, command: Command) => {
       const options: {
         suite: string;
@@ -310,6 +312,8 @@ export function buildProgram(): Command {
         runs: string;
         allowWrites: boolean;
         keep: boolean;
+        baseline?: string;
+        writeBaseline?: string;
         model?: string;
         apiUrl?: string;
         workspace?: string;

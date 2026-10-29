@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { checkOpenUi } from './openui-check.ts';
+import { baselineOf, compareToBaseline, readBaseline, writeBaseline } from './pet-eval-baseline.ts';
 import { z } from 'zod';
 import {
   items,
@@ -67,6 +68,10 @@ export interface ChatEvalOptions {
   /** Leave the fixture in place after the run. */
   readonly keep?: boolean;
   readonly runs?: number;
+  /** Gate on this recorded baseline: exit 1 only on a regression against it. */
+  readonly baseline?: string;
+  /** Record this run's per-case pass counts as a new baseline. */
+  readonly writeBaseline?: string;
 }
 
 export interface ChatToolRecord {
@@ -1096,7 +1101,14 @@ export async function petEvalChat(
     { ...options, workspace: options.workspace, pet: options.pet },
     runner,
   );
-  if (output.json || !output.isTty) printResult(results, output);
+  const runs = options.runs ?? 1;
+  if (options.writeBaseline)
+    await writeBaseline(options.writeBaseline, baselineOf(results, runs, new Date()));
+  const comparison = options.baseline
+    ? compareToBaseline(results, runs, await readBaseline(options.baseline))
+    : undefined;
+  if (output.json || !output.isTty)
+    printResult(comparison ? { results, baseline: comparison } : results, output);
   else {
     printTable(
       ['Case', 'Run', 'Outcome', 'Pass', 'Tools', 'Declined', 'Links', 'Feedback', 'Seconds'],
@@ -1126,5 +1138,17 @@ export async function petEvalChat(
       );
     }
   }
-  if (results.some((result) => !result.pass)) process.exitCode = 1;
+  if (comparison && output.isTty && !output.json)
+    process.stdout.write(
+      `\nBaseline: ${(comparison.rate * 100).toFixed(1)}% now, ${(comparison.baselineRate * 100).toFixed(1)}% recorded.` +
+        (comparison.regressions.length > 0
+          ? ` Regressed: ${comparison.regressions.join(', ')}.`
+          : '') +
+        (comparison.unrecorded.length > 0
+          ? ` Not in the baseline: ${comparison.unrecorded.join(', ')}.`
+          : '') +
+        `\n`,
+    );
+  if (comparison ? comparison.regressed : results.some((result) => !result.pass))
+    process.exitCode = 1;
 }
