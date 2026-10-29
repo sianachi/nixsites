@@ -9,11 +9,7 @@ import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
-import {
-  historyPanelWidth,
-  paneClip,
-  settingsPanelWidth,
-} from '@nix/web-foundation/layout/regions';
+import { paneClip } from '@nix/web-foundation/layout/regions';
 import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
@@ -365,12 +361,6 @@ export function OpenItem({
           reading={showingDocument && !editorKind}
           trailing={narrow || zen ? undefined : desktopControls}
         />
-        {panelOpen && !overlayDetails && !zen ? (
-          <div aria-hidden="true" className={`shrink-0 ${settingsPanelWidth}`} />
-        ) : null}
-        {historyOpen && lock.open && !overlayDetails && !zen ? (
-          <div aria-hidden="true" className={`shrink-0 ${historyPanelWidth}`} />
-        ) : null}
       </div>
 
       {zen ? null : sectionRowShown ? (
