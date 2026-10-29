@@ -157,7 +157,15 @@ export async function runtime(
   session: Session,
   workspaceId: string,
   petId: string,
-  operation: 'reset' | 'send' | 'read' | 'interrupt' | 'tool_claim' | 'tool_result',
+  operation:
+    | 'reset'
+    | 'send'
+    | 'read'
+    | 'interrupt'
+    | 'tool_claim'
+    | 'tool_result'
+    | 'history'
+    | 'delete_history',
   extra: Partial<Parameters<typeof pets.runtime>[0]> = {},
 ): Promise<PetConnection> {
   return session.client.execute(pets.runtime({ operation, workspaceId, petId, ...extra }));

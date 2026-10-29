@@ -1032,6 +1032,45 @@ export async function readChatCases(id: string | undefined): Promise<ChatCase[]>
   return selected;
 }
 
+function failedCase(
+  id: string,
+  run: number,
+  model: string | null,
+  error: unknown,
+  started: number,
+): ChatCaseResult {
+  return {
+    id,
+    run,
+    model,
+    outcome: 'error',
+    pass: false,
+    failures: [`error: ${error instanceof Error ? error.message : String(error)}`],
+    tools: [],
+    answer: null,
+    answerLength: 0,
+    citations: { valid: 0, invalid: 0 },
+    feedback: [],
+    durationMs: Date.now() - started,
+  };
+}
+
+/** Each case's reset archives its conversation, and the worker keeps at most 32 archives per
+ * conversation, so a long suite deletes the ones its cases made. A minute's grace covers clock skew
+ * between this machine and the worker. */
+async function pruneCaseHistory(
+  session: Session,
+  options: { workspace: string; pet: string },
+  since: number,
+): Promise<void> {
+  const listed = await runtime(session, options.workspace, options.pet, 'history');
+  for (const entry of listed.history ?? [])
+    if (Date.parse(entry.createdAt) >= since - 60_000)
+      await runtime(session, options.workspace, options.pet, 'delete_history', {
+        historyId: entry.id,
+      });
+}
+
 export async function runChatSuite(
   cases: readonly ChatCase[],
   options: ChatEvalOptions & { workspace: string; pet: string },
@@ -1071,7 +1110,15 @@ export async function runChatSuite(
             );
           }
         }
-        results.push(await runChatCase(chatCase, run, options, fixture, runner));
+        const started = Date.now();
+        try {
+          results.push(await runChatCase(chatCase, run, options, fixture, runner));
+        } catch (error) {
+          if (error instanceof RetainEvaluationFixture) throw error;
+          // A provider or Core failure fails this case, not the whole suite and the results so far.
+          results.push(failedCase(chatCase.id, run, options.model ?? null, error, started));
+        }
+        await pruneCaseHistory(runner.session, options, started);
       } catch (error) {
         retained = error instanceof RetainEvaluationFixture;
         throw error;

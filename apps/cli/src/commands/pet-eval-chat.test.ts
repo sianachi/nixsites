@@ -340,7 +340,7 @@ describe('pet eval chat', () => {
         const [score] = await result;
         expect(score?.outcome).toBe('tool_limit');
         expect(teardown).toHaveBeenCalledOnce();
-        expect(calls.slice(-4)).toEqual(['interrupt', 'read', 'read', 'reset']);
+        expect(calls.slice(-5)).toEqual(['interrupt', 'read', 'read', 'reset', 'history']);
       } else {
         await expect(result).rejects.toThrow('fixture was left in place');
         expect(teardown).not.toHaveBeenCalled();
@@ -349,6 +349,53 @@ describe('pet eval chat', () => {
       }
     },
   );
+
+  it('scores a case that errors and goes on, deleting only the archives the run made', async () => {
+    const OLD_ARCHIVE = '0f000000-0000-4000-8000-000000000001';
+    const NEW_ARCHIVE = '0f000000-0000-4000-8000-000000000002';
+    const deleted: unknown[] = [];
+    let sends = 0;
+    server.use(
+      http.post(`${CORE}/api/v1/me/pets/runtime`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        if (body.operation === 'send' && (sends += 1) === 1)
+          return HttpResponse.json(
+            { title: 'Companion unavailable', status: 502 },
+            { status: 502 },
+          );
+        if (body.operation === 'history')
+          return HttpResponse.json(
+            connection({
+              history: [
+                { id: OLD_ARCHIVE, title: 'Owner chat', createdAt: '2020-01-01T00:00:00Z' },
+                { id: NEW_ARCHIVE, title: 'Eval', createdAt: new Date().toISOString() },
+              ],
+            }),
+          );
+        if (body.operation === 'delete_history') deleted.push(body.historyId);
+        if (body.operation === 'read')
+          return HttpResponse.json(
+            connection({
+              state: 'success',
+              messages: [{ id: 'a', role: 'assistant', text: 'Hi.' }],
+            }),
+          );
+        return HttpResponse.json(connection({ state: 'idle' }));
+      }),
+    );
+    const cases = ['first', 'second'].map((id) => chatCaseSchema.parse({ id, prompt: 'Hello' }));
+    const results = await runChatSuite(
+      cases,
+      { suite: 'chat', workspace: WORKSPACE, pet: PET },
+      runner(),
+    );
+    expect(results.map((result) => [result.id, result.outcome])).toEqual([
+      ['first', 'error'],
+      ['second', 'done'],
+    ]);
+    expect(results[0]?.failures[0]).toMatch(/^error: /);
+    expect(deleted).toEqual([NEW_ARCHIVE, NEW_ARCHIVE]);
+  });
 
   it.each([
     { variant: 'correct', pass: true },
