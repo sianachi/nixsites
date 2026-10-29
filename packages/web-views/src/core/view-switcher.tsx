@@ -267,8 +267,10 @@ function SwitcherTab({
       onClick={onSelect}
       className={[
         // Shrink-free and snapping, so a scrolled strip stops on a tab rather than half of one, and
-        // a full touch target on a coarse pointer, where 28px is smaller than a fingertip.
-        'relative flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap border px-2 py-1 text-sm pointer-coarse:min-h-(--control-lg)',
+        // a full touch target on a coarse pointer, where 28px is smaller than a fingertip. The
+        // control height and frame radius every other control in this row takes, so the tabs and
+        // the search field beside them line up.
+        'relative flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-sm min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
         focusRing,
         active
           ? 'border-divider bg-foreground/7 text-foreground'
