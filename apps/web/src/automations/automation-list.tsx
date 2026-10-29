@@ -58,7 +58,7 @@ export function AutomationList(props: AutomationListProps): ReactNode {
             {(contextTarget) => (
               <li
                 {...contextTarget}
-                className="flex min-w-0 flex-col gap-2 border border-divider p-3 wrap-anywhere"
+                className="flex min-w-0 flex-col gap-2 rounded-md border border-divider p-3 wrap-anywhere"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

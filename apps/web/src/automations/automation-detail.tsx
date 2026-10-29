@@ -146,7 +146,7 @@ export function AutomationDetail(props: AutomationDetailProps): ReactNode {
 
 function UneditableRule({ rule }: { readonly rule: AutomationRule }): ReactNode {
   return (
-    <section className="flex flex-col gap-2 border border-divider p-3">
+    <section className="flex flex-col gap-2 rounded-md border border-divider p-3">
       <Text variant="h5" as="h2">
         {rule.name}
       </Text>
@@ -239,7 +239,7 @@ function RuleForm(props: AutomationDetailProps & { readonly start: AutomationDra
         {rule === null ? 'New automation' : `Edit ${rule.name}`}
       </Text>
       {conflict === null ? null : (
-        <div role="alert" className="flex flex-col gap-2 border border-divider p-3">
+        <div role="alert" className="flex flex-col gap-2 rounded-md border border-divider p-3">
           <Text variant="note">{conflict}</Text>
           <Text variant="note" tone="muted">
             Reloading replaces what is on screen with the saved version.
@@ -265,7 +265,7 @@ function RuleForm(props: AutomationDetailProps & { readonly start: AutomationDra
         </Text>
       )}
       {serverViolations.length === 0 ? null : (
-        <div role="alert" className="flex flex-col gap-2 border border-divider p-3">
+        <div role="alert" className="flex flex-col gap-2 rounded-md border border-divider p-3">
           <Text variant="note">The automation could not be saved:</Text>
           <ul className="flex list-disc flex-col gap-1 pl-5">
             {serverViolations.map((violation, index) => (

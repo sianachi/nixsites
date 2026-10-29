@@ -24,6 +24,16 @@ function Frame({ children }: { readonly children: ReactNode }): ReactElement {
   );
 }
 
+function Notice({ children }: { readonly children: ReactNode }): ReactElement {
+  return (
+    <div role="status" className="rounded-md border border-divider p-3">
+      <Text variant="note" as="p">
+        {children}
+      </Text>
+    </div>
+  );
+}
+
 export function TrashPage(): ReactElement {
   const client = useApiClient();
   const { workspaceId } = useWorkspace();
@@ -125,11 +135,7 @@ export function TrashPage(): ReactElement {
   if (state.items.length === 0)
     return (
       <Frame>
-        {notice ? (
-          <Text variant="note" as="p" role="status">
-            {notice}
-          </Text>
-        ) : null}
+        {notice ? <Notice>{notice}</Notice> : null}
         <EmptyPanel
           title="Trash is empty"
           detail="Items you delete can be restored here until their retention period ends."
@@ -138,11 +144,7 @@ export function TrashPage(): ReactElement {
     );
   return (
     <Frame>
-      {notice ? (
-        <Text variant="note" as="p" role="status">
-          {notice}
-        </Text>
-      ) : null}
+      {notice ? <Notice>{notice}</Notice> : null}
       <ul aria-label="Trash" className="flex flex-col gap-px">
         {state.items.map((item) => (
           <ContextMenu
@@ -181,6 +183,7 @@ export function TrashPage(): ReactElement {
                   <Button
                     className="min-w-0 flex-1 justify-center sm:flex-none"
                     variant="secondary"
+                    aria-label={`Restore ${item.title || 'Untitled'}`}
                     disabled={restoring !== null}
                     onClick={() => {
                       void restore(item);
@@ -191,7 +194,8 @@ export function TrashPage(): ReactElement {
                   </Button>
                   <Button
                     className="min-w-0 flex-1 justify-center text-center sm:flex-none"
-                    variant="primary"
+                    variant="subtle"
+                    aria-label={`Delete ${item.title || 'Untitled'} permanently`}
                     disabled={restoring !== null}
                     onClick={() => {
                       setPurgeTarget(item);

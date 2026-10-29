@@ -668,7 +668,7 @@ function ConditionFields({
             key={index}
             role="group"
             aria-label={`Condition ${number}`}
-            className="flex flex-col gap-2 border border-divider p-3"
+            className="flex flex-col gap-2 rounded-md border border-divider p-3"
           >
             <div className="flex flex-wrap items-end gap-3">
               <PropertyKeyField
@@ -722,7 +722,7 @@ function ConditionFields({
             <div>
               <Button
                 type="button"
-                variant="ghost"
+                variant="subtle"
                 onClick={() => {
                   set(withoutIndex(conditions, index));
                   // The button just pressed is gone; keep focus in the section.
@@ -782,7 +782,7 @@ function ActionFields(props: AutomationEditorProps): ReactNode {
             key={index}
             role="group"
             aria-label={`Action ${number}`}
-            className="flex flex-col gap-3 border border-divider p-3"
+            className="flex flex-col gap-3 rounded-md border border-divider p-3"
           >
             <Field label={`Action ${number} does`} className="max-w-sm">
               {(control) => (
@@ -821,7 +821,7 @@ function ActionFields(props: AutomationEditorProps): ReactNode {
             <div>
               <Button
                 type="button"
-                variant="ghost"
+                variant="subtle"
                 disabled={actions.length <= 1}
                 onClick={() => {
                   set(withoutIndex(actions, index));

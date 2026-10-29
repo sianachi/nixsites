@@ -174,7 +174,7 @@ function NameForm({
         <Button type="submit" variant="secondary">
           Save
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="subtle" onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -333,7 +333,7 @@ export function HistorySidebar(props: HistorySidebarProps): ReactElement {
               Current version
             </Text>
             <Button
-              variant="ghost"
+              variant="subtle"
               onClick={() => {
                 if (headSeq !== null) onRemoveName(headSeq);
               }}
@@ -395,10 +395,10 @@ export function HistorySidebar(props: HistorySidebarProps): ReactElement {
                           setSelectedSeq(revision.seq);
                           setNamingSeq(null);
                         }}
-                        className={`flex w-full flex-col items-start gap-0.5 border px-2 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+                        className={`flex w-full flex-col items-start gap-0.5 rounded-sm border px-2 py-1.5 text-left pointer-coarse:min-h-11 transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
                           selected
-                            ? 'border-accent-text bg-accent/10'
-                            : 'border-transparent hover:bg-foreground/5'
+                            ? 'border-divider bg-surface'
+                            : 'border-transparent hover:bg-surface'
                         }`}
                       >
                         <Text variant="bodySmall">{shortActorId(revision.actorId)}</Text>
