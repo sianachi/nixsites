@@ -22,8 +22,8 @@ func TestCatalogIsEmbeddedAndBounded(t *testing.T) {
 	if chatCatalog == "" {
 		t.Fatal("chatCatalog is empty")
 	}
-	if len(chatCatalog) > 12000 {
-		t.Fatalf("chatCatalog is %d chars, want <= 12000", len(chatCatalog))
+	if len(chatCatalog) > 13000 {
+		t.Fatalf("chatCatalog is %d chars, want <= 13000", len(chatCatalog))
 	}
 }
 

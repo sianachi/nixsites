@@ -11,6 +11,7 @@ import {
 } from '../vocabulary/property-types.js';
 import { STRUCTURED_RECIPES } from '../vocabulary/recipes.js';
 import { TASK_SEMANTIC_FIELD_TYPES } from '../spec/field.js';
+import { SORTED_VIEW_KINDS } from '../spec/view.js';
 import { PROPERTY_FORMULA_GUIDANCE } from './formulas.js';
 import { SMART_LISTS } from '../vocabulary/smart-lists.js';
 import {
@@ -192,7 +193,7 @@ function viewKindLine(kind: CatalogViewKind): string {
 /**
  * The pet's catalog text: field types, view kinds and their requirements, recipes, the
  * never-ops, formulas, rollups, form rules, smart lists, recurrence, habits, the template
- * vocabulary, the blueprint schema summary and the efficiency patterns, at most 12000
+ * vocabulary, the blueprint schema summary and the efficiency patterns, at most 13000
  * characters. One conversation both refines existing structure and designs whole systems, so it
  * carries the full vocabulary.
  */
@@ -207,6 +208,15 @@ export function renderCatalog(catalog: Catalog, patterns: string): string {
   lines.push('Section: View review');
   lines.push(
     'Read configuration with nix_read_structure and bounded results with nix_read_view. Reviews only read; requested refinements use nix_update_view, then read back.',
+  );
+  lines.push(
+    `Sorting: sortBy (a field key) and sortDescending set one sort; ${SORTED_VIEW_KINDS.join(', ')} apply it. Other kinds show children in their own order and ignore saved sorts and filters.`,
+  );
+  lines.push(
+    'Filters belong to smart lists (query): each is {field, op, value} with an op from Query operators, and all must match; $type, $inside, $created, $modified and $done test the item itself. A preset (Smart lists) is a built-in rule used instead of filters. "Any of" groups exist only when a person added them in the editor; read them, never propose them.',
+  );
+  lines.push(
+    'Formula and rollup fields cannot be filtered or sorted when read. nix_read_view reports whether it applied the saved rules (appliedViewRules) and what it ignored or could not read (limits): read both before explaining an order, a total or a missing item.',
   );
   lines.push('');
   lines.push('Section: Property types');

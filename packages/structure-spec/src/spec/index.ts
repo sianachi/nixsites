@@ -1,7 +1,7 @@
 export { fieldSpecSchema } from './field.js';
 export type { FieldSpec } from './field.js';
 
-export { queryOperatorSchema, viewSpecSchema } from './view.js';
+export { queryOperatorSchema, SORTED_VIEW_KINDS, viewSpecSchema } from './view.js';
 export type { QueryOperator, ViewSpec } from './view.js';
 
 export { condSchema, formSpecSchema } from './form.js';

@@ -11,7 +11,7 @@ import {
   type WorkspaceAggregateQuery,
   type WorkspaceQueryMatch,
 } from '@nix/api-client';
-import { isComputedType } from '@nix/structure-spec';
+import { isComputedType, SORTED_VIEW_KINDS } from '@nix/structure-spec';
 import { z } from 'zod';
 import { checkItem } from '../guards.js';
 import type { CompanionPorts } from '../ports.js';
@@ -180,16 +180,7 @@ export async function readView(
       .filter((property) => isComputedType(property.type))
       .map((property) => property.key),
   );
-  const appliesSavedRules = [
-    'list',
-    'board',
-    'calendar',
-    'timeline',
-    'gallery',
-    'sheet',
-    'checklist',
-    'matrix',
-  ].includes(view.kind);
+  const appliesSavedRules = (SORTED_VIEW_KINDS as readonly string[]).includes(view.kind);
   const filterKeys = view.filters.flatMap(
     (rule) => rule.any?.map((condition) => condition.property) ?? [rule.property],
   );

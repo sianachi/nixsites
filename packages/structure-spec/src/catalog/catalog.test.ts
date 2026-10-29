@@ -16,7 +16,7 @@ function readPatterns(): string {
 
 describe('the capability catalog', () => {
   it('renders the catalog text at most 12000 chars', () => {
-    expect(renderCatalog(buildCatalog(), readPatterns()).length).toBeLessThanOrEqual(12000);
+    expect(renderCatalog(buildCatalog(), readPatterns()).length).toBeLessThanOrEqual(13000);
   });
 
   it('documents the exact blueprint field and kind-specific view syntax', () => {

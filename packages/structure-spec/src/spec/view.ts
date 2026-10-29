@@ -57,6 +57,19 @@ const VIEW_KINDS = [
 ] as const;
 type ViewKind = (typeof VIEW_KINDS)[number];
 
+/** The renderers that apply a view's saved filters and sort. Every other kind shows its children in
+ * its own order; the pet's catalog says so and nix_read_view samples those without the rules. */
+export const SORTED_VIEW_KINDS = [
+  'list',
+  'board',
+  'calendar',
+  'timeline',
+  'gallery',
+  'sheet',
+  'checklist',
+  'matrix',
+] as const satisfies readonly ViewKind[];
+
 /**
  * A field this package's `ViewSpec` allows only on some view kinds, gated by the `superRefine`
  * below rather than by the object schema itself: a Zod object's per-key shape cannot express
