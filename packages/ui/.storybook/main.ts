@@ -43,7 +43,7 @@ const config: StorybookConfig = {
     '../../../apps/web/src/views/outline/*.stories.tsx',
     '../../../apps/web/src/views/query/*.stories.tsx',
     '../../../apps/web/src/views/*.stories.tsx',
-    '../../../apps/web/src/collections/properties/*.stories.tsx',
+    '../../../packages/web-collections/src/properties/*.stories.tsx',
     '../../../apps/web/src/automations/*.stories.tsx',
     '../../../packages/web-workspaces/src/launch/*.stories.tsx',
     '../../../apps/web/src/recording/*.stories.tsx',

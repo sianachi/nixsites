@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import type { Item, PropertyDefinition, View } from '../../collections/core/container-model';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
+import type { Item, PropertyDefinition, View } from '@nix/web-collections/core/container-model';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
 import { ChecklistView } from './checklist-view';
 
 export default { title: 'Nix/Views/Checklist', parameters: { layout: 'padded' } };

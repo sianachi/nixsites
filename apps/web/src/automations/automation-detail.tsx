@@ -10,7 +10,7 @@ import { Button, Dialog, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { TemplateItemPicker } from '../collections/items/template-item-picker';
+import { TemplateItemPicker } from '@nix/web-collections/items/template-item-picker';
 import {
   describeRunReason,
   describeRunStatus,

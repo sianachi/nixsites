@@ -1,7 +1,7 @@
 import type { CalendarEntry } from '@nix/api-client';
 import { DateTime } from 'luxon';
 
-import { readTimestampValue, writeTimestampValue } from '../collections/core/timestamps';
+import { readTimestampValue, writeTimestampValue } from '@nix/web-collections/core/timestamps';
 
 /**
  * What to write when an entry is dragged somewhere else.

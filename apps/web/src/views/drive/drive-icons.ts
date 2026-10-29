@@ -1,6 +1,6 @@
 import { Blocks, File, FileText, Folder, PenTool, Sheet, type LucideIcon } from 'lucide-react';
 
-import type { Item } from '../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 
 /**
  * The glyph a drive row leads with.

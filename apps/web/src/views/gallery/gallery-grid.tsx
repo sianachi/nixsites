@@ -6,8 +6,8 @@ import {
   type Item,
   type PropertyDefinition,
   type PropertyValue,
-} from '../../collections/core/container-model';
-import { useVirtualWindow } from '../../collections/core/use-virtual-window';
+} from '@nix/web-collections/core/container-model';
+import { useVirtualWindow } from '@nix/web-collections/core/use-virtual-window';
 import { CARD_SIZE_GRID, galleryColumnCount, galleryRowEstimate, type CardSize } from './card-size';
 import { GalleryCard } from './gallery-card';
 import type { Cover } from './gallery-cover';

@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { DocumentHistory } from '../../history/document-history';
 import { historyPanelWidth } from '@nix/web-foundation/layout/regions';
 import { ItemPanel, type Pane } from '../../panel/item-panel';
-import type { useItemProperties } from '../../collections/properties/use-item-properties';
-import type { useContainer } from '../../collections/core/use-container';
+import type { useItemProperties } from '@nix/web-collections/properties/use-item-properties';
+import type { useContainer } from '@nix/web-collections/core/use-container';
 
 interface ItemPanelsProps {
   readonly itemId: string;

@@ -1,8 +1,8 @@
 import { Button } from '@nix/ui';
 import { type ReactNode, type RefObject } from 'react';
 
-import { PropertyInput } from '../../collections/properties/property-input';
-import { type Item, type PropertyDefinition } from '../../collections/core/container-model';
+import { PropertyInput } from '@nix/web-collections/properties/property-input';
+import { type Item, type PropertyDefinition } from '@nix/web-collections/core/container-model';
 
 interface GridPropertyPanelProps {
   readonly panelRef: RefObject<HTMLDivElement | null>;

@@ -3,8 +3,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { View } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 
 const workspace = '11111111-1111-4111-8111-111111111111';
 const collection = '22222222-2222-4222-8222-222222222222';

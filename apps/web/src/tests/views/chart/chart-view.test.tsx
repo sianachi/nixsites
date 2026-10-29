@@ -3,8 +3,8 @@ import { createNixClient, itemChartSchema, NixApiError } from '@nix/api-client';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import { ChartView } from '../../../views/chart/chart-view';
-import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 /**
  * The chart view: bars over every child, not over the loaded page.

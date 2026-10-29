@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
-import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import type { View } from '../../../collections/core/container-model';
+import type { View } from '@nix/web-collections/core/container-model';
 import { QueryView } from '../../../views/query/query-view';
 import { ViewTools } from '../../../views/core/view-tools';
-import { useViewState } from '../../../collections/core/view-state';
+import { useViewState } from '@nix/web-collections/core/view-state';
 import {
   hiddenItemsKey,
   readHiddenItems,

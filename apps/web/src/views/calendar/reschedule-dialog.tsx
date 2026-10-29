@@ -2,8 +2,8 @@ import { Button, Dialog, Field, Input } from '@nix/ui';
 import { DateTime } from 'luxon';
 import { useRef, useState, type ReactNode } from 'react';
 
-import { readDateValue, type Item } from '../../collections/core/container-model';
-import { readTimestampValue, writeTimestampValue } from '../../collections/core/timestamps';
+import { readDateValue, type Item } from '@nix/web-collections/core/container-model';
+import { readTimestampValue, writeTimestampValue } from '@nix/web-collections/core/timestamps';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { FreeSlotHint } from './free-slot-hint';
 import { suggestSlot } from './schedule-slot';

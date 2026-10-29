@@ -1,10 +1,10 @@
 import { type ReactNode } from 'react';
 
-import { type View } from '../../collections/core/container-model';
+import { type View } from '@nix/web-collections/core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { drawable, useViewChrome } from '../core/view-chrome';
-import { useViewState, type SortDirection } from '../../collections/core/view-state';
+import { useViewState, type SortDirection } from '@nix/web-collections/core/view-state';
 import { suggestSourceOf } from '../suggest/suggest-source';
 import { resolveColumns } from './grid-model';
 import { SpreadsheetGrid } from './spreadsheet-grid';

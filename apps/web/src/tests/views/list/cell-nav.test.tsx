@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import type { PropertyDefinition } from '../../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { ListView } from '../../../views/list/list-view';
-import { aContainer } from '../../container-fixture';
-import type { ContainerData } from '../../../collections/core/use-container';
-import { item, schemaOf } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
+import { item, schemaOf } from '@nix/web-collections/testing/view-fixture';
 
 /**
  * Alt+Arrow cell-to-cell movement (`../../../views/list/cell-nav.ts`), driven the way a keyboard

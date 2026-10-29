@@ -1,4 +1,4 @@
-import type { Item } from '../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 
 /** One visible row: the item, how deep it sits and where it is among its siblings. */
 export interface OutlineRow {

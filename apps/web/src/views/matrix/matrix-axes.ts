@@ -2,8 +2,8 @@ import {
   describeAxisProblem,
   resolveViewAxis,
   type ViewAxis,
-} from '../../collections/core/view-axis';
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
+} from '@nix/web-collections/core/view-axis';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 
 export interface MatrixAxes {
   readonly rows: ViewAxis;

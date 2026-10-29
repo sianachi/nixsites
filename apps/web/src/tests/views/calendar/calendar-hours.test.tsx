@@ -2,15 +2,15 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CalendarDay } from '../../../collections/core/calendar-dates';
+import type { CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { HourGrid } from '../../../views/calendar/calendar-hours';
 import { minutesToPx } from '../../../views/calendar/hours/geometry';
 import { CalendarView } from '../../../views/calendar/calendar-view';
-import { aContainer, views } from '../../container-fixture';
-import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
+import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
+import type { EffectiveSchema, Item, View } from '@nix/web-collections/core/container-model';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView, datedItem } from '../../view-fixture';
-import { readerZone, writeTimestampValue } from '../../../collections/core/timestamps';
+import { aView, datedItem } from '@nix/web-collections/testing/view-fixture';
+import { readerZone, writeTimestampValue } from '@nix/web-collections/core/timestamps';
 
 /**
  * The week grid's layout at a narrow width: a floor on every day column, one scroller for the

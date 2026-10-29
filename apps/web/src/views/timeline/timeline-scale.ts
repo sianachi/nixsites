@@ -14,7 +14,7 @@ import {
   weekdayIndex,
   type CalendarDay,
   type CalendarMonth,
-} from '../../collections/core/calendar-dates';
+} from '@nix/web-collections/core/calendar-dates';
 
 /**
  * Where a timeline's columns are, and which of them a span covers.

@@ -1,7 +1,7 @@
 /**
  * The structural shapes this package's vocabulary and compiler traffic in.
  *
- * These mirror `apps/web/src/collections/core/container-model.ts`'s `PropertyDefinition`, form types
+ * These mirror `packages/web-collections/src/core/container-model.ts`'s `PropertyDefinition`, form types
  * and `View` field for field - same names, same shapes, same optionality - so a value built here
  * is assignable to the web type and a web value is assignable back, without either side importing
  * the other. `apps/web/src/tests/views/structure-spec-contract.test.ts` asserts that mutual
@@ -22,7 +22,7 @@
  * if a runtime dependency other than `zod` or `@nix/sheet` is ever added.
  */
 
-/** A property definition, as `apps/web/src/collections/core/container-model.ts`'s `PropertyDefinition`. */
+/** A property definition, as `packages/web-collections/src/core/container-model.ts`'s `PropertyDefinition`. */
 export interface StructureProperty {
   key: string;
   label: string;
@@ -136,7 +136,7 @@ export interface StructureChartOptions {
 }
 
 /**
- * A view, as `apps/web/src/collections/core/container-model.ts`'s `View`.
+ * A view, as `packages/web-collections/src/core/container-model.ts`'s `View`.
  *
  * The trailing group of fields is optional there for the same reason it is here: a view built by
  * a wizard recipe, a compiled spec, or a test fixture is not a parse of a server response, and

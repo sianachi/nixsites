@@ -2,9 +2,9 @@ import { Duotone } from '@nix/ui';
 import { useEffect, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { fileImageReferenceItemId } from '../../collections/properties/inputs/image-reference';
-import { useFileImagePreview } from '../../collections/properties/inputs/use-file-image-preview';
-import { useFileThumbnail } from '../../collections/thumbnails';
+import { fileImageReferenceItemId } from '@nix/web-collections/properties/inputs/image-reference';
+import { useFileImagePreview } from '@nix/web-collections/properties/inputs/use-file-image-preview';
+import { useFileThumbnail } from '@nix/web-collections/thumbnails/index';
 
 /**
  * The one place a cover picture is drawn.

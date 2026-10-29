@@ -2,7 +2,7 @@ import { Button, Field, Icon, Input, Select, Text } from '@nix/ui';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 import { StructuredViewConfiguration } from '../../views/core/structured-view-configuration';
 import { findViewKind } from '../../views/core/view-kinds';
 

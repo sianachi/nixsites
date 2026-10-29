@@ -24,6 +24,7 @@
 @source '../../web-workspaces/src';
 @source '../../web-sites/src';
 @source '../../web-settings/src';
+@source '../../web-collections/src';
 
 /* The ground: the light technical paper the whole system sits on. */
 body {

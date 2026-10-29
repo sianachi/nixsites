@@ -1,9 +1,9 @@
 import { Button, cn, focusRing, Text } from '@nix/ui';
 import { items } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ShownItems } from '../../collections/core/item-selection-context';
-import type { ContainerData } from '../../collections/core/use-container';
-import type { View } from '../../collections/core/container-model';
+import { ShownItems } from '@nix/web-collections/core/item-selection-context';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
+import type { View } from '@nix/web-collections/core/container-model';
 import {
   EmptyPanel,
   ErrorPanel,

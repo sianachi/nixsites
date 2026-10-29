@@ -1,8 +1,8 @@
 import { Text, cn, focusRing } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import { dayLabel, dayText, type CalendarDay } from '../../collections/core/calendar-dates';
-import type { Item } from '../../collections/core/container-model';
+import { dayLabel, dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import type { Item } from '@nix/web-collections/core/container-model';
 import { AllDayBand } from './hours/all-day-band';
 import { DayColumn } from './hours/day-column';
 import { DAY_COLUMN, HOURS, HOUR_GUTTER, ROW_HEIGHT } from './hours/geometry';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PropertyDefinition } from '../../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import {
   VIEW_KINDS,
   findViewKind,

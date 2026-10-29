@@ -2,10 +2,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { View } from '../../../collections/core/container-model';
+import type { View } from '@nix/web-collections/core/container-model';
 import { ViewSwitcher } from '../../../views/core/view-switcher';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 /**
  * The per-container switcher.

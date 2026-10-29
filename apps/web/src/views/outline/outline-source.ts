@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { Item } from '../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 
 /**
  * What the outline reads and writes through: one level of children at a time, a create, and the

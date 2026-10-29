@@ -1,13 +1,13 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { ContainerViews } from '../../../collections/core/container-model';
+import type { ContainerViews } from '@nix/web-collections/core/container-model';
 import {
   useKnownSmartLists,
   useKnownSmartListsStore,
   useRememberSmartList,
 } from '../../../views/query/known-smart-lists';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 const WORKSPACE = 'workspace-1';
 

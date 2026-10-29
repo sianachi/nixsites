@@ -1,7 +1,7 @@
 import { type CellRange, type CellRef, cellKey } from '@nix/sheet';
 
-import { TITLE_COLUMN_KEY, resolveConfiguredColumns } from '../../collections/core/columns';
-import { isComputedType, valueShapeOf } from '../../collections/core/property-types';
+import { TITLE_COLUMN_KEY, resolveConfiguredColumns } from '@nix/web-collections/core/columns';
+import { isComputedType, valueShapeOf } from '@nix/web-collections/core/property-types';
 import {
   firstLine,
   readPropertyText,
@@ -9,13 +9,13 @@ import {
   type Item,
   type PropertyValue,
   type View,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import {
   dayFor,
   formatTime,
   readTimestampValue,
   readerZone,
-} from '../../collections/core/timestamps';
+} from '@nix/web-collections/core/timestamps';
 import { continueSeries, type SeriesKind } from '@nix/web-foundation/lib/suggest/fill-series';
 
 /**

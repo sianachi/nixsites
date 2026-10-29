@@ -1,12 +1,12 @@
 import { Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { dayText, weekOf, type CalendarDay } from '../../../collections/core/calendar-dates';
-import type { Item } from '../../../collections/core/container-model';
+import { dayText, weekOf, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import type { Item } from '@nix/web-collections/core/container-model';
 import { CreateItemControl } from '../../core/create-item-control';
 import type { CardContext } from '../item/card-context';
 import { ItemCard } from '../item/item-card';
-import { agendaDayLabel } from '../../../collections/core/day-math';
+import { agendaDayLabel } from '@nix/web-collections/core/day-math';
 
 interface PhoneAgendaProps {
   readonly byDate: ReadonlyMap<string, readonly Item[]>;

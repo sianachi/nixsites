@@ -1,8 +1,8 @@
 import { type CellRef } from '@nix/sheet';
 import { useState, type Dispatch } from 'react';
 
-import { type Item } from '../../collections/core/container-model';
-import { clamp, type GridBounds, type SelectionAction } from '../../collections/sheet/selection';
+import { type Item } from '@nix/web-collections/core/container-model';
+import { clamp, type GridBounds, type SelectionAction } from '@nix/web-collections/sheet/selection';
 
 /**
  * The selection follows the item, not the index. Recorded and reconciled during render (the

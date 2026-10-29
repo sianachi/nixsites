@@ -1,9 +1,9 @@
 import { Table, type MenuEntry, type TableRowDrag, type TableSort } from '@nix/ui';
 import { useMemo, useRef, type ReactNode } from 'react';
 
-import type { Item } from '../../collections/core/container-model';
-import { useVirtualWindow } from '../../collections/core/use-virtual-window';
-import { virtualSpacers } from '../../collections/core/virtual-window';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { useVirtualWindow } from '@nix/web-collections/core/use-virtual-window';
+import { virtualSpacers } from '@nix/web-collections/core/virtual-window';
 import type { ListColumn } from './list-columns';
 
 const VIRTUALIZATION_THRESHOLD = 100;

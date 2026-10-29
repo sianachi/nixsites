@@ -297,6 +297,37 @@ FIXTURE
 expect 0 "editor importing foundation and platform passes"
 
 reset_tree
+add packages/web-settings/src/settings/up-collections.ts <<'FIXTURE'
+import { x } from '@nix/web-collections/core/container-model';
+export const u = x;
+FIXTURE
+expect 1 "settings importing web-collections (upward) fails" "imports a package above it" "up-collections.ts"
+
+reset_tree
+add packages/web-editor/src/editor/up-collections.ts <<'FIXTURE'
+import { x } from '@nix/web-collections/core/container-model';
+export const u = x;
+FIXTURE
+expect 1 "editor importing web-collections (upward) fails" "imports a package above it" "up-collections.ts"
+
+reset_tree
+add packages/web-collections/src/core/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { PreferencesSection } from '@nix/web-settings/settings/preferences/PreferencesSection';
+export const d = [announce, useAuth, useWorkspace, PreferencesSection];
+FIXTURE
+expect 0 "collections importing foundation, platform, workspaces and settings passes"
+
+reset_tree
+add packages/web-collections/src/core/up-views.ts <<'FIXTURE'
+import { x } from '@nix/web-views/core/view-kinds';
+export const u = x;
+FIXTURE
+expect 1 "collections importing web-views (upward) fails" "imports a package above it" "up-views.ts"
+
+reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';
 export const a = announce;

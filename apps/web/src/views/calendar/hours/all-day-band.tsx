@@ -1,10 +1,10 @@
 import { Text, cn } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { dayLabel, dayText, type CalendarDay } from '../../../collections/core/calendar-dates';
-import { readPropertyText, type Item } from '../../../collections/core/container-model';
+import { dayLabel, dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import { readPropertyText, type Item } from '@nix/web-collections/core/container-model';
 import { CreateItemControl } from '../../core/create-item-control';
-import { useItemOpenProps } from '../../../collections/core/item-open-click';
+import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { CalendarEntryMenu } from '../calendar-entry-menu';
 import { DAY_COLUMN, HOUR_GUTTER } from './geometry';
 

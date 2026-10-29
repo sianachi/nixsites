@@ -39,9 +39,10 @@
 #   R4  nobody outside shell/, app.tsx and main.tsx imports shell/ for a value.
 #   R5  apps/web/src/app/ does not exist.
 #   R6  nothing under packages/web-* imports from apps/ (packages never import apps).
-#   R7  web packages stack: web-foundation imports no other web-*, web-platform only web-foundation,
-#      web-editor and web-workspaces only those two,
-#      web-sites those three, web-settings all five below it.
+#   R7  each web package imports only the web packages on its allowed list (a DAG, see the r7_scan
+#      calls below): web-foundation none, web-platform foundation, web-editor and web-workspaces
+#      those two, web-sites adds workspaces, web-settings adds editor and sites, web-collections
+#      foundation, platform, editor, workspaces and settings.
 #   R8  non-test source (anything outside a tests/ or testing/ directory) imports no */testing/*
 #      module. The testing/ folders obey R6 and R7 like any other source.
 #
@@ -161,16 +162,25 @@ if [ -n "$packages" ]; then
   apps_imports="$(printf '%s' "$apps_imports" | grep -v '^$' || true)"
 fi
 
-# R7: dependency direction web-foundation <- web-platform <- later packages. Add a line per new package.
+# R7: each web package may import only the web packages on its allowed list (plus itself). The lists
+# form a DAG, listed bottom-up; add one line per new package.
+r7_scan() {
+  pkg="$1"
+  allowed="$2"
+  scan "(from|import\\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/$pkg/src" |
+    grep -vE "'@nix/($pkg|${allowed// /|})[/']" || true
+}
 up_imports=""
 if [ -n "$packages" ]; then
-  up_imports="$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-foundation/src" | grep -vE "'@nix/web-foundation[/']" || true)
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-platform/src" | grep -vE "'@nix/web-(foundation|platform)[/']" || true)
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-workspaces/src" | grep -vE "'@nix/web-(foundation|platform|workspaces)[/']" || true)
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-sites/src" | grep -vE "'@nix/web-(foundation|platform|workspaces|sites)[/']" || true)
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-settings/src" | grep -vE "'@nix/web-(foundation|platform|editor|workspaces|sites|settings)[/']" || true)"
-  up_imports="$up_imports
-$(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-editor/src" | grep -vE "'@nix/web-(foundation|platform|editor)[/']" || true)"
+  up_imports="$(
+    r7_scan web-foundation "web-foundation"
+    r7_scan web-platform "web-foundation"
+    r7_scan web-editor "web-foundation web-platform"
+    r7_scan web-workspaces "web-foundation web-platform"
+    r7_scan web-sites "web-foundation web-platform web-workspaces"
+    r7_scan web-settings "web-foundation web-platform web-editor web-workspaces web-sites"
+    r7_scan web-collections "web-foundation web-platform web-editor web-workspaces web-settings"
+  )"
   up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"
 fi
 

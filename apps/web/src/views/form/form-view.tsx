@@ -1,16 +1,16 @@
 import { Button, Checkbox, Field, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { PropertyInput, isKnownPropertyType } from '../../collections/properties/property-input';
-import { resolveConfiguredColumns } from '../../collections/core/columns';
-import { isComputedType } from '../../collections/core/property-types';
+import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
+import { resolveConfiguredColumns } from '@nix/web-collections/core/columns';
+import { isComputedType } from '@nix/web-collections/core/property-types';
 import {
   type EffectiveSchema,
   type PropertyDefinition,
   type PropertyValue,
   type View,
-} from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+} from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';

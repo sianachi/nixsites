@@ -4,15 +4,15 @@ import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView, item } from '../../view-fixture';
-import { aContainer } from '../../container-fixture';
+import { aView, item } from '@nix/web-collections/testing/view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import type {
   EffectiveSchema,
   Item,
   PropertyDefinition,
   View,
-} from '../../../collections/core/container-model';
-import type { ContainerData } from '../../../collections/core/use-container';
+} from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { MatrixView } from '../../../views/matrix/matrix-view';
 
 const URGENCY: PropertyDefinition = {

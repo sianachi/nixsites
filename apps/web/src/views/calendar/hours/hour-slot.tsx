@@ -1,7 +1,7 @@
 import { cn } from '@nix/ui';
 import { useState, type DragEvent, type ReactNode } from 'react';
 
-import { dayLabel, type CalendarDay } from '../../../collections/core/calendar-dates';
+import { dayLabel, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { CreateItemControl } from '../../core/create-item-control';
 import { ROW_HEIGHT } from './geometry';
 import { writeSlot } from './placement';

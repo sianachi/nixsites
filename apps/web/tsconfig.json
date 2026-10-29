@@ -32,6 +32,9 @@
     },
     {
       "path": "../../packages/web-settings"
+    },
+    {
+      "path": "../../packages/web-collections"
     }
   ]
 }

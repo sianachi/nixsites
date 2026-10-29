@@ -1,8 +1,8 @@
 import { Checkbox, cn } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { Item } from '../../collections/core/container-model';
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 
 /**
  * The selection box every selecting view draws beside an item (requirement 7): a plain toggle,

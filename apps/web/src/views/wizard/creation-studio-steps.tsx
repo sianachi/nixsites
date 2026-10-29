@@ -2,9 +2,9 @@ import { Button, Checkbox, Field, Icon, Input, Segmented, Select, Text } from '@
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { type ReactNode } from 'react';
 
-import type { PropertyDefinition as PropertyDefinitionType } from '../../collections/core/container-model';
+import type { PropertyDefinition as PropertyDefinitionType } from '@nix/web-collections/core/container-model';
 import { LineListInput } from '../core/line-list-input';
-import { PROPERTY_TYPES, isDateShaped } from '../../collections/core/property-types';
+import { PROPERTY_TYPES, isDateShaped } from '@nix/web-collections/core/property-types';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';
 import { FilterRulesEditor } from '../core/filter-rules-editor';
 import { companionView, refreshViewProperties, type StudioDraft } from './creation-studio-model';

@@ -10,7 +10,7 @@ import type {
   Item,
   PropertyDefinition,
   PropertyValue,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 
 /**
  * Which property values a new item probably wants, learned from its siblings' titles.

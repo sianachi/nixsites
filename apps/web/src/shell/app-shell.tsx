@@ -4,8 +4,8 @@ import {
   useVisualViewportHeight,
 } from '@nix/web-foundation/layout/use-mobile-keyboard';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
-import { describeBulkDelete, executeBulkDelete } from '../collections/items/bulk-delete';
-import { ItemCommandsProvider } from '../collections/items/item-commands-context';
+import { describeBulkDelete, executeBulkDelete } from '@nix/web-collections/items/bulk-delete';
+import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
 import { ItemDialogProvider } from '../items/item-dialog-provider';
 import { MobileNavigation } from './mobile-navigation';
 import { petAttentionText } from '../pets/pet-attention';
@@ -20,20 +20,20 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { ImportDialog } from '@nix/web-workspaces/import/import-dialog';
 import { consumeInterruptedImportForWorkspace } from '@nix/web-foundation/lib/import-interrupted-notice';
-import { useWorkspaceTree, type TreeItem } from '../collections/items/use-workspace-tree';
+import { useWorkspaceTree, type TreeItem } from '@nix/web-collections/items/use-workspace-tree';
 import { announce, useAnnouncement } from '@nix/web-foundation/a11y/announcer';
 import type { ShellContext } from './shell-context';
 import { focusPane } from '@nix/web-platform/panes/pane-params';
 import { usePanes } from '@nix/web-platform/panes/pane-state';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
-import { automationsHref } from '../collections/items/automation-url';
+import { automationsHref } from '@nix/web-collections/items/automation-url';
 import { CommandPalette } from '../search/command-palette';
 import { builtInCommands } from '../search/commands';
 import {
   useBookmarksLoader,
   useBookmarksStore,
   useIsKept,
-} from '../collections/items/use-bookmarks';
+} from '@nix/web-collections/items/use-bookmarks';
 import { MiniPlayer } from '@nix/web-foundation/audio/mini-player';
 import { useOpenItem } from '../tabs/use-open-item';
 import { useOpenDailyOnLaunch } from '@nix/web-workspaces/launch/use-open-daily-on-launch';

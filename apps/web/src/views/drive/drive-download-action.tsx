@@ -2,8 +2,8 @@ import { Button, Icon } from '@nix/ui';
 import { Download } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
-import type { Item } from '../../collections/core/container-model';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
+import type { Item } from '@nix/web-collections/core/container-model';
 
 export function DriveDownloadAction({
   rows,

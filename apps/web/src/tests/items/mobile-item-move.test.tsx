@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MobileItemMove } from '../../items/mobile-item-move';
-import type { TreeItem, WorkspaceTree } from '../../collections/items/use-workspace-tree';
+import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 
 /**
  * Moving an item on a phone: choosing a destination is not choosing a position, and reordering

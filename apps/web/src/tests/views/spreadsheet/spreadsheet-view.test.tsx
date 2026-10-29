@@ -5,10 +5,10 @@ import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aContainer } from '../../container-fixture';
-import { aView, item, property, schemaOf } from '../../view-fixture';
-import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
-import type { ContainerData } from '../../../collections/core/use-container';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView, item, property, schemaOf } from '@nix/web-collections/testing/view-fixture';
+import type { EffectiveSchema, Item, View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
 
 /**

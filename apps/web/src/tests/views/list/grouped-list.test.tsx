@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../../view-fixture';
-import { aContainer } from '../../container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import type {
   EffectiveSchema,
   Item,
   PropertyDefinition,
   View,
-} from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { ListView } from '../../../views/list/list-view';
 
 /**

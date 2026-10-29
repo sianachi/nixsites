@@ -1,7 +1,7 @@
 import { files as fileResources, type NixClient } from '@nix/api-client';
 import type { CompanionFiles, FileRead } from '@nix/companion';
 import { WorkspaceToolRefusal } from '@nix/companion/tool-args';
-import { extractPdfText, renderPdfFirstPage } from '../collections/thumbnails/pdf-first-page';
+import { extractPdfText, renderPdfFirstPage } from '@nix/web-collections/thumbnails/pdf-first-page';
 
 /** Text the pet gets from one file; the tool result itself is cut at 16,000 characters. */
 const MAX_TEXT_CHARS = 14_000;

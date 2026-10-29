@@ -7,8 +7,8 @@ import {
   ErrorPanel,
   LoadingPanel,
 } from '@nix/web-foundation/components/states/status-panels';
-import type { View } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { CloseMonthDialog } from './close-month-dialog';
 import { FinanceAccounts } from './finance-accounts';
 import { FinanceBudget } from './finance-budget';

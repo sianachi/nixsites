@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
-import type { TreeItem } from '../../collections/items/use-workspace-tree';
+import type { TreeItem } from '@nix/web-collections/items/use-workspace-tree';
 import type {
   TemplateInitialization,
   TemplateInitializationRule,

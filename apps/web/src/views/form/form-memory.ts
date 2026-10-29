@@ -1,5 +1,5 @@
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
-import type { PropertyDefinition, PropertyValue } from '../../collections/core/container-model';
+import type { PropertyDefinition, PropertyValue } from '@nix/web-collections/core/container-model';
 
 /**
  * What this person usually puts in a form's fields, remembered from their own submissions.

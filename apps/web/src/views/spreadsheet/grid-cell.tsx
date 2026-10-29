@@ -3,9 +3,9 @@ import { Icon, cn, gridRangeCell } from '@nix/ui';
 import { Check, ChevronDown, Square } from 'lucide-react';
 import { type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 
-import { type Item } from '../../collections/core/container-model';
+import { type Item } from '@nix/web-collections/core/container-model';
 import { cellId } from './grid-geometry';
-import { TITLE_COLUMN_KEY } from '../../collections/core/columns';
+import { TITLE_COLUMN_KEY } from '@nix/web-collections/core/columns';
 import { cellDisplay, cellText, type SpreadsheetColumn } from './grid-model';
 
 interface GridCellProps {

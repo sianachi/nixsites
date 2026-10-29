@@ -5,14 +5,14 @@ import {
   dayText,
   weekLabel,
   type CalendarDay,
-} from '../../../collections/core/calendar-dates';
-import type { Item } from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/calendar-dates';
+import type { Item } from '@nix/web-collections/core/container-model';
 import {
   formatTime,
   minutesFor,
   readTimestampValue,
   writeTimestampValue,
-} from '../../../collections/core/timestamps';
+} from '@nix/web-collections/core/timestamps';
 import { MINUTES_PER_DAY, MIN_SPAN_MINUTES, type Placed } from './geometry';
 
 /** The moment a minute of a day stands for, on the reader's clock. Midnight rolls to the next day. */

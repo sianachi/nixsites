@@ -8,9 +8,9 @@ import {
   type PropertyDefinition,
   type ViewFilterCondition,
   type ViewFilterRule,
-} from '../../collections/core/container-model';
-import { operatorTakesValue, ruleConditions } from '../../collections/core/filter-rules';
-import { isComputedType } from '../../collections/core/property-types';
+} from '@nix/web-collections/core/container-model';
+import { operatorTakesValue, ruleConditions } from '@nix/web-collections/core/filter-rules';
+import { isComputedType } from '@nix/web-collections/core/property-types';
 
 /**
  * The smallest honest editor for a view's filters: one row per condition - property, operator,

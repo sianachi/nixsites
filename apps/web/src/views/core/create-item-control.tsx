@@ -4,7 +4,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'rea
 
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import type { CreateSuggestSource } from '../suggest/suggest-source';
-import type { PropertyValue } from '../../collections/core/container-model';
+import type { PropertyValue } from '@nix/web-collections/core/container-model';
 
 /**
  * Loaded on first use, not with the view: the classifier and the similarity search are only worth

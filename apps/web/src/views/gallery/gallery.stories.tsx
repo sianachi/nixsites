@@ -3,8 +3,8 @@ import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
-import { recordStoryView } from '../../collections/core/story-container';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
+import { recordStoryView } from '@nix/web-collections/core/story-container';
 import { RecordViewStory } from '../list/record-view-story';
 import { GalleryView } from './gallery-view';
 

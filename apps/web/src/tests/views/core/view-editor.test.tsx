@@ -4,11 +4,11 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { View } from '../../../collections/core/container-model';
-import type { ContainerData } from '../../../collections/core/use-container';
+import type { View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { ViewEditor } from '../../../views/core/view-editor';
-import { aContainer, views as offered } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer, views as offered } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 function viewOf(overrides: Partial<View> & { id: string; name: string }): View {
   return aView(overrides);

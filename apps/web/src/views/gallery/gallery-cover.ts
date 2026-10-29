@@ -1,6 +1,6 @@
-import { propertyTypeLabel } from '../../collections/core/property-types';
-import type { ContainerData } from '../../collections/core/use-container';
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
+import { propertyTypeLabel } from '@nix/web-collections/core/property-types';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 
 /**
  * What this gallery's cover column is, or why it has none - as data rather than as flags read in

@@ -9,9 +9,12 @@ import {
   subscribeHiddenItems,
   writeHiddenItems,
 } from '@nix/web-foundation/lib/view-hidden-items';
-import { useHiddenItems, useHiddenItemPredicate } from '../../collections/items/use-hidden-items';
+import {
+  useHiddenItems,
+  useHiddenItemPredicate,
+} from '@nix/web-collections/items/use-hidden-items';
 import { ViewItemVisibility } from '../../views/core/view-item-visibility';
-import { aContainer } from '../container-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 import { signedIn } from '@nix/web-foundation/testing/render-with-router';

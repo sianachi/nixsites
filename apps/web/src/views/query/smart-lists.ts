@@ -1,7 +1,7 @@
 import { isNixApiError, views as coreViews, type NixClient } from '@nix/api-client';
 import { type SmartListPreset, smartListView } from '@nix/structure-spec';
 
-import { toViewRequest } from '../../collections/core/container-model';
+import { toViewRequest } from '@nix/web-collections/core/container-model';
 
 /**
  * `SmartListPreset`, `SMART_LISTS`, `findSmartList` and `smartListView` moved to

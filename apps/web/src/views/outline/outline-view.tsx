@@ -2,12 +2,12 @@ import { Button, Text } from '@nix/ui';
 import { useId, useRef, type ReactNode } from 'react';
 
 import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
-import type { View } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { ContainerNotices, resolveLoadState } from '../core/view-chrome';
-import { ShownItems } from '../../collections/core/item-selection-context';
-import { useClickSelects } from '../../collections/core/item-open-click';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { ShownItems } from '@nix/web-collections/core/item-selection-context';
+import { useClickSelects } from '@nix/web-collections/core/item-open-click';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import { DraftField } from './outline-draft-field';
 import { OutlineRowView } from './outline-row';
 import { OutlineToolbar } from './outline-toolbar';

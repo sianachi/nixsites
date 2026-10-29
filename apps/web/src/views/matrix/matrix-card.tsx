@@ -6,10 +6,10 @@ import type {
   Item,
   PropertyDefinition,
   PropertyValue,
-} from '../../collections/core/container-model';
-import { useItemOpenProps } from '../../collections/core/item-open-click';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
-import { ValuePopover } from '../../collections/properties/value-popover';
+} from '@nix/web-collections/core/container-model';
+import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { ListCell } from '../list/list-cell';
 import { cellValue, type CellAddress } from './matrix-axes';
 

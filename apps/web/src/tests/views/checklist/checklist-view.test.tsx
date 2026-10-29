@@ -4,13 +4,13 @@ import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView, item, property, schemaOf } from '../../view-fixture';
-import { aContainer } from '../../container-fixture';
-import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
+import { aView, item, property, schemaOf } from '@nix/web-collections/testing/view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import type { EffectiveSchema, Item, View } from '@nix/web-collections/core/container-model';
 import { ChecklistView, resolveDoneProperty } from '../../../views/checklist/checklist-view';
-import { ItemSelectionContext } from '../../../collections/core/item-selection-context';
-import { useItemSelection } from '../../../collections/core/use-item-selection';
-import { capabilitiesOf } from '../../../collections/core/view-capabilities';
+import { ItemSelectionContext } from '@nix/web-collections/core/item-selection-context';
+import { useItemSelection } from '@nix/web-collections/core/use-item-selection';
+import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 
 const DONE = property('done', 'Done', 'checkbox');
 const WHERE = property('aisle', 'Aisle', 'text');

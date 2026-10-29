@@ -5,14 +5,14 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
-import { executeBulkDelete } from '../../collections/items/bulk-delete';
-import { ItemCommandsProvider } from '../../collections/items/item-commands-context';
-import { useWorkspaceTree } from '../../collections/items/use-workspace-tree';
+import { executeBulkDelete } from '@nix/web-collections/items/bulk-delete';
+import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
+import { useWorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { ContainerView } from '../../views/core/container-view';
-import { useContainer } from '../../collections/core/use-container';
+import { useContainer } from '@nix/web-collections/core/use-container';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
-import { aView } from '../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),

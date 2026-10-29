@@ -18,10 +18,10 @@ import {
 import {
   ShownItems,
   useOptionalItemSelection,
-} from '../../collections/core/item-selection-context';
+} from '@nix/web-collections/core/item-selection-context';
 import { CreateItemControl } from '../core/create-item-control';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
-import type { Item } from '../../collections/core/container-model';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import type { Item } from '@nix/web-collections/core/container-model';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { isDriveContainerCandidate } from './drive-icons';
 import { DriveDownloadAction } from './drive-download-action';

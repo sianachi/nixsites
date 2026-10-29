@@ -12,8 +12,8 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { PropertyPanel } from '../../collections/properties/property-panel';
-import { useItemProperties } from '../../collections/properties/use-item-properties';
+import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
+import { useItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import { useDriveFileInfo } from '../../views/drive/use-drive-file-info';
 import { item } from '@nix/web-foundation/testing/api-stub';
 import { json } from '@nix/web-foundation/testing/json-response';

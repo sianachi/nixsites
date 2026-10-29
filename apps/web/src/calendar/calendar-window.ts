@@ -6,7 +6,7 @@ import {
   startOfWeek,
   weekOf,
   type CalendarDay,
-} from '../collections/core/calendar-dates';
+} from '@nix/web-collections/core/calendar-dates';
 
 /**
  * Which days a grain needs fetched, and how the address names where the reader is.

@@ -3,10 +3,10 @@ import { useCallback } from 'react';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspaceTree } from '../../collections/items/use-workspace-tree';
+import { useWorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { Item } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { Item } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 
 /** Uploads in flight at once: enough to overlap network latency across several files without
  * saturating the connection or losing per-file failure attribution. */

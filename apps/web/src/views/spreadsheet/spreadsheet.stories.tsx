@@ -4,8 +4,8 @@ import { MemoryRouter } from 'react-router';
 import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import type { Item, PropertyDefinition, View } from '../../collections/core/container-model';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
+import type { Item, PropertyDefinition, View } from '@nix/web-collections/core/container-model';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
 import { SpreadsheetView } from './spreadsheet-view';
 
 export default { title: 'Nix/Views/Spreadsheet', parameters: { layout: 'padded' } };

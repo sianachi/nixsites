@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { PropertyDefinition, PropertyValue } from '../../collections/core/container-model';
+import type { PropertyDefinition, PropertyValue } from '@nix/web-collections/core/container-model';
 import { DuplicateNotice } from './duplicate-notice';
 import { SuggestionAction, SuggestionHint } from './suggestion-hint';
 import { unnamedMember, WithMemberNames, type MemberNameOf } from './member-name';

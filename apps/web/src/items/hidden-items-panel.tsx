@@ -4,7 +4,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useHiddenItems } from '../collections/items/use-hidden-items';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { HiddenItemsList, type HiddenEntry } from './hidden-items-list';
 
 export function HiddenItemsPanel({

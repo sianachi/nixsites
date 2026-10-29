@@ -4,15 +4,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
-import { todayDay } from '../../collections/core/day-math';
-import { ShownItems } from '../../collections/core/item-selection-context';
-import { dayText, type CalendarDay } from '../../collections/core/calendar-dates';
+import { todayDay } from '@nix/web-collections/core/day-math';
+import { ShownItems } from '@nix/web-collections/core/item-selection-context';
+import { dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { CreateItemControl } from '../core/create-item-control';
 import { buildWindow, readScale, stepAnchor, type TimelineScale } from './timeline-scale';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
-import { useViewState } from '../../collections/core/view-state';
-import { readerZone } from '../../collections/core/timestamps';
+import { useViewState } from '@nix/web-collections/core/view-state';
+import { readerZone } from '@nix/web-collections/core/timestamps';
 import {
   NO_START_PROPERTY,
   byId,

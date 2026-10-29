@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
 import { ListView } from './list-view';
 
 export default { title: 'Nix/Views/Grouped list', parameters: { layout: 'padded' } };

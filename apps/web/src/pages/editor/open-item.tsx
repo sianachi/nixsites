@@ -8,7 +8,7 @@ import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
-import { useHiddenItems } from '../../collections/items/use-hidden-items';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import {
   historyPanelWidth,
   paneClip,
@@ -22,16 +22,16 @@ import { toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { readPanelOpen, storePanelOpen } from '../../panel/panel-state';
 import type { Pane } from '../../panel/item-panel';
-import { useItemProperties } from '../../collections/properties/use-item-properties';
+import { useItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
 import type { ShellContext } from '../../shell/shell-context';
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
 import { useItemHasSite } from '@nix/web-sites/sites/use-item-site';
 import { useOpenChat } from '../../tabs/use-open-chat';
-import { DOCUMENT_VIEW, type View } from '../../collections/core/container-model';
+import { DOCUMENT_VIEW, type View } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '../../views/core/container-view';
-import { useContainer } from '../../collections/core/use-container';
-import { useViewState } from '../../collections/core/view-state';
+import { useContainer } from '@nix/web-collections/core/use-container';
+import { useViewState } from '@nix/web-collections/core/view-state';
 import { ViewSwitcher } from '../../views/core/view-switcher';
 import { useRememberSmartList } from '../../views/query/known-smart-lists';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';

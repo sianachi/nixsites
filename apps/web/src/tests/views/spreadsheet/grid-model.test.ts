@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { rangeToTsv } from '../../../collections/sheet/clipboard';
-import type { Item } from '../../../collections/core/container-model';
+import { rangeToTsv } from '@nix/web-collections/sheet/clipboard';
+import type { Item } from '@nix/web-collections/core/container-model';
 import {
   cellDisplay,
   cellText,
@@ -14,7 +14,7 @@ import {
   resolveColumns,
   type SpreadsheetColumn,
 } from '../../../views/spreadsheet/grid-model';
-import { aView, property, schemaOf } from '../../view-fixture';
+import { aView, property, schemaOf } from '@nix/web-collections/testing/view-fixture';
 
 function item(id: string, title: string, properties: Record<string, unknown> = {}): Item {
   return {

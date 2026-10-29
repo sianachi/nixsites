@@ -4,9 +4,9 @@ import {
   type EffectiveSchema,
   type Item,
   type View,
-} from '../../collections/core/container-model';
-import { propertyTypeWord, isDateShaped } from '../../collections/core/property-types';
-import { readDayValue } from '../../collections/core/day-math';
+} from '@nix/web-collections/core/container-model';
+import { propertyTypeWord, isDateShaped } from '@nix/web-collections/core/property-types';
+import { readDayValue } from '@nix/web-collections/core/day-math';
 import { placeSpan, type TimelinePlacement, type TimelineWindow } from './timeline-scale';
 
 export const NO_START_PROPERTY =

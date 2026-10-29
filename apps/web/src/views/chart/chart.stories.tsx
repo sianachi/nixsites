@@ -9,8 +9,8 @@ import {
 import { useState, type ReactElement } from 'react';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';
 import { ChartBody, ChartView } from './chart-view';
 

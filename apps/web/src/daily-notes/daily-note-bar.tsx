@@ -9,7 +9,7 @@ import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useOpenItem } from '../tabs/use-open-item';
-import { readTimestampValue, readerZone } from '../collections/core/timestamps';
+import { readTimestampValue, readerZone } from '@nix/web-collections/core/timestamps';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   dailyNoteLabel,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { FileThumbnail } from '../../collections/thumbnails';
-import type { Item } from '../../collections/core/container-model';
+import { FileThumbnail } from '@nix/web-collections/thumbnails/index';
+import type { Item } from '@nix/web-collections/core/container-model';
 import type { DriveFileInfo } from './use-drive-file-info';
 
 /**

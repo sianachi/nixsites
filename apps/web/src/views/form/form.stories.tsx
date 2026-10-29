@@ -6,8 +6,8 @@ import type {
   InteractiveFormDefinition,
   PropertyDefinition,
   View,
-} from '../../collections/core/container-model';
-import { storyContainer } from '../../collections/core/story-container';
+} from '@nix/web-collections/core/container-model';
+import { storyContainer } from '@nix/web-collections/core/story-container';
 import { FormView } from './form-view';
 import { InteractiveFormEditor } from './interactive-form-editor';
 import { InteractiveFormView } from './interactive-form-view';

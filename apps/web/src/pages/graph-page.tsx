@@ -25,7 +25,7 @@ import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { offerReference } from '@nix/web-foundation/lib/pending-reference';
 import { useOpenItem } from '../tabs/use-open-item';
-import { resolveOpenMode } from '../collections/core/open-policy';
+import { resolveOpenMode } from '@nix/web-collections/core/open-policy';
 
 /**
  * The graph destination: the workspace as items and the references between them.

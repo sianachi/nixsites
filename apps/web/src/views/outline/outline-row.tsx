@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 import type { RefObject, ReactNode } from 'react';
 
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { rowGestures } from '../../collections/core/use-item-selection';
-import type { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { rowGestures } from '@nix/web-collections/core/use-item-selection';
+import type { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import { RenameField } from './outline-rename-field';
 import { onRowKeyDown } from './outline-keys';
 import { titleOf, type OutlineRow } from './outline-model';

@@ -6,7 +6,7 @@ import { useState, type ReactNode } from 'react';
 import type {
   InteractiveFormDefinition,
   PropertyDefinition,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { BlockEditor } from './editor/block-editor';
 import { PageConditions } from './editor/conditions';
 import { move } from './editor/move';

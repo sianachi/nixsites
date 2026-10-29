@@ -1,7 +1,7 @@
 import { Text } from '@nix/ui';
 import { useId, type DragEvent, type ReactNode } from 'react';
 
-import type { Item } from '../../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 import type { CardContext } from '../item/card-context';
 import { ItemCard } from '../item/item-card';
 

@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { waitFor, within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import type { PropertyDefinition } from '../../collections/core/container-model';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
-import { recordStoryView } from '../../collections/core/story-container';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
+import { recordStoryView } from '@nix/web-collections/core/story-container';
 import { RecordViewStory } from '../list/record-view-story';
 import { BoardView } from './board-view';
 

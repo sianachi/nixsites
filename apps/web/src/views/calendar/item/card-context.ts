@@ -1,4 +1,4 @@
-import type { PropertyDefinition, PropertyValue } from '../../../collections/core/container-model';
+import type { PropertyDefinition, PropertyValue } from '@nix/web-collections/core/container-model';
 
 /** What every card needs, whether it sits in a day or in the unscheduled list. */
 export interface CardContext {

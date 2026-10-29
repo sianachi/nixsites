@@ -1,4 +1,4 @@
-import { useHiddenItems } from '../collections/items/use-hidden-items';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 import { Button, Text } from '@nix/ui';
@@ -25,7 +25,7 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
-import type { CalendarDay } from '../collections/core/calendar-dates';
+import type { CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**

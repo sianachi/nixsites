@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ContainerView } from '../../../views/core/container-view';
-import { aContainer } from '../../container-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 beforeEach(() => {
   stubViewport(true);

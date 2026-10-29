@@ -1,13 +1,13 @@
 import { Button, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { PropertyInput, isKnownPropertyType } from '../../../collections/properties/property-input';
+import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import type {
   FormCondition,
   InteractiveFormDefinition,
   PropertyDefinition,
   PropertyValue,
-} from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 
 export function InteractiveFormRespondentPreview({
   form,

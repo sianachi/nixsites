@@ -2,7 +2,7 @@ import { Button, Dialog, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowLeft, ArrowRight, Check, Eye } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import type { PropertyDefinition } from '../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import {
   STEPS,

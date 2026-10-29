@@ -2,7 +2,7 @@ import type { FileRecord } from '@nix/api-client';
 import { Button, Tag, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { fileKindLabel, formatBytes, formatWhen } from '../collections/items/file-facts';
+import { fileKindLabel, formatBytes, formatWhen } from '@nix/web-collections/items/file-facts';
 
 /**
  * The facts about a file, and its versions: the drawer beside the content.

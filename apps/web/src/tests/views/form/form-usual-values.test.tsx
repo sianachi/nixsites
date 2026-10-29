@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { FormView } from '../../../views/form/form-view';
 import { rememberSubmission } from '../../../views/form/form-memory';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';

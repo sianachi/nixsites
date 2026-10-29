@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InteractiveFormView } from '../../../views/form/interactive-form-view';
-import { aContainer } from '../../container-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 const interactiveForm = {
   pages: [

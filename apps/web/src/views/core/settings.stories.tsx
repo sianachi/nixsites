@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import type { PropertyDefinition } from '../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { SchemaEditor } from './schema-editor';
-import { recordStoryView, storyContainer } from '../../collections/core/story-container';
+import { recordStoryView, storyContainer } from '@nix/web-collections/core/story-container';
 import { ViewEditor } from './view-editor';
 import { ViewSwitcher } from './view-switcher';
 

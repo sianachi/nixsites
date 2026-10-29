@@ -2,10 +2,10 @@ import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aContainer, views } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { BoardView } from '../../../views/board/board-view';
-import type { Item, PropertyDefinition } from '../../../collections/core/container-model';
+import type { Item, PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { clearSuggestionDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { anItem } from '../suggest/suggest-fixtures';

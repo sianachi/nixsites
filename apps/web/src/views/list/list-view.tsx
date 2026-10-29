@@ -2,8 +2,8 @@ import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { type MenuEntry, type TableColumn, type TableRowDrag, type TableSort } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import { dropRefusal } from '../../collections/items/bulk-move';
-import { useOptionalItemCommands } from '../../collections/items/item-commands-context';
+import { dropRefusal } from '@nix/web-collections/items/bulk-move';
+import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
 
@@ -12,22 +12,22 @@ import {
   type PropertyValue,
   type View,
   type ViewFilterRule,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
 import { suggestSourceOf } from '../suggest/suggest-source';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import {
   resetColumnWidth,
   setColumnWidth,
   useColumnWidths,
-} from '../../collections/core/column-widths';
+} from '@nix/web-collections/core/column-widths';
 import {
   ShownItems,
   useOptionalItemSelection,
-} from '../../collections/core/item-selection-context';
-import { useClickSelects } from '../../collections/core/item-open-click';
+} from '@nix/web-collections/core/item-selection-context';
+import { useClickSelects } from '@nix/web-collections/core/item-open-click';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { rowGestures } from '../../collections/core/use-item-selection';
+import { rowGestures } from '@nix/web-collections/core/use-item-selection';
 import { cellFor, isCellMoveKey, moveFocusedCell } from './cell-nav';
 import {
   SELECT_COLUMN_KEY,
@@ -39,12 +39,16 @@ import {
 import { ListRows, type RowSelection } from './list-rows';
 import { ListSections } from './list-sections';
 import { MobileListRows } from './mobile-list-rows';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { drawable, useViewChrome, ViewSettingsLink } from '../core/view-chrome';
-import { viewConfigureHref } from '../../collections/core/view-configure-route';
-import { capabilitiesOf } from '../../collections/core/view-capabilities';
-import { useViewState, type SortDirection } from '../../collections/core/view-state';
-import { describeAxisProblem, groupItems, resolveViewAxis } from '../../collections/core/view-axis';
+import { viewConfigureHref } from '@nix/web-collections/core/view-configure-route';
+import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
+import { useViewState, type SortDirection } from '@nix/web-collections/core/view-state';
+import {
+  describeAxisProblem,
+  groupItems,
+  resolveViewAxis,
+} from '@nix/web-collections/core/view-axis';
 
 /**
  * The list view: a container's children as a table, edited in place.

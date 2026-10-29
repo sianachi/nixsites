@@ -4,7 +4,7 @@ import { create } from 'zustand';
 
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
-import type { ContainerViews } from '../../collections/core/container-model';
+import type { ContainerViews } from '@nix/web-collections/core/container-model';
 
 /**
  * The smart lists this browser knows about in each workspace, for the rail's Smart lists section

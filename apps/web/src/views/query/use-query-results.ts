@@ -10,7 +10,7 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useStaleWhileRevalidate } from '@nix/web-foundation/lib/use-stale-while-revalidate';
-import { readerToday } from '../../collections/core/timestamps';
+import { readerToday } from '@nix/web-collections/core/timestamps';
 
 /**
  * One run of a saved query, refreshed on demand.

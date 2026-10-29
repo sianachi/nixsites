@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import {
   isKnownPropertyType,
   type PropertyInputDensity,
-} from '../../collections/properties/property-input';
-import { TITLE_COLUMN_KEY, resolveConfiguredColumns } from '../../collections/core/columns';
+} from '@nix/web-collections/properties/property-input';
+import { TITLE_COLUMN_KEY, resolveConfiguredColumns } from '@nix/web-collections/core/columns';
 import {
   readPropertyText,
   type EffectiveSchema,
@@ -13,8 +13,8 @@ import {
   type PropertyDefinition,
   type PropertyValue,
   type View,
-} from '../../collections/core/container-model';
-import type { rowGestures } from '../../collections/core/use-item-selection';
+} from '@nix/web-collections/core/container-model';
+import type { rowGestures } from '@nix/web-collections/core/use-item-selection';
 import { ListCell } from './list-cell';
 
 /** The selection column's key; never a property, so it cannot collide with one. */

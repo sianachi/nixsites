@@ -3,8 +3,8 @@ import type {
   FormCondition,
   InteractiveFormDefinition,
   PropertyDefinition,
-} from '../../collections/core/container-model';
-import { isComputedType } from '../../collections/core/property-types';
+} from '@nix/web-collections/core/container-model';
+import { isComputedType } from '@nix/web-collections/core/property-types';
 
 const CONDITION_OPERATORS = new Set(['equals', 'not_equals', 'contains', 'checked', 'not_checked']);
 

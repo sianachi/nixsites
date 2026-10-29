@@ -1,8 +1,8 @@
 import { Checkbox, Field, Input, Select } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { TreeItem } from '../../collections/items/use-workspace-tree';
-import { TemplateItemPicker } from '../../collections/items/template-item-picker';
+import type { TreeItem } from '@nix/web-collections/items/use-workspace-tree';
+import { TemplateItemPicker } from '@nix/web-collections/items/template-item-picker';
 import type { TemplateInitializationRule, TemplateInput } from '../template-api';
 import { availableDateInputs, compatibleInput, type TargetOption } from './initialization-targets';
 

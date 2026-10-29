@@ -6,17 +6,17 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
-import { aView, item, property, schemaOf } from '../../view-fixture';
+import { aView, item, property, schemaOf } from '@nix/web-collections/testing/view-fixture';
 import type {
   EffectiveSchema,
   Item,
   PropertyDefinition,
   View,
-} from '../../../collections/core/container-model';
-import { setColumnWidth } from '../../../collections/core/column-widths';
+} from '@nix/web-collections/core/container-model';
+import { setColumnWidth } from '@nix/web-collections/core/column-widths';
 import { ListView } from '../../../views/list/list-view';
-import { aContainer } from '../../container-fixture';
-import type { ContainerData } from '../../../collections/core/use-container';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 
 /**
  * The list view, driven the way a person drives it: through the address bar and the pointer.

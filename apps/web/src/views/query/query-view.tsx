@@ -9,17 +9,17 @@ import {
   PartialNotice,
 } from '@nix/web-foundation/components/states/status-panels';
 import { inferFilters, type InferredFilters } from '@nix/web-foundation/lib/suggest/infer-filters';
-import { useItemOpenProps } from '../../collections/core/item-open-click';
+import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import {
   applyTitleSearch,
   isFilterGroup,
   readPropertyText,
   type ViewFilterRule,
-} from '../../collections/core/container-model';
-import { useViewState } from '../../collections/core/view-state';
-import { ruleConditions } from '../../collections/core/filter-rules';
+} from '@nix/web-collections/core/container-model';
+import { useViewState } from '@nix/web-collections/core/view-state';
+import { ruleConditions } from '@nix/web-collections/core/filter-rules';
 import type { ViewRendererProps } from '../core/view-kinds';
-import { useHiddenItems } from '../../collections/items/use-hidden-items';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { editableDefinition, QueryRowValue } from './query-row-values';
 import { useRowSchemas } from './use-row-schemas';
 import { useQueryResults } from './use-query-results';

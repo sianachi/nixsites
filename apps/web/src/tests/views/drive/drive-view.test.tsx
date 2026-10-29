@@ -3,11 +3,11 @@ import type * as apiClient from '@nix/api-client';
 import { createNixClient, type NixClient } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { aContainer } from '../../container-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { renderAt as render } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../../view-fixture';
-import type { Item } from '../../../collections/core/container-model';
-import type { ContainerData } from '../../../collections/core/use-container';
+import { aView } from '@nix/web-collections/testing/view-fixture';
+import type { Item } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { DriveView } from '../../../views/drive/drive-view';
 import { ContainerView } from '../../../views/core/container-view';
 
@@ -117,7 +117,7 @@ vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => null,
 }));
 
-vi.mock('../../../collections/items/use-workspace-tree', () => ({
+vi.mock('@nix/web-collections/items/use-workspace-tree', () => ({
   useWorkspaceTree: () => ({
     status: 'ready',
     error: null,

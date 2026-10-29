@@ -1,11 +1,11 @@
-import { treeChildrenEntry } from '../collections/items/item-menu-entries';
+import { treeChildrenEntry } from '@nix/web-collections/items/item-menu-entries';
 import { Button, ContextMenu, Icon, Menu, Text, type MenuEntry } from '@nix/ui';
 import { ArrowLeft, ChevronRight, EyeOff, MoreHorizontal, Shapes, X } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
-import { useHiddenItems } from '../collections/items/use-hidden-items';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { HiddenItemsPanel } from './hidden-items-panel';
-import type { WorkspaceTree } from '../collections/items/use-workspace-tree';
+import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
 

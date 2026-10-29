@@ -2,10 +2,10 @@ import { Button, Field, Icon, Select, Text, focusRing } from '@nix/ui';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { PropertyDefinition, View } from '../../collections/core/container-model';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 import { FilterRulesEditor } from './filter-rules-editor';
 import { LineListInput } from './line-list-input';
-import { OPEN_MODES, OPEN_MODE_LABELS } from '../../collections/core/open-policy';
+import { OPEN_MODES, OPEN_MODE_LABELS } from '@nix/web-collections/core/open-policy';
 import { findViewKind } from './view-kinds';
 
 export interface StructuredViewConfigurationProps {

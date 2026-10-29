@@ -20,7 +20,7 @@ import {
   type TemplateSummary,
 } from '@nix/api-client';
 
-import type { EffectiveSchema } from '../collections/core/container-model';
+import type { EffectiveSchema } from '@nix/web-collections/core/container-model';
 
 export { templateImportPreviewSchema as TemplateImportPreviewSchema } from '@nix/api-client';
 export type {

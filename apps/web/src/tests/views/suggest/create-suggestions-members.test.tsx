@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CreateItemControl } from '../../../views/core/create-item-control';
-import type { PropertyDefinition } from '../../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { WORKSPACE_ID, anItem } from './suggest-fixtures';
 

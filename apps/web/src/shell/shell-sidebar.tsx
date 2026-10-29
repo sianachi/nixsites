@@ -8,7 +8,7 @@ import { SidebarDivider } from '@nix/web-foundation/layout/sidebar-divider';
 import { SidebarDrawer } from '@nix/web-foundation/layout/sidebar-drawer';
 import type { Sidebar } from '@nix/web-foundation/layout/use-sidebar';
 import { WorkspaceSidebar } from '../items/workspace-sidebar';
-import type { TreeItem, WorkspaceTree } from '../collections/items/use-workspace-tree';
+import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
 export interface ShellSidebarProps {

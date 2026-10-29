@@ -1,4 +1,4 @@
-import type { Item } from '../../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 
 /**
  * The height of one hour, in pixels, and **the one place in the app that still sets `style`**.

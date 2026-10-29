@@ -8,8 +8,8 @@ import {
 } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import type { Item } from '../../collections/core/container-model';
-import { ValuePopover } from '../../collections/properties/value-popover';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { SELECT_COLUMN_KEY } from './list-columns';
 import { rowMenuLabel, type ListRowsProps } from './list-rows';
 

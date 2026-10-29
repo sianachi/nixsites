@@ -5,7 +5,7 @@ import {
 } from '@nix/api-client';
 import { z } from 'zod';
 
-import { EffectiveSchemaSchema, ViewSchema } from '../collections/core/container-model';
+import { EffectiveSchemaSchema, ViewSchema } from '@nix/web-collections/core/container-model';
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import { type TemplateEditDraft } from './template-api';
 import { type TemplateItemEdits } from './draft/template-draft-editor';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { VIEW_CAPABILITIES, capabilitiesOf } from '../../../collections/core/view-capabilities';
+import { VIEW_CAPABILITIES, capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 import { VIEW_KINDS } from '../../../views/core/view-kinds';
 
 describe('view capabilities', () => {

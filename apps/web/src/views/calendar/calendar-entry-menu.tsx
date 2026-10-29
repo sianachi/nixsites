@@ -2,7 +2,7 @@ import { ContextMenu, type ContextMenuTargetProps, type MenuEntry } from '@nix/u
 import { CalendarClock, Timer } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 
 /**
  * A calendar entry's secondary-click menu: the actions every view offers on an entry, plus

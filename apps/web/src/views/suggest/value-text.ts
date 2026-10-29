@@ -1,5 +1,5 @@
-import { PRIORITY_LEVELS } from '../../collections/properties/priority-levels';
-import type { PropertyDefinition } from '../../collections/core/container-model';
+import { PRIORITY_LEVELS } from '@nix/web-collections/properties/priority-levels';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import { unnamedMember, type MemberNameOf } from './member-name';
 
 /**

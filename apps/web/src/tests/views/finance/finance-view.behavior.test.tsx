@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Finance, FinanceDashboard, QueryEndpoint } from '@nix/api-client';
-import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { FinanceView } from '../../../views/finance/finance-view';
 import type { FinanceState } from '../../../views/finance/use-finance';
 import type * as UseFinance from '../../../views/finance/use-finance';

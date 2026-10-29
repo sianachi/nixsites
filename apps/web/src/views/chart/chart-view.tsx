@@ -7,7 +7,7 @@ import {
   ErrorPanel,
   LoadingPanel,
 } from '@nix/web-foundation/components/states/status-panels';
-import type { PropertyDefinition } from '../../collections/core/container-model';
+import type { PropertyDefinition } from '@nix/web-collections/core/container-model';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { Drawing } from './chart-drawing';
 import {

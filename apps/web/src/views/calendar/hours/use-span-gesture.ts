@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
-import type { CalendarDay } from '../../../collections/core/calendar-dates';
-import type { Item } from '../../../collections/core/container-model';
-import { readTimestampValue } from '../../../collections/core/timestamps';
+import type { CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { readTimestampValue } from '@nix/web-collections/core/timestamps';
 import { movedStart, resizedDuration } from '../span-gesture';
 import { DRAG_THRESHOLD_PX, ROW_HEIGHT, type Placed, type SpanGesture } from './geometry';
 import { momentAt, writeMoment } from './placement';

@@ -2,9 +2,9 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aContainer } from '../../container-fixture';
-import { aView } from '../../view-fixture';
-import type { PlanWrite } from '../../../collections/core/use-container';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
+import type { PlanWrite } from '@nix/web-collections/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
 import { anItem } from '../suggest/suggest-fixtures';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';

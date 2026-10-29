@@ -4,13 +4,13 @@ import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aContainer } from '../../container-fixture';
-import { aView, schemaOf } from '../../view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import { aView, schemaOf } from '@nix/web-collections/testing/view-fixture';
 import type {
   EffectiveSchema,
   PropertyDefinition,
   View,
-} from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { FormView } from '../../../views/form/form-view';
 
 /**

@@ -5,23 +5,26 @@ import {
   useNarrowViewport,
   useRoomForAnotherPane,
 } from '@nix/web-foundation/layout/viewport';
-import { useOptionalItemCommands } from '../../collections/items/item-commands-context';
+import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 
 import { EmptyPanel, ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
-import type { View } from '../../collections/core/container-model';
-import type { ContainerData } from '../../collections/core/use-container';
-import { VIEW_GUTTER } from '../../collections/core/view-gutter';
-import { ClickSelectsContext } from '../../collections/core/item-open-click';
-import { ItemSelectionContext } from '../../collections/core/item-selection-context';
-import { resolveOpenMode } from '../../collections/core/open-policy';
+import type { View } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
+import { VIEW_GUTTER } from '@nix/web-collections/core/view-gutter';
+import { ClickSelectsContext } from '@nix/web-collections/core/item-open-click';
+import { ItemSelectionContext } from '@nix/web-collections/core/item-selection-context';
+import { resolveOpenMode } from '@nix/web-collections/core/open-policy';
 import { SelectionBar } from './selection-bar';
-import { useItemSelection, useSelectionShortcuts } from '../../collections/core/use-item-selection';
-import { capabilitiesOf, DRAG_EFFECT_COPY } from '../../collections/core/view-capabilities';
+import {
+  useItemSelection,
+  useSelectionShortcuts,
+} from '@nix/web-collections/core/use-item-selection';
+import { capabilitiesOf, DRAG_EFFECT_COPY } from '@nix/web-collections/core/view-capabilities';
 import { findViewKind } from './view-kinds';
 import { ViewItemVisibility } from './view-item-visibility';
 import { ViewTools, type ViewToolsPlacement } from './view-tools';
-import { useViewState } from '../../collections/core/view-state';
+import { useViewState } from '@nix/web-collections/core/view-state';
 
 /**
  * An item's children, drawn the way the chosen view says.

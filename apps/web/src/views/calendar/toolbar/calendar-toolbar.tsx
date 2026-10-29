@@ -8,7 +8,7 @@ import {
   weekLabel,
   type CalendarDay,
   type CalendarMonth,
-} from '../../../collections/core/calendar-dates';
+} from '@nix/web-collections/core/calendar-dates';
 import { CreateItemControl } from '../../core/create-item-control';
 
 type Mode = 'month' | 'week' | 'day';

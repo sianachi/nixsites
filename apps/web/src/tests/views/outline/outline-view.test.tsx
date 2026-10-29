@@ -5,15 +5,15 @@ import { useRef, useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../../view-fixture';
-import { aContainer } from '../../container-fixture';
-import type { Item } from '../../../collections/core/container-model';
+import { aView } from '@nix/web-collections/testing/view-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
+import type { Item } from '@nix/web-collections/core/container-model';
 import { OutlineTree } from '../../../views/outline/outline-view';
 import type { OutlineSource } from '../../../views/outline/outline-source';
-import { ItemSelectionContext } from '../../../collections/core/item-selection-context';
+import { ItemSelectionContext } from '@nix/web-collections/core/item-selection-context';
 import { SelectionBar } from '../../../views/core/selection-bar';
-import { useItemSelection } from '../../../collections/core/use-item-selection';
-import { capabilitiesOf } from '../../../collections/core/view-capabilities';
+import { useItemSelection } from '@nix/web-collections/core/use-item-selection';
+import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 
 /**
  * The outline, driven from the keyboard over an in-memory tree. The fake source keeps every item's

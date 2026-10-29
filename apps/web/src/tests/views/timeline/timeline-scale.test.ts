@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Item } from '../../../collections/core/container-model';
+import type { Item } from '@nix/web-collections/core/container-model';
 import {
   buildWindow,
   columnOf,
@@ -8,7 +8,7 @@ import {
   readScale,
   stepAnchor,
 } from '../../../views/timeline/timeline-scale';
-import { readDayValue } from '../../../collections/core/day-math';
+import { readDayValue } from '@nix/web-collections/core/day-math';
 
 /**
  * The arithmetic a timeline is built from, tested without rendering one.

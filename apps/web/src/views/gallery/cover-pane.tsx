@@ -1,7 +1,7 @@
 import { Text, blueprintFrame, cn } from '@nix/ui';
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
-import { isDisplayableImageValue } from '../../collections/properties/inputs/image-reference';
+import { isDisplayableImageValue } from '@nix/web-collections/properties/inputs/image-reference';
 import { CARD_SIZE_COVER, type CardSize } from './card-size';
 import { CoverImage } from './cover-image';
 

@@ -1,4 +1,4 @@
-import type { Item, PropertyDefinition } from '../../collections/core/container-model';
+import type { Item, PropertyDefinition } from '@nix/web-collections/core/container-model';
 
 /**
  * What a view knows that lets its create control make suggestions: the siblings to learn from and

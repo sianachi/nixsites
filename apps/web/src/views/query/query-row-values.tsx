@@ -2,9 +2,9 @@ import { isNixApiError, structure as coreStructure } from '@nix/api-client';
 import { useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { PropertyInput, isKnownPropertyType } from '../../collections/properties/property-input';
-import type { PropertyDefinition, PropertyValue } from '../../collections/core/container-model';
-import { ValuePopover, useTrackWrite } from '../../collections/properties/value-popover';
+import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
+import type { PropertyDefinition, PropertyValue } from '@nix/web-collections/core/container-model';
+import { ValuePopover, useTrackWrite } from '@nix/web-collections/properties/value-popover';
 
 /**
  * One matched value of a query row, editable in place through the same popover the phone list

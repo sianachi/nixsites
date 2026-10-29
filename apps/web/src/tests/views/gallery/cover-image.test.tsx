@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forgetThumbnails } from '@nix/web-foundation/lib/thumbnail-cache';
-import { fileImageReference } from '../../../collections/properties/inputs/image-reference';
+import { fileImageReference } from '@nix/web-collections/properties/inputs/image-reference';
 import { CoverImage } from '../../../views/gallery/cover-image';
 
 const client = vi.hoisted(() => ({ query: vi.fn() }));

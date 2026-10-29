@@ -2,10 +2,10 @@ import { ContextMenu, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowDown, ArrowUp, ChevronsUpDown, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { formatBytes, formatWhen } from '../../collections/items/file-facts';
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+import { formatBytes, formatWhen } from '@nix/web-collections/items/file-facts';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { rowGestures } from '../../collections/core/use-item-selection';
+import { rowGestures } from '@nix/web-collections/core/use-item-selection';
 import { driveKindIcon } from './drive-icons';
 import { DriveFileThumbnail } from './drive-file-thumbnail';
 import { DriveRowActions } from './drive-row-actions';

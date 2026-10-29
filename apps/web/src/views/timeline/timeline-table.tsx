@@ -3,8 +3,8 @@ import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 
 import { CalendarEntryMenu } from '../calendar/calendar-entry-menu';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { useVirtualWindow } from '../../collections/core/use-virtual-window';
-import { virtualSpacers } from '../../collections/core/virtual-window';
+import { useVirtualWindow } from '@nix/web-collections/core/use-virtual-window';
+import { virtualSpacers } from '@nix/web-collections/core/virtual-window';
 import { Bar, Milestone } from './timeline-bars';
 import type { AsideContext, Placed } from './timeline-model';
 import { titleOf } from './timeline-model';

@@ -1,0 +1,154 @@
+{
+  "name": "@nix/web-collections",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Collections: container model, property inputs and display, item actions, spreadsheet model, thumbnails",
+  "exports": {
+    "./items/delete-items-dialog": {
+      "types": "./src/items/delete-items-dialog.tsx",
+      "default": "./src/items/delete-items-dialog.tsx"
+    },
+    "./items/item-commands-context": {
+      "types": "./src/items/item-commands-context.tsx",
+      "default": "./src/items/item-commands-context.tsx"
+    },
+    "./items/mobile-destination-picker": {
+      "types": "./src/items/mobile-destination-picker.tsx",
+      "default": "./src/items/mobile-destination-picker.tsx"
+    },
+    "./items/move-items-dialog": {
+      "types": "./src/items/move-items-dialog.tsx",
+      "default": "./src/items/move-items-dialog.tsx"
+    },
+    "./items/rename-item-dialog": {
+      "types": "./src/items/rename-item-dialog.tsx",
+      "default": "./src/items/rename-item-dialog.tsx"
+    },
+    "./items/template-item-picker": {
+      "types": "./src/items/template-item-picker.tsx",
+      "default": "./src/items/template-item-picker.tsx"
+    },
+    "./properties/field-source-editor": {
+      "types": "./src/properties/field-source-editor.tsx",
+      "default": "./src/properties/field-source-editor.tsx"
+    },
+    "./properties/inputs/checkbox-value": {
+      "types": "./src/properties/inputs/checkbox-value.tsx",
+      "default": "./src/properties/inputs/checkbox-value.tsx"
+    },
+    "./properties/inputs/choice-select": {
+      "types": "./src/properties/inputs/choice-select.tsx",
+      "default": "./src/properties/inputs/choice-select.tsx"
+    },
+    "./properties/inputs/choice-values": {
+      "types": "./src/properties/inputs/choice-values.tsx",
+      "default": "./src/properties/inputs/choice-values.tsx"
+    },
+    "./properties/inputs/computed-value": {
+      "types": "./src/properties/inputs/computed-value.tsx",
+      "default": "./src/properties/inputs/computed-value.tsx"
+    },
+    "./properties/inputs/date-values": {
+      "types": "./src/properties/inputs/date-values.tsx",
+      "default": "./src/properties/inputs/date-values.tsx"
+    },
+    "./properties/inputs/image-value": {
+      "types": "./src/properties/inputs/image-value.tsx",
+      "default": "./src/properties/inputs/image-value.tsx"
+    },
+    "./properties/inputs/long-text-value": {
+      "types": "./src/properties/inputs/long-text-value.tsx",
+      "default": "./src/properties/inputs/long-text-value.tsx"
+    },
+    "./properties/inputs/multi-select-value": {
+      "types": "./src/properties/inputs/multi-select-value.tsx",
+      "default": "./src/properties/inputs/multi-select-value.tsx"
+    },
+    "./properties/inputs/shell": {
+      "types": "./src/properties/inputs/shell.tsx",
+      "default": "./src/properties/inputs/shell.tsx"
+    },
+    "./properties/inputs/timestamp-values": {
+      "types": "./src/properties/inputs/timestamp-values.tsx",
+      "default": "./src/properties/inputs/timestamp-values.tsx"
+    },
+    "./properties/inputs/typed-value": {
+      "types": "./src/properties/inputs/typed-value.tsx",
+      "default": "./src/properties/inputs/typed-value.tsx"
+    },
+    "./properties/member-directory": {
+      "types": "./src/properties/member-directory.tsx",
+      "default": "./src/properties/member-directory.tsx"
+    },
+    "./properties/property-input": {
+      "types": "./src/properties/property-input.tsx",
+      "default": "./src/properties/property-input.tsx"
+    },
+    "./properties/property-panel": {
+      "types": "./src/properties/property-panel.tsx",
+      "default": "./src/properties/property-panel.tsx"
+    },
+    "./properties/property-value-display": {
+      "types": "./src/properties/property-value-display.tsx",
+      "default": "./src/properties/property-value-display.tsx"
+    },
+    "./properties/value-popover": {
+      "types": "./src/properties/value-popover.tsx",
+      "default": "./src/properties/value-popover.tsx"
+    },
+    "./thumbnails/file-thumbnail": {
+      "types": "./src/thumbnails/file-thumbnail.tsx",
+      "default": "./src/thumbnails/file-thumbnail.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/sheet": "workspace:*",
+    "@nix/structure-spec": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-editor": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-settings": "workspace:*",
+    "@nix/web-workspaces": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "luxon": "^3.7.2",
+    "pdfjs-dist": "6.4.299",
+    "react-router": "^7.18.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/luxon": "^3.7.2",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
+  }
+}

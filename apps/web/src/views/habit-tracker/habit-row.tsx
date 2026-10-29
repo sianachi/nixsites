@@ -1,9 +1,9 @@
 import { Button, ContextMenu, cn, focusRing, Icon, Input, Text } from '@nix/ui';
 import { Check, CheckCircle2, Circle, CircleAlert, Clock3, Pencil } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { useItemOpenProps } from '../../collections/core/item-open-click';
+import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import type { HabitTracker } from '@nix/api-client';
 import { spokenDayName, todayInTimezone, weekdayFor } from './habit-days';
 

@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import type { PropertyDefinition, View } from '../../../collections/core/container-model';
+import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 import { StructuredViewConfiguration } from '../../../views/core/structured-view-configuration';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 const FIELDS: readonly PropertyDefinition[] = [
   {

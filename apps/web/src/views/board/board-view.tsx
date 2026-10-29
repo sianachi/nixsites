@@ -4,7 +4,7 @@ import { CircleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
-import { ShownItems } from '../../collections/core/item-selection-context';
+import { ShownItems } from '@nix/web-collections/core/item-selection-context';
 import {
   UNSET_LABEL,
   UNSET_VALUE,
@@ -12,15 +12,15 @@ import {
   type Item,
   type PropertyDefinition,
   type View,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
 import { staleMembers, type StaleMember } from '@nix/web-foundation/lib/suggest/staleness';
 import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { suggestSourceOf } from '../suggest/suggest-source';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import type { ContainerData } from '../../collections/core/use-container';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
-import { useViewState } from '../../collections/core/view-state';
+import { useViewState } from '@nix/web-collections/core/view-state';
 import { BoardColumnPanel } from './board-column';
 import {
   NO_STALE,

@@ -7,8 +7,8 @@ import {
   clampWidth,
   resetColumnWidth,
   setColumnWidth,
-} from '../../collections/core/column-widths';
-import { type SortDirection } from '../../collections/core/view-state';
+} from '@nix/web-collections/core/column-widths';
+import { type SortDirection } from '@nix/web-collections/core/view-state';
 import { type SpreadsheetColumn } from './grid-model';
 
 interface GridHeaderProps {

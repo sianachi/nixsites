@@ -5,10 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   EffectiveSchema,
   PropertyDefinition,
-} from '../../../collections/core/container-model';
-import { aContainer } from '../../container-fixture';
+} from '@nix/web-collections/core/container-model';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { SchemaEditor } from '../../../views/core/schema-editor';
-import type { ContainerData, SchemaDraft } from '../../../collections/core/use-container';
+import type { ContainerData, SchemaDraft } from '@nix/web-collections/core/use-container';
 
 /**
  * Declaring properties on a folder.

@@ -2,12 +2,12 @@ import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { CalendarClock } from 'lucide-react';
 import type { DragEvent, ReactNode } from 'react';
 
-import { useClickSelects } from '../../../collections/core/item-open-click';
-import { useOptionalItemSelection } from '../../../collections/core/item-selection-context';
+import { useClickSelects } from '@nix/web-collections/core/item-open-click';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../../core/select-checkbox';
-import { rowGestures } from '../../../collections/core/use-item-selection';
-import type { Item } from '../../../collections/core/container-model';
-import { readTimestampValue } from '../../../collections/core/timestamps';
+import { rowGestures } from '@nix/web-collections/core/use-item-selection';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { readTimestampValue } from '@nix/web-collections/core/timestamps';
 import { ListCell } from '../../list/list-cell';
 import { CalendarEntryMenu } from '../calendar-entry-menu';
 import type { CardContext } from './card-context';

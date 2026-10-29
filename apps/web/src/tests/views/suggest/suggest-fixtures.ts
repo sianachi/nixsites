@@ -1,4 +1,4 @@
-import type { Item, PropertyDefinition } from '../../../collections/core/container-model';
+import type { Item, PropertyDefinition } from '@nix/web-collections/core/container-model';
 
 /** Shared fixtures for the suggestion suites: a small container of bills and errands. */
 

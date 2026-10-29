@@ -47,37 +47,37 @@ import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
-import { useBookmarksStore } from '../collections/items/use-bookmarks';
+import { useBookmarksStore } from '@nix/web-collections/items/use-bookmarks';
 import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';
 import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '../templates/use-templates';
 import type { TemplateSummary } from '../templates/template-api';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
-import { useAutomateEntry } from '../collections/items/automate-entry';
+import { useAutomateEntry } from '@nix/web-collections/items/automate-entry';
 import { useMuteRemindersEntry } from '@nix/web-settings/settings/notifications/mute-reminders-entry';
 import {
   bookmarkEntry,
   copyLinkEntry,
   treeChildrenEntry,
-} from '../collections/items/item-menu-entries';
-import { useHiddenItems } from '../collections/items/use-hidden-items';
+} from '@nix/web-collections/items/item-menu-entries';
+import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';
 import { HiddenItemsPanel } from './hidden-items-panel';
 import { siblingMoveTarget } from './sibling-move-target';
-import { useOptionalItemCommands } from '../collections/items/item-commands-context';
+import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import {
   ItemSelectionContext,
   useOptionalItemSelection,
-} from '../collections/core/item-selection-context';
+} from '@nix/web-collections/core/item-selection-context';
 import { SelectionBar } from '../views/core/selection-bar';
 import {
   rowGestures,
   useItemSelection,
   useSelectionShortcuts,
-} from '../collections/core/use-item-selection';
-import { capabilitiesOf } from '../collections/core/view-capabilities';
-import type { TreeItem, WorkspaceTree } from '../collections/items/use-workspace-tree';
+} from '@nix/web-collections/core/use-item-selection';
+import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
+import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
 import type { ItemLandmarks } from '@nix/web-foundation/lib/item-landmarks';

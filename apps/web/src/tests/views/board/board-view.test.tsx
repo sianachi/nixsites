@@ -4,7 +4,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView, itemOf, schemaOf } from '../../view-fixture';
+import { aView, itemOf, schemaOf } from '@nix/web-collections/testing/view-fixture';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { BoardView } from '../../../views/board/board-view';
 import type {
@@ -12,9 +12,9 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../../../collections/core/container-model';
-import { aContainer, views } from '../../container-fixture';
-import type { ContainerData } from '../../../collections/core/use-container';
+} from '@nix/web-collections/core/container-model';
+import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 
 /**
  * The board, driven the way a person drives it.

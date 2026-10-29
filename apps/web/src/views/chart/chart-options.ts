@@ -2,8 +2,8 @@ import type {
   ChartOptions,
   PropertyDefinition,
   View,
-} from '../../collections/core/container-model';
-import { isDateShaped } from '../../collections/core/property-types';
+} from '@nix/web-collections/core/container-model';
+import { isDateShaped } from '@nix/web-collections/core/property-types';
 import { chartKindOf, isChartPeriod, TIME_AXIS_KINDS, type ChartKind } from './chart-model';
 
 /**

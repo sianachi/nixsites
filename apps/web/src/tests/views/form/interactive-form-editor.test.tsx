@@ -7,7 +7,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import type {
   InteractiveFormDefinition,
   PropertyDefinition,
-} from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import {
   EMPTY_INTERACTIVE_FORM,
   InteractiveFormEditor,

@@ -2,7 +2,7 @@ import type {
   EffectiveSchema,
   PropertyDefinition,
   View,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import {
   STRUCTURED_RECIPES,
   viewForRecipe,

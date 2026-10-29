@@ -1,13 +1,13 @@
 import { type CellRange, type CellRef } from '@nix/sheet';
 import { useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import { type Item } from '../../collections/core/container-model';
-import { gridKeyAction } from '../../collections/sheet/grid-keys';
+import { type Item } from '@nix/web-collections/core/container-model';
+import { gridKeyAction } from '@nix/web-collections/sheet/grid-keys';
 import {
   type GridBounds,
   type SelectionAction,
   type SelectionState,
-} from '../../collections/sheet/selection';
+} from '@nix/web-collections/sheet/selection';
 import { type PlanVerb } from './grid-geometry';
 import {
   cellText,

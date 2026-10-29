@@ -3,18 +3,19 @@
 Read for `apps/web/` and `packages/` changes.
 
 Keep dependency direction `apps/* -> packages/*`; `packages/web-*` never import
-`apps/`. The web app's lower layers are packages, each importing only those before it:
+`apps/`. The web app's lower layers are packages, each importing only the packages on its allowed list in `scripts/check-frontend-layering.sh` (R7, a DAG):
 `web-foundation` (`lib/`, `a11y/`, `layout/`, `keyboard/`, `theme/`, `audio/`,
 `components/`) <- `web-platform` (`auth/`, `pwa/`, `api/`, `session/`, `panes/`,
 `routing/`, `export/`) <- `web-editor` (`editor/`, `plugins/`) and `web-workspaces`
-(`workspaces/`, `import/`, `launch/`) <- `web-sites` (`sites/`) <- `web-settings` (`settings/`). They export TypeScript
+(`workspaces/`, `import/`, `launch/`) <- `web-sites` (`sites/`) <- `web-settings` (`settings/`) <- `web-collections` (`core/`,
+`properties/`, `items/`, `sheet/`, `thumbnails/`). They export TypeScript
 source (no build); import deep paths that mirror the folders, e.g.
 `@nix/web-foundation/lib/browser-storage`. A new `.tsx` file needs its own exact
 `exports` entry in the package's `package.json` (the `./*` pattern only reaches `.ts`).
 Each package is a TypeScript composite project (`tsc -b`, output in a gitignored `.tsbuild/`):
 list every web package it imports under `references`, and add new packages to `apps/web`'s.
 A package's tests live in its `src/tests` and run in that package; shared test helpers
-live in `web-foundation/src/testing` and `web-editor/src/testing`, which non-test code may not
+live in `web-foundation/src/testing`, `web-editor/src/testing` and `web-collections/src/testing`, which non-test code may not
 import (R8). Tests that render the whole app stay in `apps/web/src/tests`. `check-frontend-layering.sh` (R6, R7) enforces the
 order. In `web-foundation`, `lib/` and `a11y/` are leaves and `layout/` may additionally reach `lib/`.
 Inside `apps/web/src`, features may import those, siblings, and `shell/` types

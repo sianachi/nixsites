@@ -4,7 +4,7 @@ import { beforeEach, expect, it } from 'vitest';
 import { App } from '../../app';
 import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 beforeEach(() => {

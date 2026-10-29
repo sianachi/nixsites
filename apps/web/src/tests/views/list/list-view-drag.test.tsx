@@ -2,14 +2,14 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { ItemCommandsProvider } from '../../../collections/items/item-commands-context';
-import type { TreeItem, WorkspaceTree } from '../../../collections/items/use-workspace-tree';
+import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
+import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { onNotice, type Notice } from '@nix/web-foundation/lib/notices';
 import { ContainerView } from '../../../views/core/container-view';
-import { aContainer } from '../../container-fixture';
+import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { aView } from '../../view-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 
 const ROADMAP = item({ id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', title: 'Roadmap' });
 const LEDGER = item({ id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', title: 'Ledger' });

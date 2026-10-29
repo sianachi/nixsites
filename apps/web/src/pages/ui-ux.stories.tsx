@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router';
 import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
 import { PetDeviceSettings } from '../pets/pet-device-settings';
 import { EpubReader } from '@nix/web-editor/plugins/epub-reader';
-import { PropertyInput } from '../collections/properties/property-input';
+import { PropertyInput } from '@nix/web-collections/properties/property-input';
 import { InlineAiPanel } from '@nix/web-editor/editor/inline-ai/inline-ai-panel';
 import type {
   InlineAiController,

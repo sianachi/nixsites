@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import type { View } from '../../collections/core/container-model';
-import { storyContainer, storyItem } from '../../collections/core/story-container';
+import type { View } from '@nix/web-collections/core/container-model';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
 import { ContainerView } from '../core/container-view';
-import { VIEW_GUTTER } from '../../collections/core/view-gutter';
+import { VIEW_GUTTER } from '@nix/web-collections/core/view-gutter';
 import { TimelineView } from '../timeline/timeline-view';
 import { CalendarView } from './calendar-view';
 

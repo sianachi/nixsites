@@ -1,8 +1,8 @@
 import { useEffect, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 
 import { type CellRef } from '@nix/sheet';
-import { useColumnWidths } from '../../collections/core/column-widths';
-import { columnOffsets, columnWindow, rowWindow } from '../../collections/sheet/windowing';
+import { useColumnWidths } from '@nix/web-collections/core/column-widths';
+import { columnOffsets, columnWindow, rowWindow } from '@nix/web-collections/sheet/windowing';
 import { columnWidth, type SpreadsheetColumn } from './grid-model';
 
 export interface GridViewport {

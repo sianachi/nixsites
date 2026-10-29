@@ -8,12 +8,12 @@ import {
   type Item,
   type PropertyDefinition,
   type PropertyValue,
-} from '../../collections/core/container-model';
-import { useItemOpenProps } from '../../collections/core/item-open-click';
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+} from '@nix/web-collections/core/container-model';
+import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
-import { ValuePopover } from '../../collections/properties/value-popover';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { ListCell } from '../list/list-cell';
 import { staleDismissalKey, type BoardColumn } from './board-grouping';
 import { StaleCardHint } from './stale-card-hint';

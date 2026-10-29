@@ -1,6 +1,6 @@
-import type { Item } from '../../collections/core/container-model';
-import { fileKindLabel } from '../../collections/items/file-facts';
-import { driveBodyKindLabel } from '../../collections/core/view-axis';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { fileKindLabel } from '@nix/web-collections/items/file-facts';
+import { driveBodyKindLabel } from '@nix/web-collections/core/view-axis';
 import type { DriveFileInfo } from './use-drive-file-info';
 
 export type SortKey = 'name' | 'kind' | 'size' | 'modified';

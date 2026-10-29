@@ -7,14 +7,14 @@ import {
   type Item,
   type PropertyDefinition,
   type PropertyValue,
-} from '../../collections/core/container-model';
-import { useClickSelects } from '../../collections/core/item-open-click';
-import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+} from '@nix/web-collections/core/container-model';
+import { useClickSelects } from '@nix/web-collections/core/item-open-click';
+import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { ValuePopover } from '../../collections/properties/value-popover';
-import { useItemContextActions } from '../../collections/core/use-item-context-actions';
-import { rowGestures } from '../../collections/core/use-item-selection';
-import { FileThumbnail } from '../../collections/thumbnails';
+import { ValuePopover } from '@nix/web-collections/properties/value-popover';
+import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import { rowGestures } from '@nix/web-collections/core/use-item-selection';
+import { FileThumbnail } from '@nix/web-collections/thumbnails/index';
 import { ListCell } from '../list/list-cell';
 import { CARD_SIZE_COVER, type CardSize } from './card-size';
 import { CoverPane } from './cover-pane';

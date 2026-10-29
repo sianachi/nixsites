@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router';
 
 import { STRUCTURED_RECIPES } from '@nix/structure-spec';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { uniqueIdentifier, type View } from '../../collections/core/container-model';
+import { uniqueIdentifier, type View } from '@nix/web-collections/core/container-model';
 import { EditorShell } from './editor-shell';
-import type { ContainerData } from '../../collections/core/use-container';
-import { viewConfigureHref } from '../../collections/core/view-configure-route';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
+import { viewConfigureHref } from '@nix/web-collections/core/view-configure-route';
 import { OpensAsSection } from './opens-as-section';
 import { ProgramEditorSlot, starterProgram } from './program-editor-slot';
 import { findViewKind } from './view-kinds';

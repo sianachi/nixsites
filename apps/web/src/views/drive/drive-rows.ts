@@ -1,8 +1,8 @@
 import type { MenuEntry } from '@nix/ui';
 import type { DragEvent } from 'react';
 
-import { formatBytes } from '../../collections/items/file-facts';
-import type { Item } from '../../collections/core/container-model';
+import { formatBytes } from '@nix/web-collections/items/file-facts';
+import type { Item } from '@nix/web-collections/core/container-model';
 import { kindOf } from './drive-sort';
 import type { DriveFileInfo } from './use-drive-file-info';
 

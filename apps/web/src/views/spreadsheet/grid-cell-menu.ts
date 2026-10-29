@@ -1,8 +1,8 @@
 import { type CellRef } from '@nix/sheet';
 import { type MenuEntry } from '@nix/ui';
 
-import { type Item, type PropertyDefinition } from '../../collections/core/container-model';
-import { type SelectionAction } from '../../collections/sheet/selection';
+import { type Item, type PropertyDefinition } from '@nix/web-collections/core/container-model';
+import { type SelectionAction } from '@nix/web-collections/sheet/selection';
 import { type PlanVerb } from './grid-geometry';
 import { cellText, clearPlan, type SpreadsheetColumn, type WritePlan } from './grid-model';
 import { canEditProperty } from './use-grid-edit';

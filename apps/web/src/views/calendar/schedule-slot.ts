@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon';
 
 import { nextFreeSlot, type Span } from '@nix/web-foundation/lib/suggest/free-slot';
-import type { Item } from '../../collections/core/container-model';
-import { readTimestampValue } from '../../collections/core/timestamps';
+import type { Item } from '@nix/web-collections/core/container-model';
+import { readTimestampValue } from '@nix/web-collections/core/timestamps';
 
 /**
  * The next free slot on a calendar for one item, from the items the calendar has already loaded.

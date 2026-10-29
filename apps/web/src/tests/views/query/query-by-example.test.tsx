@@ -11,8 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
-import { aContainer, views } from '../../container-fixture';
-import { aView } from '../../view-fixture';
+import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
+import { aView } from '@nix/web-collections/testing/view-fixture';
 import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import {
   ApiClientOverrideProvider,
@@ -23,7 +23,7 @@ import {
   toViewRequest,
   type PropertyDefinition,
   type View,
-} from '../../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import type * as WorkspaceContextModule from '@nix/web-workspaces/workspaces/workspace-context';
 import { describeInferredRule } from '../../../views/query/query-by-example';

@@ -5,7 +5,7 @@ import {
   filterGroup,
   type PropertyDefinition,
   type ViewFilterRule,
-} from '../../collections/core/container-model';
+} from '@nix/web-collections/core/container-model';
 import { FilterRulesEditor } from '../core/filter-rules-editor';
 
 /**
