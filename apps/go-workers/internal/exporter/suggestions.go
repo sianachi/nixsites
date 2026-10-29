@@ -9,18 +9,32 @@ import (
 // Suggestions are proposals, not content: every export draws the document as if all were
 // rejected. Inserted text and blocks go, deleted text and blocks stay, a format change goes back
 // to its original marks. A restructure (list wrap, indent) keeps its new structure: the original
-// is stored as a ProseMirror slice that the web renderers restore and this one does not.
+// is stored as a ProseMirror slice; the run of blocks it produced is replaced by that snapshot,
+// unless the snapshot is open (it cannot be placed without its surroundings).
+
+var suggestionMarks = map[string]bool{"suggestionInsert": true, "suggestionDelete": true, "suggestionFormat": true}
 
 var proseTextblocks = map[string]bool{"paragraph": true, "heading": true, "codeBlock": true, "detailsSummary": true}
 
 func (parser *proseDecoder) rejectSuggestions(children []proseNode) []proseNode {
 	var out []proseNode
-	for _, child := range children {
+	for index := 0; index < len(children); index++ {
+		child := children[index]
 		if child.Type == "text" {
 			if text, keep := parser.rejectText(child); keep {
 				out = appendProseText(out, text)
 			}
 			continue
+		}
+		if child.Attrs.suggestionOp == "restructure" && child.Attrs.suggestionBefore != "" {
+			if original, closed := parser.restructureSnapshot(child.Attrs.suggestionBefore); closed {
+				for index+1 < len(children) && children[index+1].Attrs.suggestionOp != "" &&
+					children[index+1].Attrs.suggestionID == child.Attrs.suggestionID {
+					index++
+				}
+				out = append(out, parser.rejectSuggestions(original)...)
+				continue
+			}
 		}
 		insert := child.Attrs.suggestionOp == "insert"
 		child.Attrs.suggestionOp = ""
@@ -35,6 +49,46 @@ func (parser *proseDecoder) rejectSuggestions(children []proseNode) []proseNode 
 		}
 	}
 	return out
+}
+
+// restructureSnapshot reads the JSON of the slice a restructure replaced. The boolean is false for
+// a snapshot that is open, malformed or has no content.
+func (parser *proseDecoder) restructureSnapshot(snapshot string) ([]proseNode, bool) {
+	sub := proseDecoder{decoder: json.NewDecoder(strings.NewReader(snapshot)), budget: parser.budget}
+	sub.decoder.UseNumber()
+	if token, err := sub.token(); err != nil || token != json.Delim('{') {
+		return nil, false
+	}
+	var content []proseNode
+	found, open := false, false
+	for sub.decoder.More() {
+		name, err := sub.objectKey()
+		if err != nil {
+			return nil, false
+		}
+		switch name {
+		case "content":
+			var malformed bool
+			if content, malformed, err = sub.content(1); err != nil || malformed {
+				return nil, false
+			}
+			found = true
+		case "openStart", "openEnd":
+			token, err := sub.token()
+			if number, ok := token.(json.Number); err != nil || !ok || number.String() != "0" {
+				open = true
+			}
+		default:
+			if err := sub.skipValue(1); err != nil {
+				return nil, false
+			}
+		}
+	}
+	if !found || open || sub.close('}') != nil {
+		return nil, false
+	}
+	parser.budget = sub.budget
+	return content, true
 }
 
 func (parser *proseDecoder) rejectText(node proseNode) (proseNode, bool) {

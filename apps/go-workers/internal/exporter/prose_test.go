@@ -332,3 +332,22 @@ func TestProjectBodyRendersDocumentsAsIfSuggestionsWereRejected(t *testing.T) {
 		t.Fatalf("markdown = %q, losses = %#v, want %q", markdown, losses, want)
 	}
 }
+
+func TestProjectBodyRestoresRestructureSnapshotsAndFlagsStrayIdentity(t *testing.T) {
+	snapshot := `{\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"One\"}]},{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Two\"}]}]}`
+	first := `"attrs":{"suggestion":{"id":"r1","authorId":"a","createdAt":"now","op":"restructure","before":"` + snapshot + `"}}`
+	next := `"attrs":{"suggestion":{"id":"r1","authorId":"a","createdAt":"now","op":"restructure"}}`
+	document := `{"type":"doc","content":[` +
+		`{"type":"bulletList",` + first + `,"content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"One"}]}]}]},` +
+		`{"type":"bulletList",` + next + `,"content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Two"}]}]}]}` +
+		`]}`
+	markdown, losses := projectMarkdown(t, document)
+	if want := "One\n\nTwo"; markdown != want || len(losses) != 0 {
+		t.Fatalf("markdown = %q, losses = %#v, want %q", markdown, losses, want)
+	}
+
+	_, losses = projectMarkdown(t, `{"type":"doc","content":[{"type":"paragraph","attrs":{"id":"x"},"content":[{"type":"text","text":"Plain"}]}]}`)
+	requireLoss(t, losses, lossUnknownAttribute)
+	_, losses = projectMarkdown(t, `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Plain","marks":[{"type":"bold","attrs":{"id":"x"}}]}]}]}`)
+	requireLoss(t, losses, lossUnknownAttribute)
+}

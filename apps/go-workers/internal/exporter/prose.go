@@ -95,16 +95,21 @@ type proseAttrs struct {
 	href        string
 	align       string
 	textAlign   string
-	// suggestionOp is a block suggestion's kind; before is a format suggestion's original marks as JSON.
-	suggestionOp string
-	before       string
-	present      uint64
-	valid        uint64
-	unknown      bool
-	invalid      bool
-	dimensions   bool
-	linkMeta     bool
-	listStyle    bool
+	// suggestionOp is a block suggestion's kind, suggestionID groups the blocks of one restructure and
+	// suggestionBefore is its snapshot as JSON; before is a format suggestion's original marks as JSON.
+	suggestionOp     string
+	suggestionID     string
+	suggestionBefore string
+	before           string
+	// identity records an id, authorId or createdAt attribute, which only a suggestion mark may carry.
+	identity   bool
+	present    uint64
+	valid      uint64
+	unknown    bool
+	invalid    bool
+	dimensions bool
+	linkMeta   bool
+	listStyle  bool
 }
 
 type proseNode struct {
@@ -716,7 +721,10 @@ func (parser *proseDecoder) attributes(attributes *proseAttrs, depth int) error 
 			err = parser.suggestionAttribute(attributes, depth+1)
 		case "before":
 			err = parser.stringAttribute(attributes, attrBefore, &attributes.before)
-		case "colspan", "rowspan", "colwidth", "text", "background", "threadId", "presentation", "id", "authorId", "createdAt":
+		case "id", "authorId", "createdAt":
+			attributes.identity = true
+			err = parser.skipValue(depth + 1)
+		case "colspan", "rowspan", "colwidth", "text", "background", "threadId", "presentation":
 			err = parser.skipValue(depth + 1)
 		default:
 			attributes.unknown = true
@@ -729,7 +737,8 @@ func (parser *proseDecoder) attributes(attributes *proseAttrs, depth int) error 
 	return parser.close('}')
 }
 
-// suggestionAttribute reads a block suggestion's `op` and skips the rest of the object.
+// suggestionAttribute reads a block suggestion's `op`, `id` and restructure snapshot and skips the
+// rest of the object.
 func (parser *proseDecoder) suggestionAttribute(attributes *proseAttrs, depth int) error {
 	first, err := parser.token()
 	if err != nil {
@@ -747,18 +756,27 @@ func (parser *proseDecoder) suggestionAttribute(attributes *proseAttrs, depth in
 		if err != nil {
 			return err
 		}
-		if name != "op" {
+		var destination *string
+		limit := maximumProseNameBytes
+		switch name {
+		case "op":
+			destination = &attributes.suggestionOp
+		case "id":
+			destination = &attributes.suggestionID
+		case "before":
+			destination, limit = &attributes.suggestionBefore, maximumProseAllocationBytes
+		default:
 			if err := parser.skipValue(depth + 1); err != nil {
 				return err
 			}
 			continue
 		}
-		value, present, valid, err := parser.stringValue(maximumProseNameBytes)
+		value, present, valid, err := parser.stringValue(limit)
 		if err != nil {
 			return err
 		}
 		if present && valid {
-			attributes.suggestionOp = value
+			*destination = value
 		}
 	}
 	return parser.close('}')
@@ -1139,7 +1157,7 @@ func (projection *proseProjection) noteNodeShape(node *proseNode) {
 	if node.Malformed || node.Type == "text" && !node.TextPresent {
 		projection.noteLoss(lossMalformedContent)
 	}
-	if node.UnknownFields || node.Attrs.unknown {
+	if node.UnknownFields || node.Attrs.unknown || node.Attrs.identity {
 		projection.noteLoss(lossUnknownAttribute)
 	}
 	if node.Attrs.invalid {
@@ -1702,7 +1720,7 @@ func (projection *proseProjection) readMarks(node *proseNode) renderedMarks {
 		if mark.Malformed {
 			projection.noteLoss(lossMalformedContent)
 		}
-		if mark.UnknownFields || mark.Attrs.unknown {
+		if mark.UnknownFields || mark.Attrs.unknown || mark.Attrs.identity && !suggestionMarks[mark.Type] {
 			projection.noteLoss(lossUnknownAttribute)
 		}
 		if mark.Attrs.invalid {
