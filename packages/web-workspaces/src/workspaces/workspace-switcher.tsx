@@ -248,7 +248,7 @@ export function WorkspaceSwitcher(): ReactNode {
           <button
             {...trigger}
             aria-label="Workspace menu"
-            className={`flex min-w-0 w-full flex-1 items-center justify-between gap-2 border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
+            className={`flex min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
           >
             <span className="truncate">{workspace.name}</span>
             <Icon icon={ChevronDown} size="sm" />
