@@ -6,6 +6,7 @@ using Nix.Domain.Comments;
 using Nix.Domain.Files;
 using Nix.Domain.Importing;
 using Nix.Domain.Items;
+using Nix.Domain.Primitives;
 using Nix.Persistence.ObjectStorage;
 using Npgsql;
 using NpgsqlTypes;
@@ -14,6 +15,10 @@ namespace Nix.Persistence.Importing;
 
 public sealed partial class DocumentImportStore
 {
+    private const int MaxImportThreadsPerNote = 500;
+    private const int MaxImportCommentsPerThread = 100;
+    private const int MaxImportComments = 10_000;
+
     public async ValueTask<DocumentImportStageRecord?> StageAsync(
         StageDocumentImport request,
         CancellationToken cancellationToken)
@@ -172,7 +177,20 @@ public sealed partial class DocumentImportStore
             items.Add(item);
             if (planned.ItemType == "note" && planned.Comments is { Count: > 0 })
             {
-                comments.AddRange(ImportedComments(planned.Comments, context, targetId, now));
+                // Past a cap the whole stage is refused, as for any other over-limit plan.
+                if (planned.Comments.Count > MaxImportThreadsPerNote
+                    || planned.Comments.Any(thread => thread.Comments?.Count > MaxImportCommentsPerThread))
+                {
+                    return null;
+                }
+
+                var imported = ImportedComments(planned.Comments, context, targetId, now).ToList();
+                if (imported.Count > NoteComment.MaxPerNote || comments.Count + imported.Count > MaxImportComments)
+                {
+                    return null;
+                }
+
+                comments.AddRange(imported);
             }
 
             FileVersionId? fileVersionId = null;
@@ -323,7 +341,7 @@ public sealed partial class DocumentImportStore
         ItemId itemId,
         DateTimeOffset now)
     {
-        static string? Cut(string? value, int max) => value is { Length: > 0 } ? value[..Math.Min(value.Length, max)] : null;
+        static string? Cut(string? value, int max) => value is { Length: > 0 } ? TextCut.Cut(value, max) : null;
         foreach (var thread in threads)
         {
             Guid? threadId = null;

@@ -165,7 +165,8 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
                             ? null
                             : reader.GetGuid(1),
                         reader.GetGuid(2),
-                        reader.GetString(3));
+                        reader.GetString(3),
+                        reader.GetBoolean(4));
                 }
             }
         }

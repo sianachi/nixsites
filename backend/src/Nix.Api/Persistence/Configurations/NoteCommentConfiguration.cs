@@ -15,7 +15,7 @@ internal sealed class NoteCommentConfiguration : IEntityTypeConfiguration<NoteCo
 
         builder.ToTable(NixTables.NoteComment, table => table.HasCheckConstraint(
             "note_comment_bounded",
-            "char_length(body) BETWEEN 1 AND 10000 AND cardinality(mention_ids) <= 20"
+            "char_length(body) <= 10000 AND (deleted_at IS NOT NULL OR char_length(body) >= 1) AND cardinality(mention_ids) <= 20"
                 + " AND (quote IS NULL OR char_length(quote) <= 1000)"
                 + " AND (anchor_start IS NULL OR char_length(anchor_start) <= 512)"
                 + " AND (anchor_end IS NULL OR char_length(anchor_end) <= 512)"
@@ -36,6 +36,7 @@ internal sealed class NoteCommentConfiguration : IEntityTypeConfiguration<NoteCo
         builder.Property(comment => comment.ResolvedBy).HasColumnName("resolved_by");
         builder.Property(comment => comment.CreatedAt).HasColumnName("created_at");
         builder.Property(comment => comment.EditedAt).HasColumnName("edited_at");
+        builder.Property(comment => comment.DeletedAt).HasColumnName("deleted_at");
 
         // Comments are part of the note: purging it takes them with it. No foreign key on the
         // author or resolver, so a comment outlives a removed member.

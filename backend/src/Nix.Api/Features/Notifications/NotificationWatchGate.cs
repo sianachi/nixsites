@@ -24,14 +24,22 @@ public class NotificationWatchGate
     public const int MaxConcurrentPerProcess = 40;
 
     private readonly ConcurrentDictionary<Guid, int> active = new();
-    private int total;
+
+    // One cell, so a gate built to share the process total counts into the same cell.
+    private readonly int[] total;
+
+    /// <summary>Creates a gate with its own process total.</summary>
+    public NotificationWatchGate() => total = new int[1];
+
+    /// <summary>Creates a gate whose per-principal counts are its own but whose process total is shared with <paramref name="shareTotalWith"/>.</summary>
+    protected NotificationWatchGate(NotificationWatchGate shareTotalWith) => total = (shareTotalWith ?? throw new ArgumentNullException(nameof(shareTotalWith))).total;
 
     /// <summary>Claims a slot for this principal. Returns <see langword="false"/> when none is free.</summary>
     public bool TryEnter(Guid principalId)
     {
-        if (Interlocked.Increment(ref total) > MaxConcurrentPerProcess)
+        if (Interlocked.Increment(ref total[0]) > MaxConcurrentPerProcess)
         {
-            Interlocked.Decrement(ref total);
+            Interlocked.Decrement(ref total[0]);
             return false;
         }
 
@@ -40,7 +48,7 @@ public class NotificationWatchGate
             var current = active.GetOrAdd(principalId, 0);
             if (current >= MaxConcurrent)
             {
-                Interlocked.Decrement(ref total);
+                Interlocked.Decrement(ref total[0]);
                 return false;
             }
 
@@ -66,7 +74,7 @@ public class NotificationWatchGate
                 : active.TryUpdate(principalId, current - 1, current);
             if (released)
             {
-                Interlocked.Decrement(ref total);
+                Interlocked.Decrement(ref total[0]);
                 return;
             }
         }

@@ -63,6 +63,13 @@ public sealed class CommentHandler(
             var revision = await store.RevisionAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
             if (revision > query.After || DateTimeOffset.UtcNow >= deadline)
             {
+                // The wait can be long: the caller may have lost access or the note been locked or trashed since.
+                var again = await GateAsync(query.ItemId, write: false, cancellationToken).ConfigureAwait(false);
+                if (again.IsFailure)
+                {
+                    return Result.Failure<CommentsResponse>(again.Error);
+                }
+
                 return Result.Success(await ReadAsync(query.ItemId, cancellationToken).ConfigureAwait(false));
             }
 
@@ -102,13 +109,18 @@ public sealed class CommentHandler(
                 return Invalid<CommentThreadDto>("An anchor needs a quote or positions.");
             }
 
-            quote = string.IsNullOrEmpty(anchor.Quote) ? null : anchor.Quote.Length > MaxQuote ? anchor.Quote[..MaxQuote] : anchor.Quote;
+            quote = string.IsNullOrEmpty(anchor.Quote) ? null : TextCut.Cut(anchor.Quote, MaxQuote);
         }
 
         var valid = Validate(request.Body, request.MentionIds);
         if (valid.IsFailure)
         {
             return Result.Failure<CommentThreadDto>(valid.Error);
+        }
+
+        if (await FullAsync(command.ItemId, cancellationToken).ConfigureAwait(false))
+        {
+            return Full<CommentThreadDto>();
         }
 
         var id = Guid.CreateVersion7();
@@ -137,6 +149,11 @@ public sealed class CommentHandler(
         if (valid.IsFailure)
         {
             return Result.Failure<CommentThreadDto>(valid.Error);
+        }
+
+        if (await FullAsync(command.ItemId, cancellationToken).ConfigureAwait(false))
+        {
+            return Full<CommentThreadDto>();
         }
 
         await store.AddAsync(New(gate.Value, Guid.CreateVersion7(), root.Id, request.Body, valid.Value, null, null, null), cancellationToken).ConfigureAwait(false);
@@ -194,6 +211,13 @@ public sealed class CommentHandler(
             return NotFound<CommentThreadDto>();
         }
 
+        // Anyone who can comment may place a thread's first anchor; moving one is for its author or an editor.
+        if (!string.IsNullOrEmpty(root.AnchorStart) && root.AuthorPrincipalId != Me
+            && !await permissions.CanWriteWorkspaceAsync(gate.Value.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        {
+            return NotAuthor<CommentThreadDto>("Only the thread's author or an editor can move its anchor.");
+        }
+
         root.AnchorStart = anchor.Start;
         root.AnchorEnd = anchor.End;
         await store.SaveAsync(cancellationToken).ConfigureAwait(false);
@@ -238,8 +262,31 @@ public sealed class CommentHandler(
             return Result.Failure<Guid>(own.Error);
         }
 
-        await store.DeleteAsync(command.ItemId, own.Value.Id, cancellationToken).ConfigureAwait(false);
-        return Result.Success(own.Value.Id);
+        var comment = own.Value;
+        var thread = (await store.ListAsync(command.ItemId, cancellationToken).ConfigureAwait(false)).Where(row => row.ThreadId == comment.ThreadId).ToList();
+        if (comment.ThreadId == comment.Id)
+        {
+            // A root others replied to stays as a tombstone, so their replies are not deleted with it.
+            if (thread.Any(row => row.Id != comment.Id && row.AuthorPrincipalId != Me))
+            {
+                comment.Body = string.Empty;
+                comment.DeletedAt = clock.GetUtcNow();
+                await store.SaveAsync(cancellationToken).ConfigureAwait(false);
+                return Result.Success(comment.Id);
+            }
+
+            await store.DeleteAsync(command.ItemId, comment.Id, cancellationToken).ConfigureAwait(false);
+            return Result.Success(comment.Id);
+        }
+
+        await store.DeleteAsync(command.ItemId, comment.Id, cancellationToken).ConfigureAwait(false);
+        // The last reply under a tombstone takes the tombstone with it.
+        if (thread.Count == 2 && thread.Any(row => row.Id == comment.ThreadId && row.DeletedAt is not null))
+        {
+            await store.DeleteAsync(command.ItemId, comment.ThreadId, cancellationToken).ConfigureAwait(false);
+        }
+
+        return Result.Success(comment.Id);
     }
 
     private async ValueTask<NoteComment?> RootAsync(ItemId itemId, Guid threadId, CancellationToken cancellationToken)
@@ -252,7 +299,7 @@ public sealed class CommentHandler(
     private async ValueTask<Result<NoteComment>> OwnAsync(ItemId itemId, Guid commentId, CancellationToken cancellationToken)
     {
         var comment = await store.FindAsync(itemId, commentId, cancellationToken).ConfigureAwait(false);
-        return comment is null ? NotFound<NoteComment>() : comment.AuthorPrincipalId != Me ? NotAuthor<NoteComment>() : Result.Success(comment);
+        return comment is null || comment.DeletedAt is not null ? NotFound<NoteComment>() : comment.AuthorPrincipalId != Me ? NotAuthor<NoteComment>() : Result.Success(comment);
     }
 
     private NoteComment New(Item item, Guid id, Guid threadId, string body, Guid[] mentions, string? start, string? end, string? quote) => new()
@@ -272,10 +319,13 @@ public sealed class CommentHandler(
 
     private async ValueTask<Result<Item>> GateAsync(ItemId itemId, bool write, CancellationToken cancellationToken)
     {
-        var item = await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+        // FindAsync hides a trashed note and anything under a trashed ancestor; the stored row is read
+        // only to tell a trashed note (409 on write) from one that is not there.
+        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = visible ?? (write ? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false) : null);
         if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || (item.LifecycleState != ItemLifecycleState.Active && (!write || item.LifecycleState != ItemLifecycleState.Deleted)))
+            || (visible is null && item.LifecycleState != ItemLifecycleState.Deleted)
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return NotFound<Item>();
         }
@@ -300,7 +350,7 @@ public sealed class CommentHandler(
             return Result.Failure<Item>(new NixError("comments.forbidden", "Commenting needs the commenter role or higher."));
         }
 
-        return item.LifecycleState == ItemLifecycleState.Active
+        return visible is not null
             ? Result.Success(item)
             : Result.Failure<Item>(ItemErrors.LifecycleConflict("A trashed note cannot be commented on."));
     }
@@ -324,12 +374,15 @@ public sealed class CommentHandler(
         return thread is null ? NotFound<CommentThreadDto>() : Result.Success(thread);
     }
 
+    private async ValueTask<bool> FullAsync(ItemId itemId, CancellationToken cancellationToken) =>
+        await store.CountAsync(itemId, cancellationToken).ConfigureAwait(false) >= NoteComment.MaxPerNote;
+
     private static CommentThreadDto Thread(NoteComment root, IReadOnlyList<NoteComment> rows, IReadOnlyDictionary<Guid, string> names) => new(
         root.Id, root.AnchorStart, root.AnchorEnd, root.Quote, root.ResolvedAt, root.ResolvedBy?.Value,
         root.ResolvedBy is { } by ? names.GetValueOrDefault(by.Value) : null,
         [.. rows.Where(row => row.ThreadId == root.Id).Select(row => new CommentDto(
             row.Id, row.AuthorPrincipalId.Value, names.GetValueOrDefault(row.AuthorPrincipalId.Value, "Former member"),
-            row.ImportedAuthor, row.Body, row.MentionIds, row.CreatedAt, row.EditedAt))]);
+            row.ImportedAuthor, row.Body, row.DeletedAt is null ? row.MentionIds : [], row.CreatedAt, row.EditedAt, row.DeletedAt is not null))]);
 
     private static Result<Guid[]> Validate(string? body, IReadOnlyList<Guid>? mentions)
     {
@@ -346,5 +399,7 @@ public sealed class CommentHandler(
 
     private static Result<T> NotFound<T>() => Result.Failure<T>(new NixError("comments.not_found", "That note or comment is unavailable."));
 
-    private static Result<T> NotAuthor<T>() => Result.Failure<T>(new NixError("comments.not_author", "Only the author can change or delete a comment."));
+    private static Result<T> NotAuthor<T>(string message = "Only the author can change or delete a comment.") => Result.Failure<T>(new NixError("comments.not_author", message));
+
+    private static Result<T> Full<T>() => Result.Failure<T>(new NixError("comments.limit", $"A note holds at most {NoteComment.MaxPerNote} comments."));
 }

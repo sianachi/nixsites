@@ -3,10 +3,14 @@ using Nix.Messaging;
 
 namespace Nix.Features.Comments;
 
-/// <summary>One comment. <c>importedAuthor</c> is set when it came from an archive: <c>authorName</c> is then the importer.</summary>
+/// <summary>
+/// One comment. <c>importedAuthor</c> is set when it came from an archive: <c>authorName</c> is then the importer.
+/// <c>deleted</c> marks a tombstone: the author deleted a root that others had replied to, so the body is empty
+/// and mentions are cleared; show "Comment deleted".
+/// </summary>
 public sealed record CommentDto(
     Guid Id, Guid AuthorId, string AuthorName, string? ImportedAuthor, string Body,
-    IReadOnlyList<Guid> MentionIds, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt);
+    IReadOnlyList<Guid> MentionIds, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, bool Deleted);
 
 /// <summary>
 /// A thread: its root comment first (the thread id is the root's id), then replies oldest first.
@@ -59,5 +63,5 @@ public sealed record SetCommentAnchor(ItemId ItemId, Guid ThreadId, CommentAncho
 /// <summary>Resolves or reopens a thread.</summary>
 public sealed record SetCommentResolved(ItemId ItemId, Guid ThreadId, bool Resolved) : ICommand<CommentThreadDto>;
 
-/// <summary>Deletes a comment of the caller's own; deleting a root deletes its thread.</summary>
+/// <summary>Deletes a comment of the caller's own; a root with replies from others becomes a tombstone, otherwise deleting a root deletes its thread.</summary>
 public sealed record DeleteComment(ItemId ItemId, Guid CommentId) : ICommand<Guid>;

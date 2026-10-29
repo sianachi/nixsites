@@ -270,7 +270,7 @@ public sealed class WorkerStore(NixDbContext database) : IWorkerJobStore, IWorke
 
     private static bool TryReadExportIdentity(
         JsonElement payload,
-        out (Guid ItemId, Guid WorkspaceId, string Format, string Scope) identity)
+        out (Guid ItemId, Guid WorkspaceId, string Format, string Scope, bool IncludeComments) identity)
     {
         identity = default;
         if (payload.ValueKind != JsonValueKind.Object
@@ -288,7 +288,9 @@ public sealed class WorkerStore(NixDbContext database) : IWorkerJobStore, IWorke
             return false;
         }
 
-        identity = (itemId, workspaceId, format.GetString()!, scope.GetString()!);
+        // Absent means false (older payloads), so a retry that flips the flag is a different request.
+        var includeComments = payload.TryGetProperty("includeComments", out var comments) && comments.ValueKind == JsonValueKind.True;
+        identity = (itemId, workspaceId, format.GetString()!, scope.GetString()!, includeComments);
         return true;
     }
 

@@ -9,11 +9,14 @@ namespace Nix.Abstractions;
 /// </summary>
 public interface INoteComments
 {
-    /// <summary>Every comment on a note, oldest first.</summary>
+    /// <summary>Up to <see cref="NoteComment.MaxPerNote"/> comments on a note, oldest first (the most a note can hold).</summary>
     public Task<IReadOnlyList<NoteComment>> ListAsync(ItemId itemId, CancellationToken cancellationToken);
 
     /// <summary>One comment on a note, tracked for <see cref="SaveAsync"/>, or <see langword="null"/>.</summary>
     public Task<NoteComment?> FindAsync(ItemId itemId, Guid commentId, CancellationToken cancellationToken);
+
+    /// <summary>How many comments the note holds.</summary>
+    public Task<int> CountAsync(ItemId itemId, CancellationToken cancellationToken);
 
     /// <summary>Writes a new comment.</summary>
     public Task AddAsync(NoteComment comment, CancellationToken cancellationToken);

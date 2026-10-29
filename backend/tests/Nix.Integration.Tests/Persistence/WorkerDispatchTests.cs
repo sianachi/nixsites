@@ -742,7 +742,25 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
         Assert.Null(state.LeaseUntil);
     }
 
-    private async ValueTask<Guid> CreateExportAsync(string idempotencyKey)
+    [Fact]
+    public async Task An_export_retry_with_a_different_comments_flag_conflicts_and_the_flag_reaches_the_execution()
+    {
+        var withComments = await CreateExportAsync("export-comments-on", includeComments: true);
+        await Assert.ThrowsAsync<WorkerJobIdempotencyConflictException>(
+            async () => await CreateExportAsync("export-comments-on", includeComments: false));
+        Assert.Equal(withComments, await CreateExportAsync("export-comments-on", includeComments: true));
+        var without = await CreateExportAsync("export-comments-off");
+
+        await using var scope = fixture.Application.CreateUnscopedScope();
+        var store = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
+        await store.ClaimJobAsync(withComments, "exporter:comments-on", 60, Cancellation);
+        await store.ClaimJobAsync(without, "exporter:comments-off", 60, Cancellation);
+
+        Assert.True((await store.AuthorizeExecutionAsync(withComments, "exporter:comments-on", Cancellation))!.IncludeComments);
+        Assert.False((await store.AuthorizeExecutionAsync(without, "exporter:comments-off", Cancellation))!.IncludeComments);
+    }
+
+    private async ValueTask<Guid> CreateExportAsync(string idempotencyKey, bool? includeComments = null)
     {
         await using var work = await fixture.Application.BeginUnitOfWorkAsync(
             TestTenants.AlphaContext,
@@ -757,6 +775,7 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
             extension = "pdf",
             mediaType = "application/pdf",
             declaredLoss = Array.Empty<string>(),
+            includeComments,
         });
         var job = await work.Resolve<IWorkerJobStore>().CreateAsync(
             TenantId.From(TestTenants.Alpha),

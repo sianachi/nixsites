@@ -15729,7 +15729,8 @@
           "body",
           "mentionIds",
           "createdAt",
-          "editedAt"
+          "editedAt",
+          "deleted"
         ],
         "type": "object",
         "properties": {
@@ -15770,6 +15771,9 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
           }
         }
       },

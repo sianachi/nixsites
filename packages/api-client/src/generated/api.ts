@@ -3909,6 +3909,7 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       editedAt: null | string;
+      deleted: boolean;
     };
     CommentResolvedRequest: {
       resolved: boolean;

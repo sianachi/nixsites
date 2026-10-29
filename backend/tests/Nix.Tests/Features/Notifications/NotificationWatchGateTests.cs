@@ -59,4 +59,24 @@ public sealed class NotificationWatchGateTests
         gate.Exit(Guid.NewGuid());
         Assert.False(gate.TryEnter(Guid.NewGuid()));
     }
+
+    [Fact]
+    public void Comment_and_notification_watches_share_one_process_total_but_not_principal_slots()
+    {
+        var notifications = new NotificationWatchGate();
+        var comments = new Nix.Features.Comments.CommentWatchGate(notifications);
+        var one = Guid.NewGuid();
+        Assert.True(notifications.TryEnter(one));
+        Assert.True(notifications.TryEnter(one));
+        Assert.True(comments.TryEnter(one));
+        for (var index = 3; index < NotificationWatchGate.MaxConcurrentPerProcess; index++)
+        {
+            Assert.True(comments.TryEnter(Guid.NewGuid()));
+        }
+
+        Assert.False(notifications.TryEnter(Guid.NewGuid()));
+        Assert.False(comments.TryEnter(Guid.NewGuid()));
+        comments.Exit(one);
+        Assert.True(notifications.TryEnter(Guid.NewGuid()));
+    }
 }

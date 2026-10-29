@@ -46,6 +46,15 @@ public static class WorkerExportDelegationPolicy
             return false;
         }
 
+        // Comments are an opt-in export input. The cheap first pass has no execution yet; the
+        // second pass (execution known) refuses them unless this is an export that asked for them.
+        if (target.Comments
+            && execution is not null
+            && !(execution.Kind.StartsWith("export.", StringComparison.Ordinal) && execution.IncludeComments))
+        {
+            return false;
+        }
+
         return token.Scope is "item" or "subtree"
             && token.WorkspaceId != Guid.Empty
             && target.ItemId != Guid.Empty
@@ -128,7 +137,7 @@ public static class WorkerExportDelegationPolicy
                 || Segment(segments[4], "views")
                 || Segment(segments[4], "comments")))
         {
-            target = new DelegatedReadTarget(itemId, WorkspaceId: null, RootOnly: false);
+            target = new DelegatedReadTarget(itemId, WorkspaceId: null, RootOnly: false, Comments: segments.Length == 5 && Segment(segments[4], "comments"));
             return true;
         }
 
@@ -150,5 +159,5 @@ public static class WorkerExportDelegationPolicy
     private static bool Segment(string actual, string expected) =>
         string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
 
-    private readonly record struct DelegatedReadTarget(Guid ItemId, Guid? WorkspaceId, bool RootOnly);
+    private readonly record struct DelegatedReadTarget(Guid ItemId, Guid? WorkspaceId, bool RootOnly, bool Comments = false);
 }

@@ -215,6 +215,27 @@ public sealed class DocumentImportStoreTests(NixPostgresFixture fixture) : IAsyn
     }
 
     [Fact]
+    public async Task An_import_with_more_comments_than_the_caps_allow_is_refused_and_a_cut_keeps_a_surrogate_pair_whole()
+    {
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var (imports, operation, digest) = await CommitQueuedAsync(work, "nix", "caps.nix", 8, itemCount: 1);
+        ImportEnvelopePlan Note(IReadOnlyList<ImportCommentThread> threads) =>
+            new("note", null, 0, "Commented", "note", null, null, null, "active", false, null, threads);
+        async Task<DocumentImportStageRecord?> Stage(IReadOnlyList<ImportCommentThread> threads) =>
+            await imports.StageAsync(new StageDocumentImport(DocumentImportId.From(operation.Id), new string('b', 64), digest, [Note(threads)]), Cancellation);
+
+        var tooManyThreads = Enumerable.Range(0, 501).Select(_ => new ImportCommentThread(null, false, [new("A", "x", null)])).ToList();
+        Assert.Null(await Stage(tooManyThreads));
+        var tooLong = new ImportCommentThread(null, false, [.. Enumerable.Range(0, 101).Select(_ => new ImportComment("A", "x", null))]);
+        Assert.Null(await Stage([tooLong]));
+
+        var pair = new string('q', 999) + "\U0001F600";
+        var stage = Assert.IsType<DocumentImportStageRecord>(await Stage([new(pair, false, [new("A", "x", null)])]));
+        var quote = (await work.DbContext.NoteComments.AsNoTracking().SingleAsync(row => row.ItemId == ItemId.From(stage.RootItemId), Cancellation)).Quote;
+        Assert.Equal(new string('q', 999), quote);
+    }
+
+    [Fact]
     public async Task An_import_keeps_habit_content_and_drops_every_other_reserved_key()
     {
         await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);

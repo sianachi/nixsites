@@ -144,7 +144,7 @@ builder.Services
     });
 builder.Services.AddSingleton<OidcMetadataClient>();
 builder.Services.AddSingleton<NotificationWatchGate>();
-builder.Services.AddSingleton<Nix.Features.Comments.CommentWatchGate>();
+builder.Services.AddSingleton<Nix.Features.Comments.CommentWatchGate>();  // takes the NotificationWatchGate singleton: one shared process total
 builder.Services.AddSingleton<Nix.Features.Pets.PetInlineLimiter>();
 builder.Services.AddHttpClient<ConversationBodyReader>();
 builder.Services.AddHttpClient<PetWorkerClient>(client => client.Timeout = Timeout.InfiniteTimeSpan)

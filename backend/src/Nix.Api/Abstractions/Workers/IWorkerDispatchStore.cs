@@ -16,7 +16,7 @@ public interface IWorkerDispatchStore
 
 public sealed record DispatchedWorkerJob(Guid Id, Guid TenantId, Guid? WorkspaceId, Guid? ActorId, string Kind, string Payload, int Attempts, bool CancellationRequested);
 public sealed record WorkerExecutionState(string Status, bool CancellationRequested, bool LeaseOwned, DateTimeOffset? LeaseUntil);
-public sealed record WorkerExecutionAuthorization(Guid TenantId, Guid? WorkspaceId, Guid ActorId, string Kind);
+public sealed record WorkerExecutionAuthorization(Guid TenantId, Guid? WorkspaceId, Guid ActorId, string Kind, bool IncludeComments = false);
 public sealed record DispatchedOutboxEvent(
     Guid Id,
     Guid TenantId,

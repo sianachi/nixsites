@@ -14,6 +14,7 @@ public sealed class NoteCommentStore(NixDbContext db, INixSessionContextAccessor
         await db.Set<NoteComment>().AsNoTracking()
             .Where(comment => comment.ItemId == itemId)
             .OrderBy(comment => comment.CreatedAt).ThenBy(comment => comment.Id)
+            .Take(NoteComment.MaxPerNote)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
@@ -21,6 +22,10 @@ public sealed class NoteCommentStore(NixDbContext db, INixSessionContextAccessor
         await db.Set<NoteComment>().AsTracking()
             .SingleOrDefaultAsync(comment => comment.ItemId == itemId && comment.Id == commentId, cancellationToken)
             .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<int> CountAsync(ItemId itemId, CancellationToken cancellationToken) =>
+        await db.Set<NoteComment>().CountAsync(comment => comment.ItemId == itemId, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async Task AddAsync(NoteComment comment, CancellationToken cancellationToken)

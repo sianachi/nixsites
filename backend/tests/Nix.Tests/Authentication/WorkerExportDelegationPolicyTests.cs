@@ -16,7 +16,6 @@ public sealed class WorkerExportDelegationPolicyTests
     [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222")]
     [InlineData("HEAD", "/api/v1/items/22222222-2222-4222-8222-222222222222/schema")]
     [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/views")]
-    [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/comments")]
     public void Delegation_allows_only_the_item_metadata_routes_collaboration_reads(
         string method,
         string path)
@@ -43,6 +42,23 @@ public sealed class WorkerExportDelegationPolicyTests
             request,
             Token(),
             Execution()));
+    }
+
+    [Theory]
+    [InlineData("export.nix", true, true)]
+    [InlineData("export.nix", false, false)]
+    [InlineData("site.build", true, false)]
+    [InlineData("site.build", false, false)]
+    public void The_comments_route_is_delegated_only_to_an_export_that_asked_for_comments(string kind, bool includeComments, bool allowed)
+    {
+        var request = Request("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/comments");
+        var execution = new WorkerExecutionAuthorization(
+            Guid.Parse("44444444-4444-4444-8444-444444444444"), WorkspaceId,
+            Guid.Parse("55555555-5555-4555-8555-555555555555"), kind, includeComments);
+
+        Assert.Equal(allowed, WorkerExportDelegationPolicy.Allows(request, Token(), execution));
+        // The first pass has no execution to ask yet and must not refuse what the second may allow.
+        Assert.True(WorkerExportDelegationPolicy.Allows(request, Token(), execution: null));
     }
 
     [Fact]

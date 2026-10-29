@@ -22,6 +22,8 @@ public sealed class NoteCommentTests : IAsyncLifetime
     private static readonly Guid Note = new("c0c0c000-4444-4444-8444-c0c0c0000001");
     private static readonly Guid LockedNote = new("c0c0c000-4444-4444-8444-c0c0c0000002");
     private static readonly Guid TrashedNote = new("c0c0c000-4444-4444-8444-c0c0c0000003");
+    private static readonly Guid TrashedParent = new("c0c0c000-4444-4444-8444-c0c0c0000004");
+    private static readonly Guid UnderTrashed = new("c0c0c000-4444-4444-8444-c0c0c0000005");
     private static readonly Guid Viewer = new("c0c0c000-4444-4444-8444-c0c0c0000011");
     private static readonly Guid Commenter = new("c0c0c000-4444-4444-8444-c0c0c0000012");
     private static readonly Guid Editor = new("c0c0c000-4444-4444-8444-c0c0c0000013");
@@ -163,6 +165,114 @@ public sealed class NoteCommentTests : IAsyncLifetime
         Assert.Equal("comments.invalid", (await SendAsync<AddComment, CommentThreadDto>(Commenter, new AddComment(ItemId.From(Note), new("x", mentions, null)))).Error.Code);
     }
 
+    [Fact]
+    public async Task A_note_holds_at_most_two_thousand_comments_and_the_database_backs_it_up()
+    {
+        var thread = (await AddAsync(Commenter, Note, "first")).Value;
+        await RunAsync($"""
+            INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, body, mention_ids, created_at)
+            SELECT gen_random_uuid(), {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(Note)}, {Literal(thread.Id)}, {Literal(Commenter)}, 'filler', ARRAY[]::uuid[], now()
+              FROM generate_series(1, 1999);
+            """);
+
+        var full = await AddAsync(Commenter, Note, "one too many");
+        Assert.Equal("comments.limit", full.Error.Code);
+        Assert.Equal("comments.limit", (await SendAsync<ReplyComment, CommentThreadDto>(Editor, new ReplyComment(ItemId.From(Note), thread.Id, new("reply", null)))).Error.Code);
+        Assert.Equal(2000, (await ListAsync(Editor, Note)).Value.Threads.Sum(candidate => candidate.Comments.Count));
+
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            var refused = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => RawSql.ExecuteAsync(connection, null, $"""
+                INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, body, mention_ids, created_at)
+                VALUES (gen_random_uuid(), {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(Note)}, {Literal(thread.Id)}, {Literal(Commenter)}, 'x', ARRAY[]::uuid[], now());
+                """));
+            Assert.Equal("23514", refused.SqlState);
+        }
+    }
+
+    [Fact]
+    public async Task A_note_under_a_trashed_parent_is_neither_listed_nor_commentable()
+    {
+        Assert.Equal("comments.not_found", (await ListAsync(Editor, UnderTrashed)).Error.Code);
+        Assert.Equal("comments.not_found", (await AddAsync(Editor, UnderTrashed, "x")).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_thread_is_re_anchored_by_its_author_or_an_editor_but_not_by_another_commenter()
+    {
+        var mine = (await SendAsync<AddComment, CommentThreadDto>(Editor, new AddComment(ItemId.From(Note), new("q", null, new(null, null, "text"))))).Value;
+        // No anchor yet: anyone who can comment places the first one.
+        Assert.Equal("AAA=", (await SendAsync<SetCommentAnchor, CommentThreadDto>(Commenter, new SetCommentAnchor(ItemId.From(Note), mine.Id, new("AAA=", "BBB=")))).Value.AnchorStart);
+        // Anchored now: the commenter is neither author nor editor.
+        Assert.Equal("comments.not_author", (await SendAsync<SetCommentAnchor, CommentThreadDto>(Commenter, new SetCommentAnchor(ItemId.From(Note), mine.Id, new("CCC=", "DDD=")))).Error.Code);
+        Assert.Equal("CCC=", (await SendAsync<SetCommentAnchor, CommentThreadDto>(Editor, new SetCommentAnchor(ItemId.From(Note), mine.Id, new("CCC=", "DDD=")))).Value.AnchorStart);
+
+        var theirs = (await SendAsync<AddComment, CommentThreadDto>(Commenter, new AddComment(ItemId.From(Note), new("q", null, new("EEE=", "FFF=", null))))).Value;
+        Assert.Equal("GGG=", (await SendAsync<SetCommentAnchor, CommentThreadDto>(Commenter, new SetCommentAnchor(ItemId.From(Note), theirs.Id, new("GGG=", "HHH=")))).Value.AnchorStart);
+        Assert.Equal("III=", (await SendAsync<SetCommentAnchor, CommentThreadDto>(Editor, new SetCommentAnchor(ItemId.From(Note), theirs.Id, new("III=", "JJJ=")))).Value.AnchorStart);
+    }
+
+    [Fact]
+    public async Task Deleting_a_root_that_others_replied_to_leaves_a_tombstone_and_keeps_the_replies()
+    {
+        var thread = (await AddAsync(Commenter, Note, "secret root")).Value;
+        await SendAsync<ReplyComment, CommentThreadDto>(Editor, new ReplyComment(ItemId.From(Note), thread.Id, new("my reply", [Commenter])));
+
+        Assert.True((await SendAsync<DeleteComment, Guid>(Commenter, new DeleteComment(ItemId.From(Note), thread.Id))).IsSuccess);
+        var kept = (await ListAsync(Editor, Note)).Value.Threads.Single();
+        Assert.True(kept.Comments[0].Deleted);
+        Assert.Equal(string.Empty, kept.Comments[0].Body);
+        Assert.Equal("my reply", kept.Comments[1].Body);
+        Assert.False(kept.Comments[1].Deleted);
+        Assert.Equal("comments.not_found", (await SendAsync<EditComment, CommentThreadDto>(Commenter, new EditComment(ItemId.From(Note), thread.Id, new("back")))).Error.Code);
+
+        // The last reply under a tombstone takes it along.
+        Assert.True((await SendAsync<DeleteComment, Guid>(Editor, new DeleteComment(ItemId.From(Note), kept.Comments[1].Id))).IsSuccess);
+        Assert.Empty((await ListAsync(Editor, Note)).Value.Threads);
+    }
+
+    [Fact]
+    public async Task A_watch_that_outlives_the_callers_access_returns_the_refusal_not_the_threads()
+    {
+        await AddAsync(Commenter, Note, "one");
+        var revision = (await ListAsync(Editor, Note)).Value.Revision;
+        var watch = SendWatchAsync(Editor, revision);
+        await Task.Delay(1500, Cancellation);
+
+        await RunAsync($"""
+            INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
+            VALUES ({Literal(Note)}, {Literal(M0SchemaSeed.Alpha.TenantId)}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+            UPDATE note_comment_revision SET revision = revision + 1;
+            """);
+
+        Assert.Equal("items.locked", (await watch.WaitAsync(TimeSpan.FromSeconds(10), Cancellation)).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_notice_carries_a_snippet_cut_on_a_code_point_boundary()
+    {
+        var body = new string('a', 139) + "\U0001F600" + new string('b', 300);
+        var thread = (await SendAsync<AddComment, CommentThreadDto>(Commenter, new AddComment(ItemId.From(Note), new(body, [Editor], null)))).Value;
+        await FireAsync(Editor, thread.Id);
+
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            var snippet = await RawSql.TextAsync(connection, null, "SELECT body FROM notification WHERE kind = 'comment'");
+            Assert.Equal(new string('a', 139), snippet);
+        }
+    }
+
+    private async Task RunAsync(string sql)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, null, sql);
+        }
+    }
+
     private Task<Result<CommentThreadDto>> AddAsync(Guid who, Guid note, string body) =>
         SendAsync<AddComment, CommentThreadDto>(who, new AddComment(ItemId.From(note), new(body, null, null)));
 
@@ -248,13 +358,18 @@ public sealed class NoteCommentTests : IAsyncLifetime
             VALUES
                 ({{Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
                 ({{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 2000, '{"title": "Locked"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now());
+                ({{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000, '{"title": "Parent"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 'note', {{Literal(TrashedParent)}}, 1000, '{"title": "Child"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
                 ({{Literal(Note)}}, {{Literal(Note)}}, {{tenant}}, {{workspace}}, 0),
                 ({{Literal(LockedNote)}}, {{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(TrashedNote)}}, {{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 0);
+                ({{Literal(TrashedNote)}}, {{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 0),
+                ({{Literal(TrashedParent)}}, {{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 0),
+                ({{Literal(UnderTrashed)}}, {{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 0),
+                ({{Literal(UnderTrashed)}}, {{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 1);
 
             INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
             VALUES ({{Literal(LockedNote)}}, {{tenant}}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {{granter}}, now());

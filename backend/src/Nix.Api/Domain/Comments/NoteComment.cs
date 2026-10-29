@@ -10,6 +10,9 @@ namespace Nix.Domain.Comments;
 /// </summary>
 public sealed class NoteComment
 {
+    /// <summary>The most comments one note holds; enforced by a database trigger.</summary>
+    public const int MaxPerNote = 2000;
+
     /// <summary>Gets the tenant, carried for row-level security.</summary>
     public required TenantId TenantId { get; init; }
 
@@ -28,7 +31,7 @@ public sealed class NoteComment
     /// <summary>Gets the original author's name when the comment came from an archive, otherwise <see langword="null"/>.</summary>
     public string? ImportedAuthor { get; init; }
 
-    /// <summary>Gets or sets the text, at most 10,000 characters.</summary>
+    /// <summary>Gets or sets the text, at most 10,000 characters; empty once <see cref="DeletedAt"/> is set.</summary>
     public required string Body { get; set; }
 
     /// <summary>Gets the principals mentioned, at most 20.</summary>
@@ -55,4 +58,10 @@ public sealed class NoteComment
 
     /// <summary>Gets or sets when the body last changed.</summary>
     public DateTimeOffset? EditedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the author deleted a root that others had replied to. The row stays as a
+    /// tombstone (empty body) so the replies are not lost with it.
+    /// </summary>
+    public DateTimeOffset? DeletedAt { get; set; }
 }

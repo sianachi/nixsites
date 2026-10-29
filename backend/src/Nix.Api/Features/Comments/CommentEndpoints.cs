@@ -100,7 +100,7 @@ internal static class CommentEndpoints
         {
             "comments.not_found" => 404,
             "items.locked" => 423,
-            "items.lifecycle_conflict" => 409,
+            "items.lifecycle_conflict" or "comments.limit" => 409,
             "comments.forbidden" or "comments.not_author" => 403,
             _ => 422,
         };

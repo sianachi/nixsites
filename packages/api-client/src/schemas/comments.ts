@@ -11,6 +11,8 @@ export const commentSchema = z.object({
   mentionIds: z.array(z.uuid()),
   createdAt: z.iso.datetime({ offset: true }),
   editedAt: z.iso.datetime({ offset: true }).nullable(),
+  /** True for a tombstone: the author deleted a root that others had replied to. `body` is empty; show "Comment deleted". */
+  deleted: z.boolean(),
 });
 
 /**

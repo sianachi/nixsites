@@ -804,6 +804,10 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
                     b.Property<DateTimeOffset?>("EditedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("edited_at");
@@ -853,7 +857,7 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.ToTable("note_comment", null, t =>
                         {
-                            t.HasCheckConstraint("note_comment_bounded", "char_length(body) BETWEEN 1 AND 10000 AND cardinality(mention_ids) <= 20 AND (quote IS NULL OR char_length(quote) <= 1000) AND (anchor_start IS NULL OR char_length(anchor_start) <= 512) AND (anchor_end IS NULL OR char_length(anchor_end) <= 512) AND (imported_author IS NULL OR char_length(imported_author) <= 200)");
+                            t.HasCheckConstraint("note_comment_bounded", "char_length(body) <= 10000 AND (deleted_at IS NOT NULL OR char_length(body) >= 1) AND cardinality(mention_ids) <= 20 AND (quote IS NULL OR char_length(quote) <= 1000) AND (anchor_start IS NULL OR char_length(anchor_start) <= 512) AND (anchor_end IS NULL OR char_length(anchor_end) <= 512) AND (imported_author IS NULL OR char_length(imported_author) <= 200)");
                         });
                 });
 

@@ -2,6 +2,7 @@ using Nix.Abstractions;
 using Nix.Abstractions.Scheduling;
 using Nix.Domain.Items;
 using Nix.Domain.Notifications;
+using Nix.Domain.Primitives;
 using Nix.Domain.Scheduling;
 
 namespace Nix.Features.Comments;
@@ -19,6 +20,9 @@ public sealed class CommentNoticeSource(
 {
     /// <summary>The source name the database trigger records.</summary>
     public const string SourceName = "note.comment";
+
+    // The push contract is title, body and url only, never full text: the notice carries a snippet.
+    internal const int SnippetLength = 140;
 
     /// <inheritdoc />
     public string Name => SourceName;
@@ -60,12 +64,12 @@ public sealed class CommentNoticeSource(
         var names = await comments.NamesAsync([comment.AuthorPrincipalId.Value], cancellationToken).ConfigureAwait(false);
         var author = names.GetValueOrDefault(comment.AuthorPrincipalId.Value, "Someone");
         var mentioned = comment.MentionIds.Contains(trigger.PrincipalId.Value);
-        var title = Truncate($"{author} {(mentioned ? "mentioned you in" : "replied in")} {NoteTitle(item)}", 200);
+        var title = TextCut.Cut($"{author} {(mentioned ? "mentioned you in" : "replied in")} {NoteTitle(item)}", 200);
         await notifications.CreateAsync(
             trigger.PrincipalId,
             NotificationKind.Comment,
             title,
-            Truncate(comment.Body, 1000),
+            TextCut.Cut(comment.Body, SnippetLength),
             itemId,
             item.WorkspaceId,
             trigger.DedupeKey,
@@ -90,6 +94,4 @@ public sealed class CommentNoticeSource(
 
         return "a note";
     }
-
-    private static string Truncate(string text, int length) => text.Length > length ? text[..length] : text;
 }
