@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { View } from '@nix/web-collections/core/container-model';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
-import { ViewEditor } from '../../../views/core/view-editor';
+import { ViewEditor } from '@nix/web-views/core/view-editor';
 import { aContainer, views as offered } from '@nix/web-collections/testing/container-fixture';
 import { aView } from '@nix/web-collections/testing/view-fixture';
 

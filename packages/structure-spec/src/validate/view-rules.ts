@@ -191,7 +191,7 @@ function refuseKindRequirement(
 /**
  * A checklist needs something to tick: the checkbox it names, or - named nothing - a checkbox keyed
  * `done` or the schema's task completion, which is the renderer's own fallback order
- * (`apps/web/src/views/checklist/checklist-view.tsx`). Core's checklist has no requirement and
+ * (`packages/web-views/src/checklist/checklist-view.tsx`). Core's checklist has no requirement and
  * stores any key; this is the same client-only strictness as the board's, so a pet hears before
  * the checklist draws titles with no boxes.
  */

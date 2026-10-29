@@ -7,7 +7,7 @@ import { isCanceledError, isNixApiError } from '@nix/api-client';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import { type PropertyValue } from '@nix/web-collections/core/container-model';
-import { reportFormValidity } from '../views/form/form-validity';
+import { reportFormValidity } from '@nix/web-views/form/form-validity';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import {
   publicFormByToken,

@@ -376,7 +376,7 @@
         "packages/web-editor/src/editor/collab-sync.ts",
         "packages/web-foundation/src/lib/body-cache.ts",
         "packages/web-foundation/src/lib/draft-journal.ts",
-        "apps/web/src/views/sheet/sheet-editor.tsx",
+        "packages/web-views/src/sheet/sheet-editor.tsx",
         "packages/editor-schema/src/index.ts",
         "packages/web-editor/src/editor/toolbar.tsx",
         "packages/web-editor/src/editor/page-guides.ts",
@@ -389,7 +389,7 @@
         "runtime": "Browser",
         "transports": "WebSocket/Yjs, HTTP/JSON, IndexedDB",
         "depends_on": "Core, collaboration, Yjs and local body copies",
-        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-foundation/src/lib/body-cache.ts\npackages/web-foundation/src/lib/draft-journal.ts\napps/web/src/views/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
+        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-foundation/src/lib/body-cache.ts\npackages/web-foundation/src/lib/draft-journal.ts\npackages/web-views/src/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
       },
       "localProofItemId": "01a12247-5982-793f-8300-50c278ae2111"
     },
@@ -399,9 +399,9 @@
       "itemId": "1a69c5b3-70e2-5388-aac8-affb63e996e6",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/web/src/views/core/view-kinds.tsx",
-        "apps/web/src/views/core/use-container.ts",
-        "apps/web/src/views/core/view-state.ts",
+        "packages/web-views/src/core/view-kinds.tsx",
+        "packages/web-views/src/core/use-container.ts",
+        "packages/web-views/src/core/view-state.ts",
         "packages/web-foundation/src/theme/theme-store.ts",
         "packages/web-foundation/src/theme/use-theme.ts",
         "apps/web/index.html",
@@ -418,7 +418,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON",
         "depends_on": "Core schemas, view configurations and child queries",
-        "source_paths": "apps/web/src/views/core/view-kinds.tsx\napps/web/src/views/core/use-container.ts\napps/web/src/views/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "packages/web-views/src/core/view-kinds.tsx\npackages/web-views/src/core/use-container.ts\npackages/web-views/src/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "localProofItemId": "01a12247-5982-7d31-b237-89650eca2ca2"
     },
@@ -1198,7 +1198,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 306,
       "properties": {
@@ -1219,7 +1219,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 421,
       "properties": {
@@ -1240,7 +1240,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 580,
       "properties": {
@@ -1261,7 +1261,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 1070,
       "properties": {
@@ -1282,7 +1282,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 421,
       "properties": {
@@ -1303,7 +1303,7 @@
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
         "apps/web/src/properties/computed.ts",
-        "apps/web/src/views/core/schema-editor.tsx"
+        "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 504,
       "properties": {

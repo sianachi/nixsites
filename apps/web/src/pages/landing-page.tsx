@@ -4,7 +4,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
-import { findViewKind } from '../views/core/view-kinds';
+import { findViewKind } from '@nix/web-views/core/view-kinds';
 
 export interface LandingPageProps {
   /** Starts the redirect to the identity provider. */

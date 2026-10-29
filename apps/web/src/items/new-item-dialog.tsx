@@ -19,7 +19,7 @@ import {
   RECIPE_GROUPS,
   STRUCTURED_RECIPES,
   type StructuredRecipeId,
-} from '../views/wizard/structured-recipes';
+} from '@nix/web-views/wizard/structured-recipes';
 
 /**
  * The dialog behind each entry of the sidebar's New menu.

@@ -19,7 +19,7 @@ vi.mock('@nix/web-editor/editor/canvas-editor', () => ({
   ),
 }));
 
-vi.mock('../../views/sheet/sheet-editor', () => ({
+vi.mock('@nix/web-views/sheet/sheet-editor', () => ({
   SheetEditor: ({ itemId }: { itemId: string }) => (
     <div aria-label="Spreadsheet body">spreadsheet {itemId}</div>
   ),

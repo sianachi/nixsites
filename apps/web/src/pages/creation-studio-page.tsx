@@ -7,8 +7,8 @@ import type { ShellContext } from '../shell/shell-context';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { uniqueIdentifier } from '@nix/web-collections/core/container-model';
 import { useContainer } from '@nix/web-collections/core/use-container';
-import { CreationStudioFrame } from '../views/wizard/creation-studio-frame';
-import { BasicsStep, OptionsStep } from '../views/wizard/creation-studio-steps';
+import { CreationStudioFrame } from '@nix/web-views/wizard/creation-studio-frame';
+import { BasicsStep, OptionsStep } from '@nix/web-views/wizard/creation-studio-steps';
 import {
   FALLBACK_RECIPE,
   compiledViews,
@@ -18,8 +18,8 @@ import {
   validateDraft,
   type StudioDraft,
   type StudioIntent,
-} from '../views/wizard/creation-studio-model';
-import { findStructuredRecipe, viewForRecipe } from '../views/wizard/structured-recipes';
+} from '@nix/web-views/wizard/creation-studio-model';
+import { findStructuredRecipe, viewForRecipe } from '@nix/web-views/wizard/structured-recipes';
 
 export function CreationStudioPage(): ReactNode {
   const { recipe, itemId, viewId } = useParams();

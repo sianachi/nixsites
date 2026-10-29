@@ -49,7 +49,7 @@ import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
 import { useBookmarksStore } from '@nix/web-collections/items/use-bookmarks';
 import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';
-import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
+import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '../templates/use-templates';
 import type { TemplateSummary } from '../templates/template-api';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
@@ -70,7 +70,7 @@ import {
   ItemSelectionContext,
   useOptionalItemSelection,
 } from '@nix/web-collections/core/item-selection-context';
-import { SelectionBar } from '../views/core/selection-bar';
+import { SelectionBar } from '@nix/web-views/core/selection-bar';
 import {
   rowGestures,
   useItemSelection,

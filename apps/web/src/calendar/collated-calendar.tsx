@@ -3,15 +3,15 @@ import { Blueprint, Button, Icon, Segmented, Text, cn, focusRing } from '@nix/ui
 import { CalendarClock, CircleCheck, Repeat, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 
-import { HourGrid } from '../views/calendar/calendar-hours';
+import { HourGrid } from '@nix/web-views/calendar/calendar-hours';
 import {
   DayNumber,
   MONTH_CELL,
   MONTH_VISIBLE_ITEMS,
   MonthGrid,
   type DayCellSpec,
-} from '../views/calendar/month-grid';
-import { RescheduleDialog } from '../views/calendar/reschedule-dialog';
+} from '@nix/web-views/calendar/month-grid';
+import { RescheduleDialog } from '@nix/web-views/calendar/reschedule-dialog';
 import {
   addDays,
   dayLabel,

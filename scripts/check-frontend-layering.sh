@@ -42,7 +42,7 @@
 #   R7  each web package imports only the web packages on its allowed list (a DAG, see the r7_scan
 #      calls below): web-foundation none, web-platform foundation, web-editor and web-workspaces
 #      those two, web-sites adds workspaces, web-settings adds editor and sites, web-collections
-#      foundation, platform, editor, workspaces and settings.
+#      foundation, platform, editor, workspaces and settings, web-views those plus web-collections.
 #   R8  non-test source (anything outside a tests/ or testing/ directory) imports no */testing/*
 #      module. The testing/ folders obey R6 and R7 like any other source.
 #
@@ -180,6 +180,7 @@ if [ -n "$packages" ]; then
     r7_scan web-sites "web-foundation web-platform web-workspaces"
     r7_scan web-settings "web-foundation web-platform web-editor web-workspaces web-sites"
     r7_scan web-collections "web-foundation web-platform web-editor web-workspaces web-settings"
+    r7_scan web-views "web-foundation web-platform web-editor web-workspaces web-settings web-collections"
   )"
   up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"
 fi

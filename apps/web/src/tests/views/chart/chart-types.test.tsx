@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ChartBody } from '../../../views/chart/chart-view';
+import { ChartBody } from '@nix/web-views/chart/chart-view';
 import { aChart, aSplitChart, aTimeChart, aYearChart } from './chart-fixtures';
 
 /**

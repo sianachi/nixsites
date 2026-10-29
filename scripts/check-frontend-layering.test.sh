@@ -328,6 +328,29 @@ FIXTURE
 expect 1 "collections importing web-views (upward) fails" "imports a package above it" "up-views.ts"
 
 reset_tree
+add packages/web-settings/src/settings/up-views.ts <<'FIXTURE'
+import { x } from '@nix/web-views/core/view-kinds';
+export const u = x;
+FIXTURE
+expect 1 "settings importing web-views (upward) fails" "imports a package above it" "up-views.ts"
+
+reset_tree
+add packages/web-views/src/core/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { Container } from '@nix/web-collections/core/use-container';
+import { PreferencesSection } from '@nix/web-settings/settings/preferences/PreferencesSection';
+export const d = [announce, Container, PreferencesSection];
+FIXTURE
+expect 0 "views importing foundation, collections and settings passes"
+
+reset_tree
+add packages/web-views/src/core/up-app.ts <<'FIXTURE'
+import { x } from '@nix/web-sites/sites/site-copy';
+export const u = x;
+FIXTURE
+expect 1 "views importing a package outside its list (web-sites) fails" "imports a package above it" "up-app.ts"
+
+reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';
 export const a = announce;

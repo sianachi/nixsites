@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { useKnownSmartListsStore } from '../views/query/known-smart-lists';
+import { useKnownSmartListsStore } from '@nix/web-views/query/known-smart-lists';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { NavRail } from './nav-rail';
 

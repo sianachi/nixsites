@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { Text } from '@nix/ui';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { ViewKindDescriptor, ViewRendererProps } from '../../views/core/view-kinds';
+import type { ViewKindDescriptor, ViewRendererProps } from '@nix/web-views/core/view-kinds';
 import { ChatView } from './chat-view';
 
 function ChatRenderer({ container }: ViewRendererProps): ReactNode {

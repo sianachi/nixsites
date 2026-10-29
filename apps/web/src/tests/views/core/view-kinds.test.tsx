@@ -6,7 +6,7 @@ import {
   findViewKind,
   isKnownViewKind,
   type ViewConfiguration,
-} from '../../../views/core/view-kinds';
+} from '@nix/web-views/core/view-kinds';
 
 /**
  * The registry that makes adding a view kind one entry.

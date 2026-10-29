@@ -8,7 +8,7 @@ import {
   plottedSeries,
   seriesStyle,
   trailingAverage,
-} from '../../../views/chart/chart-model';
+} from '@nix/web-views/chart/chart-model';
 import { aSplitChart, aTimeChart } from './chart-fixtures';
 
 describe('the chart model', () => {

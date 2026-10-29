@@ -21,7 +21,7 @@ import type { StructureFilter, StructureView } from '../types.js';
  * different feature, and a bug, not a convenience.
  *
  * `applySmartList` (which needs a `NixClient` to store the view) stays in
- * `apps/web/src/views/query/smart-lists.ts`, which re-exports everything here and adds it.
+ * `packages/web-views/src/query/smart-lists.ts`, which re-exports everything here and adds it.
  */
 
 export interface SmartListPreset {

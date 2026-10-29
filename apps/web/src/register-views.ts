@@ -3,9 +3,9 @@ import { lazy } from 'react';
 import { CUSTOM_VIEW_KIND } from './openui/custom-view-kind';
 import { CHAT_VIEW_KIND } from './pets/chat/chat-view-kind';
 import { STARTER_PROGRAM } from './openui/starter-program';
-import { registerBuiltinViews } from './views/builtin-views';
-import { provideProgramEditor } from './views/core/program-editor-slot';
-import { registerViewKinds } from './views/core/view-kinds';
+import { registerBuiltinViews } from '@nix/web-views/builtin-views';
+import { provideProgramEditor } from '@nix/web-views/core/program-editor-slot';
+import { registerViewKinds } from '@nix/web-views/core/view-kinds';
 
 /**
  * Registers every view kind and the custom view's program editor, once, before anything renders.

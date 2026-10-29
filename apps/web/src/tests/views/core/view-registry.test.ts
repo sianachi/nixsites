@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { registerViews } from '../../../register-views';
-import { VIEW_KINDS, findViewKind } from '../../../views/core/view-kinds';
+import { VIEW_KINDS, findViewKind } from '@nix/web-views/core/view-kinds';
 
 /**
  * The kinds register themselves at start-up, and the test setup runs the app's own bootstrap

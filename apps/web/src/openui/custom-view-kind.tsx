@@ -2,7 +2,7 @@ import { Code2 } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 
 import { Text } from '@nix/ui';
-import type { ViewKindDescriptor } from '../views/core/view-kinds';
+import type { ViewKindDescriptor } from '@nix/web-views/core/view-kinds';
 
 // The OpenUI renderer is its own chunk, loaded only when a custom view is opened.
 const CustomView = lazy(() => import('./custom-view'));

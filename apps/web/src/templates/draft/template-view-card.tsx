@@ -3,8 +3,8 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
-import { StructuredViewConfiguration } from '../../views/core/structured-view-configuration';
-import { findViewKind } from '../../views/core/view-kinds';
+import { StructuredViewConfiguration } from '@nix/web-views/core/structured-view-configuration';
+import { findViewKind } from '@nix/web-views/core/view-kinds';
 
 export function TemplateViewCard({
   view,

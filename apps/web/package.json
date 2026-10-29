@@ -32,6 +32,7 @@
     "@nix/web-foundation": "workspace:*",
     "@nix/web-platform": "workspace:*",
     "@nix/web-settings": "workspace:*",
+    "@nix/web-views": "workspace:*",
     "@nix/web-sites": "workspace:*",
     "@nix/web-workspaces": "workspace:*",
     "@openuidev/lang-core": "1.0.1",

@@ -10,8 +10,8 @@ import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishin
 import { SitePane } from '@nix/web-sites/sites/site-pane';
 import type { ItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
-import { SchemaEditor } from '../views/core/schema-editor';
-import { ViewEditor } from '../views/core/view-editor';
+import { SchemaEditor } from '@nix/web-views/core/schema-editor';
+import { ViewEditor } from '@nix/web-views/core/view-editor';
 
 /**
  * One panel, five panes: what this item *is*, what its children may carry, how they are shown,

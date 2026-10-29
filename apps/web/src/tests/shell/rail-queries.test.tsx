@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
-import { useKnownSmartListsStore } from '../../views/query/known-smart-lists';
+import { useKnownSmartListsStore } from '@nix/web-views/query/known-smart-lists';
 
 /**
  * The rail's Smart lists section (plan 1.8): every smart list this browser has opened, pin and unpin,

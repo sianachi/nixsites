@@ -35,6 +35,9 @@
     },
     {
       "path": "../../packages/web-collections"
+    },
+    {
+      "path": "../../packages/web-views"
     }
   ]
 }

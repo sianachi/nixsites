@@ -46,7 +46,7 @@ import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
 import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
 import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
-import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
+import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import { useTemplates } from '../templates/use-templates';
 import { TemplateLibraryProvider } from '../templates/template-library-context';
 import { ShellHeader } from './shell-header';

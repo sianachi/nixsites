@@ -7,7 +7,7 @@ import {
   STRUCTURED_RECIPES,
   viewForRecipe,
   type StructuredRecipeId,
-} from '../../views/wizard/structured-recipes';
+} from '@nix/web-views/wizard/structured-recipes';
 import type { TemplateItem } from '../template-api';
 
 export function templateDraftDocumentPath(

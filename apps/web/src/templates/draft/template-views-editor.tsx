@@ -3,7 +3,10 @@ import { Plus } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { isFilterGroup, type View } from '@nix/web-collections/core/container-model';
-import { STRUCTURED_RECIPES, type StructuredRecipeId } from '../../views/wizard/structured-recipes';
+import {
+  STRUCTURED_RECIPES,
+  type StructuredRecipeId,
+} from '@nix/web-views/wizard/structured-recipes';
 import { move, prepareNewView, type TemplateItemEdit } from './draft-model';
 import { TemplateViewCard } from './template-view-card';
 

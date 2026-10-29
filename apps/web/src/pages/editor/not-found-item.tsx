@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import type { PaneState } from '@nix/web-platform/panes/pane-state';
 import type { ShellContext } from '../../shell/shell-context';
-import { useForgetMissingSmartList } from '../../views/query/known-smart-lists';
+import { useForgetMissingSmartList } from '@nix/web-views/query/known-smart-lists';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 interface NotFoundItemProps {

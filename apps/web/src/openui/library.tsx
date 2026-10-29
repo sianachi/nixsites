@@ -29,9 +29,9 @@ import { createContext, useContext, useEffect, useRef, type ReactNode } from 're
 import { Link } from 'react-router';
 import type { z } from 'zod';
 
-import { seriesStyle } from '../views/chart/chart-model';
-import { ChartTable } from '../views/chart/chart-table';
-import { ColumnChart, LineChart, PieChart } from '../views/chart/svg-charts';
+import { seriesStyle } from '@nix/web-views/chart/chart-model';
+import { ChartTable } from '@nix/web-views/chart/chart-table';
+import { ColumnChart, LineChart, PieChart } from '@nix/web-views/chart/svg-charts';
 import { CONTRACTS, type ContractName, type ContractProps } from './contracts';
 import { DesignFrame, OpenUiDesign } from './design-frame';
 import { isContainer } from './designer-model';

@@ -64,7 +64,7 @@ const preview: Preview = {
   // here rather than imported above, so the view modules evaluate after the Excalidraw asset path.
   // The test runner calls this once per story file over one module graph, so it registers once.
   beforeAll: async () => {
-    const { VIEW_KINDS } = await import('../../../apps/web/src/views/core/view-kinds');
+    const { VIEW_KINDS } = await import('../../../packages/web-views/src/core/view-kinds');
     if (VIEW_KINDS.length === 0) {
       (await import('../../../apps/web/src/register-views')).registerViews();
     }

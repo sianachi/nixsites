@@ -1,7 +1,7 @@
 import { buildCatalog } from '@nix/structure-spec';
 import { describe, expect, it } from 'vitest';
 
-import { VIEW_KINDS } from '../../views/core/view-kinds';
+import { VIEW_KINDS } from '@nix/web-views/core/view-kinds';
 
 /**
  * The pet's capability catalog offers every view kind except `drive` and `finance` (studio-only

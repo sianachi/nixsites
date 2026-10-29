@@ -24,7 +24,7 @@ import {
   useKnownSmartLists,
   useKnownSmartListsStore,
   type KnownSmartList,
-} from '../views/query/known-smart-lists';
+} from '@nix/web-views/query/known-smart-lists';
 
 import { petAttentionText } from '../pets/pet-attention';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';

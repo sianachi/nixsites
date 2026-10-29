@@ -7,10 +7,10 @@ import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { LockedBody } from '../../locks/locked-body';
 import type { useItemLock } from '../../locks/use-item-lock';
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
-import { ContainerView } from '../../views/core/container-view';
+import { ContainerView } from '@nix/web-views/core/container-view';
 import type { View } from '@nix/web-collections/core/container-model';
 import type { useContainer } from '@nix/web-collections/core/use-container';
-import { SheetEditor } from '../../views/sheet/sheet-editor';
+import { SheetEditor } from '@nix/web-views/sheet/sheet-editor';
 import { CompanionViewPair } from './companion-view-pair';
 
 // Loaded at the moment somebody opens a canvas, not before: the editor is deliberately outside

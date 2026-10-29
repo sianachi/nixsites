@@ -1,0 +1,651 @@
+{
+  "name": "@nix/web-views",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Views: the view registry and every view kind (board, calendar, chart, checklist, drive, finance, form, gallery, habit tracker, list, matrix, outline, query, spreadsheet, timeline), suggestions and the creation wizard",
+  "exports": {
+    "./board/board-card": {
+      "types": "./src/board/board-card.tsx",
+      "default": "./src/board/board-card.tsx"
+    },
+    "./board/board-column": {
+      "types": "./src/board/board-column.tsx",
+      "default": "./src/board/board-column.tsx"
+    },
+    "./board/board-view": {
+      "types": "./src/board/board-view.tsx",
+      "default": "./src/board/board-view.tsx"
+    },
+    "./board/stale-card-hint": {
+      "types": "./src/board/stale-card-hint.tsx",
+      "default": "./src/board/stale-card-hint.tsx"
+    },
+    "./builtin-views": {
+      "types": "./src/builtin-views.tsx",
+      "default": "./src/builtin-views.tsx"
+    },
+    "./calendar/agenda/phone-agenda": {
+      "types": "./src/calendar/agenda/phone-agenda.tsx",
+      "default": "./src/calendar/agenda/phone-agenda.tsx"
+    },
+    "./calendar/calendar-entry-menu": {
+      "types": "./src/calendar/calendar-entry-menu.tsx",
+      "default": "./src/calendar/calendar-entry-menu.tsx"
+    },
+    "./calendar/calendar-hours": {
+      "types": "./src/calendar/calendar-hours.tsx",
+      "default": "./src/calendar/calendar-hours.tsx"
+    },
+    "./calendar/calendar-view": {
+      "types": "./src/calendar/calendar-view.tsx",
+      "default": "./src/calendar/calendar-view.tsx"
+    },
+    "./calendar/free-slot-hint": {
+      "types": "./src/calendar/free-slot-hint.tsx",
+      "default": "./src/calendar/free-slot-hint.tsx"
+    },
+    "./calendar/hours/all-day-band": {
+      "types": "./src/calendar/hours/all-day-band.tsx",
+      "default": "./src/calendar/hours/all-day-band.tsx"
+    },
+    "./calendar/hours/day-column": {
+      "types": "./src/calendar/hours/day-column.tsx",
+      "default": "./src/calendar/hours/day-column.tsx"
+    },
+    "./calendar/hours/end-time-hint": {
+      "types": "./src/calendar/hours/end-time-hint.tsx",
+      "default": "./src/calendar/hours/end-time-hint.tsx"
+    },
+    "./calendar/hours/hour-slot": {
+      "types": "./src/calendar/hours/hour-slot.tsx",
+      "default": "./src/calendar/hours/hour-slot.tsx"
+    },
+    "./calendar/item/item-card": {
+      "types": "./src/calendar/item/item-card.tsx",
+      "default": "./src/calendar/item/item-card.tsx"
+    },
+    "./calendar/month-grid": {
+      "types": "./src/calendar/month-grid.tsx",
+      "default": "./src/calendar/month-grid.tsx"
+    },
+    "./calendar/month/day-cell": {
+      "types": "./src/calendar/month/day-cell.tsx",
+      "default": "./src/calendar/month/day-cell.tsx"
+    },
+    "./calendar/month/month-dots": {
+      "types": "./src/calendar/month/month-dots.tsx",
+      "default": "./src/calendar/month/month-dots.tsx"
+    },
+    "./calendar/month/roving-month": {
+      "types": "./src/calendar/month/roving-month.tsx",
+      "default": "./src/calendar/month/roving-month.tsx"
+    },
+    "./calendar/reschedule-dialog": {
+      "types": "./src/calendar/reschedule-dialog.tsx",
+      "default": "./src/calendar/reschedule-dialog.tsx"
+    },
+    "./calendar/toolbar/calendar-toolbar": {
+      "types": "./src/calendar/toolbar/calendar-toolbar.tsx",
+      "default": "./src/calendar/toolbar/calendar-toolbar.tsx"
+    },
+    "./calendar/unscheduled/unscheduled-list": {
+      "types": "./src/calendar/unscheduled/unscheduled-list.tsx",
+      "default": "./src/calendar/unscheduled/unscheduled-list.tsx"
+    },
+    "./chart/bar-table": {
+      "types": "./src/chart/bar-table.tsx",
+      "default": "./src/chart/bar-table.tsx"
+    },
+    "./chart/chart-drawing": {
+      "types": "./src/chart/chart-drawing.tsx",
+      "default": "./src/chart/chart-drawing.tsx"
+    },
+    "./chart/chart-notices": {
+      "types": "./src/chart/chart-notices.tsx",
+      "default": "./src/chart/chart-notices.tsx"
+    },
+    "./chart/chart-options-editor": {
+      "types": "./src/chart/chart-options-editor.tsx",
+      "default": "./src/chart/chart-options-editor.tsx"
+    },
+    "./chart/chart-table": {
+      "types": "./src/chart/chart-table.tsx",
+      "default": "./src/chart/chart-table.tsx"
+    },
+    "./chart/chart-view": {
+      "types": "./src/chart/chart-view.tsx",
+      "default": "./src/chart/chart-view.tsx"
+    },
+    "./chart/pie-with-table": {
+      "types": "./src/chart/pie-with-table.tsx",
+      "default": "./src/chart/pie-with-table.tsx"
+    },
+    "./chart/svg-charts": {
+      "types": "./src/chart/svg-charts.tsx",
+      "default": "./src/chart/svg-charts.tsx"
+    },
+    "./chart/year-grid": {
+      "types": "./src/chart/year-grid.tsx",
+      "default": "./src/chart/year-grid.tsx"
+    },
+    "./checklist/checklist-view": {
+      "types": "./src/checklist/checklist-view.tsx",
+      "default": "./src/checklist/checklist-view.tsx"
+    },
+    "./core/container-view": {
+      "types": "./src/core/container-view.tsx",
+      "default": "./src/core/container-view.tsx"
+    },
+    "./core/create-item-control": {
+      "types": "./src/core/create-item-control.tsx",
+      "default": "./src/core/create-item-control.tsx"
+    },
+    "./core/editor-shell": {
+      "types": "./src/core/editor-shell.tsx",
+      "default": "./src/core/editor-shell.tsx"
+    },
+    "./core/filter-rules-editor": {
+      "types": "./src/core/filter-rules-editor.tsx",
+      "default": "./src/core/filter-rules-editor.tsx"
+    },
+    "./core/line-list-input": {
+      "types": "./src/core/line-list-input.tsx",
+      "default": "./src/core/line-list-input.tsx"
+    },
+    "./core/opens-as-section": {
+      "types": "./src/core/opens-as-section.tsx",
+      "default": "./src/core/opens-as-section.tsx"
+    },
+    "./core/schema-editor": {
+      "types": "./src/core/schema-editor.tsx",
+      "default": "./src/core/schema-editor.tsx"
+    },
+    "./core/select-checkbox": {
+      "types": "./src/core/select-checkbox.tsx",
+      "default": "./src/core/select-checkbox.tsx"
+    },
+    "./core/selection-bar": {
+      "types": "./src/core/selection-bar.tsx",
+      "default": "./src/core/selection-bar.tsx"
+    },
+    "./core/structured-view-configuration": {
+      "types": "./src/core/structured-view-configuration.tsx",
+      "default": "./src/core/structured-view-configuration.tsx"
+    },
+    "./core/view-chrome": {
+      "types": "./src/core/view-chrome.tsx",
+      "default": "./src/core/view-chrome.tsx"
+    },
+    "./core/view-editor": {
+      "types": "./src/core/view-editor.tsx",
+      "default": "./src/core/view-editor.tsx"
+    },
+    "./core/view-item-visibility": {
+      "types": "./src/core/view-item-visibility.tsx",
+      "default": "./src/core/view-item-visibility.tsx"
+    },
+    "./core/view-kinds": {
+      "types": "./src/core/view-kinds.tsx",
+      "default": "./src/core/view-kinds.tsx"
+    },
+    "./core/view-switcher": {
+      "types": "./src/core/view-switcher.tsx",
+      "default": "./src/core/view-switcher.tsx"
+    },
+    "./core/view-tools": {
+      "types": "./src/core/view-tools.tsx",
+      "default": "./src/core/view-tools.tsx"
+    },
+    "./drive/drive-download-action": {
+      "types": "./src/drive/drive-download-action.tsx",
+      "default": "./src/drive/drive-download-action.tsx"
+    },
+    "./drive/drive-file-thumbnail": {
+      "types": "./src/drive/drive-file-thumbnail.tsx",
+      "default": "./src/drive/drive-file-thumbnail.tsx"
+    },
+    "./drive/drive-grid": {
+      "types": "./src/drive/drive-grid.tsx",
+      "default": "./src/drive/drive-grid.tsx"
+    },
+    "./drive/drive-move-dialog": {
+      "types": "./src/drive/drive-move-dialog.tsx",
+      "default": "./src/drive/drive-move-dialog.tsx"
+    },
+    "./drive/drive-row-actions": {
+      "types": "./src/drive/drive-row-actions.tsx",
+      "default": "./src/drive/drive-row-actions.tsx"
+    },
+    "./drive/drive-table": {
+      "types": "./src/drive/drive-table.tsx",
+      "default": "./src/drive/drive-table.tsx"
+    },
+    "./drive/drive-view": {
+      "types": "./src/drive/drive-view.tsx",
+      "default": "./src/drive/drive-view.tsx"
+    },
+    "./finance/assign-preview-dialog": {
+      "types": "./src/finance/assign-preview-dialog.tsx",
+      "default": "./src/finance/assign-preview-dialog.tsx"
+    },
+    "./finance/budget-actual-dialog": {
+      "types": "./src/finance/budget-actual-dialog.tsx",
+      "default": "./src/finance/budget-actual-dialog.tsx"
+    },
+    "./finance/close-month-dialog": {
+      "types": "./src/finance/close-month-dialog.tsx",
+      "default": "./src/finance/close-month-dialog.tsx"
+    },
+    "./finance/finance-account-dialog": {
+      "types": "./src/finance/finance-account-dialog.tsx",
+      "default": "./src/finance/finance-account-dialog.tsx"
+    },
+    "./finance/finance-accounts": {
+      "types": "./src/finance/finance-accounts.tsx",
+      "default": "./src/finance/finance-accounts.tsx"
+    },
+    "./finance/finance-balance-trend": {
+      "types": "./src/finance/finance-balance-trend.tsx",
+      "default": "./src/finance/finance-balance-trend.tsx"
+    },
+    "./finance/finance-budget": {
+      "types": "./src/finance/finance-budget.tsx",
+      "default": "./src/finance/finance-budget.tsx"
+    },
+    "./finance/finance-cashflow": {
+      "types": "./src/finance/finance-cashflow.tsx",
+      "default": "./src/finance/finance-cashflow.tsx"
+    },
+    "./finance/finance-dashboard": {
+      "types": "./src/finance/finance-dashboard.tsx",
+      "default": "./src/finance/finance-dashboard.tsx"
+    },
+    "./finance/finance-import-dialog": {
+      "types": "./src/finance/finance-import-dialog.tsx",
+      "default": "./src/finance/finance-import-dialog.tsx"
+    },
+    "./finance/finance-line-dialog": {
+      "types": "./src/finance/finance-line-dialog.tsx",
+      "default": "./src/finance/finance-line-dialog.tsx"
+    },
+    "./finance/finance-month-summary": {
+      "types": "./src/finance/finance-month-summary.tsx",
+      "default": "./src/finance/finance-month-summary.tsx"
+    },
+    "./finance/finance-setup": {
+      "types": "./src/finance/finance-setup.tsx",
+      "default": "./src/finance/finance-setup.tsx"
+    },
+    "./finance/finance-shared": {
+      "types": "./src/finance/finance-shared.tsx",
+      "default": "./src/finance/finance-shared.tsx"
+    },
+    "./finance/finance-transactions": {
+      "types": "./src/finance/finance-transactions.tsx",
+      "default": "./src/finance/finance-transactions.tsx"
+    },
+    "./finance/finance-view": {
+      "types": "./src/finance/finance-view.tsx",
+      "default": "./src/finance/finance-view.tsx"
+    },
+    "./finance/session-changes": {
+      "types": "./src/finance/session-changes.tsx",
+      "default": "./src/finance/session-changes.tsx"
+    },
+    "./finance/transaction-bulk-bar": {
+      "types": "./src/finance/transaction-bulk-bar.tsx",
+      "default": "./src/finance/transaction-bulk-bar.tsx"
+    },
+    "./finance/transaction-dialog": {
+      "types": "./src/finance/transaction-dialog.tsx",
+      "default": "./src/finance/transaction-dialog.tsx"
+    },
+    "./finance/transaction-filter-form": {
+      "types": "./src/finance/transaction-filter-form.tsx",
+      "default": "./src/finance/transaction-filter-form.tsx"
+    },
+    "./finance/transaction-table": {
+      "types": "./src/finance/transaction-table.tsx",
+      "default": "./src/finance/transaction-table.tsx"
+    },
+    "./form/editor/block-editor": {
+      "types": "./src/form/editor/block-editor.tsx",
+      "default": "./src/form/editor/block-editor.tsx"
+    },
+    "./form/editor/conditions": {
+      "types": "./src/form/editor/conditions.tsx",
+      "default": "./src/form/editor/conditions.tsx"
+    },
+    "./form/editor/field-picker": {
+      "types": "./src/form/editor/field-picker.tsx",
+      "default": "./src/form/editor/field-picker.tsx"
+    },
+    "./form/editor/preview": {
+      "types": "./src/form/editor/preview.tsx",
+      "default": "./src/form/editor/preview.tsx"
+    },
+    "./form/editor/publishing-controls": {
+      "types": "./src/form/editor/publishing-controls.tsx",
+      "default": "./src/form/editor/publishing-controls.tsx"
+    },
+    "./form/form-results": {
+      "types": "./src/form/form-results.tsx",
+      "default": "./src/form/form-results.tsx"
+    },
+    "./form/form-view": {
+      "types": "./src/form/form-view.tsx",
+      "default": "./src/form/form-view.tsx"
+    },
+    "./form/interactive-form-editor": {
+      "types": "./src/form/interactive-form-editor.tsx",
+      "default": "./src/form/interactive-form-editor.tsx"
+    },
+    "./form/interactive-form-view": {
+      "types": "./src/form/interactive-form-view.tsx",
+      "default": "./src/form/interactive-form-view.tsx"
+    },
+    "./form/usual-value-hint": {
+      "types": "./src/form/usual-value-hint.tsx",
+      "default": "./src/form/usual-value-hint.tsx"
+    },
+    "./gallery/cover-image": {
+      "types": "./src/gallery/cover-image.tsx",
+      "default": "./src/gallery/cover-image.tsx"
+    },
+    "./gallery/cover-pane": {
+      "types": "./src/gallery/cover-pane.tsx",
+      "default": "./src/gallery/cover-pane.tsx"
+    },
+    "./gallery/cover-picker-dialog": {
+      "types": "./src/gallery/cover-picker-dialog.tsx",
+      "default": "./src/gallery/cover-picker-dialog.tsx"
+    },
+    "./gallery/gallery-card": {
+      "types": "./src/gallery/gallery-card.tsx",
+      "default": "./src/gallery/gallery-card.tsx"
+    },
+    "./gallery/gallery-grid": {
+      "types": "./src/gallery/gallery-grid.tsx",
+      "default": "./src/gallery/gallery-grid.tsx"
+    },
+    "./gallery/gallery-view": {
+      "types": "./src/gallery/gallery-view.tsx",
+      "default": "./src/gallery/gallery-view.tsx"
+    },
+    "./habit-tracker/habit-chart-widgets": {
+      "types": "./src/habit-tracker/habit-chart-widgets.tsx",
+      "default": "./src/habit-tracker/habit-chart-widgets.tsx"
+    },
+    "./habit-tracker/habit-insights": {
+      "types": "./src/habit-tracker/habit-insights.tsx",
+      "default": "./src/habit-tracker/habit-insights.tsx"
+    },
+    "./habit-tracker/habit-progress": {
+      "types": "./src/habit-tracker/habit-progress.tsx",
+      "default": "./src/habit-tracker/habit-progress.tsx"
+    },
+    "./habit-tracker/habit-row": {
+      "types": "./src/habit-tracker/habit-row.tsx",
+      "default": "./src/habit-tracker/habit-row.tsx"
+    },
+    "./habit-tracker/habit-setup": {
+      "types": "./src/habit-tracker/habit-setup.tsx",
+      "default": "./src/habit-tracker/habit-setup.tsx"
+    },
+    "./habit-tracker/habit-tracker-header": {
+      "types": "./src/habit-tracker/habit-tracker-header.tsx",
+      "default": "./src/habit-tracker/habit-tracker-header.tsx"
+    },
+    "./habit-tracker/habit-tracker-view": {
+      "types": "./src/habit-tracker/habit-tracker-view.tsx",
+      "default": "./src/habit-tracker/habit-tracker-view.tsx"
+    },
+    "./list/list-cell": {
+      "types": "./src/list/list-cell.tsx",
+      "default": "./src/list/list-cell.tsx"
+    },
+    "./list/list-columns": {
+      "types": "./src/list/list-columns.tsx",
+      "default": "./src/list/list-columns.tsx"
+    },
+    "./list/list-rows": {
+      "types": "./src/list/list-rows.tsx",
+      "default": "./src/list/list-rows.tsx"
+    },
+    "./list/list-sections": {
+      "types": "./src/list/list-sections.tsx",
+      "default": "./src/list/list-sections.tsx"
+    },
+    "./list/list-view": {
+      "types": "./src/list/list-view.tsx",
+      "default": "./src/list/list-view.tsx"
+    },
+    "./list/mobile-list-rows": {
+      "types": "./src/list/mobile-list-rows.tsx",
+      "default": "./src/list/mobile-list-rows.tsx"
+    },
+    "./list/record-view-story": {
+      "types": "./src/list/record-view-story.tsx",
+      "default": "./src/list/record-view-story.tsx"
+    },
+    "./matrix/matrix-card": {
+      "types": "./src/matrix/matrix-card.tsx",
+      "default": "./src/matrix/matrix-card.tsx"
+    },
+    "./matrix/matrix-cells": {
+      "types": "./src/matrix/matrix-cells.tsx",
+      "default": "./src/matrix/matrix-cells.tsx"
+    },
+    "./matrix/matrix-view": {
+      "types": "./src/matrix/matrix-view.tsx",
+      "default": "./src/matrix/matrix-view.tsx"
+    },
+    "./outline/outline-draft-field": {
+      "types": "./src/outline/outline-draft-field.tsx",
+      "default": "./src/outline/outline-draft-field.tsx"
+    },
+    "./outline/outline-rename-field": {
+      "types": "./src/outline/outline-rename-field.tsx",
+      "default": "./src/outline/outline-rename-field.tsx"
+    },
+    "./outline/outline-row": {
+      "types": "./src/outline/outline-row.tsx",
+      "default": "./src/outline/outline-row.tsx"
+    },
+    "./outline/outline-toolbar": {
+      "types": "./src/outline/outline-toolbar.tsx",
+      "default": "./src/outline/outline-toolbar.tsx"
+    },
+    "./outline/outline-view": {
+      "types": "./src/outline/outline-view.tsx",
+      "default": "./src/outline/outline-view.tsx"
+    },
+    "./query/query-by-example": {
+      "types": "./src/query/query-by-example.tsx",
+      "default": "./src/query/query-by-example.tsx"
+    },
+    "./query/query-row-values": {
+      "types": "./src/query/query-row-values.tsx",
+      "default": "./src/query/query-row-values.tsx"
+    },
+    "./query/query-view": {
+      "types": "./src/query/query-view.tsx",
+      "default": "./src/query/query-view.tsx"
+    },
+    "./sheet/cell-editor": {
+      "types": "./src/sheet/cell-editor.tsx",
+      "default": "./src/sheet/cell-editor.tsx"
+    },
+    "./sheet/formula-bar": {
+      "types": "./src/sheet/formula-bar.tsx",
+      "default": "./src/sheet/formula-bar.tsx"
+    },
+    "./sheet/sheet-cell": {
+      "types": "./src/sheet/sheet-cell.tsx",
+      "default": "./src/sheet/sheet-cell.tsx"
+    },
+    "./sheet/sheet-cell-rows": {
+      "types": "./src/sheet/sheet-cell-rows.tsx",
+      "default": "./src/sheet/sheet-cell-rows.tsx"
+    },
+    "./sheet/sheet-column-header": {
+      "types": "./src/sheet/sheet-column-header.tsx",
+      "default": "./src/sheet/sheet-column-header.tsx"
+    },
+    "./sheet/sheet-editor": {
+      "types": "./src/sheet/sheet-editor.tsx",
+      "default": "./src/sheet/sheet-editor.tsx"
+    },
+    "./sheet/sheet-grid": {
+      "types": "./src/sheet/sheet-grid.tsx",
+      "default": "./src/sheet/sheet-grid.tsx"
+    },
+    "./sheet/sheet-row-numbers": {
+      "types": "./src/sheet/sheet-row-numbers.tsx",
+      "default": "./src/sheet/sheet-row-numbers.tsx"
+    },
+    "./sheet/sheet-status": {
+      "types": "./src/sheet/sheet-status.tsx",
+      "default": "./src/sheet/sheet-status.tsx"
+    },
+    "./spreadsheet/fill-series-offer": {
+      "types": "./src/spreadsheet/fill-series-offer.tsx",
+      "default": "./src/spreadsheet/fill-series-offer.tsx"
+    },
+    "./spreadsheet/grid-cell": {
+      "types": "./src/spreadsheet/grid-cell.tsx",
+      "default": "./src/spreadsheet/grid-cell.tsx"
+    },
+    "./spreadsheet/grid-header": {
+      "types": "./src/spreadsheet/grid-header.tsx",
+      "default": "./src/spreadsheet/grid-header.tsx"
+    },
+    "./spreadsheet/grid-property-panel": {
+      "types": "./src/spreadsheet/grid-property-panel.tsx",
+      "default": "./src/spreadsheet/grid-property-panel.tsx"
+    },
+    "./spreadsheet/grid-toolbar": {
+      "types": "./src/spreadsheet/grid-toolbar.tsx",
+      "default": "./src/spreadsheet/grid-toolbar.tsx"
+    },
+    "./spreadsheet/spreadsheet-grid": {
+      "types": "./src/spreadsheet/spreadsheet-grid.tsx",
+      "default": "./src/spreadsheet/spreadsheet-grid.tsx"
+    },
+    "./spreadsheet/spreadsheet-view": {
+      "types": "./src/spreadsheet/spreadsheet-view.tsx",
+      "default": "./src/spreadsheet/spreadsheet-view.tsx"
+    },
+    "./suggest/create-suggestions": {
+      "types": "./src/suggest/create-suggestions.tsx",
+      "default": "./src/suggest/create-suggestions.tsx"
+    },
+    "./suggest/duplicate-notice": {
+      "types": "./src/suggest/duplicate-notice.tsx",
+      "default": "./src/suggest/duplicate-notice.tsx"
+    },
+    "./suggest/member-name": {
+      "types": "./src/suggest/member-name.tsx",
+      "default": "./src/suggest/member-name.tsx"
+    },
+    "./suggest/property-suggestion-line": {
+      "types": "./src/suggest/property-suggestion-line.tsx",
+      "default": "./src/suggest/property-suggestion-line.tsx"
+    },
+    "./suggest/suggestion-hint": {
+      "types": "./src/suggest/suggestion-hint.tsx",
+      "default": "./src/suggest/suggestion-hint.tsx"
+    },
+    "./timeline/timeline-agenda": {
+      "types": "./src/timeline/timeline-agenda.tsx",
+      "default": "./src/timeline/timeline-agenda.tsx"
+    },
+    "./timeline/timeline-bars": {
+      "types": "./src/timeline/timeline-bars.tsx",
+      "default": "./src/timeline/timeline-bars.tsx"
+    },
+    "./timeline/timeline-off-axis": {
+      "types": "./src/timeline/timeline-off-axis.tsx",
+      "default": "./src/timeline/timeline-off-axis.tsx"
+    },
+    "./timeline/timeline-reschedule": {
+      "types": "./src/timeline/timeline-reschedule.tsx",
+      "default": "./src/timeline/timeline-reschedule.tsx"
+    },
+    "./timeline/timeline-table": {
+      "types": "./src/timeline/timeline-table.tsx",
+      "default": "./src/timeline/timeline-table.tsx"
+    },
+    "./timeline/timeline-view": {
+      "types": "./src/timeline/timeline-view.tsx",
+      "default": "./src/timeline/timeline-view.tsx"
+    },
+    "./wizard/creation-studio-frame": {
+      "types": "./src/wizard/creation-studio-frame.tsx",
+      "default": "./src/wizard/creation-studio-frame.tsx"
+    },
+    "./wizard/creation-studio-preview": {
+      "types": "./src/wizard/creation-studio-preview.tsx",
+      "default": "./src/wizard/creation-studio-preview.tsx"
+    },
+    "./wizard/creation-studio-steps": {
+      "types": "./src/wizard/creation-studio-steps.tsx",
+      "default": "./src/wizard/creation-studio-steps.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/chart-render": "workspace:*",
+    "@nix/design-tokens": "workspace:*",
+    "@nix/sheet": "workspace:*",
+    "@nix/structure-spec": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/view-render": "workspace:*",
+    "@nix/web-collections": "workspace:*",
+    "@nix/web-editor": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-settings": "workspace:*",
+    "@nix/web-workspaces": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "luxon": "^3.7.2",
+    "react-dom": "^19.2.8",
+    "react-router": "^7.18.1",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/luxon": "^3.7.2",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
+  }
+}

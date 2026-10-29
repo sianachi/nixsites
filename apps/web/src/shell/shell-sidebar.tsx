@@ -1,7 +1,7 @@
 import { MobileWorkspaceBrowser } from '../items/mobile-workspace-browser';
 import { focusPane } from '@nix/web-platform/panes/pane-params';
 import type { OpenItemControl } from '../tabs/use-open-item';
-import type { StructuredRecipeId } from '../views/wizard/structured-recipes';
+import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '../templates/use-templates';
 import type { TemplateSummary } from '../templates/template-api';
 import { SidebarDivider } from '@nix/web-foundation/layout/sidebar-divider';
