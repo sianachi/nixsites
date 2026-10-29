@@ -20,6 +20,8 @@ export interface BeginExportInput {
   readonly format: string;
   readonly scope: 'item' | 'subtree';
   readonly idempotencyKey: string;
+  /** Adds each note's comment threads to the export (Markdown, PDF, DOCX and .nix). */
+  readonly includeComments?: boolean;
 }
 
 export const formats = (): QueryEndpoint<ExportFormatCatalog> =>

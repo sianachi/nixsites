@@ -110,3 +110,15 @@ func TestPortablePropertiesKeepExactDecimalText(t *testing.T) {
 		t.Fatalf("projection = %q, %v", output, err)
 	}
 }
+
+func TestPortableCommentsFollowTheBodyWithQuoteAuthorAndDate(t *testing.T) {
+	bundle := nixarchive.Bundle{
+		Comments: json.RawMessage(`[{"id":"t","quote":"the plan","resolved":true,"comments":[{"author":"Ada","body":"# Why?","createdAt":"2026-10-29T10:00:00Z"}]}]`),
+	}
+	output, _, _, err := ProjectBundle(bundle, 1<<20, nil)
+	for _, want := range []string{"## Comments", "> the plan", "(Resolved)", "**Ada** · 2026-10-29", `\# Why?`} {
+		if err != nil || !strings.Contains(output, want) {
+			t.Fatalf("missing %q in %q (%v)", want, output, err)
+		}
+	}
+}

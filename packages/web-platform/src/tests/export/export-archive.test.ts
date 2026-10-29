@@ -124,6 +124,27 @@ describe('requestArchive', () => {
     expect(fake.query.mock.calls.at(-1)?.[0].operation).toBe('exports.download.authorize');
   });
 
+  it('asks for comments only when told to', async () => {
+    const without = clientFor([state('completed')]);
+    await requestArchive({
+      client: without.client,
+      itemId: ITEM_ID,
+      scope: 'item',
+      format: 'markdown',
+    });
+    expect(without.execute.mock.calls[0]?.[0].body).not.toHaveProperty('includeComments');
+
+    const withComments = clientFor([state('completed')]);
+    await requestArchive({
+      client: withComments.client,
+      itemId: ITEM_ID,
+      scope: 'item',
+      format: 'markdown',
+      includeComments: true,
+    });
+    expect(withComments.execute.mock.calls[0]?.[0].body).toMatchObject({ includeComments: true });
+  });
+
   it('returns the worker failure detail instead of asking for a download', async () => {
     const fake = clientFor([
       state('failed', {

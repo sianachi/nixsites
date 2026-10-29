@@ -169,6 +169,8 @@ type Bundle struct {
 	ViewRows          []json.RawMessage `json:"viewRows"`
 	ViewRowsTruncated bool              `json:"viewRowsTruncated"`
 	Body              json.RawMessage   `json:"body"`
+	// Comments is present only when the export asked for comment threads.
+	Comments json.RawMessage `json:"comments,omitempty"`
 }
 
 var safeID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)

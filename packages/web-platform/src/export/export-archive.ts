@@ -34,6 +34,7 @@ export interface ArchiveRequest {
   readonly itemId: string;
   readonly scope: ArchiveScope;
   readonly format: ExportFormat;
+  readonly includeComments?: boolean;
   readonly signal?: AbortSignal;
   readonly pollIntervalMs?: number;
   readonly onStarted?: (state: Export) => void;
@@ -48,6 +49,7 @@ export async function requestArchive(request: ArchiveRequest): Promise<ArchiveOu
         itemId: request.itemId,
         scope: request.scope,
         format: request.format,
+        ...(request.includeComments === true ? { includeComments: true } : {}),
         idempotencyKey: `web-export:${globalThis.crypto.randomUUID()}`,
       },
       {

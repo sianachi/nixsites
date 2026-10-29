@@ -69,6 +69,7 @@ export function registerExportRoutes(app: FastifyInstance, deps: RouteDependenci
       scope?: string;
       exportedAt?: string;
       expandEmbeds?: string;
+      includeComments?: string;
       atSeq?: string;
     };
 
@@ -95,6 +96,7 @@ export function registerExportRoutes(app: FastifyInstance, deps: RouteDependenci
       query.exportedAt,
       query.expandEmbeds === 'true',
       atSeq,
+      query.includeComments === 'true',
     );
     if (prepared === null) {
       return reply;
@@ -147,6 +149,7 @@ async function establishExport(
   rawExportedAt?: string,
   expandEmbeds = false,
   atSeq?: number,
+  includeComments = false,
 ): Promise<PreparedExport | null> {
   const context = await establish(request, reply, deps);
   if (context === null) {
@@ -183,6 +186,7 @@ async function establishExport(
     scope,
     includeDeleted: false,
     expandEmbeds,
+    includeComments,
     atSeq,
     exportedAt,
   });

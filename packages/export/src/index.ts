@@ -56,6 +56,8 @@ export {
   type TemplateInitializationInput,
   type TemplateInitializationRule,
   type TemplateReferenceRule,
+  type CommentSnapshot,
+  type CommentThreadSnapshot,
   type ItemBundle,
   type LossEntry,
   type Omission,

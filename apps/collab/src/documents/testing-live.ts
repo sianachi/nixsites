@@ -132,6 +132,7 @@ export async function startLiveServer(
       listChildren: () => Promise.resolve(null),
       getSchema: () => Promise.resolve(null),
       getViews: () => Promise.resolve(null),
+      listComments: () => Promise.resolve(null),
     },
     internalSecret: 'live-harness-secret',
     reauthMs: 60_000,

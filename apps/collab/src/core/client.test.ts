@@ -147,4 +147,46 @@ describe('Core view snapshots', () => {
       ],
     });
   });
+  it("reads comment threads as export snapshots, keeping an imported comment's original author", async () => {
+    const client = createCoreClient({
+      coreBaseUrl: 'http://core',
+      fetch: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              revision: 3,
+              threads: [
+                {
+                  id: 't1',
+                  quote: 'plan',
+                  resolvedAt: '2026-10-29T10:00:00Z',
+                  comments: [
+                    {
+                      authorName: 'Importer',
+                      importedAuthor: 'Ada',
+                      body: 'Why?',
+                      createdAt: 'c1',
+                    },
+                    { authorName: 'Bo', importedAuthor: null, body: 'Because', createdAt: 'c2' },
+                  ],
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        ),
+    });
+
+    expect(await client.listComments('token', 'item')).toEqual([
+      {
+        id: 't1',
+        quote: 'plan',
+        resolved: true,
+        comments: [
+          { author: 'Ada', body: 'Why?', createdAt: 'c1' },
+          { author: 'Bo', body: 'Because', createdAt: 'c2' },
+        ],
+      },
+    ]);
+  });
 });

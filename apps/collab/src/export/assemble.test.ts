@@ -39,6 +39,7 @@ function coreWith(tree: Readonly<Record<string, readonly CoreItem[]>>): CoreClie
       Promise.resolve({ items: tree[parentId] ?? [], nextCursor: null }),
     getSchema: () => Promise.resolve(null),
     getViews: () => Promise.resolve(null),
+    listComments: () => Promise.resolve(null),
   };
 }
 
@@ -176,6 +177,40 @@ describe('enumerateSubtree', () => {
     expect(calls).toBe(1);
     expect(tree.items).toHaveLength(EXPORT_LIMITS.maxItems);
     expect(tree.omitted).toHaveLength(1);
+  });
+});
+
+describe('gatherMetadata comments', () => {
+  const thread = {
+    id: 't1',
+    quote: 'the plan',
+    resolved: false,
+    comments: [{ author: 'Ada', body: 'Why?', createdAt: '2026-10-29T10:00:00Z' }],
+  };
+  const note = { ...root, type: 'note' };
+
+  it('reads comments only when asked, and only for notes', async () => {
+    let asked = 0;
+    const core: CoreClient = {
+      ...coreWith({}),
+      listComments: () => {
+        asked += 1;
+        return Promise.resolve([thread]);
+      },
+    };
+
+    expect((await gatherMetadata(core, 't', [note])).comments?.size ?? 0).toBe(0);
+    expect(asked).toBe(0);
+
+    const metadata = await gatherMetadata(
+      core,
+      't',
+      [note, { ...root, id: 'f', type: 'file' }],
+      true,
+    );
+    expect(metadata.comments?.get(note.id)).toEqual([thread]);
+    expect(metadata.comments?.has('f')).toBe(false);
+    expect(asked).toBe(1);
   });
 });
 
@@ -350,6 +385,7 @@ describe('gatherViewRows', () => {
       listChildren: () => Promise.resolve(null),
       getSchema: () => Promise.resolve(null),
       getViews: () => Promise.resolve(null),
+      listComments: () => Promise.resolve(null),
     };
 
     const rows = await gatherViewRows(refusing, 't', [root], new Map([['root', VIEWS]]));

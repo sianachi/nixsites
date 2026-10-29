@@ -1,5 +1,5 @@
 import { exports as exportResources, isNixApiError, type Export } from '@nix/api-client';
-import { Button, Dialog, Field, Segmented, Select, Text } from '@nix/ui';
+import { Button, Checkbox, Dialog, Field, Segmented, Select, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
@@ -57,6 +57,7 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
   const [format, setFormat] = useState<ExportFormat | null>(null);
   const [formatAttempt, setFormatAttempt] = useState(0);
   const [scope, setScope] = useState<ArchiveScope>(hasChildren ? 'subtree' : 'item');
+  const [includeComments, setIncludeComments] = useState(false);
   const [progress, setProgress] = useState<Progress>({ phase: 'idle' });
   const active = useRef<ActiveExport | null>(null);
 
@@ -141,6 +142,7 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
       itemId,
       scope,
       format: selectedFormat.format,
+      includeComments,
       signal: request.controller.signal,
       onStarted: (state) => {
         request.exportId = state.id;
@@ -335,6 +337,15 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
                 }}
               />
             ) : null}
+            <Checkbox
+              label="Include comments"
+              checked={includeComments}
+              disabled={working}
+              onChange={(event) => {
+                setIncludeComments(event.target.checked);
+                setProgress({ phase: 'idle' });
+              }}
+            />
           </fieldset>
         )}
 

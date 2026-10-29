@@ -1,4 +1,4 @@
-import type { SchemaSnapshot, ViewsSnapshot } from '@nix/export';
+import type { CommentThreadSnapshot, SchemaSnapshot, ViewsSnapshot } from '@nix/export';
 import { isRecord } from '../is-record.ts';
 
 /**
@@ -46,6 +46,8 @@ export interface CoreClient {
   ): Promise<ChildPage | null>;
   getSchema(token: string, itemId: string): Promise<SchemaSnapshot | null>;
   getViews(token: string, itemId: string): Promise<ViewsSnapshot | null>;
+  /** The note's comment threads, or null when none can be read (no access, locked, not a note). */
+  listComments(token: string, itemId: string): Promise<readonly CommentThreadSnapshot[] | null>;
 }
 
 export interface CoreClientOptions {
@@ -159,6 +161,26 @@ export function createCoreClient(options: CoreClientOptions): CoreClient {
       }));
 
       return { views, default: text(body.default) };
+    },
+
+    async listComments(token, itemId) {
+      const body = await read(token, `/api/v1/items/${itemId}/comments`);
+      if (!isRecord(body) || !Array.isArray(body.threads)) {
+        return null;
+      }
+
+      return body.threads.filter(isRecord).map((thread) => ({
+        id: text(thread.id),
+        quote: nullableText(thread.quote),
+        resolved: typeof thread.resolvedAt === 'string',
+        comments: (Array.isArray(thread.comments) ? thread.comments.filter(isRecord) : []).map(
+          (comment) => ({
+            author: nullableText(comment.importedAuthor) ?? text(comment.authorName),
+            body: text(comment.body),
+            createdAt: text(comment.createdAt),
+          }),
+        ),
+      }));
     },
   };
 }

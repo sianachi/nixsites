@@ -50,6 +50,7 @@ const silentCore: CoreClient = {
   listChildren: () => Promise.resolve(null),
   getSchema: () => Promise.resolve(null),
   getViews: () => Promise.resolve(null),
+  listComments: () => Promise.resolve(null),
 };
 
 const INTERNAL_SECRET = 'test-internal-secret';

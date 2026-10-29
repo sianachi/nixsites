@@ -53,6 +53,7 @@ export interface PrepareRequest {
   readonly scope: ExportScope;
   readonly includeDeleted: boolean;
   readonly expandEmbeds?: boolean | undefined;
+  readonly includeComments?: boolean | undefined;
 
   /** Read the body at this content position; only meaningful for `scope: 'item'`. */
   readonly atSeq?: number | undefined;
@@ -81,7 +82,12 @@ export async function prepareExport(request: PrepareRequest): Promise<PreparedEx
     includeDeleted: request.includeDeleted,
   });
 
-  const metadata = await gatherMetadata(request.core, request.token, tree.items);
+  const metadata = await gatherMetadata(
+    request.core,
+    request.token,
+    tree.items,
+    request.includeComments === true,
+  );
 
   // For the manifest's account of what is missing. The bundle stream checks again in its own scope
   // and is what actually withholds a body; this read only lets the archive say so up front.

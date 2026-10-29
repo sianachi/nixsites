@@ -129,6 +129,39 @@ func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader)
 			losses = append(losses, "The exported view source records are incomplete.")
 		}
 	}
+	if len(bundle.Comments) > 0 && !bytes.Equal(bytes.TrimSpace(bundle.Comments), []byte("null")) {
+		var threads []struct {
+			Quote    string `json:"quote"`
+			Resolved bool   `json:"resolved"`
+			Comments []struct {
+				Author    string `json:"author"`
+				Body      string `json:"body"`
+				CreatedAt string `json:"createdAt"`
+			} `json:"comments"`
+		}
+		if err := json.Unmarshal(bundle.Comments, &threads); err != nil {
+			return "", nil, nil, fmt.Errorf("decode export comments: %w", err)
+		}
+		if len(threads) > 0 {
+			write("\n\n## Comments\n\n")
+		}
+		for _, thread := range threads {
+			if thread.Quote != "" {
+				write("> " + strings.ReplaceAll(portableLiteral(thread.Quote), "\n", "\n> ") + "\n\n")
+			}
+			if thread.Resolved {
+				write("(Resolved)\n\n")
+			}
+			for _, comment := range thread.Comments {
+				date := comment.CreatedAt
+				if len(date) >= 10 {
+					date = date[:10]
+				}
+				write("**" + portableLiteral(comment.Author) + "** · " + portableLiteral(date) + "\n\n")
+				write(escapeMarkdownLiteral(sanitizeText(comment.Body), true) + "\n\n")
+			}
+		}
+	}
 	if writeErr != nil {
 		return "", nil, nil, writeErr
 	}

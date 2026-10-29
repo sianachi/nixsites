@@ -4,6 +4,7 @@ import {
   ARCHIVE_FORMAT,
   ARCHIVE_FORMAT_VERSION,
   type ArchiveManifest,
+  type CommentThreadSnapshot,
   type ItemBundle,
   type Omission,
   type SchemaSnapshot,
@@ -213,6 +214,9 @@ export interface GatheredMetadata {
 
   /** The children an item's views draw, for the items that have views. See {@link gatherViewRows}. */
   readonly viewRows: ReadonlyMap<string, ViewRows>;
+
+  /** Comment threads per item; empty unless the export asked for them. */
+  readonly comments?: ReadonlyMap<string, readonly CommentThreadSnapshot[]>;
 }
 
 export interface ViewRows {
@@ -240,9 +244,11 @@ export async function gatherMetadata(
   core: CoreClient,
   token: string,
   items: readonly CoreItem[],
+  includeComments = false,
 ): Promise<GatheredMetadata> {
   const schemas = new Map<string, SchemaSnapshot | null>();
   const views = new Map<string, ViewsSnapshot | null>();
+  const comments = new Map<string, readonly CommentThreadSnapshot[]>();
 
   let cursor = 0;
 
@@ -256,13 +262,16 @@ export async function gatherMetadata(
         return;
       }
 
-      const [schema, viewSet] = await Promise.all([
+      const [schema, viewSet, threads] = await Promise.all([
         core.getSchema(token, item.id),
         core.getViews(token, item.id),
+        // Read as the caller: a note they cannot comment-read, or that is locked, has none.
+        includeComments && item.type === 'note' ? core.listComments(token, item.id) : null,
       ]);
 
       schemas.set(item.id, schema);
       views.set(item.id, viewSet);
+      if (threads !== null && threads.length > 0) comments.set(item.id, threads);
     }
   }
 
@@ -272,7 +281,7 @@ export async function gatherMetadata(
 
   const viewRows = await gatherViewRows(core, token, items, views);
 
-  return { schemas, views, viewRows };
+  return { schemas, views, viewRows, comments };
 }
 
 /**
@@ -480,6 +489,9 @@ export async function* streamBundles(input: {
       views: metadata.views.get(item.id) ?? null,
       viewRows: metadata.viewRows.get(item.id)?.rows ?? [],
       viewRowsTruncated: metadata.viewRows.get(item.id)?.truncated ?? false,
+      ...(metadata.comments?.get(item.id)
+        ? { comments: metadata.comments.get(item.id) ?? [] }
+        : {}),
       body:
         input.resolveEmbeddedItem === undefined
           ? await readUnlocked(item)

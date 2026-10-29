@@ -254,6 +254,21 @@ export interface ViewRowSnapshot {
   readonly properties: Readonly<Record<string, unknown>>;
 }
 
+/** One comment as exported. `author` is the display name; an imported comment keeps its original author's. */
+export interface CommentSnapshot {
+  readonly author: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+/** A comment thread as exported; `quote` is the commented text, null for a page-level thread. */
+export interface CommentThreadSnapshot {
+  readonly id: string;
+  readonly quote: string | null;
+  readonly resolved: boolean;
+  readonly comments: readonly CommentSnapshot[];
+}
+
 /** The view set an item offers over its children. */
 export interface ViewsSnapshot {
   readonly views: readonly ViewSnapshot[];
@@ -370,6 +385,9 @@ export interface ItemBundle {
 
   /** Its own document body, or null when it has never been opened. */
   readonly body: ItemBody | null;
+
+  /** Comment threads, present only when the export asked for them and the caller could read them. */
+  readonly comments?: readonly CommentThreadSnapshot[];
 }
 
 /**
