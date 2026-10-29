@@ -16,7 +16,7 @@ export function WritingModeControl(): ReactNode {
       onOpenChange={setOpen}
       trigger={(trigger) => (
         <Button
-          variant="ghost"
+          variant="subtle"
           className="shrink-0 whitespace-nowrap"
           {...trigger}
           aria-label={`Writing mode: ${WRITING_MODES[mode].label}`}
@@ -32,8 +32,8 @@ export function WritingModeControl(): ReactNode {
           {WritingModeSchema.options.map((choice) => (
             <Button
               key={choice}
-              variant="ghost"
-              className="h-auto w-full shrink-0 flex-col items-start whitespace-normal py-3 text-left any-pointer-coarse:h-auto any-pointer-coarse:min-h-(--control-lg)"
+              variant="subtle"
+              className={`h-auto w-full shrink-0 flex-col items-start whitespace-normal py-3 text-left any-pointer-coarse:h-auto any-pointer-coarse:min-h-(--control-lg) ${mode === choice ? 'bg-accent/18 text-foreground' : ''}`}
               aria-pressed={mode === choice}
               onClick={() => {
                 setMode(choice);

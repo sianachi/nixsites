@@ -519,7 +519,7 @@ export function EditorToolbar({
         )}
         {writingModeControl}
         <Button
-          variant="ghost"
+          variant="subtle"
           className="shrink-0 whitespace-nowrap"
           onClick={() => {
             setMoreOpen(true);
@@ -540,7 +540,7 @@ export function EditorToolbar({
               {more.map((control) => (
                 <Button
                   key={control.id}
-                  variant="ghost"
+                  variant="subtle"
                   className="h-auto min-h-(--control-lg) min-w-0 justify-start whitespace-normal text-left any-pointer-coarse:h-auto"
                   disabled={control.enabled === false}
                   aria-pressed={control.active}
@@ -556,7 +556,7 @@ export function EditorToolbar({
               {onInsertItem ? (
                 <>
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       setMoreOpen(false);
                       onInsertItem('attachment');
@@ -565,7 +565,7 @@ export function EditorToolbar({
                     Attachment
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       setMoreOpen(false);
                       onInsertItem('embed');
@@ -574,7 +574,7 @@ export function EditorToolbar({
                     Embed note
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       setMoreOpen(false);
                       onInsertItem('subpage');
@@ -583,7 +583,7 @@ export function EditorToolbar({
                     New subpage
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     disabled={editor.state.selection.$from.depth > 1}
                     onClick={() => {
                       setMoreOpen(false);
@@ -642,7 +642,7 @@ export function EditorToolbar({
         }}
         trigger={(trigger) => (
           <Button
-            variant="ghost"
+            variant="subtle"
             {...trigger}
             ref={(element) => {
               trigger.ref.current = element;
@@ -693,7 +693,7 @@ export function EditorToolbar({
               {(['attachment', 'embed', 'subpage'] as const).map((kind) => (
                 <Button
                   key={kind}
-                  variant="ghost"
+                  variant="subtle"
                   className="justify-start"
                   onClick={() => {
                     setInsertOpen(false);
@@ -708,7 +708,7 @@ export function EditorToolbar({
           ) : null}
           {onPageBreak !== undefined ? (
             <Button
-              variant="ghost"
+              variant="subtle"
               className="justify-start"
               disabled={editor.state.selection.$from.depth > 1}
               onClick={() => {
@@ -763,7 +763,7 @@ function ControlPopover({
       onOpenChange={setOpen}
       trigger={(trigger) => (
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-label={label === 'Block type' ? `${label}: ${triggerLabel}` : triggerLabel}
           {...trigger}
         >
@@ -813,7 +813,7 @@ function ControlOption({
 }): ReactNode {
   return (
     <Button
-      variant="ghost"
+      variant="subtle"
       className={[
         'w-full justify-start',
         control.active === true ? 'bg-accent/18 text-foreground' : '',

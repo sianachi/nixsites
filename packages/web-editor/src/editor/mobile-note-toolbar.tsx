@@ -100,7 +100,7 @@ export function MobileNoteToolbar({
     >
       {collapsed ? (
         <Button
-          variant="ghost"
+          variant="subtle"
           onMouseDown={(event) => {
             event.preventDefault();
           }}
@@ -132,7 +132,7 @@ export function MobileNoteToolbar({
             </div>
             {actions || details ? (
               <Button
-                variant="ghost"
+                variant="subtle"
                 className="shrink-0"
                 onClick={() => {
                   setActionsOpen(true);
@@ -166,7 +166,7 @@ export function MobileNoteToolbar({
         >
           {details ? (
             <Button
-              variant="ghost"
+              variant="subtle"
               className="justify-start"
               aria-expanded={details.open}
               onClick={() => {

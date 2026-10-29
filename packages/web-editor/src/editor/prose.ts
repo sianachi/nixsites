@@ -236,13 +236,13 @@ export const proseClasses: Readonly<Record<string, string>> = {
 
   // Code is set one step below body copy - a monospace face runs visually larger at the same size
   // - and scrolls rather than wraps, because a wrapped line of code is a misread line of code.
-  codeBlock: `${BLOCK_GAP} overflow-x-auto border border-divider bg-surface px-4 py-3 font-mono ${DOCUMENT_SECONDARY_STEP} text-foreground`,
+  codeBlock: `${BLOCK_GAP} overflow-x-auto rounded-md border border-divider bg-surface px-4 py-3 font-mono ${DOCUMENT_SECONDARY_STEP} text-foreground`,
 
   horizontalRule: 'my-8 border-t border-divider',
 
   itemBlock: `${BLOCK_GAP} rounded-md border border-divider p-4`,
   pageBreak: `${BLOCK_GAP} border-y border-dashed border-divider py-3`,
-  image: `${BLOCK_GAP} block h-auto max-w-full border border-divider`,
+  image: `${BLOCK_GAP} block h-auto max-w-full rounded-md border border-divider`,
 
   // Tables. `table-fixed` is what makes the column widths prosemirror-tables writes into the
   // colgroup take effect; without it the browser re-measures from content and dragging a column
@@ -320,7 +320,7 @@ export const proseClasses: Readonly<Record<string, string>> = {
   italic: 'italic',
   underline: 'underline underline-offset-2',
   strike: 'line-through',
-  code: `border border-divider bg-surface px-1 py-0.5 font-mono ${DOCUMENT_SECONDARY_STEP}`,
+  code: `rounded-sm border border-divider bg-surface px-1 py-0.5 font-mono ${DOCUMENT_SECONDARY_STEP}`,
 
   // Highlight is a fixed pale wash with dark ink on top, for the same reason the text selection
   // is: it stands for a marker pen, and a marker pen does not invert.

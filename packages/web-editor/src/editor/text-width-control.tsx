@@ -10,7 +10,7 @@ export function TextWidthControl(): ReactNode {
     <Popover
       label="Text width"
       trigger={(trigger) => (
-        <Button variant="ghost" className="shrink-0 whitespace-nowrap" {...trigger}>
+        <Button variant="subtle" className="shrink-0 whitespace-nowrap" {...trigger}>
           <Icon icon={Ruler} size="sm" />
           Text width
         </Button>
@@ -21,8 +21,8 @@ export function TextWidthControl(): ReactNode {
           {(['reading', 'full'] as const).map((choice) => (
             <Button
               key={choice}
-              variant="ghost"
-              className="justify-start"
+              variant="subtle"
+              className={`justify-start ${width === choice ? 'bg-accent/18 text-foreground' : ''}`}
               aria-pressed={width === choice}
               onClick={() => {
                 setWidth(choice);

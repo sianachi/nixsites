@@ -1102,8 +1102,8 @@ export function NoteEditor({
               <>
                 <WritingModeControl />
                 <Button
-                  variant="ghost"
-                  className="shrink-0 whitespace-nowrap"
+                  variant="subtle"
+                  className={`shrink-0 whitespace-nowrap ${markdownMode?.phase === 'open' ? 'bg-accent/18 text-foreground' : ''}`}
                   aria-pressed={markdownMode?.phase === 'open'}
                   onClick={() => {
                     if (markdownMode !== null) {

@@ -160,7 +160,7 @@ export function MarkdownModePanel({
         />
         {trigger === null ? null : (
           // shortcut: the list sits under the textarea, not at the caret (textareas have no caret rect); upgrade if users find it far from the cursor
-          <div className="flex max-h-64 shrink-0 flex-col overflow-y-auto border border-divider bg-background">
+          <div className="flex max-h-64 shrink-0 flex-col overflow-y-auto rounded-md border border-divider bg-background">
             <Listbox
               label="Items to link to"
               options={options}

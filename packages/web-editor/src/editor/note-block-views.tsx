@@ -404,7 +404,7 @@ export function ItemBlockView(
         </Text>
         {embed && state.status === 'resolved' ? (
           <Button
-            variant="ghost"
+            variant="subtle"
             aria-expanded={expanded}
             onClick={() => {
               setExpanded(!expanded);
@@ -425,7 +425,7 @@ export function ItemBlockView(
         ) : null}
         {props.editor.isEditable ? (
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => {
               props.deleteNode();
             }}
@@ -478,7 +478,7 @@ export function PageBreakView(props: ReactNodeViewProps): ReactNode {
       </Text>
       {props.editor.isEditable ? (
         <Button
-          variant="ghost"
+          variant="subtle"
           onClick={() => {
             props.deleteNode();
           }}

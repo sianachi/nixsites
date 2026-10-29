@@ -130,7 +130,7 @@ export function MentionBubbleView({
         {formatShortcut(LINK_MENTION_SHORTCUT)}
       </Text>
       <Button
-        variant="ghost"
+        variant="subtle"
         onMouseDown={(event) => {
           event.preventDefault();
         }}

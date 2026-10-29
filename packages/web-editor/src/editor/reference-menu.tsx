@@ -295,7 +295,7 @@ export function ReferenceMenu({
       // the scroller - which the editor does under it.
       style={menuPosition} // design-token-exempt: a caret's position is a runtime measurement, not a scale step.
       className={[
-        'fixed z-20 flex flex-col overflow-y-auto border border-divider bg-background shadow-md',
+        'fixed z-20 flex flex-col overflow-y-auto rounded-md border border-divider bg-background shadow-md',
         placement.above ? '-mb-1 -translate-y-full' : 'mt-1',
       ].join(' ')}
     >
