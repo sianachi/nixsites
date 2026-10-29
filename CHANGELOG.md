@@ -26,6 +26,21 @@ follows semantic versioning (`0.x` pre-1.0).
   never searched. Notes are indexed as they are next saved, and existing notes in the background.
   The API image is about 35 MB larger, the API uses 100-250 MB more memory, and its memory limit
   in the Compose and Kubernetes files rises from 512 MB to 768 MB.
+- Drag files and folders from your computer onto the Explorer. Dropping on an item puts them
+  inside it, between items puts them beside it, and on empty space at the top of the workspace.
+  A folder becomes a note holding its files and subfolders.
+- An embedded note shows its views as well as its text, with tabs to switch between them. The view
+  you pick is saved with the embed, so everyone opening the page sees the same one.
+- Comments on notes: select text and choose Comment, or leave a comment on the whole page.
+  Threads take replies, can be resolved and reopened, and update live. @mentions and replies
+  notify the people in the thread. The Commenter role can now comment without editing. Exports can
+  include comments, and `.nix` archives carry them. The MCP tools `list_comments`, `add_comment`,
+  `reply_comment` and `resolve_comment` read and write them.
+- Suggesting mode: turn it on to propose edits instead of making them. Typing, deleting,
+  formatting and block changes (new paragraphs, lists, indents) show as suggestions that others
+  accept or reject one by one, from the Comments pane, or all at once. Published sites and exports
+  show the document as it was before the suggestions.
+- A word count, reading time and heading outline under every note.
 
 ### Changed
 
