@@ -48,6 +48,8 @@ export interface ItemComments {
   readonly errorDetail: string | null;
   /** The body has synced, so anchors can be trusted to decode; before then nothing is drawn. */
   readonly ready: boolean;
+  /** Whether the viewer may comment, as the server last said; null until the first answer. */
+  readonly canComment: boolean | null;
   readonly activeThreadId: string | null;
   /** Threads whose anchor no longer resolves to text. */
   readonly detached: readonly string[];
@@ -68,6 +70,7 @@ const EMPTY: ItemComments = {
   errorCode: null,
   errorDetail: null,
   ready: false,
+  canComment: null,
   activeThreadId: null,
   detached: [],
   suggestions: [],
@@ -211,25 +214,36 @@ function blockQuoteText(block: ProseMirrorNode): string {
 }
 
 /**
- * Where `quote` occurs inside a single block, when it occurs exactly once in the document; a
- * repeated phrase is ambiguous, so it stays detached rather than guessing. A quote that spans
- * blocks is never found.
+ * Where `quote` occurs in the document, when it occurs exactly once; a repeated phrase is
+ * ambiguous, so it stays detached rather than guessing. The search runs over the same text
+ * `captureAnchor` quotes (blocks joined by one space), so a quote that spans paragraphs is found.
  */
 export function findQuote(
   doc: ProseMirrorNode,
   quote: string,
 ): { from: number; to: number } | null {
-  const hits: { from: number; to: number }[] = [];
+  // Each text block with the offset its text starts at in the joined string.
+  const blocks: { pos: number; start: number; length: number }[] = [];
+  let text = '';
   doc.descendants((node, pos) => {
-    if (hits.length > 1) return false;
     if (!node.isTextblock) return true;
-    const text = blockQuoteText(node);
-    for (let index = text.indexOf(quote); index >= 0; index = text.indexOf(quote, index + 1)) {
-      hits.push({ from: pos + 1 + index, to: pos + 1 + index + quote.length });
-    }
+    const block = blockQuoteText(node);
+    blocks.push({
+      pos: pos + 1,
+      start: text.length + (blocks.length > 0 ? 1 : 0),
+      length: block.length,
+    });
+    text += (blocks.length > 1 ? ' ' : '') + block;
     return false;
   });
-  return hits.length === 1 ? (hits[0] ?? null) : null;
+  const first = text.indexOf(quote);
+  if (first < 0 || quote.length === 0 || text.indexOf(quote, first + 1) >= 0) return null;
+  const end = first + quote.length;
+  const from = blocks.find((block) => first < block.start + block.length);
+  const to = blocks.find((block) => end > block.start && end <= block.start + block.length);
+  return from === undefined || to === undefined
+    ? null
+    : { from: from.pos + first - from.start, to: to.pos + end - to.start };
 }
 
 export const commentAnchorsKey = new PluginKey<Computed | null>('nixCommentAnchors');

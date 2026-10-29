@@ -45,7 +45,7 @@ import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { BubbleMenu } from './bubble-menu';
-import { CommentAnchors, captureAnchor, requestComment } from './comment-anchors';
+import { CommentAnchors, captureAnchor, requestComment, useItemComments } from './comment-anchors';
 import { useCommentSync } from './use-comment-sync';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import { EditorToolbar, SuggestingControl } from './toolbar';
@@ -833,6 +833,17 @@ export function NoteEditor({
   }, [editor, writingMode]);
 
   const [suggesting, setSuggestingOn] = useState(false);
+  const suggestingKey = `nix.suggesting.${itemId}`;
+  // Per viewer and per note, kept on this device only; applied once the note can be edited.
+  useEffect(() => {
+    if (readOnly || stale) return;
+    try {
+      if (localStorage.getItem(suggestingKey) === '1') setSuggestingOn(true);
+    } catch {
+      // Storage can be blocked; suggesting then starts off each time.
+    }
+  }, [suggestingKey, readOnly, stale]);
+  const { canComment } = useItemComments(itemId);
   const suggestionsPending = useEditorState({
     editor,
     selector: ({ editor: current }) => hasSuggestions(current.state.doc),
@@ -1157,6 +1168,12 @@ export function NoteEditor({
                     pending={suggestionsPending}
                     onToggle={() => {
                       setSuggestingOn(!suggesting);
+                      try {
+                        if (suggesting) localStorage.removeItem(suggestingKey);
+                        else localStorage.setItem(suggestingKey, '1');
+                      } catch {
+                        // Not remembered; the switch still works for this session.
+                      }
                     }}
                   />
                 )}
@@ -1390,9 +1407,13 @@ export function NoteEditor({
               {stale || bodyUnavailable ? null : (
                 <BubbleMenu
                   editor={editor}
-                  onComment={() => {
-                    requestComment(itemId, captureAnchor(editor.view));
-                  }}
+                  onComment={
+                    canComment === true
+                      ? () => {
+                          requestComment(itemId, captureAnchor(editor.view));
+                        }
+                      : undefined
+                  }
                   onOpenInlineAi={
                     inlineAi.available
                       ? () => {
@@ -1406,7 +1427,7 @@ export function NoteEditor({
               <MentionBubble editor={editor} />
               {readOnly || stale ? null : <TableMenu editor={editor} />}
             </PaneViewport>
-            {hideToolbar || bodyUnavailable ? null : <NoteStatsFooter editor={editor} />}
+            {hideToolbar || narrow || bodyUnavailable ? null : <NoteStatsFooter editor={editor} />}
 
             {itemRequest !== null && workspaceId !== undefined ? (
               <ItemInsertDialog

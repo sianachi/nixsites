@@ -109,6 +109,16 @@ describe('comment anchors', () => {
     expect(captureAnchor(target.view)?.quote).toBe('one fn() two');
   });
 
+  it('finds a quote that spans two paragraphs, and only when it is unique', () => {
+    const target = makeEditor();
+    target.commands.setTextSelection({ from: 7, to: 20 });
+    const quote = captureAnchor(target.view)?.quote;
+    expect(quote).toBe('world Second');
+    expect(findQuote(target.state.doc, 'world Second')).toEqual({ from: 7, to: 20 });
+    target.commands.setContent('<p>Hello world</p><p>Second</p><p>Hello world</p><p>Second</p>');
+    expect(findQuote(target.state.doc, 'world Second')).toBeNull();
+  });
+
   it('keeps a highlight on its words through a local edit before it', () => {
     const target = makeEditor();
     target.commands.setTextSelection({ from: 7, to: 12 });

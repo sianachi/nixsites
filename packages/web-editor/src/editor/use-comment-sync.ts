@@ -58,6 +58,7 @@ function runFeed(client: NixClient, itemId: string): () => void {
     patchComments(itemId, {
       threads: answer.threads,
       revision: answer.revision,
+      canComment: answer.canComment,
       status: 'ready',
       errorCode: null,
       errorDetail: null,
@@ -197,19 +198,19 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
     };
   }, [editor, itemId, ready]);
 
-  // Re-anchor the threads that lost their text, one at a time: a viewer's first 403 ends the
-  // attempts for the whole note, so the rest are never sent. Only detached threads get here
+  // Re-anchor the threads that lost their text, one at a time, and only for someone who may
+  // comment (the server says so with every list). Only detached threads get here
   // (never anchored, or anchors that decode to nothing), and `findQuote` answers only for a
   // quote that occurs exactly once.
-  const { detached: lost, threads } = useItemComments(itemId);
+  const { detached: lost, threads, canComment } = useItemComments(itemId);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || canComment !== true) return;
     const detached = reanchorCandidates(itemId, threads, lost);
     if (detached.length === 0) return;
     let cancelled = false;
     void (async () => {
       for (const id of detached) {
-        if (cancelled || refused.has(itemId)) return;
+        if (cancelled) return;
         if (attempted.has(`${itemId}:${id}`)) continue;
         attempted.add(`${itemId}:${id}`);
         const quote = readComments(itemId).threads.find((thread) => thread.id === id)?.quote;
@@ -220,22 +221,15 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
         try {
           await client.execute(comments.setAnchor(itemId, id, range.start, range.end));
           readComments(itemId).refresh();
-        } catch (reason) {
-          // Only the author may move an anchor: that thread is given up (it is in `attempted`), the rest go on.
-          if (
-            isNixApiError(reason) &&
-            reason.status === 403 &&
-            reason.code !== 'comments.not_author'
-          ) {
-            refused.add(itemId);
-          }
+        } catch {
+          // Only the author may move an anchor, or the thread is gone: it is in `attempted`, so it is not retried.
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [client, lost, threads, editor, itemId, ready]);
+  }, [client, lost, threads, canComment, editor, itemId, ready]);
 
   // Last, so it cleans up last on unmount and no cleanup above writes into a forgotten entry.
   useCommentFeed(itemId);
@@ -270,5 +264,3 @@ export function reanchorCandidates(
 
 /** Threads already tried this session, so a failed or repeated re-anchor never loops. */
 const attempted = new Set<string>();
-/** Notes where the viewer may not comment, so re-anchoring is not tried again. */
-const refused = new Set<string>();

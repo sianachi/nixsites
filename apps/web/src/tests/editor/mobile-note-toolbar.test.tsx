@@ -62,7 +62,7 @@ it('hides on typing, reveals on demand, and releases its subscription', async ()
   const blur = vi.fn();
   const editor = {
     isFocused: true,
-    state: { selection: { empty: true } },
+    state: { selection: { empty: true }, doc: { descendants: () => undefined } },
     commands: { blur },
     on: (_: string, listener: () => void) => listeners.add(listener),
     off: (_: string, listener: () => void) => listeners.delete(listener),

@@ -39,7 +39,13 @@ export function readNoteStats(doc: ProseMirrorNode): NoteStats {
   return { words, minutes: Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)), outline };
 }
 
-export function NoteStatsFooter({ editor }: { readonly editor: Editor }): ReactNode {
+export function NoteStatsFooter({
+  editor,
+  className = 'px-5 py-1 sm:px-8',
+}: {
+  readonly editor: Editor;
+  readonly className?: string;
+}): ReactNode {
   const [stats, setStats] = useState(() => readNoteStats(editor.state.doc));
 
   useEffect(() => {
@@ -58,7 +64,7 @@ export function NoteStatsFooter({ editor }: { readonly editor: Editor }): ReactN
   }, [editor]);
 
   return (
-    <div className="flex shrink-0 items-center gap-3 px-5 py-1 sm:px-8">
+    <div className={`flex shrink-0 items-center gap-3 ${className}`}>
       <Text variant="caption" tone="muted">
         {stats.words} {stats.words === 1 ? 'word' : 'words'} · {stats.minutes} min read
       </Text>

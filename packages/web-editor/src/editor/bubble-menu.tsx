@@ -351,6 +351,15 @@ export function BubbleMenu({
     placement !== null &&
     !(dismissed !== null && dismissed.from === placement.from && dismissed.to === placement.to);
 
+  // Choosing Comment opens the pane, so the menu steps aside for this selection (like Escape).
+  const comment =
+    onComment === undefined
+      ? undefined
+      : (): void => {
+          if (placement !== null) setDismissed({ from: placement.from, to: placement.to });
+          onComment();
+        };
+
   // Nothing below this line is worth computing for a menu that draws nothing - and a dismissed
   // menu is exactly that for as long as the selection it was dismissed over stands: `placement`
   // stays set, so every transaction and every scroll still re-renders this component. The live
@@ -370,7 +379,7 @@ export function BubbleMenu({
 
   // A note that cannot be edited can still be commented on: the bubble then holds that one button.
   if (!editor.isEditable) {
-    if (onComment === undefined) return null;
+    if (comment === undefined) return null;
     return (
       <div
         role="toolbar"
@@ -386,7 +395,7 @@ export function BubbleMenu({
       >
         <button
           type="button"
-          onClick={onComment}
+          onClick={comment}
           className="flex min-h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-xs hover:bg-foreground/7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
         >
           <Icon icon={MessageSquarePlus} size="sm" />
@@ -411,7 +420,7 @@ export function BubbleMenu({
   // widget with one tab stop. Offered only where the note can be written to.
   const aiIndex = onOpenInlineAi !== undefined ? runnable.length : null;
   if (aiIndex !== null) runnable.push(true);
-  const commentIndex = onComment !== undefined ? runnable.length : null;
+  const commentIndex = comment !== undefined ? runnable.length : null;
   if (commentIndex !== null) runnable.push(true);
   // Accept and Reject, for the suggestion(s) under the selection: two more stops in the same row.
   const suggestionIds = suggestionIdsAt(editor.state);
@@ -619,7 +628,7 @@ export function BubbleMenu({
             aria-label="Comment"
             title="Comment"
             tabIndex={commentIndex === tabStop ? 0 : -1}
-            onClick={onComment}
+            onClick={comment}
             className="flex min-h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-xs hover:bg-foreground/7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
           >
             <Icon icon={MessageSquarePlus} size="sm" />

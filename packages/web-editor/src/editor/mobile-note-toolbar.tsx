@@ -2,6 +2,7 @@ import { Button, Dialog } from '@nix/ui';
 import { flushSync } from 'react-dom';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
+import { NoteStatsFooter } from './note-stats';
 import { useMobileToolbarPreference } from './mobile-toolbar-preference';
 
 /**
@@ -112,6 +113,8 @@ export function MobileNoteToolbar({
         </Button>
       ) : (
         <>
+          {/* The word count and Outline live in the dock on phones: it covers the page footer. */}
+          {editor ? <NoteStatsFooter editor={editor} className="px-2 pb-1" /> : null}
           <div className="flex min-w-0 items-center gap-1">
             <div
               className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
