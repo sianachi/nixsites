@@ -7,9 +7,9 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prosemirrorJSONToYDoc } from 'y-prosemirror';
 import * as Y from 'yjs';
-import { ItemBlockView, NoteSourcesProvider } from '@nix/web-editor/editor/note-block-views';
-import { ReferenceResolutionProvider } from '@nix/web-editor/editor/reference-resolution';
-import type { CollabSyncOptions } from '@nix/web-editor/editor/collab-sync';
+import { ItemBlockView, NoteSourcesProvider } from '../../editor/note-block-views';
+import { ReferenceResolutionProvider } from '../../editor/reference-resolution';
+import type { CollabSyncOptions } from '../../editor/collab-sync';
 const harness = vi.hoisted(() => ({
   query: vi.fn(),
   start: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('@nix/web-platform/auth/auth-provider', () => ({
   useAuth: () => ({ getAccessToken: () => Promise.resolve('token') }),
 }));
 vi.mock('@nix/web-platform/routing/selected-item', () => ({ useSelectedItem: () => harness }));
-vi.mock('@nix/web-editor/editor/collab-sync', () => ({
+vi.mock('../../editor/collab-sync', () => ({
   FRAGMENT_NAME: 'default',
   startCollabSync: (options: CollabSyncOptions) => {
     harness.start(options);

@@ -5,10 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
-import {
-  ReferenceResolutionProvider,
-  useReference,
-} from '@nix/web-editor/editor/reference-resolution';
+import { ReferenceResolutionProvider, useReference } from '../../editor/reference-resolution';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 /**
