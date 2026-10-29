@@ -63,7 +63,7 @@ export function Segmented<TValue extends string>(props: SegmentedProps<TValue>):
       aria-label={label}
       aria-describedby={describedBy}
       className={cn(
-        'flex min-w-0 flex-wrap items-center gap-0.5 rounded-md bg-surface p-0.5',
+        'flex max-w-full min-w-0 shrink-0 flex-wrap items-center gap-0.5 rounded-md bg-surface p-0.5',
         className,
       )}
     >
@@ -74,12 +74,13 @@ export function Segmented<TValue extends string>(props: SegmentedProps<TValue>):
           <button
             key={option.value}
             type="button"
+            title={option.label}
             aria-current={current ? 'true' : undefined}
             onClick={() => {
               onChange(option.value);
             }}
             className={cn(
-              'min-w-0 flex-1 rounded-sm px-2 py-1 text-sm wrap-anywhere transition-colors',
+              'min-w-0 flex-auto truncate rounded-sm px-2 py-1 text-sm transition-colors',
               'any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) any-pointer-coarse:text-md',
               focusRing,
               current

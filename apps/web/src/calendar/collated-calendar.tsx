@@ -252,7 +252,6 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
-          className="shrink-0 [&_button]:whitespace-nowrap"
           label="Calendar grain"
           options={GRAINS}
           value={grain}
