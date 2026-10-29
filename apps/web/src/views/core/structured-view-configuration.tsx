@@ -2,11 +2,8 @@ import { Button, Field, Icon, Select, Text, focusRing } from '@nix/ui';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { ChartOptionsEditor } from '../chart/chart-options-editor';
-import { InteractiveFormEditor } from '../form/interactive-form-editor';
-import { resolveDoneProperty } from '../checklist/checklist-view';
-import { FilterRulesEditor } from '../query/filter-rules-editor';
 import type { PropertyDefinition, View } from './container-model';
+import { FilterRulesEditor } from './filter-rules-editor';
 import { LineListInput } from './line-list-input';
 import { OPEN_MODES, OPEN_MODE_LABELS } from './open-policy';
 import { findViewKind } from './view-kinds';
@@ -133,10 +130,6 @@ export function StructuredViewConfiguration({
         )}
       </Field>
 
-      {view.kind === 'chart' ? (
-        <ChartOptionsEditor view={view} fields={fields} onChange={onChange} />
-      ) : null}
-
       {view.kind === 'board' ? (
         <Field label="Column order" hint="One select option per line.">
           {(control) => (
@@ -153,10 +146,6 @@ export function StructuredViewConfiguration({
             />
           )}
         </Field>
-      ) : null}
-
-      {view.kind === 'checklist' ? (
-        <ChecklistDetailChoice view={view} fields={fields} onChange={onChange} />
       ) : null}
 
       {view.kind === 'calendar' || view.kind === 'timeline' ? (
@@ -198,6 +187,8 @@ export function StructuredViewConfiguration({
         </Field>
       ) : null}
 
+      {descriptor?.configurationEditor?.({ view, fields, onChange })}
+
       {showColumns ? <ViewColumns view={view} fields={fields} onChange={onChange} /> : null}
 
       {showSort ? <SortChoice view={view} fields={fields} onChange={onChange} /> : null}
@@ -222,63 +213,7 @@ export function StructuredViewConfiguration({
           }}
         />
       ) : null}
-
-      {view.kind === 'interactive_form' && view.interactiveForm != null ? (
-        <InteractiveFormEditor
-          form={view.interactiveForm}
-          schema={fields}
-          itemId={null}
-          viewId={view.id}
-          showPublishing={false}
-          onChange={(interactiveForm) => {
-            onChange({ ...view, interactiveForm });
-          }}
-        />
-      ) : null}
     </>
-  );
-}
-
-/**
- * The one property a checklist shows beside each title. Stored as the view's first column, which
- * is what a list switched to a checklist already has there; a checklist has room for one, so this
- * is a single choice rather than the list's ordered column picker.
- */
-function ChecklistDetailChoice({
-  view,
-  fields,
-  onChange,
-}: {
-  readonly view: View;
-  readonly fields: readonly PropertyDefinition[];
-  readonly onChange: (view: View) => void;
-}): ReactNode {
-  const current = view.columns.find((key) => key !== 'title') ?? '';
-  // The box is already on every line, so the property it ticks is not offered as the detail too.
-  const done = resolveDoneProperty(fields, view.doneProperty);
-  const offered = fields.filter(
-    (field) => done.kind !== 'ready' || field.key !== done.property.key,
-  );
-  return (
-    <Field label="Shown beside each line" hint="One property, read-only, after the title.">
-      {(control) => (
-        <Select
-          {...control}
-          value={current}
-          onChange={(event) => {
-            const value = event.target.value;
-            onChange({ ...view, columns: value.length === 0 ? [] : [value] });
-          }}
-        >
-          <option value="">Nothing</option>
-          {offered.map((field) => (
-            <option key={field.key} value={field.key}>
-              {field.label}
-            </option>
-          ))}
-        </Select>
-      )}
-    </Field>
   );
 }
 

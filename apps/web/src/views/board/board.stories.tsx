@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 
 import type { PropertyDefinition } from '../core/container-model';
 import { storyContainer, storyItem } from '../core/story-container';
-import { RecordViewStory, recordStoryView } from '../list/record-view-story';
+import { recordStoryView } from '../core/story-container';
+import { RecordViewStory } from '../list/record-view-story';
 import { BoardView } from './board-view';
 
 export default { title: 'Nix/Views/Board', parameters: { layout: 'padded' } };

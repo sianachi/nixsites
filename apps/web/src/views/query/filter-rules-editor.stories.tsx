@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react';
 import { within } from '@testing-library/dom';
 
 import { filterGroup, type PropertyDefinition, type ViewFilterRule } from '../core/container-model';
-import { FilterRulesEditor } from './filter-rules-editor';
+import { FilterRulesEditor } from '../core/filter-rules-editor';
 
 /**
  * The filter rules editor in each of its shapes - plain conditions, an "any of" group, the

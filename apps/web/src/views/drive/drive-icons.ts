@@ -32,30 +32,6 @@ export function driveKindIcon(item: Item): LucideIcon {
   }
 }
 
-/**
- * The word a person sees in a body kind's own name.
- *
- * Not used for files, which name themselves after their extension instead (see `drive-file-info`) -
- * "kind" for a file means what is inside it, and an item's body kind ("file") says nothing about
- * that.
- */
-export function driveBodyKindLabel(type: string): string {
-  switch (type) {
-    case 'note':
-      return 'Note';
-    case 'canvas':
-      return 'Canvas';
-    case 'spreadsheet':
-      return 'Spreadsheet';
-    case 'artifact':
-      return 'Artifact';
-    case 'file':
-      return 'File';
-    default:
-      return type.length === 0 ? 'Item' : type.slice(0, 1).toUpperCase() + type.slice(1);
-  }
-}
-
 /** Whether a child can hold the sort of thing a "move into" destination has to be. */
 export function isDriveContainerCandidate(item: Item): boolean {
   // Every item can in principle hold children, but the drive only offers what already reads as a

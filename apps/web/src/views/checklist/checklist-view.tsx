@@ -1,4 +1,15 @@
-import { Button, Checkbox, ContextMenu, Icon, Input, Text, cn, focusRing } from '@nix/ui';
+import {
+  Button,
+  Checkbox,
+  ContextMenu,
+  Field,
+  Icon,
+  Input,
+  Select,
+  Text,
+  cn,
+  focusRing,
+} from '@nix/ui';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
@@ -16,6 +27,7 @@ import { propertyTypeWord, valueShapeOf } from '../core/property-types';
 import type { ContainerData } from '../core/use-container';
 import { useItemContextActions } from '../core/use-item-context-actions';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
+import type { ViewConfigurationEditorProps } from '../core/view-kinds';
 import { useViewState } from '../core/view-state';
 
 /**
@@ -421,5 +433,44 @@ function AddLine({
         )}
       </form>
     </li>
+  );
+}
+
+/**
+ * The one property a checklist shows beside each title. Stored as the view's first column, which
+ * is what a list switched to a checklist already has there; a checklist has room for one, so this
+ * is a single choice rather than the list's ordered column picker.
+ */
+export function ChecklistDetailChoice({
+  view,
+  fields,
+  onChange,
+}: ViewConfigurationEditorProps): ReactNode {
+  const current = view.columns.find((key) => key !== 'title') ?? '';
+  // The box is already on every line, so the property it ticks is not offered as the detail too.
+  const done = resolveDoneProperty(fields, view.doneProperty);
+  const offered = fields.filter(
+    (field) => done.kind !== 'ready' || field.key !== done.property.key,
+  );
+  return (
+    <Field label="Shown beside each line" hint="One property, read-only, after the title.">
+      {(control) => (
+        <Select
+          {...control}
+          value={current}
+          onChange={(event) => {
+            const value = event.target.value;
+            onChange({ ...view, columns: value.length === 0 ? [] : [value] });
+          }}
+        >
+          <option value="">Nothing</option>
+          {offered.map((field) => (
+            <option key={field.key} value={field.key}>
+              {field.label}
+            </option>
+          ))}
+        </Select>
+      )}
+    </Field>
   );
 }

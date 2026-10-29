@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import { recordStoryView } from '../list/record-view-story';
 import type { PropertyDefinition } from './container-model';
 import { SchemaEditor } from './schema-editor';
-import { storyContainer } from './story-container';
+import { recordStoryView, storyContainer } from './story-container';
 import { ViewEditor } from './view-editor';
 import { ViewSwitcher } from './view-switcher';
 

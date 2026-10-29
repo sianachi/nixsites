@@ -1,4 +1,3 @@
-import { driveBodyKindLabel } from '../drive/drive-icons';
 import {
   readSelectValue,
   type Item,
@@ -201,5 +200,29 @@ export function describeAxisProblem(
       return `Its ${role} came from a property that is no longer here. Choose another in this view's settings.`;
     case 'wrongType':
       return `Its ${role} come from "${resolution.property.label}", a ${propertyTypeWord(resolution.property.type)} property; only a select or a checkbox can make ${role}.`;
+  }
+}
+
+/**
+ * The word a person sees in a body kind's own name.
+ *
+ * Not used for files, which name themselves after their extension instead (see `drive-file-info`) -
+ * "kind" for a file means what is inside it, and an item's body kind ("file") says nothing about
+ * that.
+ */
+export function driveBodyKindLabel(type: string): string {
+  switch (type) {
+    case 'note':
+      return 'Note';
+    case 'canvas':
+      return 'Canvas';
+    case 'spreadsheet':
+      return 'Spreadsheet';
+    case 'artifact':
+      return 'Artifact';
+    case 'file':
+      return 'File';
+    default:
+      return type.length === 0 ? 'Item' : type.slice(0, 1).toUpperCase() + type.slice(1);
   }
 }

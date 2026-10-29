@@ -731,3 +731,11 @@ export function sortItemsBy(
 
   return decorated.map((entry) => entry.item);
 }
+
+/** `base`, or `base-2`, `base-3`... - the first one not already taken. */
+export function uniqueIdentifier(base: string, taken: ReadonlySet<string>): string {
+  if (!taken.has(base)) return base;
+  let suffix = 2;
+  while (taken.has(`${base}-${String(suffix)}`)) suffix += 1;
+  return `${base}-${String(suffix)}`;
+}

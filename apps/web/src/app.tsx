@@ -37,9 +37,13 @@ import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/wor
 import { PetCompanion } from './pets/pet-companion';
 import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
 import { provideArtifactView } from '@nix/web-editor/editor/artifact-view-slot';
+import { registerViews } from './register-views';
 
 // An embedded artifact brings the OpenUI renderer, loaded only when one is embedded.
 provideArtifactView(lazy(() => import('./openui/artifact-view')));
+
+// Every view kind, before the first render: the real app and the demo both mount from here.
+registerViews();
 
 // Loaded when somebody opens /tokens, not before: the specimens are about 35 kB of design-lane
 // reference material - every ramp step, every type scale, every rhythm demo - and nobody working

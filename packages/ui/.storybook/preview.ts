@@ -60,6 +60,15 @@ const withGround: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
+  // The stories under apps/web draw views, which look their kind up in the app's registry. Loaded
+  // here rather than imported above, so the view modules evaluate after the Excalidraw asset path.
+  // The test runner calls this once per story file over one module graph, so it registers once.
+  beforeAll: async () => {
+    const { VIEW_KINDS } = await import('../../../apps/web/src/views/core/view-kinds');
+    if (VIEW_KINDS.length === 0) {
+      (await import('../../../apps/web/src/register-views')).registerViews();
+    }
+  },
   initialGlobals: { ground: 'light' satisfies Ground },
   globalTypes: {
     ground: {

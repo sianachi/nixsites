@@ -1,4 +1,4 @@
-import type { EffectiveSchema, Item, PropertyDefinition } from './container-model';
+import type { EffectiveSchema, Item, PropertyDefinition, View } from './container-model';
 import type { ContainerData } from './use-container';
 
 /**
@@ -67,5 +67,26 @@ export function storyItem(
     properties,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
+  };
+}
+
+export function recordStoryView(kind: string, overrides: Partial<View> = {}): View {
+  return {
+    id: kind,
+    name: 'Plans',
+    kind,
+    columns: [],
+    groupBy: null,
+    groupOrder: [],
+    dateProperty: null,
+    sortBy: null,
+    sortDescending: false,
+    mode: null,
+    coverProperty: null,
+    endDateProperty: null,
+    cardSize: null,
+    layout: null,
+    filters: [],
+    ...overrides,
   };
 }

@@ -72,111 +72,114 @@ function Point({ title, children }: { readonly title: string; readonly children:
   );
 }
 
-const kindIcon = (kind: string): LucideIcon => findViewKind(kind)?.icon ?? FileText;
+// Looked up at render: the kinds register at start-up, after this module is evaluated.
+const kindIcon = (kind: string | null): LucideIcon =>
+  (kind === null ? null : findViewKind(kind))?.icon ?? FileText;
 
 /** Every view the hero can show, captured from the demo by apps/web/scripts/capture-landing.mjs. */
 const VIEWS: readonly {
   readonly id: string;
   readonly label: string;
-  readonly icon: LucideIcon;
+  /** The view kind whose icon the tab shows; null for the note, which is not a view. */
+  readonly kind: string | null;
   readonly src: string;
   readonly alt: string;
 }[] = [
   {
     id: 'note',
     label: 'Notes',
-    icon: FileText,
+    kind: null,
     src: '/landing/note.jpg',
     alt: 'A launch brief note with headings, a list and a table',
   },
   {
     id: 'board',
     label: 'Board',
-    icon: kindIcon('board'),
+    kind: 'board',
     src: '/landing/board.jpg',
     alt: 'Launch tasks as a board, in columns by status',
   },
   {
     id: 'list',
     label: 'List',
-    icon: kindIcon('list'),
+    kind: 'list',
     src: '/landing/list.jpg',
     alt: 'Launch tasks as a list with status, priority and due date',
   },
   {
     id: 'calendar',
     label: 'Calendar',
-    icon: kindIcon('calendar'),
+    kind: 'calendar',
     src: '/landing/calendar.jpg',
     alt: 'Launch tasks on a month calendar by due date',
   },
   {
     id: 'timeline',
     label: 'Timeline',
-    icon: kindIcon('timeline'),
+    kind: 'timeline',
     src: '/landing/timeline.jpg',
     alt: 'Launch tasks as bars on a quarter timeline',
   },
   {
     id: 'sheet',
     label: 'Spreadsheet',
-    icon: kindIcon('sheet'),
+    kind: 'sheet',
     src: '/landing/sheet.jpg',
     alt: 'Launch tasks as an editable spreadsheet',
   },
   {
     id: 'gallery',
     label: 'Gallery',
-    icon: kindIcon('gallery'),
+    kind: 'gallery',
     src: '/landing/gallery.jpg',
     alt: 'Launch tasks as gallery cards',
   },
   {
     id: 'checklist',
     label: 'Checklist',
-    icon: kindIcon('checklist'),
+    kind: 'checklist',
     src: '/landing/checklist.jpg',
     alt: 'Launch tasks as a checklist with ticked items',
   },
   {
     id: 'matrix',
     label: 'Matrix',
-    icon: kindIcon('matrix'),
+    kind: 'matrix',
     src: '/landing/matrix.jpg',
     alt: 'Priorities in an urgent and important matrix',
   },
   {
     id: 'outline',
     label: 'Outline',
-    icon: kindIcon('outline'),
+    kind: 'outline',
     src: '/landing/outline.jpg',
     alt: 'Launch tasks as an outline with nested steps',
   },
   {
     id: 'chart',
     label: 'Chart',
-    icon: kindIcon('chart'),
+    kind: 'chart',
     src: '/landing/chart.jpg',
     alt: 'A chart counting launch tasks by status',
   },
   {
     id: 'form',
     label: 'Form',
-    icon: kindIcon('form'),
+    kind: 'form',
     src: '/landing/form.jpg',
     alt: 'A form that adds a launch task',
   },
   {
     id: 'habits',
     label: 'Habit tracker',
-    icon: kindIcon('habit_tracker'),
+    kind: 'habit_tracker',
     src: '/landing/habits.png',
     alt: 'Habit tracker view in Nix',
   },
   {
     id: 'companion',
     label: 'Companion',
-    icon: kindIcon('chat'),
+    kind: 'chat',
     src: '/landing/companion.png',
     alt: 'Companion chat in Nix',
   },
@@ -231,7 +234,7 @@ function ViewGallery(): ReactNode {
               }}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm whitespace-nowrap outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent ${selected ? 'border-divider bg-foreground/7 text-foreground' : 'border-transparent text-muted hover:bg-foreground/5'}`}
             >
-              <Icon icon={view.icon} size="sm" />
+              <Icon icon={kindIcon(view.kind)} size="sm" />
               {view.label}
             </button>
           );

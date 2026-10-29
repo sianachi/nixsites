@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { storyContainer, storyItem } from '../core/story-container';
-import { RecordViewStory, recordStoryView } from '../list/record-view-story';
+import { recordStoryView } from '../core/story-container';
+import { RecordViewStory } from '../list/record-view-story';
 import { GalleryView } from './gallery-view';
 
 export default { title: 'Nix/Views/Gallery', parameters: { layout: 'padded' } };

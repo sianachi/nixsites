@@ -6,7 +6,7 @@ import type { PropertyDefinition as PropertyDefinitionType } from '../core/conta
 import { LineListInput } from '../core/line-list-input';
 import { PROPERTY_TYPES, isDateShaped } from '../core/property-types';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';
-import { FilterRulesEditor } from '../query/filter-rules-editor';
+import { FilterRulesEditor } from '../core/filter-rules-editor';
 import { companionView, refreshViewProperties, type StudioDraft } from './creation-studio-model';
 import { SMART_LIST_STARTERS, keyForProperty, type StructuredRecipe } from './structured-recipes';
 

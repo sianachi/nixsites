@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import { storyContainer, storyItem } from '../core/story-container';
+import { recordStoryView, storyContainer, storyItem } from '../core/story-container';
 import { ContainerView } from '../core/container-view';
-import { RecordViewStory, recordStoryView, STORY_FILE } from '../list/record-view-story';
+import { RecordViewStory, STORY_FILE } from '../list/record-view-story';
 import { DriveMoveDialog } from './drive-move-dialog';
 
 export default { title: 'Nix/Views/Drive', parameters: { layout: 'padded' } };

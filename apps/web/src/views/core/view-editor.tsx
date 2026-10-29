@@ -1,23 +1,17 @@
 import { Button, Field, Icon, Select, Text } from '@nix/ui';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
-import { STARTER_PROGRAM } from '../../openui/starter-program';
+import { STRUCTURED_RECIPES } from '@nix/structure-spec';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { uniqueIdentifier } from '../wizard/creation-studio-model';
-import { STRUCTURED_RECIPES } from '../wizard/structured-recipes';
-import type { View } from './container-model';
+import { uniqueIdentifier, type View } from './container-model';
 import { EditorShell } from './editor-shell';
 import type { ContainerData } from './use-container';
 import { viewConfigureHref } from './view-configure-route';
 import { OpensAsSection } from './opens-as-section';
+import { ProgramEditorSlot, starterProgram } from './program-editor-slot';
 import { findViewKind } from './view-kinds';
-
-// The program editor carries the OpenUI renderer, so it loads only when one is opened.
-const ProgramEditor = lazy(() =>
-  import('../../openui/program-editor').then((module) => ({ default: module.ProgramEditor })),
-);
 
 /** A custom view with the starter program, which lists the collection's children. */
 function newCustomView(taken: ReadonlySet<string>): View {
@@ -37,7 +31,7 @@ function newCustomView(taken: ReadonlySet<string>): View {
     cardSize: null,
     layout: null,
     filters: [],
-    program: STARTER_PROGRAM,
+    program: starterProgram(),
   };
 }
 
@@ -246,7 +240,7 @@ export function ViewEditor({
             </div>
             {view.kind === 'custom' && programOf === view.id ? (
               <Suspense fallback={<Text role="status">Loading the editor…</Text>}>
-                <ProgramEditor
+                <ProgramEditorSlot
                   value={view.program ?? ''}
                   workspaceId={workspaceId}
                   label={`Program for ${view.name}`}

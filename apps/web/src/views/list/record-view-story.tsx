@@ -9,7 +9,6 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { View } from '../core/container-model';
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111';
 export const STORY_FILE = '22222222-2222-4222-8222-222222222222';
@@ -98,25 +97,4 @@ export function RecordViewStory({ children }: { readonly children: ReactNode }):
       </MemoryRouter>
     </ApiClientOverrideProvider>
   );
-}
-
-export function recordStoryView(kind: string, overrides: Partial<View> = {}): View {
-  return {
-    id: kind,
-    name: 'Plans',
-    kind,
-    columns: [],
-    groupBy: null,
-    groupOrder: [],
-    dateProperty: null,
-    sortBy: null,
-    sortDescending: false,
-    mode: null,
-    coverProperty: null,
-    endDateProperty: null,
-    cardSize: null,
-    layout: null,
-    filters: [],
-    ...overrides,
-  };
 }

@@ -8,7 +8,7 @@ import {
   type PropertyDefinition,
   type ViewFilterRule,
 } from '../../../views/core/container-model';
-import { FilterRulesEditor } from '../../../views/query/filter-rules-editor';
+import { FilterRulesEditor } from '../../../views/core/filter-rules-editor';
 
 /**
  * The filter-rules editor: rows of property, condition and value, with the two honesty properties

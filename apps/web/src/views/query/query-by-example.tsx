@@ -9,7 +9,7 @@ import type { PropertyDefinition, ViewFilterRule } from '../core/container-model
 import { SuggestionHint } from '../suggest/suggestion-hint';
 import { MemberNames, unnamedMember, type MemberNameOf } from '../suggest/member-name';
 import { valueText } from '../suggest/value-text';
-import { FilterRulesEditor } from './filter-rules-editor';
+import { FilterRulesEditor } from '../core/filter-rules-editor';
 
 /**
  * Query by example's review step: what the examples share, proposed as rules, in the ordinary

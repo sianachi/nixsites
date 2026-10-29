@@ -10,7 +10,6 @@ import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 
 import { EmptyPanel, ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import type { View } from './container-model';
-import { ListView } from '../list/list-view';
 import type { ContainerData } from './use-container';
 import { VIEW_GUTTER } from './view-gutter';
 import { ClickSelectsContext } from './item-open-click';
@@ -181,7 +180,7 @@ export function ContainerView({
           </ViewItemVisibility>
         ) : (
           <ViewItemVisibility container={container} view={view}>
-            {(visible) => <ListView container={visible} view={view} onOpen={open} />}
+            {(visible) => findViewKind('list')?.render({ container: visible, view, onOpen: open })}
           </ViewItemVisibility>
         )}
       </div>
@@ -266,7 +265,7 @@ function renderContent(
   // which is most of them. A list is the sensible default because it needs no configuration - it
   // has titles to show even with no schema.
   if (view === null) {
-    return <ListView container={container} view={null} onOpen={onOpen} />;
+    return findViewKind('list')?.renderUnconfigured?.({ container, onOpen });
   }
 
   // The registry decides, rather than a switch with a default arm. That arm used to catch 'list'

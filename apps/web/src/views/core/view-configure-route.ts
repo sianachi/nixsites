@@ -1,4 +1,4 @@
-import { STRUCTURED_RECIPES } from '../wizard/structured-recipes';
+import { STRUCTURED_RECIPES } from '@nix/structure-spec';
 import type { View } from './container-model';
 
 /** The guided recipe that configures a view of this kind, if any does. */

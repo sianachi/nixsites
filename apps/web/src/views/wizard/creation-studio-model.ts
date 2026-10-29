@@ -79,13 +79,6 @@ export function draftKey(recipe: StructuredRecipe, parentId: string | null): str
   return `nix:create:${recipe.id}:${parentId ?? 'root'}`;
 }
 
-export function uniqueIdentifier(base: string, taken: ReadonlySet<string>): string {
-  if (!taken.has(base)) return base;
-  let suffix = 2;
-  while (taken.has(`${base}-${String(suffix)}`)) suffix += 1;
-  return `${base}-${String(suffix)}`;
-}
-
 export function readDraft(recipe: StructuredRecipe, parentId: string | null): StudioDraft {
   const fallback = draftFor(recipe);
   const raw = browserSessionStorage()?.getItem(draftKey(recipe, parentId));
