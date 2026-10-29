@@ -4,7 +4,7 @@ import { createNixClient, NixApiError, type NixClient } from '@nix/api-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FileViewer } from '../../files/file-viewer';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 let client: NixClient;
 const revokeObjectURL = vi.fn();

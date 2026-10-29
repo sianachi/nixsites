@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { InteractiveFormView } from '../../../views/form/interactive-form-view';
 import { aContainer } from '../../container-fixture';
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 
 const interactiveForm = {

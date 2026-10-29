@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PropertyInput } from '../../properties/property-input';
 import { fieldChoices } from '../../properties/use-field-choices';
-import { item as stubItem, stubCoreApi } from '../api-stub';
-import { STUB_WORKSPACE_ID, type StubItem } from '../api-stub';
+import { item as stubItem, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { STUB_WORKSPACE_ID, type StubItem } from '@nix/web-foundation/testing/api-stub';
 
 const state = vi.hoisted(() => ({ client: null as NixClient | null }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { WebConfigContext } from '@nix/web-foundation/lib/web-config';
-import { stubCoreApi } from '../api-stub';
-import { renderAt } from '../render-with-router';
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
 
 /**

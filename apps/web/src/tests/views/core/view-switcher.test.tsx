@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { View } from '../../../views/core/container-model';
 import { ViewSwitcher } from '../../../views/core/view-switcher';
-import { stubViewport } from '../../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
 
 /**

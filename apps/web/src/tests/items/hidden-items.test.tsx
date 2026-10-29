@@ -12,9 +12,9 @@ import {
 import { useHiddenItems, useHiddenItemPredicate } from '../../items/use-hidden-items';
 import { ViewItemVisibility } from '../../views/core/view-item-visibility';
 import { aContainer } from '../container-fixture';
-import { item } from '../api-stub';
-import { memoryStorage } from '../memory-storage';
-import { signedIn } from '../render-with-router';
+import { item } from '@nix/web-foundation/testing/api-stub';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { signedIn } from '@nix/web-foundation/testing/render-with-router';
 
 const workspace = vi.hoisted(() => ({ id: 'workspace-a' }));
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({

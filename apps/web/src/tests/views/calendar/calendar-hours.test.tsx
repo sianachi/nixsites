@@ -8,7 +8,7 @@ import { minutesToPx } from '../../../views/calendar/hours/geometry';
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
 import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, datedItem } from '../../view-fixture';
 import { readerZone, writeTimestampValue } from '../../../views/core/timestamps';
 

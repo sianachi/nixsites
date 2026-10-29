@@ -2,8 +2,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
-import { stubViewport } from '../../stub-viewport';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
 import { VIEW_GUTTER_BLEED } from '../../../views/core/view-gutter';
 import { CalendarView } from '../../../views/calendar/calendar-view';

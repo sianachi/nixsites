@@ -6,8 +6,8 @@ import { ItemCommandsProvider } from '../../../items/item-commands-context';
 import type { TreeItem, WorkspaceTree } from '../../../items/use-workspace-tree';
 import { ContainerView } from '../../../views/core/container-view';
 import { aContainer } from '../../container-fixture';
-import { item } from '../../api-stub';
-import { renderAt } from '../../render-with-router';
+import { item } from '@nix/web-foundation/testing/api-stub';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 
 const NOTE = item({ id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', title: 'Roadmap' });

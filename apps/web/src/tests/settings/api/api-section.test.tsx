@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../../app';
 import { apiBase } from '@nix/web-settings/settings/api/api-section';
-import { stubCoreApi } from '../../api-stub';
-import { renderAt, signedIn } from '../../render-with-router';
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 describe('apiBase', () => {
   it('sends the local web app to Core for the token exchange', () => {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView, schemaOf } from '../../view-fixture';
 import type {

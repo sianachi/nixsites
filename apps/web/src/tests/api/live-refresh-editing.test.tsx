@@ -15,8 +15,8 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import { PropertyPanel } from '../../properties/property-panel';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useDriveFileInfo } from '../../views/drive/use-drive-file-info';
-import { item } from '../api-stub';
-import { json } from '../json-response';
+import { item } from '@nix/web-foundation/testing/api-stub';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 const NOTE = item({
   id: 'a5000000-0000-4000-8000-000000000001',

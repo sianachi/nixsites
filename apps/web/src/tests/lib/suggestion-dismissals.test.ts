@@ -6,7 +6,7 @@ import {
   readDismissals,
   rememberDismissal,
 } from '@nix/web-foundation/lib/suggestion-dismissals';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /** An in-memory `Storage`: the test environment's global is not a usable one. */
 describe('suggestion dismissals', () => {

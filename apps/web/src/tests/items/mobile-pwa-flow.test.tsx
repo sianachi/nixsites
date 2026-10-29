@@ -2,11 +2,11 @@ import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { App } from '../../app';
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../view-fixture';
-import { stubViewport } from '../stub-viewport';
-import { memoryStorage } from '../memory-storage';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const root = item({
   id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',

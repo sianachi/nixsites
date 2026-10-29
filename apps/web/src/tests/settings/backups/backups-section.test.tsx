@@ -2,8 +2,8 @@ import { act, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../../app';
-import { stubCoreApi } from '../../api-stub';
-import { renderAt, signedIn } from '../../render-with-router';
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 beforeEach(() => {
   signedIn();

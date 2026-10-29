@@ -8,7 +8,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import { useContainer } from '../../views/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE } from '../api-stub';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import { aView } from '../view-fixture';
 
 const CONTAINER = 'e2000000-0000-4000-8000-000000000001';

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 const NOTE = item({ id: '0a0a0a0a-0000-4000-8000-00000000000a', title: 'Alpha' });
 

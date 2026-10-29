@@ -8,7 +8,7 @@ import {
   TEXT_WIDTH_STORAGE_KEY,
   useTextWidthPreference,
 } from '@nix/web-editor/editor/text-width-preference';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());

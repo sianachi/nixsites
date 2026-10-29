@@ -3,11 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import {
+  item,
+  STUB_WORKSPACE,
+  stubCoreApi,
+  type StubWorkspace,
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
-import { memoryStorage } from '../memory-storage';
-import { requestUrl } from '../request-url';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const SHARED_ID = '00000000-0000-4000-8000-000000000002';
 const INACCESSIBLE_ID = '00000000-0000-4000-8000-000000000099';

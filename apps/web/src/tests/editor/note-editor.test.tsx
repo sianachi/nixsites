@@ -13,7 +13,7 @@ import { useWritingModePreference } from '@nix/web-editor/editor/writing-mode';
 import { useTextWidthPreference } from '@nix/web-editor/editor/text-width-preference';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import type * as reactRouter from 'react-router';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 /**
  * The provider is replaced, and the document it is handed is kept.

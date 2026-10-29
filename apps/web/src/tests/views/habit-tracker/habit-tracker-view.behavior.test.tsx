@@ -8,7 +8,7 @@ import { ItemCommandsProvider } from '../../../items/item-commands-context';
 import type { TreeItem, WorkspaceTree } from '../../../items/use-workspace-tree';
 import type { ContainerData } from '../../../views/core/use-container';
 import { aContainer } from '../../container-fixture';
-import { stubViewport } from '../../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { HabitTrackerView } from '../../../views/habit-tracker/habit-tracker-view';
 import { spokenDayName } from '../../../views/habit-tracker/habit-days';
 import { ContainerView } from '../../../views/core/container-view';

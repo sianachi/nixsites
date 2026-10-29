@@ -9,7 +9,7 @@ import {
   ReferenceResolutionProvider,
   useReference,
 } from '@nix/web-editor/editor/reference-resolution';
-import { requestUrl } from '../request-url';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 /**
  * What a reference resolves to, and - the part that matters - what it refuses to resolve to.

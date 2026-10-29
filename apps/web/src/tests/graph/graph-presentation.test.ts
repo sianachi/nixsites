@@ -4,7 +4,7 @@ import {
   readGraphPresentation,
   writeGraphPresentation,
 } from '../../graph/graph-presentation';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 let storage: Storage;
 beforeEach(() => {
   storage = memoryStorage();

@@ -1,31 +1,22 @@
 import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
+import { vi } from 'vitest';
 
-import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { bodyCacheAccountEpoch, openBodyCache } from '@nix/web-foundation/lib/body-cache';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
-import { vi } from 'vitest';
+import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+
 import { memoryStorage } from './memory-storage';
-import { stubHealthyCollaboration } from './healthy-collaboration';
 
 /**
  * Renders a tree under a MemoryRouter at a given URL.
  *
  * Tests drive the app the way a user does - through the address - so the URL-state convention is
- * exercised rather than mocked.
- * Collaboration uses a healthy test transport by default so unrelated UI tests do not open real
- * sockets. Pass collaboration: 'provided' when a test supplies its own transport or failures.
+ * exercised rather than mocked. This is the router-only form; the editor package wraps it with a
+ * healthy collaboration transport for suites that render a document.
  */
-export function renderAt(
-  ui: ReactElement,
-  url = '/',
-  { collaboration = 'healthy' }: { readonly collaboration?: 'healthy' | 'provided' } = {},
-): RenderResult {
-  if (collaboration === 'healthy') {
-    void prepareHealthyAdmission();
-    stubHealthyCollaboration();
-  }
+export function renderAt(ui: ReactElement, url = '/'): RenderResult {
   // A query naming workspace resources is already a workspace-scoped deep link. Older behavior
   // tests predate routed workspaces and spell that link as `/?item=...`; resolve that shorthand
   // here so those tests exercise the resource route instead of the deliberately lossy legacy

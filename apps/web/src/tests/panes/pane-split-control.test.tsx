@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useSearchParams } from 'react-router';
 
 import { App } from '../../app';
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const FIRST = item({ id: '91919191-1111-4111-8111-919191919191', title: 'First note' });
 const SECOND = item({ id: '92929292-2222-4222-8222-929292929292', title: 'Second note' });

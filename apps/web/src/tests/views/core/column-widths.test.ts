@@ -6,7 +6,7 @@ import {
   resetColumnWidth,
   setColumnWidth,
 } from '../../../views/core/column-widths';
-import { memoryStorage } from '../../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 let viewId = 0;
 let storage: Storage;

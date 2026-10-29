@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { useContainer } from '../../../views/core/use-container';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE } from '../../api-stub';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useQueryResults } from '../../../views/query/use-query-results';
 import { useWorkspaceTree } from '../../../items/use-workspace-tree';
-import { requestUrl } from '../../request-url';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const getAccessToken = (): Promise<string> => Promise.resolve('token');
 

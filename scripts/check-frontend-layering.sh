@@ -42,6 +42,8 @@
 #   R7  web packages stack: web-foundation imports no other web-*, web-platform only web-foundation,
 #      web-editor and web-workspaces only those two,
 #      web-sites those three, web-settings all five below it.
+#   R8  non-test source (anything outside a tests/ or testing/ directory) imports no */testing/*
+#      module. The testing/ folders obey R6 and R7 like any other source.
 #
 # Be clear about what this is worth. It catches the ordinary mistake - someone
 # adds `import { announce } from '../a11y/announcer'` to a layout/ file - and
@@ -172,8 +174,19 @@ $(scan "(from|import\()[[:space:]]*'@nix/web-[a-z-]+" "$packages/web-editor/src"
   up_imports="$(printf '%s' "$up_imports" | grep -v '^$' || true)"
 fi
 
+# R8: testing helpers are for tests. scan() prunes tests/ only, so testing/ is pruned here as well.
+testing_imports=""
+for root in "$src" ${packages:+"$packages"/web-*/}; do
+  found="$(scan "(from|import\()[[:space:]]*'[^']*/testing/" "$root" | grep -vE '^[^:]*/testing/' || true)"
+  if [ -n "$found" ]; then
+    testing_imports="$testing_imports$found
+"
+  fi
+done
+testing_imports="$(printf '%s' "$testing_imports" | grep -v '^$' || true)"
+
 if [ -z "$layout_leaks" ] && [ -z "$a11y_leaks" ] && [ -z "$lib_leaks" ] &&
-  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ] && [ -z "$apps_imports" ] && [ -z "$up_imports" ]; then
+  [ -z "$shell_value_imports" ] && [ -z "$app_folder" ] && [ -z "$apps_imports" ] && [ -z "$up_imports" ] && [ -z "$testing_imports" ]; then
   echo "check-frontend-layering: OK (the leaves are leaves; the shell is imported for a value only by the route table)."
   exit 0
 fi
@@ -196,6 +209,7 @@ report "a11y/ imports from the application:" "$a11y_leaks"
 report "lib/ imports from the application:" "$lib_leaks"
 report "a web package imports from apps/:" "$apps_imports"
 report "a web package imports a package above it (foundation <- platform):" "$up_imports"
+report "non-test source imports a testing/ module:" "$testing_imports"
 report "a feature imports shell/ for a value rather than a type:" "$shell_value_imports"
 if [ -n "$app_folder" ]; then
   report "the dissolved app/ folder is back:" "$app_folder"

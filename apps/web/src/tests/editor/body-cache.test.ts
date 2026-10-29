@@ -23,7 +23,7 @@ import {
 } from '@nix/web-foundation/lib/body-cache';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const ADA = 'subject-ada';
 const BO = 'subject-bo';

@@ -9,9 +9,9 @@ import {
   type StubInvitation,
   type StubMember,
   type StubWorkspace,
-} from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const OWNER_ID = '44444444-bbbb-4bbb-8bbb-444444444444';
 const EDITOR_ID = '55555555-bbbb-4bbb-8bbb-555555555555';

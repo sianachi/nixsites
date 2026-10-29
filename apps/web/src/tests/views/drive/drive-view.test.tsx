@@ -4,7 +4,7 @@ import { createNixClient, type NixClient } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { aContainer } from '../../container-fixture';
-import { renderAt as render } from '../../render-with-router';
+import { renderAt as render } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 import type { Item } from '../../../views/core/container-model';
 import type { ContainerData } from '../../../views/core/use-container';

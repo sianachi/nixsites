@@ -4,8 +4,13 @@ import { useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { item, STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import {
+  item,
+  STUB_WORKSPACE,
+  stubCoreApi,
+  type StubWorkspace,
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 /**
  * The per-workspace daily-notes switch, and every entry point that has to respect it.

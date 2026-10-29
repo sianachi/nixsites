@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { ApiClientProvider, useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { json } from '../json-response';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 const auth = vi.hoisted(() => ({
   getAccessToken: vi.fn<(forceRefresh?: boolean) => Promise<string | null>>(),

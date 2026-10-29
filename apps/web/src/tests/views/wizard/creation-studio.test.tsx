@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../../app';
-import { item, STUB_WORKSPACE, stubCoreApi } from '../../api-stub';
-import { renderAt, signedIn } from '../../render-with-router';
+import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
-import { memoryStorage } from '../../memory-storage';
-import { requestUrl } from '../../request-url';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const DESTINATION = item({
   id: '4a4a4a4a-4444-4444-8444-4a4a4a4a4a4a',

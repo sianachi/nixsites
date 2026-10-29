@@ -6,7 +6,7 @@ import { StrictMode } from 'react';
 import { PetCompanion } from '../../pets/pet-companion';
 import { PetPage } from '../../pages/pet-page';
 import { MobileNoteToolbar } from '@nix/web-editor/editor/mobile-note-toolbar';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));

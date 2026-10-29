@@ -11,7 +11,7 @@ import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { ContainerView } from '../../views/core/container-view';
 import { useContainer } from '../../views/core/use-container';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
+import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { aView } from '../view-fixture';
 
 vi.mock('@nix/web-platform/auth/auth-provider', () => ({

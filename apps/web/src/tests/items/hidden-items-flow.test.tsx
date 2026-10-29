@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { memoryStorage } from '../memory-storage';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-hidden-items';
 
 const NOTE = item({ id: '1e1e1e1e-1111-4111-8111-1e1e1e1e1e1e', title: 'Meeting notes' });

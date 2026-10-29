@@ -4,12 +4,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useNavigate } from 'react-router';
 
 import { App } from '../../app';
-import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { useTabOrientationStore } from '../../tabs/tab-orientation-store';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 /**
  * Documents opened as tabs within a pane - previewed, pinned, closed, and kept straight across

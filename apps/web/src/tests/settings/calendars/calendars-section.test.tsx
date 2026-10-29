@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CalendarsSection } from '@nix/web-settings/settings/calendars/calendars-section';
 import { useCalendarSync } from '@nix/web-settings/settings/calendars/use-calendar-sync';
-import { renderAt } from '../../render-with-router';
-import { stubViewport } from '../../stub-viewport';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 vi.mock('@nix/web-settings/settings/calendars/use-calendar-sync');
 

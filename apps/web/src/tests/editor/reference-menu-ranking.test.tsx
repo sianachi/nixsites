@@ -13,7 +13,7 @@ import {
 } from '@nix/web-editor/editor/reference-menu';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * The picker's re-rank against a real editor and a fake client: it asks for a pool larger than it

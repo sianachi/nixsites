@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
 import { isoWeek } from '../../pages/homebase';
-import { STUB_WORKSPACE, item, stubCoreApi } from '../api-stub';
-import { memoryStorage } from '../memory-storage';
-import { renderAt, signedIn } from '../render-with-router';
+import { STUB_WORKSPACE, item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 const ROADMAP = item({ id: '3a3a3a3a-3333-4333-8333-3a3a3a3a3a3a', title: 'Roadmap' });
 const HOME = `/w/${STUB_WORKSPACE.id}`;

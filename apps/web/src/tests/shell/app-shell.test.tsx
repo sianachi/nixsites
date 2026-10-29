@@ -2,9 +2,9 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { App } from '../../app';
 import { recordInterruptedImport } from '@nix/web-foundation/lib/import-interrupted-notice';
 

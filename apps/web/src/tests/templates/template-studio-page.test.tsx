@@ -3,9 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { item, STUB_TEMPLATES, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { findByAriaLabel } from '../by-aria-label';
+import {
+  item,
+  STUB_TEMPLATES,
+  STUB_WORKSPACE,
+  stubCoreApi,
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { findByAriaLabel } from '@nix/web-foundation/testing/by-aria-label';
 
 const SOURCE = item({
   id: 'a9999999-9999-4999-8999-999999999999',

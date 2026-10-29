@@ -12,7 +12,7 @@ import {
   WritingModeKeymap,
   WRITING_MODE_STORAGE_KEY,
 } from '@nix/web-editor/editor/writing-mode';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 let editor: Editor | undefined;
 let storage: Storage;

@@ -10,7 +10,7 @@ import type {
   InlineAiController,
   InlinePanelState,
 } from '@nix/web-editor/editor/inline-ai/use-inline-ai';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const INITIAL: InlinePanelState = {
   phase: 'composing',

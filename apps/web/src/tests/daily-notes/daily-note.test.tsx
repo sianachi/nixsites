@@ -3,9 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
 import { localDailyNoteDate, parseDailyNoteDate } from '../../daily-notes/daily-note';
-import { STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
+import {
+  STUB_WORKSPACE,
+  stubCoreApi,
+  type StubWorkspace,
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 beforeEach(() => {
   signedIn();

@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
 import { ConfirmLaunch } from '@nix/web-workspaces/launch/launch-page';
-import { STUB_WORKSPACE, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
+import { STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 /**
  * The installed app's launch addresses, driven through the address bar exactly as a shortcut, the

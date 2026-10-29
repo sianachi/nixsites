@@ -12,7 +12,7 @@ import {
   WorkspaceProvider,
 } from '@nix/web-workspaces/workspaces/workspace-context';
 import { NewChatNote } from '../../../views/chat/new-chat-note';
-import { item, STUB_WORKSPACE } from '../../api-stub';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const groupId = '22222222-2222-4222-8222-222222222222';

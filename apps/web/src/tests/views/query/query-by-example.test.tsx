@@ -10,10 +10,10 @@ import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { renderAt, signedIn } from '../../render-with-router';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { aContainer, views } from '../../container-fixture';
 import { aView } from '../../view-fixture';
-import { STUB_WORKSPACE } from '../../api-stub';
+import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import {
   ApiClientOverrideProvider,
   ApiClientProvider,

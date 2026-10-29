@@ -8,9 +8,9 @@ import {
   useRoomForAnotherPane,
 } from '@nix/web-foundation/layout/viewport';
 import { App } from '../../app';
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const note = item({ id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', title: 'Tablet document' });
 beforeEach(() => {

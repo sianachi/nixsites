@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { requestUrl } from '../../request-url';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 export interface Call {
   readonly method: string;

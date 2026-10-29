@@ -14,7 +14,7 @@ import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as registerServiceWorker from '@nix/web-platform/pwa/register-service-worker';
 import { workspaces } from '@nix/api-client';
 import { ApiClientProvider, useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const future = '2099-01-01T00:00:00+00:00';
 

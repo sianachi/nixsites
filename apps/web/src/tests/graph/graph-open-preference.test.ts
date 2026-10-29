@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_GRAPH_OPEN_MODE, useGraphOpenPreference } from '../../graph/graph-open-preference';
 import { hydrateUiSettings, resetUiSettingsSync } from '@nix/web-foundation/lib/ui-settings-sync';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const ME = '11111111-1111-4111-8111-111111111111';
 

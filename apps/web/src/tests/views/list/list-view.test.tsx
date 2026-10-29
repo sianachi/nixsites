@@ -4,8 +4,8 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
-import { stubViewport } from '../../stub-viewport';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView, item, property, schemaOf } from '../../view-fixture';
 import type {
   EffectiveSchema,

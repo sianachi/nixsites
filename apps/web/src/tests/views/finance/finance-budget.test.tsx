@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BudgetGrid, BudgetLine, Finance, QueryEndpoint } from '@nix/api-client';
-import { stubViewport } from '../../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 import { FinanceBudget } from '../../../views/finance/finance-budget';
 import type { FinanceState as FinanceViewState } from '../../../views/finance/use-finance';

@@ -13,9 +13,9 @@ import {
   InteractiveFormEditor,
   InteractiveFormRespondentPreview,
 } from '../../../views/form/interactive-form-editor';
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import { memoryStorage } from '../../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => ({ workspaceId: 'preview-workspace' }),

@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
 import type {

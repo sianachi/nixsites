@@ -9,7 +9,7 @@ import {
   restoreRevision,
   type HistoryRequestConfig,
 } from '../../history/history-api';
-import { json } from '../json-response';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 /**
  * `history-api.ts` against a hand-rolled `fetch`: the URLs and headers it actually sends, what it

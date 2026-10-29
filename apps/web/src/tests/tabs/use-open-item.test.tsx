@@ -7,7 +7,7 @@ import { resetAnnouncements, useAnnouncement } from '@nix/web-foundation/a11y/an
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const A = '00000000-0000-4000-8000-000000000001';
 const B = '00000000-0000-4000-8000-000000000002';

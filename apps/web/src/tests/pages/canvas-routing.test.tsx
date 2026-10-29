@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 /**
  * The body axis choosing its editor: `item.type` says how the body is drawn, a canvas

@@ -23,7 +23,7 @@ import {
   warmPhraseLibrary,
 } from '@nix/web-editor/editor/phrase-library';
 import { completePhrase } from '@nix/web-foundation/lib/suggest/ngram';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const ADA = 'subject-ada';
 const WORKSPACE = 'workspace-1';

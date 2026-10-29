@@ -3,7 +3,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderAt, signedIn } from '../../render-with-router';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView } from '../../view-fixture';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';

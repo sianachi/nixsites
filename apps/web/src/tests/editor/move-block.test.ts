@@ -3,7 +3,7 @@ import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 
 import { moveTopLevelBlockTr } from '@nix/web-editor/editor/move-block';
-import { paragraph } from '../paragraph-fixture';
+import { paragraph } from '@nix/web-foundation/testing/paragraph-fixture';
 
 /**
  * `MoveBlock`'s transform, at the layer that has no DOM.

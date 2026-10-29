@@ -5,9 +5,13 @@ import { MemoryRouter, useNavigate, type NavigateFunction } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
-import { signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
+import {
+  STUB_WORKSPACE,
+  stubCoreApi,
+  type StubWorkspace,
+} from '@nix/web-foundation/testing/api-stub';
+import { signedIn } from '@nix/web-foundation/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const SHARED: StubWorkspace = {
   ...STUB_WORKSPACE,

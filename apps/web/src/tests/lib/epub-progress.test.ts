@@ -4,7 +4,7 @@ import {
   readEpubProgress,
   writeEpubProgress,
 } from '@nix/web-foundation/lib/epub-progress';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 describe('remembering EPUB chapters', () => {
   it('remembers each book independently and replaces an older position', () => {

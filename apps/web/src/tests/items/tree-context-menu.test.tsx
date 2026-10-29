@@ -13,9 +13,9 @@ import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { STUB_WORKSPACE } from '../api-stub';
-import { memoryStorage } from '../memory-storage';
-import { signedIn } from '../render-with-router';
+import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { signedIn } from '@nix/web-foundation/testing/render-with-router';
 
 /**
  * The sidebar row's secondary-click menu: the row's existing actions, where a desktop user looks

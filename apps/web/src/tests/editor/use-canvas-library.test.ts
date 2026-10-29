@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCanvasLibrary } from '@nix/web-editor/editor/use-canvas-library';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
-import { requestUrl } from '../request-url';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 /**
  * A stable reference, not an inline arrow inside the factory: `useAuth()` is a dependency of the

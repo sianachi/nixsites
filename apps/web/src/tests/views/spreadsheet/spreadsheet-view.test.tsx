@@ -4,7 +4,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView, item, property, schemaOf } from '../../view-fixture';
 import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';

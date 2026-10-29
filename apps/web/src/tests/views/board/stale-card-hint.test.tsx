@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer, views } from '../../container-fixture';
 import { aView } from '../../view-fixture';
 import { BoardView } from '../../../views/board/board-view';
@@ -9,7 +9,7 @@ import type { Item, PropertyDefinition } from '../../../views/core/container-mod
 import { clearSuggestionDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { anItem } from '../suggest/suggest-fixtures';
-import { memoryStorage } from '../../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * The board's stale-card note: said only for a card far older than its column's usual, phrased as

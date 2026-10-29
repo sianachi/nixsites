@@ -2,10 +2,10 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it } from 'vitest';
 import { App } from '../../app';
-import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../view-fixture';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 beforeEach(() => {
   signedIn();

@@ -2,11 +2,15 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
-import { automationRule, stubAutomations, type StubAutomationRun } from '../api-stub/automations';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
+import {
+  automationRule,
+  stubAutomations,
+  type StubAutomationRun,
+} from '@nix/web-foundation/testing/api-stub/automations';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const RULE_ID = 'a1111111-1111-4111-8111-111111111111';
 const OTHER_ID = 'a2222222-2222-4222-8222-222222222222';

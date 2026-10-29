@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useRef, useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
 import type { Item } from '../../../views/core/container-model';

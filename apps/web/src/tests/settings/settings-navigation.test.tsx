@@ -3,15 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { useNavigationType } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
 import { SettingsPage } from '../../pages/settings-page';
 import {
   CapabilitiesProvider,
   NO_CAPABILITIES,
 } from '@nix/web-platform/session/capabilities-context';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 /**
  * How the settings screen is reached: by address, from the persistent rail, and through the

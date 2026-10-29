@@ -8,8 +8,8 @@ import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { ReferenceResolutionProvider } from '@nix/web-editor/editor/reference-resolution';
 import { ReferenceView } from '@nix/web-editor/editor/reference-view';
-import { renderAt, signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 /**
  * How a reference is drawn once the server has been asked about it, and what it does when clicked.

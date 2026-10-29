@@ -14,7 +14,7 @@ import {
 } from '@nix/web-editor/editor/slash-menu';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 describe('the slash menu', () => {
   it('offers every block the schema defines a way to insert', () => {

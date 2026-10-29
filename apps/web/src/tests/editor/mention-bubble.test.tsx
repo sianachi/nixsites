@@ -14,7 +14,7 @@ import {
   UnlinkedMentions,
 } from '@nix/web-editor/editor/unlinked-mentions';
 import { readDismissals } from '@nix/web-foundation/lib/suggestion-dismissals';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * The "Link to" bubble against a real editor: it appears when the caret is moved into an

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CanvasElement } from '@nix/web-editor/editor/canvas-binding';
 import { CanvasEditor } from '@nix/web-editor/editor/canvas-editor';
 import type { NixCanvasProps } from '@nix/web-editor/editor/nix-canvas';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const canvasHarness = vi.hoisted(() => ({
   props: null as NixCanvasProps | null,

@@ -10,7 +10,7 @@ import {
   recordPick,
   withPick,
 } from '@nix/web-foundation/lib/frecency';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 const NOW = 1_800_000_000_000;
 

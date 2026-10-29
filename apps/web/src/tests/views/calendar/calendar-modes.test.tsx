@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
 import type { EffectiveSchema, View } from '../../../views/core/container-model';
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, datedItem } from '../../view-fixture';
 import type { ContainerData } from '../../../views/core/use-container';
 

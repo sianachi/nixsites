@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { App } from '../../app';
-import { item, STUB_WORKSPACE, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
-import { requestUrl } from '../request-url';
+import { item, STUB_WORKSPACE, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 
 const daily = item({
   id: '2d2d2d2d-2222-4222-8222-2d2d2d2d2d2d',

@@ -11,8 +11,8 @@ import {
   onItemChildrenChanged,
 } from '@nix/web-foundation/lib/item-children-changed';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE } from '../api-stub';
-import { json } from '../json-response';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 const FIRST = item({
   id: 'a4000000-0000-4000-8000-000000000001',

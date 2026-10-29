@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { renderAt, signedIn } from './render-with-router';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../app';
 
 // Every suite in this file is about what the application renders once somebody is past the session

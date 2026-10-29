@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 /**
  * Exporting, from the application rather than from a module nobody reaches.

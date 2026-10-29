@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readArrangement, writeArrangement } from '../../graph/graph-arrangement';
 import { cameraOf, fitCamera, viewOf, zoomAbout } from '../../graph/graph-camera';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 describe('a chosen view', () => {
   it('round-trips through the pane it was made in', () => {

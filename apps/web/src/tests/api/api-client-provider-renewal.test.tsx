@@ -11,8 +11,8 @@ import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
 import * as drafts from '@nix/web-foundation/lib/draft-journal';
-import { memoryStorage } from '../memory-storage';
-import { json } from '../json-response';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 const profile = { subject: 'renewal-person', name: 'Stored person', email: null };
 const command = defineCommand({

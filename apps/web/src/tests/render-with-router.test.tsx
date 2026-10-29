@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
-import { memoryStorage } from './memory-storage';
-import { prepareHealthyAdmission, resetSession, signedIn } from './render-with-router';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+import {
+  prepareHealthyAdmission,
+  resetSession,
+  signedIn,
+} from '@nix/web-foundation/testing/render-with-router';
 
 describe('healthy account fixture admission', () => {
   it('reports a failure belonging to the current fixture', async () => {

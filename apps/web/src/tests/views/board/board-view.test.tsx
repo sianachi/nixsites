@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, itemOf, schemaOf } from '../../view-fixture';
-import { stubViewport } from '../../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { BoardView } from '../../../views/board/board-view';
 import type {
   EffectiveSchema,

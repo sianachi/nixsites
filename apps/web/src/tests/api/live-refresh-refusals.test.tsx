@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE } from '../api-stub';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 const parent = item({
   id: 'e1000000-0000-4000-8000-000000000001',

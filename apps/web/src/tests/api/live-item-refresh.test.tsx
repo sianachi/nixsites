@@ -18,7 +18,7 @@ import { useWorkspaceTree } from '../../items/use-workspace-tree';
 import { useItemProperties } from '../../properties/use-item-properties';
 import { useContainer } from '../../views/core/use-container';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { item, STUB_WORKSPACE } from '../api-stub';
+import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 const PARENT = item({
   id: 'a1000000-0000-4000-8000-000000000020',

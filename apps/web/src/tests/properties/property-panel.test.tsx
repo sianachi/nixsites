@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import type { Item } from '../../views/core/container-model';
 import { PropertyPanel } from '../../properties/property-panel';
 import { propertyOf } from '../property-fixture';

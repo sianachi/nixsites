@@ -5,9 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { ContainerView } from '../../../views/core/container-view';
 import { ClickSelectsContext, useItemOpenProps } from '../../../views/core/item-open-click';
 import { aContainer } from '../../container-fixture';
-import { item } from '../../api-stub';
-import { renderAt } from '../../render-with-router';
-import { stubViewport } from '../../stub-viewport';
+import { item } from '@nix/web-foundation/testing/api-stub';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
 
 beforeEach(() => {

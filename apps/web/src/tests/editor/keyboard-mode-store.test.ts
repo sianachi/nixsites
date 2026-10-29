@@ -8,7 +8,7 @@ import {
   storeKeyboardMode,
   useKeyboardModeStore,
 } from '@nix/web-editor/editor/keyboard-mode-store';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 afterEach(() => {
   vi.restoreAllMocks();

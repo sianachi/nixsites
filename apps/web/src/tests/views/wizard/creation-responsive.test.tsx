@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { App } from '../../../app';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
-import { renderAt, signedIn } from '../../render-with-router';
-import { stubViewport } from '../../stub-viewport';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 beforeEach(() => {
   signedIn();

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView } from '../../view-fixture';
 import { FormView } from '../../../views/form/form-view';
@@ -9,7 +9,7 @@ import { rememberSubmission } from '../../../views/form/form-memory';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { CATEGORY } from '../suggest/suggest-fixtures';
-import { memoryStorage } from '../../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * The form's usual values: offered beside an empty field from this person's own earlier

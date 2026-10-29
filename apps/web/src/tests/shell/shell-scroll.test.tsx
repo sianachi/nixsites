@@ -1,8 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { item, stubCoreApi } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
 
 /**

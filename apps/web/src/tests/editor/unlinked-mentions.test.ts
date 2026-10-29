@@ -21,7 +21,7 @@ import {
   type MentionLookup,
 } from '@nix/web-editor/editor/unlinked-mentions';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * Unlinked mentions against a real editor: typed text, a faked idle timer, a lookup that answers

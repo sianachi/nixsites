@@ -10,10 +10,10 @@ import {
   item,
   stubCoreApi,
   type StubTemplate,
-} from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { requestUrl } from '../request-url';
-import { findByAriaLabel } from '../by-aria-label';
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
+import { findByAriaLabel } from '@nix/web-foundation/testing/by-aria-label';
 
 beforeEach(() => {
   signedIn();

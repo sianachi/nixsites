@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import {
   filterGroup,
   type PropertyDefinition,

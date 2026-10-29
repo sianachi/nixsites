@@ -7,9 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { CommandPalette } from '../../search/command-palette';
-import { item, stubCoreApi } from '../api-stub';
-import { signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { signedIn } from '@nix/web-foundation/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const NOTE = item({ id: '1e1e1e1e-1111-4111-8111-1e1e1e1e1e1e', title: 'Acquisition memo' });
 

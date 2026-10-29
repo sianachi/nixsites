@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { GraphExplorer, graphConnections } from '../../graph/graph-explorer';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { GraphView } from '../../graph/graph-view';
 import { readGraphPresentation, writeGraphPresentation } from '../../graph/graph-presentation';
 import { readArrangement, writeArrangement } from '../../graph/graph-arrangement';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
 beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());

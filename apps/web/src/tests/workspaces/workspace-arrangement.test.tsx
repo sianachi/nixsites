@@ -3,8 +3,12 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { STUB_WORKSPACE, stubCoreApi, type StubWorkspace } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
+import {
+  STUB_WORKSPACE,
+  stubCoreApi,
+  type StubWorkspace,
+} from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import {
   arrangeWorkspaces,
   assignToGroup,

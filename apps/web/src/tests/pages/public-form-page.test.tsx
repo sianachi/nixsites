@@ -8,7 +8,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import type { PublicForm } from '../../pages/public-form-api';
 import { PublicFormPage } from '../../pages/public-form-page';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
-import { renderAt } from '../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 
 const FORM: PublicForm = {
   name: 'Daily check in',

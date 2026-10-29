@@ -2,8 +2,8 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { stubCoreApi, type StubAccessToken } from '../../api-stub';
-import { renderAt, signedIn } from '../../render-with-router';
+import { stubCoreApi, type StubAccessToken } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../../app';
 
 /**

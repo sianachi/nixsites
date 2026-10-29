@@ -8,7 +8,7 @@ import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { STUB_WORKSPACE } from '../api-stub';
+import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 /**
  * Moving an item without a pointer.

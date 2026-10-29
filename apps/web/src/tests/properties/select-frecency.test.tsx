@@ -5,7 +5,7 @@ import { PropertyInput } from '../../properties/property-input';
 import { frecencyScores, recordPick } from '@nix/web-foundation/lib/frecency';
 import { useChoiceOrderPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import type { PropertyDefinition } from '../../views/core/container-model';
-import { memoryStorage } from '../memory-storage';
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 /**
  * Select options keep their declared order; what this person usually picks, per workspace and

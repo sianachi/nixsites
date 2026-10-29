@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { renderAt } from '../../render-with-router';
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import type { Item, ViewFilterRule } from '../../../views/core/container-model';
 import type { ContainerData } from '../../../views/core/use-container';

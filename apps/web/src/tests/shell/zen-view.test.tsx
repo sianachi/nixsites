@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
-import { item, stubCoreApi, STUB_WORKSPACE_ID } from '../api-stub';
-import { renderAt, signedIn } from '../render-with-router';
-import { stubViewport } from '../stub-viewport';
+import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 beforeEach(() => {
   signedIn();

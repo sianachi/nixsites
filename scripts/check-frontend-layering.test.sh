@@ -303,6 +303,36 @@ export const a = announce;
 FIXTURE
 expect 0 "a web package importing another package is fine"
 
+# --- R8: testing helpers are for tests ---------------------------------------
+
+reset_tree
+add packages/web-platform/src/api/uses-helper.ts <<'FIXTURE'
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+export const s = stubCoreApi;
+FIXTURE
+expect 1 "non-test source importing a testing/ module fails" "non-test source imports a testing/ module" "uses-helper.ts"
+
+reset_tree
+add items/uses-helper.ts <<'FIXTURE'
+import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
+export const m = memoryStorage;
+FIXTURE
+expect 1 "app source importing a testing/ module fails too" "non-test source imports a testing/ module"
+
+reset_tree
+add packages/web-editor/src/testing/render.tsx <<'FIXTURE'
+import { signedIn } from '@nix/web-foundation/testing/render-with-router';
+export const s = signedIn;
+FIXTURE
+expect 0 "a testing/ module may import another testing/ module"
+
+reset_tree
+add packages/web-foundation/src/testing/leak.ts <<'FIXTURE'
+import { renderAt } from '@nix/web-editor/testing/render-with-router';
+export const r = renderAt;
+FIXTURE
+expect 1 "testing/ folders obey R7: foundation testing may not import web-editor" "imports a package above it" "leak.ts"
+
 # --- tests/ are out of scope -------------------------------------------------
 
 reset_tree

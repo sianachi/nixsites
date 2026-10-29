@@ -6,7 +6,7 @@ import {
   useCoarsePointer,
   useNarrowViewport,
 } from '@nix/web-foundation/layout/viewport';
-import { stubViewport } from '../stub-viewport';
+import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 function stubPointer(coarse: boolean): void {
   globalThis.matchMedia = (query: string): MediaQueryList =>

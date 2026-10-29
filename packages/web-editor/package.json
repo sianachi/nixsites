@@ -149,6 +149,10 @@
       "types": "./src/plugins/text-viewer.tsx",
       "default": "./src/plugins/text-viewer.tsx"
     },
+    "./testing/render-with-router": {
+      "types": "./src/testing/render-with-router.tsx",
+      "default": "./src/testing/render-with-router.tsx"
+    },
     "./*": {
       "types": "./src/*.ts",
       "default": "./src/*.ts"
@@ -157,7 +161,8 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
@@ -193,14 +198,19 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.15.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
     "react": "^19.2.8",
     "typescript-eslint": "^8.38.0",
-    "vite": "^7.3.6"
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
   }
 }

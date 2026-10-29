@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../../app';
-import { stubCoreApi } from '../../api-stub';
-import { renderAt, signedIn } from '../../render-with-router';
+import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { layerRoutes, reply } from './fake-routes';
 
 const SITE = '5a5a5a5a-1111-4111-8111-5a5a5a5a5a5a';

@@ -9,7 +9,7 @@ import {
   changeColumnWidthTr,
 } from '@nix/web-editor/editor/column-width';
 import { tableContext } from '@nix/web-editor/editor/table-controls';
-import { paragraph } from '../paragraph-fixture';
+import { paragraph } from '@nix/web-foundation/testing/paragraph-fixture';
 
 /**
  * `changeColumnWidthTr`'s transform, at the layer that has no DOM - the counterpart to

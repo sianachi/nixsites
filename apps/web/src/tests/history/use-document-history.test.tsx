@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useDocumentHistory } from '../../history/use-document-history';
-import { json } from '../json-response';
+import { json } from '@nix/web-foundation/testing/json-response';
 
 /**
  * `useDocumentHistory` against a hand-rolled `fetch`: the initial page, paging further back,
