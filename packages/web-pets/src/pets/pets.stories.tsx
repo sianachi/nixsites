@@ -116,7 +116,7 @@ export const Settings = {
   render: (): ReactElement => settingsStory('chatgpt'),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    canvas.getByRole('combobox', { name: 'Model provider' });
+    canvas.getByRole('combobox', { name: 'Model' });
     await canvas.findByRole('button', { name: 'Connect ChatGPT' });
     canvas.getByRole('region', { name: 'ChatGPT connection' });
     if (canvas.queryByLabelText(/API key/) !== null)
@@ -127,7 +127,7 @@ export const Settings = {
 function keySettingsPlay(label: string, otherLabel: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    canvas.getByRole('combobox', { name: 'Model provider' });
+    canvas.getByRole('combobox', { name: 'Model' });
     const key = await canvas.findByLabelText(label);
     if (key.getAttribute('type') !== 'password')
       throw new Error('Provider API key fields must conceal their values.');
