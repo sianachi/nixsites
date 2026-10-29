@@ -123,7 +123,7 @@ function Example({
 export const Menu = {
   render: (): ReactNode => <Example />,
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Workspace menu' }));
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /, workspace menu$/ }));
     const page = within(document.body);
     const group = await page.findByRole('button', { name: 'Personal projects' });
     await userEvent.click(group);

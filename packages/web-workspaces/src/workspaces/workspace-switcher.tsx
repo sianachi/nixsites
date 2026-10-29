@@ -247,7 +247,8 @@ export function WorkspaceSwitcher(): ReactNode {
         {(trigger) => (
           <button
             {...trigger}
-            aria-label="Workspace menu"
+            // Starts with the visible name so voice control can say what it sees (WCAG 2.5.3).
+            aria-label={`${workspace.name}, workspace menu`}
             className={`flex min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
           >
             <span className="truncate">{workspace.name}</span>

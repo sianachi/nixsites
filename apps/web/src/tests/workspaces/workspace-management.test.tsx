@@ -85,18 +85,18 @@ beforeEach(() => {
 
 function workspaceButton(name: string): HTMLElement {
   void name;
-  return screen.getByRole('button', { name: 'Workspace menu' });
+  return screen.getByRole('button', { name: /, workspace menu$/ });
 }
 
 async function switchWorkspace(user: UserEvent, to: string): Promise<void> {
-  await user.click(screen.getByRole('button', { name: 'Workspace menu' }));
+  await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
   await user.click(
     within(screen.getByRole('region', { name: 'Workspaces' })).getByRole('link', { name: to }),
   );
 }
 
 async function createWorkspaceFromMenu(user: UserEvent, name: string): Promise<void> {
-  await user.click(screen.getByRole('button', { name: 'Workspace menu' }));
+  await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
   await user.click(screen.getByRole('button', { name: 'New workspace…' }));
   await user.type(await screen.findByRole('textbox', { name: 'New workspace name' }), name);
   await user.click(screen.getByRole('button', { name: 'Create' }));
@@ -299,7 +299,7 @@ describe('workspace management', () => {
     stubCoreApi();
     renderAt(<App />, '/settings');
 
-    await screen.findByRole('button', { name: 'Workspace menu' });
+    await screen.findByRole('button', { name: /, workspace menu$/ });
     await createWorkspaceFromMenu(user, 'Project Atlas');
 
     await waitFor(() => {

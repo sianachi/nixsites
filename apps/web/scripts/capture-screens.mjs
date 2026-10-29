@@ -39,7 +39,7 @@ async function login(statePath, baseUrl) {
   const page = await context.newPage();
   await page.goto(baseUrl);
   console.log('Sign in in the window that opened; waiting up to 10 minutes.');
-  await page.getByRole('button', { name: 'Workspace menu' }).waitFor({ timeout: 600_000 });
+  await page.getByRole('button', { name: /, workspace menu$/ }).waitFor({ timeout: 600_000 });
   await context.storageState({ path: statePath });
   console.log('saved session to', statePath);
   await browser.close();
