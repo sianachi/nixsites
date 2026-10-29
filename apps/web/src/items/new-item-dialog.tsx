@@ -13,8 +13,8 @@ import {
 import { LayoutTemplate } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 
-import type { TemplateLibraryStatus } from '../templates/use-templates';
-import type { TemplateSummary } from '../templates/template-api';
+import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
+import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
 import {
   RECIPE_GROUPS,
   STRUCTURED_RECIPES,

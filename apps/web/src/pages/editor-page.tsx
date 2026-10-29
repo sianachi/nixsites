@@ -14,7 +14,7 @@ import type { ShellContext } from '../shell/shell-context';
 import type { TabTransferPayload } from '../tabs/tab-transfer';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useTabTransfer } from '../tabs/use-tab-transfer';
-import { useTemplateLibrary } from '../templates/template-library-context';
+import { useTemplateLibrary } from '@nix/web-templates/templates/template-library-context';
 import { PaneContents } from './editor/pane-contents';
 import { Homebase } from './homebase';
 

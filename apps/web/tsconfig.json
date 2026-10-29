@@ -38,6 +38,9 @@
     },
     {
       "path": "../../packages/web-views"
+    },
+    {
+      "path": "../../packages/web-templates"
     }
   ]
 }

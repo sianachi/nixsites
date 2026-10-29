@@ -1,0 +1,128 @@
+{
+  "name": "@nix/web-templates",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Templates: the template library, import, studio, draft and initialization editors",
+  "exports": {
+    "./templates/draft/template-body-editor": {
+      "types": "./src/templates/draft/template-body-editor.tsx",
+      "default": "./src/templates/draft/template-body-editor.tsx"
+    },
+    "./templates/draft/template-draft-editor": {
+      "types": "./src/templates/draft/template-draft-editor.tsx",
+      "default": "./src/templates/draft/template-draft-editor.tsx"
+    },
+    "./templates/draft/template-fields-editor": {
+      "types": "./src/templates/draft/template-fields-editor.tsx",
+      "default": "./src/templates/draft/template-fields-editor.tsx"
+    },
+    "./templates/draft/template-view-card": {
+      "types": "./src/templates/draft/template-view-card.tsx",
+      "default": "./src/templates/draft/template-view-card.tsx"
+    },
+    "./templates/draft/template-views-editor": {
+      "types": "./src/templates/draft/template-views-editor.tsx",
+      "default": "./src/templates/draft/template-views-editor.tsx"
+    },
+    "./templates/import/template-import-page": {
+      "types": "./src/templates/import/template-import-page.tsx",
+      "default": "./src/templates/import/template-import-page.tsx"
+    },
+    "./templates/initialization/input-editors": {
+      "types": "./src/templates/initialization/input-editors.tsx",
+      "default": "./src/templates/initialization/input-editors.tsx"
+    },
+    "./templates/initialization/rule-value-editor": {
+      "types": "./src/templates/initialization/rule-value-editor.tsx",
+      "default": "./src/templates/initialization/rule-value-editor.tsx"
+    },
+    "./templates/initialization/template-initialization-editor": {
+      "types": "./src/templates/initialization/template-initialization-editor.tsx",
+      "default": "./src/templates/initialization/template-initialization-editor.tsx"
+    },
+    "./templates/library/template-card": {
+      "types": "./src/templates/library/template-card.tsx",
+      "default": "./src/templates/library/template-card.tsx"
+    },
+    "./templates/library/template-library-page": {
+      "types": "./src/templates/library/template-library-page.tsx",
+      "default": "./src/templates/library/template-library-page.tsx"
+    },
+    "./templates/studio/studio-gate": {
+      "types": "./src/templates/studio/studio-gate.tsx",
+      "default": "./src/templates/studio/studio-gate.tsx"
+    },
+    "./templates/template-library-context": {
+      "types": "./src/templates/template-library-context.tsx",
+      "default": "./src/templates/template-library-context.tsx"
+    },
+    "./templates/template-studio-facts": {
+      "types": "./src/templates/template-studio-facts.tsx",
+      "default": "./src/templates/template-studio-facts.tsx"
+    },
+    "./templates/template-studio-notice": {
+      "types": "./src/templates/template-studio-notice.tsx",
+      "default": "./src/templates/template-studio-notice.tsx"
+    },
+    "./templates/template-studio-shell": {
+      "types": "./src/templates/template-studio-shell.tsx",
+      "default": "./src/templates/template-studio-shell.tsx"
+    },
+    "./templates/template-studio-steps": {
+      "types": "./src/templates/template-studio-steps.tsx",
+      "default": "./src/templates/template-studio-steps.tsx"
+    },
+    "./templates/template-view-preview": {
+      "types": "./src/templates/template-view-preview.tsx",
+      "default": "./src/templates/template-view-preview.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/design-tokens": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/view-render": "workspace:*",
+    "@nix/web-collections": "workspace:*",
+    "@nix/web-editor": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-views": "workspace:*",
+    "@nix/web-workspaces": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "react-dom": "^19.2.8",
+    "react-router": "^7.18.1",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/luxon": "^3.7.2",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
+  }
+}

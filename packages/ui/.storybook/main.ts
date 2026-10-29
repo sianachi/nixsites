@@ -23,7 +23,7 @@ const config: StorybookConfig = {
     '../../../packages/web-editor/src/plugins/*.stories.tsx',
     '../../../apps/web/src/pages/*.stories.tsx',
     '../../../apps/web/src/files/*.stories.tsx',
-    '../../../apps/web/src/templates/*.stories.tsx',
+    '../../../packages/web-templates/src/templates/*.stories.tsx',
     '../../../packages/web-views/src/chart/*.stories.tsx',
     '../../../packages/web-views/src/core/*.stories.tsx',
     '../../../apps/web/src/pets/chat/*.stories.tsx',

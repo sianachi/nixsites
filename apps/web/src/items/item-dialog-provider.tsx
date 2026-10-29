@@ -4,7 +4,7 @@ import { useLocation } from 'react-router';
 import { OpenItem } from '../pages/editor-page';
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useOpenItem } from '../tabs/use-open-item';
-import { useTemplateLibrary } from '../templates/template-library-context';
+import { useTemplateLibrary } from '@nix/web-templates/templates/template-library-context';
 import { LocalViewStateContext } from '@nix/web-collections/core/view-state';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { ItemDialogContext } from '@nix/web-foundation/lib/item-dialog-context';

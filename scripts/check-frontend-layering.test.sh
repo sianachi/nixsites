@@ -351,6 +351,36 @@ FIXTURE
 expect 1 "views importing a package outside its list (web-sites) fails" "imports a package above it" "up-app.ts"
 
 reset_tree
+add packages/web-collections/src/core/up-templates.ts <<'FIXTURE'
+import { x } from '@nix/web-templates/templates/template-api';
+export const u = x;
+FIXTURE
+expect 1 "collections importing web-templates (upward) fails" "imports a package above it" "up-templates.ts"
+
+reset_tree
+add packages/web-views/src/core/up-templates.ts <<'FIXTURE'
+import { x } from '@nix/web-templates/templates/template-api';
+export const u = x;
+FIXTURE
+expect 1 "views importing web-templates (upward) fails" "imports a package above it" "up-templates.ts"
+
+reset_tree
+add packages/web-templates/src/templates/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { Container } from '@nix/web-collections/core/use-container';
+import { findViewKind } from '@nix/web-views/core/view-kinds';
+export const d = [announce, Container, findViewKind];
+FIXTURE
+expect 0 "templates importing foundation, collections and views passes"
+
+reset_tree
+add packages/web-templates/src/templates/up-settings.ts <<'FIXTURE'
+import { x } from '@nix/web-settings/settings/preferences/PreferencesSection';
+export const u = x;
+FIXTURE
+expect 1 "templates importing a package outside its list (web-settings) fails" "imports a package above it" "up-settings.ts"
+
+reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';
 export const a = announce;

@@ -23,8 +23,8 @@ import {
   type TemplateDetail,
   type TemplateEditDraft,
   type TemplatePreflight,
-} from './template-api';
-import { useTemplateLibrary } from './template-library-context';
+} from '@nix/web-templates/templates/template-api';
+import { useTemplateLibrary } from '@nix/web-templates/templates/template-library-context';
 import {
   draftScope,
   editedRootFacts,
@@ -35,16 +35,16 @@ import {
   TEMPLATE_STUDIO_STEPS,
   type CaptureFacts,
   type TemplateDraft,
-} from './template-studio-model';
-import { Review } from './template-studio-facts';
-import { TemplateStudioShell } from './template-studio-shell';
-import { Basics, Contents } from './template-studio-steps';
-import { StudioNotice } from './template-studio-notice';
-import { templateFailure } from './use-templates';
-import { saveTemplateEdit } from './studio/save-template-edit';
-import { studioGate } from './studio/studio-gate';
-import { useCaptureFacts } from './studio/use-capture-facts';
-import { useTemplateStudioLoad } from './studio/use-template-studio-load';
+} from '@nix/web-templates/templates/template-studio-model';
+import { Review } from '@nix/web-templates/templates/template-studio-facts';
+import { TemplateStudioShell } from '@nix/web-templates/templates/template-studio-shell';
+import { Basics, Contents } from '@nix/web-templates/templates/template-studio-steps';
+import { StudioNotice } from '@nix/web-templates/templates/template-studio-notice';
+import { templateFailure } from '@nix/web-templates/templates/use-templates';
+import { saveTemplateEdit } from '@nix/web-templates/templates/studio/save-template-edit';
+import { studioGate } from '@nix/web-templates/templates/studio/studio-gate';
+import { useCaptureFacts } from '@nix/web-templates/templates/studio/use-capture-facts';
+import { useTemplateStudioLoad } from '@nix/web-templates/templates/studio/use-template-studio-load';
 import {
   createFields,
   destinationLabel,
@@ -53,7 +53,7 @@ import {
   studioTitle,
   requestInputValue,
   requestTemplateInputs,
-} from './studio/studio-requests';
+} from '@nix/web-templates/templates/studio/studio-requests';
 
 export function TemplateStudioPage(): ReactNode {
   const { templateId, itemId } = useParams();
