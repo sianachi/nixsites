@@ -5,6 +5,7 @@ import { registerConversationMcpTools } from './mcp-conversations.ts';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
+  comments,
   files,
   finance,
   habits,
@@ -830,6 +831,81 @@ export async function createWorkspaceMcpServer(
     ({ habitId, status }) =>
       toolResult(async () =>
         (await session()).client.execute(habits.setStatus(habitId, { status })),
+      ),
+  );
+
+  // shortcut: add_comment stores the quote with no relative positions; the web client anchors it
+  // the next time the note is open (the same re-anchor pass that recovers detached threads).
+  // Resolving positions here would need a collab document session per call.
+  server.registerTool(
+    'list_comments',
+    {
+      description:
+        'List the comment threads on a note: anchor quote, resolved state, and each comment with its author.',
+      inputSchema: { itemId: identifier },
+    },
+    ({ itemId }) => toolResult(async () => (await session()).client.query(comments.list(itemId))),
+  );
+
+  server.registerTool(
+    'add_comment',
+    {
+      description:
+        'Start a comment thread on a note. Without quote it is a page-level comment; with quote it is attached to that text.',
+      inputSchema: {
+        itemId: identifier,
+        body: z.string().min(1).max(10_000),
+        quote: z.string().min(1).max(1_000).optional(),
+        mentionIds: z.array(identifier).max(20).optional(),
+      },
+    },
+    ({ itemId, body, quote, mentionIds }) =>
+      toolResult(async () =>
+        (await session()).client.execute(
+          comments.add(itemId, {
+            body,
+            ...(mentionIds === undefined ? {} : { mentionIds }),
+            ...(quote === undefined ? {} : { anchor: { quote } }),
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
+    'reply_comment',
+    {
+      description: 'Reply in a comment thread. threadId is the thread id from list_comments.',
+      inputSchema: {
+        itemId: identifier,
+        threadId: identifier,
+        body: z.string().min(1).max(10_000),
+        mentionIds: z.array(identifier).max(20).optional(),
+      },
+    },
+    ({ itemId, threadId, body, mentionIds }) =>
+      toolResult(async () =>
+        (await session()).client.execute(
+          comments.reply(itemId, threadId, {
+            body,
+            ...(mentionIds === undefined ? {} : { mentionIds }),
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
+    'resolve_comment',
+    {
+      description: 'Resolve a comment thread, or reopen it with resolved=false.',
+      inputSchema: {
+        itemId: identifier,
+        threadId: identifier,
+        resolved: z.boolean().default(true),
+      },
+    },
+    ({ itemId, threadId, resolved }) =>
+      toolResult(async () =>
+        (await session()).client.execute(comments.setResolved(itemId, threadId, resolved)),
       ),
   );
 

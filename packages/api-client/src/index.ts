@@ -260,6 +260,9 @@ export type {
 } from './schemas/sites.js';
 export type { PetToolCall } from './schemas/pets.js';
 
+export * as comments from './resources/comments.js';
+export type { AddCommentInput, ReplyCommentInput } from './resources/comments.js';
+export type { Comment, CommentThread, CommentsResponse } from './schemas/comments.js';
 export * as habits from './resources/habits.js';
 export { type HabitTracker } from './schemas/habits.js';
 export type { SetHabitInput } from './resources/habits.js';

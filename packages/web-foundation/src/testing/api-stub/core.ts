@@ -1420,6 +1420,22 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
         );
         return Promise.resolve(json({ unread: 0 }));
       }
+      const commentsRoute = /^\/api\/v1\/items\/[0-9a-f-]{36}\/comments(\/watch)?$/.exec(
+        parsedUrl.pathname,
+      );
+      if (commentsRoute !== null && method === 'GET') {
+        const empty = { revision: 0, threads: [] };
+        if (commentsRoute[1] === undefined) {
+          return Promise.resolve(json(empty));
+        }
+        // A long-poll: like the real one it answers only when something changes, so it stays open
+        // until the caller aborts (a loop re-asking at once would spin).
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError')),
+          );
+        });
+      }
       if (parsedUrl.pathname === '/api/v1/me/notifications/watch') {
         if (notificationsWatchThrottled) {
           return Promise.resolve(
