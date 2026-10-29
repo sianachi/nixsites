@@ -19,7 +19,7 @@ export function remoteCursor(user: {
 
   const profile = document.createElement('span');
   profile.className =
-    'absolute bottom-full left-0 mb-0.5 flex size-5 -translate-x-1/2 items-center justify-center rounded-full border bg-surface text-2xs leading-none text-muted';
+    'absolute bottom-full left-0 mb-0.5 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border bg-surface text-xs leading-none text-muted';
   profile.style.borderColor = color;
   profile.textContent = initialsOf(name);
   // The header's presence list already names who is here; the caret is not read out twice.
