@@ -115,7 +115,8 @@ public sealed record StageDocumentImportItemRequest(
     JsonElement? Views,
     string FinalLifecycleState,
     bool BodyRequired,
-    StageDocumentImportFileRequest? File);
+    StageDocumentImportFileRequest? File,
+    IReadOnlyList<ImportCommentThread>? Comments = null);
 
 public sealed record StageDocumentImportFileRequest(
     string SourceKind,

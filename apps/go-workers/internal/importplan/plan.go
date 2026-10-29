@@ -36,6 +36,8 @@ type Item struct {
 	FinalLifecycleState string          `json:"finalLifecycleState"`
 	Body                *Body           `json:"body,omitempty"`
 	File                *File           `json:"file,omitempty"`
+	// Comments holds the exported threads ([{id, quote, resolved, comments: [{author, body, createdAt}]}]); Core bounds and stores them.
+	Comments json.RawMessage `json:"comments,omitempty"`
 }
 
 type Body struct {

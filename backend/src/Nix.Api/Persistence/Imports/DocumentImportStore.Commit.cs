@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Nix.Abstractions;
 using Nix.Abstractions.Files;
 using Nix.Abstractions.Importing;
+using Nix.Domain.Comments;
 using Nix.Domain.Files;
 using Nix.Domain.Importing;
 using Nix.Domain.Items;
@@ -125,6 +127,7 @@ public sealed partial class DocumentImportStore
         var versions = new List<FileVersion>();
         var bodies = new List<FileBody>();
         var archivedVersions = new List<DocumentImportFileVersion>();
+        var comments = new List<NoteComment>();
         foreach (var planned in ordered)
         {
             var targetId = targetIds[planned.SourceId];
@@ -167,6 +170,10 @@ public sealed partial class DocumentImportStore
             }
 
             items.Add(item);
+            if (planned.ItemType == "note" && planned.Comments is { Count: > 0 })
+            {
+                comments.AddRange(ImportedComments(planned.Comments, context, targetId, now));
+            }
 
             FileVersionId? fileVersionId = null;
             string? objectKey = null;
@@ -290,6 +297,7 @@ public sealed partial class DocumentImportStore
 
         database.Items.AddRange(items);
         database.DocumentImportItems.AddRange(mappings);
+        database.NoteComments.AddRange(comments);
         database.FileVersions.AddRange(versions);
         database.DocumentImportFileVersions.AddRange(archivedVersions);
         database.FileBodies.AddRange(bodies);
@@ -305,6 +313,47 @@ public sealed partial class DocumentImportStore
             archivedVersions.Select(value => new DocumentImportFileVersionMapping(
                 value.TransferId, value.SourceItemId, value.TargetItemId.Value,
                 archivedVersionNumbers[value.TransferId])).ToArray());
+    }
+
+    // Imported comments belong to the importer; the original author is kept as a name only, so no
+    // notice is queued. Anchors stay empty and the client re-anchors by the quote.
+    private static IEnumerable<NoteComment> ImportedComments(
+        IReadOnlyList<ImportCommentThread> threads,
+        NixSessionContext context,
+        ItemId itemId,
+        DateTimeOffset now)
+    {
+        static string? Cut(string? value, int max) => value is { Length: > 0 } ? value[..Math.Min(value.Length, max)] : null;
+        foreach (var thread in threads)
+        {
+            Guid? threadId = null;
+            foreach (var comment in thread.Comments ?? [])
+            {
+                var body = Cut(comment.Body, 10_000);
+                if (body is null)
+                {
+                    continue;
+                }
+                var id = Guid.CreateVersion7();
+                var root = threadId is null;
+                threadId ??= id;
+                yield return new NoteComment
+                {
+                    TenantId = context.TenantId,
+                    Id = id,
+                    ItemId = itemId,
+                    ThreadId = threadId.Value,
+                    AuthorPrincipalId = context.PrincipalId,
+                    ImportedAuthor = Cut(comment.Author, 200) ?? "Unknown",
+                    Body = body,
+                    MentionIds = [],
+                    Quote = root ? Cut(thread.Quote, 1000) : null,
+                    ResolvedAt = root && thread.Resolved ? now : null,
+                    ResolvedBy = root && thread.Resolved ? context.PrincipalId : null,
+                    CreatedAt = comment.CreatedAt ?? now,
+                };
+            }
+        }
     }
 
     public async ValueTask<DocumentImportStageRecord?> AuthorizeBodyWritesAsync(

@@ -103,6 +103,7 @@ type nixBundle struct {
 	ViewRows          json.RawMessage    `json:"viewRows"`
 	ViewRowsTruncated bool               `json:"viewRowsTruncated"`
 	Body              json.RawMessage    `json:"body"`
+	Comments          json.RawMessage    `json:"comments,omitempty"`
 }
 
 type validatedNixItem struct {
@@ -139,6 +140,7 @@ func parseNix(ctx context.Context, source Source, limits Limits) (Plan, error) {
 			Recurrence: cloneNullableJSON(bundle.Recurrence),
 			Schema:     importNixSchema(entry.ID == parsed.manifest.Root, parsed.manifest.RootEffectiveSchema, bundle.Schema),
 			Views:      cloneNullableJSON(bundle.Views), FinalLifecycleState: bundle.LifecycleState,
+			Comments: cloneNullableJSON(bundle.Comments),
 		}
 		if !isJSONNull(bundle.Body) {
 			planItem.Body = &Body{Encoding: "archive", Archive: cloneJSON(bundle.Body)}

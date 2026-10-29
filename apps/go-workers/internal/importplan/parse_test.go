@@ -337,3 +337,37 @@ func appendDOCXPNGChunk(target []byte, kind string, data []byte) []byte {
 	binary.BigEndian.PutUint32(chunk[8+len(data):], crc32.ChecksumIEEE(chunk[4:8+len(data)]))
 	return append(target, chunk...)
 }
+
+func TestNixImportCarriesNoteCommentsAndStillImportsWithoutThem(t *testing.T) {
+	id := "11111111-1111-4111-8111-111111111111"
+	for _, withComments := range []bool{true, false} {
+		manifest, _ := json.Marshal(map[string]any{
+			"format": "nix-archive", "formatVersion": 1, "schemaVersion": 3,
+			"exportedAt": "2026-09-01T12:00:00Z", "root": id, "rootEffectiveSchema": nil, "includesDeleted": false,
+			"items":   []any{map[string]any{"id": id, "parentId": nil, "seq": "1024", "title": "Root", "type": "note"}},
+			"omitted": []any{}, "loss": []any{},
+		})
+		bundle := map[string]any{
+			"id": id, "parentId": nil, "workspaceId": "33333333-3333-4333-8333-333333333333", "type": "note", "title": "Root",
+			"seq": "1024", "lifecycleState": "active", "createdAt": "2026-09-01T12:00:00Z", "updatedAt": "2026-09-01T12:00:00Z",
+			"properties": map[string]any{"title": "Root"}, "schema": nil, "views": nil, "viewRows": []any{}, "viewRowsTruncated": false,
+			"body": map[string]any{"schemaVersion": 3, "prosemirror": map[string]any{"type": "doc", "content": []any{map[string]any{"type": "paragraph"}}}},
+		}
+		if withComments {
+			bundle["comments"] = []any{map[string]any{"id": "t", "quote": "the plan", "resolved": true, "comments": []any{
+				map[string]any{"author": "Ada", "body": "Why?", "createdAt": "2026-10-29T10:00:00Z"}}}}
+		}
+		bundleBytes, _ := json.Marshal(bundle)
+		source := zipSource(t, "c.nix", "nix", []zipFixture{{"manifest.json", manifest}, {"items/" + id + ".json", bundleBytes}})
+
+		plan, err := Parse(context.Background(), source, testLimits())
+
+		if err != nil {
+			t.Fatalf("withComments=%v: %v", withComments, err)
+		}
+		got := string(plan.Items[0].Comments)
+		if withComments != strings.Contains(got, `"author":"Ada"`) || (!withComments && got != "") {
+			t.Fatalf("withComments=%v comments = %q", withComments, got)
+		}
+	}
+}

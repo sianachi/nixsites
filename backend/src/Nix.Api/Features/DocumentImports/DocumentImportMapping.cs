@@ -29,7 +29,8 @@ internal static class DocumentImportMapping
                 value.File.Sha256,
                 value.File.Previewable,
                 value.File.PixelWidth,
-                value.File.PixelHeight));
+                value.File.PixelHeight),
+        value.Comments);
 
     private static string? Json(JsonElement? value) => value is { ValueKind: JsonValueKind.Object }
         ? value.Value.GetRawText()

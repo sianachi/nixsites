@@ -502,7 +502,7 @@ func stageItem(item importplan.Item) workerapi.DocumentImportStageItem {
 		SourceID: item.SourceID, ParentSourceID: item.ParentSourceID, Order: item.Order,
 		Title: item.Title, ItemType: item.ItemType, Properties: item.Properties,
 		Schema: item.Schema, Views: item.Views, FinalLifecycleState: item.FinalLifecycleState,
-		BodyRequired: item.Body != nil,
+		BodyRequired: item.Body != nil, Comments: item.Comments,
 	}
 	if item.File != nil {
 		result.File = &workerapi.DocumentImportFile{

@@ -180,6 +180,41 @@ public sealed class DocumentImportStoreTests(NixPostgresFixture fixture) : IAsyn
     }
 
     [Fact]
+    public async Task An_import_restores_note_comments_for_the_importer_without_queueing_notices()
+    {
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var (imports, operation, digest) = await CommitQueuedAsync(work, "nix", "comments.nix", 8, itemCount: 1);
+        var stamp = DateTimeOffset.Parse("2026-10-29T10:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        var note = new ImportEnvelopePlan("note", null, 0, "Commented", "note", null, null, null, "active", false, null,
+        [
+            new(new string('q', 1500), true, [new("Ada", "Why?", stamp), new("Grace", "Because.", stamp.AddMinutes(1)), new("Nobody", "", stamp)]),
+            new(null, false, [new(null, "Open question", null)]),
+        ]);
+        var stage = Assert.IsType<DocumentImportStageRecord>(await imports.StageAsync(new StageDocumentImport(
+            DocumentImportId.From(operation.Id), new string('b', 64), digest, [note]), Cancellation));
+
+        var rows = await work.DbContext.NoteComments.AsNoTracking()
+            .Where(row => row.ItemId == ItemId.From(stage.RootItemId)).OrderBy(row => row.CreatedAt).ToListAsync(Cancellation);
+
+        Assert.Equal(3, rows.Count);
+        Assert.All(rows, row => Assert.Equal(TestTenants.AlphaPrincipal, row.AuthorPrincipalId.Value));
+        Assert.Equal(["Ada", "Grace", "Unknown"], rows.Select(row => row.ImportedAuthor));
+        var root = rows[0];
+        Assert.Equal(root.Id, root.ThreadId);
+        Assert.Equal(root.Id, rows[1].ThreadId);
+        Assert.Equal(1000, root.Quote!.Length);
+        Assert.Equal(stamp, root.CreatedAt);
+        Assert.NotNull(root.ResolvedAt);
+        Assert.Null(root.AnchorStart);
+        Assert.Null(rows[2].ResolvedAt);
+        var connection = await fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(0, await RawSql.CountAsync(connection, null, "SELECT count(*) FROM scheduled_trigger WHERE source = 'note.comment'"));
+        }
+    }
+
+    [Fact]
     public async Task An_import_keeps_habit_content_and_drops_every_other_reserved_key()
     {
         await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);

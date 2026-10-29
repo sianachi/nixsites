@@ -297,6 +297,7 @@ type DocumentImportStageItem struct {
 	FinalLifecycleState string              `json:"finalLifecycleState"`
 	BodyRequired        bool                `json:"bodyRequired"`
 	File                *DocumentImportFile `json:"file,omitempty"`
+	Comments            json.RawMessage     `json:"comments,omitempty"`
 }
 
 type DocumentImportStageRequest struct {

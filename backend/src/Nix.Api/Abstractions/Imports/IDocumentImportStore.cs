@@ -50,7 +50,13 @@ public sealed record ImportEnvelopePlan(
     string? Views,
     string FinalLifecycleState,
     bool BodyRequired,
-    ImportFilePlan? File);
+    ImportFilePlan? File,
+    IReadOnlyList<ImportCommentThread>? Comments = null);
+
+/// <summary>One exported comment thread; the replies are in written order and the first is the root.</summary>
+public sealed record ImportCommentThread(string? Quote, bool Resolved, IReadOnlyList<ImportComment>? Comments);
+
+public sealed record ImportComment(string? Author, string? Body, DateTimeOffset? CreatedAt);
 
 public sealed record StageDocumentImport(
     DocumentImportId ImportId,
