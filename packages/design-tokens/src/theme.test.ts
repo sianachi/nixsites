@@ -446,3 +446,21 @@ describe('chart series roles', () => {
     },
   );
 });
+
+describe('the danger role', () => {
+  it.each([
+    ['light', getProperty],
+    ['dark', getDarkProperty],
+  ] as const)('carries body-size text at 4.5:1 on the %s ground and surface', (_ground, read) => {
+    const danger = read('color-danger');
+    expect(danger).toMatch(/^#[0-9a-f]{6}$/);
+    for (const ground of ['color-bg', 'color-surface'] as const) {
+      expect(contrast(danger, read(ground)), `${danger} on ${ground}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('is set again on the chosen light ground', () => {
+    // Without it, a light document chosen on a dark system would keep the dark ground's pink.
+    expect(themeCss).toMatch(/\[data-theme='light'\]\s*\{[^}]*--color-danger: #a8413a/);
+  });
+});

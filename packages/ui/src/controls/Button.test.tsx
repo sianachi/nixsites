@@ -106,7 +106,7 @@ describe('Button', () => {
   });
 
   it('stands one control-scale step tall in every variant, rather than a hard-coded box', () => {
-    for (const variant of ['primary', 'secondary', 'ghost', 'subtle', 'icon'] as const) {
+    for (const variant of ['primary', 'secondary', 'ghost', 'subtle', 'danger', 'icon'] as const) {
       const { container, unmount } = render(
         <Button variant={variant} aria-label="Act">
           Act
@@ -121,7 +121,7 @@ describe('Button', () => {
   });
 
   it('grows to the 44px touch step when any pointer is coarse, in every variant', () => {
-    for (const variant of ['primary', 'secondary', 'ghost', 'subtle', 'icon'] as const) {
+    for (const variant of ['primary', 'secondary', 'ghost', 'subtle', 'danger', 'icon'] as const) {
       const { container, unmount } = render(
         <Button variant={variant} aria-label="Act">
           Act
@@ -157,7 +157,7 @@ describe('Button', () => {
   });
 
   it('turns the same corner as a card, in every variant', () => {
-    for (const variant of ['primary', 'secondary', 'ghost', 'subtle'] as const) {
+    for (const variant of ['primary', 'secondary', 'ghost', 'subtle', 'danger'] as const) {
       const { container } = render(<Button variant={variant}>Act</Button>);
       const button = container.querySelector('button');
       expect(button?.className).toContain('rounded-md');

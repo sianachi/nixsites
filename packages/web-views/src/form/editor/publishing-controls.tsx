@@ -164,6 +164,7 @@ export function PublishingControls({
               Keep link
             </Button>
             <Button
+              variant="danger"
               onClick={() => {
                 setRevoking(false);
                 void change('DELETE');

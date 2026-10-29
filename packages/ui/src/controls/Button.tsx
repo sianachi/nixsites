@@ -22,6 +22,8 @@ import {
  * - `subtle`    type or glyph only in the muted role, for chrome that must recede beside
  *               content: a row's actions, a drawer's close. Not accent, so it never
  *               competes with the one accent object on the screen.
+ * - `danger`    the secondary box with its label in the danger role, for an action that
+ *               destroys something (delete permanently, leave). Text, never a fill.
  * - `icon`      a square outlined box holding a single glyph.
  *
  * The frame's radius comes from `blueprintFrame`, so a button turns its corner
@@ -95,6 +97,7 @@ const buttonVariants = cva(
         secondary: cn(`border-divider text-foreground ${boxPadding}`, inkWashStates),
         ghost: cn('text-accent-text border-transparent px-1', accentWashStates),
         subtle: cn('text-muted border-transparent px-1 hover:text-foreground', inkWashStates),
+        danger: cn(`border-divider text-danger ${boxPadding}`, inkWashStates),
         icon: cn(
           'border-divider text-foreground w-(--control-md) any-pointer-coarse:w-(--control-lg) p-0',
           inkWashStates,
@@ -122,7 +125,7 @@ type ButtonBaseProps = Omit<ComponentPropsWithRef<'button'>, 'style'> & {
  * whole point of encoding the variant in the type.
  */
 export type ButtonProps =
-  | (ButtonBaseProps & { variant?: 'primary' | 'secondary' | 'ghost' | 'subtle' })
+  | (ButtonBaseProps & { variant?: 'primary' | 'secondary' | 'ghost' | 'subtle' | 'danger' })
   | (ButtonBaseProps & { variant: 'icon'; 'aria-label': string });
 
 export function Button(props: ButtonProps): ReactNode {

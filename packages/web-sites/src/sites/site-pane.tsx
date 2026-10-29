@@ -399,7 +399,7 @@ function SiteDetails({
               </Button>
             ) : (
               <Button
-                variant="secondary"
+                variant="danger"
                 disabled={working || building}
                 onClick={() => {
                   setConfirming({ kind: 'delete' });
@@ -606,6 +606,7 @@ function ConfirmDialog({
             Cancel
           </Button>
           <Button
+            variant={confirming.kind === 'delete' ? 'danger' : 'primary'}
             disabled={working}
             onClick={() => {
               setWorking(true);

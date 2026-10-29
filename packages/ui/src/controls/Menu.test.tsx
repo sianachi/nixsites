@@ -166,12 +166,15 @@ describe('Menu', () => {
     expect(screen.getAllByRole('menuitem')).toHaveLength(3);
   });
 
-  it('marks a destructive item without reaching for a colour the token sheet does not have', async () => {
+  it('marks a destructive item in the danger role and by weight, not by colour alone', async () => {
     const user = userEvent.setup();
     render(<Menu label="Workspace actions" items={ACTION_ITEMS} children={trigger()} />);
     await user.click(screen.getByRole('button', { name: 'Actions' }));
 
-    expect(screen.getByRole('menuitem', { name: 'Delete workspace' })).toHaveClass('font-semibold');
+    expect(screen.getByRole('menuitem', { name: 'Delete workspace' })).toHaveClass(
+      'font-semibold',
+      'text-danger',
+    );
   });
 
   it('selecting an item closes the menu, runs its handler once, and returns focus to the trigger', async () => {

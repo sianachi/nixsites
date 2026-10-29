@@ -466,7 +466,7 @@ function RuleTools(props: AutomationDetailProps & { readonly rule: AutomationRul
         <div>
           <Button
             type="button"
-            variant="secondary"
+            variant="danger"
             onClick={() => {
               setDeleteRefusal(null);
               setConfirmingDelete(true);
@@ -497,6 +497,7 @@ function RuleTools(props: AutomationDetailProps & { readonly rule: AutomationRul
                 Cancel
               </Button>
               <Button
+                variant="danger"
                 disabled={deleting}
                 onClick={() => {
                   void confirmDelete();

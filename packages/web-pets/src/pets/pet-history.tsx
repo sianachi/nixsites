@@ -250,7 +250,7 @@ export function PetHistory({
                         </Text>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            variant="secondary"
+                            variant="danger"
                             aria-label="Delete saved conversation permanently"
                             disabled={busy}
                             onClick={() => {

@@ -227,7 +227,7 @@ export function TemplateStudioShell({
             <Button variant="secondary" onClick={onCloseDiscard}>
               Keep editing
             </Button>
-            <Button disabled={working} onClick={onDiscard}>
+            <Button variant="danger" disabled={working} onClick={onDiscard}>
               Discard setup
             </Button>
           </>

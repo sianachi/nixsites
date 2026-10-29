@@ -19,6 +19,8 @@ colors:
   accent-text-dark: "#b5d9fd"
   accent-fill-dark: "#b5d9fd"
   muted-dark: "#b7b7ba"
+  danger: "#a8413a"
+  danger-dark: "#e88a80"
   series-1: "#5087bd"
   series-2: "#a16428"
   series-3: "#2a6d62"
@@ -101,7 +103,7 @@ A hairline-drawn, paper-quiet workspace. Structure is told by 1px dividers and w
 Density is deliberately compact (spacing unit 3.4px, 0.85x of a 4px base) yet touch-safe: controls grow to 44px on coarse pointers. The product's priorities (accessibility, simplicity, no decoration, edit in place) are expressed here as restraint: no decorative colour, no second typeface, no ornament.
 
 **Key Characteristics:**
-- Mono scheme: one steel accent; categorical colour exists only for chart series.
+- Mono scheme: one steel accent; categorical colour exists only for chart series, plus one danger role for destructive labels.
 - One family (Nunito Sans), separated by weight and size, not by a second face.
 - Hairline `divider` borders over unfilled frames; depth only on floating layers.
 - Light and dark grounds both first-class, switched by semantic roles, never `dark:` variants.
@@ -121,6 +123,9 @@ A cool-grey paper ground with ink-grey text and one muted steel blue. Values bel
 - **Quiet** (#5d5d60, `muted`, dark #b7b7ba): secondary copy; the neutral ramp is not symmetric, so the role flips ends per ground.
 - **Hairline** (`divider`, ink at 16% on paper, 18% on ink): every border.
 - Ramps `neutral-100..900` and `accent-100..900` exist for tinted fills (100-300), role bases (500) and pressed or text steps (700-900).
+
+### Danger
+Brick #a8413a (dark #e88a80, `danger`): the label of an action that destroys something for good. Text only, never a fill, at 4.5:1 or more on both grounds. Destructive menu items pair it with a heavier weight so colour is never the only signal.
 
 ### Chart series (the only categorical colour)
 Steel #5087bd, ochre #a16428, teal #2a6d62, plum #72437c, moss #374d21, graphite #383838 (`series-1..6`). Each is at least 3:1 against its ground and neighbours differ in lightness.
@@ -173,6 +178,7 @@ Library: `packages/ui` (controls, primitives, patterns). Every component has a s
 - **Primary:** the only solid accent object; `accent-fill` with `background`-coloured label, 36px tall (44px coarse).
 - **Secondary:** hairline outlined box. **Ghost:** type only. **Icon:** square outlined box with one glyph.
 - **Subtle:** type or glyph in `muted`, no frame, an ink wash on hover; for chrome that recedes beside content (row actions, overflow, close).
+- **Danger:** the secondary box with its label in `danger`; for the button that deletes, revokes or discards for good, and the confirm that follows it. Cancel stays the default focus in the confirm. Reversible removals stay Subtle.
 - **States:** hover and pressed step along the accent ramp; focus is a 2px accent outline offset 2px (`focus-visible` only); disabled is 45% opacity.
 
 ### Cards, Dialog, Popover, Menu, ContextMenu, Toast

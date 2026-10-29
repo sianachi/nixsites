@@ -194,7 +194,7 @@ export function TrashPage(): ReactElement {
                   </Button>
                   <Button
                     className="min-w-0 flex-1 justify-center text-center sm:flex-none"
-                    variant="subtle"
+                    variant="danger"
                     aria-label={`Delete ${item.title || 'Untitled'} permanently`}
                     disabled={restoring !== null}
                     onClick={() => {
@@ -228,7 +228,7 @@ export function TrashPage(): ReactElement {
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant="danger"
               onClick={() => {
                 if (purgeTarget !== null) void purge(purgeTarget);
               }}

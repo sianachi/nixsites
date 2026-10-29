@@ -59,10 +59,8 @@ import { useAnchoredPanel } from './use-anchored-panel';
  * the same way: a fine pointer gets the compact row, a finger gets the touch target the platform
  * guidelines ask for.
  *
- * **Destructive tone** darkens the label's weight rather than reaching for a colour: the token
- * sheet carries no danger role today (see `docs/adr/` before adding one - every other tone in this
- * package is a role, not a colour, and a one-off red here would be the first exception), so this is
- * the honest treatment available without inventing a raw value the guide forbids.
+ * **Destructive tone** sets the label in the token sheet's danger role and a heavier weight, so the
+ * action reads as destructive without relying on colour alone.
  */
 
 export interface MenuAction {
@@ -72,7 +70,7 @@ export interface MenuAction {
   readonly label: string;
   /** Decorative - the label already carries the name. */
   readonly icon?: LucideIcon;
-  /** Marks a destructive action (leave, delete, sign out) without a colour the system does not have. */
+  /** Marks a destructive action (leave, delete, sign out) in the danger role. */
   readonly destructive?: boolean;
   readonly disabled?: boolean;
   /** The keyboard shortcut that does the same thing, shown after the label - display only. */
@@ -568,7 +566,7 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
           return <Fragment key={entry.key ?? `content-${String(index)}`}>{node}</Fragment>;
         }
 
-        const tone = entry.destructive === true ? 'font-semibold' : undefined;
+        const tone = entry.destructive === true ? 'font-semibold text-danger' : undefined;
         const tabIndex = role === 'dialog' || index === activeIndex ? 0 : -1;
         const key = entry.key ?? entry.label;
 

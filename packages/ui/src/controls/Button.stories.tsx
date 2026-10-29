@@ -22,7 +22,7 @@ const meta = {
   argTypes: {
     variant: {
       control: 'inline-radio',
-      options: ['primary', 'secondary', 'ghost', 'subtle', 'icon'],
+      options: ['primary', 'secondary', 'ghost', 'subtle', 'danger', 'icon'],
     },
     fullWidth: { control: 'boolean' },
     disabled: { control: 'boolean' },
@@ -53,6 +53,11 @@ export const Ghost: Story = {
 /** Muted type or glyph, for chrome that recedes beside content: a row's actions, a close. */
 export const Subtle: Story = {
   args: { variant: 'subtle', children: 'Close' },
+};
+
+/** The secondary box with a danger label, for an action that destroys something. */
+export const Danger: Story = {
+  args: { variant: 'danger', children: 'Delete permanently' },
 };
 
 /** A square outlined box holding one glyph; the label lives in aria-label. */

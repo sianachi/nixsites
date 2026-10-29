@@ -122,6 +122,14 @@
   --color-series-5: #374d21;
   --color-series-6: #383838;
 
+  /* ── Danger ────────────────────────────────────────────────────────────
+     The label of an action that destroys something: delete permanently,
+     leave, sign out. Text only, never a fill, so it never competes with the
+     one accent object. A muted brick that sits in the palette like the
+     series, at 4.5:1 or more against both grounds and surfaces so it can
+     carry body-size type; theme.test.ts asserts the ratios. */
+  --color-danger: #a8413a;
+
   /* ── The solid accent fill ─────────────────────────────────────────────
      The primary button, and anything else that fills with accent and puts
      ground-coloured text on top of it.
@@ -345,6 +353,7 @@
     --color-series-4: #9a5ba6;
     --color-series-5: #dbe9cd;
     --color-series-6: #9c9c9c;
+    --color-danger: #e88a80;
 
     /* Lighter rather than deeper: on ink the label is dark, so the fill has
        to move away from it. */
@@ -395,6 +404,7 @@
   --color-series-4: #9a5ba6;
   --color-series-5: #dbe9cd;
   --color-series-6: #9c9c9c;
+  --color-danger: #e88a80;
 
   /* Lighter rather than deeper: on ink the label is dark, so the fill has
      to move away from it. */
@@ -433,6 +443,7 @@
   --color-series-4: #72437c;
   --color-series-5: #374d21;
   --color-series-6: #383838;
+  --color-danger: #a8413a;
 
   --color-accent-fill: var(--color-accent-700);
   --color-accent-fill-hover: var(--color-accent-800);

@@ -186,7 +186,7 @@ export function ArchivedWorkspacesPage(): ReactNode {
                       {restoring === workspace.id ? 'Restoring…' : 'Restore workspace'}
                     </Button>
                     <Button
-                      variant="secondary"
+                      variant="danger"
                       disabled={restoring !== null || purging !== null}
                       onClick={() => {
                         setConfirmation(workspace.id);
@@ -211,6 +211,7 @@ export function ArchivedWorkspacesPage(): ReactNode {
                             Cancel
                           </Button>
                           <Button
+                            variant="danger"
                             disabled={purging !== null}
                             onClick={() => void purge(workspace.id)}
                           >

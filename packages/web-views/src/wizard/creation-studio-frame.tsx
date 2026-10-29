@@ -282,7 +282,9 @@ export function CreationStudioFrame({
             <Button variant="secondary" onClick={onDiscardClose}>
               Keep editing
             </Button>
-            <Button onClick={onDiscard}>Discard setup</Button>
+            <Button variant="danger" onClick={onDiscard}>
+              Discard setup
+            </Button>
           </>
         }
       >

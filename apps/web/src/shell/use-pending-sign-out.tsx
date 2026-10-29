@@ -124,7 +124,9 @@ export function usePendingSignOut(beforeCheck?: () => Promise<void>): {
               <Button variant="secondary" onClick={cancel}>
                 Keep editing
               </Button>
-              <Button onClick={() => void confirm()}>Sign out and remove local notes</Button>
+              <Button variant="danger" onClick={() => void confirm()}>
+                Sign out and remove local notes
+              </Button>
             </>
           ) : undefined
         }
