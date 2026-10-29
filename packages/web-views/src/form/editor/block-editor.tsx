@@ -29,7 +29,7 @@ export function BlockEditor({
   const identityEligible =
     schema.find((property) => property.key === block.propertyKey)?.type === 'text';
   return (
-    <div className="flex min-w-0 flex-col gap-2 bg-surface p-3">
+    <div className="flex min-w-0 flex-col gap-2 rounded-md bg-surface p-3">
       <div className="flex flex-wrap items-end gap-2">
         <Field
           label={

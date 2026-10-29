@@ -18,7 +18,12 @@ export function DriveRowActions(props: {
   return (
     <Menu label={label} items={rowContextMenu(item)}>
       {(trigger) => (
-        <Button {...trigger} variant="icon" aria-label={label}>
+        <Button
+          {...trigger}
+          variant="subtle"
+          className="min-w-(--control-md) any-pointer-coarse:min-w-(--control-lg)"
+          aria-label={label}
+        >
           <Icon icon={Ellipsis} size="sm" />
         </Button>
       )}

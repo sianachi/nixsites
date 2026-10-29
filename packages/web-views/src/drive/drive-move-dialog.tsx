@@ -51,7 +51,7 @@ export function DriveMoveDialog(props: DriveMoveDialogProps): ReactNode {
       onClose={onClose}
       actions={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" onClick={confirm} disabled={target === undefined}>

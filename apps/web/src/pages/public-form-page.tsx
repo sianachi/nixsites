@@ -8,6 +8,7 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import { type PropertyValue } from '@nix/web-collections/core/container-model';
 import { reportFormValidity } from '@nix/web-views/form/form-validity';
+import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import {
   publicFormByToken,
@@ -112,22 +113,18 @@ export function PublicFormPage(): ReactNode {
 
   if (failed) {
     return (
-      <PublicFrame>
-        <Text variant="h2" as="h1">
-          This form is unavailable
-        </Text>
-        <Text tone="muted" className="wrap-anywhere">
-          The link may have expired or been revoked.
-        </Text>
+      <PublicFrame framed={false}>
+        <ErrorPanel
+          title="This form is unavailable"
+          detail="The link may have expired or been revoked."
+        />
       </PublicFrame>
     );
   }
   if (form === null)
     return (
-      <PublicFrame>
-        <Text tone="muted" className="wrap-anywhere">
-          Loading form…
-        </Text>
+      <PublicFrame framed={false}>
+        <LoadingPanel label="the form" />
       </PublicFrame>
     );
   if (complete) {
@@ -259,11 +256,6 @@ export function PublicFormPage(): ReactNode {
           if (field === undefined || !isKnownPropertyType(field.type)) return null;
           return (
             <div key={block.id} className="flex min-w-0 flex-col gap-1">
-              {block.help === null ? null : (
-                <Text variant="note" tone="muted">
-                  {block.help}
-                </Text>
-              )}
               <PropertyInput
                 item={{
                   title: '',
@@ -287,6 +279,11 @@ export function PublicFormPage(): ReactNode {
                   );
                 }}
               />
+              {block.help === null ? null : (
+                <Text variant="note" tone="muted">
+                  {block.help}
+                </Text>
+              )}
             </div>
           );
         })}
@@ -298,9 +295,13 @@ export function PublicFormPage(): ReactNode {
           className="hidden"
           aria-hidden="true"
         />
-        <Text variant="note" role="alert">
-          {submitError}
-        </Text>
+        <div role="alert">
+          {submitError === null ? null : (
+            <Text variant="bodySmall" className="block rounded-md border border-divider p-3">
+              {submitError}
+            </Text>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           {pageIndex === 0 ? null : (
             <Button
@@ -322,14 +323,22 @@ export function PublicFormPage(): ReactNode {
   );
 }
 
-function PublicFrame({ children }: { readonly children: ReactNode }): ReactNode {
+function PublicFrame({
+  children,
+  framed = true,
+}: {
+  readonly children: ReactNode;
+  readonly framed?: boolean;
+}): ReactNode {
   const zen = useZenActive();
   return (
     <main className="mx-auto flex min-h-dvh min-w-0 w-full max-w-2xl flex-col gap-3 px-2 py-4 sm:justify-center sm:px-5 sm:py-8">
-      <Button variant="secondary" className="self-end" onClick={toggleZenMode} aria-pressed={zen}>
+      <Button variant="subtle" className="self-end" onClick={toggleZenMode} aria-pressed={zen}>
         {zen ? 'Exit Zen' : 'Enter Zen'}
       </Button>
-      <section className="min-w-0 border border-divider bg-surface p-3 shadow-sm sm:p-6">
+      <section
+        className={framed ? 'min-w-0 rounded-md border border-divider p-3 sm:p-6' : 'min-w-0'}
+      >
         {children}
       </section>
     </main>

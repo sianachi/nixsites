@@ -1,4 +1,4 @@
-import { Button, Input, Text } from '@nix/ui';
+import { Button, Dialog, Input, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isCanceledError, isNixApiError } from '@nix/api-client';
@@ -20,6 +20,7 @@ export function PublishingControls({
     itemId === null ? 'idle' : 'loading',
   );
   const [working, setWorking] = useState(false);
+  const [revoking, setRevoking] = useState(false);
   const [outcome, setOutcome] = useState<string | null>(null);
   const pendingChange = useRef<AbortController | null>(null);
 
@@ -116,13 +117,13 @@ export function PublishingControls({
             void change('PUT');
           }}
         >
-          {working ? 'Working…' : 'Publish form'}
+          {working ? 'Working…' : published ? 'Publish new link' : 'Publish form'}
         </Button>
         <Button
           variant="secondary"
           disabled={working || itemId === null || status !== 'ready' || !published}
           onClick={() => {
-            void change('DELETE');
+            setRevoking(true);
           }}
         >
           Revoke link
@@ -146,6 +147,38 @@ export function PublishingControls({
           {outcome}
         </Text>
       )}
+      <Dialog
+        open={revoking}
+        title="Revoke the public link?"
+        onClose={() => {
+          setRevoking(false);
+        }}
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setRevoking(false);
+              }}
+            >
+              Keep link
+            </Button>
+            <Button
+              onClick={() => {
+                setRevoking(false);
+                void change('DELETE');
+              }}
+            >
+              Revoke link
+            </Button>
+          </>
+        }
+      >
+        <Text variant="bodySmall">
+          People with the link will no longer be able to open or submit the form. Publishing again
+          creates a new link.
+        </Text>
+      </Dialog>
     </section>
   );
 }

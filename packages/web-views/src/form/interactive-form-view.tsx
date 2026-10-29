@@ -122,7 +122,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
         ref={pageHeaderRef}
         tabIndex={-1}
         aria-live="polite"
-        className="flex min-w-0 w-full max-w-xl flex-col gap-2 border border-divider p-3"
+        className="flex min-w-0 w-full max-w-xl flex-col gap-2 rounded-md border border-divider p-3"
       >
         <Text variant="h3" as="h2" className="wrap-anywhere">
           {completion === 'saved' ? definition.confirmationTitle : 'Results ready'}
@@ -316,7 +316,11 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
         />
       ))}
 
-      {outcome === null ? null : <Text role="alert">{outcome}</Text>}
+      {outcome === null ? null : (
+        <Text variant="bodySmall" role="alert" className="rounded-md border border-divider p-3">
+          {outcome}
+        </Text>
+      )}
       <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-divider bg-background py-2">
         {pageIndex === 0 ? null : (
           <Button
@@ -377,11 +381,6 @@ function InteractiveBlock({
   }
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      {block.help === null ? null : (
-        <Text variant="note" tone="muted">
-          {block.help}
-        </Text>
-      )}
       <PropertyInput
         item={{
           parentId,
@@ -393,6 +392,11 @@ function InteractiveBlock({
         allowInputStorage={allowInputStorage}
         onCommit={onValue}
       />
+      {block.help === null ? null : (
+        <Text variant="note" tone="muted">
+          {block.help}
+        </Text>
+      )}
     </div>
   );
 }

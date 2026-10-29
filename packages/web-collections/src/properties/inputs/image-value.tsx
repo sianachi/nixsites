@@ -224,7 +224,7 @@ export function ImageValue(props: PropertyInputProps): ReactNode {
   const undoButton =
     removed === null ? null : (
       <Button
-        variant="ghost"
+        variant="subtle"
         aria-label={`Undo removing ${name}`}
         disabled={disabled}
         onClick={() => {
@@ -420,7 +420,7 @@ export function ImageValue(props: PropertyInputProps): ReactNode {
 
   const removeButton = (
     <Button
-      variant="ghost"
+      variant="subtle"
       aria-label={`Remove ${name}`}
       disabled={disabled}
       onClick={() => {

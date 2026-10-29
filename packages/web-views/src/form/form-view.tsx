@@ -474,11 +474,17 @@ function EntryForm({
           status - the blocked summary informs rather than interrupts because focus (above) is
           what carries the interruption to the field itself. Not one region with a switched role,
           which assistive technology would not re-announce. */}
-      <div>
-        <Text variant="note" role="alert" as="p">
+      <div
+        className={
+          outcome?.kind === 'refused' || outcome?.kind === 'blocked'
+            ? 'rounded-md border border-divider p-3'
+            : undefined
+        }
+      >
+        <Text variant="bodySmall" role="alert" as="p">
           {outcome?.kind === 'refused' ? outcome.text : null}
         </Text>
-        <Text variant="note" role="status" as="p">
+        <Text variant="bodySmall" role="status" as="p">
           {sending ? 'Adding the entry.' : outcome?.kind === 'refused' ? null : outcome?.text}
         </Text>
       </div>

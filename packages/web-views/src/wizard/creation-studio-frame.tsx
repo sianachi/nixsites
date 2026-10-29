@@ -161,14 +161,14 @@ export function CreationStudioFrame({
                   }}
                   className={cn(
                     `flex min-h-(--control-lg) w-full flex-row items-center gap-2 rounded-md px-2 py-1 ${focusRing}`,
-                    step === index ? 'bg-accent/10 text-accent-text' : 'hover:bg-foreground/7',
+                    step === index ? 'bg-foreground/10 text-foreground' : 'hover:bg-foreground/7',
                   )}
                 >
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-background">
                     {index < step ? <Icon icon={Check} size="sm" /> : String(index + 1)}
                   </span>
                   <span className="min-w-0 max-w-full">
-                    <Text variant="caption" as="span" className="block max-w-full truncate">
+                    <Text variant="bodySmall" as="span" className="block max-w-full truncate">
                       {entry.label}
                     </Text>
                     <Text
@@ -198,7 +198,11 @@ export function CreationStudioFrame({
             {children}
 
             {error === null ? null : (
-              <Text variant="bodySmall" role="alert" className="bg-surface px-3 py-2">
+              <Text
+                variant="bodySmall"
+                role="alert"
+                className="rounded-md border border-divider p-3"
+              >
                 {error}
               </Text>
             )}

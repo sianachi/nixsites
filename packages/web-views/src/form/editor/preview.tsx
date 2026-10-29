@@ -35,7 +35,7 @@ export function InteractiveFormRespondentPreview({
         ref={previewRef}
         tabIndex={-1}
         aria-label="Form preview"
-        className="flex min-w-0 flex-col gap-3 border border-divider bg-background p-3"
+        className="flex min-w-0 flex-col gap-3 rounded-md border border-divider bg-background p-3"
       >
         <Text variant="h3" as="h3" className="wrap-anywhere">
           {form.confirmationTitle}
@@ -93,7 +93,7 @@ export function InteractiveFormRespondentPreview({
       ref={previewRef}
       tabIndex={-1}
       aria-label="Form preview"
-      className="flex min-w-0 flex-col gap-4 border border-divider bg-background p-3"
+      className="flex min-w-0 flex-col gap-4 rounded-md border border-divider bg-background p-3"
     >
       <header className="flex flex-col gap-1 border-b border-divider pb-3">
         <Text variant="caption" tone="muted">

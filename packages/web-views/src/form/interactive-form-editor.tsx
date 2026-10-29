@@ -93,7 +93,10 @@ export function InteractiveFormEditor({
       {previewing ? <InteractiveFormRespondentPreview form={form} schema={schema} /> : null}
 
       {form.pages.map((page, pageIndex) => (
-        <div key={page.id} className="flex min-w-0 flex-col gap-2 border border-divider p-3">
+        <div
+          key={page.id}
+          className="flex min-w-0 flex-col gap-2 rounded-md border border-divider p-3"
+        >
           <div className="flex flex-wrap items-end gap-2">
             <Field
               label={`Page ${String(pageIndex + 1)} title`}

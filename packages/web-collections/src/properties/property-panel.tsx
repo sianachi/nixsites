@@ -200,7 +200,7 @@ export function PropertyPanel(props: PropertyPanelProps): ReactNode {
       ))}
       {compact && visible.length < editable.length ? (
         <Button
-          variant="ghost"
+          variant="subtle"
           className="justify-start"
           onClick={() => {
             focusOnReveal.current =

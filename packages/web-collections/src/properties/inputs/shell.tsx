@@ -186,7 +186,7 @@ export function ClearButton(props: {
       <Icon icon={X} size="sm" />
     </Button>
   ) : (
-    <Button variant="ghost" disabled={disabled} aria-label={`Clear ${name}`} onClick={onClick}>
+    <Button variant="subtle" disabled={disabled} aria-label={`Clear ${name}`} onClick={onClick}>
       Clear
     </Button>
   );
