@@ -7,6 +7,7 @@ import type {
   InteractiveFormDefinition,
   PropertyDefinition,
 } from '@nix/web-collections/core/container-model';
+import { insertAt, useUndoRemove } from '../core/use-undo-remove';
 import { BlockEditor } from './editor/block-editor';
 import { PageConditions } from './editor/conditions';
 import { move } from './editor/move';
@@ -55,6 +56,8 @@ export function InteractiveFormEditor({
   function commit(next: InteractiveFormDefinition): void {
     onChange(normalizeInteractiveForm(next, schema));
   }
+
+  const { track, notice } = useUndoRemove(form, commit);
 
   function updatePage(
     index: number,
@@ -138,6 +141,10 @@ export function InteractiveFormEditor({
                   variant="icon"
                   aria-label={`Remove ${page.title}`}
                   onClick={() => {
+                    track(page.title || 'page', (state) => ({
+                      ...state,
+                      pages: insertAt(state.pages, pageIndex, page),
+                    }));
                     commit({
                       ...form,
                       pages: form.pages.filter((_, index) => index !== pageIndex),
@@ -188,6 +195,15 @@ export function InteractiveFormEditor({
                 });
               }}
               onRemove={() => {
+                // Matched by page id so an undo after pages moved still lands on the right page.
+                track(block.text || 'block', (state) => ({
+                  ...state,
+                  pages: state.pages.map((entry) =>
+                    entry.id === page.id
+                      ? { ...entry, blocks: insertAt(entry.blocks, blockIndex, block) }
+                      : entry,
+                  ),
+                }));
                 updatePage(pageIndex, {
                   blocks: page.blocks.filter((_, index) => index !== blockIndex),
                 });
@@ -306,6 +322,7 @@ export function InteractiveFormEditor({
         )}
       </Field>
       {showPublishing ? <PublishingControls itemId={itemId} viewId={viewId} /> : null}
+      {notice}
     </section>
   );
 }

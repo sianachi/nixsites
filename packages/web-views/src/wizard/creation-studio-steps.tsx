@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 import type { PropertyDefinition as PropertyDefinitionType } from '@nix/web-collections/core/container-model';
+import { insertAt, useUndoRemove } from '../core/use-undo-remove';
 import { LineListInput } from '../core/line-list-input';
 import { PROPERTY_TYPES, isDateShaped } from '@nix/web-collections/core/property-types';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';
@@ -166,6 +167,7 @@ function FieldsEditor({
   readonly properties: readonly PropertyDefinitionType[];
   readonly onChange: (properties: readonly PropertyDefinitionType[]) => void;
 }): ReactNode {
+  const { track, notice } = useUndoRemove(properties, onChange);
   return (
     <div className="@container/fields flex min-w-0 flex-col gap-3">
       {properties.map((property, index) => (
@@ -194,6 +196,7 @@ function FieldsEditor({
                 variant="icon"
                 aria-label={`Remove ${property.label || 'field'}`}
                 onClick={() => {
+                  track(property.label || 'field', (state) => insertAt(state, index, property));
                   onChange(properties.filter((_, position) => position !== index));
                 }}
               >
@@ -319,6 +322,7 @@ function FieldsEditor({
         <Icon icon={Plus} size="sm" />
         Add field
       </Button>
+      {notice}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Icon } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import type { FormBlock, FormCondition } from '@nix/web-collections/core/container-model';
+import { insertAt, useUndoRemove } from '../../core/use-undo-remove';
 
 export function PageConditions({
   conditions,
@@ -14,6 +15,9 @@ export function PageConditions({
   readonly earlier: readonly FormBlock[];
   readonly onChange: (conditions: FormCondition[]) => void;
 }): ReactNode {
+  const { track, notice } = useUndoRemove(conditions, (next) => {
+    onChange([...next]);
+  });
   if (earlier.length === 0) return null;
   return (
     <div className="flex min-w-0 flex-col gap-2 border-t border-divider p-3">
@@ -77,6 +81,7 @@ export function PageConditions({
             variant="icon"
             aria-label="Remove page condition"
             onClick={() => {
+              track('page condition', (state) => insertAt(state, index, condition));
               onChange(conditions.filter((_, position) => position !== index));
             }}
           >
@@ -96,6 +101,7 @@ export function PageConditions({
       >
         <Icon icon={Plus} size="sm" /> Add page condition
       </Button>
+      {notice}
     </div>
   );
 }
@@ -109,6 +115,7 @@ export function BlockConditions({
   readonly earlier: readonly FormBlock[];
   readonly onChange: (block: FormBlock) => void;
 }): ReactNode {
+  const { track, notice } = useUndoRemove(block, onChange);
   if (earlier.length === 0) return null;
   return (
     <div className="flex min-w-0 flex-col gap-2 border-t border-divider p-3">
@@ -189,6 +196,10 @@ export function BlockConditions({
             variant="icon"
             aria-label="Remove condition"
             onClick={() => {
+              track('condition', (state) => ({
+                ...state,
+                visibleWhen: insertAt(state.visibleWhen, conditionIndex, condition),
+              }));
               onChange({
                 ...block,
                 visibleWhen: block.visibleWhen.filter((_, index) => index !== conditionIndex),
@@ -214,6 +225,7 @@ export function BlockConditions({
       >
         <Icon icon={Plus} size="sm" /> Add condition
       </Button>
+      {notice}
     </div>
   );
 }
