@@ -70,12 +70,15 @@ export function DemoPage(): ReactNode {
             </MemoryRouter>
             <aside
               aria-label="Demo"
-              className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-divider bg-background px-4 py-2 shadow-md sm:bottom-4"
+              className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-divider bg-background px-4 py-2 sm:bottom-[max(1rem,env(safe-area-inset-bottom))]"
             >
               <Text variant="note" as="p" tone="muted">
                 Demo · nothing is saved
               </Text>
-              <a href="/" className="text-sm font-bold whitespace-nowrap text-accent-text">
+              <a
+                href="/"
+                className="flex items-center text-sm font-bold whitespace-nowrap text-accent-text pointer-coarse:min-h-11"
+              >
                 Back to Nix
               </a>
             </aside>

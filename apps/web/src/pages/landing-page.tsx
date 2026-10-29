@@ -262,14 +262,17 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
   return (
     <div className="min-h-dvh bg-background text-md text-foreground">
       <header className={`border-b ${RULE}`}>
-        <div className={`${PAGE} flex flex-wrap items-center justify-between gap-4 py-4`}>
+        <div className={`${PAGE} flex flex-wrap items-center gap-x-6 gap-y-1 py-3 sm:py-4`}>
           <a
             href="#top"
-            className="flex min-h-11 items-center font-heading text-xl font-bold text-foreground no-underline"
+            className="mr-auto flex min-h-11 items-center font-heading text-xl font-bold text-foreground no-underline"
           >
             Nix
           </a>
-          <nav aria-label="Primary" className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <nav
+            aria-label="Primary"
+            className="order-last flex w-full flex-wrap items-center gap-x-6 sm:order-none sm:w-auto"
+          >
             <a href="#views" className={NAV_LINK}>
               Views
             </a>
@@ -282,9 +285,11 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
             <a href={REPOSITORY} className={NAV_LINK}>
               GitHub
             </a>
+          </nav>
+          <div className="flex items-center gap-3 sm:gap-6">
             <ThemeChoice inline />
             {signIn}
-          </nav>
+          </div>
         </div>
       </header>
 
