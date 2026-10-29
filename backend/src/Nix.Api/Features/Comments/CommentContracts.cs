@@ -21,8 +21,8 @@ public sealed record CommentThreadDto(
     Guid Id, string? AnchorStart, string? AnchorEnd, string? Quote, DateTimeOffset? ResolvedAt,
     Guid? ResolvedBy, string? ResolvedByName, IReadOnlyList<CommentDto> Comments);
 
-/// <summary>Every thread on a note, oldest first, with the revision they were read at.</summary>
-public sealed record CommentsResponse(long Revision, IReadOnlyList<CommentThreadDto> Threads);
+/// <summary>Every thread on a note, oldest first, with the revision they were read at and whether the caller may comment.</summary>
+public sealed record CommentsResponse(long Revision, IReadOnlyList<CommentThreadDto> Threads, bool CanComment = false);
 
 /// <summary>Where a new thread is anchored. Give a quote, positions, or both.</summary>
 public sealed record CommentAnchorRequest(string? Start, string? End, string? Quote);

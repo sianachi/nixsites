@@ -3918,6 +3918,8 @@ export interface components {
       /** Format: int64 */
       revision: number | string;
       threads: components['schemas']['CommentThreadDto'][];
+      /** @default false */
+      canComment: boolean;
     };
     CommentThreadDto: {
       /** Format: uuid */

@@ -15808,6 +15808,10 @@
             "items": {
               "$ref": "#/components/schemas/CommentThreadDto"
             }
+          },
+          "canComment": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

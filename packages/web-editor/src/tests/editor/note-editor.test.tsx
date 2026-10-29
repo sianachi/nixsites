@@ -46,7 +46,7 @@ const fileHarness = vi.hoisted(() => ({
     query: vi.fn((endpoint?: { operation?: string }) =>
       Promise.resolve(
         endpoint?.operation?.startsWith('comments.') === true
-          ? { revision: 0, threads: [] }
+          ? { revision: 0, threads: [], canComment: true }
           : { references: [] },
       ),
     ),

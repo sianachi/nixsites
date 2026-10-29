@@ -103,6 +103,7 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
       me={me}
       active={state.activeThreadId === thread.id}
       detached={state.detached.includes(thread.id)}
+      canComment={state.canComment === true}
       act={act}
     />
   );
@@ -132,20 +133,22 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
           </Text>
         ) : null}
 
-        <Composer
-          key={state.draft?.start ?? 'page'}
-          label={state.draft === null ? 'New comment' : 'Comment on the selection'}
-          quote={state.draft?.quote ?? null}
-          submitLabel="Comment"
-          onSubmit={(body, mentionIds) => addThread(body, mentionIds, state.draft)}
-          onCancel={
-            state.draft === null
-              ? undefined
-              : () => {
-                  patchComments(itemId, { draft: null });
-                }
-          }
-        />
+        {state.canComment !== true ? null : (
+          <Composer
+            key={state.draft?.start ?? 'page'}
+            label={state.draft === null ? 'New comment' : 'Comment on the selection'}
+            quote={state.draft?.quote ?? null}
+            submitLabel="Comment"
+            onSubmit={(body, mentionIds) => addThread(body, mentionIds, state.draft)}
+            onCancel={
+              state.draft === null
+                ? undefined
+                : () => {
+                    patchComments(itemId, { draft: null });
+                  }
+            }
+          />
+        )}
 
         {open.length === 0 && state.status === 'ready' ? (
           <Text variant="note" tone="muted">
@@ -246,6 +249,7 @@ function ThreadCard({
   me,
   active,
   detached,
+  canComment,
   act,
 }: {
   readonly itemId: string;
@@ -253,6 +257,7 @@ function ThreadCard({
   readonly me: string | null;
   readonly active: boolean;
   readonly detached: boolean;
+  readonly canComment: boolean;
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
 }): ReactNode {
   const client = useApiClient();
@@ -293,27 +298,29 @@ function ThreadCard({
         </Text>
       ) : null}
 
-      <div className="flex flex-wrap gap-1">
-        <Button
-          variant="ghost"
-          aria-expanded={replying}
-          onClick={() => {
-            setReplying((current) => !current);
-          }}
-        >
-          Reply
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            void act(() => client.execute(comments.setResolved(itemId, thread.id, !isResolved)));
-          }}
-        >
-          {isResolved ? 'Reopen' : 'Resolve'}
-        </Button>
-      </div>
+      {canComment ? (
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant="ghost"
+            aria-expanded={replying}
+            onClick={() => {
+              setReplying((current) => !current);
+            }}
+          >
+            Reply
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void act(() => client.execute(comments.setResolved(itemId, thread.id, !isResolved)));
+            }}
+          >
+            {isResolved ? 'Reopen' : 'Resolve'}
+          </Button>
+        </div>
+      ) : null}
 
-      {replying ? (
+      {canComment && replying ? (
         <Composer
           label="Reply"
           submitLabel="Reply"

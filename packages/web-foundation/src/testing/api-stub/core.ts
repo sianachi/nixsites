@@ -1424,7 +1424,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
         parsedUrl.pathname,
       );
       if (commentsRoute !== null && method === 'GET') {
-        const empty = { revision: 0, threads: [] };
+        const empty = { revision: 0, threads: [], canComment: true };
         if (commentsRoute[1] === undefined) {
           return Promise.resolve(json(empty));
         }

@@ -90,7 +90,7 @@ beforeEach(() => {
       return Promise.resolve(Response.json(OPEN));
     }
     if (method === 'GET' && url.pathname.endsWith(`/items/${ITEM}/comments`)) {
-      return Promise.resolve(Response.json({ revision: 1, threads: listed }));
+      return Promise.resolve(Response.json({ revision: 1, threads: listed, canComment: true }));
     }
     // The long-poll: nothing new, so it never answers.
     if (url.pathname.endsWith('/comments/watch')) return new Promise<Response>(() => undefined);

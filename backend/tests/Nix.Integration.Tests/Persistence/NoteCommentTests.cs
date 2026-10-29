@@ -57,6 +57,13 @@ public sealed class NoteCommentTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_list_says_whether_the_caller_may_comment()
+    {
+        Assert.False((await ListAsync(Viewer, Note)).Value.CanComment);
+        Assert.True((await ListAsync(Commenter, Note)).Value.CanComment);
+    }
+
+    [Fact]
     public async Task Only_the_author_edits_or_deletes_and_deleting_a_root_deletes_the_thread()
     {
         var thread = (await AddAsync(Commenter, Note, "root")).Value;

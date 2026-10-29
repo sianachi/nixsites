@@ -44,7 +44,7 @@ public sealed class CommentHandler(
     {
         ArgumentNullException.ThrowIfNull(query);
         var gate = await GateAsync(query.ItemId, write: false, cancellationToken).ConfigureAwait(false);
-        return gate.IsFailure ? Result.Failure<CommentsResponse>(gate.Error) : Result.Success(await ReadAsync(query.ItemId, cancellationToken).ConfigureAwait(false));
+        return gate.IsFailure ? Result.Failure<CommentsResponse>(gate.Error) : Result.Success(await ReadForCallerAsync(gate.Value, cancellationToken).ConfigureAwait(false));
     }
 
     /// <inheritdoc />
@@ -72,7 +72,7 @@ public sealed class CommentHandler(
                     return Result.Failure<CommentsResponse>(again.Error);
                 }
 
-                return Result.Success(await ReadAsync(query.ItemId, cancellationToken).ConfigureAwait(false));
+                return Result.Success(await ReadForCallerAsync(again.Value, cancellationToken).ConfigureAwait(false));
             }
 
             var remaining = deadline - DateTimeOffset.UtcNow;
@@ -364,6 +364,12 @@ public sealed class CommentHandler(
             ? Result.Success(item)
             : Result.Failure<Item>(ItemErrors.LifecycleConflict("A trashed note cannot be commented on."));
     }
+
+    private async ValueTask<CommentsResponse> ReadForCallerAsync(Item item, CancellationToken cancellationToken) =>
+        (await ReadAsync(item.Id, cancellationToken).ConfigureAwait(false)) with
+        {
+            CanComment = await permissions.CanCommentWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false),
+        };
 
     private async ValueTask<CommentsResponse> ReadAsync(ItemId itemId, CancellationToken cancellationToken)
     {

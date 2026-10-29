@@ -34,6 +34,7 @@ export const commentThreadSchema = z.object({
 export const commentsResponseSchema = z.object({
   revision: z.number().int().min(0),
   threads: z.array(commentThreadSchema),
+  canComment: z.boolean(),
 });
 
 export type Comment = z.infer<typeof commentSchema>;
