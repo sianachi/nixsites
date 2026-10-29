@@ -286,7 +286,8 @@ export function OpenItem({
   const zenAvailable = lock.open;
   const desktopControls = (
     <div className="flex shrink-0 items-center gap-1">
-      <BookmarkButton compact itemId={itemId} title={title} />
+      {/* The framed icon button, like the two beside it, so the three read as one set. */}
+      <BookmarkButton itemId={itemId} title={title} />
       <Button
         variant="icon"
         aria-label="Settings"
