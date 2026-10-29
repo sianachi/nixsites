@@ -91,6 +91,11 @@ export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     to: 6,
     describe: 'Captured Mermaid pictures on code blocks; existing content is unchanged.',
   },
+  {
+    from: 6,
+    to: 7,
+    describe: 'Embed views and suggestion marks; existing content is unchanged.',
+  },
 ];
 
 /** What became of one document. */

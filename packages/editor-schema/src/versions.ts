@@ -1,5 +1,7 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
+import { SUGGESTIBLE_BLOCKS } from './suggestions.js';
+
 /**
  * The version every document starts at: the node and mark set as first shipped.
  *
@@ -51,6 +53,9 @@ export const NODE_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze(
 export const MARK_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze({
   textColor: 2,
   comment: 2,
+  suggestionInsert: 7,
+  suggestionDelete: 7,
+  suggestionFormat: 7,
 });
 
 /** The image node existed at version 1; this attribute is only safe from version 3 onward. */
@@ -60,6 +65,9 @@ const ATTRIBUTE_MIN_VERSION: Readonly<Record<string, number>> = Object.freeze({
   'heading.textAlign': 5,
   'detailsSummary.textAlign': 5,
   'codeBlock.renderFileId': 6,
+  'itemBlock.view': 7,
+  // Every block type that can carry a suggestion; see `SUGGESTIBLE_BLOCKS`.
+  ...Object.fromEntries(SUGGESTIBLE_BLOCKS.map((name) => [`${name}.suggestion`, 7])),
 });
 
 /** The two tables {@link requiredSchemaVersion} consults, together. */
@@ -115,6 +123,20 @@ export function requiredSchemaVersion(
     const renderFileId: unknown = node.type.name === 'codeBlock' ? attributes.renderFileId : null;
     if (renderFileId !== null && renderFileId !== undefined) {
       const attributeMinimum = ATTRIBUTE_MIN_VERSION['codeBlock.renderFileId'];
+      if (attributeMinimum !== undefined && attributeMinimum > required)
+        required = attributeMinimum;
+    }
+
+    const view: unknown = node.type.name === 'itemBlock' ? attributes.view : null;
+    if (view !== null && view !== undefined) {
+      const attributeMinimum = ATTRIBUTE_MIN_VERSION['itemBlock.view'];
+      if (attributeMinimum !== undefined && attributeMinimum > required)
+        required = attributeMinimum;
+    }
+
+    const suggestion: unknown = attributes.suggestion;
+    if (suggestion !== null && suggestion !== undefined) {
+      const attributeMinimum = ATTRIBUTE_MIN_VERSION[`${node.type.name}.suggestion`];
       if (attributeMinimum !== undefined && attributeMinimum > required)
         required = attributeMinimum;
     }

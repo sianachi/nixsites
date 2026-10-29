@@ -24,8 +24,11 @@ import { nixExtensions } from './extensions.js';
  *
  * Version 6 added a Mermaid code block's captured picture (`codeBlock.renderFileId` and
  * `renderSourceHash`, ADR-0063).
+ *
+ * Version 7 added an embedded note's remembered view (`itemBlock.view`) and the suggestion
+ * (track-changes) marks and block attribute.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /**
  * The ProseMirror schema, derived from the extension list.

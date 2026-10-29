@@ -23,6 +23,15 @@ export const ItemBlock = Node.create({
             typeof attrs.presentation === 'string' ? attrs.presentation : 'attachment',
         }),
       },
+      /** Version 7. The view an embedded note shows, remembered across reloads. */
+      view: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-view'),
+        renderHTML: (attrs) =>
+          typeof attrs.view === 'string' && attrs.view.length > 0
+            ? { 'data-view': attrs.view }
+            : {},
+      },
     };
   },
   parseHTML() {

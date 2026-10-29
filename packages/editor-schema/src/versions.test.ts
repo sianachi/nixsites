@@ -120,7 +120,7 @@ describe('the schema version a document requires', () => {
   });
 
   it('rises to what the shipped fixture actually uses', () => {
-    expect(requiredSchemaVersion(parse(FIXTURE_DOCUMENT))).toBe(6);
+    expect(requiredSchemaVersion(parse(FIXTURE_DOCUMENT))).toBe(7);
   });
 
   it('requires version 3 for an image backed by a durable file item', () => {
@@ -165,6 +165,29 @@ describe('a captured Mermaid picture', () => {
     const dom = JSON.stringify(codeBlock.spec.toDOM?.(node));
     expect(dom).not.toContain('file-item');
     expect(dom).not.toContain('source-hash');
+  });
+});
+
+describe('embed views and suggestions', () => {
+  const need = (node: unknown) => {
+    const parsed = parseDocument({ type: 'doc', content: [node] });
+    if (!parsed.ok) throw new Error(parsed.error);
+    return requiredSchemaVersion(parsed.document);
+  };
+  const by = { id: 's', authorId: 'a', createdAt: '2026-10-29T00:00:00.000Z' };
+
+  it('require version 7 only once used', () => {
+    const embed = { targetId: 't', presentation: 'embed' };
+    expect(need({ type: 'itemBlock', attrs: embed })).toBe(4);
+    expect(need({ type: 'itemBlock', attrs: { ...embed, view: 'v' } })).toBe(7);
+    expect(need({ type: 'paragraph' })).toBe(BASE_SCHEMA_VERSION);
+    expect(need({ type: 'paragraph', attrs: { suggestion: { ...by, op: 'insert' } } })).toBe(7);
+    expect(
+      need({
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'x', marks: [{ type: 'suggestionDelete', attrs: by }] }],
+      }),
+    ).toBe(7);
   });
 });
 

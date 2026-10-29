@@ -111,6 +111,7 @@ describe('tables', () => {
   it('keeps a merged cell merged', () => {
     const merged = {
       type: 'table',
+      attrs: { suggestion: null },
       content: [
         {
           type: 'tableRow',
@@ -121,7 +122,7 @@ describe('tables', () => {
               content: [
                 {
                   type: 'paragraph',
-                  attrs: { textAlign: null },
+                  attrs: { textAlign: null, suggestion: null },
                   content: [{ type: 'text', text: 'Spans two' }],
                 },
               ],
@@ -142,6 +143,7 @@ describe('tables', () => {
   it('keeps a column width', () => {
     const sized = {
       type: 'table',
+      attrs: { suggestion: null },
       content: [
         {
           type: 'tableRow',
@@ -149,7 +151,7 @@ describe('tables', () => {
             {
               type: 'tableCell',
               attrs: { colspan: 1, rowspan: 1, colwidth: [180], align: null },
-              content: [{ type: 'paragraph', attrs: { textAlign: null } }],
+              content: [{ type: 'paragraph', attrs: { textAlign: null, suggestion: null } }],
             },
           ],
         },
@@ -262,7 +264,7 @@ describe('the schema version', () => {
     // document carries a pin that has to be raised past it by a job at deploy (ADR-0024).
     // If this assertion fails, the question is whether that was done - not whether to
     // update the number.
-    expect(SCHEMA_VERSION).toBe(6);
+    expect(SCHEMA_VERSION).toBe(7);
   });
 
   it('still opens a document written before the bump, unchanged', () => {
@@ -284,13 +286,13 @@ describe('the schema version', () => {
     expect(requiredSchemaVersion(parsed.document)).toBe(1);
   });
 
-  it('needs version 6 for the complete block, alignment and capture fixture', () => {
+  it('needs version 7 for the complete block, alignment, capture and suggestion fixture', () => {
     const parsed = parseDocument(FIXTURE_DOCUMENT);
     if (!parsed.ok) {
       throw new Error(parsed.error);
     }
 
-    expect(requiredSchemaVersion(parsed.document)).toBe(6);
+    expect(requiredSchemaVersion(parsed.document)).toBe(7);
   });
 });
 

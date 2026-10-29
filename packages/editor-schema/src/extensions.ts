@@ -25,6 +25,12 @@ import { ColumnEditing } from './column-commands.js';
 import { Column, ColumnBlock } from './columns.js';
 import { CommentMark, TextColorMark } from './marks.js';
 import { Reference } from './references.js';
+import {
+  SuggestionAttributes,
+  SuggestionDeleteMark,
+  SuggestionFormatMark,
+  SuggestionInsertMark,
+} from './suggestions.js';
 import { Details, DetailsContent, DetailsSummary } from './details.js';
 
 /**
@@ -46,6 +52,7 @@ export const nixExtensions: Extensions = [
   Document.extend({ content: '(block | pageBoundary)+' }),
   Paragraph,
   TextAlignmentAttributes,
+  SuggestionAttributes,
   Text,
   HardBreak,
 
@@ -135,6 +142,11 @@ export const nixExtensions: Extensions = [
   // thread hangs off.
   TextColorMark,
   CommentMark,
+
+  // Version 7. Track-changes marks; the block-level half is `SuggestionAttributes`.
+  SuggestionInsertMark,
+  SuggestionDeleteMark,
+  SuggestionFormatMark,
 ];
 
 /**

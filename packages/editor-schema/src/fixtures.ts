@@ -1,3 +1,4 @@
+import { SUGGESTIBLE_BLOCKS } from './suggestions.js';
 import { MARK_MIN_VERSION, NODE_MIN_VERSION } from './versions.js';
 
 /**
@@ -12,8 +13,7 @@ import { MARK_MIN_VERSION, NODE_MIN_VERSION } from './versions.js';
  * client actually sends.
  */
 
-/** A block-level fixture, keyed by the node it exercises. */
-export const NODE_FIXTURES: Readonly<Record<string, unknown>> = {
+const NODE_FIXTURES_SOURCE: Readonly<Record<string, unknown>> = {
   itemBlock: {
     type: 'itemBlock',
     attrs: { targetId: '00000000-0000-4000-8000-000000000001', presentation: 'embed' },
@@ -308,8 +308,55 @@ export const NODE_FIXTURES: Readonly<Record<string, unknown>> = {
   },
 };
 
+/** Version 7 defaults (`suggestion`, `itemBlock.view`), filled in so the sources above stay short. */
+function withVersion7Defaults(fixture: unknown): unknown {
+  if (Array.isArray(fixture)) return fixture.map(withVersion7Defaults);
+  if (typeof fixture !== 'object' || fixture === null) return fixture;
+  const node = Object.fromEntries(
+    Object.entries(fixture).map(([key, value]) => [key, withVersion7Defaults(value)]),
+  ) as { type?: unknown; attrs?: Record<string, unknown> };
+  if (typeof node.type !== 'string') return node;
+  const defaults: Record<string, unknown> = SUGGESTIBLE_BLOCKS.includes(node.type)
+    ? { suggestion: null }
+    : {};
+  if (node.type === 'itemBlock') defaults.view = null;
+  return Object.keys(defaults).length === 0
+    ? node
+    : { ...node, attrs: { ...defaults, ...node.attrs } };
+}
+
+/** A block-level fixture, keyed by the node it exercises. */
+export const NODE_FIXTURES = withVersion7Defaults(NODE_FIXTURES_SOURCE) as Readonly<
+  Record<string, unknown>
+>;
+
 /** An inline fixture per mark, each a paragraph carrying exactly that mark. */
-export const MARK_FIXTURES: Readonly<Record<string, unknown>> = {
+/** A paragraph whose text carries one suggestion mark. */
+function suggested(mark: string, text: string, extra: Record<string, unknown> = {}) {
+  return {
+    type: 'paragraph',
+    attrs: { textAlign: null },
+    content: [
+      {
+        type: 'text',
+        marks: [
+          {
+            type: mark,
+            attrs: {
+              id: 's-1',
+              authorId: '0199c0de-0000-7000-8000-000000000004',
+              createdAt: '2026-10-29T00:00:00.000Z',
+              ...extra,
+            },
+          },
+        ],
+        text,
+      },
+    ],
+  };
+}
+
+const MARK_FIXTURES_SOURCE: Readonly<Record<string, unknown>> = {
   bold: {
     type: 'paragraph',
     attrs: { textAlign: null },
@@ -384,7 +431,14 @@ export const MARK_FIXTURES: Readonly<Record<string, unknown>> = {
       },
     ],
   },
+  suggestionInsert: suggested('suggestionInsert', 'proposed'),
+  suggestionDelete: suggested('suggestionDelete', 'struck'),
+  suggestionFormat: suggested('suggestionFormat', 'restyled', { before: '[]' }),
 };
+
+export const MARK_FIXTURES = withVersion7Defaults(MARK_FIXTURES_SOURCE) as Readonly<
+  Record<string, unknown>
+>;
 
 /**
  * One document using every node and every mark.
@@ -392,7 +446,7 @@ export const MARK_FIXTURES: Readonly<Record<string, unknown>> = {
  * The single artefact both sides check themselves against. If it parses here and in the
  * collaboration service, the two builds agree about what a document is.
  */
-export const FIXTURE_DOCUMENT: unknown = {
+export const FIXTURE_DOCUMENT: unknown = withVersion7Defaults({
   type: 'doc',
   content: [
     ...Object.values(NODE_FIXTURES),
@@ -412,8 +466,31 @@ export const FIXTURE_DOCUMENT: unknown = {
       },
       content: [{ type: 'text', text: 'flowchart LR\n  A --> B' }],
     },
+    {
+      // Version 7: an embed that remembers its view, and a block inserted by a suggestion.
+      type: 'itemBlock',
+      attrs: {
+        targetId: '00000000-0000-4000-8000-000000000001',
+        presentation: 'embed',
+        view: '0199c0de-0000-7000-8000-000000000005',
+        suggestion: null,
+      },
+    },
+    {
+      type: 'paragraph',
+      attrs: {
+        textAlign: null,
+        suggestion: {
+          id: 's-2',
+          authorId: '0199c0de-0000-7000-8000-000000000004',
+          createdAt: '2026-10-29T00:00:00.000Z',
+          op: 'insert',
+        },
+      },
+      content: [{ type: 'text', text: 'A suggested paragraph.' }],
+    },
   ],
-};
+});
 
 /**
  * A document exactly as version 1 of the schema could produce it.

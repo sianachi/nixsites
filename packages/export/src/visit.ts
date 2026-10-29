@@ -70,6 +70,9 @@ export const PROSE_MARKS = [
   'link',
   'textColor',
   'comment',
+  'suggestionInsert',
+  'suggestionDelete',
+  'suggestionFormat',
 ] as const;
 
 export type ProseMarkName = (typeof PROSE_MARKS)[number];
