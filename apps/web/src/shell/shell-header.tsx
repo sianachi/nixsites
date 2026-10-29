@@ -99,7 +99,7 @@ export function ShellHeader({
         <span className="hidden flex-1 text-left sm:inline">Search</span>
         {/* The shortcut is shown rather than hidden in a tooltip: a shortcut nobody can discover
             is a shortcut nobody uses. */}
-        <kbd className="hidden font-mono text-2xs text-muted md:inline">
+        <kbd className="hidden font-mono text-xs text-muted md:inline">
           {SEARCH_KEYS.map((keys) => formatShortcut(keys)).join(' ')}
         </kbd>
       </button>

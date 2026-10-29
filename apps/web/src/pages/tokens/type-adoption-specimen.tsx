@@ -140,8 +140,8 @@ const TRACKING_ROWS: readonly TrackingRow[] = [
   },
   {
     token: 'tracking-widest',
-    className: 'font-body text-2xs uppercase tracking-widest text-muted',
-    why: 'At 10px capitals look set solid without it. This is the `kicker` variant.',
+    className: 'font-body text-xs uppercase tracking-widest text-muted',
+    why: 'The smallest caps, at the 11px floor, look set solid without it. This is the `kicker` variant.',
     sample: 'Contract',
   },
 ];
@@ -194,11 +194,6 @@ const ALLOWLIST: readonly AllowlistRow[] = [
     where: 'A specimen quoting another surface',
     what: 'The view switcher’s tabs in `rhythm-specimen.tsx`',
     why: 'Reproduced verbatim from `view-switcher.tsx`. A specimen that redrew the thing it is quoting would stop being evidence about the real surface.',
-  },
-  {
-    where: 'One caps label off the published step',
-    what: '`theme-choice.tsx`’s “Appearance”, at `text-2xs`',
-    why: 'Everything about it is `fieldLabel` except the size. It names a group inside a 240px menu, where the published step sits level with the options under it and stops reading as their heading.',
   },
 ];
 

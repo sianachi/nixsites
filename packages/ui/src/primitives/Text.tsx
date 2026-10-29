@@ -169,7 +169,8 @@ const textVariants = cva('wrap-anywhere', {
       bodySmall: `text-base ${body}`,
       note: `text-sm ${body}`,
       caption: `text-xs ${body}`,
-      kicker: `text-2xs ${body} tracking-widest uppercase`,
+      // 11px, not the sheet's 10px step: no visible text sits below 11px (the platform floor).
+      kicker: `text-xs ${body} tracking-widest uppercase`,
     },
     tone: {
       default: 'text-foreground',

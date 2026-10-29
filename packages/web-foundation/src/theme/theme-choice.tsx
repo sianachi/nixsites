@@ -33,14 +33,13 @@ export function ThemeChoice({ inline = false }: { readonly inline?: boolean }): 
     <fieldset className={inline ? '' : 'border-t border-divider px-3 py-2'}>
       <legend className="sr-only">Appearance</legend>
 
-      {/* text-primitive-exempt: `fieldLabel` one step down. This names the group inside a 240px
-          account menu, where the published label step (`text-xs`) sits level with the option
-          labels under it and stops reading as their heading. Everything else about it - family,
-          caps, tracking, muted role - is the published treatment. */}
+      {/* text-primitive-exempt: the published `fieldLabel` look on a paragraph, since it names a
+          group rather than one field. It once sat a step smaller, at 10px, which is below the 11px
+          floor for visible text; caps and tracking already set it apart from the options. */}
       {inline ? null : (
         <p
           aria-hidden="true"
-          className="mb-1.5 font-heading text-2xs uppercase tracking-wider text-muted"
+          className="mb-1.5 font-heading text-xs uppercase tracking-wider text-muted"
         >
           Appearance
         </p>
