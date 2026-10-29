@@ -174,7 +174,8 @@ export function CreationStudioFrame({
                     <Text
                       variant="caption"
                       as="span"
-                      tone="muted"
+                      // Muted ink fails contrast on the selected fill, so the selected step's detail takes ink too.
+                      tone={step === index ? 'default' : 'muted'}
                       className="hidden truncate @4xl/studio:block"
                     >
                       {entry.detail}
