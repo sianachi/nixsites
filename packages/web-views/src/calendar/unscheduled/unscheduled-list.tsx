@@ -33,7 +33,7 @@ export function UnscheduledList(props: UnscheduledListProps): ReactNode {
           onClear(dragged.id);
         }
       }}
-      className="flex flex-col gap-2 border border-divider p-3"
+      className="flex flex-col gap-2 rounded-md border border-divider p-3"
     >
       <Text variant="h6" as="h3" id={headingId}>
         {`Unscheduled (${String(items.length)})`}

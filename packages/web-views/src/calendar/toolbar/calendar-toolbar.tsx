@@ -77,7 +77,7 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
 
       <div className="ml-auto flex items-center gap-1">
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-label={`Previous ${mode}`}
           className="px-2"
           onClick={() => {
@@ -98,7 +98,7 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
         </Button>
 
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-label={`Next ${mode}`}
           className="px-2"
           onClick={() => {

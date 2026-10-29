@@ -45,7 +45,10 @@ export function OffAxisList({
   }
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2 border border-divider p-3">
+    <section
+      aria-labelledby={headingId}
+      className="flex flex-col gap-2 rounded-md border border-divider p-3"
+    >
       <Text variant="h6" as="h3" id={headingId}>
         {heading}
       </Text>
@@ -64,7 +67,7 @@ export function OffAxisList({
 
       {placed.length <= MAXIMUM_COLLAPSED_OFF_AXIS_ITEMS ? null : (
         <Button
-          variant="ghost"
+          variant="subtle"
           className="self-start py-1 text-sm"
           aria-expanded={expanded}
           onClick={() => {
@@ -104,9 +107,9 @@ function OffAxisEntry({
             floor - the same widening as the calendar card's title, half a step each side so it
             never reaches the reschedule toggle beside it. */}
             <Button
-              variant="ghost"
+              variant="subtle"
               aria-label={announce(placed)}
-              className="relative min-w-0 justify-start px-0 py-0.5 text-left text-sm before:absolute before:inset-y-0 before:-inset-x-0.5"
+              className="relative min-w-0 flex-1 justify-start px-0 py-0.5 text-left text-sm before:absolute before:inset-y-0 before:-inset-x-0.5"
               {...openProps(item.id)}
             >
               <span className="truncate">{titleOf(item)}</span>

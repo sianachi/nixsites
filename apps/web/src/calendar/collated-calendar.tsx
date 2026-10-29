@@ -252,6 +252,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
+          className="shrink-0 [&_button]:whitespace-nowrap"
           label="Calendar grain"
           options={GRAINS}
           value={grain}
@@ -592,7 +593,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
                       </span>
                     ) : onComplete === undefined ? null : (
                       <Button
-                        variant="ghost"
+                        variant="subtle"
                         aria-label={`Mark ${title || 'Untitled'} done`}
                         className="shrink-0 px-0.5 py-0.5"
                         onClick={() => {
@@ -651,7 +652,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
                   </button>
 
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     aria-label={`Reschedule ${title || 'Untitled'}`}
                     aria-haspopup="dialog"
                     // Shown on hover, on focus and always on a coarse pointer: on every chip at
@@ -671,7 +672,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
 
         {entries.length <= MONTH_VISIBLE_ITEMS ? null : (
           <Button
-            variant="ghost"
+            variant="subtle"
             className="self-start px-1 py-0 text-xs"
             aria-expanded={expanded}
             onClick={() => {

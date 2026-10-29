@@ -90,7 +90,7 @@ function TimelineRow({ placed, columns, aside, virtualIndex }: TimelineRowProps)
           >
             <div className="flex items-center justify-between gap-2">
               <SelectCheckbox item={item} />
-              <Text variant="bodySmall" as="span" className="truncate">
+              <Text variant="bodySmall" as="span" className="min-w-0 flex-1 truncate">
                 {titleOf(item)}
               </Text>
 

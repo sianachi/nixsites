@@ -29,7 +29,7 @@ export function RescheduleToggle({
 
   return (
     <Button
-      variant="icon"
+      variant="subtle"
       // Named per item, the way the calendar names its per-card control and the list names its per-
       // row cells: a screen of twelve controls all called "Reschedule" is twelve controls neither a
       // screen reader user nor a test can tell apart.

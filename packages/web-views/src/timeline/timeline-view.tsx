@@ -244,7 +244,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
 
           <div className="ml-auto flex items-center gap-1">
             <Button
-              variant="ghost"
+              variant="subtle"
               aria-label={`Previous ${scale}`}
               className="px-2"
               onClick={() => {
@@ -265,7 +265,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
             </Button>
 
             <Button
-              variant="ghost"
+              variant="subtle"
               aria-label={`Next ${scale}`}
               className="px-2"
               onClick={() => {
@@ -352,7 +352,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
           // what actually moves focus here, this is what makes moving it possible on an element
           // that carries no interaction of its own.
           tabIndex={-1}
-          className="flex flex-col gap-2 border border-divider p-3"
+          className="flex flex-col gap-2 rounded-md border border-divider p-3"
         >
           <div className="flex items-center justify-between gap-2">
             <Text variant="h6" as="h3">
@@ -360,7 +360,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
             </Text>
 
             <Button
-              variant="ghost"
+              variant="subtle"
               className="py-1 text-sm"
               onClick={() => {
                 setRescheduling(null);

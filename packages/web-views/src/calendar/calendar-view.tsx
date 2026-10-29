@@ -364,7 +364,7 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
       {container.writeError === null ? null : (
         // Alongside the calendar rather than instead of it: the write was refused and the item has
         // already been put back where it was, so the grid is correct and only the reason is missing.
-        <div role="alert" className="border border-divider p-3">
+        <div role="alert" className="rounded-md border border-divider p-3">
           <Text variant="bodySmall">{container.writeError}</Text>
         </div>
       )}

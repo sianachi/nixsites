@@ -73,7 +73,7 @@ export function DayCell(props: DayCellProps): ReactNode {
 
         {items.length <= MONTH_VISIBLE_ITEMS ? null : (
           <Button
-            variant="ghost"
+            variant="subtle"
             className="self-start px-1 py-0 text-xs"
             aria-expanded={expanded}
             onClick={() => {
