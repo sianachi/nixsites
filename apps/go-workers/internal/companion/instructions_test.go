@@ -149,7 +149,7 @@ func TestViewChangesRequireReadbackAndConcreteCapabilityFeedback(t *testing.T) {
 // note and searches before answering, and cites only items it has been given.
 func TestInstructionsReadTheOpenNoteSearchAndCite(t *testing.T) {
 	text := instructions()
-	for _, want := range []string{"currentItemId and currentItemTitle name the note the owner has open", "read it with nix_read_note before answering", "search with nix_search and read the best matches before answering", "'Sources:'", "link only items returned by a successful tool result or listed in the input"} {
+	for _, want := range []string{"currentItemId and currentItemTitle name the note the owner has open", "read it with nix_read_note before answering", "search with nix_search before answering", "answer from them when they hold the answer, citing their notes", "'Sources:'", "link only items returned by a successful tool result or listed in the input"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("instructions omit %q", want)
 		}

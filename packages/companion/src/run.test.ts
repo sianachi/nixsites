@@ -255,13 +255,20 @@ describe('workspace-scoped companion tools', () => {
   );
   it('filters search results before sending data to the model', async () => {
     const { ports, query, signal } = setup();
-    query.mockResolvedValue({
-      results: [
-        { id: 'allowed', workspaceId: workspace },
-        { id: 'private', workspaceId: 'other' },
-      ],
-      truncated: true,
-    });
+    const passage = { itemId, title: 'Trip', heading: 'Plan', ord: 0, text: 'Holiday in May.' };
+    query.mockImplementation((endpoint: { path: string; query?: Record<string, unknown> }) =>
+      Promise.resolve(
+        endpoint.path === '/api/v1/search/passages'
+          ? { passages: endpoint.query?.workspaceId === workspace ? [passage] : [] }
+          : {
+              results: [
+                { id: 'allowed', workspaceId: workspace },
+                { id: 'private', workspaceId: 'other' },
+              ],
+              truncated: true,
+            },
+      ),
+    );
     const outcome = await runWorkspaceTool(
       ports,
       workspace,
@@ -269,7 +276,7 @@ describe('workspace-scoped companion tools', () => {
       signal,
     );
     expect(outcome.text).not.toContain('private');
-    expect(JSON.parse(outcome.text)).toMatchObject({ truncated: true });
+    expect(JSON.parse(outcome.text)).toMatchObject({ truncated: true, passages: [passage] });
   });
   it('refuses unknown operations and model-provided URLs', async () => {
     const { ports, execute, signal } = setup();

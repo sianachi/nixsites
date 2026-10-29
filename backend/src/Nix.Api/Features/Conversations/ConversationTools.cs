@@ -100,7 +100,27 @@ public static class ConversationTools
                     rows.Add(Envelope(row));
                 }
             }
-            return new(true, new JsonObject { ["workspaceId"] = workspaceId, ["items"] = rows, ["partial"] = hits.Count >= 30 || rows.Count != hits.Count }.ToJsonString());
+            // Passages match by meaning too, so they can answer what no title or word matched.
+            var passages = new JsonArray();
+            try
+            {
+                foreach (var passage in await services.GetRequiredService<IItemSearch>().FindPassagesAsync(null, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false))
+                {
+                    passages.Add(new JsonObject
+                    {
+                        ["itemId"] = passage.ItemId.Value,
+                        ["title"] = passage.Title,
+                        ["heading"] = passage.Heading,
+                        ["text"] = passage.Text,
+                    });
+                }
+            }
+            catch (ItemQueryFailedException)
+            {
+                // The item matches still answer; passages are the extra a slow search drops.
+            }
+
+            return new(true, new JsonObject { ["workspaceId"] = workspaceId, ["items"] = rows, ["partial"] = hits.Count >= 30 || rows.Count != hits.Count, ["passages"] = passages }.ToJsonString());
         }
         Item? item = null;
         if (Guid.TryParse(Arg("itemId"), out var id))

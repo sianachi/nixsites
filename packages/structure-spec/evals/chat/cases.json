@@ -2067,5 +2067,34 @@
     "answerChecks": {
       "all": ["overdue"]
     }
+  },
+  {
+    "id": "search-by-meaning",
+    "fixture": "search",
+    "prompt": "When is my trip, and where am I going?",
+    "noWrites": true,
+    "tools": {
+      "requireSuccessful": ["search"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["Lisbon", "May"],
+      "cites": ["summer-plans"]
+    }
+  },
+  {
+    "id": "search-child-passage",
+    "fixture": "search",
+    "currentItem": "apartment",
+    "prompt": "How long does my cover for water damage last? The answer is somewhere in the notes in here.",
+    "noWrites": true,
+    "tools": {
+      "requireSuccessful": ["search|search_note"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["36 months|three years"],
+      "cites": ["insurance-note"]
+    }
   }
 ]

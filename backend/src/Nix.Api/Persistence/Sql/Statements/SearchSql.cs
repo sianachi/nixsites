@@ -202,8 +202,9 @@ public static class SearchSql
         """;
 
     /// <summary>
-    /// The passages of a note's subtree that best match a query, by reciprocal-rank fusion of
-    /// full-text rank and, when <c>@query_embedding</c> is not null, cosine distance.
+    /// The passages that best match a query, in a note's subtree or, when <c>@root_id</c> is null,
+    /// in every readable workspace given, by reciprocal-rank fusion of full-text rank and, when
+    /// <c>@query_embedding</c> is not null, cosine distance.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -213,11 +214,11 @@ public static class SearchSql
     /// </para>
     /// <para>
     /// Each arm keeps its fifty best before fusing, and 60 is the usual fusion constant. The cosine
-    /// arm scans the subtree's chunks exactly. shortcut: no ANN index, fine for one note's subtree;
-    /// add HNSW if this ever searches a whole workspace.
+    /// arm scans the candidate chunks exactly, under the ad-hoc query timeout. shortcut: no ANN
+    /// index; add HNSW once a workspace holds more than about 100,000 chunks.
     /// </para>
     /// </remarks>
-    public const string SubtreePassages = """
+    public const string Passages = """
         WITH scoped AS MATERIALIZED (
             SELECT chunk.item_id,
                    chunk.ord,
@@ -226,15 +227,19 @@ public static class SearchSql
                    chunk.body_vector,
                    chunk.embedding,
                    item.properties ->> 'title' AS title
-            FROM item_closure AS edge
+            FROM item_chunk AS chunk
             JOIN item
               ON item.tenant_id = @tenant_id
-             AND item.id = edge.descendant_id
-            JOIN item_chunk AS chunk
-              ON chunk.tenant_id = @tenant_id
-             AND chunk.item_id = item.id
-            WHERE edge.tenant_id = @tenant_id
-              AND edge.ancestor_id = @root_id
+             AND item.id = chunk.item_id
+            WHERE chunk.tenant_id = @tenant_id
+              AND (CAST(@root_id AS uuid) IS NULL
+                   OR EXISTS (
+                       SELECT 1
+                       FROM item_closure AS edge
+                       WHERE edge.tenant_id = @tenant_id
+                         AND edge.ancestor_id = @root_id
+                         AND edge.descendant_id = item.id
+                   ))
               AND item.workspace_id = ANY(@workspace_ids)
               AND item.lifecycle_state = 'active'
               AND item.template_id IS NULL

@@ -7,7 +7,7 @@ import { chatCaseSchema, chatSuiteSchema } from './chat-schema.js';
 describe('chat review evaluation contract', () => {
   it('keeps every fixture buildable and every suite reference local to its fixture', () => {
     const nodesOf = new Map<string | undefined, Set<string>>();
-    for (const name of [undefined, 'views']) {
+    for (const name of [undefined, 'views', 'search']) {
       const file = name ? `fixture-${name}.json` : 'fixture.json';
       const raw = readFileSync(
         new URL(`../../evals/chat/${file}`, import.meta.url),

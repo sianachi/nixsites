@@ -260,7 +260,7 @@ const TOOL_BUILDS: Readonly<Record<WorkspaceOperation, () => ToolBuild>> = {
   }),
   search: () => ({
     description:
-      'Search this workspace by title or content. Read-only; reads may run without a card; changes always ask for approval.',
+      'Search this workspace by title or content: returns matching items and the passages that best answer the query, matched by meaning as well as words. Read-only; reads may run without a card; changes always ask for approval.',
     properties: { query: stringProperty('What to search for.') },
     required: ['query'],
   }),

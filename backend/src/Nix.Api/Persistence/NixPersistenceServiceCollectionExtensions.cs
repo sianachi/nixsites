@@ -459,6 +459,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IQueryHandler<ResolveReferences, Result<ResolvedReferences>>, ResolveReferencesHandler>();
         services.AddScoped<IQueryHandler<GetBacklinks, Result<BacklinkResults>>, GetBacklinksHandler>();
         services.AddScoped<IQueryHandler<GetPassages, Result<IReadOnlyList<NotePassage>>>, GetPassagesHandler>();
+        services.AddScoped<IQueryHandler<SearchPassages, Result<IReadOnlyList<NotePassage>>>, SearchPassagesHandler>();
         services.AddScoped<IQueryHandler<GetRelatedItems, Result<RelatedItemResults>>, GetRelatedItemsHandler>();
         services.AddScoped<IQueryHandler<FindMentions, Result<MentionResults>>, FindMentionsHandler>();
 

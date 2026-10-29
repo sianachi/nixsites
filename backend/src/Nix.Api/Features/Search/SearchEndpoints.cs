@@ -75,6 +75,18 @@ internal static class SearchEndpoints
                 + "blank query returns no results rather than every item.")
             .Produces<SearchResponse>(StatusCodes.Status200OK);
 
+        search.MapGet("/passages", SearchPassagesEndpoint.Handle)
+            .WithName("SearchPassages")
+            .WithSummary("The passages across the caller's workspaces that best answer a query")
+            .WithDescription(
+                "Returns up to 'limit' (default 8, at most 20) passages from every document the "
+                + "caller may read, or from one workspace when 'workspaceId' is given, ranked by "
+                + "full-text match fused with semantic similarity when the server's local "
+                + "embedding model is loaded. Locked, trashed and template content is never "
+                + "returned. A workspace the caller cannot read returns no passages.")
+            .Produces<PassagesResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         search.MapGet("/references", ResolveReferencesEndpoint.Handle)
             .WithName("ResolveReferences")
             .WithSummary("Resolve the items a document's references point at")

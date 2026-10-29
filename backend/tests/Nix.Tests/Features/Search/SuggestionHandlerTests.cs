@@ -358,7 +358,7 @@ public sealed class SuggestionHandlerTests
             throw new InvalidOperationException("Mentions must not resolve identifiers.");
 
         public ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
-            ItemId rootId,
+            ItemId? rootId,
             string query,
             IReadOnlyList<WorkspaceId> readableWorkspaces,
             int limit,

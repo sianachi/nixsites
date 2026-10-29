@@ -417,10 +417,18 @@ export async function runWorkspaceTool(
         };
         break;
       }
-      const found = await client.query(search.searchItems(args.query, 50), requestOptions);
+      // Items match a title or the words; passages also match by meaning, so a note that says
+      // "holiday" answers a question about a trip.
+      const [found, passages] = await Promise.all([
+        client.query(search.searchItems(args.query, 50), requestOptions),
+        client.query(search.workspacePassages(args.query, workspaceId, 8), requestOptions),
+      ]);
       const hits = found.results.filter((item) => item.workspaceId === workspaceId);
-      contentSources = hits.map((hit) => hit.parentId);
-      result = { results: hits, truncated: found.truncated };
+      contentSources = [
+        ...hits.map((hit) => hit.parentId),
+        ...passages.passages.map((passage) => passage.itemId),
+      ];
+      result = { results: hits, truncated: found.truncated, passages: passages.passages };
       break;
     }
     case 'create_note': {

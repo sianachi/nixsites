@@ -85,6 +85,7 @@ public sealed class AccessTokenScopePolicyTests
         ["GetOperation"] = Requirement.Read,
         ["GetBacklinks"] = Requirement.Read,
         ["GetPassages"] = Requirement.Read,
+        ["SearchPassages"] = Requirement.Read,
         ["GetItemPermissions"] = Requirement.Read,
         ["RunItemQuery"] = Requirement.Read,
 

@@ -1387,6 +1387,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/search/passages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The passages across the caller's workspaces that best answer a query
+     * @description Returns up to 'limit' (default 8, at most 20) passages from every document the caller may read, or from one workspace when 'workspaceId' is given, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned. A workspace the caller cannot read returns no passages.
+     */
+    get: operations['SearchPassages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/search/references': {
     parameters: {
       query?: never;
@@ -10605,6 +10625,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SearchResponse'];
+        };
+      };
+    };
+  };
+  SearchPassages: {
+    parameters: {
+      query?: {
+        q?: string;
+        workspaceId?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PassagesResponse'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
     };

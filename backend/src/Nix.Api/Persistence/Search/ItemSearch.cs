@@ -109,7 +109,7 @@ public sealed class ItemSearch(
 
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
-        ItemId rootId,
+        ItemId? rootId,
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
@@ -131,11 +131,11 @@ public sealed class ItemSearch(
         return await ItemQueryReader.GuardedAsync<IReadOnlyList<NotePassage>>(sql, async () =>
         {
             var rows = sql.QueryAsync<NotePassage, PassageMapper>(
-                SearchSql.SubtreePassages,
+                SearchSql.Passages,
                 default,
                 [
                     Uuid("tenant_id", Tenant.Value),
-                    Uuid("root_id", rootId.Value),
+                    new NpgsqlParameter("root_id", NpgsqlDbType.Uuid) { Value = rootId is { } root ? root.Value : DBNull.Value },
                     UuidArray("workspace_ids", readableWorkspaces),
                     new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
                     new NpgsqlParameter("query_embedding", NpgsqlDbType.Text)

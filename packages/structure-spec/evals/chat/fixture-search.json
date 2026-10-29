@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "title": "Pet search evaluation fixture",
+  "summary": "Notes whose answers need a passage search: a match by meaning rather than words, and an answer held only by a child note.",
+  "root": {
+    "id": "home",
+    "title": "Search evaluation fixture",
+    "views": [
+      {
+        "kind": "list"
+      }
+    ],
+    "children": [
+      {
+        "id": "summer-plans",
+        "title": "Summer plans",
+        "markdown": "# Summer plans\n\n## Holiday\n\nWe booked a holiday to Lisbon for the second week of May. The flights leave from Gatwick on the Saturday morning.\n\n## Garden\n\nPlant the tomatoes once the frost has passed.\n"
+      },
+      {
+        "id": "apartment",
+        "title": "Apartment",
+        "markdown": "# Apartment\n\nPapers for the flat.\n",
+        "children": [
+          {
+            "id": "lease-note",
+            "title": "Lease",
+            "markdown": "# Lease\n\nThe lease runs for twelve months from March. Rent is due on the first of each month.\n"
+          },
+          {
+            "id": "insurance-note",
+            "title": "Insurance",
+            "markdown": "# Insurance\n\n## Contents policy\n\nThe policy covers water damage from burst pipes for 36 months from the start date, with a 250 excess.\n"
+          },
+          {
+            "id": "utilities-note",
+            "title": "Utilities",
+            "markdown": "# Utilities\n\nElectricity and broadband are paid by direct debit.\n"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Messaging;
 
 namespace Nix.Features.Search;
@@ -75,6 +76,55 @@ public sealed class GetPassagesHandler(
     }
 }
 
+/// <summary>The passages of every note in the caller's readable workspaces that best answer a query.</summary>
+/// <param name="WorkspaceId">Narrows the search to this workspace; null searches them all.</param>
+/// <param name="Query">What to find.</param>
+/// <param name="Limit">The most passages to return.</param>
+public sealed record SearchPassages(WorkspaceId? WorkspaceId, string Query, int Limit) : IQuery<Result<IReadOnlyList<NotePassage>>>;
+
+/// <summary>
+/// Retrieval across a workspace, for a question whose answer may be in any note: the pet's search
+/// returns these beside the matching items.
+/// </summary>
+/// <remarks>
+/// A workspace the caller cannot read gives no passages rather than an error, like the item
+/// search, so the answer never tells an outsider whether the workspace exists.
+/// </remarks>
+public sealed class SearchPassagesHandler(IItemSearch search, IPermissionResolver permissions)
+    : IQueryHandler<SearchPassages, Result<IReadOnlyList<NotePassage>>>
+{
+    /// <inheritdoc />
+    public async ValueTask<Result<IReadOnlyList<NotePassage>>> HandleAsync(
+        SearchPassages query,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var text = query.Query.Trim();
+        if (text.Length > GetPassagesHandler.MaximumQueryLength)
+        {
+            text = text[..GetPassagesHandler.MaximumQueryLength];
+        }
+
+        var workspaces = await permissions.ReadableWorkspacesAsync(cancellationToken).ConfigureAwait(false);
+        if (query.WorkspaceId is { } only)
+        {
+            workspaces = workspaces.Contains(only) ? [only] : [];
+        }
+
+        try
+        {
+            return Result.Success(await search
+                .FindPassagesAsync(null, text, workspaces, Math.Clamp(query.Limit, 1, GetPassagesHandler.MaximumLimit), cancellationToken)
+                .ConfigureAwait(false));
+        }
+        catch (ItemQueryFailedException)
+        {
+            return Result.Failure<IReadOnlyList<NotePassage>>(SearchErrors.TimedOut("The search took too long. Search one note or folder instead."));
+        }
+    }
+}
+
 /// <summary>One passage as the API returns it.</summary>
 /// <param name="ItemId">The note the passage is from.</param>
 /// <param name="Title">That note's title.</param>
@@ -87,8 +137,34 @@ internal sealed record PassageResponse(Guid ItemId, string Title, string Heading
 /// <param name="Passages">The passages.</param>
 internal sealed record PassagesResponse(IReadOnlyList<PassageResponse> Passages);
 
+internal static class SearchPassagesEndpoint
+{
+    /// <summary>Handles a workspace passage search.</summary>
+    internal static async Task<Results<Ok<PassagesResponse>, ProblemHttpResult>> Handle(
+        HttpContext httpContext,
+        [FromServices] NixDispatcher dispatcher,
+        string? q = null,
+        Guid? workspaceId = null,
+        int limit = GetPassagesHandler.DefaultLimit)
+    {
+        var result = await dispatcher
+            .QueryAsync<SearchPassages, Result<IReadOnlyList<NotePassage>>>(
+                new SearchPassages(workspaceId is { } id ? new WorkspaceId(id) : null, q ?? string.Empty, limit),
+                httpContext.RequestAborted)
+            .ConfigureAwait(false);
+
+        return result.IsFailure
+            ? TypedResults.Problem(SearchEndpoints.Problem(httpContext, result.Error))
+            : TypedResults.Ok(GetPassagesEndpoint.Response(result.Value));
+    }
+}
+
 internal static class GetPassagesEndpoint
 {
+    internal static PassagesResponse Response(IReadOnlyList<NotePassage> passages) =>
+        new([.. passages.Select(passage => new PassageResponse(
+            passage.ItemId.Value, passage.Title, passage.Heading, passage.Ord, passage.Text))]);
+
     /// <summary>Handles a passage search.</summary>
     internal static async Task<Results<Ok<PassagesResponse>, ProblemHttpResult>> Handle(
         Guid itemId,
@@ -108,8 +184,6 @@ internal static class GetPassagesEndpoint
             return TypedResults.Problem(SearchEndpoints.Problem(httpContext, result.Error));
         }
 
-        return TypedResults.Ok(new PassagesResponse(
-            [.. result.Value.Select(passage => new PassageResponse(
-                passage.ItemId.Value, passage.Title, passage.Heading, passage.Ord, passage.Text))]));
+        return TypedResults.Ok(Response(result.Value));
     }
 }

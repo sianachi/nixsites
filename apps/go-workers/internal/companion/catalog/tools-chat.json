@@ -16,7 +16,7 @@
   },
   {
     "name": "nix_search",
-    "description": "Search this workspace by title or content. Read-only; reads may run without a card; changes always ask for approval.",
+    "description": "Search this workspace by title or content: returns matching items and the passages that best answer the query, matched by meaning as well as words. Read-only; reads may run without a card; changes always ask for approval.",
     "inputSchema": {
       "type": "object",
       "properties": {

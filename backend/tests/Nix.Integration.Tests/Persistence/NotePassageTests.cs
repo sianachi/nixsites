@@ -2,6 +2,7 @@ using System.Globalization;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Features.Search;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
@@ -68,6 +69,29 @@ public sealed class NotePassageTests : IAsyncLifetime
         var found = await PassagesAsync(PrivateNote, "fee");
 
         Assert.True(found.IsFailure);
+    }
+
+    [Fact]
+    public async Task A_workspace_search_reaches_notes_outside_any_subtree_but_not_other_workspaces()
+    {
+        var context = TestTenants.ContextFor(M0SchemaSeed.Alpha.TenantId, M0SchemaSeed.Alpha.WorkspaceId, Member);
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(context, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var everywhere = await dispatcher.QueryAsync<SearchPassages, Result<IReadOnlyList<NotePassage>>>(
+                new SearchPassages(null, "fee", GetPassagesHandler.MaximumLimit), Cancellation);
+            var elsewhere = await dispatcher.QueryAsync<SearchPassages, Result<IReadOnlyList<NotePassage>>>(
+                new SearchPassages(new WorkspaceId(PrivateWorkspace), "fee", GetPassagesHandler.MaximumLimit), Cancellation);
+
+            var ids = everywhere.Value.Select(passage => passage.ItemId.Value).ToArray();
+            Assert.Contains(Outside, ids);
+            Assert.Contains(Root, ids);
+            Assert.DoesNotContain(PrivateNote, ids);
+            Assert.DoesNotContain(LockedChild, ids);
+            Assert.DoesNotContain(TrashedChild, ids);
+            Assert.Empty(elsewhere.Value);
+        }
     }
 
     [Fact]

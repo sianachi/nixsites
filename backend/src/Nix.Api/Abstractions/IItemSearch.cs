@@ -106,9 +106,11 @@ public interface IItemSearch
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// The passages of a note and every note under it that best answer <paramref name="query"/>.
+    /// The passages of a note and every note under it, or of every note in
+    /// <paramref name="readableWorkspaces"/> when <paramref name="rootId"/> is null, that best
+    /// answer <paramref name="query"/>.
     /// </summary>
-    /// <param name="rootId">The note whose subtree is searched, itself included.</param>
+    /// <param name="rootId">The note whose subtree is searched, itself included; null for the workspaces.</param>
     /// <param name="query">What to find, in the person's or the pet's words.</param>
     /// <param name="readableWorkspaces">Where the caller is allowed to look.</param>
     /// <param name="limit">The most passages to return.</param>
@@ -121,7 +123,7 @@ public interface IItemSearch
     /// template.
     /// </remarks>
     public ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
-        ItemId rootId,
+        ItemId? rootId,
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
