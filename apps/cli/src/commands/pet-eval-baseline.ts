@@ -3,12 +3,17 @@ import { z } from 'zod';
 import type { ChatCaseResult } from './pet-eval-chat.ts';
 
 /** Per-case pass counts from a recorded chat suite run; the regression gate compares against it. */
-export const chatBaselineSchema = z.object({
-  model: z.string().nullable(),
-  runs: z.number().int().min(1),
-  recordedAt: z.string(),
-  cases: z.record(z.string(), z.number().int().min(0)),
-});
+export const chatBaselineSchema = z
+  .object({
+    model: z.string().nullable(),
+    runs: z.number().int().min(1),
+    recordedAt: z.string(),
+    cases: z.record(z.string(), z.number().int().min(0)),
+  })
+  .refine(
+    (baseline) => Object.values(baseline.cases).every((passes) => passes <= baseline.runs),
+    'A case cannot pass more often than the baseline ran.',
+  );
 export type ChatBaseline = z.infer<typeof chatBaselineSchema>;
 
 export interface BaselineComparison {
@@ -75,7 +80,11 @@ export function compareToBaseline(
     unrecorded,
     rate: shared === 0 ? 1 : rate / shared,
     baselineRate: shared === 0 ? 1 : baselineRate / shared,
-    regressed: regressions.length > 0 || drop > Math.max(1, RATE_TOLERANCE * shared),
+    // A run that shares no case with the baseline proves nothing, so it passes only if it passed.
+    regressed:
+      shared === 0
+        ? results.some((result) => !result.pass)
+        : regressions.length > 0 || drop > Math.max(1, RATE_TOLERANCE * shared),
   };
 }
 

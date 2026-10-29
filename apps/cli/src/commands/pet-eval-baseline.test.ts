@@ -68,8 +68,17 @@ describe('chat eval baseline', () => {
   });
 
   it('reports cases missing from the baseline without gating on them', () => {
-    const comparison = compareToBaseline([result('new-case', 1, false)], 1, baseline);
+    const comparison = compareToBaseline(
+      [result('steady', 1, true), result('new-case', 1, false)],
+      1,
+      baseline,
+    );
     expect(comparison.unrecorded).toEqual(['new-case']);
     expect(comparison.regressed).toBe(false);
+  });
+
+  it('passes a run of only new cases only when they passed', () => {
+    expect(compareToBaseline([result('new-case', 1, false)], 1, baseline).regressed).toBe(true);
+    expect(compareToBaseline([result('new-case', 1, true)], 1, baseline).regressed).toBe(false);
   });
 });

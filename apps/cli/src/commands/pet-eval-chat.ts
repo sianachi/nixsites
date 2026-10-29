@@ -1058,20 +1058,32 @@ function failedCase(
   };
 }
 
+async function historyIds(
+  session: Session,
+  options: { workspace: string; pet: string },
+): Promise<Set<string>> {
+  const listed = await runtime(session, options.workspace, options.pet, 'history');
+  return new Set((listed.history ?? []).map((entry) => entry.id));
+}
+
 /** Each case's reset archives its conversation, and the worker keeps at most 32 archives per
- * conversation, so a long suite deletes the ones its cases made. A minute's grace covers clock skew
- * between this machine and the worker. */
+ * conversation, so a long suite deletes the archives that appeared during a case, and only those.
+ * A failure here is not worth the suite's results: the next case simply finds one more archive. */
 async function pruneCaseHistory(
   session: Session,
   options: { workspace: string; pet: string },
-  since: number,
+  before: ReadonlySet<string> | undefined,
 ): Promise<void> {
-  const listed = await runtime(session, options.workspace, options.pet, 'history');
-  for (const entry of listed.history ?? [])
-    if (Date.parse(entry.createdAt) >= since - 60_000)
-      await runtime(session, options.workspace, options.pet, 'delete_history', {
-        historyId: entry.id,
-      });
+  if (before === undefined) return;
+  try {
+    for (const id of await historyIds(session, options))
+      if (!before.has(id))
+        await runtime(session, options.workspace, options.pet, 'delete_history', {
+          historyId: id,
+        });
+  } catch {
+    // Best effort: see above.
+  }
 }
 
 export async function runChatSuite(
@@ -1114,6 +1126,7 @@ export async function runChatSuite(
           }
         }
         const started = Date.now();
+        const before = await historyIds(runner.session, options).catch(() => undefined);
         try {
           results.push(await runChatCase(chatCase, run, options, fixture, runner));
         } catch (error) {
@@ -1121,7 +1134,7 @@ export async function runChatSuite(
           // A provider or Core failure fails this case, not the whole suite and the results so far.
           results.push(failedCase(chatCase.id, run, options.model ?? null, error, started));
         }
-        await pruneCaseHistory(runner.session, options, started);
+        await pruneCaseHistory(runner.session, options, before);
       } catch (error) {
         retained = error instanceof RetainEvaluationFixture;
         throw error;
@@ -1147,7 +1160,16 @@ export async function petEvalChat(
 ): Promise<void> {
   if (!options.workspace || !options.pet) throw new Error('Provide --workspace and --pet.');
   const cases = await readChatCases(options.case);
+  // Read before the run, which spends real model calls, so a missing or broken baseline fails now.
+  const baseline = options.baseline ? await readBaseline(options.baseline) : undefined;
   const session = await petSessionFor(options.apiUrl, profile, deps);
+  // Every case resets the conversation, which archives what it held; on a pet the owner also talks
+  // to, the first reset would archive (and the clean-up delete) their real conversation.
+  const live = await runtime(session, options.workspace, options.pet, 'read');
+  if ((live.messages ?? []).length > 0)
+    throw new Error(
+      'This pet has a conversation in this workspace. Run evaluations in a dedicated workspace or with a dedicated pet.',
+    );
   const runner: ChatEvalRuntime = {
     session,
     sleep:
@@ -1162,9 +1184,11 @@ export async function petEvalChat(
   const runs = options.runs ?? 1;
   if (options.writeBaseline)
     await writeBaseline(options.writeBaseline, baselineOf(results, runs, new Date()));
-  const comparison = options.baseline
-    ? compareToBaseline(results, runs, await readBaseline(options.baseline))
-    : undefined;
+  const comparison = baseline ? compareToBaseline(results, runs, baseline) : undefined;
+  if (baseline && (results[0]?.model ?? null) !== baseline.model)
+    process.stderr.write(
+      `The baseline was recorded with model ${baseline.model ?? 'default'}; this run used ${results[0]?.model ?? 'default'}.\n`,
+    );
   if (output.json || !output.isTty)
     printResult(comparison ? { results, baseline: comparison } : results, output);
   else {
@@ -1207,6 +1231,9 @@ export async function petEvalChat(
           : '') +
         `\n`,
     );
-  if (comparison ? comparison.regressed : results.some((result) => !result.pass))
-    process.exitCode = 1;
+  // Recording a baseline is the run's purpose, so its known failures are not an error.
+  const failed = comparison
+    ? comparison.regressed
+    : !options.writeBaseline && results.some((result) => !result.pass);
+  if (failed) process.exitCode = 1;
 }

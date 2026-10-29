@@ -355,6 +355,7 @@ describe('pet eval chat', () => {
     const NEW_ARCHIVE = '0f000000-0000-4000-8000-000000000002';
     const deleted: unknown[] = [];
     let sends = 0;
+    let listings = 0;
     server.use(
       http.post(`${CORE}/api/v1/me/pets/runtime`, async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
@@ -363,12 +364,15 @@ describe('pet eval chat', () => {
             { title: 'Companion unavailable', status: 502 },
             { status: 502 },
           );
+        // Listed before and after each case; the case's own reset made the second entry.
         if (body.operation === 'history')
           return HttpResponse.json(
             connection({
               history: [
-                { id: OLD_ARCHIVE, title: 'Owner chat', createdAt: '2020-01-01T00:00:00Z' },
-                { id: NEW_ARCHIVE, title: 'Eval', createdAt: new Date().toISOString() },
+                { id: OLD_ARCHIVE, title: 'Owner chat', createdAt: new Date().toISOString() },
+                ...((listings += 1) % 2 === 0
+                  ? [{ id: NEW_ARCHIVE, title: 'Eval', createdAt: new Date().toISOString() }]
+                  : []),
               ],
             }),
           );

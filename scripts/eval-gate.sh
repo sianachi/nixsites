@@ -3,7 +3,9 @@
 # it does worse than the committed baseline (packages/structure-spec/evals/chat/baseline.json).
 #
 # Run it against the local dev stack before committing a change to the pet's prompt, tools or
-# reads. The suite talks to a real model, so it needs a pet with a connected provider. Core's
+# reads. The suite talks to a real model, so it needs a pet with a connected provider, and a
+# workspace (or pet) used for nothing else: every case resets and archives that conversation, and
+# the run refuses to start on one that holds messages. Core's
 # write limit (Nix__RateLimits__WritesPerMinute, default 120 a minute per address) can throttle a
 # long run; raise it in the local API's environment, never in production.
 #
@@ -14,7 +16,7 @@
 set -euo pipefail
 
 if [ $# -lt 3 ]; then
-  sed -n '2,13p' "$0" >&2
+  sed -n '2,15p' "$0" >&2
   exit 2
 fi
 profile=$1
