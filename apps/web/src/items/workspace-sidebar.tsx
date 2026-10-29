@@ -25,6 +25,7 @@ import {
   FolderUp,
   Grid3x3,
   LayoutTemplate,
+  MoreHorizontal,
   Shapes,
   Shield,
   ShieldOff,
@@ -1192,7 +1193,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
                 // it landed on. The three states that raise the opacity back to 100 - hover, focus-visible,
                 // group-hover - restore pointer events with it; `max-sm:` does the same unconditionally,
                 // since below `sm` this is never hidden in the first place.
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) ${disabledState} ${focusRing}`}
+                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${disabledState} ${focusRing}`}
               >
                 <Icon icon={Columns2} size="sm" />
               </button>
@@ -1207,7 +1208,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
               compact
               itemId={item.id}
               title={item.title}
-              className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-lg) ${keptIds.has(item.id) ? 'opacity-100 pointer-events-auto' : ''} ${focusRing}`}
+              className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-lg) ${keptIds.has(item.id) ? 'opacity-100 pointer-events-auto' : 'sm:pointer-coarse:hidden'} ${focusRing}`}
             />
 
             {/* A direct escape from nesting. Dragging beside a root or pressing Alt+Left once per
@@ -1222,7 +1223,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
                 onClick={() => {
                   moveToRoot();
                 }}
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) ${focusRing}`}
+                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
               >
                 <Icon icon={FolderUp} size="sm" />
               </button>
@@ -1255,11 +1256,27 @@ function TreeNode(props: TreeNodeProps): ReactNode {
                 // landing between "move to root" and the bookmark star and this destructive action has
                 // less margin for error than a mouse pointer does, and the row's own `gap-1` is otherwise
                 // the same narrow spacing on every control in it.
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) pointer-coarse:ml-2 ${focusRing}`}
+                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
               >
                 <Icon icon={Trash2} size="sm" />
               </button>
             )}
+
+            {/* On a touch tablet the four 28px row buttons fold into this one 44px menu, the way the
+            phone browser does; a kept item's star stays beside it as the bookmark indicator. */}
+            <Menu label={`Actions for ${item.title || 'Untitled'}`} items={contextItems()}>
+              {(trigger) => (
+                <button
+                  {...trigger}
+                  type="button"
+                  data-context-menu-ignore
+                  aria-label={`Actions for ${item.title || 'Untitled'}`}
+                  className={`hidden sm:pointer-coarse:flex pointer-coarse:size-(--control-lg) items-center justify-center text-muted hover:text-foreground ${focusRing}`}
+                >
+                  <Icon icon={MoreHorizontal} size="sm" />
+                </button>
+              )}
+            </Menu>
           </div>
         )}
       </ContextMenu>
