@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 
 import { CUSTOM_VIEW_KIND } from './openui/custom-view-kind';
+import { CHAT_VIEW_KIND } from './pets/chat/chat-view-kind';
 import { STARTER_PROGRAM } from './openui/starter-program';
 import { registerBuiltinViews } from './views/builtin-views';
 import { provideProgramEditor } from './views/core/program-editor-slot';
@@ -12,6 +13,8 @@ import { registerViewKinds } from './views/core/view-kinds';
  * order.
  */
 export function registerViews(): void {
+  // Chat leads the picker: it registers ahead of the builtin kinds.
+  registerViewKinds(CHAT_VIEW_KIND);
   registerBuiltinViews();
   registerViewKinds(CUSTOM_VIEW_KIND);
   // The program editor carries the OpenUI renderer, so it loads only when one is opened.

@@ -24,7 +24,7 @@ vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
     workspaces: [{ id: workspace, name: 'Home', kind: 'personal', lifecycleState: 'active' }],
   }),
 }));
-vi.mock('../../views/chat/new-chat-note', () => ({ ChatDestination: () => null }));
+vi.mock('../../pets/chat/new-chat-note', () => ({ ChatDestination: () => null }));
 
 const { default: ArtifactView } = await import('../../openui/artifact-view');
 const { SaveArtifact } = await import('../../openui/save-artifact');

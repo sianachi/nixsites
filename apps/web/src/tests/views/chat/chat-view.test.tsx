@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Editor, LongReply, Reader, Streaming } from '../../../views/chat/chat-view.stories';
+import { Editor, LongReply, Reader, Streaming } from '../../../pets/chat/chat-view.stories';
 
 describe('saved conversation notes', () => {
   it('shows persisted messages and a composer when Core permits sending', async () => {

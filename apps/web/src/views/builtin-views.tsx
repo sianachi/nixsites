@@ -12,15 +12,10 @@ import {
   ChartGantt,
   ListFilter,
   MousePointerClick,
-  MessagesSquare,
   Table2,
   Wallet,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 
-import { Text } from '@nix/ui';
-import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { ChatView } from './chat/chat-view';
 import { BoardView } from './board/board-view';
 import { normalizeChartView } from './chart/chart-options';
 import { ChartOptionsEditor } from './chart/chart-options-editor';
@@ -42,7 +37,6 @@ import {
   type ChoiceField,
   type ViewChoiceOf,
   type ViewKindDescriptor,
-  type ViewRendererProps,
 } from './core/view-kinds';
 import { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from './gallery/card-size';
 import { GalleryView } from './gallery/gallery-view';
@@ -133,28 +127,7 @@ const DRIVE_LAYOUT_LABELS: Record<DriveLayout, string> = {
   grid: 'Grid',
 };
 
-function ChatRenderer({ container }: ViewRendererProps): ReactNode {
-  const { workspaceId } = useWorkspace();
-  return container.itemId === null ? (
-    <Text role="status">Create a chat note to start a conversation.</Text>
-  ) : (
-    <ChatView
-      key={`${workspaceId}:${container.itemId}`}
-      itemId={container.itemId}
-      workspaceId={workspaceId}
-    />
-  );
-}
-
 const BUILTIN_VIEW_KINDS: readonly ViewKindDescriptor[] = [
-  {
-    kind: 'chat',
-    label: 'Chat',
-    icon: MessagesSquare,
-    render: (props) => <ChatRenderer {...props} />,
-    configures: [],
-    chooses: [],
-  },
   {
     kind: 'list',
     label: 'List',

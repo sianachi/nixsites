@@ -3,7 +3,7 @@ import { Button, Icon, Text } from '@nix/ui';
 import { FilePlus } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { type ProgramPiece } from '../../openui/fence';
-import { PetMessageText } from '../../pets/pet-message-text';
+import { PetMessageText } from '../pet-message-text';
 
 /** One saved message, laid out like the live chat: your words in a bubble on the right, the pet's
  * reply full width, a quiet icon to keep a reply as a note. */

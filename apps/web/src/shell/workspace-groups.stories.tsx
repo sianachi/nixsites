@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { WorkspaceSwitcher } from '@nix/web-workspaces/workspaces/workspace-switcher';
-import { NewChatNote } from '../views/chat/new-chat-note';
+import { NewChatNote } from '../pets/chat/new-chat-note';
 import {
   WorkspaceGroupsPage,
   WorkspaceGroupPage,

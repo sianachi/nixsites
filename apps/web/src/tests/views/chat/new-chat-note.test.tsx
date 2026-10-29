@@ -11,7 +11,7 @@ import {
   AccessibleWorkspacesProvider,
   WorkspaceProvider,
 } from '@nix/web-workspaces/workspaces/workspace-context';
-import { NewChatNote } from '../../../views/chat/new-chat-note';
+import { NewChatNote } from '../../../pets/chat/new-chat-note';
 import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 const id = '11111111-1111-4111-8111-111111111111';

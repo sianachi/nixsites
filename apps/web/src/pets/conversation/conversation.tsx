@@ -11,8 +11,8 @@ import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { selectedItemParam } from '@nix/web-platform/panes/pane-params';
-import { NewChatNote } from '../../views/chat/new-chat-note';
-import { SaveInsightNote } from '../../views/chat/save-insight-note';
+import { NewChatNote } from '../chat/new-chat-note';
+import { SaveInsightNote } from '../chat/save-insight-note';
 import { petProviderLabels } from '../catalog';
 import {
   readConversationModel,

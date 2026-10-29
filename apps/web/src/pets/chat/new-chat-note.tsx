@@ -10,7 +10,7 @@ import {
 import { Button, Checkbox, Dialog, Field, Input, Select, Text } from '@nix/ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useWorkspaceArrangement } from '@nix/web-workspaces/workspaces/use-workspace-arrangement';
-import { PetMessageText } from '../../pets/pet-message-text';
+import { PetMessageText } from '../pet-message-text';
 import { Link, useNavigate } from 'react-router';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {

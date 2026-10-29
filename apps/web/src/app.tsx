@@ -7,7 +7,7 @@ import { AutomationsPage } from './automations/automations-page';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import { DailyNotePage } from './daily-notes/daily-note-page';
-import { NewChatNote } from './views/chat/new-chat-note';
+import { NewChatNote } from './pets/chat/new-chat-note';
 import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
