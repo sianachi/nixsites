@@ -349,7 +349,7 @@
         "apps/web/public/service-worker.js",
         "packages/web-platform/src/pwa/register-service-worker.ts",
         "apps/web/vite.config.ts",
-        "apps/web/src/tests/auth/auth-provider.test.tsx",
+        "packages/web-platform/src/tests/auth/auth-provider.test.tsx",
         "apps/web/src/shell/app-shell.tsx",
         "apps/web/src/search/commands.ts"
       ],
@@ -360,7 +360,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, OIDC, IndexedDB",
         "depends_on": "Core BFF, collaboration and service worker",
-        "source_paths": "apps/web/src/main.tsx\napps/web/src/app.tsx\npackages/web-platform/src/auth/auth-provider.tsx\npackages/web-foundation/src/lib/session-store.ts\npackages/web-platform/src/api/api-client-provider.tsx\npackages/api-client/src/http.ts\napps/web/public/manifest.webmanifest\napps/web/public/service-worker.js\npackages/web-platform/src/pwa/register-service-worker.ts\napps/web/vite.config.ts\napps/web/src/tests/auth/auth-provider.test.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts"
+        "source_paths": "apps/web/src/main.tsx\napps/web/src/app.tsx\npackages/web-platform/src/auth/auth-provider.tsx\npackages/web-foundation/src/lib/session-store.ts\npackages/web-platform/src/api/api-client-provider.tsx\npackages/api-client/src/http.ts\napps/web/public/manifest.webmanifest\napps/web/public/service-worker.js\npackages/web-platform/src/pwa/register-service-worker.ts\napps/web/vite.config.ts\npackages/web-platform/src/tests/auth/auth-provider.test.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts"
       },
       "localProofItemId": "01a12247-5982-7342-aad3-f92fc7e61246"
     },
@@ -380,7 +380,7 @@
         "packages/editor-schema/src/index.ts",
         "packages/web-editor/src/editor/toolbar.tsx",
         "packages/web-editor/src/editor/page-guides.ts",
-        "apps/web/src/tests/editor/toolbar.test.tsx"
+        "packages/web-editor/src/tests/editor/toolbar.test.tsx"
       ],
       "words": 957,
       "properties": {
@@ -389,7 +389,7 @@
         "runtime": "Browser",
         "transports": "WebSocket/Yjs, HTTP/JSON, IndexedDB",
         "depends_on": "Core, collaboration, Yjs and local body copies",
-        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-foundation/src/lib/body-cache.ts\npackages/web-foundation/src/lib/draft-journal.ts\npackages/web-views/src/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\napps/web/src/tests/editor/toolbar.test.tsx"
+        "source_paths": "packages/web-editor/src/editor/note-editor.tsx\npackages/web-editor/src/editor/canvas-editor.tsx\npackages/web-editor/src/editor/canvas-binding.ts\npackages/web-editor/src/editor/collab-sync.ts\npackages/web-foundation/src/lib/body-cache.ts\npackages/web-foundation/src/lib/draft-journal.ts\npackages/web-views/src/sheet/sheet-editor.tsx\npackages/editor-schema/src/index.ts\npackages/web-editor/src/editor/toolbar.tsx\npackages/web-editor/src/editor/page-guides.ts\npackages/web-editor/src/tests/editor/toolbar.test.tsx"
       },
       "localProofItemId": "01a12247-5982-793f-8300-50c278ae2111"
     },
@@ -400,8 +400,8 @@
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
         "packages/web-views/src/core/view-kinds.tsx",
-        "packages/web-views/src/core/use-container.ts",
-        "packages/web-views/src/core/view-state.ts",
+        "packages/web-collections/src/core/use-container.ts",
+        "packages/web-collections/src/core/view-state.ts",
         "packages/web-foundation/src/theme/theme-store.ts",
         "packages/web-foundation/src/theme/use-theme.ts",
         "apps/web/index.html",
@@ -418,7 +418,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON",
         "depends_on": "Core schemas, view configurations and child queries",
-        "source_paths": "packages/web-views/src/core/view-kinds.tsx\npackages/web-views/src/core/use-container.ts\npackages/web-views/src/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "packages/web-views/src/core/view-kinds.tsx\npackages/web-collections/src/core/use-container.ts\npackages/web-collections/src/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "localProofItemId": "01a12247-5982-7d31-b237-89650eca2ca2"
     },
@@ -429,7 +429,7 @@
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
         "apps/web/src/files/file-viewer.tsx",
-        "apps/web/src/files/file-facts.ts",
+        "packages/web-collections/src/items/file-facts.ts",
         "packages/web-editor/src/plugins/file-viewer-registry.tsx",
         "packages/web-editor/src/plugins/built-in-file-viewers.ts",
         "packages/web-editor/src/plugins/mermaid-js-viewer.tsx",
@@ -453,7 +453,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, S3 capabilities, WebSocket/Yjs",
         "depends_on": "Core metadata, object storage and collaboration",
-        "source_paths": "apps/web/src/files/file-viewer.tsx\napps/web/src/files/file-facts.ts\npackages/web-editor/src/plugins/file-viewer-registry.tsx\npackages/web-editor/src/plugins/built-in-file-viewers.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx\npackages/web-editor/src/editor/nix-canvas.tsx\npackages/web-editor/src/editor/nix-canvas-model.ts\npackages/web-editor/src/editor/nix-canvas-library.ts\npackages/web-editor/src/editor/canvas-binding.ts\napps/web/package.json\npackages/web-editor/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "apps/web/src/files/file-viewer.tsx\npackages/web-collections/src/items/file-facts.ts\npackages/web-editor/src/plugins/file-viewer-registry.tsx\npackages/web-editor/src/plugins/built-in-file-viewers.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx\npackages/web-editor/src/editor/nix-canvas.tsx\npackages/web-editor/src/editor/nix-canvas-model.ts\npackages/web-editor/src/editor/nix-canvas-library.ts\npackages/web-editor/src/editor/canvas-binding.ts\napps/web/package.json\npackages/web-editor/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
       },
       "relatedWorktreeSources": [
         {
@@ -470,7 +470,7 @@
         },
         {
           "branch": "feature/mermaid-diagram-workflow",
-          "path": "apps/web/src/tests/plugins/mermaid-family-coverage.test.ts"
+          "path": "packages/web-editor/src/tests/plugins/mermaid-family-coverage.test.ts"
         }
       ],
       "localProofItemId": "01a12247-5982-7406-8439-52fccb1b1c8e"
@@ -1358,7 +1358,7 @@
       "itemId": "31f3b056-4bc7-5ba4-a54b-8f2c86e94db9",
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
-        "apps/web/src/pets/pet-work-tools.tsx",
+        "packages/web-pets/src/pets/work-tools/pet-work-tools.tsx",
         "packages/web-foundation/src/lib/device-preferences.ts",
         "packages/companion/src/guards.ts",
         "packages/companion/src/run.ts",

@@ -66,7 +66,7 @@ const preview: Preview = {
   beforeAll: async () => {
     const { VIEW_KINDS } = await import('../../../packages/web-views/src/core/view-kinds');
     if (VIEW_KINDS.length === 0) {
-      (await import('../../../apps/web/src/register-views')).registerViews();
+      (await import('../../web-pets/src/register-views')).registerViews();
     }
   },
   initialGlobals: { ground: 'light' satisfies Ground },

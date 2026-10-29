@@ -515,7 +515,7 @@ public static class PropertyValidator
     /// opening remark. So a value written while the property was text or a link survives a retype
     /// to <see cref="PropertyType.Image"/> having never met this method. The renderer checks the
     /// scheme again for exactly that reason; see <c>isFetchableAddress</c> in
-    /// <c>apps/web/src/views/gallery-view.tsx</c>, which is the layer that holds regardless of the
+    /// <c>packages/web-views/src/gallery/gallery-view.tsx</c>, which is the layer that holds regardless of the
     /// order somebody made two independent edits in.
     /// </para>
     /// <para>
@@ -547,7 +547,7 @@ public static class PropertyValidator
             : $"{definition.Label} must be a link to an image, over http or https.";
     }
 
-    // Written by apps/web/src/properties/image-value.tsx (FILE_IMAGE_PREFIX); keep the two in step.
+    // Written by packages/web-collections/src/properties/inputs/image-value.tsx (FILE_IMAGE_PREFIX); keep the two in step.
     private const string FileImageReferencePrefix = "nix-file:";
 
     private static bool IsFileImageReference(string text) =>

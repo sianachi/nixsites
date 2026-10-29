@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { registerViews } from '../../../register-views';
+import { registerViews } from '@nix/web-pets/register-views';
 import { VIEW_KINDS, findViewKind } from '@nix/web-views/core/view-kinds';
 
 /**

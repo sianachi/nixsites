@@ -143,7 +143,7 @@ func resultKind(success bool, result string) string {
 }
 
 // declinedForProblems is the prefix the web client uses when it sends a write's validation
-// problems back instead of asking the owner (apps/web/src/pets/pet-work-tools.tsx).
+// problems back instead of asking the owner (packages/web-pets/src/pets/work-tools/pet-work-tools.tsx).
 const declinedForProblems = "Declined: the design has problems."
 
 // conversationKey is the conversation a request addresses: one per pet per workspace. A stale

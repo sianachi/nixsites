@@ -6,6 +6,6 @@ import { beforeAll } from 'vitest';
 beforeAll(async () => {
   const { VIEW_KINDS } = await import('@nix/web-views/core/view-kinds');
   if (VIEW_KINDS.length === 0) {
-    (await import('../register-views')).registerViews();
+    (await import('@nix/web-pets/register-views')).registerViews();
   }
 });

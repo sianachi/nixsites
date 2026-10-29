@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { VIEW_CAPABILITIES, capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
-import { VIEW_KINDS } from '../../../core/view-kinds';
+import { VIEW_KINDS } from '@nix/web-views/core/view-kinds';
 
 describe('view capabilities', () => {
   it('names every kind the registry can draw', () => {

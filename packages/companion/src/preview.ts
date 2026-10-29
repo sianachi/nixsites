@@ -244,7 +244,7 @@ function applyTemplateProblems(preflight: TemplatePreflight | undefined): Proble
   ];
 }
 
-/** Sentences kept byte-for-byte from `apps/web/src/pets/pet-work-tools.tsx`'s
+/** Sentences kept byte-for-byte from `packages/web-pets/src/pets/work-tools/pet-work-tools.tsx`'s
  * `describeWorkspaceAction` (lines 226-255), with `read_structure` using the architecture's
  * structure-aware description. `list_templates` and `read_template` use this task card's copy. */
 function legacyHeadline(args: PreviewToolArgs): string {
