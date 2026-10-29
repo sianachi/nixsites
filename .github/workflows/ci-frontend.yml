@@ -220,8 +220,8 @@ jobs:
           NIX_COLLAB_SKIP_DB_TESTS: '1'
         run: pnpm -r --if-present --filter '!@nix/web' test
 
-  # The web app is 380 of the repo's test files and about nine tenths of the unit time, so it runs
-  # as three shards beside the other packages instead of ahead of them. Vitest splits files by a
+  # The web app keeps its integration tests (about 280 files; the web-* packages run their own in
+  # frontend-unit) and most of the unit time, so it runs as three shards beside the other packages. Vitest splits files by a
   # hash of the path, which measured within 20% on CPU time; the required check names are
   # "frontend web unit (1)" to "(3)".
   frontend-web-unit:

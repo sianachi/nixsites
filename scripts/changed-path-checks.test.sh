@@ -13,6 +13,12 @@ assert_contains() {
   esac
 }
 
+assert_not_contains() {
+  case "$1" in
+    *"$2"*) echo "expected output not to contain: $2" >&2; exit 1 ;;
+  esac
+}
+
 web_output=$("$planner" apps/web/src/app.tsx)
 assert_contains "$web_output" 'pnpm --filter @nix/web typecheck'
 assert_contains "$web_output" 'pnpm exec prettier --check apps/web/src/app.tsx'
@@ -24,7 +30,9 @@ assert_contains "$package_output" 'pnpm exec prettier --check packages/ui/src/co
 
 web_package_output=$("$planner" packages/web-editor/src/editor/toolbar.tsx)
 assert_contains "$web_package_output" 'pnpm --filter @nix/web-editor typecheck'
-assert_contains "$web_package_output" 'pnpm --filter @nix/web test'
+assert_contains "$web_package_output" 'pnpm --filter @nix/web-editor test'
+assert_contains "$web_package_output" "pnpm --filter '...^@nix/web-editor' typecheck"
+assert_not_contains "$web_package_output" 'pnpm --filter @nix/web test'
 
 cli_output=$("$planner" apps/cli/src/index.ts)
 assert_contains "$cli_output" 'pnpm exec prettier --check apps/cli/src/index.ts'

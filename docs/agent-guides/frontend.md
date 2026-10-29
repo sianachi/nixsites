@@ -11,7 +11,9 @@ Keep dependency direction `apps/* -> packages/*`; `packages/web-*` never import
 source (no build); import deep paths that mirror the folders, e.g.
 `@nix/web-foundation/lib/browser-storage`. A new `.tsx` file needs its own exact
 `exports` entry in the package's `package.json` (the `./*` pattern only reaches `.ts`).
-Tests stay in `apps/web/src/tests`. `check-frontend-layering.sh` (R6, R7) enforces the
+A package's tests live in its `src/tests` and run in that package; shared test helpers
+live in `web-foundation/src/testing` and `web-editor/src/testing`, which non-test code may not
+import (R8). Tests that render the whole app stay in `apps/web/src/tests`. `check-frontend-layering.sh` (R6, R7) enforces the
 order. In `web-foundation`, `lib/` and `a11y/` are leaves and `layout/` may additionally reach `lib/`.
 Inside `apps/web/src`, features may import those, siblings, and `shell/` types
 only; only `app.tsx` value-imports `shell/`. Put a file where its knowledge
@@ -29,6 +31,6 @@ variants, and the existing design grammar. No general CSS, raw design values,
 `dark:` escape hatches, or emojis. UI data states must honestly show loading,
 empty, error, and partial results.
 
-Place web tests under `apps/web/src/tests/`, mirroring source folders; query by
-role. UI components need stories and axe coverage. Run the path-selected
+Place web tests under the owning package's `src/tests/` (the app's under
+`apps/web/src/tests/`), mirroring source folders; query by role. UI components need stories and axe coverage. Run the path-selected
 package checks and applicable frontend guards.

@@ -80,6 +80,14 @@ has_catalog=false
 has_api_docs=false
 has_rabbitmq=false
 frontend_packages=()
+dependent_typechecks=()
+add_dependent_typecheck() {
+  local candidate=$1 existing
+  for existing in "${dependent_typechecks[@]:-}"; do
+    [ "$existing" = "$candidate" ] && return
+  done
+  dependent_typechecks+=("$candidate")
+}
 prettier_paths=()
 
 add_frontend_package() {
@@ -101,8 +109,8 @@ for path in "${paths[@]}"; do
       package_name=${path#packages/}
       package_name=${package_name%%/*}
       add_frontend_package "@nix/$package_name"
-      # The web packages' tests live in apps/web, which also typechecks them as their consumer.
-      case "$package_name" in web-*) add_frontend_package '@nix/web' ;; esac
+      # A web package runs its own tests; the packages and app above it only typecheck against it.
+      case "$package_name" in web-*) add_dependent_typecheck "@nix/$package_name" ;; esac
       ;;
     backend/*|Nix.slnx|Nix.Frontend/*) has_backend=true ;;
     apps/go-workers/*) has_workers=true ;;
@@ -159,6 +167,10 @@ if [ "$has_frontend" = true ]; then
       emit "pnpm --filter $package_name lint"
       emit "pnpm --filter $package_name typecheck"
       emit "pnpm --filter $package_name test"
+    done
+    for package_name in "${dependent_typechecks[@]:-}"; do
+      [ -n "$package_name" ] || continue
+      emit "pnpm --filter '...^$package_name' typecheck"
     done
   fi
   if [ "$has_frontend_sources" = true ] || [ "$has_shared_frontend_config" = true ]; then
