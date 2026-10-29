@@ -21,8 +21,8 @@ import {
   weekLabel,
   weekOf,
   type CalendarDay,
-} from '../views/core/calendar-dates';
-import { readTimestampValue, readerZone } from '../views/core/timestamps';
+} from '../collections/core/calendar-dates';
+import { readTimestampValue, readerZone } from '../collections/core/timestamps';
 import type { CalendarGrain } from './calendar-window';
 import {
   bucketByDay,

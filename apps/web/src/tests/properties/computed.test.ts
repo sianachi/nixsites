@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { decorateItem, decorateItems, toCellValue } from '../../properties/computed';
-import { readPropertyText } from '../../views/core/container-model';
-import type { PropertyDefinition, PropertyOwner } from '../../views/core/container-model';
+import { decorateItem, decorateItems, toCellValue } from '../../collections/properties/computed';
+import { readPropertyText } from '../../collections/core/container-model';
+import type { PropertyDefinition, PropertyOwner } from '../../collections/core/container-model';
 
 /**
  * The read-side decoration that gives an item the values it never stored.

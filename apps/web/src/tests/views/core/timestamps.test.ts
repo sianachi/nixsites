@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Timestamp } from '../../../views/core/timestamps';
+import type { Timestamp } from '../../../collections/core/timestamps';
 import {
   dayFor,
   formatTime,
   minutesFor,
   readTimestampValue,
   writeTimestampValue,
-} from '../../../views/core/timestamps';
+} from '../../../collections/core/timestamps';
 
 /**
  * Reading and writing a moment.

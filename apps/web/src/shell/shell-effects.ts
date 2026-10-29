@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { isTypingTarget, matchesShortcut } from '@nix/web-foundation/lib/shortcuts';
 import { SHORTCUTS, type ShellShortcutId } from '@nix/web-foundation/keyboard/shortcut-registry';
 
-import type { WorkspaceTree } from '../items/use-workspace-tree';
+import type { WorkspaceTree } from '../collections/items/use-workspace-tree';
 import type { PaneState } from '@nix/web-platform/panes/pane-state';
 
 /**

@@ -1,8 +1,15 @@
 import { useState, type ReactNode } from 'react';
 
-import { PropertyInput, type PropertyInputDensity } from '../../properties/property-input';
-import { useTrackWrite } from '../core/value-popover';
-import type { Item, PropertyDefinition, PropertyValue } from '../core/container-model';
+import {
+  PropertyInput,
+  type PropertyInputDensity,
+} from '../../collections/properties/property-input';
+import { useTrackWrite } from '../../collections/properties/value-popover';
+import type {
+  Item,
+  PropertyDefinition,
+  PropertyValue,
+} from '../../collections/core/container-model';
 
 /**
  * One editable cell in the list.

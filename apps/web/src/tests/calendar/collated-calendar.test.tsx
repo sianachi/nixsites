@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CollatedCalendar } from '../../calendar/collated-calendar';
-import type { CalendarDay } from '../../views/core/calendar-dates';
+import type { CalendarDay } from '../../collections/core/calendar-dates';
 
 /**
  * Creating a dated entry from the collated calendar, at the component's own layer.

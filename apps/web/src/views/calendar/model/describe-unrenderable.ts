@@ -1,5 +1,9 @@
-import type { ContainerViews, EffectiveSchema, View } from '../../core/container-model';
-import { isDateShaped } from '../../core/property-types';
+import type {
+  ContainerViews,
+  EffectiveSchema,
+  View,
+} from '../../../collections/core/container-model';
+import { isDateShaped } from '../../../collections/core/property-types';
 
 export const NO_DATE_PROPERTY =
   'A calendar places items by a date property, and this view does not name one. Nothing has been ' +

@@ -1,12 +1,16 @@
 import { type CellRef } from '@nix/sheet';
 import { useEffect, useRef, useState, type Dispatch, type RefObject } from 'react';
 
-import { isKnownPropertyType } from '../../properties/property-input';
-import { TITLE_COLUMN_KEY } from '../core/columns';
-import { type Item, type PropertyDefinition } from '../core/container-model';
-import { isComputedType } from '../core/property-types';
-import type { PlanOutcome, PlanWrite } from '../core/use-container';
-import { type GridBounds, type SelectionAction, type SelectionState } from '../sheet/selection';
+import { isKnownPropertyType } from '../../collections/properties/property-input';
+import { TITLE_COLUMN_KEY } from '../../collections/core/columns';
+import { type Item, type PropertyDefinition } from '../../collections/core/container-model';
+import { isComputedType } from '../../collections/core/property-types';
+import type { PlanOutcome, PlanWrite } from '../../collections/core/use-container';
+import {
+  type GridBounds,
+  type SelectionAction,
+  type SelectionState,
+} from '../../collections/sheet/selection';
 import { type PlanVerb } from './grid-geometry';
 import { cellText, coerceCellText, type SpreadsheetColumn, type WritePlan } from './grid-model';
 

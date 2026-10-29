@@ -5,7 +5,7 @@ import {
   ContainerViewsSchema,
   EffectiveSchemaSchema,
   toViewRequest,
-} from '../core/container-model';
+} from '../../collections/core/container-model';
 
 /**
  * Gives a container's calendar an end property, from outside that container's own page.

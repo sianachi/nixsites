@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { aContainer } from '../../container-fixture';
 import { renderAt as render } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
-import type { Item } from '../../../views/core/container-model';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { Item } from '../../../collections/core/container-model';
+import type { ContainerData } from '../../../collections/core/use-container';
 import { DriveView } from '../../../views/drive/drive-view';
 import { ContainerView } from '../../../views/core/container-view';
 
@@ -117,7 +117,7 @@ vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useOptionalWorkspace: () => null,
 }));
 
-vi.mock('../../../items/use-workspace-tree', () => ({
+vi.mock('../../../collections/items/use-workspace-tree', () => ({
   useWorkspaceTree: () => ({
     status: 'ready',
     error: null,

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { FormBlock } from '../../../views/core/container-model';
+import type { FormBlock } from '../../../collections/core/container-model';
 import { BlockEditor } from '../../../views/form/editor/block-editor';
 
 const block = (conditions: number): FormBlock => ({

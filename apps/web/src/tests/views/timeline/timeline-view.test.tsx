@@ -8,10 +8,10 @@ import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
 import { aContainer, views } from '../../container-fixture';
-import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
+import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
 import { TimelineView } from '../../../views/timeline/timeline-view';
 import { ContainerView } from '../../../views/core/container-view';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 /**
  * The timeline, and above all what it says about the items it cannot draw a bar for.

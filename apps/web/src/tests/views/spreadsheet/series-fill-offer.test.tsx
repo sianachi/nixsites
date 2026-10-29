@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
 import { aView } from '../../view-fixture';
-import type { PlanWrite } from '../../../views/core/use-container';
+import type { PlanWrite } from '../../../collections/core/use-container';
 import { SpreadsheetView } from '../../../views/spreadsheet/spreadsheet-view';
 import { anItem } from '../suggest/suggest-fixtures';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';

@@ -11,8 +11,8 @@ import { z } from 'zod';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
-import { ViewSchema } from '../../views/core/container-model';
-import { useContainer } from '../../views/core/use-container';
+import { ViewSchema } from '../../collections/core/container-model';
+import { useContainer } from '../../collections/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';

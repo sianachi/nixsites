@@ -2,7 +2,7 @@ import { Button, Icon, Menu } from '@nix/ui';
 import { Ellipsis } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Item } from '../core/container-model';
+import type { Item } from '../../collections/core/container-model';
 import type { RowsProps } from './drive-rows';
 
 /**

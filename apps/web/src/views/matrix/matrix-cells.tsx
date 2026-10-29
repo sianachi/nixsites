@@ -1,8 +1,8 @@
 import { Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { Item } from '../core/container-model';
-import type { AxisGroup } from '../core/view-axis';
+import type { Item } from '../../collections/core/container-model';
+import type { AxisGroup } from '../../collections/core/view-axis';
 
 export function ColumnHeader({ column }: { readonly column: AxisGroup }): ReactNode {
   return (

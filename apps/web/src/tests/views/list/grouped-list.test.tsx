@@ -10,7 +10,7 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { ListView } from '../../../views/list/list-view';
 
 /**

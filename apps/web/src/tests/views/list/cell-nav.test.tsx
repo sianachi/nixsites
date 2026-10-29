@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import type { PropertyDefinition } from '../../../views/core/container-model';
+import type { PropertyDefinition } from '../../../collections/core/container-model';
 import { ListView } from '../../../views/list/list-view';
 import { aContainer } from '../../container-fixture';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 import { item, schemaOf } from '../../view-fixture';
 
 /**

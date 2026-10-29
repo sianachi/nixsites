@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { PropertyDefinition, View } from './container-model';
-import type { ContainerData } from './use-container';
+import type { PropertyDefinition, View } from '../../collections/core/container-model';
+import type { ContainerData } from '../../collections/core/use-container';
 
 /**
  * The registry of every kind of view this build can draw, and everything it knows about each one.

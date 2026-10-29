@@ -5,8 +5,8 @@ import {
   describeDeleteConfirm,
   executeBulkDelete,
   planBulkDelete,
-} from '../../items/bulk-delete';
-import type { TreeItem } from '../../items/use-workspace-tree';
+} from '../../collections/items/bulk-delete';
+import type { TreeItem } from '../../collections/items/use-workspace-tree';
 
 function node(id: string, parentId: string | null, extra: Partial<TreeItem> = {}): TreeItem {
   return {

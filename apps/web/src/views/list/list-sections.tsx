@@ -2,7 +2,7 @@ import { Icon, Text, cn, focusRing } from '@nix/ui';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 
-import type { AxisGroup } from '../core/view-axis';
+import type { AxisGroup } from '../../collections/core/view-axis';
 
 interface ListSectionsProps {
   readonly sections: readonly AxisGroup[];

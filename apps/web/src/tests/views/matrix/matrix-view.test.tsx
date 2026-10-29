@@ -11,8 +11,8 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
-import type { ContainerData } from '../../../views/core/use-container';
+} from '../../../collections/core/container-model';
+import type { ContainerData } from '../../../collections/core/use-container';
 import { MatrixView } from '../../../views/matrix/matrix-view';
 
 const URGENCY: PropertyDefinition = {

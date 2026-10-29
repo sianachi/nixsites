@@ -19,8 +19,13 @@ import {
 
 import { pickRowHeight } from '../spreadsheet/grid-geometry';
 import { CellEditor } from './cell-editor';
-import { gridKeyAction } from './grid-keys';
-import { INITIAL_SELECTION, type GridBounds, selectedRange, selectionReducer } from './selection';
+import { gridKeyAction } from '../../collections/sheet/grid-keys';
+import {
+  INITIAL_SELECTION,
+  type GridBounds,
+  selectedRange,
+  selectionReducer,
+} from '../../collections/sheet/selection';
 import { FormulaBar } from './formula-bar';
 import { SheetCellRows } from './sheet-cell-rows';
 import { sheetCellMenuItems } from './sheet-cell-menu';
@@ -31,7 +36,7 @@ import { SheetStatus } from './sheet-status';
 import { useColumnResize } from './use-column-resize';
 import { useGridViewport } from './use-grid-viewport';
 import { type SheetData } from './use-sheet';
-import { columnOffsets, columnWindow, rowWindow } from './windowing';
+import { columnOffsets, columnWindow, rowWindow } from '../../collections/sheet/windowing';
 
 /**
  * The grid: windowed rendering, one selection model, edits committed to the

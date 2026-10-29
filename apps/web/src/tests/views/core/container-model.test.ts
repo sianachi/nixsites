@@ -8,7 +8,7 @@ import {
   readSelectValue,
   sortItems,
   type Item,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 
 /**
  * The model every view reads through.

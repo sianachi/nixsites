@@ -7,15 +7,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '../../container-fixture';
-import type { Item, ViewFilterRule } from '../../../views/core/container-model';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { Item, ViewFilterRule } from '../../../collections/core/container-model';
+import type { ContainerData } from '../../../collections/core/use-container';
 import {
   drawable,
   undrawable,
   useViewChrome,
   type Drawable,
 } from '../../../views/core/view-chrome';
-import { useViewState } from '../../../views/core/view-state';
+import { useViewState } from '../../../collections/core/view-state';
 import { ViewTools } from '../../../views/core/view-tools';
 
 /**

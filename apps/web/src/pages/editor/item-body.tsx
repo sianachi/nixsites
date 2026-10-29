@@ -8,8 +8,8 @@ import { LockedBody } from '../../locks/locked-body';
 import type { useItemLock } from '../../locks/use-item-lock';
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { ContainerView } from '../../views/core/container-view';
-import type { View } from '../../views/core/container-model';
-import type { useContainer } from '../../views/core/use-container';
+import type { View } from '../../collections/core/container-model';
+import type { useContainer } from '../../collections/core/use-container';
 import { SheetEditor } from '../../views/sheet/sheet-editor';
 import { CompanionViewPair } from './companion-view-pair';
 

@@ -1,7 +1,7 @@
 import { cellKey, type CellRef } from '@nix/sheet';
 import { type MenuEntry } from '@nix/ui';
 
-import { type SelectionAction } from './selection';
+import { type SelectionAction } from '../../collections/sheet/selection';
 import { type SheetData } from './use-sheet';
 
 /** The right-click menu for the cell at `ref`: edit, clear, undo and redo. */

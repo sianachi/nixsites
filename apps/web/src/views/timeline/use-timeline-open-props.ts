@@ -1,6 +1,6 @@
-import { useClickSelects } from '../core/item-open-click';
-import { useOptionalItemSelection } from '../core/item-selection-context';
-import { rowGestures } from '../core/use-item-selection';
+import { useClickSelects } from '../../collections/core/item-open-click';
+import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
+import { rowGestures } from '../../collections/core/use-item-selection';
 
 export function useTimelineOpenProps(
   onOpen: (itemId: string) => void,

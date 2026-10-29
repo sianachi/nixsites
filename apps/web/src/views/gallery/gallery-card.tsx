@@ -7,13 +7,13 @@ import {
   type Item,
   type PropertyDefinition,
   type PropertyValue,
-} from '../core/container-model';
-import { useClickSelects } from '../core/item-open-click';
-import { useOptionalItemSelection } from '../core/item-selection-context';
+} from '../../collections/core/container-model';
+import { useClickSelects } from '../../collections/core/item-open-click';
+import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { ValuePopover } from '../core/value-popover';
-import { useItemContextActions } from '../core/use-item-context-actions';
-import { rowGestures } from '../core/use-item-selection';
+import { ValuePopover } from '../../collections/properties/value-popover';
+import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { rowGestures } from '../../collections/core/use-item-selection';
 import { FileThumbnail } from '../../thumbnails';
 import { ListCell } from '../list/list-cell';
 import { CARD_SIZE_COVER, type CardSize } from './card-size';

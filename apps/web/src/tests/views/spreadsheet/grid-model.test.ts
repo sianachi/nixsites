@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { rangeToTsv } from '../../../views/sheet/clipboard';
-import type { Item } from '../../../views/core/container-model';
+import { rangeToTsv } from '../../../collections/sheet/clipboard';
+import type { Item } from '../../../collections/core/container-model';
 import {
   cellDisplay,
   cellText,

@@ -14,7 +14,7 @@ import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { draftFromRule, emptyDraft, ruleInputFromDraft } from './automation-draft';
 import { AutomationDetail } from './automation-detail';
 import { AutomationList } from './automation-list';
-import { automationsHref, parseAutomationSelection } from './automation-url';
+import { automationsHref, parseAutomationSelection } from '../collections/items/automation-url';
 import { useAutomations, type AutomationsState } from './use-automations';
 
 /**

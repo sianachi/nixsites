@@ -2,7 +2,7 @@ import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { Star } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { useBookmarksStore, useIsKept } from './use-bookmarks';
+import { useBookmarksStore, useIsKept } from '../collections/items/use-bookmarks';
 
 /**
  * The one control that keeps and releases an item, wherever it appears.

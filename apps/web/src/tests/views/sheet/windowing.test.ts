@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { columnOffsets, columnWindow, rowWindow } from '../../../views/sheet/windowing';
+import { columnOffsets, columnWindow, rowWindow } from '../../../collections/sheet/windowing';
 
 describe('row windows', () => {
   it('starts at the top with overscan below the viewport', () => {

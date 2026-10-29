@@ -5,7 +5,7 @@ import {
   sortItemsBy,
   type Item,
   type PropertyDefinition,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 
 function item(id: string, seq: number, properties: Record<string, unknown>, title = id): Item {
   return {

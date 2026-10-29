@@ -15,7 +15,7 @@ import type {
   PropertyDefinition,
   View,
   ViewFilterRule,
-} from '../../views/core/container-model';
+} from '../../collections/core/container-model';
 
 /**
  * The compile-time tie between `@nix/structure-spec`'s structural types and this app's own,

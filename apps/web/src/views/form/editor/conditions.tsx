@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Icon } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { FormBlock, FormCondition } from '../../core/container-model';
+import type { FormBlock, FormCondition } from '../../../collections/core/container-model';
 
 export function PageConditions({
   conditions,

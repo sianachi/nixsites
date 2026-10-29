@@ -1,7 +1,7 @@
 import { cellKey, type CellRange } from '@nix/sheet';
 import type { ClipboardEvent } from 'react';
 
-import { parseTsv, rangeToTsv } from './clipboard';
+import { parseTsv, rangeToTsv } from '../../collections/sheet/clipboard';
 import { type SheetData } from './use-sheet';
 
 /**

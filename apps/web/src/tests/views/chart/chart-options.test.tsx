@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import type { PropertyDefinition, View } from '../../../views/core/container-model';
+import type { PropertyDefinition, View } from '../../../collections/core/container-model';
 import { StructuredViewConfiguration } from '../../../views/core/structured-view-configuration';
 import { normalizeChartView } from '../../../views/chart/chart-options';
 import { aView } from '../../view-fixture';

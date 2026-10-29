@@ -5,7 +5,7 @@ import { FileText, Search } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useHiddenItemPredicate } from '../items/use-hidden-items';
+import { useHiddenItemPredicate } from '../collections/items/use-hidden-items';
 import { filterCommands, type PaletteCommand } from './commands';
 
 /**

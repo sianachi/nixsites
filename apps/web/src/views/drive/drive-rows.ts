@@ -2,7 +2,7 @@ import type { MenuEntry } from '@nix/ui';
 import type { DragEvent } from 'react';
 
 import { formatBytes } from '../../files/file-facts';
-import type { Item } from '../core/container-model';
+import type { Item } from '../../collections/core/container-model';
 import { kindOf } from './drive-sort';
 import type { DriveFileInfo } from './use-drive-file-info';
 

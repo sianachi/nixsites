@@ -2,7 +2,7 @@ import type { GraphLink, GraphNode } from '@nix/api-client';
 import { Button, ContextMenu, Input, Select, Text, focusRing } from '@nix/ui';
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import { useHiddenItems } from '../items/use-hidden-items';
+import { useHiddenItems } from '../collections/items/use-hidden-items';
 import { GraphView } from './graph-view';
 import {
   readGraphPresentation,

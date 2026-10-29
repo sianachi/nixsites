@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { expect, it } from 'vitest';
-import { LocalViewStateContext, useViewState } from '../../../views/core/view-state';
+import { LocalViewStateContext, useViewState } from '../../../collections/core/view-state';
 
 function DialogView() {
   const view = useViewState();

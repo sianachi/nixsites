@@ -14,7 +14,7 @@ import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'rea
 import { useSearchParams } from 'react-router';
 
 import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
-import { copyLinkEntry } from '../items/item-menu-entries';
+import { copyLinkEntry } from '../collections/items/item-menu-entries';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { CHAT_PARAM, paneParam } from '@nix/web-platform/panes/pane-params';
 import type { PaneState } from '@nix/web-platform/panes/pane-state';

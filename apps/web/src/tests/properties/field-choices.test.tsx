@@ -2,8 +2,8 @@ import { createNixClient, type NixClient } from '@nix/api-client';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PropertyInput } from '../../properties/property-input';
-import { fieldChoices } from '../../properties/use-field-choices';
+import { PropertyInput } from '../../collections/properties/property-input';
+import { fieldChoices } from '../../collections/properties/use-field-choices';
 import { item as stubItem, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { STUB_WORKSPACE_ID, type StubItem } from '@nix/web-foundation/testing/api-stub';
 

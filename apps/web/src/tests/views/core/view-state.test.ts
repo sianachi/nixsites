@@ -5,7 +5,7 @@ import {
   parseDirection,
   parseFilters,
   parseViewState,
-} from '../../../views/core/view-state';
+} from '../../../collections/core/view-state';
 
 /**
  * The view's state, read out of a query string.

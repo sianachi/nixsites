@@ -3,9 +3,9 @@ import { CalendarClock } from 'lucide-react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { dayLabel, type CalendarDay } from '../../core/calendar-dates';
-import { readPropertyText, type Item } from '../../core/container-model';
-import { useItemOpenProps } from '../../core/item-open-click';
+import { dayLabel, type CalendarDay } from '../../../collections/core/calendar-dates';
+import { readPropertyText, type Item } from '../../../collections/core/container-model';
+import { useItemOpenProps } from '../../../collections/core/item-open-click';
 import { CalendarEntryMenu } from '../calendar-entry-menu';
 import { durationLabel } from '../span-gesture';
 import {

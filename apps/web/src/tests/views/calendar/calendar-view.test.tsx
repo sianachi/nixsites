@@ -5,12 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
-import { VIEW_GUTTER_BLEED } from '../../../views/core/view-gutter';
+import { VIEW_GUTTER_BLEED } from '../../../collections/core/view-gutter';
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { ContainerView } from '../../../views/core/container-view';
-import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
+import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
 import { aContainer, views } from '../../container-fixture';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 /**
  * The calendar, driven the way a person drives it.

@@ -1,4 +1,4 @@
-import type { useWorkspaceTree } from '../items/use-workspace-tree';
+import type { useWorkspaceTree } from '../collections/items/use-workspace-tree';
 
 /**
  * What the shell hands to whatever screen is open.

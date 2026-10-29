@@ -1,4 +1,4 @@
-import { dayFromText, dayLabel } from '../core/calendar-dates';
+import { dayFromText, dayLabel } from '../../collections/core/calendar-dates';
 import type { Placed } from './timeline-model';
 import { titleOf } from './timeline-model';
 

@@ -7,7 +7,7 @@ import {
 import type {
   InteractiveFormDefinition,
   PropertyDefinition,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 
 const SCHEMA: readonly PropertyDefinition[] = [
   { key: 'name', label: 'Name', type: 'text', options: [], required: false },

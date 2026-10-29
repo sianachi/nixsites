@@ -1,8 +1,12 @@
 import { Text, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { monthLabel, WEEKDAY_ABBREVIATIONS, type CalendarMonth } from '../../core/calendar-dates';
-import type { Item } from '../../core/container-model';
+import {
+  monthLabel,
+  WEEKDAY_ABBREVIATIONS,
+  type CalendarMonth,
+} from '../../../collections/core/calendar-dates';
+import type { Item } from '../../../collections/core/container-model';
 import { DayNumber, buildWeeks } from '../month-grid';
 
 /** Dots drawn under a day: enough to say "busy", never a count to read. */

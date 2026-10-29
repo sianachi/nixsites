@@ -6,7 +6,11 @@ import {
   type ValueModel,
 } from '@nix/web-foundation/lib/suggest/naive-bayes';
 import { tokens } from '@nix/web-foundation/lib/suggest/tokenize';
-import type { Item, PropertyDefinition, PropertyValue } from '../core/container-model';
+import type {
+  Item,
+  PropertyDefinition,
+  PropertyValue,
+} from '../../collections/core/container-model';
 
 /**
  * Which property values a new item probably wants, learned from its siblings' titles.

@@ -3,12 +3,12 @@ import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import type { Item, View } from '../core/container-model';
+import type { Item, View } from '../../collections/core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
-import type { ContainerData } from '../core/use-container';
-import { groupItems, type AxisGroup } from '../core/view-axis';
+import type { ContainerData } from '../../collections/core/use-container';
+import { groupItems, type AxisGroup } from '../../collections/core/view-axis';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
-import { useViewState } from '../core/view-state';
+import { useViewState } from '../../collections/core/view-state';
 import { cellValue, resolveAxes, type CellAddress, type MatrixAxes } from './matrix-axes';
 import { MatrixCard, type CellChoice } from './matrix-card';
 import { CellCards, ColumnHeader } from './matrix-cells';

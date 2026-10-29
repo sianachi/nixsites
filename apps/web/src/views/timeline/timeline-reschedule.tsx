@@ -2,13 +2,13 @@ import { Button, Icon, Text } from '@nix/ui';
 import { CalendarClock } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import { PropertyInput } from '../../properties/property-input';
+import { PropertyInput } from '../../collections/properties/property-input';
 import type {
   EffectiveSchema,
   Item,
   PropertyDefinition,
   PropertyValue,
-} from '../core/container-model';
+} from '../../collections/core/container-model';
 import type { AsideContext } from './timeline-model';
 import { titleOf } from './timeline-model';
 

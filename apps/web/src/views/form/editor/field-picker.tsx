@@ -1,8 +1,8 @@
 import { Field, Select } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { FormBlock, PropertyDefinition } from '../../core/container-model';
-import { isComputedType } from '../../core/property-types';
+import type { FormBlock, PropertyDefinition } from '../../../collections/core/container-model';
+import { isComputedType } from '../../../collections/core/property-types';
 
 export function FieldPicker({
   block,

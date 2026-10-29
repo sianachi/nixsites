@@ -7,13 +7,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
-import type { Item } from '../../../views/core/container-model';
+import type { Item } from '../../../collections/core/container-model';
 import { OutlineTree } from '../../../views/outline/outline-view';
 import type { OutlineSource } from '../../../views/outline/outline-source';
-import { ItemSelectionContext } from '../../../views/core/item-selection-context';
+import { ItemSelectionContext } from '../../../collections/core/item-selection-context';
 import { SelectionBar } from '../../../views/core/selection-bar';
-import { useItemSelection } from '../../../views/core/use-item-selection';
-import { capabilitiesOf } from '../../../views/core/view-capabilities';
+import { useItemSelection } from '../../../collections/core/use-item-selection';
+import { capabilitiesOf } from '../../../collections/core/view-capabilities';
 
 /**
  * The outline, driven from the keyboard over an in-memory tree. The fake source keeps every item's

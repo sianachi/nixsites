@@ -1,10 +1,14 @@
 import { Checkbox, Field, Input, Select, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import { todayDay } from '../calendar/model/day-math';
-import { addDays, dayText } from '../core/calendar-dates';
-import type { ChartOptions, PropertyDefinition, View } from '../core/container-model';
-import { canSplitBy } from '../core/property-types';
+import { todayDay } from '../../collections/core/day-math';
+import { addDays, dayText } from '../../collections/core/calendar-dates';
+import type {
+  ChartOptions,
+  PropertyDefinition,
+  View,
+} from '../../collections/core/container-model';
+import { canSplitBy } from '../../collections/core/property-types';
 import {
   AVERAGE_SPAN,
   CHART_KIND_LABELS,

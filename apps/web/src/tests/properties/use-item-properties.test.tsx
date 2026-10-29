@@ -2,7 +2,7 @@ import { createNixClient, NixApiError, NixErrorKind } from '@nix/api-client';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { useItemProperties } from '../../properties/use-item-properties';
+import { useItemProperties } from '../../collections/properties/use-item-properties';
 
 /**
  * The failure path a schema-only `queryOrNull` used to erase.

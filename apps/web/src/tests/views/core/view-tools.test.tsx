@@ -5,10 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '../../view-fixture';
-import { filterGroup, type ViewFilterRule } from '../../../views/core/container-model';
+import { filterGroup, type ViewFilterRule } from '../../../collections/core/container-model';
 import { ViewSwitcher } from '../../../views/core/view-switcher';
 import { ViewTools } from '../../../views/core/view-tools';
-import { useViewState } from '../../../views/core/view-state';
+import { useViewState } from '../../../collections/core/view-state';
 
 const rules: readonly ViewFilterRule[] = [
   filterGroup([

@@ -1,14 +1,14 @@
 import { Button, Checkbox, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { PropertyInput, isKnownPropertyType } from '../../properties/property-input';
+import { PropertyInput, isKnownPropertyType } from '../../collections/properties/property-input';
 import type {
   FormBlock,
   FormCondition,
   InteractiveFormDefinition,
   PropertyValue,
   PropertyDefinition,
-} from '../core/container-model';
+} from '../../collections/core/container-model';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { reportFormValidity } from './form-validity';

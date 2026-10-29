@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { NixApiError } from '@nix/api-client';
 import { MemoryRouter } from 'react-router';
 
-import type { Item, View } from '../core/container-model';
-import { storyContainer, storyItem } from '../core/story-container';
-import { ItemSelectionContext } from '../core/item-selection-context';
+import type { Item, View } from '../../collections/core/container-model';
+import { storyContainer, storyItem } from '../../collections/core/story-container';
+import { ItemSelectionContext } from '../../collections/core/item-selection-context';
 import { SelectionBar } from '../core/selection-bar';
-import { useItemSelection } from '../core/use-item-selection';
-import { capabilitiesOf } from '../core/view-capabilities';
+import { useItemSelection } from '../../collections/core/use-item-selection';
+import { capabilitiesOf } from '../../collections/core/view-capabilities';
 import type { OutlineSource } from './outline-source';
 import { OutlineTree } from './outline-view';
 

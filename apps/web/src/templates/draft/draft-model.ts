@@ -1,4 +1,8 @@
-import type { EffectiveSchema, PropertyDefinition, View } from '../../views/core/container-model';
+import type {
+  EffectiveSchema,
+  PropertyDefinition,
+  View,
+} from '../../collections/core/container-model';
 import {
   STRUCTURED_RECIPES,
   viewForRecipe,

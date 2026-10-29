@@ -10,7 +10,7 @@ import {
   WEEKDAY_ABBREVIATIONS,
   WEEKDAY_NAMES,
   type CalendarMonth,
-} from '../core/calendar-dates';
+} from '../../collections/core/calendar-dates';
 
 /**
  * A month, as a grid of weeks, with the cells left to the caller.

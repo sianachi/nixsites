@@ -1,13 +1,18 @@
 import { DateTime } from 'luxon';
 
-import { dayLabel, dayText, weekLabel, type CalendarDay } from '../../core/calendar-dates';
-import type { Item } from '../../core/container-model';
+import {
+  dayLabel,
+  dayText,
+  weekLabel,
+  type CalendarDay,
+} from '../../../collections/core/calendar-dates';
+import type { Item } from '../../../collections/core/container-model';
 import {
   formatTime,
   minutesFor,
   readTimestampValue,
   writeTimestampValue,
-} from '../../core/timestamps';
+} from '../../../collections/core/timestamps';
 import { MINUTES_PER_DAY, MIN_SPAN_MINUTES, type Placed } from './geometry';
 
 /** The moment a minute of a day stands for, on the reader's clock. Midnight rolls to the next day. */

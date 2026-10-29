@@ -7,7 +7,7 @@ import {
   filterGroup,
   type PropertyDefinition,
   type ViewFilterRule,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { FilterRulesEditor } from '../../../views/core/filter-rules-editor';
 
 /**

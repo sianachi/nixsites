@@ -1,7 +1,7 @@
 import { Button, Dialog, Field, Input, Text } from '@nix/ui';
 import { useRef, useState, type ReactNode } from 'react';
-import { MobileDestinationPicker } from './mobile-destination-picker';
-import type { WorkspaceTree } from './use-workspace-tree';
+import { MobileDestinationPicker } from '../collections/items/mobile-destination-picker';
+import type { WorkspaceTree } from '../collections/items/use-workspace-tree';
 
 /** Kept mounted by the workspace shell so closing the sheet retains an unfinished title. */
 export function MobileNoteCapture({

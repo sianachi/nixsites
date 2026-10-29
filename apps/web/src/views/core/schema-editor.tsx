@@ -1,4 +1,4 @@
-import { FieldSourceEditor } from '../../properties/field-source-editor';
+import { FieldSourceEditor } from '../../collections/properties/field-source-editor';
 import {
   FORMULA_FUNCTION_NAMES,
   PROPERTY_FORMULA_LIMITS,
@@ -8,7 +8,7 @@ import { Button, Field, Icon, Input, Select, Text, cn, fieldLabel, focusRing } f
 import { Plus, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import type { PropertyDefinition } from './container-model';
+import type { PropertyDefinition } from '../../collections/core/container-model';
 import { EditorShell } from './editor-shell';
 import { LineListInput } from './line-list-input';
 import {
@@ -17,8 +17,8 @@ import {
   foldNeedsProperty,
   isComputedType,
   propertyTypeLabel,
-} from './property-types';
-import type { ContainerData } from './use-container';
+} from '../../collections/core/property-types';
+import type { ContainerData } from '../../collections/core/use-container';
 
 /**
  * Declaring the properties a folder gives its contents.

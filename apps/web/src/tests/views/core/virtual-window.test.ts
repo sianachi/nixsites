@@ -7,7 +7,7 @@ import {
   virtualIndexes,
   virtualSegments,
   virtualSpacers,
-} from '../../../views/core/virtual-window';
+} from '../../../collections/core/virtual-window';
 
 describe('variable view windowing', () => {
   it('uses measured replacements without losing total geometry', () => {

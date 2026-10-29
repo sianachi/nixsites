@@ -2,8 +2,12 @@ import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { within } from '@testing-library/dom';
 
-import type { InteractiveFormDefinition, PropertyDefinition, View } from '../core/container-model';
-import { storyContainer } from '../core/story-container';
+import type {
+  InteractiveFormDefinition,
+  PropertyDefinition,
+  View,
+} from '../../collections/core/container-model';
+import { storyContainer } from '../../collections/core/story-container';
 import { FormView } from './form-view';
 import { InteractiveFormEditor } from './interactive-form-editor';
 import { InteractiveFormView } from './interactive-form-view';

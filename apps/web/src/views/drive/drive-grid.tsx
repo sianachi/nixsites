@@ -1,9 +1,9 @@
 import { ContextMenu, Icon, Text, blueprintFrame, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { useOptionalItemSelection } from '../core/item-selection-context';
+import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { rowGestures } from '../core/use-item-selection';
+import { rowGestures } from '../../collections/core/use-item-selection';
 import { driveKindIcon } from './drive-icons';
 import { DriveFileThumbnail } from './drive-file-thumbnail';
 import { DriveRowActions } from './drive-row-actions';

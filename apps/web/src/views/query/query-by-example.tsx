@@ -5,7 +5,7 @@ import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider'
 import { formatCalendarDay } from '@nix/web-foundation/lib/date-format';
 import type { InferredFilters, InferredRule } from '@nix/web-foundation/lib/suggest/infer-filters';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import type { PropertyDefinition, ViewFilterRule } from '../core/container-model';
+import type { PropertyDefinition, ViewFilterRule } from '../../collections/core/container-model';
 import { SuggestionHint } from '../suggest/suggestion-hint';
 import { MemberNames, unnamedMember, type MemberNameOf } from '../suggest/member-name';
 import { valueText } from '../suggest/value-text';

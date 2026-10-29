@@ -14,9 +14,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspaceTree } from '../../items/use-workspace-tree';
-import { useItemProperties } from '../../properties/use-item-properties';
-import { useContainer } from '../../views/core/use-container';
+import { useWorkspaceTree } from '../../collections/items/use-workspace-tree';
+import { useItemProperties } from '../../collections/properties/use-item-properties';
+import { useContainer } from '../../collections/core/use-container';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 

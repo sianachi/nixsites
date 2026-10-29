@@ -3,9 +3,9 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, type LucideIcon } from 'lucide-reac
 import type { ReactNode } from 'react';
 
 import { formatBytes, formatWhen } from '../../files/file-facts';
-import { useOptionalItemSelection } from '../core/item-selection-context';
+import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
-import { rowGestures } from '../core/use-item-selection';
+import { rowGestures } from '../../collections/core/use-item-selection';
 import { driveKindIcon } from './drive-icons';
 import { DriveFileThumbnail } from './drive-file-thumbnail';
 import { DriveRowActions } from './drive-row-actions';

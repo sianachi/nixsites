@@ -20,8 +20,8 @@ import { BudgetActualDialog } from './budget-actual-dialog';
 import { QuickAddDialog } from './finance-transactions';
 import { FinanceBalanceTrend } from './finance-balance-trend';
 import { FinanceView } from './finance-view';
-import { storyContainer } from '../core/story-container';
-import { recordStoryView } from '../core/story-container';
+import { storyContainer } from '../../collections/core/story-container';
+import { recordStoryView } from '../../collections/core/story-container';
 import type { FinanceState } from './use-finance';
 
 const ROOT = 'c1111111-1111-4111-8111-111111111111';

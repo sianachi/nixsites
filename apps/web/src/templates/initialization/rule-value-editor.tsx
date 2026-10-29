@@ -1,9 +1,9 @@
 import { Button, Checkbox, Field, Input, Select, Textarea } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { TreeItem } from '../../items/use-workspace-tree';
+import type { TreeItem } from '../../collections/items/use-workspace-tree';
 import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
-import { TemplateItemPicker } from '../template-item-picker';
+import { TemplateItemPicker } from '../../collections/items/template-item-picker';
 import type { TargetOption } from './initialization-targets';
 
 export function RuleValueEditor({

@@ -15,12 +15,12 @@ import {
   type Item,
   type View,
   type ViewFilterRule,
-} from './container-model';
-import { applyRules } from './filter-rules';
-import { namesReader, useRuleContext } from './use-rule-context';
-import type { ContainerData } from './use-container';
-import { viewConfigureHref } from './view-configure-route';
-import type { ViewStateControl } from './view-state';
+} from '../../collections/core/container-model';
+import { applyRules } from '../../collections/core/filter-rules';
+import { namesReader, useRuleContext } from '../../collections/core/use-rule-context';
+import type { ContainerData } from '../../collections/core/use-container';
+import { viewConfigureHref } from '../../collections/core/view-configure-route';
+import type { ViewStateControl } from '../../collections/core/view-state';
 
 /**
  * The five things every view has to say before it can say anything about items.

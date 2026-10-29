@@ -36,7 +36,7 @@ import {
   isDateShaped,
   TYPE_GROUP_KEY,
   valueShapeOf,
-} from './core/property-types';
+} from '../collections/core/property-types';
 import {
   registerViewKinds,
   type ChoiceField,

@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Item, PropertyDefinition } from '../../views/core/container-model';
-import { PropertyInput } from '../../properties/property-input';
+import type { Item, PropertyDefinition } from '../../collections/core/container-model';
+import { PropertyInput } from '../../collections/properties/property-input';
 
 /**
  * The picture property's picker, exercised through the dispatch that chooses it.

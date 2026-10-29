@@ -12,9 +12,9 @@ import {
 
 import { FILL_SERIES_SHORTCUT } from '@nix/web-foundation/keyboard/shortcut-registry';
 import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
-import { type Item, type PropertyDefinition } from '../core/container-model';
-import type { PlanOutcome, PlanWrite } from '../core/use-container';
-import { type SortDirection } from '../core/view-state';
+import { type Item, type PropertyDefinition } from '../../collections/core/container-model';
+import type { PlanOutcome, PlanWrite } from '../../collections/core/use-container';
+import { type SortDirection } from '../../collections/core/view-state';
 import { CellEditor } from '../sheet/cell-editor';
 import {
   INITIAL_SELECTION,
@@ -22,14 +22,14 @@ import {
   selectedRange,
   selectionReducer,
   type GridBounds,
-} from '../sheet/selection';
+} from '../../collections/sheet/selection';
 import { FillSeriesOffer } from './fill-series-offer';
 import { gridCellMenuItems } from './grid-cell-menu';
 import { gridClipboardHandlers } from './grid-clipboard';
 import { GridCell } from './grid-cell';
 import { SCROLLER_HEIGHT_CLASS, cellId, pickRowHeight } from './grid-geometry';
 import { GridHeader } from './grid-header';
-import { TITLE_COLUMN_KEY } from '../core/columns';
+import { TITLE_COLUMN_KEY } from '../../collections/core/columns';
 import { cellText, type SpreadsheetColumn } from './grid-model';
 import { GridPropertyPanel } from './grid-property-panel';
 import { GridToolbar } from './grid-toolbar';

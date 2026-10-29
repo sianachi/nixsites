@@ -6,8 +6,8 @@ import {
   executeBulkMove,
   isInsideSelection,
   planBulkMove,
-} from '../../items/bulk-move';
-import type { TreeItem } from '../../items/use-workspace-tree';
+} from '../../collections/items/bulk-move';
+import type { TreeItem } from '../../collections/items/use-workspace-tree';
 
 function node(id: string, parentId: string | null): TreeItem {
   return {

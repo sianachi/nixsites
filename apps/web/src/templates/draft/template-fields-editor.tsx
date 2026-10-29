@@ -2,7 +2,7 @@ import { Button, Checkbox, Field, Icon, Input, Select, Text, Textarea } from '@n
 import { Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { PROPERTY_TYPES } from '../../views/core/property-types';
+import { PROPERTY_TYPES } from '../../collections/core/property-types';
 import { declaredFields, replaceDeclaredFields, type TemplateItemEdit } from './draft-model';
 
 export function TemplateFieldsEditor({

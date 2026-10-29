@@ -3,7 +3,10 @@ import { Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { Icon } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
-import type { InteractiveFormDefinition, PropertyDefinition } from '../core/container-model';
+import type {
+  InteractiveFormDefinition,
+  PropertyDefinition,
+} from '../../collections/core/container-model';
 import { BlockEditor } from './editor/block-editor';
 import { PageConditions } from './editor/conditions';
 import { move } from './editor/move';

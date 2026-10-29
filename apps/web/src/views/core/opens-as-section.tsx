@@ -1,8 +1,8 @@
 import { Checkbox, Field, Select, Text } from '@nix/ui';
 import { useId, useState, type ReactNode } from 'react';
 
-import { DOCUMENT_VIEW } from './container-model';
-import type { ContainerData } from './use-container';
+import { DOCUMENT_VIEW } from '../../collections/core/container-model';
+import type { ContainerData } from '../../collections/core/use-container';
 
 /**
  * What an item opens as, and whether its document keeps a tab.

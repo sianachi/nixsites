@@ -5,11 +5,11 @@ import { useState, type ReactNode } from 'react';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
-import { PropertyPanel } from '../properties/property-panel';
+import { PropertyPanel } from '../collections/properties/property-panel';
 import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
 import { SitePane } from '@nix/web-sites/sites/site-pane';
-import type { ItemProperties } from '../properties/use-item-properties';
-import type { ContainerData } from '../views/core/use-container';
+import type { ItemProperties } from '../collections/properties/use-item-properties';
+import type { ContainerData } from '../collections/core/use-container';
 import { SchemaEditor } from '../views/core/schema-editor';
 import { ViewEditor } from '../views/core/view-editor';
 

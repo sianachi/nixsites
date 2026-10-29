@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { gridKeyAction, type GridKey } from '../../../views/sheet/grid-keys';
+import { gridKeyAction, type GridKey } from '../../../collections/sheet/grid-keys';
 
 /**
  * The keyboard ladder both grids share. The two host suites exercise it end to end; these pin the

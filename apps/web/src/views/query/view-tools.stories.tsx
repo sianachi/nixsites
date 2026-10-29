@@ -3,9 +3,9 @@ import { MemoryRouter } from 'react-router';
 import { within } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 
-import { ViewSchema } from '../core/container-model';
+import { ViewSchema } from '../../collections/core/container-model';
 import { ViewTools } from '../core/view-tools';
-import { useViewState } from '../core/view-state';
+import { useViewState } from '../../collections/core/view-state';
 
 export default { title: 'Nix/Views/Search and filters', parameters: { layout: 'padded' } };
 

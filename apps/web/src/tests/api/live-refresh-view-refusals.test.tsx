@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { useContainer } from '../../views/core/use-container';
+import { useContainer } from '../../collections/core/use-container';
 import { useQueryResults } from '../../views/query/use-query-results';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { item, STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';

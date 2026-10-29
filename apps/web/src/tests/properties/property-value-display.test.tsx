@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PropertyDefinition } from '../../views/core/container-model';
-import { MemberDirectory } from '../../properties/member-directory';
-import { PropertyValueDisplay } from '../../properties/property-value-display';
+import type { PropertyDefinition } from '../../collections/core/container-model';
+import { MemberDirectory } from '../../collections/properties/member-directory';
+import { PropertyValueDisplay } from '../../collections/properties/property-value-display';
 import {
   useWorkspaceMembers,
   type WorkspaceMembersState,

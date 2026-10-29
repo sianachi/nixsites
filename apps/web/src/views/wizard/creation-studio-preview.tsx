@@ -3,8 +3,8 @@ import { PRINT_PALETTE } from '@nix/design-tokens/print';
 import { renderView } from '@nix/view-render';
 import { useDeferredValue, type ReactNode } from 'react';
 
-import { isFilterGroup } from '../core/container-model';
-import { isDateShaped } from '../core/property-types';
+import { isFilterGroup } from '../../collections/core/container-model';
+import { isDateShaped } from '../../collections/core/property-types';
 import { InteractiveFormRespondentPreview } from '../form/interactive-form-editor';
 import type { StudioDraft } from './creation-studio-model';
 

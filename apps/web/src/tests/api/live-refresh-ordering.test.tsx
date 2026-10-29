@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { useWorkspaceTree, type WorkspaceTree } from '../../items/use-workspace-tree';
+import { useWorkspaceTree, type WorkspaceTree } from '../../collections/items/use-workspace-tree';
 import {
   notifyItemChildrenChanged,
   onItemChildrenChanged,

@@ -5,7 +5,7 @@ import {
   seriesFillOffer,
   seriesFillPlan,
 } from '../../../views/spreadsheet/grid-model';
-import type { EffectiveSchema } from '../../../views/core/container-model';
+import type { EffectiveSchema } from '../../../collections/core/container-model';
 import { aView } from '../../view-fixture';
 import { anItem } from '../suggest/suggest-fixtures';
 

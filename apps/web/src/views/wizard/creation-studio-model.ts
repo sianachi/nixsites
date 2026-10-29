@@ -6,8 +6,8 @@ import {
   ViewSchema,
   type PropertyDefinition,
   type View,
-} from '../core/container-model';
-import { isDateShaped } from '../core/property-types';
+} from '../../collections/core/container-model';
+import { isDateShaped } from '../../collections/core/property-types';
 import { validateInteractiveForm } from '../form/interactive-form-rules';
 import {
   findStructuredRecipe,

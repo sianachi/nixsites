@@ -10,7 +10,7 @@ import type {
   EffectiveSchema,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { FormView } from '../../../views/form/form-view';
 
 /**

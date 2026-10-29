@@ -2,10 +2,14 @@ import { Blueprint, Button, ContextMenu, Icon, Menu, Text, cn, focusRing } from 
 import { ArrowRightLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Item, PropertyDefinition, PropertyValue } from '../core/container-model';
-import { useItemOpenProps } from '../core/item-open-click';
-import { useItemContextActions } from '../core/use-item-context-actions';
-import { ValuePopover } from '../core/value-popover';
+import type {
+  Item,
+  PropertyDefinition,
+  PropertyValue,
+} from '../../collections/core/container-model';
+import { useItemOpenProps } from '../../collections/core/item-open-click';
+import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import { ValuePopover } from '../../collections/properties/value-popover';
 import { ListCell } from '../list/list-cell';
 import { cellValue, type CellAddress } from './matrix-axes';
 

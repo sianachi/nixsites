@@ -5,10 +5,14 @@ import { createPortal } from 'react-dom';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { FilterRulesEditor } from './filter-rules-editor';
-import { TITLE_COLUMN_KEY } from './columns';
+import { TITLE_COLUMN_KEY } from '../../collections/core/columns';
 import { BelowRowSlot } from './view-switcher';
-import type { PropertyDefinition, View, ViewFilterRule } from './container-model';
-import type { SortDirection, ViewStateControl } from './view-state';
+import type {
+  PropertyDefinition,
+  View,
+  ViewFilterRule,
+} from '../../collections/core/container-model';
+import type { SortDirection, ViewStateControl } from '../../collections/core/view-state';
 
 export type ViewToolsPlacement = 'row' | 'inline';
 

@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CalendarView } from '../../../views/calendar/calendar-view';
 import { aContainer, views } from '../../container-fixture';
-import type { EffectiveSchema, View } from '../../../views/core/container-model';
+import type { EffectiveSchema, View } from '../../../collections/core/container-model';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, datedItem } from '../../view-fixture';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 /**
  * The calendar at a day and a week, and the reason those modes needed a timestamp type.

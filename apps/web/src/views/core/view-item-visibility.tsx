@@ -1,9 +1,9 @@
 import { Button, Text } from '@nix/ui';
 import { useMemo, type ReactNode } from 'react';
 
-import { useHiddenItems } from '../../items/use-hidden-items';
-import type { View } from './container-model';
-import type { ContainerData } from './use-container';
+import { useHiddenItems } from '../../collections/items/use-hidden-items';
+import type { View } from '../../collections/core/container-model';
+import type { ContainerData } from '../../collections/core/use-container';
 
 export function ViewItemVisibility({
   container,

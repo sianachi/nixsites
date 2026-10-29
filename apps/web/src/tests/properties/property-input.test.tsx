@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Item } from '../../views/core/container-model';
-import { PropertyInput } from '../../properties/property-input';
+import type { Item } from '../../collections/core/container-model';
+import { PropertyInput } from '../../collections/properties/property-input';
 import {
   useWorkspaceMembers,
   type WorkspaceMember,

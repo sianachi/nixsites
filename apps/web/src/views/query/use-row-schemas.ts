@@ -2,7 +2,7 @@ import { structure } from '@nix/api-client';
 import { useEffect, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import type { PropertyDefinition } from '../core/container-model';
+import type { PropertyDefinition } from '../../collections/core/container-model';
 
 /**
  * The effective schema of each container a query's rows live in, by container id. A row is edited

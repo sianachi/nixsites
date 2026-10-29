@@ -11,7 +11,7 @@ import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-h
 import { itemLandmarksKey } from '@nix/web-foundation/lib/item-landmarks';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
-import type { TreeItem, WorkspaceTree } from '../../items/use-workspace-tree';
+import type { TreeItem, WorkspaceTree } from '../../collections/items/use-workspace-tree';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';

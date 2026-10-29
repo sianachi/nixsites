@@ -9,7 +9,7 @@ import {
   subscribeHiddenItems,
   writeHiddenItems,
 } from '@nix/web-foundation/lib/view-hidden-items';
-import { useHiddenItems, useHiddenItemPredicate } from '../../items/use-hidden-items';
+import { useHiddenItems, useHiddenItemPredicate } from '../../collections/items/use-hidden-items';
 import { ViewItemVisibility } from '../../views/core/view-item-visibility';
 import { aContainer } from '../container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';

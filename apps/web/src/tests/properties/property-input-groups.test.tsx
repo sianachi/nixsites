@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Item } from '../../views/core/container-model';
-import { PropertyInput } from '../../properties/property-input';
+import type { Item } from '../../collections/core/container-model';
+import { PropertyInput } from '../../collections/properties/property-input';
 import { propertyOf } from '../property-fixture';
 
 process.env.TZ = 'Pacific/Honolulu';

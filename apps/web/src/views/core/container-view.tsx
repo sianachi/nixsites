@@ -5,23 +5,23 @@ import {
   useNarrowViewport,
   useRoomForAnotherPane,
 } from '@nix/web-foundation/layout/viewport';
-import { useOptionalItemCommands } from '../../items/item-commands-context';
+import { useOptionalItemCommands } from '../../collections/items/item-commands-context';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 
 import { EmptyPanel, ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
-import type { View } from './container-model';
-import type { ContainerData } from './use-container';
-import { VIEW_GUTTER } from './view-gutter';
-import { ClickSelectsContext } from './item-open-click';
-import { ItemSelectionContext } from './item-selection-context';
-import { resolveOpenMode } from './open-policy';
+import type { View } from '../../collections/core/container-model';
+import type { ContainerData } from '../../collections/core/use-container';
+import { VIEW_GUTTER } from '../../collections/core/view-gutter';
+import { ClickSelectsContext } from '../../collections/core/item-open-click';
+import { ItemSelectionContext } from '../../collections/core/item-selection-context';
+import { resolveOpenMode } from '../../collections/core/open-policy';
 import { SelectionBar } from './selection-bar';
-import { useItemSelection, useSelectionShortcuts } from './use-item-selection';
-import { capabilitiesOf, DRAG_EFFECT_COPY } from './view-capabilities';
+import { useItemSelection, useSelectionShortcuts } from '../../collections/core/use-item-selection';
+import { capabilitiesOf, DRAG_EFFECT_COPY } from '../../collections/core/view-capabilities';
 import { findViewKind } from './view-kinds';
 import { ViewItemVisibility } from './view-item-visibility';
 import { ViewTools, type ViewToolsPlacement } from './view-tools';
-import { useViewState } from './view-state';
+import { useViewState } from '../../collections/core/view-state';
 
 /**
  * An item's children, drawn the way the chosen view says.

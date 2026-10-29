@@ -7,15 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, itemOf, schemaOf } from '../../view-fixture';
 import { aContainer, views } from '../../container-fixture';
-import { fileImageReference } from '../../../properties/inputs/image-reference';
+import { fileImageReference } from '../../../collections/properties/inputs/image-reference';
 import type {
   EffectiveSchema,
   Item,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { GalleryView } from '../../../views/gallery/gallery-view';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 const WORKSPACE = 'a1000000-0000-4000-8000-000000000001';
 

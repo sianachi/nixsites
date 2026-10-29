@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { View } from '../../../views/core/container-model';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { View } from '../../../collections/core/container-model';
+import type { ContainerData } from '../../../collections/core/use-container';
 import { ViewEditor } from '../../../views/core/view-editor';
 import { aContainer, views as offered } from '../../container-fixture';
 import { aView } from '../../view-fixture';

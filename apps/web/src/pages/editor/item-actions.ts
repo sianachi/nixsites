@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import type { NavigateFunction } from 'react-router';
 
-import { treeChildrenEntry } from '../../items/item-menu-entries';
-import type { useHiddenItems } from '../../items/use-hidden-items';
+import { treeChildrenEntry } from '../../collections/items/item-menu-entries';
+import type { useHiddenItems } from '../../collections/items/use-hidden-items';
 import type { useItemLock } from '../../locks/use-item-lock';
 import type { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { ItemDialogName } from './item-dialogs';

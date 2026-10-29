@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { isSelectGesture, useItemSelection } from '../../../views/core/use-item-selection';
+import { isSelectGesture, useItemSelection } from '../../../collections/core/use-item-selection';
 
 const order = ['a', 'b', 'c', 'd'];
 

@@ -2,7 +2,7 @@ import { Text, cn } from '@nix/ui';
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
 import { CreateItemControl } from '../core/create-item-control';
-import { useVirtualWindow } from '../core/use-virtual-window';
+import { useVirtualWindow } from '../../collections/core/use-virtual-window';
 import { boardCard, type BoardCardListProps } from './board-card';
 import type { BoardColumn } from './board-grouping';
 import type { CreateSuggestSource } from '../suggest/suggest-source';

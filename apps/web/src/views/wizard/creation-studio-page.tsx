@@ -5,8 +5,8 @@ import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../../shell/shell-context';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { uniqueIdentifier } from '../core/container-model';
-import { useContainer } from '../core/use-container';
+import { uniqueIdentifier } from '../../collections/core/container-model';
+import { useContainer } from '../../collections/core/use-container';
 import { CreationStudioFrame } from './creation-studio-frame';
 import { BasicsStep, OptionsStep } from './creation-studio-steps';
 import {

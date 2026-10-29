@@ -2,10 +2,13 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { EffectiveSchema, PropertyDefinition } from '../../../views/core/container-model';
+import type {
+  EffectiveSchema,
+  PropertyDefinition,
+} from '../../../collections/core/container-model';
 import { aContainer } from '../../container-fixture';
 import { SchemaEditor } from '../../../views/core/schema-editor';
-import type { ContainerData, SchemaDraft } from '../../../views/core/use-container';
+import type { ContainerData, SchemaDraft } from '../../../collections/core/use-container';
 
 /**
  * Declaring properties on a folder.

@@ -1,7 +1,11 @@
 import { useState, type ReactElement } from 'react';
 import { within } from '@testing-library/dom';
 
-import { filterGroup, type PropertyDefinition, type ViewFilterRule } from '../core/container-model';
+import {
+  filterGroup,
+  type PropertyDefinition,
+  type ViewFilterRule,
+} from '../../collections/core/container-model';
 import { FilterRulesEditor } from '../core/filter-rules-editor';
 
 /**

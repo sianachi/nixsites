@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { Icon } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import type { FormBlock, PropertyDefinition } from '../../core/container-model';
+import type { FormBlock, PropertyDefinition } from '../../../collections/core/container-model';
 import { BlockConditions } from './conditions';
 import { FieldPicker } from './field-picker';
 

@@ -2,10 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PropertyInput } from '../../../properties/property-input';
+import { PropertyInput } from '../../../collections/properties/property-input';
 import { ListCell } from '../../../views/list/list-cell';
-import { ValuePopover } from '../../../views/core/value-popover';
-import type { PropertyDefinition } from '../../../views/core/container-model';
+import { ValuePopover } from '../../../collections/properties/value-popover';
+import type { PropertyDefinition } from '../../../collections/core/container-model';
 
 const owner = { title: 'Plan', properties: {} };
 

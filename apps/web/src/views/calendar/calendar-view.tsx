@@ -3,8 +3,8 @@ import { Blueprint, Button, Text } from '@nix/ui';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useState, type ReactNode } from 'react';
 
-import { ShownItems } from '../core/item-selection-context';
-import type { PropertyValue, View } from '../core/container-model';
+import { ShownItems } from '../../collections/core/item-selection-context';
+import type { PropertyValue, View } from '../../collections/core/container-model';
 import { CreateItemControl } from '../core/create-item-control';
 import {
   addDays,
@@ -16,16 +16,16 @@ import {
   weekOf,
   type CalendarDay,
   type CalendarMonth,
-} from '../core/calendar-dates';
+} from '../../collections/core/calendar-dates';
 import { HourGrid } from './calendar-hours';
 import { EndTimeHint } from './hours/end-time-hint';
 import { MonthGrid, buildWeeks } from './month-grid';
 import { RescheduleDialog } from './reschedule-dialog';
-import { VIEW_GUTTER_BLEED } from '../core/view-gutter';
-import { readTimestampValue, readerZone } from '../core/timestamps';
-import type { ContainerData } from '../core/use-container';
+import { VIEW_GUTTER_BLEED } from '../../collections/core/view-gutter';
+import { readTimestampValue, readerZone } from '../../collections/core/timestamps';
+import type { ContainerData } from '../../collections/core/use-container';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
-import { useViewState } from '../core/view-state';
+import { useViewState } from '../../collections/core/view-state';
 import { PhoneAgenda } from './agenda/phone-agenda';
 import type { CardContext } from './item/card-context';
 import { RovingMonth } from './month/roving-month';
@@ -39,7 +39,7 @@ import {
   shiftDateText,
   today,
   todayDay,
-} from './model/day-math';
+} from '../../collections/core/day-math';
 import { bucketItems } from './model/bucket-items';
 import { CalendarToolbar } from './toolbar/calendar-toolbar';
 import { UnscheduledList } from './unscheduled/unscheduled-list';

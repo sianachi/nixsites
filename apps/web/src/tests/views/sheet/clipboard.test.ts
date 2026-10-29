@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseTsv, rangeToTsv } from '../../../views/sheet/clipboard';
+import { parseTsv, rangeToTsv } from '../../../collections/sheet/clipboard';
 
 describe('copying a range', () => {
   it('serializes raw text row by row, empty cells as empty fields', () => {

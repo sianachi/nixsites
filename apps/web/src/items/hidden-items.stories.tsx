@@ -1,5 +1,5 @@
 import { Button, Menu } from '@nix/ui';
-import { treeChildrenEntry } from './item-menu-entries';
+import { treeChildrenEntry } from '../collections/items/item-menu-entries';
 import { useState, type ReactNode } from 'react';
 
 import { HiddenItemsList, type HiddenEntry } from './hidden-items-list';

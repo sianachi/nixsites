@@ -3,7 +3,7 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../views/core/container-model';
+} from '../collections/core/container-model';
 
 /**
  * A view, with only the fields a test cares about spelled out.

@@ -2,8 +2,13 @@ import { Icon, cn, focusRing, focusRingInset } from '@nix/ui';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { Fragment, useRef, type CSSProperties, type ReactNode } from 'react';
 
-import { COLUMN_WIDTH, clampWidth, resetColumnWidth, setColumnWidth } from '../core/column-widths';
-import { type SortDirection } from '../core/view-state';
+import {
+  COLUMN_WIDTH,
+  clampWidth,
+  resetColumnWidth,
+  setColumnWidth,
+} from '../../collections/core/column-widths';
+import { type SortDirection } from '../../collections/core/view-state';
 import { type SpreadsheetColumn } from './grid-model';
 
 interface GridHeaderProps {

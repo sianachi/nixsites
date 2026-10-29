@@ -3,8 +3,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Item, PropertyDefinition } from '../../views/core/container-model';
-import { PropertyInput } from '../../properties/property-input';
+import type { Item, PropertyDefinition } from '../../collections/core/container-model';
+import { PropertyInput } from '../../collections/properties/property-input';
 
 /**
  * The picture property's upload path, kept apart from `image-value.test.tsx`.

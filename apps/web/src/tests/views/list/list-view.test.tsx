@@ -12,11 +12,11 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
-import { setColumnWidth } from '../../../views/core/column-widths';
+} from '../../../collections/core/container-model';
+import { setColumnWidth } from '../../../collections/core/column-widths';
 import { ListView } from '../../../views/list/list-view';
 import { aContainer } from '../../container-fixture';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 /**
  * The list view, driven the way a person drives it: through the address bar and the pointer.

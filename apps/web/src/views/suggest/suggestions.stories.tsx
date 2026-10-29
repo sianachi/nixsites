@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 
-import type { ViewFilterRule } from '../core/container-model';
+import type { ViewFilterRule } from '../../collections/core/container-model';
 import QueryByExamplePanel from '../query/query-by-example';
 import { DuplicateNotice } from './duplicate-notice';
 import { FillSeriesOffer } from '../spreadsheet/fill-series-offer';

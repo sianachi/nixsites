@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveOpenMode } from '../../../views/core/open-policy';
+import { resolveOpenMode } from '../../../collections/core/open-policy';
 import { aView } from '../../view-fixture';
 
 describe('resolveOpenMode', () => {

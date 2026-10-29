@@ -1,8 +1,8 @@
 import { type CellRange } from '@nix/sheet';
 import type { ClipboardEvent } from 'react';
 
-import { type Item } from '../core/container-model';
-import { parseTsv, rangeToTsv } from '../sheet/clipboard';
+import { type Item } from '../../collections/core/container-model';
+import { parseTsv, rangeToTsv } from '../../collections/sheet/clipboard';
 import { type PlanVerb } from './grid-geometry';
 import { pastePlan, rangeTextMap, type SpreadsheetColumn, type WritePlan } from './grid-model';
 

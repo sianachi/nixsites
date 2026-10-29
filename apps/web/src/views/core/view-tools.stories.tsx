@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
-import type { View } from './container-model';
-import { useViewState } from './view-state';
+import type { View } from '../../collections/core/container-model';
+import { useViewState } from '../../collections/core/view-state';
 import { ViewSwitcher } from './view-switcher';
 import { ViewTools } from './view-tools';
 

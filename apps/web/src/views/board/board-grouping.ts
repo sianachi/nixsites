@@ -4,9 +4,9 @@ import {
   type Item,
   type PropertyDefinition,
   type View,
-} from '../core/container-model';
-import { canGroupBy } from '../core/property-types';
-import type { ContainerData } from '../core/use-container';
+} from '../../collections/core/container-model';
+import { canGroupBy } from '../../collections/core/property-types';
+import type { ContainerData } from '../../collections/core/use-container';
 
 export interface BoardColumn {
   /** The property value this column writes, or null for the unset column. */

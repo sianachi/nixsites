@@ -1,5 +1,9 @@
-import type { ChartOptions, PropertyDefinition, View } from '../core/container-model';
-import { isDateShaped } from '../core/property-types';
+import type {
+  ChartOptions,
+  PropertyDefinition,
+  View,
+} from '../../collections/core/container-model';
+import { isDateShaped } from '../../collections/core/property-types';
 import { chartKindOf, isChartPeriod, TIME_AXIS_KINDS, type ChartKind } from './chart-model';
 
 /**

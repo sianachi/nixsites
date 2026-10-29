@@ -1,9 +1,9 @@
 import { Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { computedValues, planFor } from '../../properties/computed';
-import { PropertyInput } from '../../properties/property-input';
-import type { PropertyDefinition, PropertyValue } from '../core/container-model';
+import { computedValues, planFor } from '../../collections/properties/computed';
+import { PropertyInput } from '../../collections/properties/property-input';
+import type { PropertyDefinition, PropertyValue } from '../../collections/core/container-model';
 
 /** The same formula engine as saved entries, evaluated without writing the response. */
 export function FormResults({

@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 
-import { ItemCommandsProvider } from '../../../items/item-commands-context';
-import type { TreeItem, WorkspaceTree } from '../../../items/use-workspace-tree';
+import { ItemCommandsProvider } from '../../../collections/items/item-commands-context';
+import type { TreeItem, WorkspaceTree } from '../../../collections/items/use-workspace-tree';
 import { ContainerView } from '../../../views/core/container-view';
 import { aContainer } from '../../container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';

@@ -13,22 +13,25 @@ import {
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-import { useItemOpenProps } from '../core/item-open-click';
-import { ShownItems, useOptionalItemSelection } from '../core/item-selection-context';
+import { useItemOpenProps } from '../../collections/core/item-open-click';
+import {
+  ShownItems,
+  useOptionalItemSelection,
+} from '../../collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
 import {
   readPropertyText,
   type Item,
   type PropertyDefinition,
   type View,
-} from '../core/container-model';
-import { TITLE_COLUMN_KEY } from '../core/columns';
-import { propertyTypeWord, valueShapeOf } from '../core/property-types';
-import type { ContainerData } from '../core/use-container';
-import { useItemContextActions } from '../core/use-item-context-actions';
+} from '../../collections/core/container-model';
+import { TITLE_COLUMN_KEY } from '../../collections/core/columns';
+import { propertyTypeWord, valueShapeOf } from '../../collections/core/property-types';
+import type { ContainerData } from '../../collections/core/use-container';
+import { useItemContextActions } from '../../collections/core/use-item-context-actions';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import type { ViewConfigurationEditorProps } from '../core/view-kinds';
-import { useViewState } from '../core/view-state';
+import { useViewState } from '../../collections/core/view-state';
 
 /**
  * The checklist (plan 3.4): one line per child - a box and the title, either of which ticks it, then one optional property and a trailing button that opens the item -

@@ -12,9 +12,9 @@ import type {
   Item,
   PropertyDefinition,
   View,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { aContainer, views } from '../../container-fixture';
-import type { ContainerData } from '../../../views/core/use-container';
+import type { ContainerData } from '../../../collections/core/use-container';
 
 /**
  * The board, driven the way a person drives it.

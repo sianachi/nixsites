@@ -2,9 +2,9 @@ import { Button, ContextMenu, Icon, Text, focusRing } from '@nix/ui';
 import { FileText } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { useHiddenItemPredicate } from '../items/use-hidden-items';
+import { useHiddenItemPredicate } from '../collections/items/use-hidden-items';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
-import { useBookmarksStore } from '../bookmarks/use-bookmarks';
+import { useBookmarksStore } from '../collections/items/use-bookmarks';
 import {
   EmptyPanel,
   ErrorPanel,

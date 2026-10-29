@@ -6,7 +6,7 @@ import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { App } from '../../app';
-import { useBookmarksStore } from '../../bookmarks/use-bookmarks';
+import { useBookmarksStore } from '../../collections/items/use-bookmarks';
 
 /**
  * Bookmarks, driven through the whole application.

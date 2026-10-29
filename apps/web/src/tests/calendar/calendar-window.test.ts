@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { anchorOf, anchorText, grainOf, windowFor } from '../../calendar/calendar-window';
-import type { CalendarDay } from '../../views/core/calendar-dates';
+import type { CalendarDay } from '../../collections/core/calendar-dates';
 
 /**
  * The window is arithmetic with edges, so it is tested as arithmetic - no DOM, no render.

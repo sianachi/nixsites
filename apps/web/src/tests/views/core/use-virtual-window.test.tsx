@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import { useRef, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { useVirtualWindow } from '../../../views/core/use-virtual-window';
+import { useVirtualWindow } from '../../../collections/core/use-virtual-window';
 
 function Harness(props: {
   readonly keys: readonly string[];

@@ -1,4 +1,4 @@
-import type { PropertyDefinition } from '../views/core/container-model';
+import type { PropertyDefinition } from '../collections/core/container-model';
 
 export function propertyOf(
   overrides: Partial<PropertyDefinition> & { key: string },

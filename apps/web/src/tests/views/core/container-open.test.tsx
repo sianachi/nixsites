@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ContainerView } from '../../../views/core/container-view';
-import { ClickSelectsContext, useItemOpenProps } from '../../../views/core/item-open-click';
+import { ClickSelectsContext, useItemOpenProps } from '../../../collections/core/item-open-click';
 import { aContainer } from '../../container-fixture';
 import { item } from '@nix/web-foundation/testing/api-stub';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';

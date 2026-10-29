@@ -23,7 +23,7 @@ import {
   toViewRequest,
   type PropertyDefinition,
   type View,
-} from '../../../views/core/container-model';
+} from '../../../collections/core/container-model';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import type * as WorkspaceContextModule from '@nix/web-workspaces/workspaces/workspace-context';
 import { describeInferredRule } from '../../../views/query/query-by-example';

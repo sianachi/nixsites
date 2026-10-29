@@ -1,11 +1,11 @@
 import { Button, Dialog, Icon, Text } from '@nix/ui';
 import { ArrowDown, ArrowLeft, ArrowUp } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import { MobileDestinationPicker } from './mobile-destination-picker';
+import { MobileDestinationPicker } from '../collections/items/mobile-destination-picker';
 import { WorkspaceItemTransfer } from './workspace-item-transfer';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { siblingMoveTarget } from './sibling-move-target';
-import type { TreeItem, WorkspaceTree } from './use-workspace-tree';
+import type { TreeItem, WorkspaceTree } from '../collections/items/use-workspace-tree';
 
 type Step = 'destination' | 'position' | 'workspace';
 

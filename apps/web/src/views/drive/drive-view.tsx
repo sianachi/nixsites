@@ -15,10 +15,13 @@ import {
   ErrorPanel,
   LoadingPanel,
 } from '@nix/web-foundation/components/states/status-panels';
-import { ShownItems, useOptionalItemSelection } from '../core/item-selection-context';
+import {
+  ShownItems,
+  useOptionalItemSelection,
+} from '../../collections/core/item-selection-context';
 import { CreateItemControl } from '../core/create-item-control';
-import { useItemContextActions } from '../core/use-item-context-actions';
-import type { Item } from '../core/container-model';
+import { useItemContextActions } from '../../collections/core/use-item-context-actions';
+import type { Item } from '../../collections/core/container-model';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { isDriveContainerCandidate } from './drive-icons';
 import { DriveDownloadAction } from './drive-download-action';

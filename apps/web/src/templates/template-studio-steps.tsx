@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import type { CollabSync } from '@nix/web-editor/editor/collab-sync';
 import { formatDateTime } from '@nix/web-foundation/lib/date-format';
-import type { PropertyDefinition } from '../views/core/container-model';
+import type { PropertyDefinition } from '../collections/core/container-model';
 import type { TemplateDetail, TemplateEditDraft, TemplateInitialization } from './template-api';
 import { TemplateDraftEditor, type TemplateItemEdit } from './draft/template-draft-editor';
 import { TemplateFact, TemplateFacts } from './template-studio-facts';
@@ -11,8 +11,8 @@ import type { StudioMode, TemplateDraft } from './template-studio-model';
 import { StudioNotice } from './template-studio-notice';
 import { TemplateInitializationEditor } from './initialization/template-initialization-editor';
 import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
-import type { TreeItem } from '../items/use-workspace-tree';
-import { TemplateItemPicker } from './template-item-picker';
+import type { TreeItem } from '../collections/items/use-workspace-tree';
+import { TemplateItemPicker } from '../collections/items/template-item-picker';
 
 export function Basics({
   mode,

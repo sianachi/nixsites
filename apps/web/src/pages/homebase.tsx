@@ -17,7 +17,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { NewItemDialog } from '../items/new-item-dialog';
-import type { WorkspaceTree } from '../items/use-workspace-tree';
+import type { WorkspaceTree } from '../collections/items/use-workspace-tree';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { recentItems } from '@nix/web-foundation/lib/recent-items';
 import { useOpenItem } from '../tabs/use-open-item';

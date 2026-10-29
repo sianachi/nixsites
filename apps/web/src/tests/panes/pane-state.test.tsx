@@ -3,7 +3,7 @@ import { MemoryRouter, useLocation, useNavigate, useSearchParams } from 'react-r
 import { describe, expect, it, vi } from 'vitest';
 
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
-import { parseFilters, parseViewState } from '../../views/core/view-state';
+import { parseFilters, parseViewState } from '../../collections/core/view-state';
 import { closePaneParams, parsePanes, usePanes } from '@nix/web-platform/panes/pane-state';
 import {
   PANE_LIMIT,

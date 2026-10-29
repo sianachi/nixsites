@@ -6,7 +6,7 @@ import {
   type SelectionState,
   selectedRange,
   selectionReducer,
-} from '../../../views/sheet/selection';
+} from '../../../collections/sheet/selection';
 
 const bounds: GridBounds = { rows: 100, cols: 26 };
 

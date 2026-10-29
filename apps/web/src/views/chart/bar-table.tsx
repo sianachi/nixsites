@@ -2,7 +2,7 @@ import type { ItemChart } from '@nix/api-client';
 import { Text, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 
-import { UNSET_LABEL } from '../core/container-model';
+import { UNSET_LABEL } from '../../collections/core/container-model';
 import { bucketKey, formatMeasure, measureOf, type PlottedSeries } from './chart-model';
 import { ChartLegend } from './svg-charts';
 

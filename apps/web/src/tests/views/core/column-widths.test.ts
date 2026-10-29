@@ -5,7 +5,7 @@ import {
   readColumnWidths,
   resetColumnWidth,
   setColumnWidth,
-} from '../../../views/core/column-widths';
+} from '../../../collections/core/column-widths';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 
 let viewId = 0;

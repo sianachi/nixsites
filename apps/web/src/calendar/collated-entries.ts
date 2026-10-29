@@ -1,6 +1,6 @@
 import type { CalendarEntry, WorkspaceCalendar } from '@nix/api-client';
 
-import type { Item } from '../views/core/container-model';
+import type { Item } from '../collections/core/container-model';
 
 /**
  * Turning collated entries into something the shared grids can draw.

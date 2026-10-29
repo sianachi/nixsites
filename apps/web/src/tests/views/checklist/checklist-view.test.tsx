@@ -6,11 +6,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView, item, property, schemaOf } from '../../view-fixture';
 import { aContainer } from '../../container-fixture';
-import type { EffectiveSchema, Item, View } from '../../../views/core/container-model';
+import type { EffectiveSchema, Item, View } from '../../../collections/core/container-model';
 import { ChecklistView, resolveDoneProperty } from '../../../views/checklist/checklist-view';
-import { ItemSelectionContext } from '../../../views/core/item-selection-context';
-import { useItemSelection } from '../../../views/core/use-item-selection';
-import { capabilitiesOf } from '../../../views/core/view-capabilities';
+import { ItemSelectionContext } from '../../../collections/core/item-selection-context';
+import { useItemSelection } from '../../../collections/core/use-item-selection';
+import { capabilitiesOf } from '../../../collections/core/view-capabilities';
 
 const DONE = property('done', 'Done', 'checkbox');
 const WHERE = property('aisle', 'Aisle', 'text');

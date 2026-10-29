@@ -5,8 +5,8 @@ import {
   type PropertyOwner,
   type ViewFilterCondition,
   type ViewFilterRule,
-} from '../../../views/core/container-model';
-import { applyRules, evaluateRule, type RuleContext } from '../../../views/core/filter-rules';
+} from '../../../collections/core/container-model';
+import { applyRules, evaluateRule, type RuleContext } from '../../../collections/core/filter-rules';
 
 const CONTEXT: RuleContext = { today: '2026-10-01', principalId: 'principal-me' };
 
