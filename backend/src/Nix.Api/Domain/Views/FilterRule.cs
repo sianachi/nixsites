@@ -98,7 +98,7 @@ public static class QueryOperators
     /// </summary>
     /// <remarks>
     /// The web evaluates it over a container's own children
-    /// (<c>apps/web/src/views/core/filter-rules.ts</c>) and <c>QuerySql</c> compiles it with the
+    /// (<c>packages/web-collections/src/core/filter-rules.ts</c>) and <c>QuerySql</c> compiles it with the
     /// same meaning: an escaped <c>ILIKE</c> for text, element containment for a list.
     /// </remarks>
     public const string Contains = "contains";

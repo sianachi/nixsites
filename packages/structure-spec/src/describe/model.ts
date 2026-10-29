@@ -19,7 +19,7 @@ export interface PreviewNode {
  * without the caller re-deriving them, the change tree itself, and the fixed list of writes this
  * executor never performs (architecture section 7, "Approval UX architecture"). `problems` (from
  * `ValidationReport`) block approval; `warnings` do not. Every string here is plain text - the
- * renderer (`apps/web/src/pets/pet-structure-preview.tsx`, task A.6) never runs Markdown or
+ * renderer (`packages/web-pets/src/pets/pet-structure-preview.tsx`, task A.6) never runs Markdown or
  * `dangerouslySetInnerHTML` over any of it, because every string in this model may have been
  * chosen by the model that proposed the change.
  */

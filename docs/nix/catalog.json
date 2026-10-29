@@ -288,7 +288,7 @@
         "apps/cli/src/commands/pets.ts",
         "backend/src/Nix.Api/Features/Pets/PetContracts.cs",
         "backend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs",
-        "apps/web/src/pets/pet-device-settings.tsx",
+        "packages/web-pets/src/pets/pet-device-settings.tsx",
         "apps/web/src/pets/pet-conversation.tsx",
         "packages/web-foundation/src/lib/device-preferences.ts"
       ],
@@ -299,7 +299,7 @@
         "runtime": "Go",
         "transports": "HTTP/RPC, HTTP/internal, Provider HTTP",
         "depends_on": "Core authorization, linked provider, worker companion runtime",
-        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/go-workers/internal/companion/manager.go\napps/go-workers/internal/companion/rpc.go\napps/go-workers/internal/companion/tools.go\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\napps/web/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\npackages/web-foundation/src/lib/device-preferences.ts"
+        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/go-workers/internal/companion/manager.go\napps/go-workers/internal/companion/rpc.go\napps/go-workers/internal/companion/tools.go\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\npackages/web-pets/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\npackages/web-foundation/src/lib/device-preferences.ts"
       },
       "localProofItemId": "01a12247-5982-7cb7-ab74-946fc37792ff"
     },
@@ -1197,7 +1197,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 306,
@@ -1218,7 +1218,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 421,
@@ -1239,7 +1239,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 580,
@@ -1260,7 +1260,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 1070,
@@ -1281,7 +1281,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 421,
@@ -1302,7 +1302,7 @@
         "packages/sheet/src/properties.ts",
         "packages/sheet/src/values.ts",
         "packages/sheet/src/limits.ts",
-        "apps/web/src/properties/computed.ts",
+        "packages/web-collections/src/properties/computed.ts",
         "packages/web-views/src/core/schema-editor.tsx"
       ],
       "words": 504,
@@ -1330,7 +1330,7 @@
       "itemId": "b0fe1712-f76d-51a1-a705-547a3feb5e8e",
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
-        "apps/web/src/pets/use-pet-runtime.ts",
+        "packages/web-pets/src/pets/use-pet-runtime.ts",
         "apps/go-workers/internal/companion/manager.go",
         "apps/go-workers/internal/companion/tools.go",
         "apps/go-workers/internal/companion/watch.go",
@@ -1377,7 +1377,7 @@
         "packages/companion/src/blueprint/plan.ts",
         "packages/companion/src/blueprint/build.ts",
         "packages/companion/src/blueprint/sandbox.ts",
-        "apps/web/src/pets/pet-structure-preview.tsx"
+        "packages/web-pets/src/pets/pet-structure-preview.tsx"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
     },
@@ -1387,8 +1387,8 @@
       "itemId": "b9a78f19-4d1d-5915-a2c0-bfde417a5662",
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
-        "apps/web/src/pets/turn-context.ts",
-        "apps/web/src/pets/pet-history.tsx",
+        "packages/web-pets/src/pets/turn-context.ts",
+        "packages/web-pets/src/pets/pet-history.tsx",
         "apps/go-workers/internal/companion/history.go",
         "apps/go-workers/internal/companion/drafts.go",
         "apps/go-workers/internal/companion/manager.go",
@@ -1404,8 +1404,8 @@
       "sources": [
         "backend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs",
         "backend/src/Nix.Api/Domain/Content/PetPreferences.cs",
-        "apps/web/src/pets/catalog.ts",
-        "apps/web/src/pets/pet-avatar.tsx",
+        "packages/web-pets/src/pets/catalog.ts",
+        "packages/web-pets/src/pets/pet-avatar.tsx",
         "packages/web-foundation/src/lib/device-preferences.ts",
         "backend/src/Nix.Api/Features/Pets/PetInline.cs",
         "apps/go-workers/internal/companion/inline.go"
