@@ -192,7 +192,7 @@ export function BoardView(props: BoardViewProps): ReactNode {
     <div className="flex min-h-0 min-w-0 flex-col gap-3">
       <ShownItems ids={visibleColumns.flatMap((column) => column.items.map((card) => card.id))} />
       {moveError === null ? null : (
-        <div role="alert" className="flex items-start gap-2 border border-divider p-3">
+        <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
           <Icon icon={CircleAlert} size="sm" className="text-accent-text" />
           <Text variant="bodySmall" as="span" tone="accent">
             {moveError} The card has returned to the column it was in; nothing was changed.

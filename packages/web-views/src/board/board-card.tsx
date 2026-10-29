@@ -202,7 +202,7 @@ function BoardCard(props: BoardCardProps): ReactNode {
                   {(trigger) => (
                     <Button
                       {...trigger}
-                      variant="icon"
+                      variant="subtle"
                       aria-label={`Move ${item.title || 'Untitled'} to column`}
                     >
                       <Icon icon={ArrowRightLeft} size="sm" />

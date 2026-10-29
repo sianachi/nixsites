@@ -201,7 +201,7 @@ export function ChecklistView(props: ChecklistViewProps): ReactNode {
             {`${String(doneCount)} of ${String(items.length)} done`}
           </Text>
           <Button
-            variant="ghost"
+            variant="subtle"
             aria-pressed={hideDone}
             onClick={() => {
               setHideDone((current) => !current);

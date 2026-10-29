@@ -101,7 +101,7 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
         // schema and view editors' draft rows - pads at p-3. A column was the one place this rhythm
         // had drifted, and cards inside it sat visibly closer to the frame than the same shape does
         // everywhere else it appears.
-        'flex w-full min-w-0 shrink-0 flex-col gap-2 border border-divider p-3',
+        'flex w-full min-w-0 shrink-0 flex-col gap-2 rounded-md border border-divider p-3',
         compact ? '' : 'sm:w-80',
         dropTarget && dragged !== null ? 'outline-2 -outline-offset-2 outline-accent' : '',
       )}

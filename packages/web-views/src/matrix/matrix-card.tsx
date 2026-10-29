@@ -102,7 +102,7 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
                 }))}
               >
                 {(trigger) => (
-                  <Button {...trigger} variant="icon" aria-label={`Move ${title} to`}>
+                  <Button {...trigger} variant="subtle" aria-label={`Move ${title} to`}>
                     <Icon icon={ArrowRightLeft} size="sm" />
                   </Button>
                 )}

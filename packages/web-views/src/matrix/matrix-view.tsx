@@ -195,7 +195,7 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-3">
       {moveError === null ? null : (
-        <div role="alert" className="flex items-start gap-2 border border-divider p-3">
+        <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
           <Icon icon={CircleAlert} size="sm" className="text-accent-text" />
           <Text variant="bodySmall" as="span" tone="accent">
             {moveError} The card is back in the cell it was in; nothing was changed.
@@ -207,7 +207,7 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
 
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-pressed={showEmpty}
           onClick={() => {
             setShowEmpty((current) => !current);

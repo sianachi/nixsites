@@ -166,7 +166,7 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
           icon button legible sitting on top of an arbitrary photograph. */}
           <div className="absolute right-2 top-2 z-20 rounded-md bg-surface">
             <Button
-              variant="icon"
+              variant="subtle"
               aria-label={
                 cover.kind === 'ready' && readPropertyText(item, cover.property.key).length > 0
                   ? `Change cover for ${item.title || 'Untitled'}`
