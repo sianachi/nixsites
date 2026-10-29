@@ -172,6 +172,8 @@ describe('dropping OS files on the Explorer', () => {
       expect(calls.execute.map((c) => c.operation)).toContain('files.upload.begin');
     });
     expect(calls.execute[0]?.body).toMatchObject({ type: 'note', title: 'Docs', parentId: null });
+    // Core binds the create key as a Guid; a prefixed key is refused with a 400.
+    expect(calls.execute[0]?.body.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
     expect(calls.execute[1]?.body).toMatchObject({ parentId: 'folder-id', fileName: 'b.txt' });
   });
 

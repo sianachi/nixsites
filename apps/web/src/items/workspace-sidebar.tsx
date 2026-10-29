@@ -243,7 +243,8 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
                 type: 'note',
                 title,
                 parentId: folderParentId,
-                idempotencyKey: `web-folder:${crypto.randomUUID()}`,
+                // Core binds this key as a Guid, so no prefix.
+                idempotencyKey: crypto.randomUUID(),
               }),
             )
           ).id,
