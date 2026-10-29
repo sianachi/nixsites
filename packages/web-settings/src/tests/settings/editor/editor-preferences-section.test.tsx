@@ -10,12 +10,12 @@ import { useKeyboardModeStore } from '@nix/web-editor/editor/keyboard-mode-store
 import { usePageGuidePreference } from '@nix/web-editor/editor/page-guide-preference';
 import { readDismissals, rememberDismissal } from '@nix/web-foundation/lib/suggestion-dismissals';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
-import { EditorPreferencesSection } from '@nix/web-settings/settings/editor/editor-preferences-section';
-import { PreferencesSection } from '@nix/web-settings/settings/preferences/PreferencesSection';
+import { EditorPreferencesSection } from '../../../settings/editor/editor-preferences-section';
+import { PreferencesSection } from '../../../settings/preferences/PreferencesSection';
 import {
   usePublishingPreference,
   useSitesVisible,
-} from '@nix/web-settings/settings/publishing/publishing-preference';
+} from '../../../settings/publishing/publishing-preference';
 import {
   CapabilitiesProvider,
   NO_CAPABILITIES,
