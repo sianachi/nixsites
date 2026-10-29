@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MAX_LAUNCH_FILES, receiveLaunchFiles } from '@nix/web-workspaces/launch/launch-files';
+import { MAX_LAUNCH_FILES, receiveLaunchFiles } from '../../launch/launch-files';
 
 afterEach(() => {
   delete (globalThis as { launchQueue?: unknown }).launchQueue;
