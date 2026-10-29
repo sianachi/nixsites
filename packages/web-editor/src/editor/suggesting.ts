@@ -14,6 +14,7 @@ import {
   RemoveMarkStep,
   ReplaceAroundStep,
   ReplaceStep,
+  type Step,
 } from '@tiptap/pm/transform';
 import type { EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey } from 'y-prosemirror';
@@ -29,8 +30,9 @@ import { ySyncPluginKey } from 'y-prosemirror';
  * reverts them together.
  *
  * **What it never touches.** Remote edits and undo (they carry the y-sync meta; the Markdown
- * mode's whole-body swap arrives the same way), its own commands, and composition: an IME owns
- * the DOM mid-word, so the composed range is marked after `compositionend` instead.
+ * mode's whole-body swap arrives the same way), its own commands, and other plugins' appended
+ * repairs. While an IME composes, only its deletes are tracked: it owns the DOM mid-word, so the
+ * composed range is marked as an insert after `compositionend`.
  *
  * shortcut: attribute changes (text alignment, task checkboxes, column widths) and text typed
  * over an IME selection are not tracked; a restructure rejects by restoring its snapshot, which
@@ -109,42 +111,89 @@ function ownMark(node: ProseMirrorNode | null | undefined, name: string, authorI
   return node?.marks.find((mark) => mark.type.name === name && mark.attrs.authorId === authorId);
 }
 
-/** Marks `from..to` as inserted by `who`, and the blocks that start inside it as inserted blocks. */
-function markInserted(tr: Transaction, from: number, to: number, authorId: string): void {
+const hasMark = (node: ProseMirrorNode, name: string): boolean =>
+  node.marks.some((mark) => mark.type.name === name);
+
+/** Whether `slice` carries any text or leaf, or only the block structure around nothing. */
+function hasLeaf(slice: Slice): boolean {
+  let leaf = false;
+  slice.content.descendants((node) => {
+    leaf = leaf || node.isLeaf;
+    return !leaf;
+  });
+  return leaf;
+}
+
+/** The suggestion an insert at `from..to` joins: the author's own neighbouring insert, or the start of their inserted block. */
+function insertStamp(tr: Transaction, from: number, to: number, authorId: string): Stamp {
+  const $from = tr.doc.resolve(from);
+  const neighbour =
+    ownMark($from.nodeBefore, 'suggestionInsert', authorId) ??
+    ownMark(tr.doc.resolve(to).nodeAfter, 'suggestionInsert', authorId);
+  if (neighbour !== undefined) {
+    return { id: idOf(neighbour), authorId, createdAt: String(neighbour.attrs.createdAt) };
+  }
+  const block = blockSuggestion($from.parent);
+  return block?.op === 'insert' && block.authorId === authorId && $from.parentOffset === 0
+    ? { id: block.id, authorId, createdAt: block.createdAt }
+    : stamp(authorId);
+}
+
+/**
+ * Marks `from..to` as inserted by `who`, and the blocks that start inside it as inserted blocks.
+ * `keepDeletes` leaves struck text struck (a composition range can hold text it deleted).
+ */
+function markInserted(
+  tr: Transaction,
+  from: number,
+  to: number,
+  authorId: string,
+  keepDeletes = false,
+): void {
   if (from >= to) return;
   const { marks } = tr.doc.type.schema;
-  // Typing next to one's own insert extends it rather than starting a second suggestion.
-  const neighbour =
-    ownMark(tr.doc.resolve(from).nodeBefore, 'suggestionInsert', authorId) ??
-    ownMark(tr.doc.resolve(to).nodeAfter, 'suggestionInsert', authorId);
-  const attrs: Stamp =
-    neighbour === undefined
-      ? stamp(authorId)
-      : { id: idOf(neighbour), authorId, createdAt: String(neighbour.attrs.createdAt) };
+  const attrs = insertStamp(tr, from, to, authorId);
   // Text carried in from elsewhere (a paste, text typed inside a struck run) brings its own marks.
-  for (const name of SUGGESTION_MARKS) tr.removeMark(from, to, marks[name]);
-  tr.addMark(from, to, markType(tr.doc.type.schema, 'suggestionInsert').create(attrs));
+  for (const name of SUGGESTION_MARKS) {
+    if (!keepDeletes || name !== 'suggestionDelete') tr.removeMark(from, to, marks[name]);
+  }
+  const insert = markType(tr.doc.type.schema, 'suggestionInsert').create(attrs);
   const blocks: number[] = [];
   tr.doc.nodesBetween(from, to, (node, pos) => {
     if (pos >= from && isSuggestible(node)) blocks.push(pos);
+    if (keepDeletes && node.isInline && !hasMark(node, 'suggestionDelete')) {
+      tr.addMark(Math.max(pos, from), Math.min(pos + node.nodeSize, to), insert);
+    }
   });
+  if (!keepDeletes) tr.addMark(from, to, insert);
   for (const pos of blocks) tr.setNodeAttribute(pos, 'suggestion', { ...attrs, op: 'insert' });
 }
 
 /**
  * Puts `deleted` back at `at`, marked as a deletion. Text and blocks the same author inserted
- * are removed for real. Returns where the restored content starts, or null if none stayed.
+ * are removed for real. `invert` is the exact inverse of a delete-only step, used when it still
+ * applies (an open slice does not always fit back by `replace`). Returns where the restored
+ * content starts, or null if nothing was put back.
  */
 function restoreDeleted(
   tr: Transaction,
   deleted: Slice,
   at: number,
   authorId: string,
+  invert: Step | null,
 ): number | null {
   const first = tr.steps.length;
-  tr.replace(at, at, deleted);
+  let exact = invert !== null;
+  try {
+    if (invert === null) throw new Error('replace');
+    tr.step(invert);
+  } catch {
+    exact = false;
+    tr.replace(at, at, deleted);
+  }
   if (tr.steps.length === first) return null;
-  const end = tr.mapping.slice(first).map(at, 1);
+  // The inverse replaces a range, so `at` (its start) would map to itself, not past the content.
+  const end = exact ? at + deleted.size : tr.mapping.slice(first).map(at, 1);
 
   const own: [number, number][] = [];
   tr.doc.nodesBetween(at, end, (node, pos) => {
@@ -167,32 +216,35 @@ function restoreDeleted(
   for (const [from, to] of own.reverse()) tr.delete(from, to);
   const to = tr.mapping.slice(removing).map(end, -1);
 
-  const attrs = stamp(authorId);
+  // Deleting next to one's own earlier delete (backspace, backspace) continues that suggestion.
+  const near =
+    ownMark(tr.doc.resolve(at).nodeBefore, 'suggestionDelete', authorId) ??
+    ownMark(tr.doc.resolve(to).nodeAfter, 'suggestionDelete', authorId);
+  const attrs: Stamp =
+    near === undefined
+      ? stamp(authorId)
+      : { id: idOf(near), authorId, createdAt: String(near.attrs.createdAt) };
   const texts: [number, number][] = [];
   const blocks: number[] = [];
   tr.doc.nodesBetween(at, to, (node, pos) => {
     if (node.isText) {
-      if (!node.marks.some((mark) => mark.type.name === 'suggestionDelete')) {
+      if (!hasMark(node, 'suggestionDelete')) {
         texts.push([Math.max(pos, at), Math.min(pos + node.nodeSize, to)]);
       }
-    } else if (
-      isSuggestible(node) &&
-      pos >= at &&
-      pos + node.nodeSize <= to &&
-      blockSuggestion(node) === null
-    ) {
+    } else if (isSuggestible(node) && pos >= at && pos < to && blockSuggestion(node) === null) {
+      // A block that starts inside the deletion has lost the boundary before it, even if text remains.
       blocks.push(pos);
     }
   });
   for (const [from, upTo] of texts)
     tr.addMark(from, upTo, markType(tr.doc.type.schema, 'suggestionDelete').create(attrs));
   for (const pos of blocks) tr.setNodeAttribute(pos, 'suggestion', { ...attrs, op: 'delete' });
-  return texts.length + blocks.length === 0 ? null : at;
+  return at;
 }
 
 /** A backspace or delete that only removes the boundary between blocks: no content to strike. */
 function isBoundaryJoin(doc: ProseMirrorNode, step: ReplaceStep): boolean {
-  if (step.slice.size !== 0 || step.from >= step.to) return false;
+  if (hasLeaf(step.slice) || step.from >= step.to) return false;
   const deleted = doc.slice(step.from, step.to);
   if (deleted.openStart === 0 && deleted.openEnd === 0) return false;
   let content = false;
@@ -208,10 +260,13 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
   /** The range a composition has written so far, marked once it ends. */
   let composed: { from: number; to: number } | null = null;
 
-  const skipped = (tr: Transaction): boolean =>
+  /** Not the user's edit: ours, a remote or undo one, or another plugin's repair appended to it. */
+  const external = (tr: Transaction): boolean =>
     tr.getMeta(OWN) !== undefined ||
     tr.getMeta(ySyncPluginKey) !== undefined ||
-    tr.getMeta('composition') !== undefined;
+    tr.getMeta('appendedTransaction') !== undefined;
+  const skipped = (tr: Transaction): boolean =>
+    external(tr) || tr.getMeta('composition') !== undefined;
   const active = (): boolean => storage.enabled && storage.authorId !== '' && isEditable();
 
   const flushComposition = (view: EditorView): void => {
@@ -219,7 +274,7 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
     composed = null;
     if (range === null || view.isDestroyed || !active()) return;
     const tr = view.state.tr;
-    markInserted(tr, range.from, Math.min(range.to, tr.doc.content.size), storage.authorId);
+    markInserted(tr, range.from, Math.min(range.to, tr.doc.content.size), storage.authorId, true);
     view.dispatch(tr.setMeta(OWN, true));
   };
 
@@ -280,8 +335,12 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
             });
           });
         }
-        if (skipped(tr)) return;
+        if (external(tr)) return;
+        // An IME owns the DOM mid-word, so its text is marked when it ends; its deletes are tracked now.
+        const composing = tr.getMeta('composition') !== undefined;
 
+        // The splits that follow a restructure (a list wrap makes one item per paragraph) belong to it.
+        let restructured = false;
         const later = new Mapping();
         for (const next of transactions.slice(index + 1)) {
           for (const map of next.mapping.maps) later.appendMap(map);
@@ -295,14 +354,27 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
           const before = tr.docs[i];
           if (before === undefined) return;
 
+          if (composing && !(step instanceof ReplaceStep)) return;
           if (step instanceof ReplaceStep) {
-            markInserted(fix, at(step.from, -1), at(step.from + step.slice.size, 1), authorId);
-            if (step.to > step.from && !isBoundaryJoin(before, step)) {
+            const deletes = step.to > step.from;
+            // A delete that only refits block structure inserts nothing.
+            const fill = deletes && !hasLeaf(step.slice);
+            if (!composing && !fill && !(restructured && !hasLeaf(step.slice))) {
+              markInserted(fix, at(step.from, -1), at(step.from + step.slice.size, 1), authorId);
+            }
+            if (deletes && !isBoundaryJoin(before, step)) {
+              // Alone in its dispatch, the step's inverse puts everything back exactly.
+              const exact =
+                fill &&
+                fix.steps.length === 0 &&
+                transactions.length === 1 &&
+                i === tr.steps.length - 1;
               const start = restoreDeleted(
                 fix,
                 before.slice(step.from, step.to),
                 at(step.from, -1),
                 authorId,
+                exact ? step.invert(before) : null,
               );
               if (start !== null && lastKey === 'Backspace') restored.at = start;
             }
@@ -329,9 +401,12 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
               return true;
             });
           } else if (step instanceof ReplaceAroundStep) {
+            // The sibling blocks the step touched, whole: a closed snapshot that can be put back.
+            const range = before.resolve(step.from).blockRange(before.resolve(step.to));
+            if (range === null) return;
             const map = step.getMap();
-            const from = at(map.map(step.from, -1), -1);
-            const to = at(map.map(step.to, 1), 1);
+            const from = at(map.map(range.start, -1), -1);
+            const to = at(map.map(range.end, 1), 1);
             const top: { pos: number; node: ProseMirrorNode }[] = [];
             fix.doc.nodesBetween(from, to, (node, pos) => {
               if (pos < from || pos + node.nodeSize > to || !isSuggestible(node)) return true;
@@ -351,7 +426,7 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
               return;
             }
             const attrs = { ...stamp(authorId), op: 'restructure' };
-            const snapshot = JSON.stringify(before.slice(step.from, step.to).toJSON());
+            const snapshot = JSON.stringify(before.slice(range.start, range.end).toJSON());
             top.forEach(({ pos }, n) => {
               fix.setNodeAttribute(
                 pos,
@@ -359,6 +434,7 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
                 n === 0 ? { ...attrs, before: snapshot } : attrs,
               );
             });
+            restructured = true;
           }
         });
       });
@@ -408,40 +484,62 @@ function gather(doc: ProseMirrorNode, ids: ReadonlySet<string> | null) {
 
 interface Edit {
   readonly from: number;
-  readonly to: number;
+  to: number;
   readonly slice?: Slice;
 }
 
-/** Whether `node` still has text once the given author-agnostic inserted text is gone. */
-function keepsText(node: ProseMirrorNode): boolean {
+const isInsertedText = (node: ProseMirrorNode): boolean => hasMark(node, 'suggestionInsert');
+const isDeletedText = (node: ProseMirrorNode): boolean => hasMark(node, 'suggestionDelete');
+
+/** Whether `node` still has text once the text that `gone` names is removed. */
+function keeps(node: ProseMirrorNode, gone: (text: ProseMirrorNode) => boolean): boolean {
   let kept = false;
   node.descendants((child) => {
-    kept =
-      kept || (child.isText && !child.marks.some((mark) => mark.type.name === 'suggestionInsert'));
+    kept = kept || (child.isText && !gone(child));
     return !kept;
   });
   return kept;
 }
 
 /** Where the first textblock at or inside `node` that keeps text starts. */
-function firstTextblock(node: ProseMirrorNode, pos: number): number | null {
-  if (node.isTextblock) return keepsText(node) ? pos : null;
+function firstTextblock(
+  node: ProseMirrorNode,
+  pos: number,
+  gone: (text: ProseMirrorNode) => boolean,
+): number | null {
+  if (node.isTextblock) return keeps(node, gone) ? pos : null;
   const found: number[] = [];
   node.descendants((child, offset) => {
-    if (found.length === 0 && child.isTextblock && keepsText(child)) found.push(pos + 1 + offset);
+    if (found.length === 0 && child.isTextblock && keeps(child, gone)) found.push(pos + 1 + offset);
     return found.length === 0;
   });
   return found[0] ?? null;
 }
 
-/** The end of the content of the last textblock that finishes before `pos`. */
-function textblockEndBefore(doc: ProseMirrorNode, pos: number): number | null {
+/** The end of the content of the last textblock before `pos` that `doomed` does not remove. */
+function textblockEndBefore(
+  doc: ProseMirrorNode,
+  pos: number,
+  doomed: (start: number) => boolean,
+): number | null {
   const ends: number[] = [];
   doc.descendants((child, offset) => {
-    if (child.isTextblock && offset + child.nodeSize <= pos) ends.push(offset + child.nodeSize - 1);
+    if (child.isTextblock && offset + child.nodeSize <= pos && !doomed(offset)) {
+      ends.push(offset + child.nodeSize - 1);
+    }
     return offset < pos;
   });
   return ends[ends.length - 1] ?? null;
+}
+
+/** Whether `from..to` holds nothing but block boundaries: no text, leaf or whole block. */
+function onlyBoundaries(doc: ProseMirrorNode, from: number, to: number): boolean {
+  let content = false;
+  doc.nodesBetween(from, to, (node, pos) => {
+    content = content || node.isLeaf || (pos >= from && pos + node.nodeSize <= to);
+    return !content;
+  });
+  return !content;
 }
 
 /**
@@ -460,6 +558,24 @@ function resolve(
   const schema = tr.doc.type.schema;
   const edits: Edit[] = [];
   const deletes = new Map<string, Edit[]>();
+  const addDelete = (id: string, edit: Edit): void => {
+    deletes.set(id, [...(deletes.get(id) ?? []), edit]);
+  };
+
+  // Blocks this decision removes whole; a join must not use one of their textblocks as its target.
+  const gone = accept ? isDeletedText : isInsertedText;
+  const wholeOp = accept ? 'delete' : 'insert';
+  const doomed = blocks.filter(
+    ({ node, suggestion }) => suggestion.op === wholeOp && !keeps(node, gone),
+  );
+  const isDoomed = (start: number): boolean =>
+    doomed.some(({ pos, node }) => start >= pos && start < pos + node.nodeSize);
+  /** Joins the text a block keeps onto the textblock before it: the boundary before it was proposed. */
+  const join = (pos: number, node: ProseMirrorNode): Edit | null => {
+    const tail = firstTextblock(node, pos, gone);
+    const previous = tail === null ? null : textblockEndBefore(tr.doc, pos, isDoomed);
+    return tail === null || previous === null ? null : { from: previous, to: tail + 1 };
+  };
 
   for (const { from, to, node, mark } of texts) {
     const kind = mark.type.name;
@@ -481,8 +597,7 @@ function resolve(
     } else if ((kind === 'suggestionInsert') === accept) {
       tr.removeMark(from, to, mark);
     } else if (accept) {
-      const id = idOf(mark);
-      deletes.set(id, [...(deletes.get(id) ?? []), { from, to }]);
+      addDelete(idOf(mark), { from, to });
     } else {
       edits.push({ from, to });
     }
@@ -493,16 +608,20 @@ function resolve(
     const { op } = suggestion;
     const end = pos + node.nodeSize;
     if (op === 'delete' && accept) {
-      deletes.set(suggestion.id, [...(deletes.get(suggestion.id) ?? []), { from: pos, to: end }]);
+      if (!keeps(node, isDeletedText)) {
+        addDelete(suggestion.id, { from: pos, to: end });
+      } else {
+        const joining = join(pos, node);
+        if (joining !== null) addDelete(suggestion.id, joining);
+        tr.setNodeAttribute(pos, 'suggestion', null);
+      }
     } else if (op === 'insert' && !accept && pos >= coveredUntil) {
       coveredUntil = end;
-      if (!keepsText(node)) {
+      if (!keeps(node, isInsertedText)) {
         edits.push({ from: pos, to: end });
       } else {
-        // A split block that still holds the author's text before the split: join it back.
-        const tail = firstTextblock(node, pos);
-        const previous = tail === null ? null : textblockEndBefore(tr.doc, pos);
-        if (tail !== null && previous !== null) edits.push({ from: previous, to: tail + 1 });
+        const joining = join(pos, node);
+        if (joining !== null) edits.push(joining);
         tr.setNodeAttribute(pos, 'suggestion', null);
       }
     } else if (op === 'restructure' && !accept && typeof suggestion.before === 'string') {
@@ -521,19 +640,36 @@ function resolve(
       tr.setNodeAttribute(pos, 'suggestion', null);
     }
   }
-  for (const ranges of deletes.values()) {
-    edits.push({
-      from: Math.min(...ranges.map((range) => range.from)),
-      to: Math.max(...ranges.map((range) => range.to)),
-    });
+  // Each deleted piece goes; pieces join into one delete only where just block boundaries lie
+  // between them, so text typed inside a struck run or left unmarked survives.
+  for (const pieces of deletes.values()) {
+    pieces.sort((a, b) => a.from - b.from || b.to - a.to);
+    let current: Edit | null = null;
+    for (const piece of pieces) {
+      if (
+        current !== null &&
+        (piece.from < current.to || onlyBoundaries(tr.doc, current.to, piece.from))
+      ) {
+        current.to = Math.max(current.to, piece.to);
+      } else {
+        if (current !== null) edits.push(current);
+        current = { ...piece };
+      }
+    }
+    if (current !== null) edits.push(current);
   }
 
-  // Drop an edit that lies inside a larger one, then apply from the end backwards.
+  // Overlapping deletes become one; any other edit inside a larger one is dropped. Then apply
+  // from the end backwards.
   edits.sort((a, b) => a.from - b.from || b.to - a.to);
   const applied: Edit[] = [];
   for (const edit of edits) {
     const outer = applied[applied.length - 1];
-    if (outer === undefined || edit.from >= outer.to) applied.push(edit);
+    if (outer === undefined || edit.from >= outer.to) {
+      applied.push({ ...edit });
+    } else if (outer.slice === undefined && edit.slice === undefined) {
+      outer.to = Math.max(outer.to, edit.to);
+    }
   }
   for (const edit of applied.reverse()) {
     if (edit.slice === undefined) tr.delete(edit.from, edit.to);
@@ -587,6 +723,12 @@ export function suggestionIdsAt(state: EditorState): string[] {
   if (empty) {
     const after = new Set(markIds($from.nodeAfter));
     for (const id of markIds($from.nodeBefore)) if (after.has(id)) ids.add(id);
+    // A caret inside a block that is itself a suggestion (an inserted, deleted or restructured one).
+    for (let depth = $from.depth; depth > 0; depth -= 1) {
+      const node = $from.node(depth);
+      const suggestion = isSuggestible(node) ? blockSuggestion(node) : null;
+      if (suggestion !== null) ids.add(suggestion.id);
+    }
     return [...ids];
   }
   state.doc.nodesBetween(from, to, (node) => {
@@ -597,18 +739,28 @@ export function suggestionIdsAt(state: EditorState): string[] {
   return [...ids];
 }
 
-/** Whether the document holds any suggestion; stops at the first. */
-export function hasSuggestions(doc: ProseMirrorNode): boolean {
-  let found = false;
-  doc.descendants((node) => {
-    found =
-      found ||
-      (node.isText
-        ? node.marks.some((mark) => SUGGESTION_MARKS.has(mark.type.name))
-        : blockSuggestion(node) !== null);
-    return !found;
-  });
+const holdsSuggestion = new WeakMap<ProseMirrorNode, boolean>();
+
+/**
+ * Whether the document holds any suggestion. Nodes are immutable and shared between document
+ * versions, so each is looked at once and an edit only re-walks the path it changed.
+ */
+export function hasSuggestions(node: ProseMirrorNode): boolean {
+  let found = holdsSuggestion.get(node);
+  if (found === undefined) {
+    found = node.isText
+      ? node.marks.some((mark) => SUGGESTION_MARKS.has(mark.type.name))
+      : blockSuggestion(node) !== null || childrenHold(node);
+    holdsSuggestion.set(node, found);
+  }
   return found;
+}
+
+function childrenHold(node: ProseMirrorNode): boolean {
+  for (let index = 0; index < node.childCount; index += 1) {
+    if (hasSuggestions(node.child(index))) return true;
+  }
+  return false;
 }
 
 export interface SuggestionEntry {
@@ -633,19 +785,25 @@ const MARK_KINDS: Readonly<Record<string, SuggestionEntry['kind'] | undefined>> 
  * blocks is reported by its text kind; `block` means it only has block-level marks.
  */
 export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
-  const entries = new Map<string, { entry: SuggestionEntry; text: string }>();
+  const entries = new Map<
+    string,
+    { entry: SuggestionEntry; text: string; blockText: string; blockEnd: number }
+  >();
   const note = (
     attrs: { id?: unknown; authorId?: unknown; createdAt?: unknown },
     kind: SuggestionEntry['kind'],
     from: number,
     to: number,
     text: string,
+    block = false,
   ): void => {
     if (typeof attrs.id !== 'string') return;
     const known = entries.get(attrs.id);
     if (known === undefined) {
       entries.set(attrs.id, {
-        text,
+        text: block ? '' : text,
+        blockText: block ? text : '',
+        blockEnd: block ? to : 0,
         entry: {
           id: attrs.id,
           authorId: typeof attrs.authorId === 'string' ? attrs.authorId : '',
@@ -658,7 +816,12 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
       });
       return;
     }
-    known.text += text;
+    // Text carries the excerpt; a block's own text only stands in when no text is marked.
+    // A block nested in one already counted for this suggestion adds no text of its own.
+    if (block) {
+      if (from >= known.blockEnd) known.blockText += text;
+      known.blockEnd = Math.max(known.blockEnd, to);
+    } else known.text += text;
     known.entry = {
       ...known.entry,
       kind: known.entry.kind === 'block' ? kind : known.entry.kind,
@@ -676,14 +839,18 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
       return false;
     }
     const suggestion = blockSuggestion(node);
-    if (suggestion !== null) note(suggestion, 'block', pos, pos + node.nodeSize, node.textContent);
+    if (suggestion !== null)
+      note(suggestion, 'block', pos, pos + node.nodeSize, node.textContent, true);
     return true;
   });
 
   return [...entries.values()]
-    .map(({ entry, text }) => ({
-      ...entry,
-      excerpt: text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH)}...` : text,
-    }))
+    .map(({ entry, text: marked, blockText }) => {
+      const text = marked === '' ? blockText : marked;
+      return {
+        ...entry,
+        excerpt: text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH)}...` : text,
+      };
+    })
     .sort((a, b) => a.from - b.from);
 }
