@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 )
 
@@ -72,23 +73,11 @@ func (parser *proseDecoder) rejectText(node proseNode) (proseNode, bool) {
 }
 
 func appendProseText(nodes []proseNode, node proseNode) []proseNode {
-	if last := len(nodes) - 1; last >= 0 && nodes[last].Type == "text" && sameProseMarks(nodes[last].Marks, node.Marks) {
+	if last := len(nodes) - 1; last >= 0 && nodes[last].Type == "text" && slices.Equal(nodes[last].Marks, node.Marks) {
 		nodes[last].Text += node.Text
 		return nodes
 	}
 	return append(nodes, node)
-}
-
-func sameProseMarks(a, b []proseMark) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for index := range a {
-		if a[index] != b[index] {
-			return false
-		}
-	}
-	return true
 }
 
 func hasProseText(node proseNode) bool {
