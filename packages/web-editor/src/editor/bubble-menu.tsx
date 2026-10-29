@@ -2,6 +2,7 @@ import { Icon, placeFloatingMenu, readViewportBounds } from '@nix/ui';
 import type { TextColor } from '@nix/editor-schema';
 import type { Editor } from '@tiptap/react';
 import { useFloatingPlacement } from './floating-placement';
+import { suggestionIdsAt } from './suggesting';
 import type { MarkType, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import {
   Baseline,
@@ -279,7 +280,7 @@ function readPlacement(editor: Editor): MenuPlacement | null {
   // Only a selection that actually holds text. An empty selection is a caret; a non-empty
   // one over no text (a bare node selection, a table cell boundary) has nothing this menu's
   // commands could colour.
-  if (empty || !hasText(state.doc, from, to)) {
+  if (empty ? suggestionIdsAt(state).length === 0 : !hasText(state.doc, from, to)) {
     return null;
   }
 
@@ -378,6 +379,10 @@ export function BubbleMenu({
   // widget with one tab stop. Offered only where the note can be written to.
   const aiIndex = onOpenInlineAi !== undefined && editor.isEditable ? runnable.length : null;
   if (aiIndex !== null) runnable.push(true);
+  // Accept and Reject, for the suggestion(s) under the selection: two more stops in the same row.
+  const suggestionIds = editor.isEditable ? suggestionIdsAt(editor.state) : [];
+  const decideIndex = suggestionIds.length > 0 ? runnable.length : null;
+  if (decideIndex !== null) runnable.push(true, true);
 
   // The tab stop has to sit on a button that can actually be used.
   const firstRunnable = runnable.indexOf(true);
@@ -570,6 +575,31 @@ export function BubbleMenu({
             <Icon icon={Sparkles} size="sm" />
             <span className="px-0.5">AI</span>
           </button>
+        )}
+        {decideIndex === null ? null : (
+          <div role="group" aria-label="Suggestion" className="flex shrink-0 items-center gap-0.5">
+            {(['accept', 'reject'] as const).map((decision, offset) => (
+              <button
+                key={decision}
+                ref={(element) => {
+                  buttons.current[decideIndex + offset] = element;
+                }}
+                type="button"
+                tabIndex={decideIndex + offset === tabStop ? 0 : -1}
+                onClick={() => {
+                  const chain = editor.chain().focus(undefined, { scrollIntoView: false });
+                  for (const id of suggestionIds) {
+                    if (decision === 'accept') chain.acceptSuggestion(id);
+                    else chain.rejectSuggestion(id);
+                  }
+                  chain.run();
+                }}
+                className="flex min-h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-xs hover:bg-foreground/7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+              >
+                <span className="px-0.5">{decision === 'accept' ? 'Accept' : 'Reject'}</span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </>

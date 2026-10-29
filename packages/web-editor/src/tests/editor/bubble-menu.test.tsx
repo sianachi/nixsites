@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type ReactNode } from 'react';
 
 import { BubbleMenu } from '../../editor/bubble-menu';
+import { Suggesting, hasSuggestions } from '../../editor/suggesting';
 
 /**
  * The bubble menu against a real editor: shown over a real selection, applying the mark through
@@ -19,7 +20,7 @@ let captured: Editor | null = null;
 
 function Harness(): ReactNode {
   const editor = useEditor({
-    extensions: [...nixExtensions],
+    extensions: [...nixExtensions, Suggesting],
     onCreate: ({ editor: created }) => {
       captured = created;
     },
@@ -74,6 +75,17 @@ function select(editor: Editor, from: number, to: number): void {
 }
 
 describe('the selection bubble menu', () => {
+  it('offers Accept and Reject over a suggestion, and applies the choice', async () => {
+    const editor = await editorWith(
+      '<p>Hi <ins data-suggestion="" data-suggestion-id="s1" data-suggestion-authorId="a" data-suggestion-createdAt="now">there</ins></p>',
+    );
+    expect(hasSuggestions(editor.state.doc)).toBe(true);
+    select(editor, 4, 7);
+    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }));
+    expect(editor.getText()).toBe('Hi ');
+    expect(hasSuggestions(editor.state.doc)).toBe(false);
+  });
+
   it.each([
     ['Bold', 'strong'],
     ['Italic', 'em'],

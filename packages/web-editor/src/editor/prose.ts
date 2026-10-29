@@ -96,6 +96,10 @@ export const proseRoot = [
   // A cell selection, tinted rather than filled so the text inside stays legible on either ground.
   '[&_.selectedCell]:bg-accent/25',
 
+  // A block-level suggestion (version 7): a bar on its left edge, one rule for every kind, because the
+  // text inside already says whether it is going or coming.
+  '[&_[data-suggestion]]:border-l-2 [&_[data-suggestion]]:border-l-accent-400 [&_[data-suggestion]]:pl-2',
+
   // The table's wrapper, which the resizable table view draws around every table. It carries
   // the block gap, so the table itself does not: an overflow container does not let a margin
   // collapse through it, and a gap on both would be two gaps. The overflow is what lets a wide
@@ -342,10 +346,10 @@ export const proseClasses: Readonly<Record<string, string>> = {
   // the words stay the words. The thread it belongs to is on the element as an attribute.
   comment: 'border-b-2 border-b-accent-400 bg-accent/10 hover:bg-accent/20 cursor-default',
 
-  // Suggestions (version 7), kept to the mono sheet: an insert is underlined, a delete is struck
-  // through and muted, a format change is outlined.
-  suggestionInsert: 'underline decoration-accent-400 decoration-2 underline-offset-2',
-  suggestionDelete: 'line-through text-muted',
+  // Suggestions (version 7), kept to the mono sheet so none of them leans on hue: an insert is
+  // underlined, a delete is struck through and muted, a format change is outlined with dots.
+  suggestionInsert: 'underline decoration-accent-400 decoration-2 underline-offset-2 bg-accent/10',
+  suggestionDelete: 'line-through decoration-2 text-muted',
   suggestionFormat: 'rounded-sm outline-dotted outline-1 outline-accent-400',
 };
 

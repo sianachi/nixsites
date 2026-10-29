@@ -3,6 +3,7 @@ import { Button, Dialog, Popover, Text, chromeSurface } from '@nix/ui';
 import type { ItemInsertKind } from './item-insert-dialog';
 import { TableSizePicker } from './table-size-picker';
 import type { WritingMode } from './writing-mode';
+import type {} from './suggesting';
 import { Icon } from '@nix/ui';
 import type { Editor } from '@tiptap/react';
 import {
@@ -891,4 +892,52 @@ function ToolbarButton({
 
 function Separator(): ReactNode {
   return <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-divider" />;
+}
+
+/**
+ * The Suggesting switch (track changes) and, while suggestions stand, the whole-note decisions.
+ * Shown only where the note can be written to; the toolbar it sits in is not drawn otherwise.
+ */
+export function SuggestingControl({
+  editor,
+  suggesting,
+  pending,
+  onToggle,
+}: {
+  readonly editor: Editor;
+  readonly suggesting: boolean;
+  /** Whether the note holds any suggestion. */
+  readonly pending: boolean;
+  readonly onToggle: () => void;
+}): ReactNode {
+  return (
+    <>
+      <Button
+        variant="subtle"
+        className={`shrink-0 whitespace-nowrap ${suggesting ? 'bg-accent/18 text-foreground' : ''}`}
+        aria-pressed={suggesting}
+        onClick={onToggle}
+      >
+        Suggesting
+      </Button>
+      {pending ? (
+        <>
+          <Button
+            variant="subtle"
+            className="shrink-0 whitespace-nowrap"
+            onClick={() => void editor.commands.acceptAllSuggestions()}
+          >
+            Accept all
+          </Button>
+          <Button
+            variant="subtle"
+            className="shrink-0 whitespace-nowrap"
+            onClick={() => void editor.commands.rejectAllSuggestions()}
+          >
+            Reject all
+          </Button>
+        </>
+      ) : null}
+    </>
+  );
 }

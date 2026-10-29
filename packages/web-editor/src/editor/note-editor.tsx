@@ -46,7 +46,8 @@ import { ColumnControls } from './column-controls';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { BubbleMenu } from './bubble-menu';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
-import { EditorToolbar } from './toolbar';
+import { EditorToolbar, SuggestingControl } from './toolbar';
+import { Suggesting, hasSuggestions, setSuggesting } from './suggesting';
 import { MARKDOWN_ORIGIN, snapshotMarkdown, type MarkdownSnapshot } from './markdown-mode';
 import { MarkdownLossesDialog, MarkdownModePanel } from './markdown-mode-panel';
 import { announce } from '@nix/web-foundation/a11y/announcer';
@@ -733,6 +734,9 @@ export function NoteEditor({
       // "Narrower"/"Wider"/"Reset" in the table menu and the compact toolbar's table group -
       // the same `colwidth` change the resize handle makes, run without a drag.
       ColumnWidthControls,
+      // Track changes: edits become suggestions while the toolbar's switch is on. Told who and
+      // whether by an effect below, through its storage.
+      Suggesting,
     ],
 
     // No `content`: the Yjs document is the source of truth, and seeding content here would
@@ -819,6 +823,15 @@ export function NoteEditor({
   useEffect(() => {
     setEditorWritingMode(editor, writingMode);
   }, [editor, writingMode]);
+
+  const [suggesting, setSuggestingOn] = useState(false);
+  const suggestionsPending = useEditorState({
+    editor,
+    selector: ({ editor: current }) => hasSuggestions(current.state.doc),
+  });
+  useEffect(() => {
+    setSuggesting(editor, { enabled: suggesting && !readOnly && !stale, authorId: subject ?? '' });
+  }, [editor, readOnly, stale, subject, suggesting]);
 
   // The server's read-only mode and stale copies cannot save edits.
   useLayoutEffect(() => {
@@ -1105,6 +1118,13 @@ export function NoteEditor({
                   variant="subtle"
                   className={`shrink-0 whitespace-nowrap ${markdownMode?.phase === 'open' ? 'bg-accent/18 text-foreground' : ''}`}
                   aria-pressed={markdownMode?.phase === 'open'}
+                  // A round trip through Markdown would silently apply every suggestion.
+                  disabled={suggestionsPending && markdownMode === null}
+                  title={
+                    suggestionsPending && markdownMode === null
+                      ? 'Accept or reject the suggestions to use Markdown mode'
+                      : undefined
+                  }
                   onClick={() => {
                     if (markdownMode !== null) {
                       setMarkdownMode(null);
@@ -1122,6 +1142,16 @@ export function NoteEditor({
                 >
                   Markdown
                 </Button>
+                {subject === undefined ? null : (
+                  <SuggestingControl
+                    editor={editor}
+                    suggesting={suggesting}
+                    pending={suggestionsPending}
+                    onToggle={() => {
+                      setSuggestingOn(!suggesting);
+                    }}
+                  />
+                )}
               </>
             }
             textWidthControl={narrow ? undefined : <TextWidthControl />}
