@@ -26,29 +26,47 @@ export function MobileNavigation({
   readonly onCreate: () => void;
   readonly onOpenInbox: () => void;
 }): ReactNode {
-  const control = `flex min-h-(--control-lg) min-w-0 flex-1 flex-col items-center justify-center gap-1 sm:flex-row sm:gap-2 rounded-md px-1 py-2 text-muted hover:bg-surface ${focusRing}`;
+  const control = `flex min-h-(--control-lg) min-w-0 flex-1 flex-col items-center justify-center gap-1 sm:flex-row sm:gap-2 rounded-md px-1 py-2 hover:bg-surface ${focusRing}`;
+  // A tab bar's selected item is told apart by a fill and ink, the others stay muted - glyph and
+  // label together, so the label never reads as selected while its glyph does not.
+  const tone = (active: boolean): string => (active ? 'bg-surface text-foreground' : 'text-muted');
   return (
     // design-token-exempt: device safe-area inset keeps navigation above the home indicator.
     <nav
       aria-label="Mobile navigation"
       className={`flex shrink-0 items-center gap-1 border-t border-divider bg-background px-2 pb-[env(safe-area-inset-bottom)] ${chromeSurface}`}
     >
-      <button type="button" className={control} aria-expanded={treeOpen} onClick={onTree}>
+      <button
+        type="button"
+        className={`${control} ${tone(treeOpen)}`}
+        aria-expanded={treeOpen}
+        onClick={onTree}
+      >
         <Icon icon={FolderTree} size="sm" />
-        <Text variant="caption">Explorer</Text>
+        <Text variant="caption" tone={treeOpen ? 'default' : 'muted'}>
+          Explorer
+        </Text>
       </button>
-      <button type="button" className={control} onClick={onSearch}>
+      <button type="button" className={`${control} ${tone(false)}`} onClick={onSearch}>
         <Icon icon={Search} size="sm" />
-        <Text variant="caption">Find</Text>
+        <Text variant="caption" tone="muted">
+          Find
+        </Text>
       </button>
       <NavLink
         to={`/w/${workspaceId}/calendar`}
-        className={({ isActive }) => `${control} ${isActive ? 'bg-surface text-foreground' : ''}`}
+        className={({ isActive }) => `${control} ${tone(isActive)}`}
       >
-        <Icon icon={CalendarDays} size="sm" />
-        <Text variant="caption">Calendar</Text>
+        {({ isActive }) => (
+          <>
+            <Icon icon={CalendarDays} size="sm" />
+            <Text variant="caption" tone={isActive ? 'default' : 'muted'}>
+              Calendar
+            </Text>
+          </>
+        )}
       </NavLink>
-      <button type="button" className={`relative ${control}`} onClick={onOpenInbox}>
+      <button type="button" className={`relative ${control} ${tone(false)}`} onClick={onOpenInbox}>
         <span className="relative">
           <Icon icon={Bell} size="sm" />
           {unreadNotifications > 0 ? (
@@ -58,7 +76,7 @@ export function MobileNavigation({
             />
           ) : null}
         </span>
-        <Text variant="caption">
+        <Text variant="caption" tone="muted">
           Inbox
           {unreadNotifications > 0 ? (
             <span className="sr-only">, {unreadNotifications} unread</span>
@@ -70,9 +88,7 @@ export function MobileNavigation({
         // the accessible name, so the pet is still announced by name.
         <NavLink
           to={`/w/${workspaceId}/pet`}
-          className={({ isActive }) =>
-            `${control} flex-none w-(--control-lg) ${isActive ? 'bg-surface text-foreground' : ''}`
-          }
+          className={({ isActive }) => `${control} flex-none w-(--control-lg) ${tone(isActive)}`}
         >
           <span className="relative">
             <Icon icon={PawPrint} size="sm" />
