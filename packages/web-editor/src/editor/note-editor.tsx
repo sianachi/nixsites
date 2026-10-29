@@ -45,6 +45,8 @@ import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { BubbleMenu } from './bubble-menu';
+import { CommentAnchors, captureAnchor, requestComment } from './comment-anchors';
+import { useCommentSync } from './use-comment-sync';
 import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
 import { EditorToolbar, SuggestingControl } from './toolbar';
 import { Suggesting, hasSuggestions, setSuggesting } from './suggesting';
@@ -738,6 +740,9 @@ export function NoteEditor({
       // Track changes: edits become suggestions while the toolbar's switch is on. Told who and
       // whether by an effect below, through its storage.
       Suggesting,
+      // Comment threads drawn on the text they were made on; told which note it is by
+      // `useCommentSync` below.
+      CommentAnchors,
     ],
 
     // No `content`: the Yjs document is the source of truth, and seeding content here would
@@ -788,6 +793,8 @@ export function NoteEditor({
       created.registerPlugin(yUndoPlugin({ trackedOrigins: [MARKDOWN_ORIGIN] }) as Plugin);
     },
   });
+
+  useCommentSync(editor, itemId, synced && !stale);
 
   const pageGuides = usePageGuidePreference((state) => state.visibility);
   // State rather than a ref, so the overlay renders once the box exists rather than one render late.
@@ -1380,9 +1387,12 @@ export function NoteEditor({
                 ) : null}
               </div>
               {/* After the editable region on purpose: Tab from the text is what reaches its buttons. */}
-              {readOnly || stale ? null : (
+              {stale || bodyUnavailable ? null : (
                 <BubbleMenu
                   editor={editor}
+                  onComment={() => {
+                    requestComment(itemId, captureAnchor(editor.view));
+                  }}
                   onOpenInlineAi={
                     inlineAi.available
                       ? () => {

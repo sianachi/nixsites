@@ -43,7 +43,13 @@ const fileHarness = vi.hoisted(() => ({
   fetchFileContent: vi.fn(() => Promise.reject(new Error('Preview unavailable in this test'))),
   client: {
     execute: vi.fn(() => Promise.resolve({ id: 'upload-id' })),
-    query: vi.fn(() => Promise.resolve({ references: [] })),
+    query: vi.fn((endpoint?: { operation?: string }) =>
+      Promise.resolve(
+        endpoint?.operation?.startsWith('comments.') === true
+          ? { revision: 0, threads: [] }
+          : { references: [] },
+      ),
+    ),
   },
 }));
 

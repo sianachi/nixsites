@@ -10,6 +10,7 @@ import {
   Code,
   Highlighter,
   Italic,
+  MessageSquarePlus,
   Sparkles,
   Strikethrough,
   Underline,
@@ -318,8 +319,11 @@ function readPlacement(editor: Editor): MenuPlacement | null {
 export function BubbleMenu({
   editor,
   onOpenInlineAi,
+  onComment,
 }: {
   readonly editor: Editor;
+  /** Opens the comments pane with the selection as the draft's place; absent where comments are off. */
+  readonly onComment?: (() => void) | undefined;
   /** Present only when the writing assistance is on offer; the control exists only then. */
   readonly onOpenInlineAi?: (() => void) | undefined;
 }): ReactNode {
@@ -364,6 +368,34 @@ export function BubbleMenu({
     );
   }
 
+  // A note that cannot be edited can still be commented on: the bubble then holds that one button.
+  if (!editor.isEditable) {
+    if (onComment === undefined) return null;
+    return (
+      <div
+        role="toolbar"
+        aria-label="Selection actions"
+        style={{ left: placement.left, top: placement.top, maxWidth: placement.maxWidth }} // design-token-exempt: position and size are measured against the visible viewport.
+        className={[
+          'fixed z-20 flex items-center rounded-md border border-divider bg-surface p-1 shadow-md',
+          placement.below ? 'mt-2' : '-mt-2 -translate-y-full',
+        ].join(' ')}
+        onMouseDown={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <button
+          type="button"
+          onClick={onComment}
+          className="flex min-h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-xs hover:bg-foreground/7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        >
+          <Icon icon={MessageSquarePlus} size="sm" />
+          <span className="px-0.5">Comment</span>
+        </button>
+      </div>
+    );
+  }
+
   // Whether each command can run where the selection is. Marks are not admitted inside a code
   // block or inline code, and a button that would silently do nothing is worse than one that
   // says it cannot.
@@ -377,10 +409,12 @@ export function BubbleMenu({
   runnable.push(...ROW.map((entry) => canSet(can, entry.group.axis, entry.option.color)));
   // The writing assistance is one more stop at the end of the row, so the toolbar stays one
   // widget with one tab stop. Offered only where the note can be written to.
-  const aiIndex = onOpenInlineAi !== undefined && editor.isEditable ? runnable.length : null;
+  const aiIndex = onOpenInlineAi !== undefined ? runnable.length : null;
   if (aiIndex !== null) runnable.push(true);
+  const commentIndex = onComment !== undefined ? runnable.length : null;
+  if (commentIndex !== null) runnable.push(true);
   // Accept and Reject, for the suggestion(s) under the selection: two more stops in the same row.
-  const suggestionIds = editor.isEditable ? suggestionIdsAt(editor.state) : [];
+  const suggestionIds = suggestionIdsAt(editor.state);
   const decideIndex = suggestionIds.length > 0 ? runnable.length : null;
   if (decideIndex !== null) runnable.push(true, true);
 
@@ -574,6 +608,22 @@ export function BubbleMenu({
           >
             <Icon icon={Sparkles} size="sm" />
             <span className="px-0.5">AI</span>
+          </button>
+        )}
+        {commentIndex === null ? null : (
+          <button
+            ref={(element) => {
+              buttons.current[commentIndex] = element;
+            }}
+            type="button"
+            aria-label="Comment"
+            title="Comment"
+            tabIndex={commentIndex === tabStop ? 0 : -1}
+            onClick={onComment}
+            className="flex min-h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-xs hover:bg-foreground/7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          >
+            <Icon icon={MessageSquarePlus} size="sm" />
+            <span className="px-0.5">Comment</span>
           </button>
         )}
         {decideIndex === null ? null : (

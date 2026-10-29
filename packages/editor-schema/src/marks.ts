@@ -184,21 +184,17 @@ export const TextColorMark = Mark.create({
 });
 
 /**
- * The range a comment thread is anchored to.
+ * Reserved for a comment thread's range; nothing writes it.
  *
- * **The mark renders; the stored anchor finds.** A thread lives in Postgres, where it can be
- * queried, resolved and counted, and it carries an encoded Yjs relative position so the
- * server can place it without loading the document. But a relative position cannot follow
- * heavy concurrent editing the way a mark does - a mark is merged by the CRDT like any other
- * and stays on the words it was put on. So both exist, and each does the job the other
- * cannot: the mark is authoritative for where the highlight is drawn, the anchor is the
- * fallback when the mark was lost to a paste and the sort key for the sidebar.
+ * **Threads do not use this mark.** They live in Postgres (`note_comment`), anchored by Yjs
+ * relative positions the web editor decodes into highlight decorations (`comment-anchors.ts` in
+ * `@nix/web-editor`). Relative positions follow the CRDT through concurrent edits, and keeping
+ * the anchor out of the document means commenting never edits the note, so a Commenter who cannot
+ * write the body can still comment. The mark stays in the schema so documents that carry it still
+ * parse.
  *
- * `inclusive: false` so typing at the edge of a commented range does not silently extend
- * somebody else's thread over the new text.
- *
- * `excludes: ''` so overlapping threads are legal. Two comments on overlapping ranges is a
- * normal thing for two people to do, and a schema that refused it would drop one of them.
+ * `inclusive: false` so typing at the edge of a marked range does not extend it, and
+ * `excludes: ''` so overlapping ranges are legal.
  */
 export const CommentMark = Mark.create({
   name: 'comment',
