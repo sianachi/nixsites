@@ -39,6 +39,8 @@ const inputVariants = cva(
     // grounds (5.9:1 on paper, 8.9:1 on ink) and still reads quieter than the value beside it,
     // which is the whole job of a placeholder.
     'placeholder:text-muted',
+    // Every search field draws its own clear button; Chromium's native one would sit beside it.
+    '[&::-webkit-search-cancel-button]:appearance-none',
     'transition-colors',
     fieldFocus,
     disabledState,
