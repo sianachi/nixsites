@@ -53,15 +53,12 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
               onMode(grain);
             }}
             className={[
-              // `relative before:*`: the drawn pill is about 22px tall (`text-xs` at its 1.4
-              // line height plus `py-1`), just under WCAG 2.5.8's 24px floor. The pseudo-element
-              // widens the hit area half a step past each edge without moving the row - the
-              // pane-divider technique, at the smallest extension that clears the floor.
-              'relative rounded-sm px-2 py-1 text-xs capitalize before:absolute before:inset-x-0 before:-inset-y-0.5 pointer-coarse:min-h-(--control-lg)',
+              // The view tabs' height and radius, so the grain switcher lines up with them.
+              'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
               'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
               mode === grain
-                ? 'bg-foreground/7 text-foreground'
-                : 'text-muted hover:bg-foreground/7 hover:text-foreground',
+                ? 'border-divider bg-foreground/7 text-foreground'
+                : 'border-transparent text-muted hover:bg-foreground/5',
             ].join(' ')}
           >
             {grain}

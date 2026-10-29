@@ -634,15 +634,14 @@ describe('the touch targets on the track', () => {
     expect(milestone).toHaveClass('h-6', 'relative', 'before:absolute', 'before:-inset-y-1');
   });
 
-  it('declares the extension classes on the scale switcher chips, which draw shorter than the floor', () => {
+  it('gives the scale switcher chips the view tabs control height', () => {
     render({ children: [ROLLOUT] });
 
     const nav = screen.getByRole('navigation', { name: 'Timeline scale' });
     for (const grain of ['week', 'month', 'quarter']) {
       expect(within(nav).getByRole('button', { name: grain })).toHaveClass(
-        'relative',
-        'before:absolute',
-        'before:-inset-y-0.5',
+        'min-h-(--control-md)',
+        'rounded-md',
       );
     }
   });

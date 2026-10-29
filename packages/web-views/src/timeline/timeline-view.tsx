@@ -227,14 +227,12 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
                   setMode(grain);
                 }}
                 className={cn(
-                  // `relative before:*`: the drawn pill is about 22px tall (`text-xs` at its 1.4
-                  // line height plus `py-1`), just under WCAG 2.5.8's 24px floor - the same fix,
-                  // for the same control, as the calendar's grain switcher.
-                  'relative rounded-sm px-2 py-1 text-xs capitalize before:absolute before:inset-x-0 before:-inset-y-0.5 pointer-coarse:min-h-(--control-lg)',
+                  // The view tabs' height and radius, as on the calendar's grain switcher.
+                  'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
                   focusRing,
                   scale === grain
-                    ? 'bg-foreground/7 text-foreground'
-                    : 'text-muted hover:bg-foreground/7 hover:text-foreground',
+                    ? 'border-divider bg-foreground/7 text-foreground'
+                    : 'border-transparent text-muted hover:bg-foreground/5',
                 )}
               >
                 {grain}
