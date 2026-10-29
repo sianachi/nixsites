@@ -2118,8 +2118,7 @@
       "max": 6
     },
     "answerChecks": {
-      "all": ["Friday"],
-      "absent": ["hunter2"]
+      "all": ["Friday"]
     }
   }
 ]

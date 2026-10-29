@@ -4,6 +4,7 @@ Per call: create_structured 6 views, add_view 4; 12 total per item. Read structu
 
 Section: View review
 Read configuration with nix_read_structure and bounded results with nix_read_view. Reviews only read; requested refinements use nix_update_view, then read back.
+After building or changing views, read each one that changed with nix_read_view, not only the structure, and name the items its results show.
 Sorting: sortBy (a field key) and sortDescending set one sort; list, board, calendar, timeline, gallery, sheet, checklist, matrix apply it. Smart lists (query) apply their own filters; every other kind shows children in its own order and ignores saved sorts and filters.
 Filters belong to smart lists (query): each is {field, op, value} with an op from Query operators, and all must match; $type, $inside, $created, $modified and $done test the item itself. A preset (Smart lists) is a built-in rule used instead of filters. "Any of" groups exist only when a person added them in the editor; read them, never propose them.
 Formula and rollup fields cannot be filtered or sorted when read. nix_read_view reports whether it applied the saved rules (appliedViewRules) and what it ignored or could not read (limits): read both before explaining an order, a total or a missing item.

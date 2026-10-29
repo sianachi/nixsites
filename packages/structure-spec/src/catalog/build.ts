@@ -210,6 +210,9 @@ export function renderCatalog(catalog: Catalog, patterns: string): string {
     'Read configuration with nix_read_structure and bounded results with nix_read_view. Reviews only read; requested refinements use nix_update_view, then read back.',
   );
   lines.push(
+    'After building or changing views, read each one that changed with nix_read_view, not only the structure, and name the items its results show.',
+  );
+  lines.push(
     `Sorting: sortBy (a field key) and sortDescending set one sort; ${SORTED_VIEW_KINDS.join(', ')} apply it. Smart lists (query) apply their own filters; every other kind shows children in its own order and ignores saved sorts and filters.`,
   );
   lines.push(
