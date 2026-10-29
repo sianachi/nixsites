@@ -56,7 +56,7 @@ typography:
     lineHeight: 1.5
   label:
     fontFamily: "Nunito Sans, system-ui, sans-serif"
-    fontSize: "10px"
+    fontSize: "11px"
     fontWeight: 400
     lineHeight: 1.4
     letterSpacing: "0.1em"
@@ -144,7 +144,9 @@ Steel #5087bd, ochre #a16428, teal #2a6d62, plum #72437c, moss #374d21, graphite
 - **h6** (700, 13px, wider tracking, uppercase): caps label.
 - **body** (400, 15px / 1.55): reading text. **bodySmall** (13px / 1.5): dense UI text.
 - **note** (12px / 1.45): secondary notes. **caption** (11px / 1.4): metadata.
-- **kicker** (10px / 1.4, widest tracking 0.1em, uppercase): smallest caps label.
+- **kicker** (11px / 1.4, widest tracking 0.1em, uppercase): smallest caps label.
+
+No visible text below 11px: `text-2xs` (10px) stays in the scale, but no visible text uses it.
 
 Scale steps: `text-2xs` 10, `xs` 11, `sm` 12, `base` 13, `md` 15, `lg` 17, `xl` 22, `2xl` 28, `3xl` 40. Tracking scale: tight -0.015em, normal 0, slight 0.04em, wide 0.06em, wider 0.08em, widest 0.1em (capitals get more air as they get smaller).
 
@@ -170,6 +172,7 @@ Library: `packages/ui` (controls, primitives, patterns). Every component has a s
 ### Buttons
 - **Primary:** the only solid accent object; `accent-fill` with `background`-coloured label, 36px tall (44px coarse).
 - **Secondary:** hairline outlined box. **Ghost:** type only. **Icon:** square outlined box with one glyph.
+- **Subtle:** type or glyph in `muted`, no frame, an ink wash on hover; for chrome that recedes beside content (row actions, overflow, close).
 - **States:** hover and pressed step along the accent ramp; focus is a 2px accent outline offset 2px (`focus-visible` only); disabled is 45% opacity.
 
 ### Cards, Dialog, Popover, Menu, ContextMenu, Toast
