@@ -1,13 +1,16 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { forgetThumbnails } from '@nix/web-foundation/lib/thumbnail-cache';
-import { useFileThumbnail, fileThumbnailKind } from '../../thumbnails/use-file-thumbnail';
+import {
+  useFileThumbnail,
+  fileThumbnailKind,
+} from '../../collections/thumbnails/use-file-thumbnail';
 
 const client = vi.hoisted(() => ({ query: vi.fn() }));
 const query = client.query;
 const revokeObjectURL = vi.fn();
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
-vi.mock('../../thumbnails/use-pdf-thumbnail', () => ({
+vi.mock('../../collections/thumbnails/use-pdf-thumbnail', () => ({
   usePdfThumbnail: () => ({ status: 'none', url: null }),
 }));
 

@@ -3,12 +3,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router';
 
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
-import type { ShellContext } from '../../shell/shell-context';
+import type { ShellContext } from '../shell/shell-context';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { uniqueIdentifier } from '../../collections/core/container-model';
-import { useContainer } from '../../collections/core/use-container';
-import { CreationStudioFrame } from './creation-studio-frame';
-import { BasicsStep, OptionsStep } from './creation-studio-steps';
+import { uniqueIdentifier } from '../collections/core/container-model';
+import { useContainer } from '../collections/core/use-container';
+import { CreationStudioFrame } from '../views/wizard/creation-studio-frame';
+import { BasicsStep, OptionsStep } from '../views/wizard/creation-studio-steps';
 import {
   FALLBACK_RECIPE,
   compiledViews,
@@ -18,8 +18,8 @@ import {
   validateDraft,
   type StudioDraft,
   type StudioIntent,
-} from './creation-studio-model';
-import { findStructuredRecipe, viewForRecipe } from './structured-recipes';
+} from '../views/wizard/creation-studio-model';
+import { findStructuredRecipe, viewForRecipe } from '../views/wizard/structured-recipes';
 
 export function CreationStudioPage(): ReactNode {
   const { recipe, itemId, viewId } = useParams();

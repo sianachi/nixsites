@@ -2,7 +2,7 @@ import type { NixClient } from '@nix/api-client';
 import { expect, it, vi } from 'vitest';
 
 import { forgetThumbnails, recallAuthorisedBytes } from '@nix/web-foundation/lib/thumbnail-cache';
-import { loadServerThumbnail } from '../../thumbnails/server-thumbnail';
+import { loadServerThumbnail } from '../../collections/thumbnails/server-thumbnail';
 
 it('does not retain thumbnail bytes if sign-out happens while Core answers the capability request', async () => {
   await forgetThumbnails();

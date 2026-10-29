@@ -14,7 +14,7 @@ import { SelectCheckbox } from '../core/select-checkbox';
 import { ValuePopover } from '../../collections/properties/value-popover';
 import { useItemContextActions } from '../../collections/core/use-item-context-actions';
 import { rowGestures } from '../../collections/core/use-item-selection';
-import { FileThumbnail } from '../../thumbnails';
+import { FileThumbnail } from '../../collections/thumbnails';
 import { ListCell } from '../list/list-cell';
 import { CARD_SIZE_COVER, type CardSize } from './card-size';
 import { CoverPane } from './cover-pane';

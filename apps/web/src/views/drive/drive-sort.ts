@@ -1,5 +1,5 @@
 import type { Item } from '../../collections/core/container-model';
-import { fileKindLabel } from '../../files/file-facts';
+import { fileKindLabel } from '../../collections/items/file-facts';
 import { driveBodyKindLabel } from '../../collections/core/view-axis';
 import type { DriveFileInfo } from './use-drive-file-info';
 

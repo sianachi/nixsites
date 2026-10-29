@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { FileThumbnail } from '../../thumbnails';
+import { FileThumbnail } from '../../collections/thumbnails';
 import type { Item } from '../../collections/core/container-model';
 import type { DriveFileInfo } from './use-drive-file-info';
 

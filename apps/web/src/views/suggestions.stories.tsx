@@ -1,13 +1,13 @@
 import { useState, type ReactElement } from 'react';
 
-import type { ViewFilterRule } from '../../collections/core/container-model';
-import QueryByExamplePanel from '../query/query-by-example';
-import { DuplicateNotice } from './duplicate-notice';
-import { FillSeriesOffer } from '../spreadsheet/fill-series-offer';
-import { FreeSlotHint } from '../calendar/free-slot-hint';
-import { PropertySuggestionLine } from './property-suggestion-line';
-import { StaleCardHint } from '../board/stale-card-hint';
-import { UsualValueHint } from '../form/usual-value-hint';
+import type { ViewFilterRule } from '../collections/core/container-model';
+import QueryByExamplePanel from './query/query-by-example';
+import { DuplicateNotice } from './suggest/duplicate-notice';
+import { FillSeriesOffer } from './spreadsheet/fill-series-offer';
+import { FreeSlotHint } from './calendar/free-slot-hint';
+import { PropertySuggestionLine } from './suggest/property-suggestion-line';
+import { StaleCardHint } from './board/stale-card-hint';
+import { UsualValueHint } from './form/usual-value-hint';
 
 /**
  * Every suggestion the views offer, in each of its states, so axe sees them on both grounds.

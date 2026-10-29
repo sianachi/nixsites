@@ -20,7 +20,7 @@ import { TemplateLibraryPage } from './templates/library/template-library-page';
 import { TemplateImportPage } from './templates/import/template-import-page';
 import { TemplateStudioPage } from './templates/template-studio-page';
 import { TrashPage } from './pages/trash-page';
-import { CreationStudioPage } from './views/wizard/creation-studio-page';
+import { CreationStudioPage } from './pages/creation-studio-page';
 import { RequireSession } from './shell/require-session';
 import { AppShell } from './shell/app-shell';
 import {

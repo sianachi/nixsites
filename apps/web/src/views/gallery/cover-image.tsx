@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { fileImageReferenceItemId } from '../../collections/properties/inputs/image-reference';
 import { useFileImagePreview } from '../../collections/properties/inputs/use-file-image-preview';
-import { useFileThumbnail } from '../../thumbnails';
+import { useFileThumbnail } from '../../collections/thumbnails';
 
 /**
  * The one place a cover picture is drawn.

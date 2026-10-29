@@ -2,7 +2,7 @@ import { ContextMenu, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowDown, ArrowUp, ChevronsUpDown, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { formatBytes, formatWhen } from '../../files/file-facts';
+import { formatBytes, formatWhen } from '../../collections/items/file-facts';
 import { useOptionalItemSelection } from '../../collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { rowGestures } from '../../collections/core/use-item-selection';

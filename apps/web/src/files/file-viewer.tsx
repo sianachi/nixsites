@@ -11,7 +11,7 @@ import {
 import { useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { findBuiltInFileViewer } from '@nix/web-editor/plugins/built-in-file-viewers';
 import { FileDetails } from './file-details';
-import { fileKindLabel, formatBytes } from './file-facts';
+import { fileKindLabel, formatBytes } from '../collections/items/file-facts';
 import { quietTopControl, useNearTopEdge } from '@nix/web-foundation/lib/use-near-top-edge';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
