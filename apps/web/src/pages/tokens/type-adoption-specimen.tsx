@@ -195,6 +195,11 @@ const ALLOWLIST: readonly AllowlistRow[] = [
     what: 'The view switcher’s tabs in `rhythm-specimen.tsx`',
     why: 'Reproduced verbatim from `view-switcher.tsx`. A specimen that redrew the thing it is quoting would stop being evidence about the real surface.',
   },
+  {
+    where: 'A caps label on a paragraph',
+    what: '`theme-choice.tsx`’s “Appearance”, at `text-xs`',
+    why: 'The `fieldLabel` look on a `<p>`, because it names a group rather than one field. It sat a step smaller once, which put it under the 11px floor for visible text.',
+  },
 ];
 
 function VariantTable(): ReactElement {
