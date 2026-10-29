@@ -1,3 +1,4 @@
+import type { PetMemoryMode } from '../memory-mode';
 import { type PetToolCall, type NixClient } from '@nix/api-client';
 import {
   READ_ONLY_OPERATIONS,
@@ -46,6 +47,7 @@ export function PetWorkToolCard({
   petName,
   busy,
   readWithoutAsking,
+  memoryMode = 'ask',
   applyWithoutAsking,
   progress,
   onBuildProgress,
@@ -67,6 +69,8 @@ export function PetWorkToolCard({
   readonly petName: string;
   readonly busy: boolean;
   readonly readWithoutAsking: boolean;
+  /** The owner's memory setting: only `always` saves a memory without a click. */
+  readonly memoryMode?: PetMemoryMode;
   readonly applyWithoutAsking: boolean;
   readonly progress: string | undefined;
   readonly onBuildProgress: (message: string) => void;
@@ -177,8 +181,10 @@ export function PetWorkToolCard({
   const itemId = args?.itemId && z.uuid().safeParse(args.itemId).success ? args.itemId : undefined;
   const parentId =
     args?.parentId && z.uuid().safeParse(args.parentId).success ? args.parentId : undefined;
-  // Memory always runs on its own: the owner reviews it in Settings, not on a card.
-  const autoRun = isReadOp && (readWithoutAsking || args.operation === 'remember');
+  // A memory follows its own setting, never "read without asking": with `always` it saves on its
+  // own and offers Undo, with `ask` it waits for the owner's click.
+  const autoRun =
+    isReadOp && (args.operation === 'remember' ? memoryMode === 'always' : readWithoutAsking);
 
   // Invalid writes go straight back to the pet: once a structure write's preview proves it has
   // problems, decline it automatically, once per tool id, in both modes, rather than making the

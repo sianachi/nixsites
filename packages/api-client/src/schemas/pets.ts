@@ -42,8 +42,9 @@ export const petSettingsSchema = z
       )
       .max(50)
       .nullish(),
-    /** The owner turned memory off: nothing is sent to the model and the pet cannot save more. */
-    memoryOff: z.boolean().nullish(),
+    /** off: nothing reaches the model or is saved; ask: each new memory waits for a click;
+     * always: saved without asking, with Undo. Settings saved before it read as ask. */
+    memoryMode: z.enum(['off', 'ask', 'always']).nullish(),
   })
   .refine((settings) => {
     const ids = new Set(settings.profiles.map((profile) => profile.id));

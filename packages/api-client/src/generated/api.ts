@@ -5158,8 +5158,8 @@ export interface components {
       /** @default false */
       inlineWriting: boolean;
       memories?: null | components['schemas']['PetMemory'][];
-      /** @default false */
-      memoryOff: boolean;
+      /** @default ask */
+      memoryMode: string;
     };
     PetSettingsResponse: {
       /** Format: int64 */

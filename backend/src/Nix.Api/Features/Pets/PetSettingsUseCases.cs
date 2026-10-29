@@ -84,6 +84,7 @@ public static class PetSettingsValidation
         }
 
         return memoryIds.Count <= MaxMemories
+            && settings.MemoryMode is PetMemoryModes.Off or PetMemoryModes.Ask or PetMemoryModes.Always
             && (!settings.Enabled || settings.ActivePetId is not null)
             && (settings.ActivePetId is null || ids.Contains(settings.ActivePetId.Value))
             && Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(settings, PetJsonContext.Default.PetSettings)) <= 60000;

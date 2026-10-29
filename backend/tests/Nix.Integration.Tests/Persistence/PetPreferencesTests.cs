@@ -164,7 +164,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             {
                 var dispatcher = work.Resolve<NixDispatcher>();
                 var saved = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
-                var settings = saved.Settings with { Memories = [new(Guid.NewGuid(), "Prefers metric units.", DateTimeOffset.UnixEpoch)], MemoryOff = off };
+                var settings = saved.Settings with { Memories = [new(Guid.NewGuid(), "Prefers metric units.", DateTimeOffset.UnixEpoch)], MemoryMode = off ? PetMemoryModes.Off : PetMemoryModes.Ask };
                 Assert.True((await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(saved.Revision, settings), Cancellation)).IsSuccess);
                 using var handler = new RecordingWorker();
                 using var http = new HttpClient(handler);

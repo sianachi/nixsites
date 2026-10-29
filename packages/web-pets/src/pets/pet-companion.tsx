@@ -1,3 +1,4 @@
+import { memoryModeOf } from './memory-mode';
 import { type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button } from '@nix/ui';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
@@ -338,6 +339,7 @@ function Companion({
             petName={pet.name}
             onChange={runtimeApi.setRuntime}
             onNeedsDecisionChange={setNeedsDecisionIds}
+            memoryMode={memoryModeOf(settings)}
           />
         </div>
       ) : null}

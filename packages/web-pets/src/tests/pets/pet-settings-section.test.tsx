@@ -599,7 +599,10 @@ describe('pet configuration', () => {
       'Likes tea.',
     );
     await user.click(screen.getByRole('button', { name: 'Add' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Let pets remember things about you' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'When a pet learns something about you' }),
+      "Don't remember",
+    );
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const saved = (save.mock.calls[0] as unknown as [PetSettingsResponse['settings']])[0];
@@ -607,6 +610,6 @@ describe('pet configuration', () => {
       'Prefers metric units.',
       'Likes tea.',
     ]);
-    expect(saved.memoryOff).toBe(true);
+    expect(saved.memoryMode).toBe('off');
   });
 });

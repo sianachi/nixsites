@@ -59,7 +59,8 @@ public sealed class PetSettingsTests
     public void Memories_are_bounded_unique_single_line_facts()
     {
         PetMemory Fact(string text) => new(Guid.NewGuid(), text, DateTimeOffset.UnixEpoch);
-        Assert.True(PetSettingsValidation.IsValid(Settings with { Memories = [Fact("Prefers metric units.")], MemoryOff = true }));
+        Assert.True(PetSettingsValidation.IsValid(Settings with { Memories = [Fact("Prefers metric units.")], MemoryMode = PetMemoryModes.Always }));
+        Assert.False(PetSettingsValidation.IsValid(Settings with { MemoryMode = "sometimes" }));
         Assert.True(PetSettingsValidation.IsValid(Settings with { Memories = [.. Enumerable.Range(0, 50).Select(i => Fact($"Fact {i}."))] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Memories = [.. Enumerable.Range(0, 51).Select(i => Fact($"Fact {i}."))] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Memories = [Fact(new string('a', 281))] }));

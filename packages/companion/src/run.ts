@@ -93,7 +93,7 @@ async function remember(
     throw new WorkspaceToolRefusal('A memory holds visible text only. Nothing was saved.');
   for (let attempt = 0; ; attempt += 1) {
     const { revision, settings } = await client.query(pets.settings(), options);
-    if (settings.memoryOff)
+    if (settings.memoryMode === 'off')
       throw new WorkspaceToolRefusal(
         'The owner has turned memory off in Settings > Pets. Nothing was saved.',
       );

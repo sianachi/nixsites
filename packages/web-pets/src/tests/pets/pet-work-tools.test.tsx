@@ -416,6 +416,61 @@ describe('companion work approvals', () => {
     owner.remove();
   });
 
+  it.each([
+    { memoryMode: 'ask', readWithoutAsking: true, asks: true },
+    { memoryMode: 'always', readWithoutAsking: false, asks: false },
+  ] as const)(
+    'a memory follows its own setting, not automatic reads: $memoryMode',
+    async ({ memoryMode, readWithoutAsking, asks }) => {
+      const tool = {
+        id: 'remember-1',
+        arguments: JSON.stringify({
+          operation: 'remember',
+          itemId: '',
+          parentId: '',
+          title: '',
+          markdown: 'Prefers metric units.',
+          query: '',
+          propertiesJson: '',
+          specJson: '',
+        }),
+        status: 'pending' as const,
+        result: '',
+        claimId: '',
+      };
+      const onResolve = vi.fn(() => Promise.resolve(true));
+      render(
+        <PetWorkToolCard
+          client={client as unknown as NixClient}
+          workspaceId="11111111-1111-4111-8111-111111111111"
+          petName="Cat"
+          busy={false}
+          readWithoutAsking={readWithoutAsking}
+          memoryMode={memoryMode}
+          applyWithoutAsking={false}
+          progress={undefined}
+          onBuildProgress={vi.fn()}
+          onProblemsChange={vi.fn()}
+          onPreviewFailedChange={vi.fn()}
+          followsLockedRead={false}
+          scrollAnchor={false}
+          onResolve={onResolve}
+          tool={tool}
+        />,
+        { wrapper: MemoryRouter },
+      );
+      if (asks) {
+        expect(await screen.findByRole('button', { name: 'Approve request' })).toBeVisible();
+        expect(onResolve).not.toHaveBeenCalled();
+      } else {
+        await vi.waitFor(() => {
+          expect(onResolve).toHaveBeenCalledWith(tool, true);
+        });
+        expect(screen.queryByRole('button', { name: 'Approve request' })).toBeNull();
+      }
+    },
+  );
+
   it("moves focus to the row after a click on a read's Approve request", async () => {
     const readRuntime = {
       ...runtime,

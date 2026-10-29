@@ -16,10 +16,24 @@ public sealed record PetProfile(Guid Id, string Name, string Appearance, string 
 /// <c>InlineWriting</c> is the separate opt-in for sending text the person selects in a note to
 /// the model provider from the editor. It defaults to off, and settings stored before it existed
 /// read as off. <c>Memories</c> are what the pet has learned about the owner, which the owner sees and
-/// edits in Settings; <c>MemoryOff</c> stops them reaching the model and the pet saving more. All three
-/// trail and default so a stored document without them still deserialises.
+/// edits in Settings. <c>MemoryMode</c> is <c>off</c> (nothing reaches the model and nothing is saved),
+/// <c>ask</c> (each new memory waits for the owner's click) or <c>always</c> (saved without asking, with
+/// Undo). All three trail and default so a stored document without them still deserialises.
 /// </remarks>
-public sealed record PetSettings(bool Enabled, Guid? ActivePetId, string Motion, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, bool MemoryOff = false);
+public sealed record PetSettings(bool Enabled, Guid? ActivePetId, string Motion, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, string MemoryMode = PetMemoryModes.Ask);
+
+/// <summary>How the pet may save memories.</summary>
+public static class PetMemoryModes
+{
+    /// <summary>No memories reach the model and none are saved.</summary>
+    public const string Off = "off";
+
+    /// <summary>Each new memory waits for the owner to approve it.</summary>
+    public const string Ask = "ask";
+
+    /// <summary>Memories are saved without asking, each with Undo.</summary>
+    public const string Always = "always";
+}
 
 /// <summary>One fact the pet saved, or the owner wrote, about the owner.</summary>
 public sealed record PetMemory(Guid Id, string Text, DateTimeOffset CreatedAt);

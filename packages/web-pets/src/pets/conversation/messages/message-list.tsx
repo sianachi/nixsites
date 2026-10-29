@@ -1,3 +1,4 @@
+import { memoryModeOf } from '../../memory-mode';
 import { type PetConnection, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react';
@@ -104,6 +105,7 @@ export function MessageList({
       applyWithoutAsking={applyWithoutAsking}
       applyExemptToolIds={applyExemptToolIds}
       noteScope={noteScope}
+      memoryMode={memoryModeOf(settings)}
     />
   );
   return (

@@ -288,7 +288,7 @@ describe('workspace-scoped companion tools', () => {
         profiles: [],
         inlineWriting: false,
         memories: [{ id: itemId, text: 'Works in London.', createdAt: '2026-10-29T00:00:00.000Z' }],
-        memoryOff: false,
+        memoryMode: 'ask',
         ...extra,
       },
     });
@@ -319,7 +319,7 @@ describe('workspace-scoped companion tools', () => {
       expect(JSON.parse((await remember(ports, 'works in london.', signal)).text)).toMatchObject({
         alreadyKnown: true,
       });
-      query.mockResolvedValue(settings({ memoryOff: true }));
+      query.mockResolvedValue(settings({ memoryMode: 'off' }));
       await expect(remember(ports, 'Likes tea.', signal)).rejects.toThrow('turned memory off');
       expect(execute).not.toHaveBeenCalled();
     });

@@ -1,8 +1,16 @@
 import type { PetSettings } from '@nix/api-client';
-import { Button, Checkbox, Field, Input, Text } from '@nix/ui';
+import { Button, Field, Input, Select, Text } from '@nix/ui';
+import type { PetMemoryMode } from './memory-mode';
 import { useState, type ReactElement } from 'react';
 
 type Memory = NonNullable<PetSettings['memories']>[number];
+
+const MODE_HINTS: Record<PetMemoryMode, string> = {
+  off: 'Nothing listed here is sent to your pets, and they save nothing new.',
+  ask: 'Each new fact waits for your approval in the chat. What is listed is sent with each new conversation.',
+  always:
+    'Pets save facts you tell them without asking, each with Undo. What is listed is sent with each new conversation.',
+};
 
 /** Core refuses more than this many memories, or a longer one. */
 const MAX_MEMORIES = 50;
@@ -14,12 +22,12 @@ const MAX_LENGTH = 280;
  */
 export function PetMemorySection({
   memories,
-  memoryOff,
+  mode,
   onChange,
 }: {
   readonly memories: readonly Memory[];
-  readonly memoryOff: boolean;
-  readonly onChange: (memories: Memory[], memoryOff: boolean) => void;
+  readonly mode: PetMemoryMode;
+  readonly onChange: (memories: Memory[], mode: PetMemoryMode) => void;
 }): ReactElement {
   const [adding, setAdding] = useState('');
   const full = memories.length >= MAX_MEMORIES;
@@ -29,7 +37,7 @@ export function PetMemorySection({
     if (!text || full) return;
     onChange(
       [...memories, { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }],
-      memoryOff,
+      mode,
     );
     setAdding('');
   }
@@ -39,19 +47,21 @@ export function PetMemorySection({
       <Text as="h3" id="pet-memory-heading" variant="h5">
         Memory
       </Text>
-      <div className="flex flex-col gap-1">
-        <Checkbox
-          label="Let pets remember things about you"
-          checked={!memoryOff}
-          onChange={(event) => {
-            onChange([...memories], !event.currentTarget.checked);
-          }}
-        />
-        <Text variant="note" tone="muted">
-          Pets save facts you tell them about yourself and send them with each new conversation.
-          Turning this off stops both; what is listed stays until you remove it.
-        </Text>
-      </div>
+      <Field label="When a pet learns something about you" hint={MODE_HINTS[mode]}>
+        {(control) => (
+          <Select
+            {...control}
+            value={mode}
+            onChange={(event) => {
+              onChange([...memories], event.currentTarget.value as PetMemoryMode);
+            }}
+          >
+            <option value="off">Don't remember</option>
+            <option value="ask">Ask before remembering</option>
+            <option value="always">Remember automatically</option>
+          </Select>
+        )}
+      </Field>
       {memories.length === 0 ? (
         <Text variant="note" tone="muted">
           Nothing remembered yet.
@@ -69,7 +79,7 @@ export function PetMemorySection({
                   const text = event.currentTarget.value;
                   onChange(
                     memories.map((entry) => (entry.id === memory.id ? { ...entry, text } : entry)),
-                    memoryOff,
+                    mode,
                   );
                 }}
               />
@@ -79,7 +89,7 @@ export function PetMemorySection({
                 onClick={() => {
                   onChange(
                     memories.filter((entry) => entry.id !== memory.id),
-                    memoryOff,
+                    mode,
                   );
                 }}
               >

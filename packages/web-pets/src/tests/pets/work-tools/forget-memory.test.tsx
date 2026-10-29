@@ -22,7 +22,7 @@ describe('forgetting a memory from the chat', () => {
           memory('Works in London.', '55555555-5555-4555-8555-555555555555'),
           memory('Prefers metric units.', '66666666-6666-4666-8666-666666666666'),
         ],
-        memoryOff: false,
+        memoryMode: 'always',
       },
     });
     client.execute.mockResolvedValue({ revision: 5, settings: {} });

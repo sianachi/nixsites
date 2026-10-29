@@ -20801,9 +20801,9 @@
               "$ref": "#/components/schemas/PetMemory"
             }
           },
-          "memoryOff": {
-            "type": "boolean",
-            "default": false
+          "memoryMode": {
+            "type": "string",
+            "default": "ask"
           }
         }
       },

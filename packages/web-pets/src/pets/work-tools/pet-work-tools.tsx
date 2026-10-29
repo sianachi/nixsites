@@ -1,3 +1,4 @@
+import type { PetMemoryMode } from '../memory-mode';
 import { pets, type PetConnection, type PetToolCall, type NixClient } from '@nix/api-client';
 import {
   READ_ONLY_OPERATIONS,
@@ -35,7 +36,10 @@ function PetWorkToolsView({
   applyExemptToolIds = [],
   client,
   noteScope,
+  memoryMode = 'ask',
 }: {
+  /** The owner's memory setting (Settings > Pets > Memory); `ask` when unknown. */
+  readonly memoryMode?: PetMemoryMode;
   readonly noteScope?: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
   readonly runtime: PetConnection;
   readonly workspaceId: string;
@@ -113,7 +117,7 @@ function PetWorkToolsView({
       if (!parsed.success) return true;
       if (
         READ_ONLY_OPERATIONS.has(parsed.data.operation) &&
-        (readWithoutAsking || parsed.data.operation === 'remember')
+        (parsed.data.operation === 'remember' ? memoryMode === 'always' : readWithoutAsking)
       )
         return false;
       return !(
@@ -352,6 +356,7 @@ function PetWorkToolsView({
           petName={petName}
           busy={busy}
           readWithoutAsking={readWithoutAsking}
+          memoryMode={memoryMode}
           applyWithoutAsking={appliesWithoutAsking(tool)}
           followsLockedRead={conversationReadLockedContent}
           progress={progress[tool.id]}

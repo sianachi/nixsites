@@ -30,9 +30,11 @@ follows semantic versioning (`0.x` pre-1.0).
   words, so a note that says "holiday" answers a question about a trip. It answers from those
   passages and links the notes they came from.
 - The companion remembers lasting facts and preferences you tell it about yourself, or ask it to
-  remember, and uses them in later conversations. Settings > Pets > Memory lists every fact: edit
-  or forget any of them, add your own, or turn memory off. It never saves what notes or other
-  people say, nor anything from a conversation that has read locked content.
+  remember, and uses them in later conversations. Settings > Pets > Memory lists every fact to
+  edit, forget or add to, and chooses whether pets don't remember, ask before remembering (the
+  default) or remember automatically, each saved fact then offering Undo in the chat. It never
+  saves what notes or other people say, nor anything from a conversation that has read locked
+  content.
 - Drag files and folders from your computer onto the Explorer. Dropping on an item puts them
   inside it, between items puts them beside it, and on empty space at the top of the workspace.
   A folder becomes a note holding its files and subfolders.
