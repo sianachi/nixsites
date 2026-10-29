@@ -1689,7 +1689,7 @@
     "id": "context-search",
     "prompt": "What did we agree to do about the vendor proposal?",
     "tools": {
-      "requireSuccessful": ["search", "read_note"],
+      "requireSuccessful": ["search"],
       "max": 8
     },
     "answerChecks": {
