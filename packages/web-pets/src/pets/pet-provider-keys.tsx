@@ -149,7 +149,7 @@ export function PetProviderKeys({
         {label} connection
       </Text>
       <details>
-        <summary className="min-h-11 cursor-pointer text-sm text-accent-text">
+        <summary className="min-h-11 cursor-pointer text-sm text-accent-text any-pointer-coarse:min-h-(--control-lg)">
           More<span className="sr-only"> about the {label} key</span>
         </summary>
         <Text variant="note" tone="muted">

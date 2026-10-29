@@ -416,7 +416,7 @@ function PetInstructions({
   const [open] = useState(value !== '');
   return (
     <details open={open}>
-      <summary className="min-h-11 cursor-pointer text-sm text-accent-text">
+      <summary className="min-h-11 cursor-pointer text-sm text-accent-text any-pointer-coarse:min-h-(--control-lg)">
         Instructions (optional)
       </summary>
       <Field

@@ -109,7 +109,7 @@ export function PetConnectionPanel({
       </Text>
       {!compact ? (
         <details>
-          <summary className="min-h-11 cursor-pointer text-sm text-accent-text">
+          <summary className="min-h-11 cursor-pointer text-sm text-accent-text any-pointer-coarse:min-h-(--control-lg)">
             More<span className="sr-only"> about the ChatGPT connection</span>
           </summary>
           <Text variant="note" tone="muted">
