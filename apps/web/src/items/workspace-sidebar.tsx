@@ -293,7 +293,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
         {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
         <Button
           variant="ghost"
-          className="ml-auto px-1.5 py-1 text-xs"
+          className="px-1.5 py-1 text-xs @xs:ml-auto"
           disabled={tree.status !== 'ready' || tree.isCreating}
           onClick={() => {
             void create(null, 'Untitled note', 'note');
