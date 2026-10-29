@@ -21,26 +21,20 @@ internal static class CommentEndpoints
         // CommentWatchGate. NixUnitOfWorkMiddleware keeps one connection open for the whole wait.
         group.MapGet("/watch", Watch).WithName("WatchComments")
             .Produces<CommentsResponse>().ProducesProblem(404).ProducesProblem(422).ProducesProblem(423).ProducesProblem(429);
-        group.MapPost("", Add).WithName("AddComment")
-            .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        group.MapPost("/{threadId:guid}/replies", Reply).WithName("ReplyComment")
-            .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        group.MapPatch("/{commentId:guid}", Edit).WithName("EditComment")
-            .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        group.MapPut("/{threadId:guid}/anchor", Anchor).WithName("SetCommentAnchor")
-            .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        group.MapPut("/{threadId:guid}/resolved", Resolve).WithName("SetCommentResolved")
-            .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+        group.MapPost("", Add).WithName("AddComment").ThreadWrite();
+        group.MapPost("/{threadId:guid}/replies", Reply).WithName("ReplyComment").ThreadWrite();
+        group.MapPatch("/{commentId:guid}", Edit).WithName("EditComment").ThreadWrite();
+        group.MapPut("/{threadId:guid}/anchor", Anchor).WithName("SetCommentAnchor").ThreadWrite();
+        group.MapPut("/{threadId:guid}/resolved", Resolve).WithName("SetCommentResolved").ThreadWrite();
         group.MapDelete("/{commentId:guid}", Delete).WithName("DeleteComment")
             .Produces(204).ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(423)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         return endpoints;
     }
+
+    private static RouteHandlerBuilder ThreadWrite(this RouteHandlerBuilder builder) => builder
+        .Produces<CommentThreadDto>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(423)
+        .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
     private static async Task<Results<Ok<CommentsResponse>, ProblemHttpResult>> List(Guid itemId, HttpContext context, [FromServices] NixDispatcher dispatcher)
     {

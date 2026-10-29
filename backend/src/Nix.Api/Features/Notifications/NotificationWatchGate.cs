@@ -15,7 +15,7 @@ namespace Nix.Features.Notifications;
 /// the default connection pool of one hundred. Both are per process: with several Core replicas a
 /// principal can hold two per replica (recorded in ADR-0051).
 /// </remarks>
-public sealed class NotificationWatchGate
+public class NotificationWatchGate
 {
     /// <summary>The most watches one principal may hold open at the same time.</summary>
     public const int MaxConcurrent = 2;

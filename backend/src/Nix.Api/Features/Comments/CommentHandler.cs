@@ -127,8 +127,8 @@ public sealed class CommentHandler(
             return Result.Failure<CommentThreadDto>(gate.Error);
         }
 
-        var root = await store.FindAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
-        if (root is null || root.ThreadId != root.Id)
+        var root = await RootAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
+        if (root is null)
         {
             return NotFound<CommentThreadDto>();
         }
@@ -159,17 +159,13 @@ public sealed class CommentHandler(
             return Result.Failure<CommentThreadDto>(valid.Error);
         }
 
-        var comment = await store.FindAsync(command.ItemId, command.CommentId, cancellationToken).ConfigureAwait(false);
-        if (comment is null)
+        var own = await OwnAsync(command.ItemId, command.CommentId, cancellationToken).ConfigureAwait(false);
+        if (own.IsFailure)
         {
-            return NotFound<CommentThreadDto>();
+            return Result.Failure<CommentThreadDto>(own.Error);
         }
 
-        if (comment.AuthorPrincipalId != Me)
-        {
-            return NotAuthor<CommentThreadDto>();
-        }
-
+        var comment = own.Value;
         comment.Body = command.Request!.Body;
         comment.EditedAt = clock.GetUtcNow();
         await store.SaveAsync(cancellationToken).ConfigureAwait(false);
@@ -192,8 +188,8 @@ public sealed class CommentHandler(
             return Invalid<CommentThreadDto>("An anchor needs a start and an end position.");
         }
 
-        var root = await store.FindAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
-        if (root is null || root.ThreadId != root.Id)
+        var root = await RootAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
+        if (root is null)
         {
             return NotFound<CommentThreadDto>();
         }
@@ -214,8 +210,8 @@ public sealed class CommentHandler(
             return Result.Failure<CommentThreadDto>(gate.Error);
         }
 
-        var root = await store.FindAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
-        if (root is null || root.ThreadId != root.Id)
+        var root = await RootAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
+        if (root is null)
         {
             return NotFound<CommentThreadDto>();
         }
@@ -236,19 +232,27 @@ public sealed class CommentHandler(
             return Result.Failure<Guid>(gate.Error);
         }
 
-        var comment = await store.FindAsync(command.ItemId, command.CommentId, cancellationToken).ConfigureAwait(false);
-        if (comment is null)
+        var own = await OwnAsync(command.ItemId, command.CommentId, cancellationToken).ConfigureAwait(false);
+        if (own.IsFailure)
         {
-            return NotFound<Guid>();
+            return Result.Failure<Guid>(own.Error);
         }
 
-        if (comment.AuthorPrincipalId != Me)
-        {
-            return NotAuthor<Guid>();
-        }
+        await store.DeleteAsync(command.ItemId, own.Value.Id, cancellationToken).ConfigureAwait(false);
+        return Result.Success(own.Value.Id);
+    }
 
-        await store.DeleteAsync(command.ItemId, comment.Id, cancellationToken).ConfigureAwait(false);
-        return Result.Success(comment.Id);
+    private async ValueTask<NoteComment?> RootAsync(ItemId itemId, Guid threadId, CancellationToken cancellationToken)
+    {
+        var root = await store.FindAsync(itemId, threadId, cancellationToken).ConfigureAwait(false);
+        return root is not null && root.ThreadId == root.Id ? root : null;
+    }
+
+    /// <summary>The comment, when it exists and the caller wrote it.</summary>
+    private async ValueTask<Result<NoteComment>> OwnAsync(ItemId itemId, Guid commentId, CancellationToken cancellationToken)
+    {
+        var comment = await store.FindAsync(itemId, commentId, cancellationToken).ConfigureAwait(false);
+        return comment is null ? NotFound<NoteComment>() : comment.AuthorPrincipalId != Me ? NotAuthor<NoteComment>() : Result.Success(comment);
     }
 
     private NoteComment New(Item item, Guid id, Guid threadId, string body, Guid[] mentions, string? start, string? end, string? quote) => new()
