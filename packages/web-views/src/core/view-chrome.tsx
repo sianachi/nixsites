@@ -325,7 +325,17 @@ export function useViewChrome<TValue>(args: ViewChromeArgs<TValue>): ViewChrome<
       node: (
         <EmptyPanel
           title="No loaded items match this title search"
-          detail={`None of the ${String(addressed.length)} loaded items remaining after filters match. Clear the search above to see them.${container.truncated ? ' More items have not been loaded.' : ''}`}
+          detail={`None of the ${String(addressed.length)} loaded items remaining after filters match.${container.truncated ? ' More items have not been loaded.' : ''}`}
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => {
+                viewState.setSearch('');
+              }}
+            >
+              Clear search
+            </Button>
+          }
         />
       ),
     };
@@ -394,7 +404,7 @@ function refreshNotice(
 ): ReactNode | null {
   if (refreshError !== null) {
     return (
-      <div role="alert" className="flex items-start gap-2 border border-divider p-3">
+      <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
         <Text variant="note" as="span" tone="accent">
           {refreshError} What is on screen is unaffected; try reloading {subject} again.
         </Text>
@@ -408,7 +418,7 @@ function refreshNotice(
         role="status"
         aria-live="polite"
         aria-busy={true}
-        className="flex items-start gap-2 border border-divider p-3"
+        className="flex items-start gap-2 rounded-md border border-divider p-3"
       >
         <Text variant="note" as="span" tone="muted">
           Refreshing {subject}

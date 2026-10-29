@@ -1,5 +1,5 @@
 import { createNixClient, type NixClient } from '@nix/api-client';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -108,7 +108,10 @@ describe('the shared view chrome', () => {
     );
     expect(screen.getByRole('status')).toHaveTextContent('No loaded items match this title search');
     expect(screen.getByRole('status')).toHaveTextContent('More items have not been loaded.');
-    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    // The empty state's own way out, rather than the search field's clear button above it.
+    await user.click(
+      within(screen.getByRole('status')).getByRole('button', { name: 'Clear search' }),
+    );
     expect(screen.getByText('Open one')).toBeVisible();
     expect(screen.queryByText('Done one')).not.toBeInTheDocument();
     expect(screen.getByText(/hidden by the current filters/)).toBeVisible();

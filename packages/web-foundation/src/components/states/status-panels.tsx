@@ -82,7 +82,8 @@ export function EmptyPanel({
   return (
     <PanelFrame>
       <div role="status" className={PANEL_BODY}>
-        <Icon icon={Inbox} className="text-accent" />
+        {/* Muted: an empty state's accent belongs to its action, when it has one. */}
+        <Icon icon={Inbox} className="text-muted" />
         <Text variant="h3">{title}</Text>
         <Text tone="muted">{detail}</Text>
         {action}
@@ -125,7 +126,7 @@ export function PartialNotice({
   readonly action?: ReactNode;
 }): ReactElement {
   return (
-    <div role="status" className="flex items-start gap-2 border border-divider p-3">
+    <div role="status" className="flex items-start gap-2 rounded-md border border-divider p-3">
       <Icon icon={TriangleAlert} className="size-4 text-accent-text" />
       <div className="flex flex-col items-start gap-1">
         <Text variant="note" as="span" tone="accent">

@@ -34,7 +34,13 @@ export function AsyncSection<T>({ status, children }: AsyncSectionProps<T>): Rea
         <ErrorPanel
           title={status.title}
           detail={status.detail}
-          action={retry === undefined ? undefined : <Button onClick={retry}>Try again</Button>}
+          action={
+            retry === undefined ? undefined : (
+              <Button variant="secondary" onClick={retry}>
+                Try again
+              </Button>
+            )
+          }
         />
       );
     }
