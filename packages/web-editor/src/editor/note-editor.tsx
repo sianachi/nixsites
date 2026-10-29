@@ -100,6 +100,7 @@ import {
 } from './writing-mode';
 import { WritingModeControl } from './writing-mode-control';
 import { TextWidthControl } from './text-width-control';
+import { NoteStatsFooter } from './note-stats';
 import { useTextWidthPreference } from './text-width-preference';
 
 /**
@@ -1395,6 +1396,7 @@ export function NoteEditor({
               <MentionBubble editor={editor} />
               {readOnly || stale ? null : <TableMenu editor={editor} />}
             </PaneViewport>
+            {hideToolbar || bodyUnavailable ? null : <NoteStatsFooter editor={editor} />}
 
             {itemRequest !== null && workspaceId !== undefined ? (
               <ItemInsertDialog
