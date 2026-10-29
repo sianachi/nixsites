@@ -70,7 +70,7 @@ export function DemoPage(): ReactNode {
             </MemoryRouter>
             <aside
               aria-label="Demo"
-              className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-divider bg-background px-4 py-2 sm:bottom-[max(1rem,env(safe-area-inset-bottom))]"
+              className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-divider bg-background px-4 py-2 sm:bottom-4"
             >
               <Text variant="note" as="p" tone="muted">
                 Demo · nothing is saved
