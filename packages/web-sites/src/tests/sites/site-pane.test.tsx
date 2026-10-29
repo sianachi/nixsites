@@ -3,8 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SitePane, SitePaneView } from '@nix/web-sites/sites/site-pane';
-import type { ItemSiteActions, ItemSiteState } from '@nix/web-sites/sites/use-item-site';
+import { SitePane, SitePaneView } from '../../sites/site-pane';
+import type { ItemSiteActions, ItemSiteState } from '../../sites/use-item-site';
 import {
   OLD_BUILD_ID,
   ROOT_ID,

@@ -3,8 +3,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SiteApprovalView } from '@nix/web-sites/sites/site-approval';
-import { SiteHostnamesView, checkErrorCopy } from '@nix/web-sites/sites/site-hostnames';
+import { SiteApprovalView } from '../../sites/site-approval';
+import { SiteHostnamesView, checkErrorCopy } from '../../sites/site-hostnames';
 import { publishedSite, site } from './site-fixtures';
 
 function hostnames(): Site {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SitePublishDialog } from '@nix/web-sites/sites/site-publish-dialog';
+import { SitePublishDialog } from '../../sites/site-publish-dialog';
 
 describe('the first-publish dialog', () => {
   it('names the address and refuses to publish until the disclosure is acknowledged', async () => {
