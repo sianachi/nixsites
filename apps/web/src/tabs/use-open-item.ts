@@ -11,7 +11,7 @@ import {
   type BesideRefusal,
 } from '@nix/web-platform/panes/pane-state';
 import { useSelectedItem, writeSelectedItem } from '@nix/web-platform/routing/selected-item';
-import { ownerOfItem } from './tab-ownership';
+import { ownerOfItem } from '@nix/web-platform/panes/tab-ownership';
 import { useTabStore, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 import { withViewTransition } from '@nix/web-foundation/lib/view-transition';
 

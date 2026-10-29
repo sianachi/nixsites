@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router';
 
 import { parsePanes } from '@nix/web-platform/panes/pane-state';
-import { tabsForPane } from './tab-ownership';
+import { tabsForPane } from '@nix/web-platform/panes/tab-ownership';
 import { useTabStore, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 
 /**

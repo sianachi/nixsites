@@ -381,6 +381,29 @@ FIXTURE
 expect 1 "templates importing a package outside its list (web-settings) fails" "imports a package above it" "up-settings.ts"
 
 reset_tree
+add packages/web-views/src/core/up-pets.ts <<'FIXTURE'
+import { x } from '@nix/web-pets/pets/catalog';
+export const u = x;
+FIXTURE
+expect 1 "views importing web-pets (upward) fails" "imports a package above it" "up-pets.ts"
+
+reset_tree
+add packages/web-pets/src/pets/ok.ts <<'FIXTURE'
+import { announce } from '@nix/web-foundation/a11y/announcer';
+import { VIEW_KINDS } from '@nix/web-views/core/view-kinds';
+import { Container } from '@nix/web-collections/core/use-container';
+export const d = [announce, VIEW_KINDS, Container];
+FIXTURE
+expect 0 "pets importing foundation, views and collections passes"
+
+reset_tree
+add packages/web-pets/src/pets/up-sites.ts <<'FIXTURE'
+import { x } from '@nix/web-sites/sites/site-copy';
+export const u = x;
+FIXTURE
+expect 1 "pets importing a package outside its list (web-sites) fails" "imports a package above it" "up-sites.ts"
+
+reset_tree
 add packages/web-other/src/fine.ts <<'FIXTURE'
 import { announce } from '@nix/web-foundation/a11y/announcer';
 export const a = announce;

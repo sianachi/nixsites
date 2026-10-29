@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
-import { useOpenChat } from '../../tabs/use-open-chat';
+import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
 const WORKSPACE = '00000000-0000-4000-8000-0000000000aa';

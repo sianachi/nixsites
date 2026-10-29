@@ -8,13 +8,13 @@ import { openUiPrompt, PROMPT_EXAMPLES } from '../../openui/prompt';
 describe('the pet’s OpenUI instructions', () => {
   it('match the catalog the Go worker embeds (regenerate with vitest -u)', async () => {
     await expect(openUiPrompt()).toMatchFileSnapshot(
-      '../../../../go-workers/internal/companion/catalog/openui.txt',
+      '../../../../../apps/go-workers/internal/companion/catalog/openui.txt',
     );
   });
 
   it('also write the library schema the chat evals parse replies with', async () => {
     await expect(`${JSON.stringify(nixLibrary.toJSONSchema(), null, 2)}\n`).toMatchFileSnapshot(
-      '../../../../../packages/structure-spec/evals/openui-library.json',
+      '../../../../structure-spec/evals/openui-library.json',
     );
   });
 

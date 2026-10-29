@@ -16,7 +16,7 @@ import { CompanionViewPair } from './companion-view-pair';
 // Loaded at the moment somebody opens a canvas, not before: the editor is deliberately outside
 // the application shell's first-load path, and a workspace of notes never needs it.
 // An artifact's live view carries the OpenUI renderer, its own chunk loaded on first open.
-const ArtifactView = lazy(() => import('../../openui/artifact-view'));
+const ArtifactView = lazy(() => import('@nix/web-pets/openui/artifact-view'));
 const CanvasEditor = lazy(async () => {
   const module = await import('@nix/web-editor/editor/canvas-editor');
   return { default: module.CanvasEditor };

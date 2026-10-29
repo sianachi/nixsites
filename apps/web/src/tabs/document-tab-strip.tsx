@@ -35,7 +35,7 @@ import {
   useTabStore,
 } from '@nix/web-foundation/lib/tab-store';
 import { useDocumentTabs } from './use-document-tabs';
-import { useOpenChat } from './use-open-chat';
+import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
 import { useOpenItem } from './use-open-item';
 
 /**

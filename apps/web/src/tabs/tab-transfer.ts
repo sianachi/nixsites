@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PANE_LIMIT } from '@nix/web-platform/panes/pane-params';
 import { closePaneParams, parsePanes } from '@nix/web-platform/panes/pane-state';
 import { writeSelectedItem } from '@nix/web-platform/routing/selected-item';
-import { ownerOfItem, tabsForPane } from './tab-ownership';
+import { ownerOfItem, tabsForPane } from '@nix/web-platform/panes/tab-ownership';
 import { isChatTabId, type OpenTab } from '@nix/web-foundation/lib/tab-store';
 
 export const TAB_TRANSFER_MIME = 'application/x-nix-document-tab';

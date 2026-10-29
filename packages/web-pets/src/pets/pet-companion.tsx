@@ -10,7 +10,7 @@ import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { openPanelPosition } from './panel-position';
 import { PetAvatar } from './pet-avatar';
 import { publishPetAttention } from './pet-attention';
-import { useOpenChat } from '../tabs/use-open-chat';
+import { useOpenChat } from './use-open-chat';
 import { usePanes } from '@nix/web-platform/panes/pane-state';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { usePetRuntime } from './use-pet-runtime';

@@ -45,7 +45,7 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
     },
   }),
 }));
-vi.mock('../../pets/use-pet-runtime', () => ({
+vi.mock('@nix/web-pets/pets/use-pet-runtime', () => ({
   usePetRuntime: (...args: unknown[]) => {
     mock.hook(...args);
     return {

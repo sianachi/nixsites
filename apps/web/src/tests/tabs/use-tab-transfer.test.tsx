@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 
 import { parsePanes } from '@nix/web-platform/panes/pane-state';
-import { tabsForPane } from '../../tabs/tab-ownership';
+import { tabsForPane } from '@nix/web-platform/panes/tab-ownership';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useTabTransfer } from '../../tabs/use-tab-transfer';
 

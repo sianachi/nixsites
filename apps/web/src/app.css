@@ -38,6 +38,7 @@
 @source '../../../packages/web-collections/src';
 @source '../../../packages/web-views/src';
 @source '../../../packages/web-templates/src';
+@source '../../../packages/web-pets/src';
 
 /*
  * Fonts are self-hosted, served from our own origin, and only the weights the

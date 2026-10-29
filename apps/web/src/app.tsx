@@ -7,7 +7,7 @@ import { AutomationsPage } from './automations/automations-page';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import { DailyNotePage } from './daily-notes/daily-note-page';
-import { NewChatNote } from './pets/chat/new-chat-note';
+import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
 import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
@@ -34,13 +34,13 @@ import {
 } from '@nix/web-workspaces/workspaces/workspace-group-page';
 import { ArchivedWorkspacesPage } from '@nix/web-workspaces/workspaces/archived-workspaces-page';
 import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { PetCompanion } from './pets/pet-companion';
+import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
 import { provideArtifactView } from '@nix/web-editor/editor/artifact-view-slot';
 import { registerViews } from './register-views';
 
 // An embedded artifact brings the OpenUI renderer, loaded only when one is embedded.
-provideArtifactView(lazy(() => import('./openui/artifact-view')));
+provideArtifactView(lazy(() => import('@nix/web-pets/openui/artifact-view')));
 
 // Every view kind, before the first render: the real app and the demo both mount from here.
 registerViews();

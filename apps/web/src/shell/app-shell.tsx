@@ -8,8 +8,8 @@ import { describeBulkDelete, executeBulkDelete } from '@nix/web-collections/item
 import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
 import { ItemDialogProvider } from '../items/item-dialog-provider';
 import { MobileNavigation } from './mobile-navigation';
-import { petAttentionText } from '../pets/pet-attention';
-import { usePetNavEntry } from '../pets/use-pet-nav-entry';
+import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
+import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
 import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 import { useRememberLocation } from '@nix/web-platform/pwa/use-remember-location';
 import { focusRing } from '@nix/ui';

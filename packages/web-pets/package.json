@@ -1,0 +1,259 @@
+{
+  "name": "@nix/web-pets",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Pets: the companion (chat, conversation, approvals, work tools) and OpenUI generated UI (renderer, library, designer, artifacts)",
+  "exports": {
+    "./openui/artifact-view": {
+      "types": "./src/openui/artifact-view.tsx",
+      "default": "./src/openui/artifact-view.tsx"
+    },
+    "./openui/custom-view": {
+      "types": "./src/openui/custom-view.tsx",
+      "default": "./src/openui/custom-view.tsx"
+    },
+    "./openui/custom-view-kind": {
+      "types": "./src/openui/custom-view-kind.tsx",
+      "default": "./src/openui/custom-view-kind.tsx"
+    },
+    "./openui/design-frame": {
+      "types": "./src/openui/design-frame.tsx",
+      "default": "./src/openui/design-frame.tsx"
+    },
+    "./openui/library": {
+      "types": "./src/openui/library.tsx",
+      "default": "./src/openui/library.tsx"
+    },
+    "./openui/openui-block": {
+      "types": "./src/openui/openui-block.tsx",
+      "default": "./src/openui/openui-block.tsx"
+    },
+    "./openui/program-designer": {
+      "types": "./src/openui/program-designer.tsx",
+      "default": "./src/openui/program-designer.tsx"
+    },
+    "./openui/program-editor": {
+      "types": "./src/openui/program-editor.tsx",
+      "default": "./src/openui/program-editor.tsx"
+    },
+    "./openui/save-artifact": {
+      "types": "./src/openui/save-artifact.tsx",
+      "default": "./src/openui/save-artifact.tsx"
+    },
+    "./pets/approval/approval-card": {
+      "types": "./src/pets/approval/approval-card.tsx",
+      "default": "./src/pets/approval/approval-card.tsx"
+    },
+    "./pets/approval/approval-frame": {
+      "types": "./src/pets/approval/approval-frame.tsx",
+      "default": "./src/pets/approval/approval-frame.tsx"
+    },
+    "./pets/approval/approval-summary": {
+      "types": "./src/pets/approval/approval-summary.tsx",
+      "default": "./src/pets/approval/approval-summary.tsx"
+    },
+    "./pets/approval/edit-request": {
+      "types": "./src/pets/approval/edit-request.tsx",
+      "default": "./src/pets/approval/edit-request.tsx"
+    },
+    "./pets/approval/write-text": {
+      "types": "./src/pets/approval/write-text.tsx",
+      "default": "./src/pets/approval/write-text.tsx"
+    },
+    "./pets/chat/chat-destination": {
+      "types": "./src/pets/chat/chat-destination.tsx",
+      "default": "./src/pets/chat/chat-destination.tsx"
+    },
+    "./pets/chat/chat-message": {
+      "types": "./src/pets/chat/chat-message.tsx",
+      "default": "./src/pets/chat/chat-message.tsx"
+    },
+    "./pets/chat/chat-save-to": {
+      "types": "./src/pets/chat/chat-save-to.tsx",
+      "default": "./src/pets/chat/chat-save-to.tsx"
+    },
+    "./pets/chat/chat-sources": {
+      "types": "./src/pets/chat/chat-sources.tsx",
+      "default": "./src/pets/chat/chat-sources.tsx"
+    },
+    "./pets/chat/chat-view": {
+      "types": "./src/pets/chat/chat-view.tsx",
+      "default": "./src/pets/chat/chat-view.tsx"
+    },
+    "./pets/chat/chat-view-kind": {
+      "types": "./src/pets/chat/chat-view-kind.tsx",
+      "default": "./src/pets/chat/chat-view-kind.tsx"
+    },
+    "./pets/chat/new-chat-note": {
+      "types": "./src/pets/chat/new-chat-note.tsx",
+      "default": "./src/pets/chat/new-chat-note.tsx"
+    },
+    "./pets/chat/save-insight-note": {
+      "types": "./src/pets/chat/save-insight-note.tsx",
+      "default": "./src/pets/chat/save-insight-note.tsx"
+    },
+    "./pets/conversation/composer/composer": {
+      "types": "./src/pets/conversation/composer/composer.tsx",
+      "default": "./src/pets/conversation/composer/composer.tsx"
+    },
+    "./pets/conversation/composer/context-chips": {
+      "types": "./src/pets/conversation/composer/context-chips.tsx",
+      "default": "./src/pets/conversation/composer/context-chips.tsx"
+    },
+    "./pets/conversation/conversation": {
+      "types": "./src/pets/conversation/conversation.tsx",
+      "default": "./src/pets/conversation/conversation.tsx"
+    },
+    "./pets/conversation/header/conversation-header": {
+      "types": "./src/pets/conversation/header/conversation-header.tsx",
+      "default": "./src/pets/conversation/header/conversation-header.tsx"
+    },
+    "./pets/conversation/messages/empty-state": {
+      "types": "./src/pets/conversation/messages/empty-state.tsx",
+      "default": "./src/pets/conversation/messages/empty-state.tsx"
+    },
+    "./pets/conversation/messages/message-editor": {
+      "types": "./src/pets/conversation/messages/message-editor.tsx",
+      "default": "./src/pets/conversation/messages/message-editor.tsx"
+    },
+    "./pets/conversation/messages/message-list": {
+      "types": "./src/pets/conversation/messages/message-list.tsx",
+      "default": "./src/pets/conversation/messages/message-list.tsx"
+    },
+    "./pets/conversation/messages/message-row": {
+      "types": "./src/pets/conversation/messages/message-row.tsx",
+      "default": "./src/pets/conversation/messages/message-row.tsx"
+    },
+    "./pets/conversation/panels/history-panel": {
+      "types": "./src/pets/conversation/panels/history-panel.tsx",
+      "default": "./src/pets/conversation/panels/history-panel.tsx"
+    },
+    "./pets/conversation/panels/settings-panel": {
+      "types": "./src/pets/conversation/panels/settings-panel.tsx",
+      "default": "./src/pets/conversation/panels/settings-panel.tsx"
+    },
+    "./pets/pet-avatar": {
+      "types": "./src/pets/pet-avatar.tsx",
+      "default": "./src/pets/pet-avatar.tsx"
+    },
+    "./pets/pet-body-edit-preview": {
+      "types": "./src/pets/pet-body-edit-preview.tsx",
+      "default": "./src/pets/pet-body-edit-preview.tsx"
+    },
+    "./pets/pet-chat-viewport": {
+      "types": "./src/pets/pet-chat-viewport.tsx",
+      "default": "./src/pets/pet-chat-viewport.tsx"
+    },
+    "./pets/pet-companion": {
+      "types": "./src/pets/pet-companion.tsx",
+      "default": "./src/pets/pet-companion.tsx"
+    },
+    "./pets/pet-connection-panel": {
+      "types": "./src/pets/pet-connection-panel.tsx",
+      "default": "./src/pets/pet-connection-panel.tsx"
+    },
+    "./pets/pet-device-settings": {
+      "types": "./src/pets/pet-device-settings.tsx",
+      "default": "./src/pets/pet-device-settings.tsx"
+    },
+    "./pets/pet-history": {
+      "types": "./src/pets/pet-history.tsx",
+      "default": "./src/pets/pet-history.tsx"
+    },
+    "./pets/pet-message-text": {
+      "types": "./src/pets/pet-message-text.tsx",
+      "default": "./src/pets/pet-message-text.tsx"
+    },
+    "./pets/pet-provider-keys": {
+      "types": "./src/pets/pet-provider-keys.tsx",
+      "default": "./src/pets/pet-provider-keys.tsx"
+    },
+    "./pets/pet-settings-section": {
+      "types": "./src/pets/pet-settings-section.tsx",
+      "default": "./src/pets/pet-settings-section.tsx"
+    },
+    "./pets/pet-story-fixtures": {
+      "types": "./src/pets/pet-story-fixtures.tsx",
+      "default": "./src/pets/pet-story-fixtures.tsx"
+    },
+    "./pets/pet-structure-preview": {
+      "types": "./src/pets/pet-structure-preview.tsx",
+      "default": "./src/pets/pet-structure-preview.tsx"
+    },
+    "./pets/work-tools/activity-rows": {
+      "types": "./src/pets/work-tools/activity-rows.tsx",
+      "default": "./src/pets/work-tools/activity-rows.tsx"
+    },
+    "./pets/work-tools/incomplete-build": {
+      "types": "./src/pets/work-tools/incomplete-build.tsx",
+      "default": "./src/pets/work-tools/incomplete-build.tsx"
+    },
+    "./pets/work-tools/pending-write-card": {
+      "types": "./src/pets/work-tools/pending-write-card.tsx",
+      "default": "./src/pets/work-tools/pending-write-card.tsx"
+    },
+    "./pets/work-tools/pet-work-tools": {
+      "types": "./src/pets/work-tools/pet-work-tools.tsx",
+      "default": "./src/pets/work-tools/pet-work-tools.tsx"
+    },
+    "./pets/work-tools/tool-card": {
+      "types": "./src/pets/work-tools/tool-card.tsx",
+      "default": "./src/pets/work-tools/tool-card.tsx"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/companion": "workspace:*",
+    "@nix/editor-schema": "workspace:*",
+    "@nix/markdown": "workspace:*",
+    "@nix/site-render": "workspace:*",
+    "@nix/structure-spec": "workspace:*",
+    "@nix/ui": "workspace:*",
+    "@nix/web-collections": "workspace:*",
+    "@nix/web-editor": "workspace:*",
+    "@nix/web-foundation": "workspace:*",
+    "@nix/web-platform": "workspace:*",
+    "@nix/web-settings": "workspace:*",
+    "@nix/web-views": "workspace:*",
+    "@nix/web-workspaces": "workspace:*",
+    "@openuidev/lang-core": "1.0.1",
+    "@openuidev/react-lang": "1.0.1",
+    "@tiptap/pm": "^3.29.0",
+    "lucide-react": "^1.27.0",
+    "react-router": "^7.18.1",
+    "y-prosemirror": "^1.3.7",
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.8",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
+  }
+}

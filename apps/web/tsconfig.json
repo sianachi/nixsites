@@ -41,6 +41,9 @@
     },
     {
       "path": "../../packages/web-templates"
+    },
+    {
+      "path": "../../packages/web-pets"
     }
   ]
 }

@@ -26,9 +26,9 @@ import {
   type KnownSmartList,
 } from '@nix/web-views/query/known-smart-lists';
 
-import { petAttentionText } from '../pets/pet-attention';
+import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
-import { usePetNavEntry } from '../pets/use-pet-nav-entry';
+import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**

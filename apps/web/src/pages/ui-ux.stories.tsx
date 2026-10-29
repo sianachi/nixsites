@@ -3,7 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { useState, type ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { AudioPlayer } from '@nix/web-foundation/audio/audio-player';
-import { PetDeviceSettings } from '../pets/pet-device-settings';
+import { PetDeviceSettings } from '@nix/web-pets/pets/pet-device-settings';
 import { EpubReader } from '@nix/web-editor/plugins/epub-reader';
 import { PropertyInput } from '@nix/web-collections/properties/property-input';
 import { InlineAiPanel } from '@nix/web-editor/editor/inline-ai/inline-ai-panel';

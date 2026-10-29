@@ -19,7 +19,7 @@ import { EditorPreferencesSection } from '@nix/web-settings/settings/editor/edit
 import { PreferencesSection } from '@nix/web-settings/settings/preferences/PreferencesSection';
 import { NotificationsSection } from '@nix/web-settings/settings/notifications/notifications-section';
 import { WorkspaceManagementSection } from '@nix/web-workspaces/workspaces/workspace-management-section';
-import { PetSettingsSection } from '../pets/pet-settings-section';
+import { PetSettingsSection } from '@nix/web-pets/pets/pet-settings-section';
 import { useCapabilities, type Capabilities } from '@nix/web-platform/session/capabilities-context';
 import {
   DEFAULT_SETTINGS_TAB,

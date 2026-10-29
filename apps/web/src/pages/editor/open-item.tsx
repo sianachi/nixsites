@@ -27,7 +27,7 @@ import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishin
 import type { ShellContext } from '../../shell/shell-context';
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
 import { useItemHasSite } from '@nix/web-sites/sites/use-item-site';
-import { useOpenChat } from '../../tabs/use-open-chat';
+import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
 import { DOCUMENT_VIEW, type View } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '@nix/web-views/core/container-view';
 import { useContainer } from '@nix/web-collections/core/use-container';

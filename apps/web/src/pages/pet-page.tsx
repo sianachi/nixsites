@@ -14,8 +14,8 @@ import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { paneColumn } from '@nix/web-foundation/layout/regions';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
-import { Conversation } from '../pets/conversation/conversation';
-import { usePetRuntime } from '../pets/use-pet-runtime';
+import { Conversation } from '@nix/web-pets/pets/conversation/conversation';
+import { usePetRuntime } from '@nix/web-pets/pets/use-pet-runtime';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 

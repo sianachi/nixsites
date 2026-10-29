@@ -1,4 +1,4 @@
-import { NewChatNote } from '../pets/chat/new-chat-note';
+import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
 import {
   Button,
   ContextMenu,

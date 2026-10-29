@@ -13,7 +13,7 @@ import { type StorybookConfig } from '@storybook/react-vite';
 const config: StorybookConfig = {
   stories: [
     '../src/**/*.stories.@(ts|tsx)',
-    '../../../apps/web/src/pets/*.stories.tsx',
+    '../../../packages/web-pets/src/pets/*.stories.tsx',
     '../../../apps/web/src/shell/notifications/*.stories.tsx',
     '../../../apps/web/src/shell/*.stories.tsx',
     '../../../packages/web-editor/src/editor/*.stories.tsx',
@@ -26,7 +26,7 @@ const config: StorybookConfig = {
     '../../../packages/web-templates/src/templates/*.stories.tsx',
     '../../../packages/web-views/src/chart/*.stories.tsx',
     '../../../packages/web-views/src/core/*.stories.tsx',
-    '../../../apps/web/src/pets/chat/*.stories.tsx',
+    '../../../packages/web-pets/src/pets/chat/*.stories.tsx',
     '../../../packages/web-views/src/calendar/*.stories.tsx',
     '../../../packages/web-views/src/sheet/*.stories.tsx',
     '../../../packages/web-views/src/spreadsheet/*.stories.tsx',

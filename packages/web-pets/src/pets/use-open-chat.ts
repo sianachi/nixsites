@@ -6,7 +6,7 @@ import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { CHAT_PARAM, focusPane, paneParam } from '@nix/web-platform/panes/pane-params';
 import { parsePanes } from '@nix/web-platform/panes/pane-state';
-import { ownerOfItem } from './tab-ownership';
+import { ownerOfItem } from '@nix/web-platform/panes/tab-ownership';
 import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
 
 /**

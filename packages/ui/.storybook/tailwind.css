@@ -27,6 +27,7 @@
 @source '../../web-collections/src';
 @source '../../web-views/src';
 @source '../../web-templates/src';
+@source '../../web-pets/src';
 
 /* The ground: the light technical paper the whole system sits on. */
 body {
