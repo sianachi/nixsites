@@ -1,5 +1,5 @@
 import { isCanceledError } from '@nix/api-client';
-import { Blueprint, Button, Dialog, Field, Icon, Input, Text } from '@nix/ui';
+import { Button, Dialog, Field, Icon, Input, Text } from '@nix/ui';
 import { FileUp, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -19,6 +19,11 @@ import { templateFailure } from '../use-templates';
 import { TemplateCard } from './template-card';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
+import {
+  EmptyPanel,
+  ErrorPanel,
+  LoadingPanel,
+} from '@nix/web-foundation/components/states/status-panels';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 interface DuplicateAttempt {
@@ -235,7 +240,7 @@ export function TemplateLibraryPage(): ReactNode {
           className={`flex min-w-0 flex-col gap-3 @3xl/library:flex-row @3xl/library:items-end @3xl/library:justify-between ${zen ? 'pr-16' : ''}`}
         >
           <div className="flex min-w-0 max-w-2xl flex-col gap-1">
-            <Text variant="h4" as="h1">
+            <Text variant="h3" as="h1">
               Templates
             </Text>
           </div>
@@ -307,15 +312,19 @@ export function TemplateLibraryPage(): ReactNode {
         )}
 
         {library.status === 'loading' ? (
-          <LibraryNotice title="Loading templates" detail="Reading the shared workspace library." />
+          <LoadingPanel label="templates" />
         ) : library.status === 'error' ? (
-          <LibraryNotice title="Templates could not be loaded" detail={library.error ?? ''}>
-            <Button variant="secondary" onClick={library.reload}>
-              <Icon icon={RefreshCw} size="sm" /> Try again
-            </Button>
-          </LibraryNotice>
+          <ErrorPanel
+            title="Templates could not be loaded"
+            detail={library.error ?? ''}
+            action={
+              <Button variant="secondary" onClick={library.reload}>
+                <Icon icon={RefreshCw} size="sm" /> Try again
+              </Button>
+            }
+          />
         ) : library.templates.length === 0 ? (
-          <LibraryNotice
+          <EmptyPanel
             title="No templates yet"
             detail={
               library.capabilities.canManage
@@ -324,9 +333,21 @@ export function TemplateLibraryPage(): ReactNode {
             }
           />
         ) : visible.length === 0 ? (
-          <LibraryNotice
+          <EmptyPanel
             title="No templates match"
             detail="Try a different name, description, or view type."
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('q');
+                  setSearchParams(next, { replace: true });
+                }}
+              >
+                Clear search
+              </Button>
+            }
           />
         ) : (
           <div className="grid min-w-0 gap-3 @3xl/library:grid-cols-2 @6xl/library:grid-cols-3">
@@ -397,25 +418,5 @@ export function TemplateLibraryPage(): ReactNode {
         )}
       </Dialog>
     </div>
-  );
-}
-
-function LibraryNotice({
-  title,
-  detail,
-  children,
-}: {
-  readonly title: string;
-  readonly detail: string;
-  readonly children?: ReactNode;
-}): ReactNode {
-  return (
-    <Blueprint className="flex flex-col items-start gap-3 p-3">
-      <Text variant="h4" as="h2">
-        {title}
-      </Text>
-      <Text tone="muted">{detail}</Text>
-      {children}
-    </Blueprint>
   );
 }

@@ -99,6 +99,7 @@ export function TemplateCard({
             <div className="flex flex-wrap items-center gap-2">
               {template.capabilities.canApply ? (
                 <Button
+                  variant="secondary"
                   aria-label={`Use ${template.title} template`}
                   className="w-full sm:w-auto"
                   onClick={onUse}
@@ -108,7 +109,7 @@ export function TemplateCard({
               ) : null}
               {template.capabilities.canEdit ? (
                 <Button
-                  variant="secondary"
+                  variant="subtle"
                   aria-label={`Edit ${template.title} template`}
                   onClick={onEdit}
                 >
@@ -117,7 +118,7 @@ export function TemplateCard({
               ) : null}
               {canDuplicate ? (
                 <Button
-                  variant="secondary"
+                  variant="subtle"
                   aria-label={`Duplicate ${template.title}`}
                   disabled={duplicateDisabled}
                   onClick={onDuplicate}
