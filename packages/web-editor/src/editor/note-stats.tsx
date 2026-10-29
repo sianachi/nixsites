@@ -26,9 +26,9 @@ export function readNoteStats(doc: ProseMirrorNode): NoteStats {
     if (!node.isTextblock) return true;
     let text = '';
     node.forEach((child) => {
-      if (child.isText && !child.marks.some((m) => m.type.name === 'suggestionDelete')) {
-        text += child.text;
-      }
+      if (child.isText) {
+        if (!child.marks.some((m) => m.type.name === 'suggestionDelete')) text += child.text;
+      } else if (child.isLeaf) text += ' '; // hard breaks and other inline leaves separate words
     });
     words += text.split(/\s+/).filter(Boolean).length;
     if (node.type.name === 'heading') {
@@ -77,17 +77,19 @@ export function NoteStatsFooter({ editor }: { readonly editor: Editor }): ReactN
             </Text>
           ) : (
             <ul className="flex max-h-72 flex-col overflow-y-auto">
-              {stats.outline.map((entry) => (
+              {stats.outline.map((entry, index) => (
                 <li key={entry.pos} style={{ paddingLeft: `${(entry.level - 1) * 12}px` }}>
                   <Button
                     variant="subtle"
                     className="w-full justify-start"
                     onClick={() => {
                       close();
+                      // Looked up in the live doc: the list can be up to the debounce stale.
+                      const pos = readNoteStats(editor.state.doc).outline[index]?.pos ?? entry.pos;
                       editor
                         .chain()
                         .focus()
-                        .setTextSelection(entry.pos + 1)
+                        .setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
                         .scrollIntoView()
                         .run();
                     }}

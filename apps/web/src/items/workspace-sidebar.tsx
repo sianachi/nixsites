@@ -217,7 +217,17 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     readonly title: string;
   } | null>(null);
 
-  async function uploadFiles(
+  /** Drops queue behind each other: two pools at once would double the concurrency cap. */
+  const uploadQueue = useRef<Promise<void>>(Promise.resolve());
+  function uploadFiles(
+    dropped: readonly (File | FileSystemEntry)[],
+    parentId: string | null,
+  ): Promise<void> {
+    uploadQueue.current = uploadQueue.current.then(() => runUpload(dropped, parentId));
+    return uploadQueue.current;
+  }
+
+  async function runUpload(
     dropped: readonly (File | FileSystemEntry)[],
     parentId: string | null,
   ): Promise<void> {
@@ -225,7 +235,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     setUploading(true);
     setRefusal(null);
     try {
-      const count = await uploadEntries(dropped, parentId, {
+      const outcome = await uploadEntries(dropped, parentId, {
         createFolder: async (title, folderParentId) =>
           (
             await client.execute(
@@ -251,17 +261,20 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
           await fileResources.uploadAndCompleteFile(client, upload, file);
         },
       });
-      await tree.reload();
-      announce(count === 1 ? 'File uploaded.' : `${String(count)} files uploaded.`);
+      const { folders, uploaded, failed, error } = outcome;
+      if (failed > 0) {
+        setRefusal(
+          `${String(uploaded)} uploaded, ${String(failed)} failed: ${uploadErrorText(error)}`,
+        );
+      } else if (uploaded > 0) {
+        announce(uploaded === 1 ? 'File uploaded.' : `${String(uploaded)} files uploaded.`);
+      } else if (folders > 0) {
+        announce(folders === 1 ? 'Folder created.' : `${String(folders)} folders created.`);
+      }
     } catch (error) {
-      setRefusal(
-        isNixApiError(error)
-          ? (error.detail ?? 'The file could not be uploaded.')
-          : error instanceof Error
-            ? error.message
-            : 'The file could not be uploaded.',
-      );
+      setRefusal(uploadErrorText(error));
     } finally {
+      await tree.reload();
       setUploading(false);
       if (uploadInputRef.current !== null) uploadInputRef.current.value = '';
     }
@@ -299,10 +312,10 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       aria-label="Explorer"
       // Rows handle their own OS drops; whatever reaches here landed on empty space: the root.
       onDragOver={(event) => {
-        if (dragged === null && event.dataTransfer.types.includes('Files')) event.preventDefault();
+        if (event.dataTransfer.types.includes('Files')) event.preventDefault();
       }}
       onDrop={(event) => {
-        if (dragged !== null || !event.dataTransfer.types.includes('Files')) return;
+        if (!event.dataTransfer.types.includes('Files')) return;
         event.preventDefault();
         void uploadFiles(collectDropped(event.dataTransfer), null);
       }}
@@ -662,6 +675,11 @@ interface TreeNodeProps extends TreeBodyProps {
   readonly depth: number;
 }
 
+function uploadErrorText(error: unknown): string {
+  if (isNixApiError(error)) return error.detail ?? 'The file could not be uploaded.';
+  return error instanceof Error ? error.message : 'The file could not be uploaded.';
+}
+
 /**
  * Where on a row a drop would land.
  *
@@ -815,7 +833,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     const landing = zone;
     setZone(null);
 
-    if (dragged === null && event.dataTransfer.types.includes('Files')) {
+    if (event.dataTransfer.types.includes('Files')) {
       event.stopPropagation(); // handled here, not as an empty-space drop on the sidebar
       onDropFiles(
         collectDropped(event.dataTransfer),

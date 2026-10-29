@@ -27,9 +27,20 @@ const readAll = async (reader: FileSystemDirectoryReader): Promise<FileSystemEnt
   }
 };
 
+/** OS litter and trees nobody means to upload, skipped by name. */
+const SKIPPED_NAMES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', '.git', 'node_modules']);
+
+export interface UploadOutcome {
+  readonly folders: number;
+  readonly uploaded: number;
+  /** Files that failed or were never started after the first failure. */
+  readonly failed: number;
+  readonly error: unknown;
+}
+
 /**
  * Creates a note per dropped folder (containers are plain notes) and uploads every file under its
- * parent through a bounded pool. Returns how many files went up; the first failure aborts.
+ * parent through a bounded pool. The first upload failure stops the pool from starting more; the outcome counts what went up.
  */
 export async function uploadEntries(
   entries: readonly (File | FileSystemEntry)[],
@@ -38,9 +49,11 @@ export async function uploadEntries(
     readonly createFolder: (name: string, parentId: string | null) => Promise<string>;
     readonly uploadFile: (file: File, parentId: string | null) => Promise<void>;
   },
-): Promise<number> {
+): Promise<UploadOutcome> {
+  let folders = 0;
   const files: { file: File; parentId: string | null }[] = [];
   const walk = async (entry: File | FileSystemEntry, parentId: string | null): Promise<void> => {
+    if (SKIPPED_NAMES.has(entry.name)) return;
     if (entry instanceof File) files.push({ file: entry, parentId });
     else if (entry.isFile) {
       const file = await new Promise<File>((resolve, reject) => {
@@ -49,6 +62,7 @@ export async function uploadEntries(
       files.push({ file, parentId });
     } else {
       const id = await io.createFolder(entry.name, parentId);
+      folders++;
       for (const child of await readAll((entry as FileSystemDirectoryEntry).createReader())) {
         await walk(child, id);
       }
@@ -57,13 +71,22 @@ export async function uploadEntries(
   for (const entry of entries) await walk(entry, rootParentId);
 
   let cursor = 0;
+  let uploaded = 0;
+  let failed = false;
+  let error: unknown = null;
   const worker = async (): Promise<void> => {
-    for (;;) {
+    while (!failed) {
       const next = files[cursor++];
       if (next === undefined) return;
-      await io.uploadFile(next.file, next.parentId);
+      try {
+        await io.uploadFile(next.file, next.parentId);
+        uploaded++;
+      } catch (caught) {
+        if (!failed) error = caught;
+        failed = true;
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, files.length) }, worker));
-  return files.length;
+  return { folders, uploaded, failed: files.length - uploaded, error };
 }

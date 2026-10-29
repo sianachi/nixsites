@@ -50,9 +50,16 @@ provideEmbeddedViews(({ viewId, onViewChange, document }) => (
   </div>
 ));
 
-function Harness({ view = null }: { readonly view?: string | null }) {
+function Harness({
+  view = null,
+  editable = true,
+}: {
+  readonly view?: string | null;
+  readonly editable?: boolean;
+}) {
   const editor = useEditor({
     extensions,
+    editable,
     onUpdate: harness.parentUpdate,
     content: {
       type: 'doc',
@@ -94,7 +101,17 @@ describe('an embedded note with views', () => {
     expect(updated.editor.getJSON().content[0]?.attrs.view).toBe('board');
     unmount();
 
-    render(<Harness view="board" />);
+    // Remounted from the written node, not a hand-set prop.
+    render(<Harness view={updated.editor.getJSON().content[0]?.attrs.view ?? null} />);
     expect(await screen.findByText('Showing board')).toBeVisible();
+  });
+
+  it("keeps a read-only host's choice local, off the node", async () => {
+    render(<Harness editable={false} />);
+    expect(await screen.findByText('Showing default')).toBeVisible();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Pick board' }));
+    expect(await screen.findByText('Showing board')).toBeVisible();
+    expect(harness.parentUpdate).not.toHaveBeenCalled();
   });
 });

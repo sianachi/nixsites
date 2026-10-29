@@ -11,6 +11,11 @@ import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 
 /** Dropping files and folders from the OS onto the Explorer uploads them under the row's item. */
 
+const announced = vi.hoisted(() => ({ messages: [] as string[] }));
+vi.mock('@nix/web-foundation/a11y/announcer', () => ({
+  announce: (message: string) => announced.messages.push(message),
+}));
+
 const calls = vi.hoisted(() => ({
   execute: [] as { operation: string; body: Record<string, unknown> }[],
 }));
@@ -168,5 +173,31 @@ describe('dropping OS files on the Explorer', () => {
     });
     expect(calls.execute[0]?.body).toMatchObject({ type: 'note', title: 'Docs', parentId: null });
     expect(calls.execute[1]?.body).toMatchObject({ parentId: 'folder-id', fileName: 'b.txt' });
+  });
+
+  it('skips OS junk and announces a folder-only drop as folders created', async () => {
+    calls.execute.length = 0;
+    const tree = treeOf();
+    renderSidebar(tree);
+    const aside = screen.getByRole('complementary', { name: 'Explorer' });
+    const folder = dirEntry('Empty', [fileEntry(new File(['x'], '.DS_Store'))]);
+    fireEvent.drop(aside, { dataTransfer: dropOf(folder) });
+    await waitFor(() => {
+      expect(announced.messages).toContain('Folder created.');
+    });
+    expect(calls.execute.map((c) => c.operation)).toEqual(['items.create']);
+  });
+
+  it('treats a file drop as an upload even when a stale tree drag id is set', async () => {
+    calls.execute.length = 0;
+    renderSidebar(treeOf());
+    const row = screen.getByRole('button', { name: 'First' }).parentElement;
+    if (row === null) throw new Error('no row');
+    fireEvent.dragStart(row, { dataTransfer: { setData: () => undefined, effectAllowed: '' } });
+    const dataTransfer = dropOf(fileEntry(new File(['x'], 'a.txt')));
+    fireEvent.drop(row, { dataTransfer });
+    await waitFor(() => {
+      expect(calls.execute.map((c) => c.operation)).toContain('files.upload.begin');
+    });
   });
 });

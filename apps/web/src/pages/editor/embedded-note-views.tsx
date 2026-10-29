@@ -4,6 +4,7 @@ import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import { useContainer } from '@nix/web-collections/core/use-container';
 import { LocalViewStateContext } from '@nix/web-collections/core/view-state';
 import type { EmbeddedViewsProps } from '@nix/web-editor/editor/embedded-views-slot';
+import { SkeletonLines } from '@nix/ui';
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { ContainerView } from '@nix/web-views/core/container-view';
@@ -35,6 +36,10 @@ export function EmbeddedNoteViews({
     showChildren,
     showingDocument,
   } = resolveActiveView(container.views, viewId);
+  // A remembered view that has not loaded yet: the document would flash before it is replaced.
+  if (container.status === 'loading' && viewId !== null && viewId !== DOCUMENT_VIEW) {
+    return <SkeletonLines label="Loading this view…" className="w-full" />;
+  }
   if (views.length === 0) return document;
 
   const open = (id: string): void => {

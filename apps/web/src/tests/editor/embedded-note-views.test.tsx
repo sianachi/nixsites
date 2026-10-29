@@ -13,8 +13,12 @@ const views = [
   aView({ id: 'by-status', name: 'By status', kind: 'board', groupBy: 'status' }),
 ];
 
+const container = vi.hoisted(() => ({ status: 'ready' as string }));
 vi.mock('@nix/web-collections/core/use-container', () => ({
-  useContainer: () => ({ views: { views, unrenderable: [], default: 'all', hideDocument: false } }),
+  useContainer: () => ({
+    status: container.status,
+    views: { views, unrenderable: [], default: 'all', hideDocument: false },
+  }),
 }));
 vi.mock('@nix/web-platform/routing/selected-item', () => ({
   useSelectedItem: () => ({ select: vi.fn() }),
@@ -39,6 +43,13 @@ function Embed({ initial }: { readonly initial: string | null }) {
 }
 
 describe('an embedded note with views', () => {
+  it('shows a loading state, not the document, while a remembered view loads', () => {
+    container.status = 'loading';
+    render(<Embed initial="by-status" />);
+    expect(screen.queryByText('The note body')).toBeNull();
+    container.status = 'ready';
+  });
+
   it('switches between the document and its views, and reports the choice', async () => {
     stubViewport(true);
     const user = userEvent.setup();

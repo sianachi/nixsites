@@ -35,6 +35,23 @@ describe('readNoteStats', () => {
     expect(readNoteStats(marked).words).toBe(1);
   });
 
+  it('counts a hard break as a word separator', () => {
+    const broken = nixSchema.nodeFromJSON({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'foo' },
+            { type: 'hardBreak' },
+            { type: 'text', text: 'bar' },
+          ],
+        },
+      ],
+    });
+    expect(readNoteStats(broken).words).toBe(2);
+  });
+
   it('lists headings with level and the position of the heading node', () => {
     const { outline } = readNoteStats(doc);
     expect(outline.map((h) => [h.level, h.text])).toEqual([
