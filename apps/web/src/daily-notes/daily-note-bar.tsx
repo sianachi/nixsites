@@ -79,7 +79,7 @@ export function DailyNoteBar({
         className="shrink-0 border-b border-divider px-3 py-1"
       >
         <Button
-          variant="ghost"
+          variant="subtle"
           className="min-w-0 w-full justify-between gap-2"
           aria-haspopup="dialog"
           aria-label={`Day navigation, ${dailyNoteLabel(date)}`}
@@ -112,7 +112,7 @@ export function DailyNoteBar({
               />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   aria-label="Previous day"
                   disabled={previous === null}
                   onClick={() => {
@@ -123,7 +123,7 @@ export function DailyNoteBar({
                   Previous
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   disabled={today === null || today === date}
                   onClick={() => {
                     go(today);
@@ -132,7 +132,7 @@ export function DailyNoteBar({
                   Today
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   aria-label="Next day"
                   disabled={next === null}
                   onClick={() => {
@@ -165,7 +165,7 @@ export function DailyNoteBar({
         </Text>
         <div className="flex items-center gap-1">
           <Button
-            variant="icon"
+            variant="subtle"
             aria-label="Previous day"
             disabled={previous === null}
             onClick={() => {
@@ -175,7 +175,7 @@ export function DailyNoteBar({
             <Icon icon={ChevronLeft} size="sm" />
           </Button>
           <Button
-            variant="icon"
+            variant="subtle"
             aria-label="Next day"
             disabled={next === null}
             onClick={() => {
@@ -185,8 +185,7 @@ export function DailyNoteBar({
             <Icon icon={ChevronRight} size="sm" />
           </Button>
           <Button
-            variant="ghost"
-            className="px-2 py-1 text-xs"
+            variant="secondary"
             disabled={today === null || today === date}
             onClick={() => {
               go(today);
@@ -205,8 +204,8 @@ export function DailyNoteBar({
           }}
         />
         <Button
-          variant="ghost"
-          className="px-2 py-1 text-xs sm:ml-auto"
+          variant="subtle"
+          className="sm:ml-auto"
           aria-expanded={scheduleOpen}
           onClick={() => {
             // A device that will not remember is a device where the section starts closed; nothing to say.
@@ -252,8 +251,7 @@ function DaySchedule({
           {error ?? 'The schedule could not be loaded.'}
         </Text>
         <Button
-          variant="ghost"
-          className="px-2 py-0.5 text-xs"
+          variant="secondary"
           onClick={() => {
             void reload();
           }}
