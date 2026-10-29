@@ -43,8 +43,8 @@ func TestCatalogNamesEveryStructureOperation(t *testing.T) {
 // is offered once, the design tools among them, and neither the old single nix_workspace tool nor
 // the retired nix_validate_blueprint is.
 func TestWorkspaceToolsOffersOneToolPerOperation(t *testing.T) {
-	if len(toolNamesChat) != 30 || len(workspaceTools()) != 30 {
-		t.Fatalf("offers %d tools, want 30", len(toolNamesChat))
+	if len(toolNamesChat) != 31 || len(workspaceTools()) != 31 {
+		t.Fatalf("offers %d tools, want 31", len(toolNamesChat))
 	}
 	for _, name := range []string{"nix_workspace", "workspace", "nix_validate_blueprint"} {
 		if _, ok := toolNamesChat[name]; ok {

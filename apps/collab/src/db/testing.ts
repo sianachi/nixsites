@@ -168,10 +168,11 @@ export async function clearContent(): Promise<void> {
     // Cascades to updates and snapshots through their composite foreign keys.
     await admin.query('DELETE FROM content_doc WHERE tenant_id = ANY($1)', [tenants]);
 
-    // Not reached by that cascade: both hang off `item`, which the suite does not delete,
+    // Not reached by that cascade: these hang off `item`, which the suite does not delete,
     // because the items are seeded once and shared by every test.
     await admin.query('DELETE FROM item_link WHERE tenant_id = ANY($1)', [tenants]);
     await admin.query('DELETE FROM item_search WHERE tenant_id = ANY($1)', [tenants]);
+    await admin.query('DELETE FROM item_chunk WHERE tenant_id = ANY($1)', [tenants]);
   } finally {
     await admin.end();
   }

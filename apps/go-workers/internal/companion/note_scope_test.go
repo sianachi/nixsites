@@ -83,7 +83,7 @@ func TestNoteScopeToolsAndPrompt(t *testing.T) {
 	for _, tool := range workspaceToolsForRequest(r) {
 		entry := tool.(map[string]any)
 		name := entry["name"]
-		if name != "nix_list_items" && name != "nix_search" && name != "nix_read_item" && name != "nix_read_note" && name != "nix_read_structure" {
+		if name != "nix_list_items" && name != "nix_search" && name != "nix_read_item" && name != "nix_read_note" && name != "nix_search_note" && name != "nix_read_structure" {
 			t.Fatalf("unsafe read-only tool: %v", name)
 		}
 	}

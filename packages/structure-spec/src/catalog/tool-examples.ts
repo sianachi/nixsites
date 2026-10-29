@@ -37,6 +37,7 @@ export const TOOL_EXAMPLES: Readonly<
   search: { query: 'reading' },
   read_item: { itemId: EXAMPLE_ITEM_ID },
   read_note: { itemId: EXAMPLE_ITEM_ID },
+  search_note: { itemId: EXAMPLE_ITEM_ID, query: 'What does it say about the deadline?' },
   read_structure: { itemId: EXAMPLE_ITEM_ID },
   read_view: { itemId: EXAMPLE_ITEM_ID, query: { viewId: 'list-1', pageSize: 10 } },
   create_note: { title: 'Plan', markdown: 'Notes go here.' },

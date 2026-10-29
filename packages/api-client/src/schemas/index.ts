@@ -72,7 +72,13 @@ export {
   type EffectiveSchema,
   type PropertyDefinition,
 } from './structure.js';
-export { searchResultsSchema, type SearchHit, type SearchResults } from './search.js';
+export {
+  notePassagesSchema,
+  searchResultsSchema,
+  type NotePassages,
+  type SearchHit,
+  type SearchResults,
+} from './search.js';
 export {
   mentionsSchema,
   relatedItemsSchema,

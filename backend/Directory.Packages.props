@@ -55,6 +55,12 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
   </ItemGroup>
 
+  <!-- Local text embeddings for pet retrieval: bge-small-en-v1.5 run in-process on the CPU. -->
+  <ItemGroup Label="Embeddings">
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Messaging">
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
   </ItemGroup>

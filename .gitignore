@@ -98,3 +98,6 @@ deploy/.dev-access-token-key.pem
 !/packages/site-render/src/__golden__/docs
 !/packages/site-render/src/__golden__/docs/changelog/tag/release/
 .tsbuild/
+
+# Local embedding model, fetched by scripts/fetch-embedding-model.sh.
+backend/models

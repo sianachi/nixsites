@@ -56,7 +56,12 @@ export const workspaceToolSchema = z
     if (args.operation === 'replace_section' || args.operation === 'replace_passage')
       required('query');
     if (args.operation === 'replace_section') required('markdown');
-    if (args.operation === 'search' || args.operation === 'read_view') required('query');
+    if (
+      args.operation === 'search' ||
+      args.operation === 'search_note' ||
+      args.operation === 'read_view'
+    )
+      required('query');
     if (args.operation === 'create_entries') required('parentId');
     if (
       [

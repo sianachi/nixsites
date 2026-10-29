@@ -202,6 +202,102 @@ public static class SearchSql
         """;
 
     /// <summary>
+    /// The passages of a note's subtree that best match a query, by reciprocal-rank fusion of
+    /// full-text rank and, when <c>@query_embedding</c> is not null, cosine distance.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The subtree is <c>item_closure</c> from the root, root included. The filters are
+    /// <see cref="MatchingItems"/>' body arm and its visibility check: readable workspace, active,
+    /// not a template, nothing at or under any lock, and no trashed or template ancestor.
+    /// </para>
+    /// <para>
+    /// Each arm keeps its fifty best before fusing, and 60 is the usual fusion constant. The cosine
+    /// arm scans the subtree's chunks exactly. shortcut: no ANN index, fine for one note's subtree;
+    /// add HNSW if this ever searches a whole workspace.
+    /// </para>
+    /// </remarks>
+    public const string SubtreePassages = """
+        WITH scoped AS MATERIALIZED (
+            SELECT chunk.item_id,
+                   chunk.ord,
+                   chunk.heading,
+                   chunk.body,
+                   chunk.body_vector,
+                   chunk.embedding,
+                   item.properties ->> 'title' AS title
+            FROM item_closure AS edge
+            JOIN item
+              ON item.tenant_id = @tenant_id
+             AND item.id = edge.descendant_id
+            JOIN item_chunk AS chunk
+              ON chunk.tenant_id = @tenant_id
+             AND chunk.item_id = item.id
+            WHERE edge.tenant_id = @tenant_id
+              AND edge.ancestor_id = @root_id
+              AND item.workspace_id = ANY(@workspace_ids)
+              AND item.lifecycle_state = 'active'
+              AND item.template_id IS NULL
+              AND (cardinality(@lock_ids) = 0
+                 OR NOT EXISTS (
+                  SELECT 1
+                  FROM item_closure AS lock_edge
+                  WHERE lock_edge.tenant_id = @tenant_id
+                    AND lock_edge.descendant_id = item.id
+                    AND lock_edge.ancestor_id = ANY(@lock_ids)
+                 ))
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM item_closure AS visibility_edge
+                  JOIN item AS ancestor
+                    ON ancestor.tenant_id = @tenant_id
+                   AND ancestor.id = visibility_edge.ancestor_id
+                  WHERE visibility_edge.tenant_id = @tenant_id
+                    AND visibility_edge.descendant_id = item.id
+                    AND visibility_edge.depth > 0
+                    AND (ancestor.template_id IS NOT NULL
+                         OR ancestor.lifecycle_state <> 'active')
+              )
+        ),
+        search_terms AS (
+            -- Any of the words, not all: a pet asks a whole question, and ts_rank already favours
+            -- passages that hold more of it.
+            SELECT CAST(replace(CAST(plainto_tsquery('english', @query) AS text), ' & ', ' | ') AS tsquery) AS terms
+        ),
+        by_text AS (
+            SELECT item_id, ord,
+                   row_number() OVER (
+                       ORDER BY ts_rank(body_vector, search_terms.terms) DESC, item_id, ord
+                   ) AS position
+            FROM scoped, search_terms
+            WHERE body_vector @@ search_terms.terms
+            ORDER BY position
+            LIMIT 50
+        ),
+        by_meaning AS (
+            SELECT item_id, ord,
+                   row_number() OVER (
+                       ORDER BY embedding <=> CAST(@query_embedding AS vector), item_id, ord
+                   ) AS position
+            FROM scoped
+            WHERE @query_embedding IS NOT NULL
+              AND embedding IS NOT NULL
+            ORDER BY position
+            LIMIT 50
+        ),
+        fused AS (
+            SELECT item_id, ord, sum(1.0 / (60 + position)) AS score
+            FROM (SELECT * FROM by_text UNION ALL SELECT * FROM by_meaning) AS ranked
+            GROUP BY item_id, ord
+        )
+        SELECT scoped.item_id, coalesce(scoped.title, ''), scoped.heading, scoped.ord, scoped.body
+        FROM fused
+        JOIN scoped USING (item_id, ord)
+        ORDER BY fused.score DESC, scoped.item_id, scoped.ord
+        LIMIT @limit
+        """;
+
+    /// <summary>
     /// The items among a given set that the caller may read, with their titles.
     /// </summary>
     /// <remarks>

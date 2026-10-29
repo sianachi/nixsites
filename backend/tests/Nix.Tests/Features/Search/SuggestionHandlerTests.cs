@@ -357,6 +357,14 @@ public sealed class SuggestionHandlerTests
             CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Mentions must not resolve identifiers.");
 
+        public ValueTask<IReadOnlyList<NotePassage>> FindPassagesAsync(
+            ItemId rootId,
+            string query,
+            IReadOnlyList<WorkspaceId> readableWorkspaces,
+            int limit,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Mentions must not search passages.");
+
         public ValueTask<IReadOnlyList<TitleMention>> MentionsAsync(
             IReadOnlyList<string> phrases,
             IReadOnlyList<WorkspaceId> readableWorkspaces,

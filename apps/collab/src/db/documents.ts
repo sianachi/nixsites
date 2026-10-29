@@ -1,3 +1,5 @@
+import type { NoteChunk } from '../documents/chunks.ts';
+
 import type { ScopedQuery } from './tenant-scope.ts';
 
 /**
@@ -324,6 +326,58 @@ export async function replaceItemLinks(
     `DELETE FROM item_link
       WHERE tenant_id = $1 AND source_item_id = $2 AND seq < $3`,
     [input.tenantId, input.sourceItemId, seq],
+  );
+}
+
+/**
+ * Replaces a note's retrieval chunks.
+ *
+ * Guarded by `seq` like the search text. A chunk whose text was already embedded, at any position,
+ * keeps that embedding, so an edit near the top of a long note does not re-embed every passage
+ * after it just because their positions shifted. Changed passages are written with no embedding,
+ * and Core's embedder fills them in. Rows past the new end are deleted.
+ */
+export async function writeItemChunks(
+  sql: ScopedQuery,
+  input: { tenantId: string; itemId: string; seq: bigint; chunks: readonly NoteChunk[] },
+): Promise<void> {
+  const seq = input.seq.toString();
+  await sql.query(
+    `WITH incoming AS (
+       SELECT * FROM unnest($4::int[], $5::text[], $6::text[], $7::text[]) AS c(ord, heading, body, hash)
+     ),
+     known AS (
+       SELECT DISTINCT ON (content_hash) content_hash, embedding
+         FROM item_chunk
+        WHERE tenant_id = $1 AND item_id = $2 AND embedding IS NOT NULL
+     )
+     INSERT INTO item_chunk (tenant_id, item_id, ord, seq, heading, body, content_hash, body_vector, embedding)
+     SELECT $1, $2, incoming.ord, $3, incoming.heading, incoming.body, incoming.hash,
+            to_tsvector('english', incoming.heading || E'\\n' || incoming.body), known.embedding
+       FROM incoming
+       LEFT JOIN known ON known.content_hash = incoming.hash
+     ON CONFLICT (tenant_id, item_id, ord) DO UPDATE
+        SET seq = EXCLUDED.seq,
+            heading = EXCLUDED.heading,
+            body = EXCLUDED.body,
+            content_hash = EXCLUDED.content_hash,
+            body_vector = EXCLUDED.body_vector,
+            embedding = EXCLUDED.embedding
+      WHERE item_chunk.seq < EXCLUDED.seq`,
+    [
+      input.tenantId,
+      input.itemId,
+      seq,
+      input.chunks.map((chunk) => chunk.ord),
+      input.chunks.map((chunk) => chunk.heading),
+      input.chunks.map((chunk) => chunk.body),
+      input.chunks.map((chunk) => chunk.contentHash),
+    ],
+  );
+  await sql.query(
+    `DELETE FROM item_chunk
+      WHERE tenant_id = $1 AND item_id = $2 AND ord >= $3 AND seq < $4`,
+    [input.tenantId, input.itemId, input.chunks.length, seq],
   );
 }
 

@@ -527,6 +527,16 @@ export async function runWorkspaceTool(
           unboundedReadProvenance = evidence.hasUnboundedProvenance;
           break;
         }
+        case 'search_note': {
+          // Any root: a collection or folder has no body of its own but notes beneath it.
+          const found = await client.query(
+            search.notePassages(item.id, args.query, 8),
+            requestOptions,
+          );
+          result = { id: item.id, title: item.title, passages: found.passages };
+          contentSources = [item.id, ...found.passages.map((passage) => passage.itemId)];
+          break;
+        }
         case 'read_note':
         case 'append_note':
           if (args.operation === 'read_note' && item.type === 'file') {

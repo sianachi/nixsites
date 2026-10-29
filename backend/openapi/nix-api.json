@@ -5848,6 +5848,69 @@
         }
       }
     },
+    "/api/v1/items/{itemId}/passages": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "The passages of a note and the notes under it that best answer a query",
+        "description": "Returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned, opened or not. Passages are derived when a document is snapshotted, so the newest edits may not be searchable yet. An item the caller may not read is reported as not found.",
+        "operationId": "GetPassages",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 8
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassagesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/items/{itemId}/related": {
       "get": {
         "tags": [
@@ -20138,6 +20201,53 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "PassageResponse": {
+        "required": [
+          "itemId",
+          "title",
+          "heading",
+          "ord",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "heading": {
+            "type": "string"
+          },
+          "ord": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "PassagesResponse": {
+        "required": [
+          "passages"
+        ],
+        "type": "object",
+        "properties": {
+          "passages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PassageResponse"
+            }
           }
         }
       },

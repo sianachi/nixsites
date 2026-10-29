@@ -373,6 +373,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
                 // the collaboration service has.
                 NixTables.ItemLink,
                 NixTables.ItemSearch,
+                NixTables.ItemChunk,
             };
 
             foreach (var table in split)

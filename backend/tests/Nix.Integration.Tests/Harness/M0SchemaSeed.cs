@@ -373,6 +373,15 @@ internal static class M0SchemaSeed
             INSERT INTO item_search (tenant_id, item_id, seq, updated_at, body_vector)
             VALUES ({tenant}, {item}, 1, now(), to_tsvector('english', '{slug} note body'));
 
+            -- Upgrade tests also seed schemas from before retrieval chunks existed.
+            DO $chunks$
+            BEGIN
+                IF to_regclass('public.item_chunk') IS NOT NULL THEN
+                    INSERT INTO item_chunk (tenant_id, item_id, ord, seq, heading, body, content_hash, body_vector)
+                    VALUES ({tenant}, {item}, 0, 1, '', '{slug} note body', '{slug}', to_tsvector('english', '{slug} note body'));
+                END IF;
+            END $chunks$;
+
             -- A self-edge, which extraction never produces: a document linking to itself is
             -- dropped precisely so it cannot appear in its own backlinks panel. It is used here
             -- because the seed holds exactly one item per tenant and every isolation theory in

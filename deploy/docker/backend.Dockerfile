@@ -11,6 +11,10 @@ COPY backend/src/Nix.Migrator/Nix.Migrator.csproj backend/src/Nix.Migrator/
 RUN dotnet restore backend/src/Nix.Api/Nix.Api.csproj \
  && dotnet restore backend/src/Nix.Migrator/Nix.Migrator.csproj
 
+# The local embedding model (about 35 MB) is fetched in its own cached layer, ahead of the source.
+COPY scripts/fetch-embedding-model.sh scripts/
+RUN sh scripts/fetch-embedding-model.sh backend/models/bge-small-en-v1.5
+
 COPY backend/ backend/
 # The build regenerates backend/openapi/nix-api.json as a side effect (see Nix.Api.csproj).
 # That is harmless here; the committed contract is what CI verifies, not this copy.

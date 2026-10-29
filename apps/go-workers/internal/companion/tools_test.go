@@ -609,7 +609,7 @@ func TestRefusalMessagesUseTypedVocabulary(t *testing.T) {
 // is a deliberate widening or narrowing of that rule, not an accident.
 func TestToolIdentityReadOnlyOperationsArePinned(t *testing.T) {
 	want := map[string]bool{
-		"list_items": true, "search": true, "read_item": true, "read_note": true,
+		"list_items": true, "search": true, "read_item": true, "read_note": true, "search_note": true,
 		"read_structure": true, "read_view": true, "list_templates": true, "read_template": true,
 		"read_calendar": true,
 	}
