@@ -215,7 +215,7 @@ export function DayColumn(props: {
 
                 {reschedule === undefined ? null : (
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     aria-label={`Reschedule ${readPropertyText(entry.item, 'title') || 'Untitled'}`}
                     aria-haspopup="dialog"
                     className="shrink-0 self-start px-0.5 py-1"

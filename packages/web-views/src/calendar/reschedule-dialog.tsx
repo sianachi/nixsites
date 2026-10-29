@@ -358,7 +358,7 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
             </Button>
           ) : null}
 
-          <Button variant="ghost" className="py-1 text-sm" onClick={onCancel}>
+          <Button variant="subtle" onClick={onCancel}>
             Cancel
           </Button>
         </div>

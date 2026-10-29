@@ -115,7 +115,7 @@ export function ItemCard(props: ItemCardProps): ReactNode {
                 beside forty titles. It lies over the chip's end rather than beside it, so a
                 chip is the full width of its day whether or not the control is showing. `opacity`, not `visibility`, so it stays in the tab order. */}
               <Button
-                variant="ghost"
+                variant="subtle"
                 aria-label={`Reschedule ${item.title || 'Untitled'}`}
                 aria-haspopup="dialog"
                 className="absolute inset-y-0 right-0 rounded-sm bg-background px-0.5 py-0 opacity-0 focus-visible:opacity-100 group-hover/chip:opacity-100 pointer-coarse:opacity-100"
@@ -185,7 +185,7 @@ export function ItemCard(props: ItemCardProps): ReactNode {
           cell width it does not have. One spacing step each side clears the floor invisibly, the
           pane-divider technique again. */}
           <Button
-            variant="ghost"
+            variant="subtle"
             aria-label={`Reschedule ${item.title || 'Untitled'}${time === null ? '' : `, ${time}`}`}
             aria-haspopup="dialog"
             className="relative gap-1 px-0 py-0.5 text-xs before:absolute before:inset-y-0 before:-inset-x-1 pointer-coarse:min-w-(--control-lg)"
