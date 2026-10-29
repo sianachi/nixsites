@@ -69,6 +69,15 @@ public sealed class WorkspaceMembershipResolver(
     }
 
     /// <inheritdoc />
+    public async ValueTask<bool> CanCommentWorkspaceAsync(
+        WorkspaceId workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var role = await RoleInAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        return role is { } held && held.GrantsComment();
+    }
+
+    /// <inheritdoc />
     public async ValueTask<bool> CanManageWorkspaceAsync(
         WorkspaceId workspaceId,
         CancellationToken cancellationToken)

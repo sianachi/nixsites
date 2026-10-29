@@ -335,6 +335,9 @@ public sealed class CompleteRecurrenceOccurrenceTests
         public ValueTask<bool> CanWriteWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
             ValueTask.FromResult(true);
 
+        public ValueTask<bool> CanCommentWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(false);
+
+
         public ValueTask<bool> CanManageWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
             ValueTask.FromResult(false);
 

@@ -18,7 +18,7 @@ namespace Nix.Persistence.Migrations.Generated
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -775,6 +775,105 @@ namespace Nix.Persistence.Migrations.Generated
                         {
                             t.HasCheckConstraint("ck_calendar_sync_log_bounded", "direction IN ('pull', 'push') AND action IN ('created', 'updated', 'deleted', 'conflict', 'skipped', 'error') AND char_length(detail) <= 500 AND (external_event_id IS NULL OR char_length(external_event_id) <= 500)");
                         });
+                });
+
+            modelBuilder.Entity("Nix.Domain.Comments.NoteComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AnchorEnd")
+                        .HasColumnType("text")
+                        .HasColumnName("anchor_end");
+
+                    b.Property<string>("AnchorStart")
+                        .HasColumnType("text")
+                        .HasColumnName("anchor_start");
+
+                    b.Property<Guid>("AuthorPrincipalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_principal_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("edited_at");
+
+                    b.Property<string>("ImportedAuthor")
+                        .HasColumnType("text")
+                        .HasColumnName("imported_author");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.PrimitiveCollection<Guid[]>("MentionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("mention_ids");
+
+                    b.Property<string>("Quote")
+                        .HasColumnType("text")
+                        .HasColumnName("quote");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("thread_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId");
+
+                    b.HasIndex("TenantId", "ThreadId")
+                        .HasDatabaseName("IX_note_comment_tenant_id_thread_id");
+
+                    b.HasIndex("TenantId", "ItemId", "CreatedAt")
+                        .HasDatabaseName("IX_note_comment_tenant_id_item_id_created_at");
+
+                    b.ToTable("note_comment", null, t =>
+                        {
+                            t.HasCheckConstraint("note_comment_bounded", "char_length(body) BETWEEN 1 AND 10000 AND cardinality(mention_ids) <= 20 AND (quote IS NULL OR char_length(quote) <= 1000) AND (anchor_start IS NULL OR char_length(anchor_start) <= 512) AND (anchor_end IS NULL OR char_length(anchor_end) <= 512) AND (imported_author IS NULL OR char_length(imported_author) <= 200)");
+                        });
+                });
+
+            modelBuilder.Entity("Nix.Domain.Comments.NoteCommentRevision", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.HasKey("TenantId", "ItemId");
+
+                    b.ToTable("note_comment_revision", (string)null);
                 });
 
             modelBuilder.Entity("Nix.Domain.Content.CanvasLibrary", b =>
@@ -2344,7 +2443,7 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.ToTable("notification", null, t =>
                         {
-                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation')");
+                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation', 'comment')");
                         });
                 });
 
@@ -4857,6 +4956,32 @@ namespace Nix.Persistence.Migrations.Generated
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_calendar_sync_log_link");
+                });
+
+            modelBuilder.Entity("Nix.Domain.Comments.NoteComment", b =>
+                {
+                    b.HasOne("Nix.Domain.Comments.NoteComment", null)
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Nix.Domain.Comments.NoteCommentRevision", b =>
+                {
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Nix.Domain.Content.CanvasLibrary", b =>

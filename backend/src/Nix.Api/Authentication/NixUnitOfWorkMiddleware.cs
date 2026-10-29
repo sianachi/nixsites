@@ -650,7 +650,9 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         var isWatchLongPoll = HttpMethods.IsGet(context.Request.Method)
             && (context.Request.Path.StartsWithSegments("/api/v1/me/pets/runtime/watch", StringComparison.OrdinalIgnoreCase)
                 || context.Request.Path.StartsWithSegments("/api/v1/me/pets/runtime/note/watch", StringComparison.OrdinalIgnoreCase)
-                || context.Request.Path.StartsWithSegments("/api/v1/me/notifications/watch", StringComparison.OrdinalIgnoreCase));
+                || context.Request.Path.StartsWithSegments("/api/v1/me/notifications/watch", StringComparison.OrdinalIgnoreCase)
+                || (context.Request.Path.StartsWithSegments("/api/v1/items", StringComparison.OrdinalIgnoreCase)
+                    && context.Request.Path.Value!.EndsWith("/comments/watch", StringComparison.OrdinalIgnoreCase)));
         if (!isWatchLongPoll && (state.LastUsedAt is null || now - state.LastUsedAt >= LastUsedGranularity))
         {
             await accessTokens.TouchAsync(accessTokenId, now, context.RequestAborted).ConfigureAwait(false);

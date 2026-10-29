@@ -9,6 +9,7 @@ using Nix.Errors;
 using Nix.Features.Admin;
 using Nix.Features.Automations;
 using Nix.Features.Bookmarks;
+using Nix.Features.Comments;
 using Nix.Features.BrowserAuth;
 using Nix.Features.Calendar;
 using Nix.Features.Canvas;
@@ -93,6 +94,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(QueryJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(ChartJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(BookmarkJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(CommentsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(LockJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(TemplateJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(TemplateFileTransfersJsonContext.Default);
@@ -142,6 +144,7 @@ builder.Services
     });
 builder.Services.AddSingleton<OidcMetadataClient>();
 builder.Services.AddSingleton<NotificationWatchGate>();
+builder.Services.AddSingleton<Nix.Features.Comments.CommentWatchGate>();
 builder.Services.AddSingleton<Nix.Features.Pets.PetInlineLimiter>();
 builder.Services.AddHttpClient<ConversationBodyReader>();
 builder.Services.AddHttpClient<PetWorkerClient>(client => client.Timeout = Timeout.InfiniteTimeSpan)
@@ -614,6 +617,7 @@ app.MapFinanceEndpoints();
 app.MapQueryEndpoints();
 app.MapChartEndpoints();
 app.MapBookmarkEndpoints();
+app.MapCommentEndpoints();
 app.MapLockEndpoints();
 app.MapPublicFormEndpoints();
 app.MapTemplateEndpoints();

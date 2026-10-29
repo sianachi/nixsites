@@ -16,6 +16,7 @@ public sealed class WorkerExportDelegationPolicyTests
     [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222")]
     [InlineData("HEAD", "/api/v1/items/22222222-2222-4222-8222-222222222222/schema")]
     [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/views")]
+    [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/comments")]
     public void Delegation_allows_only_the_item_metadata_routes_collaboration_reads(
         string method,
         string path)
@@ -32,6 +33,7 @@ public sealed class WorkerExportDelegationPolicyTests
     [InlineData("POST", "/api/v1/items/22222222-2222-4222-8222-222222222222")]
     [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/body")]
     [InlineData("GET", "/api/v1/search")]
+    [InlineData("GET", "/api/v1/items/22222222-2222-4222-8222-222222222222/comments/watch")]
     [InlineData("GET", "/api/v1/items/not-a-guid")]
     public void Delegation_rejects_writes_and_unrelated_read_routes(string method, string path)
     {

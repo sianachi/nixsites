@@ -63,6 +63,14 @@ public interface IPermissionResolver
     public ValueTask<bool> CanWriteWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Whether the acting principal may comment on notes in a workspace: a commenter or stronger.
+    /// </summary>
+    /// <param name="workspaceId">The workspace.</param>
+    /// <param name="cancellationToken">Cancels the lookup.</param>
+    /// <returns><see langword="true"/> when the workspace's notes may be commented on.</returns>
+    public ValueTask<bool> CanCommentWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Whether the acting principal may change workspace-level trusted integrations.
     /// </summary>
     /// <param name="workspaceId">The workspace.</param>

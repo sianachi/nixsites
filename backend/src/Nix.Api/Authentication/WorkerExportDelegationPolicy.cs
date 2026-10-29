@@ -125,7 +125,8 @@ public static class WorkerExportDelegationPolicy
             && Guid.TryParse(segments[3], out var itemId)
             && (segments.Length == 4
                 || Segment(segments[4], "schema")
-                || Segment(segments[4], "views")))
+                || Segment(segments[4], "views")
+                || Segment(segments[4], "comments")))
         {
             target = new DelegatedReadTarget(itemId, WorkspaceId: null, RootOnly: false);
             return true;

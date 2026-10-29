@@ -21,6 +21,9 @@ public enum NotificationKind
 
     /// <summary>An invitation to join a workspace, waiting for the recipient to accept or decline.</summary>
     Invitation,
+
+    /// <summary>A reply or mention in a note's comment thread.</summary>
+    Comment,
 }
 
 /// <summary>One entry in a principal's inbox. Never shared with anyone else, even in the same workspace.</summary>

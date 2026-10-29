@@ -18,7 +18,8 @@ public sealed record BeginExportRequest(
     Guid ItemId,
     string Format,
     string Scope,
-    string IdempotencyKey);
+    string IdempotencyKey,
+    bool IncludeComments = false);
 
 public sealed record ExportResponse(
     Guid Id,
@@ -59,7 +60,8 @@ public sealed record ExportJobPayload(
     string Title,
     string Extension,
     string MediaType,
-    IReadOnlyList<string> DeclaredLoss);
+    IReadOnlyList<string> DeclaredLoss,
+    bool IncludeComments = false);
 
 public sealed record WorkerExportSourceResponse(
     Guid ExportId,

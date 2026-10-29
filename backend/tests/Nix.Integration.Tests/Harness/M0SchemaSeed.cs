@@ -406,6 +406,17 @@ internal static class M0SchemaSeed
             INSERT INTO bookmark (principal_id, tenant_id, item_id, created_at)
             VALUES ({principal}, {tenant}, {item}, now());
 
+            -- One comment on the seeded item; its trigger also creates the revision counter row, so the
+            -- isolation theories find both comment tables populated.
+            DO $comments$
+            BEGIN
+                IF to_regclass('public.note_comment') IS NOT NULL THEN
+                    INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, body, mention_ids, created_at)
+                    SELECT c.id, {tenant}, {item}, c.id, {principal}, 'seeded', ARRAY[]::uuid[], now()
+                      FROM (SELECT gen_random_uuid() AS id) c;
+                END IF;
+            END $comments$;
+
             -- Upgrade tests also seed schemas from before reminders and the inbox existed.
             DO $notifications$
             BEGIN

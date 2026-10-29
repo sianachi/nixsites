@@ -152,6 +152,12 @@ public static class NixTables
     /// <summary>One row per item a principal has kept.</summary>
     public const string Bookmark = "bookmark";
 
+    /// <summary>Comments on notes, threads headed by a root row.</summary>
+    public const string NoteComment = "note_comment";
+
+    /// <summary>Per-note counter that lets a watch notice comment changes.</summary>
+    public const string NoteCommentRevision = "note_comment_revision";
+
     /// <summary>Passwords item bodies are held behind.</summary>
     public const string ItemLock = "item_lock";
 
@@ -284,6 +290,8 @@ public static class NixTables
         CalendarEventMap,
         CalendarSyncLog,
         Bookmark,
+        NoteComment,
+        NoteCommentRevision,
         ItemLock,
         ItemUnlock,
         ItemTranscription,
@@ -396,6 +404,8 @@ public static class NixTables
             // A bookmark is personal state the application both reads and writes on the reader's
             // behalf: keeping one is the whole feature, and there is no other service that owns it.
             [Bookmark] = FullDml,
+            [NoteComment] = FullDml,
+            [NoteCommentRevision] = FullDml,
 
             // Core alone sets, checks and removes locks, and issues and expires the grants past
             // them. The collaboration service reads which items are locked (column-level, never

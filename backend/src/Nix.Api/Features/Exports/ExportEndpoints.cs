@@ -158,7 +158,8 @@ internal static class ExportEndpoints
             ItemProperties.ReadTitle(item.Properties),
             descriptor.Extension,
             descriptor.MediaType,
-            descriptor.DeclaredLoss.ToArray());
+            descriptor.DeclaredLoss.ToArray(),
+            request.IncludeComments);
         WorkerJobRecord job;
         try
         {
@@ -320,7 +321,8 @@ internal static class ExportEndpoints
             collaboration,
             $"documents/{payload.ItemId:D}/bundles?scope={Uri.EscapeDataString(payload.Scope)}"
             + $"&exportedAt={Uri.EscapeDataString(job.CreatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}"
-            + (payload.Format is "pdf" or "docx" ? "&expandEmbeds=true" : string.Empty));
+            + (payload.Format is "pdf" or "docx" ? "&expandEmbeds=true" : string.Empty)
+            + (payload.IncludeComments ? "&includeComments=true" : string.Empty));
         var bearer = tokens.MintWorkerExecution(
             scoped.PrincipalId,
             scoped.TenantId,

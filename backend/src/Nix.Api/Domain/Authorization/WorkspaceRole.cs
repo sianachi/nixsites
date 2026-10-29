@@ -22,8 +22,7 @@ public enum WorkspaceRole
 
     /// <summary>May read, and may comment without changing what is being commented on.</summary>
     /// <remarks>
-    /// Comments do not exist yet. The rung is declared now because leaving it out would put
-    /// commenting above editing when it arrives, and every stored role would need renumbering.
+    /// Comments on notes are the one thing this role adds: see <see cref="WorkspaceRoles.GrantsComment"/>.
     /// </remarks>
     Commenter = 1,
 
@@ -93,4 +92,9 @@ public static class WorkspaceRoles
     /// document; it does not change the document.
     /// </remarks>
     public static bool GrantsWrite(this WorkspaceRole role) => role >= WorkspaceRole.Editor;
+
+    /// <summary>Whether a role permits commenting on notes.</summary>
+    /// <param name="role">The role.</param>
+    /// <returns><see langword="true"/> for a commenter, an editor or an owner.</returns>
+    public static bool GrantsComment(this WorkspaceRole role) => role >= WorkspaceRole.Commenter;
 }

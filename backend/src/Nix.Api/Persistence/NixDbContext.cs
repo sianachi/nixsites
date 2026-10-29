@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Nix.Domain.Audit;
 using Nix.Domain.Authorization;
 using Nix.Domain.Bookmarks;
+using Nix.Domain.Comments;
 using Nix.Domain.Content;
 using Nix.Domain.Files;
 using Nix.Domain.Identity;
@@ -159,6 +160,12 @@ public sealed class NixDbContext : DbContext
 
     /// <summary>The items each principal has kept.</summary>
     public DbSet<Bookmark> Bookmarks => Set<Bookmark>();
+
+    /// <summary>Gets the comments on notes.</summary>
+    public DbSet<NoteComment> NoteComments => Set<NoteComment>();
+
+    /// <summary>Gets the per-note comment change counters.</summary>
+    public DbSet<NoteCommentRevision> NoteCommentRevisions => Set<NoteCommentRevision>();
 
     /// <summary>Gets the passwords item bodies are held behind.</summary>
     public DbSet<ItemLock> ItemLocks => Set<ItemLock>();
@@ -375,6 +382,8 @@ public sealed class NixDbContext : DbContext
         modelBuilder.ApplyConfiguration(new CalendarEventMapConfiguration());
         modelBuilder.ApplyConfiguration(new CalendarSyncLogConfiguration());
         modelBuilder.ApplyConfiguration(new BookmarkConfiguration());
+        modelBuilder.ApplyConfiguration(new NoteCommentConfiguration());
+        modelBuilder.ApplyConfiguration(new NoteCommentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new ItemLockConfiguration());
         modelBuilder.ApplyConfiguration(new ItemUnlockConfiguration());
         modelBuilder.ApplyConfiguration(new ItemTranscriptionConfiguration());
