@@ -213,25 +213,20 @@ public static class SearchSql
     /// not a template, nothing at or under any lock, and no trashed or template ancestor.
     /// </para>
     /// <para>
-    /// Each arm keeps its fifty best before fusing, and 60 is the usual fusion constant. The cosine
-    /// arm scans the candidate chunks exactly, under the ad-hoc query timeout. shortcut: no ANN
+    /// The visibility checks run once per item with chunks, not once per chunk, and each arm ranks
+    /// <c>item_chunk</c> itself so the full-text arm can use its index. Each arm keeps its fifty best
+    /// before fusing, and 60 is the usual fusion constant. The cosine arm scans the candidate chunks
+    /// exactly, under the ad-hoc query timeout. shortcut: no ANN
     /// index; add HNSW once a workspace holds more than about 100,000 chunks.
     /// </para>
     /// </remarks>
     public const string Passages = """
-        WITH scoped AS MATERIALIZED (
-            SELECT chunk.item_id,
-                   chunk.ord,
-                   chunk.heading,
-                   chunk.body,
-                   chunk.body_vector,
-                   chunk.embedding,
+        WITH visible AS MATERIALIZED (
+            SELECT item.id AS item_id,
                    item.properties ->> 'title' AS title
-            FROM item_chunk AS chunk
-            JOIN item
-              ON item.tenant_id = @tenant_id
-             AND item.id = chunk.item_id
-            WHERE chunk.tenant_id = @tenant_id
+            FROM item
+            WHERE item.tenant_id = @tenant_id
+              AND item.workspace_id = ANY(@workspace_ids)
               AND (CAST(@root_id AS uuid) IS NULL
                    OR EXISTS (
                        SELECT 1
@@ -240,9 +235,12 @@ public static class SearchSql
                          AND edge.ancestor_id = @root_id
                          AND edge.descendant_id = item.id
                    ))
-              AND item.workspace_id = ANY(@workspace_ids)
               AND item.lifecycle_state = 'active'
               AND item.template_id IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM item_chunk AS has_chunk
+                  WHERE has_chunk.tenant_id = @tenant_id AND has_chunk.item_id = item.id
+              )
               AND (cardinality(@lock_ids) = 0
                  OR NOT EXISTS (
                   SELECT 1
@@ -270,23 +268,28 @@ public static class SearchSql
             SELECT CAST(replace(CAST(plainto_tsquery('english', @query) AS text), ' & ', ' | ') AS tsquery) AS terms
         ),
         by_text AS (
-            SELECT item_id, ord,
+            SELECT chunk.item_id, chunk.ord,
                    row_number() OVER (
-                       ORDER BY ts_rank(body_vector, search_terms.terms) DESC, item_id, ord
+                       ORDER BY ts_rank(chunk.body_vector, search_terms.terms) DESC, chunk.item_id, chunk.ord
                    ) AS position
-            FROM scoped, search_terms
-            WHERE body_vector @@ search_terms.terms
+            FROM item_chunk AS chunk
+            JOIN visible USING (item_id)
+            CROSS JOIN search_terms
+            WHERE chunk.tenant_id = @tenant_id
+              AND chunk.body_vector @@ search_terms.terms
             ORDER BY position
             LIMIT 50
         ),
         by_meaning AS (
-            SELECT item_id, ord,
+            SELECT chunk.item_id, chunk.ord,
                    row_number() OVER (
-                       ORDER BY embedding <=> CAST(@query_embedding AS vector), item_id, ord
+                       ORDER BY chunk.embedding <=> CAST(@query_embedding AS vector), chunk.item_id, chunk.ord
                    ) AS position
-            FROM scoped
-            WHERE @query_embedding IS NOT NULL
-              AND embedding IS NOT NULL
+            FROM item_chunk AS chunk
+            JOIN visible USING (item_id)
+            WHERE chunk.tenant_id = @tenant_id
+              AND @query_embedding IS NOT NULL
+              AND chunk.embedding IS NOT NULL
             ORDER BY position
             LIMIT 50
         ),
@@ -295,10 +298,14 @@ public static class SearchSql
             FROM (SELECT * FROM by_text UNION ALL SELECT * FROM by_meaning) AS ranked
             GROUP BY item_id, ord
         )
-        SELECT scoped.item_id, coalesce(scoped.title, ''), scoped.heading, scoped.ord, scoped.body
+        SELECT chunk.item_id, coalesce(visible.title, ''), chunk.heading, chunk.ord, chunk.body
         FROM fused
-        JOIN scoped USING (item_id, ord)
-        ORDER BY fused.score DESC, scoped.item_id, scoped.ord
+        JOIN item_chunk AS chunk
+          ON chunk.tenant_id = @tenant_id
+         AND chunk.item_id = fused.item_id
+         AND chunk.ord = fused.ord
+        JOIN visible ON visible.item_id = fused.item_id
+        ORDER BY fused.score DESC, chunk.item_id, chunk.ord
         LIMIT @limit
         """;
 

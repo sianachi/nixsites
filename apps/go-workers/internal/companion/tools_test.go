@@ -1016,3 +1016,12 @@ func TestRememberIsRefusedOnceTheConversationHasReadProtectedContent(t *testing.
 		}
 	}
 }
+
+func TestRememberTakesVisibleTextOnly(t *testing.T) {
+	for fact, ok := range map[string]bool{"Prefers metric units.": true, "Prefers‮metric": false, "Zero​width": false, "Tag\U000E0041": false} {
+		raw, _ := json.Marshal(map[string]string{"operation": "remember", "markdown": fact, "itemId": "", "parentId": "", "title": "", "query": "", "propertiesJson": "", "specJson": ""})
+		if got := validateToolArguments(raw) == ""; got != ok {
+			t.Fatalf("%q: accepted %v, want %v (%s)", fact, got, ok, validateToolArguments(raw))
+		}
+	}
+}

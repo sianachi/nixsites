@@ -364,6 +364,12 @@ func trimThread(thread *httpThread) {
 		}
 		size += messageBytes(message)
 	}
+	opening := thread.Opening
+	// A thread cut before Opening existed may no longer start with its first message; only a
+	// message that carries the workspace map is worth repeating.
+	if opening == "" && len(thread.Messages) > 0 && strings.Contains(thread.Messages[0].Text, `"workspaceMap"`) {
+		opening = thread.Messages[0].Text
+	}
 	cut := 0
 	if len(starts) > maxThreadTurns {
 		cut = len(starts) - maxThreadTurns
@@ -373,7 +379,7 @@ func trimThread(thread *httpThread) {
 		for _, message := range thread.Messages[:starts[cut]] {
 			dropped += messageBytes(message)
 		}
-		if size-dropped <= maxThreadBytes || cut == len(starts)-1 {
+		if size-dropped+len(opening) <= maxThreadBytes || cut == len(starts)-1 {
 			break
 		}
 		cut++
@@ -381,10 +387,12 @@ func trimThread(thread *httpThread) {
 	if cut == 0 || cut >= len(starts) {
 		return
 	}
-	if thread.Opening == "" {
-		thread.Opening = thread.Messages[0].Text
-	}
+	thread.Opening = opening
 	kept := append([]providerMessage(nil), thread.Messages[starts[cut]:]...)
+	if opening == "" {
+		thread.Messages = kept
+		return
+	}
 	kept[0].Text = "The conversation began with this message; its earlier turns were dropped to save space:\n" + thread.Opening + "\n\nThe message now:\n" + kept[0].Text
 	thread.Messages = kept
 }
@@ -447,7 +455,11 @@ func (t *httpTransport) runTurn(ctx context.Context, thread *httpThread, turnID 
 	}()
 	thread.usage = providerUsage{}
 	finish := func(status string, failure error) {
-		turn := map[string]any{"status": status, "usage": thread.usage}
+		turn := map[string]any{"status": status}
+		// Only the Anthropic wire reports counts; zeros from the others would read as free turns.
+		if thread.usage != (providerUsage{}) {
+			turn["usage"] = thread.usage
+		}
 		if failure != nil {
 			turn["error"] = map[string]any{"message": failure.Error(), "nixProviderError": providerFailureToken(failure)}
 		}

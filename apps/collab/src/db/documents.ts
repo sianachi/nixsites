@@ -364,6 +364,16 @@ export async function writeItemChunks(
 ): Promise<boolean> {
   const seq = input.seq.toString();
   await lockItemChunks(sql, input.tenantId, input.itemId);
+  // Unchanged chunks keep the seq they were written at, so the item's search text, which every
+  // snapshot rewrites, is the item's own seq: a snapshot older than it lost the race and writes
+  // nothing.
+  const { rows: newer } = await sql.query<{ newer: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM item_search WHERE tenant_id = $1 AND item_id = $2 AND seq > $3
+     ) AS newer`,
+    [input.tenantId, input.itemId, seq],
+  );
+  if (newer[0]?.newer) return false;
   if (input.onlyIfEmpty) {
     const { rows } = await sql.query<{ present: boolean }>(
       `SELECT EXISTS (SELECT 1 FROM item_chunk WHERE tenant_id = $1 AND item_id = $2) AS present`,

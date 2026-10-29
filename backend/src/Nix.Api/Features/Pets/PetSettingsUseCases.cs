@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Nix.Abstractions;
@@ -21,6 +22,28 @@ public static class PetSettingsValidation
 
     /// <summary>The longest memory, in UTF-16 units.</summary>
     public const int MaxMemoryLength = 280;
+
+    /// <summary>
+    /// Whether every character of a memory is one the owner can see in Settings: no controls, line
+    /// or paragraph separators, format characters (bidi overrides, zero-width, tag characters),
+    /// private-use or lone surrogates, any of which could carry text the model reads and the owner
+    /// does not.
+    /// </summary>
+    public static bool IsVisibleText(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        foreach (var rune in text.EnumerateRunes())
+        {
+            if (Rune.GetUnicodeCategory(rune) is UnicodeCategory.Control or UnicodeCategory.Format
+                or UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator
+                or UnicodeCategory.PrivateUse or UnicodeCategory.Surrogate or UnicodeCategory.OtherNotAssigned)
+            {
+                return false;
+            }
+        }
+
+        return !text.Contains(Rune.ReplacementChar.ToString(), StringComparison.Ordinal);
+    }
 
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, "system", []);
@@ -54,7 +77,7 @@ public static class PetSettingsValidation
         {
             if (memory is null || memory.Id == Guid.Empty || !memoryIds.Add(memory.Id)
                 || string.IsNullOrWhiteSpace(memory.Text) || memory.Text.Length > MaxMemoryLength
-                || memory.Text.Any(char.IsControl))
+                || !IsVisibleText(memory.Text))
             {
                 return false;
             }
@@ -94,15 +117,25 @@ public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessi
         }
 
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
+        var settings = command.Settings;
+        if (settings.Memories is null)
+        {
+            // A client built before memory existed sends none; keeping the stored ones stops its
+            // first save from erasing them. The compare-and-swap below still pins the revision read.
+            var row = await store.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
+            var stored = row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings);
+            settings = settings with { Memories = stored?.Memories };
+        }
+
         var revision = command.ExpectedRevision + 1;
         var saved = await store.SaveAsync(new PetPreferences
         {
             TenantId = context.TenantId,
             PrincipalId = context.PrincipalId,
-            SettingsJson = JsonSerializer.Serialize(command.Settings, PetJsonContext.Default.PetSettings),
+            SettingsJson = JsonSerializer.Serialize(settings, PetJsonContext.Default.PetSettings),
             Revision = revision,
         }, command.ExpectedRevision, cancellationToken).ConfigureAwait(false);
-        return saved ? Result.Success(new PetSettingsResponse(revision, command.Settings))
+        return saved ? Result.Success(new PetSettingsResponse(revision, settings))
             : Result.Failure<PetSettingsResponse>(new NixError("pets.settings_conflict", "Pet settings changed on another device. Reload before saving."));
     }
 }

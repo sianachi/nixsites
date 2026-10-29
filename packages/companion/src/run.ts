@@ -88,6 +88,9 @@ async function remember(
   const text = fact.trim().replace(/\s+/g, ' ');
   if (text.length > 280)
     throw new WorkspaceToolRefusal('A memory is one short sentence of at most 280 characters.');
+  // Core refuses what the owner could not see in Settings; say why instead of failing the save.
+  if (/[\p{Cc}\p{Cf}\p{Co}\p{Cs}\p{Cn}\u2028\u2029]/u.test(text))
+    throw new WorkspaceToolRefusal('A memory holds visible text only. Nothing was saved.');
   for (let attempt = 0; ; attempt += 1) {
     const { revision, settings } = await client.query(pets.settings(), options);
     if (settings.memoryOff)
@@ -463,9 +466,15 @@ export async function runWorkspaceTool(
       }
       // Items match a title or the words; passages also match by meaning, so a note that says
       // "holiday" answers a question about a trip.
+      // A passage search that times out costs only its passages, never the item matches.
       const [found, passages] = await Promise.all([
         client.query(search.searchItems(args.query, 50), requestOptions),
-        client.query(search.workspacePassages(args.query, workspaceId, 8), requestOptions),
+        client
+          .query(search.workspacePassages(args.query, workspaceId, 8), requestOptions)
+          .catch((error: unknown) => {
+            if (signal.aborted) throw error;
+            return { passages: [] };
+          }),
       ]);
       const hits = found.results.filter((item) => item.workspaceId === workspaceId);
       contentSources = [

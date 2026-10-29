@@ -178,6 +178,29 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
+    public async Task A_save_that_carries_no_memories_keeps_the_stored_ones()
+    {
+        await SaveInitialAsync();
+        var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var saved = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
+            var remembered = saved.Settings with { Memories = [new(Guid.NewGuid(), "Prefers metric units.", DateTimeOffset.UnixEpoch)] };
+            var first = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(saved.Revision, remembered), Cancellation);
+            // An older client knows nothing of memories and sends none.
+            var older = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(first.Value.Revision, remembered with { Memories = null, Motion = "reduced" }), Cancellation);
+            Assert.True(older.IsSuccess);
+            var reread = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
+            Assert.Equal("reduced", reread.Settings.Motion);
+            Assert.Equal(["Prefers metric units."], reread.Settings.Memories?.Select(memory => memory.Text));
+            // An empty list is the owner forgetting them all.
+            var cleared = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(reread.Revision, reread.Settings with { Memories = [] }), Cancellation);
+            Assert.Empty(cleared.Value.Settings.Memories ?? [new(Guid.Empty, "x", default)]);
+        }
+    }
+
+    [Fact]
     public async Task Note_conversations_refuse_missing_foreign_and_wrong_workspace_roots_before_contacting_worker()
     {
         await SaveInitialAsync();

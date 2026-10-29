@@ -71,9 +71,18 @@ export function startChunkBackfill(deps: {
     void (async () => {
       for (const scope of deps.activeScopes()) {
         try {
-          const written = await withTenantScope(deps.pool, scope, (sql) =>
-            backfillChunks(sql, scope.tenantId, 100),
-          );
+          // One note per transaction: each write holds that note's chunk lock until it commits, and
+          // a live snapshot of the note must not wait behind a whole batch.
+          // shortcut: a note that cannot be chunked is selected again first on every pass and stops
+          // the tenant's backfill; mark such notes once that happens outside development.
+          let written = 0;
+          for (let index = 0; index < 100; index += 1) {
+            const one = await withTenantScope(deps.pool, scope, (sql) =>
+              backfillChunks(sql, scope.tenantId, 1),
+            );
+            if (one === 0) break;
+            written += one;
+          }
           if (written > 0)
             deps.log(`chunk backfill: ${String(written)} note(s) in tenant ${scope.tenantId}.`);
         } catch (error) {

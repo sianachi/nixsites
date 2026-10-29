@@ -530,7 +530,11 @@ function resolveFixtureJson(value: unknown, fixture: ChatFixture): unknown {
 }
 
 function isWrite(operation: string): boolean {
-  return !READ_ONLY_OPERATIONS.has(operation as Parameters<typeof READ_ONLY_OPERATIONS.has>[0]);
+  // A memory changes the owner's settings, so a review that must not write must not remember.
+  return (
+    operation === 'remember' ||
+    !READ_ONLY_OPERATIONS.has(operation as Parameters<typeof READ_ONLY_OPERATIONS.has>[0])
+  );
 }
 
 async function checkAssertion(

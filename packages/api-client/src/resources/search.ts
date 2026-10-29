@@ -25,7 +25,6 @@ export const searchItems = (query: string, limit?: number): QueryEndpoint<Search
     cacheKey: undefined,
   });
 
-/** The passages of a note and every readable note under it that best answer `query`. */
 /** The passages across a workspace (or every readable one) that best answer a query. */
 export const workspacePassages = (
   query: string,
@@ -40,6 +39,7 @@ export const workspacePassages = (
     cacheKey: undefined,
   });
 
+/** The passages of a note and every readable note under it that best answer `query`. */
 export const notePassages = (
   itemId: string,
   query: string,

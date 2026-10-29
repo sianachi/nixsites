@@ -781,3 +781,14 @@ func TestTheByteBoundDropsOldTurnsButNeverTheLatest(t *testing.T) {
 		t.Fatalf("expected only the latest turn: %d messages, first %q", len(thread.Messages), thread.Messages[0].Text)
 	}
 }
+
+func TestAThreadCutBeforeOpeningExistedIsNotGivenAStrayOpening(t *testing.T) {
+	thread := &httpThread{}
+	for i := 0; i < maxThreadTurns+1; i++ {
+		thread.Messages = append(thread.Messages, turnMessages(fmt.Sprintf("turn %d", i), 0, 0)...)
+	}
+	trimThread(thread)
+	if thread.Opening != "" || thread.Messages[0].Text != "turn 1" {
+		t.Fatalf("a first message without the workspace map must not be repeated: %q / %q", thread.Opening, thread.Messages[0].Text)
+	}
+}

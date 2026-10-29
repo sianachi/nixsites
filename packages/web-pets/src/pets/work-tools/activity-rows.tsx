@@ -16,6 +16,7 @@ import {
   ranWithoutAsking,
 } from './receipts';
 import { describeReadSentence, readStatusText } from './read-sentence';
+import { ForgetMemory } from './forget-memory';
 
 export type Resolver = (
   tool: PetToolCall,
@@ -191,6 +192,8 @@ export function ReadActivityRow({
               Decline request
             </Button>
           </div>
+        ) : args.operation === 'remember' && tool.status === 'completed' ? (
+          <ForgetMemory result={tool.result} />
         ) : undefined
       }
     />

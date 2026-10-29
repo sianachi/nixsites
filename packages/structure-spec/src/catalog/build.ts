@@ -210,7 +210,7 @@ export function renderCatalog(catalog: Catalog, patterns: string): string {
     'Read configuration with nix_read_structure and bounded results with nix_read_view. Reviews only read; requested refinements use nix_update_view, then read back.',
   );
   lines.push(
-    `Sorting: sortBy (a field key) and sortDescending set one sort; ${SORTED_VIEW_KINDS.join(', ')} apply it. Other kinds show children in their own order and ignore saved sorts and filters.`,
+    `Sorting: sortBy (a field key) and sortDescending set one sort; ${SORTED_VIEW_KINDS.join(', ')} apply it. Smart lists (query) apply their own filters; every other kind shows children in its own order and ignores saved sorts and filters.`,
   );
   lines.push(
     'Filters belong to smart lists (query): each is {field, op, value} with an op from Query operators, and all must match; $type, $inside, $created, $modified and $done test the item itself. A preset (Smart lists) is a built-in rule used instead of filters. "Any of" groups exist only when a person added them in the editor; read them, never propose them.',

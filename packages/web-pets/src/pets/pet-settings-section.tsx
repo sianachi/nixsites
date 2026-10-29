@@ -105,7 +105,11 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   }
 
   async function saveSettings(): Promise<boolean> {
-    const parsed = petSettingsSchema.safeParse(draft);
+    // A memory emptied in place is one the owner forgot, not a reason to refuse the whole form.
+    const parsed = petSettingsSchema.safeParse({
+      ...draft,
+      memories: draft.memories?.filter((memory) => memory.text.trim() !== ''),
+    });
     if (!parsed.success) {
       setMessage('Check the name and settings of each pet before saving.');
       return false;

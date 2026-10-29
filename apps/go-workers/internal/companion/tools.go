@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const maxToolCallsPerTurn = 20
@@ -610,6 +611,12 @@ func validateToolArguments(raw json.RawMessage) string {
 	case "remember":
 		if fact := strings.TrimSpace(p.Markdown); fact == "" || utf16Len(fact) > 280 {
 			return "nix_remember needs one fact of at most 280 characters."
+		}
+		// The owner reviews memories in Settings; text they cannot see there must not reach the model.
+		if strings.ContainsFunc(p.Markdown, func(r rune) bool {
+			return r != ' ' && unicode.In(r, unicode.Cc, unicode.Cf, unicode.Co, unicode.Cs, unicode.Zl, unicode.Zp) || !unicode.IsGraphic(r) && !unicode.IsSpace(r)
+		}) {
+			return "nix_remember takes visible text only."
 		}
 	case "list_items":
 	case "search":
