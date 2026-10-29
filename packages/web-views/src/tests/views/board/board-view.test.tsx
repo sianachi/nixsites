@@ -13,6 +13,7 @@ import type {
   PropertyDefinition,
   View,
 } from '@nix/web-collections/core/container-model';
+import { ItemSelectionContext } from '@nix/web-collections/core/item-selection-context';
 import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 
@@ -540,5 +541,41 @@ describe('the board view', () => {
 
     // Null, not the empty string - the same distinction the drag path makes.
     expect(create).toHaveBeenCalledWith('Unsorted', { status: null });
+  });
+
+  describe('select box', () => {
+    function renderSelectable(selected: readonly string[]): string {
+      renderAt(
+        <ItemSelectionContext.Provider
+          value={{
+            selected: new Set(selected),
+            toggle: vi.fn(),
+            capabilities: {
+              select: true,
+              move: true,
+              rename: true,
+              delete: true,
+              drag: 'group-value',
+            },
+            shown: ['i1', 'i2'],
+            show: vi.fn(),
+          }}
+        >
+          {boardWith({ items: [DOING, DONE] })}
+        </ItemSelectionContext.Provider>,
+      );
+      return (
+        screen.getByRole('checkbox', { name: 'Select Search ranking' }).closest('.flex')
+          ?.className ?? ''
+      );
+    }
+
+    it('overlaps the title while idle, so the title keeps the card edge', () => {
+      expect(renderSelectable([])).toContain('absolute');
+    });
+
+    it('takes its own column once something is selected', () => {
+      expect(renderSelectable(['i2'])).not.toContain('absolute');
+    });
   });
 });

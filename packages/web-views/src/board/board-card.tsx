@@ -116,7 +116,9 @@ function BoardCard(props: BoardCardProps): ReactNode {
   } = props;
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
-  const isSelected = useOptionalItemSelection()?.selected.has(item.id) === true;
+  const selection = useOptionalItemSelection();
+  const isSelected = selection?.selected.has(item.id) === true;
+  const selecting = selection !== null && selection.selected.size > 0;
 
   const current = readSelectValue(item, property.key);
   const titleRef = useRef<HTMLButtonElement>(null);
@@ -169,9 +171,16 @@ function BoardCard(props: BoardCardProps): ReactNode {
               isSelected && 'bg-accent/10 outline-2 -outline-offset-2 outline-accent',
             )}
           >
-            <div className="flex items-start gap-2">
+            <div className="relative flex items-start gap-2">
               {/* Beside the draggable title, not inside it, so pressing the box never starts a drag. */}
-              <SelectCheckbox item={item} />
+              {/* Idle it overlaps the title on hover/focus; selecting or on touch it takes its own column. */}
+              <SelectCheckbox
+                item={item}
+                className={cn(
+                  !selecting &&
+                    'absolute left-0 top-0 z-10 bg-background pointer-events-none focus-within:pointer-events-auto group-hover:pointer-events-auto pointer-coarse:pointer-events-auto pointer-coarse:static pointer-coarse:opacity-100',
+                )}
+              />
               <div
                 className="min-w-0 flex-1"
                 draggable
