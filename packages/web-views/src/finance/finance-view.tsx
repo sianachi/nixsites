@@ -117,7 +117,10 @@ export function FinanceView({ container }: FinanceViewProps): ReactNode {
       aria-busy={state.refreshing}
     >
       {state.refreshError === null ? null : (
-        <div role="alert" className="flex flex-wrap items-start gap-2 border border-divider p-3">
+        <div
+          role="alert"
+          className="flex flex-wrap items-start gap-2 rounded-md border border-divider p-3"
+        >
           <Icon icon={TriangleAlert} className="size-4 text-accent-text" />
           <Text variant="note" as="span" tone="accent">
             {state.refreshError} The figures may be out of date.

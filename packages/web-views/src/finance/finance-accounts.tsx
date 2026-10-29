@@ -85,7 +85,7 @@ export function FinanceAccounts({
                       </Text>
                     </div>
                     <Button
-                      variant="ghost"
+                      variant="subtle"
                       onClick={() => {
                         setEditing(summary.account);
                       }}
@@ -401,7 +401,7 @@ function LoanWhatIf({
             />
           </div>
           <Button
-            variant="ghost"
+            variant="subtle"
             aria-expanded={showSchedule}
             onClick={() => {
               setShowSchedule((value) => !value);

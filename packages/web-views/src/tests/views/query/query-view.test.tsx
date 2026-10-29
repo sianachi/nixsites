@@ -1,5 +1,5 @@
 import { createNixClient } from '@nix/api-client';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -155,14 +155,11 @@ describe('the smart list', () => {
       ),
     );
     renderQueryView(OVERDUE_VIEW, vi.fn(), '/?search=missing');
-    expect(
-      await screen.findByText(
-        'No loaded results match this title search. Clear the search above to see them.',
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText('No loaded results match this title search.')).toBeVisible();
     expect(screen.getByText(/the first 2 were loaded/)).toBeVisible();
     expect(screen.queryByText('All matches are hidden for you.')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    const notice = screen.getByText('No loaded results match this title search.').closest('div');
+    await user.click(within(notice as HTMLElement).getByRole('button', { name: 'Clear search' }));
     expect(screen.getByRole('button', { name: 'Water plants' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Read' })).toBeVisible();
     // Row-schema reads are separate requests; the query itself must run once.

@@ -65,7 +65,7 @@ export function BarTable({
                   ))
                 : null}
               <th scope="col" className="p-1 text-right font-normal">
-                <Text variant="note" tone="muted" as="span">
+                <Text variant="note" tone="muted" as="span" className="whitespace-nowrap">
                   {split ? 'All' : series[0]?.label}
                 </Text>
               </th>

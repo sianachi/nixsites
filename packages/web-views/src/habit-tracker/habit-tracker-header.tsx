@@ -97,7 +97,7 @@ export function HabitTrackerHeader({
           >
             Display options
           </summary>
-          <Button variant="ghost" aria-pressed={showArchived} onClick={onToggleArchived}>
+          <Button variant="subtle" aria-pressed={showArchived} onClick={onToggleArchived}>
             {showArchived ? 'Hide archived' : 'Show archived'}
           </Button>
         </details>
@@ -113,7 +113,7 @@ export function HabitTrackerHeader({
           >
             Previous
           </Button>
-          <Button variant="ghost" onClick={onThisWeek}>
+          <Button variant="secondary" onClick={onThisWeek}>
             This week
           </Button>
           <Button

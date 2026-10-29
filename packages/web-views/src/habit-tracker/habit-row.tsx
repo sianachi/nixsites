@@ -149,7 +149,7 @@ export function HabitRow({
             </Text>
             {lifecycle !== 'archived' ? (
               <Button
-                variant="ghost"
+                variant="subtle"
                 disabled={statusPending}
                 onClick={() => {
                   setStatusPending(true);
@@ -165,7 +165,7 @@ export function HabitRow({
               </Button>
             ) : null}
             <Button
-              variant="ghost"
+              variant="subtle"
               disabled={statusPending}
               onClick={() => {
                 setStatusPending(true);
@@ -352,7 +352,7 @@ export function HabitRow({
                 </Text>
                 {measured && hasEntry ? (
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     disabled={pending.has(key) || future || lifecycle !== 'active'}
                     aria-label={`Undo ${title}, ${day}`}
                     onClick={() => {
@@ -369,7 +369,7 @@ export function HabitRow({
                 ) : null}
                 {compact ? (
                   <Button
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       setSelectedDay(null);
                     }}

@@ -177,7 +177,7 @@ export function HabitChartWidgets({
               </Text>
               <div className="flex flex-wrap gap-1">
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   disabled={index === 0}
                   onClick={() => {
                     move(index, -1);
@@ -187,7 +187,7 @@ export function HabitChartWidgets({
                   Up
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   disabled={index === widgets.length - 1}
                   onClick={() => {
                     move(index, 1);
@@ -197,7 +197,7 @@ export function HabitChartWidgets({
                   Down
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   onClick={() => {
                     remove(widget.id);
                   }}
@@ -378,7 +378,7 @@ function Chart({
                 Check-in for {selectedEntry.date}
               </Text>
               <Button
-                variant="ghost"
+                variant="subtle"
                 onClick={() => {
                   onSelect(null);
                 }}

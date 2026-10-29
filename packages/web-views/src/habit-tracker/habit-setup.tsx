@@ -33,7 +33,7 @@ export function HabitSetup({
   const [reminderTime, setReminderTime] = useState(initial?.reminderTime ?? '');
   return (
     <form
-      className="grid min-w-0 items-end gap-3 border border-divider p-3 @lg:grid-cols-2 @lg:p-4"
+      className="grid min-w-0 items-end gap-3 rounded-md border border-divider p-3 @lg:grid-cols-2 @lg:p-4"
       onSubmit={(event) => {
         event.preventDefault();
         if (pending) return;

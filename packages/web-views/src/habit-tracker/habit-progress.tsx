@@ -407,7 +407,7 @@ export function HabitQuantityTrend({
                 {day.date}
               </Text>
               <Button
-                variant="ghost"
+                variant="subtle"
                 aria-label={`${editable ? 'Edit' : 'Inspect'} ${habitDayLabel(day)}`}
                 onClick={() => {
                   onSelect(day.date);

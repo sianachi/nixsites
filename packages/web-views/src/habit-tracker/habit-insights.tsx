@@ -206,7 +206,7 @@ export function HabitInsights({
             </Field>
             {selectedDay !== null ? (
               <Button
-                variant="ghost"
+                variant="subtle"
                 onClick={() => {
                   setSelectedDay(null);
                 }}

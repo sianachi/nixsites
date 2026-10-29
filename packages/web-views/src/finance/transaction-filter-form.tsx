@@ -124,7 +124,7 @@ export function TransactionFilterForm({
         filters.minAmount !== '' ||
         filters.maxAmount !== '' ? (
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               setSearch('');
               setSource('');

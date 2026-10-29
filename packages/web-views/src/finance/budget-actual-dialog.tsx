@@ -266,7 +266,7 @@ function ActualSummary({
         ) : (
           <span className="flex flex-wrap gap-2">
             <Button
-              variant="ghost"
+              variant="subtle"
               aria-label={`Edit ${row.description}`}
               disabled={busy || savedNeedsClose}
               onClick={() => {
@@ -276,7 +276,7 @@ function ActualSummary({
               Edit
             </Button>
             <Button
-              variant="ghost"
+              variant="subtle"
               aria-label={`Delete ${row.description}`}
               disabled={busy || closed || savedNeedsClose}
               onClick={() => {

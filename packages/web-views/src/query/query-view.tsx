@@ -236,7 +236,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
       )}
 
       {run.refreshError === null ? null : (
-        <div role="alert" className="flex items-start gap-2 border border-divider p-3">
+        <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
           <Icon icon={TriangleAlert} className="size-4 text-accent-text" />
           <Text variant="note" as="span" tone="accent">
             {run.refreshError} These results are unaffected; try again.
@@ -261,7 +261,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
             All matches are hidden for you.
           </Text>
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               visibility.showItems(results.results.map((row) => row.id));
             }}
@@ -274,9 +274,17 @@ export function QueryView(props: ViewRendererProps): ReactNode {
         <div className="flex flex-wrap items-center gap-2" role="status">
           <Text variant="note" tone="muted">
             {visible.length === 0
-              ? 'No loaded results match this title search. Clear the search above to see them.'
+              ? 'No loaded results match this title search.'
               : `${String(visible.length)} of ${String(unhidden.length)} loaded results match this title search.`}
           </Text>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              viewState.setSearch('');
+            }}
+          >
+            Clear search
+          </Button>
         </div>
       )}
       <ul className="flex flex-col">
@@ -400,7 +408,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
                     {(trigger) => (
                       <Button
                         {...trigger}
-                        variant="ghost"
+                        variant="subtle"
                         className="shrink-0"
                         aria-label={`Actions for ${row.title ?? 'Untitled'}`}
                       >
