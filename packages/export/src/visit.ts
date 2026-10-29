@@ -18,6 +18,8 @@
  * a `LossKind` behind. See ADR-0037.
  */
 
+import { rejectAllSuggestions } from '@nix/editor-schema';
+
 import type { LossReport, LossSink } from './loss.js';
 
 /**
@@ -174,7 +176,8 @@ export function visitProse<T>(
     loss: request.report.for(request.itemId),
   };
 
-  const root = readNode(body, ctx);
+  // Suggestions are proposals, not content: every format draws the document as if all were rejected.
+  const root = readNode(rejectAllSuggestions(body), ctx);
 
   if (root?.type !== 'doc') {
     ctx.loss.note(

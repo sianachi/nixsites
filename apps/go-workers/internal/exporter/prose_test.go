@@ -311,3 +311,24 @@ func TestProjectBodyReportsTextAlignmentLossAndAcceptsDefaultAlignment(t *testin
 		}
 	}
 }
+
+func TestProjectBodyRendersDocumentsAsIfSuggestionsWereRejected(t *testing.T) {
+	mark := `{"type":"%s","attrs":{"id":"s1","authorId":"a","createdAt":"now"}}`
+	insert := strings.Replace(mark, "%s", "suggestionInsert", 1)
+	del := strings.Replace(mark, "%s", "suggestionDelete", 1)
+	format := `{"type":"suggestionFormat","attrs":{"id":"s3","authorId":"a","createdAt":"now","before":"[{\"type\":\"italic\"}]"}}`
+	suggestion := `"attrs":{"suggestion":{"id":"s2","authorId":"a","createdAt":"now","op":"insert"}}`
+	document := `{"type":"doc","content":[` +
+		`{"type":"paragraph","content":[` +
+		`{"type":"text","text":"kept "},` +
+		`{"type":"text","text":"proposed","marks":[` + insert + `]},` +
+		`{"type":"text","text":"struck","marks":[` + del + `]},` +
+		`{"type":"text","text":" formatted","marks":[{"type":"bold"},` + format + `]}]},` +
+		`{"type":"paragraph",` + suggestion + `,"content":[{"type":"text","text":"new block","marks":[` + insert + `]}]},` +
+		`{"type":"paragraph",` + suggestion + `,"content":[{"type":"text","text":" tail"}]}` +
+		`]}`
+	markdown, losses := projectMarkdown(t, document)
+	if want := "kept struck *formatted* tail"; markdown != want || len(losses) != 0 {
+		t.Fatalf("markdown = %q, losses = %#v, want %q", markdown, losses, want)
+	}
+}

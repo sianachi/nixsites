@@ -749,3 +749,26 @@ it('reports poem alignment loss while keeping words and manual line breaks in Ma
   expect(result.markdown).toContain('Next line');
   expect(result.losses).toContainEqual(MARKDOWN_LOSSES.alignmentDropped);
 });
+
+it('writes a document with suggestions as if they were all rejected', () => {
+  const mark = (type: string) => ({
+    type,
+    attrs: { id: 's1', authorId: 'a', createdAt: 'now' },
+  });
+  const result = documentToMarkdown(
+    doc(
+      paragraph(
+        text('kept '),
+        text('proposed', [mark('suggestionInsert')]),
+        text('struck', [mark('suggestionDelete')]),
+      ),
+      {
+        type: 'paragraph',
+        attrs: { suggestion: { id: 's2', authorId: 'a', createdAt: 'now', op: 'insert' } },
+        content: [text('new block', [mark('suggestionInsert')])],
+      },
+    ),
+  );
+  expect(result.markdown.trim()).toBe('kept struck');
+  expect(result.losses).toEqual([]);
+});

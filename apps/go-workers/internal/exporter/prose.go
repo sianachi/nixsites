@@ -46,6 +46,7 @@ const (
 	attrWidth
 	attrHeight
 	attrTextAlign
+	attrBefore
 )
 
 const (
@@ -94,13 +95,16 @@ type proseAttrs struct {
 	href        string
 	align       string
 	textAlign   string
-	present     uint64
-	valid       uint64
-	unknown     bool
-	invalid     bool
-	dimensions  bool
-	linkMeta    bool
-	listStyle   bool
+	// suggestionOp is a block suggestion's kind; before is a format suggestion's original marks as JSON.
+	suggestionOp string
+	before       string
+	present      uint64
+	valid        uint64
+	unknown      bool
+	invalid      bool
+	dimensions   bool
+	linkMeta     bool
+	listStyle    bool
 }
 
 type proseNode struct {
@@ -281,6 +285,9 @@ func decodeProseBody(body json.RawMessage, allocationLimit int64) (decodedProse,
 			result.root, err = parser.node(0)
 			if err != nil {
 				return decodedProse{}, err
+			}
+			if result.root != nil {
+				result.root.Content = parser.rejectSuggestions(result.root.Content)
 			}
 		default:
 			if err := parser.skipValue(1); err != nil {
@@ -705,7 +712,11 @@ func (parser *proseDecoder) attributes(attributes *proseAttrs, depth int) error 
 			var nonNull bool
 			nonNull, err = parser.nonNullValue(depth + 1)
 			attributes.listStyle = attributes.listStyle || nonNull
-		case "colspan", "rowspan", "colwidth", "text", "background", "threadId", "presentation":
+		case "suggestion":
+			err = parser.suggestionAttribute(attributes, depth+1)
+		case "before":
+			err = parser.stringAttribute(attributes, attrBefore, &attributes.before)
+		case "colspan", "rowspan", "colwidth", "text", "background", "threadId", "presentation", "id", "authorId", "createdAt":
 			err = parser.skipValue(depth + 1)
 		default:
 			attributes.unknown = true
@@ -713,6 +724,41 @@ func (parser *proseDecoder) attributes(attributes *proseAttrs, depth int) error 
 		}
 		if err != nil {
 			return err
+		}
+	}
+	return parser.close('}')
+}
+
+// suggestionAttribute reads a block suggestion's `op` and skips the rest of the object.
+func (parser *proseDecoder) suggestionAttribute(attributes *proseAttrs, depth int) error {
+	first, err := parser.token()
+	if err != nil {
+		return err
+	}
+	if first == nil {
+		return nil
+	}
+	if delimiter, ok := first.(json.Delim); !ok || delimiter != '{' {
+		attributes.invalid = true
+		return parser.skipStarted(first, depth)
+	}
+	for parser.decoder.More() {
+		name, err := parser.objectKey()
+		if err != nil {
+			return err
+		}
+		if name != "op" {
+			if err := parser.skipValue(depth + 1); err != nil {
+				return err
+			}
+			continue
+		}
+		value, present, valid, err := parser.stringValue(maximumProseNameBytes)
+		if err != nil {
+			return err
+		}
+		if present && valid {
+			attributes.suggestionOp = value
 		}
 	}
 	return parser.close('}')
