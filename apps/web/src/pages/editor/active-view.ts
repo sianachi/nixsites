@@ -29,29 +29,20 @@ export function resolveActiveView(
   const views = containerViews?.views ?? [];
   const unrenderable = containerViews?.unrenderable ?? [];
 
-  // Whether the Document tab is left out. An item must never open blank, so the flag is honoured
-  // only while there is a view to show instead; if every view is broken the document comes back
-  // rather than leaving a pane with nothing but explanations of what went wrong.
+  // The flag is honoured only while some view can render, so an item never opens blank.
   const documentHidden =
     containerViews?.hideDocument === true && views.some((view) => !unrenderable.includes(view.id));
 
-  // What the item says opens, unless the request says otherwise. The request wins because it is
-  // the more specific statement - somebody chose it, possibly in a link they were handed - and the
-  // stored default is the starting point rather than the authority.
+  // The request (possibly from a shared link) wins over the stored default.
   const storedDefault = containerViews?.default ?? DOCUMENT_VIEW;
   const requestedId = requested ?? storedDefault;
 
-  // While the document is hidden it can never be what is showing, whether it was asked for by the
-  // address, by a stored default that should not say it, or by a view id this item does not have.
-  // Core already resolves the default to the first view; this keeps the page consistent with that
-  // rather than being a second opinion about it.
+  // A hidden document can never be what shows; fall back to the first view, as Core does.
   const found = views.find((view) => view.id === requestedId) ?? null;
   const active: View | null =
     found !== null || !documentHidden || requestedId === CHILDREN_VIEW ? found : (views[0] ?? null);
   const activeId = active?.id ?? requestedId;
 
-  // The body, when nothing else was chosen or when what was chosen is not a view this item has.
-  // Existing shared links to the old children shortcut still open their list.
   const showChildren = activeId === CHILDREN_VIEW;
   return {
     views,

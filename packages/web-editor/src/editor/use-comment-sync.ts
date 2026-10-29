@@ -1,4 +1,4 @@
-import { comments, isCanceledError, isNixApiError } from '@nix/api-client';
+import { comments, isCanceledError, isNixApiError, type CommentsResponse } from '@nix/api-client';
 import type { Editor } from '@tiptap/core';
 import { useEffect } from 'react';
 
@@ -48,20 +48,21 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
     bindCommentItem(editor, itemId);
     const controller = new AbortController();
     const { signal } = controller;
+    const apply = (answer: CommentsResponse): void => {
+      patchComments(itemId, {
+        threads: answer.threads,
+        revision: answer.revision,
+        status: 'ready',
+        errorCode: null,
+      });
+    };
     // An own action re-reads at once instead of waiting for the long-poll to notice.
     patchComments(itemId, {
       status: 'loading',
       refresh: () => {
         void client
           .query(comments.list(itemId), { signal, forceRefresh: true })
-          .then((answer) => {
-            patchComments(itemId, {
-              threads: answer.threads,
-              revision: answer.revision,
-              status: 'ready',
-              errorCode: null,
-            });
-          })
+          .then(apply)
           .catch(() => undefined);
       },
     });
@@ -82,12 +83,7 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
           if (unchanged) await sleep(Math.max(0, MIN_POLL_MS - (Date.now() - asked)), signal);
           if (answer.revision !== revision || readComments(itemId).status !== 'ready') {
             revision = answer.revision;
-            patchComments(itemId, {
-              threads: answer.threads,
-              revision,
-              status: 'ready',
-              errorCode: null,
-            });
+            apply(answer);
           }
         } catch (reason) {
           if (isCanceledError(reason) || controller.signal.aborted) return;

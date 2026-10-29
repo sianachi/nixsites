@@ -88,6 +88,19 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
       patchComments(itemId, { draft: null, activeThreadId: created.id });
     });
 
+  // Resolved threads are never in `detached`, so one renderer serves both lists.
+  const card = (thread: CommentThread): ReactNode => (
+    <ThreadCard
+      key={thread.id}
+      itemId={itemId}
+      thread={thread}
+      me={me}
+      active={state.activeThreadId === thread.id}
+      detached={state.detached.includes(thread.id)}
+      act={act}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-4">
       {problem === null ? null : (
@@ -133,17 +146,7 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
             No open comments.
           </Text>
         ) : null}
-        {open.map((thread) => (
-          <ThreadCard
-            key={thread.id}
-            itemId={itemId}
-            thread={thread}
-            me={me}
-            active={state.activeThreadId === thread.id}
-            detached={state.detached.includes(thread.id)}
-            act={act}
-          />
-        ))}
+        {open.map(card)}
 
         {resolved.length === 0 ? null : (
           <>
@@ -156,19 +159,7 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
             >
               {showResolved ? 'Hide' : 'Show'} resolved ({resolved.length})
             </Button>
-            {showResolved
-              ? resolved.map((thread) => (
-                  <ThreadCard
-                    key={thread.id}
-                    itemId={itemId}
-                    thread={thread}
-                    me={me}
-                    active={state.activeThreadId === thread.id}
-                    detached={false}
-                    act={act}
-                  />
-                ))
-              : null}
+            {showResolved ? resolved.map(card) : null}
           </>
         )}
       </section>
