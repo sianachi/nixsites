@@ -92,14 +92,17 @@ export function ItemPanel({
           className="min-w-0 flex-1"
         />
 
-        <button
-          type="button"
-          aria-label="Hide the settings panel"
-          onClick={onClose}
-          className={`flex size-7 max-xl:min-h-11 max-xl:min-w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
-        >
-          <Icon icon={PanelRightClose} size="sm" />
-        </button>
+        {/* In a dialog the dialog's own close is the one way out; a second would be a duplicate. */}
+        {overlay ? null : (
+          <button
+            type="button"
+            aria-label="Hide the settings panel"
+            onClick={onClose}
+            className={`flex size-7 max-xl:min-h-11 max-xl:min-w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
+          >
+            <Icon icon={PanelRightClose} size="sm" />
+          </button>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
