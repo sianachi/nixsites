@@ -321,7 +321,7 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
           )}
         >
           {(trigger) => (
-            <Button {...trigger} variant="ghost" className="w-full justify-between">
+            <Button {...trigger} variant="subtle" className="w-full justify-between">
               {items[currentIndex]?.label ?? 'Workspace pages'}
               <Icon icon={ChevronDown} size="sm" />
             </Button>

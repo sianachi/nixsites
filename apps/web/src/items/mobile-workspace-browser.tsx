@@ -63,7 +63,7 @@ export function MobileWorkspaceBrowser({
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <HiddenItemsPanel onOpen={onOpen} />
           <Button
-            variant="ghost"
+            variant="subtle"
             className="min-h-(--control-lg) min-w-(--control-lg) px-2"
             aria-label="Close Explorer"
             onClick={onClose}
@@ -179,7 +179,7 @@ export function MobileWorkspaceBrowser({
                       iconReturnFocus.current = trigger.ref.current;
                       trigger.onKeyDown(event);
                     }}
-                    variant="ghost"
+                    variant="subtle"
                     className="min-h-(--control-lg) min-w-(--control-lg) shrink-0 px-2"
                     aria-label={`Actions for ${item.title || 'Untitled'}`}
                   >
@@ -189,7 +189,7 @@ export function MobileWorkspaceBrowser({
               </Menu>
               {item.hasChildren && !treeChildren.hiddenSet.has(item.id) ? (
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   className="min-h-(--control-lg) min-w-(--control-lg)"
                   aria-label={`Browse children of ${item.title || 'Untitled'}`}
                   onClick={() => {
@@ -199,7 +199,10 @@ export function MobileWorkspaceBrowser({
                 >
                   <Icon icon={ChevronRight} size="sm" />
                 </Button>
-              ) : null}
+              ) : (
+                // Holds the chevron's place, so every row's actions sit in one column.
+                <span aria-hidden="true" className="w-(--control-lg) shrink-0" />
+              )}
             </div>
           );
         })}

@@ -34,7 +34,7 @@ export function HiddenItemsPanel({
         {(trigger) => (
           <Button
             {...trigger}
-            variant="ghost"
+            variant="subtle"
             className="px-2 pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg)"
             aria-label="Workspace options"
           >
