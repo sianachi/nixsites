@@ -1,13 +1,33 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node", "@testing-library/jest-dom/vitest"],
-    "declaration": false,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": ".tsbuild",
+    "tsBuildInfoFile": ".tsbuild/tsconfig.tsbuildinfo"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.config.ts"],
+  "references": [
+    {
+      "path": "../web-editor"
+    },
+    {
+      "path": "../web-foundation"
+    },
+    {
+      "path": "../web-platform"
+    },
+    {
+      "path": "../web-sites"
+    },
+    {
+      "path": "../web-workspaces"
+    }
+  ]
 }

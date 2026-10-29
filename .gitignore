@@ -97,3 +97,4 @@ deploy/.dev-access-token-key.pem
 !/packages/site-render/src/__fixtures__/docs
 !/packages/site-render/src/__golden__/docs
 !/packages/site-render/src/__golden__/docs/changelog/tag/release/
+.tsbuild/

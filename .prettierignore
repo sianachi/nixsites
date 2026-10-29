@@ -3,6 +3,7 @@ deploy/
 docs/
 Design language for Nix review/
 **/dist/
+**/.tsbuild/
 **/build/
 **/coverage/
 **/storybook-static/

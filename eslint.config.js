@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      '**/.tsbuild/**',
       '**/build/**',
       '**/coverage/**',
       '**/storybook-static/**',

@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "stress:mvp1": "node ../../scripts/stress/mvp1.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "dependencies": {
