@@ -8,6 +8,7 @@ import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
+import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { paneClip } from '@nix/web-foundation/layout/regions';
 import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
@@ -112,6 +113,17 @@ export function OpenItem({
   const panelOpen = overlayDetails ? overlayPanelOpen : inlinePanelOpen;
   const [panelPane, setPanelPane] = useState<Pane>('details');
 
+  // The Comment button in the editor's selection menu asks for the pane; adjusting state while
+  // rendering (not in an effect) opens it in the same pass.
+  const { openRequest } = useItemComments(itemId);
+  const [seenRequest, setSeenRequest] = useState(openRequest);
+  if (seenRequest !== openRequest) {
+    setSeenRequest(openRequest);
+    setPanelPane('comments');
+    setOverlayPanelOpen(true);
+    setInlinePanelOpen(true);
+  }
+
   // The dialog is mounted only while it is open, so an export that was never started costs nothing
   // and a closed one keeps no half-chosen format from last time.
   const [dialog, setDialog] = useState<ItemDialogName | null>(null);
@@ -176,6 +188,10 @@ export function OpenItem({
     setPanelPane('site');
     if (!panelOpen) togglePanel();
     focusSitePaneHeading();
+  }
+  function openCommentsPane(): void {
+    setPanelPane('comments');
+    if (!panelOpen) togglePanel();
   }
   const sitesEnabled = useSitesVisible();
   const hasSite = useItemHasSite(itemId, sitesEnabled);
@@ -251,6 +267,7 @@ export function OpenItem({
     sitesEnabled,
     hasSite,
     openSitePane,
+    openCommentsPane: lock.open && showingDocument && !editorKind ? openCommentsPane : undefined,
     canApplyTemplates,
     canManageTemplates,
     historyOpen,

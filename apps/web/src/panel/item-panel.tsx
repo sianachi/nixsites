@@ -5,6 +5,8 @@ import { useState, type ReactNode } from 'react';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
+import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
+import { CommentsPane } from './comments-pane';
 import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
 import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
 import { SitePane } from '@nix/web-sites/sites/site-pane';
@@ -14,8 +16,8 @@ import { SchemaEditor } from '@nix/web-views/core/schema-editor';
 import { ViewEditor } from '@nix/web-views/core/view-editor';
 
 /**
- * One panel, five panes: what this item *is*, what its children may carry, how they are shown,
- * what elsewhere points at it, and whether it is published as a site.
+ * One panel, six panes: what this item *is*, what its children may carry, how they are shown,
+ * what elsewhere points at it, what people have said on it, and whether it is published as a site.
  *
  * **The rename is the point.** Two surfaces were called Properties - the values on this item, and
  * the schema it gives its children - and they are different questions with the same answer only by
@@ -26,7 +28,7 @@ import { ViewEditor } from '@nix/web-views/core/view-editor';
  * reopening it to continue.
  */
 
-export type Pane = 'details' | 'fields' | 'views' | 'links' | 'site';
+export type Pane = 'details' | 'fields' | 'views' | 'links' | 'comments' | 'site';
 
 const PANES = [
   { value: 'details', label: 'Details' },
@@ -36,6 +38,8 @@ const PANES = [
   // what it is. It sits here rather than in a surface of its own because it is another way of
   // configuring nothing and reading something, which is what this panel already is.
   { value: 'links', label: 'Links' },
+  // The note's comment threads and suggestions.
+  { value: 'comments', label: 'Comments' },
   // Publishing this item and everything inside it as a website (ADR-0063).
   { value: 'site', label: 'Site' },
 ] as const;
@@ -63,6 +67,9 @@ export function ItemPanel({
   onPaneChange,
 }: ItemPanelProps): ReactNode {
   const sitesEnabled = useSitesVisible();
+  const openComments = useItemComments(details.item?.id ?? null).threads.filter(
+    (thread) => thread.resolvedAt === null,
+  ).length;
   const [ownPane, setOwnPane] = useState<Pane>('details');
   const requestedPane = steeredPane ?? ownPane;
   // Switching publishing off while the Site pane is open falls back to Details.
@@ -86,7 +93,12 @@ export function ItemPanel({
       <div className="flex shrink-0 items-center gap-2 px-3 py-3">
         <Segmented
           label="What to configure"
-          options={sitesEnabled ? PANES : PANES.filter((option) => option.value !== 'site')}
+          options={PANES.filter((option) => sitesEnabled || option.value !== 'site').map(
+            (option) =>
+              option.value === 'comments' && openComments > 0
+                ? { ...option, label: `Comments (${String(openComments)})` }
+                : option,
+          )}
           value={pane}
           onChange={setPane}
           className="min-w-0 flex-1"
@@ -111,6 +123,10 @@ export function ItemPanel({
         ) : pane === 'site' ? (
           details.item === null ? null : (
             <SitePane itemId={details.item.id} title={details.item.title} />
+          )
+        ) : pane === 'comments' ? (
+          details.item === null ? null : (
+            <CommentsPane itemId={details.item.id} />
           )
         ) : pane === 'links' ? (
           <BacklinksPane itemId={details.item?.id ?? null} />

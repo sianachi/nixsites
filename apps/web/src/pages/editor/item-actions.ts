@@ -6,6 +6,7 @@ import {
   LayoutTemplate,
   Lock,
   LockOpen,
+  MessageSquare,
   PanelRightClose,
   Save,
   Upload,
@@ -34,6 +35,8 @@ export interface ItemActionArgs {
   readonly sitesEnabled: boolean;
   readonly hasSite: boolean | null;
   readonly openSitePane: () => void;
+  /** Opens the comments pane; absent for bodies that cannot be commented on. */
+  readonly openCommentsPane: (() => void) | undefined;
   readonly canApplyTemplates: boolean;
   readonly canManageTemplates: boolean;
   readonly historyOpen: boolean;
@@ -57,6 +60,7 @@ export function itemActionEntries({
   sitesEnabled,
   hasSite,
   openSitePane,
+  openCommentsPane,
   canApplyTemplates,
   canManageTemplates,
   historyOpen,
@@ -106,6 +110,9 @@ export function itemActionEntries({
         openDialog('move');
       },
     },
+    ...(openCommentsPane === undefined
+      ? []
+      : [{ key: 'comments', label: 'Comments', icon: MessageSquare, onSelect: openCommentsPane }]),
     {
       key: 'export',
       label: 'Export',
