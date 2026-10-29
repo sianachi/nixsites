@@ -22,7 +22,7 @@ const meta = {
   argTypes: {
     variant: {
       control: 'inline-radio',
-      options: ['primary', 'secondary', 'ghost', 'icon'],
+      options: ['primary', 'secondary', 'ghost', 'subtle', 'icon'],
     },
     fullWidth: { control: 'boolean' },
     disabled: { control: 'boolean' },
@@ -48,6 +48,11 @@ export const Secondary: Story = {
 /** Type only, for a tertiary action that must not compete. */
 export const Ghost: Story = {
   args: { variant: 'ghost', children: 'Cancel' },
+};
+
+/** Muted type or glyph, for chrome that recedes beside content: a row's actions, a close. */
+export const Subtle: Story = {
+  args: { variant: 'subtle', children: 'Close' },
 };
 
 /** A square outlined box holding one glyph; the label lives in aria-label. */
@@ -176,6 +181,14 @@ export const GhostHover: Story = {
   args: { variant: 'ghost', children: 'Cancel' },
   play: async ({ canvasElement }) => {
     const button = within(canvasElement).getByRole('button', { name: 'Cancel' });
+    await userEvent.hover(button);
+  },
+};
+
+export const SubtleHover: Story = {
+  args: { variant: 'subtle', children: 'Close' },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole('button', { name: 'Close' });
     await userEvent.hover(button);
   },
 };
