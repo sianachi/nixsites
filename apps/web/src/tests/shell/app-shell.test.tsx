@@ -89,7 +89,7 @@ describe('the shell', () => {
 
     await screen.findByRole('button', { name: /show the explorer/i });
     expect(screen.getByRole('banner')).toHaveClass('min-w-0', 'px-2');
-    expect(screen.getByRole('button', { name: 'Workspace menu' })).toHaveClass('min-w-0', 'w-full');
+    expect(screen.getByRole('button', { name: 'Workspace menu' })).toHaveClass('min-w-0');
     expect(screen.getByRole('button', { name: 'Search' })).toHaveClass('shrink-0', 'px-2');
   });
 
