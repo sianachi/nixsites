@@ -111,7 +111,11 @@ function PetWorkToolsView({
         return true;
       }
       if (!parsed.success) return true;
-      if (READ_ONLY_OPERATIONS.has(parsed.data.operation) && readWithoutAsking) return false;
+      if (
+        READ_ONLY_OPERATIONS.has(parsed.data.operation) &&
+        (readWithoutAsking || parsed.data.operation === 'remember')
+      )
+        return false;
       return !(
         appliesWithoutAsking(tool) &&
         writeMayRunWithoutAsking(parsed.data) &&

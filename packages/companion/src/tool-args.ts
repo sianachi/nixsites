@@ -37,6 +37,7 @@ export const workspaceToolSchema = z
       'create_entries',
       'build_blueprint',
       'read_calendar',
+      'remember',
     ];
     if (!NO_ITEM_ID_REQUIRED.includes(args.operation)) required('itemId');
     if (
@@ -49,7 +50,7 @@ export const workspaceToolSchema = z
       ].includes(args.operation)
     )
       required('title');
-    if (args.operation === 'append_note') required('markdown');
+    if (args.operation === 'append_note' || args.operation === 'remember') required('markdown');
     // Body edits: `query` carries the heading (replace_section) or the passage to find
     // (replace_passage); `markdown` carries the new section or the replacement text, which may be
     // empty for a passage (deleting a phrase) but never for a section.

@@ -31,6 +31,19 @@ export const petSettingsSchema = z
     motion: z.enum(['system', 'reduced', 'full']),
     profiles: z.array(petProfileSchema).max(12),
     inlineWriting: z.boolean().default(false),
+    /** What the pet has learned about the owner, newest last; the owner edits them in Settings. */
+    memories: z
+      .array(
+        z.object({
+          id: z.uuid(),
+          text: z.string().trim().min(1).max(280),
+          createdAt: z.iso.datetime({ offset: true }),
+        }),
+      )
+      .max(50)
+      .nullish(),
+    /** The owner turned memory off: nothing is sent to the model and the pet cannot save more. */
+    memoryOff: z.boolean().nullish(),
   })
   .refine((settings) => {
     const ids = new Set(settings.profiles.map((profile) => profile.id));

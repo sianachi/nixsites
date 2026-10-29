@@ -997,3 +997,22 @@ func TestEncodedProviderObjectsStillRespectDepthAndSizeLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestRememberIsRefusedOnceTheConversationHasReadProtectedContent(t *testing.T) {
+	for _, locked := range []bool{false, true} {
+		peer := &toolPeer{}
+		c := &conversation{ThreadID: "thread", State: "thinking", WorkspaceAccess: true, LockedRead: locked}
+		a := &account{transport: peer, home: t.TempDir(), conversations: map[string]*conversation{"x": c}}
+		raw := json.RawMessage(`{"threadId":"thread","tool":"nix_remember","callId":"one","arguments":{"fact":"Prefers metric units."}}`)
+		if !a.toolRequest(json.RawMessage(`1`), "item/tool/call", raw) {
+			t.Fatal("tool call not handled")
+		}
+		refused := len(peer.replies) == 1 && strings.Contains(fmt.Sprint(peer.replies[0]), "read protected content")
+		if refused != locked {
+			t.Fatalf("locked=%v: refused=%v, replies %v, tools %d", locked, refused, peer.replies, len(c.Tools))
+		}
+		if !locked && len(c.Tools) != 1 {
+			t.Fatalf("an unlocked remember should wait for the browser to run it: %d tools", len(c.Tools))
+		}
+	}
+}

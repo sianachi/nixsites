@@ -384,6 +384,9 @@ export async function declineReason(
   const args = parsed.data;
   if (args.operation === 'read_template' && !fixture.templates?.has(args.itemId))
     return 'the template was not captured by this fixture';
+  // A memory goes into the signed-in owner's own pet settings, outside every fixture; the attempt
+  // is what a case scores.
+  if (args.operation === 'remember') return 'evaluations never save memories';
   if (READ_ONLY_OPERATIONS.has(args.operation)) return undefined;
   if (!allowWrites) return 'writes are not allowed in this run';
   const approved = new Set<string>(approvedOperations);

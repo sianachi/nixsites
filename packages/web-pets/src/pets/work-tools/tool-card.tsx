@@ -177,7 +177,8 @@ export function PetWorkToolCard({
   const itemId = args?.itemId && z.uuid().safeParse(args.itemId).success ? args.itemId : undefined;
   const parentId =
     args?.parentId && z.uuid().safeParse(args.parentId).success ? args.parentId : undefined;
-  const autoRun = isReadOp && readWithoutAsking;
+  // Memory always runs on its own: the owner reviews it in Settings, not on a card.
+  const autoRun = isReadOp && (readWithoutAsking || args.operation === 'remember');
 
   // Invalid writes go straight back to the pet: once a structure write's preview proves it has
   // problems, decline it automatically, once per tool id, in both modes, rather than making the

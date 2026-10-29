@@ -26,6 +26,13 @@ follows semantic versioning (`0.x` pre-1.0).
   never searched. Notes are indexed as they are next saved, and existing notes in the background.
   The API image is about 35 MB larger, the API uses 100-250 MB more memory, and its memory limit
   in the Compose and Kubernetes files rises from 512 MB to 768 MB.
+- The companion's search finds passages by meaning across the workspace, not only titles and exact
+  words, so a note that says "holiday" answers a question about a trip. It answers from those
+  passages and links the notes they came from.
+- The companion remembers lasting facts and preferences you tell it about yourself, or ask it to
+  remember, and uses them in later conversations. Settings > Pets > Memory lists every fact: edit
+  or forget any of them, add your own, or turn memory off. It never saves what notes or other
+  people say, nor anything from a conversation that has read locked content.
 - Drag files and folders from your computer onto the Explorer. Dropping on an item puts them
   inside it, between items puts them beside it, and on empty space at the top of the workspace.
   A folder becomes a note holding its files and subfolders.
@@ -44,6 +51,12 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- With an Anthropic or OpenRouter key, the companion keeps the last 12 turns of a conversation
+  instead of the last 32 messages, so one request that runs many tools no longer makes it forget
+  everything before it, and its prompt is cached, so later steps and replies cost less and start
+  sooner.
+- The companion understands views better: which views apply a saved sort and filters, how smart
+  list filters and presets work, and what a view read left out.
 - The note tree is now called the Explorer, so "workspace" only means a workspace you belong to.
 - **Breaking:** an invitation grants nothing until it is accepted. Invitees no longer get
   provisional access, and signing in no longer accepts a pending invitation. Updating removes the

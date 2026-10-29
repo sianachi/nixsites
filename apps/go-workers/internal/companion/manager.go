@@ -460,7 +460,7 @@ func validRequest(r Request) bool {
 	case "status", "connect", "disconnect", "models":
 		return true
 	case "read", "watch", "send", "interrupt", "reset", "tool_claim", "tool_result", "history", "read_history", "delete_history", "rename", "resume_history":
-		return validHistoryOp(r) && uuid.MatchString(r.WorkspaceID) && uuid.MatchString(r.PetID) && (r.RootItemID == "" || uuid.MatchString(r.RootItemID)) && validTurnContext(r) && utf16Len(r.Text) <= 8000 && utf16Len(r.SharedText) <= 16000 && utf16Len(r.Instructions) <= 4000 && len(r.Model) <= 160 && utf16Len(r.ToolResult) <= 32000 && validToolImage(r) && len(r.ToolID) <= 200 && (r.Mode == "" || r.Mode == "chat" || r.Mode == "consult") && (r.Operation != "send" || (uuid.MatchString(r.RequestID) && strings.TrimSpace(r.Text) != "")) && (!strings.HasPrefix(r.Operation, "tool_") || (uuid.MatchString(r.RequestID) && r.ToolID != ""))
+		return validHistoryOp(r) && uuid.MatchString(r.WorkspaceID) && uuid.MatchString(r.PetID) && (r.RootItemID == "" || uuid.MatchString(r.RootItemID)) && validTurnContext(r) && utf16Len(r.Text) <= 8000 && utf16Len(r.SharedText) <= 16000 && utf16Len(r.Instructions) <= 20000 && len(r.Model) <= 160 && utf16Len(r.ToolResult) <= 32000 && validToolImage(r) && len(r.ToolID) <= 200 && (r.Mode == "" || r.Mode == "chat" || r.Mode == "consult") && (r.Operation != "send" || (uuid.MatchString(r.RequestID) && strings.TrimSpace(r.Text) != "")) && (!strings.HasPrefix(r.Operation, "tool_") || (uuid.MatchString(r.RequestID) && r.ToolID != ""))
 	default:
 		return false
 	}

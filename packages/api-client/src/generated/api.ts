@@ -5063,6 +5063,13 @@ export interface components {
       language?: null | string;
       model?: null | string;
     };
+    PetMemory: {
+      /** Format: uuid */
+      id: string;
+      text: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
     PetMessage: {
       id: string;
       role: string;
@@ -5150,6 +5157,9 @@ export interface components {
       profiles: components['schemas']['PetProfile'][];
       /** @default false */
       inlineWriting: boolean;
+      memories?: null | components['schemas']['PetMemory'][];
+      /** @default false */
+      memoryOff: boolean;
     };
     PetSettingsResponse: {
       /** Format: int64 */

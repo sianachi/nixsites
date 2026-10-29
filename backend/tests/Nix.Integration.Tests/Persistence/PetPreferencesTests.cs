@@ -154,6 +154,30 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
+    public async Task Saved_memories_reach_the_worker_only_while_memory_is_on()
+    {
+        await SaveInitialAsync();
+        foreach (var off in new[] { false, true })
+        {
+            var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+            await using (work.ConfigureAwait(false))
+            {
+                var dispatcher = work.Resolve<NixDispatcher>();
+                var saved = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
+                var settings = saved.Settings with { Memories = [new(Guid.NewGuid(), "Prefers metric units.", DateTimeOffset.UnixEpoch)], MemoryOff = off };
+                Assert.True((await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(saved.Revision, settings), Cancellation)).IsSuccess);
+                using var handler = new RecordingWorker();
+                using var http = new HttpClient(handler);
+                Assert.True((await Gateway(work, http).ExecuteAsync(new("read", TestTenants.AlphaWorkspace, settings.ActivePetId), Cancellation)).IsSuccess);
+                using var body = JsonDocument.Parse(handler.Body);
+                var instructions = body.RootElement.GetProperty("instructions").GetString();
+                Assert.Equal(!off, instructions?.Contains("- Prefers metric units.", StringComparison.Ordinal));
+                await work.CommitAsync(Cancellation);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Note_conversations_refuse_missing_foreign_and_wrong_workspace_roots_before_contacting_worker()
     {
         await SaveInitialAsync();

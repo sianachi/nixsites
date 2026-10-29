@@ -1,6 +1,6 @@
 import * as editFields from './structure/edit-fields.js';
 import { z } from 'zod';
-import { items, search, structure } from '@nix/api-client';
+import { items, NixApiError, pets, search, structure } from '@nix/api-client';
 import {
   applySpecSchema,
   entriesSpecSchema,
@@ -73,6 +73,45 @@ export interface WorkspaceToolOutcome {
   lockedContent: boolean;
   /** A file read's picture, as a `data:image/...;base64` URL, sent beside `text`. */
   image?: string;
+}
+
+/** The most memories the owner's settings hold; Core refuses more. */
+const MAX_MEMORIES = 50;
+
+/** Adds one fact to the owner's pet memory, the list Settings > Pets > Memory shows and edits.
+ * The settings document is saved at the revision just read, once more if another save won. */
+async function remember(
+  client: CompanionPorts['core'],
+  fact: string,
+  options: { signal: AbortSignal },
+): Promise<{ remembered: string; alreadyKnown?: true }> {
+  const text = fact.trim().replace(/\s+/g, ' ');
+  if (text.length > 280)
+    throw new WorkspaceToolRefusal('A memory is one short sentence of at most 280 characters.');
+  for (let attempt = 0; ; attempt += 1) {
+    const { revision, settings } = await client.query(pets.settings(), options);
+    if (settings.memoryOff)
+      throw new WorkspaceToolRefusal(
+        'The owner has turned memory off in Settings > Pets. Nothing was saved.',
+      );
+    const known = settings.memories ?? [];
+    if (known.some((memory) => memory.text.toLowerCase() === text.toLowerCase()))
+      return { remembered: text, alreadyKnown: true };
+    if (known.length >= MAX_MEMORIES)
+      throw new WorkspaceToolRefusal(
+        `Memory is full (${String(MAX_MEMORIES)} facts). Ask the owner to remove some in Settings > Pets > Memory.`,
+      );
+    const memories = [
+      ...known,
+      { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() },
+    ];
+    try {
+      await client.execute(pets.saveSettings(revision, { ...settings, memories }), options);
+      return { remembered: text };
+    } catch (error) {
+      if (attempt > 0 || !(error instanceof NixApiError) || error.status !== 409) throw error;
+    }
+  }
 }
 
 /** Execute only after the caller claims and approves this exact tool request. */
@@ -154,6 +193,7 @@ export async function runWorkspaceTool(
       'update_view',
       'list_templates',
       'read_calendar',
+      'remember',
     ].includes(args.operation)
   ) {
     await check(args.itemId);
@@ -369,6 +409,10 @@ export async function runWorkspaceTool(
         : [];
       result = listedItems(children, fields, truncated);
       contentSources = [args.parentId];
+      break;
+    }
+    case 'remember': {
+      result = await remember(client, args.markdown, requestOptions);
       break;
     }
     case 'read_calendar': {

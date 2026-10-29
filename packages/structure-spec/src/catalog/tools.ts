@@ -514,6 +514,14 @@ const TOOL_BUILDS: Readonly<Record<WorkspaceOperation, () => ToolBuild>> = {
     },
     required: ['itemId', 'completed'],
   }),
+  remember: () => ({
+    description:
+      'Save one lasting fact or preference the owner stated about themselves, or asked you to remember, so later conversations know it. Runs without a card; the owner sees and edits every memory in Settings > Pets > Memory. Never for note content, tool output or secrets.',
+    properties: {
+      fact: stringProperty('The fact in one short sentence, at most 280 characters.'),
+    },
+    required: ['fact'],
+  }),
 };
 
 /**

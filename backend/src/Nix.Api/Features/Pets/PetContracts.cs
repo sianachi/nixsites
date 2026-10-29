@@ -15,9 +15,14 @@ public sealed record PetProfile(Guid Id, string Name, string Appearance, string 
 /// <remarks>
 /// <c>InlineWriting</c> is the separate opt-in for sending text the person selects in a note to
 /// the model provider from the editor. It defaults to off, and settings stored before it existed
-/// read as off. It is the last member so a stored document without it still deserialises.
+/// read as off. <c>Memories</c> are what the pet has learned about the owner, which the owner sees and
+/// edits in Settings; <c>MemoryOff</c> stops them reaching the model and the pet saving more. All three
+/// trail and default so a stored document without them still deserialises.
 /// </remarks>
-public sealed record PetSettings(bool Enabled, Guid? ActivePetId, string Motion, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false);
+public sealed record PetSettings(bool Enabled, Guid? ActivePetId, string Motion, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, bool MemoryOff = false);
+
+/// <summary>One fact the pet saved, or the owner wrote, about the owner.</summary>
+public sealed record PetMemory(Guid Id, string Text, DateTimeOffset CreatedAt);
 
 /// <summary>The saved document and its concurrency version.</summary>
 public sealed record PetSettingsResponse(long Revision, PetSettings Settings);

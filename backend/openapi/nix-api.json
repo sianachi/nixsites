@@ -20492,6 +20492,27 @@
           }
         }
       },
+      "PetMemory": {
+        "required": [
+          "id",
+          "text",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PetMessage": {
         "required": [
           "id",
@@ -20768,6 +20789,19 @@
             }
           },
           "inlineWriting": {
+            "type": "boolean",
+            "default": false
+          },
+          "memories": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PetMemory"
+            }
+          },
+          "memoryOff": {
             "type": "boolean",
             "default": false
           }

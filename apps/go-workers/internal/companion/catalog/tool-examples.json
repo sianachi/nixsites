@@ -620,5 +620,21 @@
       "propertiesJson": "",
       "specJson": "{\"completed\":true}"
     }
+  },
+  {
+    "operation": "remember",
+    "arguments": {
+      "fact": "Prefers metric units."
+    },
+    "flat": {
+      "operation": "remember",
+      "itemId": "",
+      "parentId": "",
+      "title": "",
+      "markdown": "Prefers metric units.",
+      "query": "",
+      "propertiesJson": "",
+      "specJson": ""
+    }
   }
 ]

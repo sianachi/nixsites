@@ -14,6 +14,7 @@ import { PetAvatar } from './pet-avatar';
 import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';
 import { PetDeviceSettings } from './pet-device-settings';
+import { PetMemorySection } from './pet-memory-section';
 import { SettingsSection } from '@nix/web-settings/settings/shared/settings-section';
 
 export function PetSettingsSection(): ReactElement {
@@ -385,6 +386,13 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         ) : (
           motionField
         )}
+        <PetMemorySection
+          memories={draft.memories ?? []}
+          memoryOff={draft.memoryOff ?? false}
+          onChange={(memories, memoryOff) => {
+            change({ ...draft, memories, memoryOff });
+          }}
+        />
       </fieldset>
       {message ? (
         <Text role="status" variant="note">

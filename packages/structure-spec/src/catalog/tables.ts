@@ -371,6 +371,7 @@ export const WORKSPACE_OPERATIONS = [
   'save_as_template',
   'read_calendar',
   'complete_task',
+  'remember',
 ] as const satisfies readonly string[];
 
 export type WorkspaceOperation = (typeof WORKSPACE_OPERATIONS)[number];
@@ -387,4 +388,6 @@ export const READ_ONLY_OPERATION_NAMES = [
   'list_templates',
   'read_template',
   'read_calendar',
+  // Writes nothing in the workspace: only the owner's private memory, shown in Settings.
+  'remember',
 ] as const satisfies readonly WorkspaceOperation[];

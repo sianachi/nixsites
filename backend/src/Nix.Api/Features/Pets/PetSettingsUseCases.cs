@@ -16,6 +16,12 @@ public sealed record SavePetSettings(long ExpectedRevision, PetSettings Settings
 /// <summary>Validates settings without interpreting instructions as executable configuration.</summary>
 public static class PetSettingsValidation
 {
+    /// <summary>The most memories the settings hold.</summary>
+    public const int MaxMemories = 50;
+
+    /// <summary>The longest memory, in UTF-16 units.</summary>
+    public const int MaxMemoryLength = 280;
+
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, "system", []);
 
@@ -43,7 +49,19 @@ public static class PetSettingsValidation
             }
         }
 
-        return (!settings.Enabled || settings.ActivePetId is not null)
+        var memoryIds = new HashSet<Guid>();
+        foreach (var memory in settings.Memories ?? [])
+        {
+            if (memory is null || memory.Id == Guid.Empty || !memoryIds.Add(memory.Id)
+                || string.IsNullOrWhiteSpace(memory.Text) || memory.Text.Length > MaxMemoryLength
+                || memory.Text.Any(char.IsControl))
+            {
+                return false;
+            }
+        }
+
+        return memoryIds.Count <= MaxMemories
+            && (!settings.Enabled || settings.ActivePetId is not null)
             && (settings.ActivePetId is null || ids.Contains(settings.ActivePetId.Value))
             && Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(settings, PetJsonContext.Default.PetSettings)) <= 60000;
     }

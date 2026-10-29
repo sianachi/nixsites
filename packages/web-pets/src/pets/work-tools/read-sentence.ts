@@ -35,6 +35,12 @@ function readPhrase(args: WorkspaceToolArgs): ReadPhrase {
       };
     case 'read_view':
       return { base: 'Read a view', progressive: 'Reading a view', past: 'Read a view' };
+    case 'remember':
+      return {
+        base: `Remember: ${args.markdown}`,
+        progressive: `Remembering: ${args.markdown}`,
+        past: `Remembered: ${args.markdown} (Settings > Pets > Memory)`,
+      };
     case 'read_structure':
       return {
         base: "Read an item's structure",

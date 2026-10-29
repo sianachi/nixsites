@@ -39,7 +39,8 @@ export const saveSettings = (
     schema: petSettingsResponseSchema,
     body: {
       expectedRevision,
-      settings: value,
+      // Settings read from before memory existed carry neither field; Core reads them as none and on.
+      settings: { ...value, memories: value.memories ?? null, memoryOff: value.memoryOff ?? false },
     } satisfies components['schemas']['SavePetSettingsRequest'],
     invalidates: [settingsKey],
   });

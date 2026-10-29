@@ -114,6 +114,7 @@ var toolArgSpecs = map[string]map[string]argMapping{
 	"read_item":         {"itemId": {"itemId", argString}},
 	"read_note":         {"itemId": {"itemId", argString}},
 	"search_note":       {"itemId": {"itemId", argString}, "query": {"query", argString}},
+	"remember":          {"fact": {"markdown", argString}},
 	"read_structure":    {"itemId": {"itemId", argString}},
 	"read_view":         {"itemId": {"itemId", argString}, "query": {"query", argObjectJSON}},
 	"create_note":       {"title": {"title", argString}, "markdown": {"markdown", argString}, "parentId": {"parentId", argString}},
@@ -422,7 +423,13 @@ func (a *account) toolRequest(id json.RawMessage, method string, raw json.RawMes
 			}
 			return false
 		}
-		if reason := noteScopeToolRefusal(c, string(flatArguments)); reason != "" {
+		reason = noteScopeToolRefusal(c, string(flatArguments))
+		if reason == "" && c.LockedRead && toolOperation(string(flatArguments)) == "remember" {
+			// Protected text in the thread could otherwise leave its lock as a "fact" the owner
+			// never approved; memory runs without a card, so it stops here instead.
+			reason = "This conversation has read protected content, so nothing from it is remembered. The owner can add the fact in Settings > Pets > Memory."
+		}
+		if reason != "" {
 			if peer, ok := a.transport.(toolTransport); ok {
 				_ = peer.Reply(id, toolOutput(false, reason, ""))
 				return true
@@ -600,6 +607,10 @@ func validateToolArguments(raw json.RawMessage) string {
 		return fmt.Sprintf("%s must be a Nix item UUID.", modelParamForItemID(p.Operation))
 	}
 	switch p.Operation {
+	case "remember":
+		if fact := strings.TrimSpace(p.Markdown); fact == "" || utf16Len(fact) > 280 {
+			return "nix_remember needs one fact of at most 280 characters."
+		}
 	case "list_items":
 	case "search":
 		if strings.TrimSpace(p.Query) == "" {

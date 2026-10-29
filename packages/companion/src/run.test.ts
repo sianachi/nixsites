@@ -278,6 +278,52 @@ describe('workspace-scoped companion tools', () => {
     expect(outcome.text).not.toContain('private');
     expect(JSON.parse(outcome.text)).toMatchObject({ truncated: true, passages: [passage] });
   });
+  describe('remember', () => {
+    const settings = (extra: Record<string, unknown> = {}) => ({
+      revision: 7,
+      settings: {
+        enabled: true,
+        activePetId: null,
+        motion: 'system',
+        profiles: [],
+        inlineWriting: false,
+        memories: [{ id: itemId, text: 'Works in London.', createdAt: '2026-10-29T00:00:00.000Z' }],
+        memoryOff: false,
+        ...extra,
+      },
+    });
+    const remember = (
+      ports: ReturnType<typeof setup>['ports'],
+      fact: string,
+      signal: AbortSignal,
+    ) => runWorkspaceTool(ports, workspace, input('remember', { markdown: fact }), signal);
+
+    it('adds the fact at the revision it read', async () => {
+      const { ports, query, execute, signal } = setup();
+      query.mockResolvedValue(settings());
+      const outcome = await remember(ports, '  Prefers   metric units. ', signal);
+      expect(JSON.parse(outcome.text)).toEqual({ remembered: 'Prefers metric units.' });
+      const saved = execute.mock.calls[0]?.[0] as {
+        body: { expectedRevision: number; settings: { memories: { text: string }[] } };
+      };
+      expect(saved.body.expectedRevision).toBe(7);
+      expect(saved.body.settings.memories.map((memory) => memory.text)).toEqual([
+        'Works in London.',
+        'Prefers metric units.',
+      ]);
+    });
+
+    it('saves nothing for a fact it already has, or when memory is off', async () => {
+      const { ports, query, execute, signal } = setup();
+      query.mockResolvedValue(settings());
+      expect(JSON.parse((await remember(ports, 'works in london.', signal)).text)).toMatchObject({
+        alreadyKnown: true,
+      });
+      query.mockResolvedValue(settings({ memoryOff: true }));
+      await expect(remember(ports, 'Likes tea.', signal)).rejects.toThrow('turned memory off');
+      expect(execute).not.toHaveBeenCalled();
+    });
+  });
   it('refuses unknown operations and model-provided URLs', async () => {
     const { ports, execute, signal } = setup();
     await expect(runWorkspaceTool(ports, workspace, input('shell'), signal)).rejects.toThrow();

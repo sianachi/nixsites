@@ -568,4 +568,45 @@ describe('pet configuration', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.getByRole('button', { name: 'Change ChatGPT connection' })).toHaveFocus();
   });
+
+  it('lists what the pet remembered and saves edits, removals, additions and the off switch', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(() => Promise.resolve(true));
+    const remembered = {
+      ...savedPet('anthropic'),
+      settings: {
+        ...savedPet('anthropic').settings,
+        memories: [
+          {
+            id: '55555555-5555-4555-8555-555555555555',
+            text: 'Prefers metric units.',
+            createdAt: '2026-10-29T00:00:00.000Z',
+          },
+          {
+            id: '66666666-6666-4666-8666-666666666666',
+            text: 'Works in London.',
+            createdAt: '2026-10-29T00:00:00.000Z',
+          },
+        ],
+      },
+    };
+    render(<PetSettingsEditor initial={remembered} saving={false} onSave={save} />);
+
+    expect(screen.getByRole('textbox', { name: 'Memory 1' })).toHaveValue('Prefers metric units.');
+    await user.click(screen.getByRole('button', { name: 'Forget "Works in London."' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Add something to remember' }),
+      'Likes tea.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Let pets remember things about you' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const saved = (save.mock.calls[0] as unknown as [PetSettingsResponse['settings']])[0];
+    expect(saved.memories?.map((memory) => memory.text)).toEqual([
+      'Prefers metric units.',
+      'Likes tea.',
+    ]);
+    expect(saved.memoryOff).toBe(true);
+  });
 });

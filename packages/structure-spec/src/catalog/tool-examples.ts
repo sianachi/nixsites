@@ -98,6 +98,7 @@ export const TOOL_EXAMPLES: Readonly<
   save_as_template: { itemId: EXAMPLE_ITEM_ID, title: 'Reading log template' },
   read_calendar: { from: '2026-10-05', to: '2026-10-11' },
   complete_task: { itemId: EXAMPLE_ITEM_ID, completed: true },
+  remember: { fact: 'Prefers metric units.' },
 };
 
 /** Typed parameters that are neither a flat field nor a whole JSON object: each one becomes a
@@ -123,7 +124,7 @@ export interface FlatWorkspaceToolArgs {
  * /companion/tools.go`): translates one typed `nix_<operation>` call's native-JSON arguments back
  * into the flat shape `workspaceToolSchema` and `@nix/companion/run.ts` have always parsed.
  * `templateId` maps to `itemId`; `heading` and `find` map to `query` and `replace` to `markdown`
- * (the body edits); `properties` marshals to `propertiesJson`; `spec` and `blueprint` both
+ * (the body edits), and `fact` to `markdown` (remember); `properties` marshals to `propertiesJson`; `spec` and `blueprint` both
  * marshal to `specJson`; the scalar `SPEC_FIELD_PARAMETERS` gather into one `specJson` object;
  * every other flat field defaults to `""`. Used by
  * `tools.test.ts`'s and `@nix/companion`'s round-trip tests, by `scripts/build-catalog.ts` (which
@@ -173,6 +174,7 @@ export function flattenToolExample(
         flat.query = String(value);
         break;
       case 'replace':
+      case 'fact':
         flat.markdown = String(value);
         break;
       case 'properties':
