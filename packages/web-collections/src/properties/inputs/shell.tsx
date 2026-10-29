@@ -182,7 +182,7 @@ export function ClearButton(props: {
   };
 
   return density === 'cell' ? (
-    <Button variant="icon" disabled={disabled} aria-label={`Clear ${name}`} onClick={onClick}>
+    <Button variant="subtle" disabled={disabled} aria-label={`Clear ${name}`} onClick={onClick}>
       <Icon icon={X} size="sm" />
     </Button>
   ) : (
