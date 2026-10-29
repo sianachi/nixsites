@@ -446,7 +446,7 @@ function SiteDetails({
                   </Text>
                   {site.canManage && site.status === 'published' ? (
                     <Button
-                      variant="ghost"
+                      variant="subtle"
                       disabled={working || building || rollingBackTo !== null}
                       aria-label={`Roll back to the build from ${dateTime(build.createdAt)}`}
                       onClick={() => {
@@ -469,7 +469,7 @@ function SiteDetails({
             Pages
           </Text>
           <Button
-            variant="ghost"
+            variant="subtle"
             aria-expanded={showPages}
             onClick={() => {
               setShowPages(!showPages);

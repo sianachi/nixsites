@@ -650,7 +650,7 @@ export function SiteDatedCollections({
                 {`${titleOf(entry.itemId)}, dated by ${labelOf(entry.itemId, entry.dateProperty)}`}
               </Text>
               <Button
-                variant="ghost"
+                variant="subtle"
                 aria-label={`Remove ${titleOf(entry.itemId)}`}
                 disabled={save.saving}
                 onClick={() => {

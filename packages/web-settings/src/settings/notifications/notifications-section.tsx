@@ -199,7 +199,7 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
                   </Text>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       removeMutedContainer(container.id);
                     }}

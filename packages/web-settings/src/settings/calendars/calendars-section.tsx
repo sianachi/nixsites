@@ -420,7 +420,7 @@ export function CalendarsSection(): ReactElement {
                           header: 'Actions',
                           cell: (entry: WorkspaceCalendarLink) => (
                             <Button
-                              variant="ghost"
+                              variant="subtle"
                               onClick={() => {
                                 setUnlinkingOthers(entry);
                               }}

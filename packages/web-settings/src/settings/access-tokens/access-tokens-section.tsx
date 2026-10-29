@@ -131,7 +131,7 @@ export function AccessTokensSection(): ReactElement {
       cell: (token: AccessToken) =>
         tokenStatus(token, now).kind === 'live' ? (
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => {
               setRevokeRefusal(null);
               setRevoking(token);

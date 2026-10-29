@@ -149,7 +149,7 @@ export function SitePagesList({
                       setReturnFocusTo(null);
                       node.focus();
                     }}
-                    variant="ghost"
+                    variant="subtle"
                     aria-label={`Change the path of ${title}`}
                     onClick={() => {
                       setSaveError(null);

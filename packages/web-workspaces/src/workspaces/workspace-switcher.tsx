@@ -190,7 +190,7 @@ export function WorkspaceSwitcher(): ReactNode {
               <button
                 type="button"
                 onClick={reload}
-                className={`mt-1 text-xs text-accent-text underline ${focusRing}`}
+                className={`mt-1 text-xs text-accent-text underline pointer-coarse:min-h-11 ${focusRing}`}
               >
                 Try again
               </button>
@@ -200,7 +200,7 @@ export function WorkspaceSwitcher(): ReactNode {
           <Link
             to="/workspaces/groups"
             onClick={close}
-            className={`block border-t border-divider px-3 py-2 text-sm text-accent-text ${focusRing}`}
+            className={`flex items-center border-t border-divider px-3 py-2 text-sm text-foreground hover:bg-accent/10 pointer-coarse:min-h-11 ${focusRing}`}
           >
             Workspace groups
           </Link>
@@ -209,7 +209,7 @@ export function WorkspaceSwitcher(): ReactNode {
             <Link
               to="/workspaces/archived"
               onClick={close}
-              className="flex items-center gap-2 border-t border-divider px-3 py-2 text-sm text-foreground no-underline hover:bg-accent/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+              className="flex items-center gap-2 border-t border-divider px-3 py-2 text-sm text-foreground no-underline pointer-coarse:min-h-11 hover:bg-accent/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
             >
               <Icon icon={Archive} size="sm" />
               Archived workspaces ({archivedCount})
@@ -219,7 +219,7 @@ export function WorkspaceSwitcher(): ReactNode {
           <button
             type="button"
             onClick={menuAction('arrange', close)}
-            className={`block w-full border-t border-divider px-3 py-2 text-left text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
+            className={`flex w-full items-center border-t border-divider px-3 py-2 text-left pointer-coarse:min-h-11 text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
           >
             Arrange workspaces…
           </button>
@@ -227,7 +227,7 @@ export function WorkspaceSwitcher(): ReactNode {
           <button
             type="button"
             onClick={menuAction('create', close)}
-            className={`flex w-full items-center gap-2 border-t border-divider px-3 py-2 text-left text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
+            className={`flex w-full items-center gap-2 border-t border-divider px-3 py-2 text-left pointer-coarse:min-h-11 text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
           >
             <Icon icon={Plus} size="sm" />
             New workspace…

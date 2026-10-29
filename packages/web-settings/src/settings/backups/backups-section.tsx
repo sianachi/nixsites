@@ -90,7 +90,7 @@ export function BackupsSection(): ReactElement {
                 key={step}
                 role="group"
                 aria-label={label}
-                className="flex flex-col gap-2 border border-divider p-3"
+                className="flex flex-col gap-2 rounded-md border border-divider p-3"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Text variant="h5" as="h3">

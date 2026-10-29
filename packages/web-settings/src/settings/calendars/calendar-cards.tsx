@@ -169,7 +169,7 @@ export function OthersCards(props: {
             {entry.title || 'Untitled'}
           </Text>
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => {
               props.onUnlink(entry);
             }}

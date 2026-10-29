@@ -167,7 +167,7 @@ export function SiteExclusionsPicker({
                     />
                     {child.hasChildren && !chosen.has(child.id) ? (
                       <Button
-                        variant="ghost"
+                        variant="subtle"
                         aria-label={`Show what is inside ${title}`}
                         onClick={() => {
                           enter([...trail, { id: child.id, title }]);
