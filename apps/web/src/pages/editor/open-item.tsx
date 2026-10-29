@@ -24,7 +24,7 @@ import type { ShellContext } from '../../shell/shell-context';
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
 import { useItemHasSite } from '@nix/web-sites/sites/use-item-site';
 import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
-import { DOCUMENT_VIEW, type View } from '@nix/web-collections/core/container-model';
+import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '@nix/web-views/core/container-view';
 import { useContainer } from '@nix/web-collections/core/use-container';
 import { useViewState } from '@nix/web-collections/core/view-state';
@@ -32,6 +32,7 @@ import { ViewSwitcher } from '@nix/web-views/core/view-switcher';
 import { useRememberSmartList } from '@nix/web-views/query/known-smart-lists';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { itemActionEntries } from './item-actions';
+import { resolveActiveView } from './active-view';
 import { ItemBody } from './item-body';
 import { ItemDialogs, type ItemDialogName } from './item-dialogs';
 import { ItemHeader } from './item-header';
@@ -185,38 +186,16 @@ export function OpenItem({
   const dailyMarker = details.item?.properties.$daily;
   const dailyDate = typeof dailyMarker === 'string' ? parseDailyNoteDate(dailyMarker) : null;
 
-  const views = useMemo(() => container.views?.views ?? [], [container.views]);
-  const unrenderable = container.views?.unrenderable ?? [];
-
-  // Whether the Document tab is left out. An item must never open blank, so the flag is honoured
-  // only while there is a view to show instead; if every view is broken the document comes back
-  // rather than leaving a pane with nothing but explanations of what went wrong.
-  const documentHidden =
-    container.views?.hideDocument === true && views.some((view) => !unrenderable.includes(view.id));
-
-  // What the item says opens, unless the address says otherwise. The URL wins because it is the
-  // more specific statement - somebody chose it, possibly in a link they were handed - and the
-  // stored default is the starting point rather than the authority.
-  const storedDefault = container.views?.default ?? DOCUMENT_VIEW;
-  const requestedId = viewId ?? storedDefault;
-
-  // While the document is hidden it can never be what is showing, whether it was asked for by the
-  // address, by a stored default that should not say it, or by a view id this item does not have.
-  // Core already resolves the default to the first view; this keeps the page consistent with that
-  // rather than being a second opinion about it.
-  const active = useMemo<View | null>(() => {
-    const requested = views.find((view) => view.id === requestedId) ?? null;
-    if (requested !== null || !documentHidden || requestedId === '__children__') {
-      return requested;
-    }
-    return views[0] ?? null;
-  }, [documentHidden, requestedId, views]);
-  const activeId = active?.id ?? requestedId;
-
-  // The body, when nothing else was chosen or when what was chosen is not a view this item has.
-  // Existing shared links to the old children shortcut still open their list.
-  const showChildren = activeId === '__children__';
-  const showingDocument = active === null && !showChildren;
+  const {
+    views,
+    unrenderable,
+    documentHidden,
+    storedDefault,
+    active,
+    activeId,
+    showChildren,
+    showingDocument,
+  } = useMemo(() => resolveActiveView(container.views, viewId), [container.views, viewId]);
 
   // On a phone, a note's writing dock carries Details and the item actions itself (see
   // `MobileNoteToolbar`), so the section row under the title is only drawn for the bodies that have

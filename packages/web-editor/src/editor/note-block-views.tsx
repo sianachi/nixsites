@@ -42,6 +42,7 @@ import {
 import { NoteImageView } from './note-image-view';
 
 import { ArtifactSlot } from './artifact-view-slot';
+import { EmbeddedViewsSlot } from './embedded-views-slot';
 import { ReferenceView } from './reference-view';
 import { proseClasses, proseRoot } from './prose';
 
@@ -386,6 +387,10 @@ export function ItemBlockView(
   }, [targetId, refreshReference]);
   const { select } = useSelectedItem();
   const [expanded, setExpanded] = useState(true);
+  // The chosen view lives on the node while the host is editable; a reader's choice stays local.
+  const [localView, setLocalView] = useState<string | null | undefined>(undefined);
+  const savedView = typeof props.node.attrs.view === 'string' ? props.node.attrs.view : null;
+  const shownView = props.editor.isEditable || localView === undefined ? savedView : localView;
   const embed =
     (props.node.attrs.presentation === 'embed' || props.node.attrs.presentation === 'subpage') &&
     !props.nested;
@@ -439,7 +444,16 @@ export function ItemBlockView(
       state.status === 'resolved' &&
       state.type === 'note' &&
       targetId !== null ? (
-        <SourcePreview key={targetId} targetId={targetId} />
+        <EmbeddedViewsSlot
+          key={targetId}
+          itemId={targetId}
+          viewId={shownView}
+          onViewChange={(view) => {
+            if (props.editor.isEditable) props.updateAttributes({ view });
+            else setLocalView(view);
+          }}
+          document={<SourcePreview targetId={targetId} />}
+        />
       ) : null}
       {embed &&
       expanded &&

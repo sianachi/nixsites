@@ -341,6 +341,12 @@ export const proseClasses: Readonly<Record<string, string>> = {
   // A commented range is marked the way a reader would mark one: underneath, not on top, so
   // the words stay the words. The thread it belongs to is on the element as an attribute.
   comment: 'border-b-2 border-b-accent-400 bg-accent/10 hover:bg-accent/20 cursor-default',
+
+  // Suggestions (version 7), kept to the mono sheet: an insert is underlined, a delete is struck
+  // through and muted, a format change is outlined.
+  suggestionInsert: 'underline decoration-accent-400 decoration-2 underline-offset-2',
+  suggestionDelete: 'line-through text-muted',
+  suggestionFormat: 'rounded-sm outline-dotted outline-1 outline-accent-400',
 };
 
 /**

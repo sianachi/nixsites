@@ -37,10 +37,13 @@ import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/wor
 import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
 import { provideArtifactView } from '@nix/web-editor/editor/artifact-view-slot';
+import { provideEmbeddedViews } from '@nix/web-editor/editor/embedded-views-slot';
+import { EmbeddedNoteViews } from './pages/editor/embedded-note-views';
 import { registerViews } from '@nix/web-pets/register-views';
 
 // An embedded artifact brings the OpenUI renderer, loaded only when one is embedded.
 provideArtifactView(lazy(() => import('@nix/web-pets/openui/artifact-view')));
+provideEmbeddedViews(EmbeddedNoteViews);
 
 // Every view kind, before the first render: the real app and the demo both mount from here.
 registerViews();
