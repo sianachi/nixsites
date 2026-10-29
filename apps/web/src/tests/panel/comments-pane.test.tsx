@@ -30,6 +30,7 @@ function comment(id: string, authorId: string, body: string, authorName: string)
     mentionIds: [],
     createdAt: '2026-10-29T09:00:00.000Z',
     editedAt: null,
+    deleted: false,
   };
 }
 
@@ -64,6 +65,7 @@ function must<T>(value: T | null | undefined): T {
   return value;
 }
 
+let listed: CommentThread[];
 let sent: { method: string; path: string; body: unknown }[];
 const realFetch = globalThis.fetch;
 
@@ -71,6 +73,7 @@ beforeEach(() => {
   signedIn();
   stubCoreApi();
   sent = [];
+  listed = [OPEN, RESOLVED];
   const base = globalThis.fetch;
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(
@@ -87,7 +90,7 @@ beforeEach(() => {
       return Promise.resolve(Response.json(OPEN));
     }
     if (method === 'GET' && url.pathname.endsWith(`/items/${ITEM}/comments`)) {
-      return Promise.resolve(Response.json({ revision: 1, threads: [OPEN, RESOLVED] }));
+      return Promise.resolve(Response.json({ revision: 1, threads: listed }));
     }
     // The long-poll: nothing new, so it never answers.
     if (url.pathname.endsWith('/comments/watch')) return new Promise<Response>(() => undefined);
@@ -159,6 +162,27 @@ describe('the comments pane', () => {
     });
     expect(within(mine).getByRole('button', { name: 'Delete' })).toBeVisible();
     expect(within(theirs).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
+  it('shows a deleted root as muted text with no actions, and keeps its replies', async () => {
+    const rootId = 'd0d0d0d0-0000-4000-8000-d0d0d0d0d0d0';
+    const tombstone: CommentThread = {
+      ...OPEN,
+      id: rootId,
+      quote: null,
+      comments: [
+        { ...comment(rootId, ME, '', 'Test Person'), deleted: true },
+        comment('e0e0e0e0-0000-4000-8000-e0e0e0e0e0e0', OTHER, 'Still here.', 'Ada'),
+      ],
+    };
+    listed = [tombstone];
+    patchComments(ITEM, { threads: [tombstone], detached: [] });
+    renderPane();
+
+    expect(await screen.findByText('Comment deleted')).toBeVisible();
+    expect(screen.getByText('Still here.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('posts a reply to the thread', async () => {

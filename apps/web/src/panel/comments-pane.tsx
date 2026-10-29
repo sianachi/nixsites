@@ -30,13 +30,16 @@ import type { SuggestionEntry } from '@nix/web-editor/editor/suggesting';
 const ERRORS: Readonly<Record<string, string>> = {
   'comments.forbidden': 'You do not have permission to comment on this note.',
   'comments.not_author': 'Only the author can change this comment.',
+  'comments.limit': 'This note has reached its comment limit.',
   'items.locked': 'This note is locked.',
 };
 
 function refusalText(reason: unknown): string {
   if (isNixApiError(reason)) {
+    const known = ERRORS[reason.code];
+    if (known !== undefined) return known;
     if (reason.status === 409) return 'This note is in the trash.';
-    return ERRORS[reason.code] ?? reason.detail ?? 'That did not work. Try again.';
+    return reason.detail ?? 'That did not work. Try again.';
   }
   return 'Core could not be reached.';
 }
@@ -344,6 +347,14 @@ function CommentRow({
   const client = useApiClient();
   const [editing, setEditing] = useState(false);
   const mine = me !== null && comment.authorId === me;
+
+  if (comment.deleted) {
+    return (
+      <Text variant="bodySmall" tone="muted">
+        Comment deleted
+      </Text>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1">

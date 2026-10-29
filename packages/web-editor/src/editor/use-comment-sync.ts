@@ -3,6 +3,7 @@ import {
   isCanceledError,
   isNixApiError,
   type CommentsResponse,
+  type CommentThread,
   type NixClient,
 } from '@nix/api-client';
 import type { Editor } from '@tiptap/core';
@@ -15,6 +16,7 @@ import {
   editorHandle,
   encodeRange,
   findQuote,
+  isAnchoredThread,
   patchComments,
   readComments,
   useItemComments,
@@ -199,9 +201,11 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
   // attempts for the whole note, so the rest are never sent. Only detached threads get here
   // (never anchored, or anchors that decode to nothing), and `findQuote` answers only for a
   // quote that occurs exactly once.
-  const { detached } = useItemComments(itemId);
+  const { detached: lost, threads } = useItemComments(itemId);
   useEffect(() => {
-    if (!ready || detached.length === 0) return;
+    if (!ready) return;
+    const detached = reanchorCandidates(itemId, threads, lost);
+    if (detached.length === 0) return;
     let cancelled = false;
     void (async () => {
       for (const id of detached) {
@@ -217,17 +221,51 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
           await client.execute(comments.setAnchor(itemId, id, range.start, range.end));
           readComments(itemId).refresh();
         } catch (reason) {
-          if (isNixApiError(reason) && reason.status === 403) refused.add(itemId);
+          // Only the author may move an anchor: that thread is given up (it is in `attempted`), the rest go on.
+          if (
+            isNixApiError(reason) &&
+            reason.status === 403 &&
+            reason.code !== 'comments.not_author'
+          ) {
+            refused.add(itemId);
+          }
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [client, detached, editor, itemId, ready]);
+  }, [client, lost, threads, editor, itemId, ready]);
 
   // Last, so it cleans up last on unmount and no cleanup above writes into a forgotten entry.
   useCommentFeed(itemId);
+}
+
+/** Threads seen attached to text this session, so one that loses its text later stays detached. */
+const attached = new Set<string>();
+
+/**
+ * The detached threads worth re-anchoring: never anchored (MCP, import) or detached when first
+ * seen. A thread seen attached whose text was then deleted stays detached rather than jumping to
+ * another copy of its quote. Also records which threads are attached now.
+ */
+export function reanchorCandidates(
+  itemId: string,
+  threads: readonly CommentThread[],
+  detached: readonly string[],
+): string[] {
+  const eligible = detached.filter((id) => {
+    const thread = threads.find((candidate) => candidate.id === id);
+    return (
+      thread !== undefined && (thread.anchorStart === null || !attached.has(`${itemId}:${id}`))
+    );
+  });
+  for (const thread of threads) {
+    if (isAnchoredThread(thread) && !detached.includes(thread.id)) {
+      attached.add(`${itemId}:${thread.id}`);
+    }
+  }
+  return eligible;
 }
 
 /** Threads already tried this session, so a failed or repeated re-anchor never loops. */

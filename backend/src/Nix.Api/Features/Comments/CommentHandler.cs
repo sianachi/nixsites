@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
+using Npgsql;
 using Nix.Domain.Comments;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
@@ -124,7 +126,11 @@ public sealed class CommentHandler(
         }
 
         var id = Guid.CreateVersion7();
-        await store.AddAsync(New(gate.Value, id, id, request.Body, valid.Value, anchor?.Start, anchor?.End, quote), cancellationToken).ConfigureAwait(false);
+        if (!await TryAddAsync(New(gate.Value, id, id, request.Body, valid.Value, anchor?.Start, anchor?.End, quote), cancellationToken).ConfigureAwait(false))
+        {
+            return Full<CommentThreadDto>();
+        }
+
         return await ThreadAsync(command.ItemId, id, cancellationToken).ConfigureAwait(false);
     }
 
@@ -156,7 +162,11 @@ public sealed class CommentHandler(
             return Full<CommentThreadDto>();
         }
 
-        await store.AddAsync(New(gate.Value, Guid.CreateVersion7(), root.Id, request.Body, valid.Value, null, null, null), cancellationToken).ConfigureAwait(false);
+        if (!await TryAddAsync(New(gate.Value, Guid.CreateVersion7(), root.Id, request.Body, valid.Value, null, null, null), cancellationToken).ConfigureAwait(false))
+        {
+            return Full<CommentThreadDto>();
+        }
+
         return await ThreadAsync(command.ItemId, root.Id, cancellationToken).ConfigureAwait(false);
     }
 
@@ -373,6 +383,23 @@ public sealed class CommentHandler(
         var thread = all.Threads.FirstOrDefault(candidate => candidate.Id == threadId);
         return thread is null ? NotFound<CommentThreadDto>() : Result.Success(thread);
     }
+
+    /// <summary>False when the database trigger refused the insert at the per-note limit (a race past <see cref="FullAsync"/>).</summary>
+    private async ValueTask<bool> TryAddAsync(NoteComment comment, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await store.AddAsync(comment, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException exception) when (IsLimitRefusal(exception))
+        {
+            return false;
+        }
+    }
+
+    private static bool IsLimitRefusal(DbUpdateException exception) =>
+        exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.CheckViolation, ConstraintName: null };
 
     private async ValueTask<bool> FullAsync(ItemId itemId, CancellationToken cancellationToken) =>
         await store.CountAsync(itemId, cancellationToken).ConfigureAwait(false) >= NoteComment.MaxPerNote;
