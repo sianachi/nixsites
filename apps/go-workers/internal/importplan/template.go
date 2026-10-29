@@ -218,6 +218,7 @@ func ParseTemplate(ctx context.Context, source Source, limits Limits) (TemplateP
 				return TemplatePlan{}, errors.New("the template profile excludes the root body but the archive contains it")
 			}
 		}
+		// Templates are starting points: bundle.Comments from a document export are dropped here, never planned or imported.
 		plan.Items = append(plan.Items, TemplateItem{
 			SourceID: entry.ID, ParentSourceID: cloneOptionalString(entry.ParentID), Sequence: entry.Sequence,
 			Title: bundle.Title, ItemType: bundle.Type, Properties: cloneJSON(bundle.Properties),

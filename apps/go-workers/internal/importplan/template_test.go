@@ -55,6 +55,23 @@ func TestTemplatePlanPreservesProfileTreeSequencesAndArchiveBodies(t *testing.T)
 	}
 }
 
+func TestTemplateArchiveIgnoresExportedComments(t *testing.T) {
+	comments := []any{map[string]any{"id": "t1", "quote": nil, "resolved": false, "comments": []any{
+		map[string]any{"author": "Ada", "body": "hi", "createdAt": "2026-09-01T12:00:00Z"},
+	}}}
+	source := templateArchiveSource(t, templateProfileFixture(true, true), true, true, nil, nil, map[string]any{"comments": comments})
+
+	plan, err := ParseTemplate(context.Background(), source, testLimits())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, _, err := EncodeTemplate(plan, testLimits().MaxPlanBytes)
+	if err != nil || strings.Contains(string(encoded), "Ada") {
+		t.Fatalf("template plan carried comments: %v", err)
+	}
+}
+
 func TestTemplateProfileRequiresSupportedBoundedMetadata(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -165,7 +182,7 @@ func templateProfileFixture(includeBody, includeChildren bool) map[string]any {
 	}
 }
 
-func templateArchiveSource(t *testing.T, profile any, includeChild, includeRootBody bool, omitted, loss []any) Source {
+func templateArchiveSource(t *testing.T, profile any, includeChild, includeRootBody bool, omitted, loss []any, rootExtra ...map[string]any) Source {
 	t.Helper()
 	if omitted == nil {
 		omitted = []any{}
@@ -208,7 +225,13 @@ func templateArchiveSource(t *testing.T, profile any, includeChild, includeRootB
 		}
 	}
 	manifestBody, _ := json.Marshal(manifest)
-	rootBundle, _ := json.Marshal(bundle(templateRoot, nil, "-9223372036854775808", "Project", "note", rootBody, rootViews))
+	rootFields := bundle(templateRoot, nil, "-9223372036854775808", "Project", "note", rootBody, rootViews)
+	for _, extra := range rootExtra {
+		for key, value := range extra {
+			rootFields[key] = value
+		}
+	}
+	rootBundle, _ := json.Marshal(rootFields)
 	entries := []zipFixture{{"manifest.json", manifestBody}, {"items/" + templateRoot + ".json", rootBundle}}
 	if includeChild {
 		parent := templateRoot
