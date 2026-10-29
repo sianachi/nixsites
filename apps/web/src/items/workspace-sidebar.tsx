@@ -12,7 +12,8 @@ import {
   focusRing,
   type MenuEntry,
 } from '@nix/ui';
-import { files as fileResources, isNixApiError } from '@nix/api-client';
+import { files as fileResources, isNixApiError, items as coreItems } from '@nix/api-client';
+import { collectDropped, uploadEntries } from './drop-upload';
 import {
   ChevronDown,
   ChevronRight,
@@ -216,28 +217,42 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     readonly title: string;
   } | null>(null);
 
-  async function uploadFiles(selected: FileList | null): Promise<void> {
-    if (selected === null || selected.length === 0) return;
+  async function uploadFiles(
+    dropped: readonly (File | FileSystemEntry)[],
+    parentId: string | null,
+  ): Promise<void> {
+    if (dropped.length === 0) return;
     setUploading(true);
     setRefusal(null);
     try {
-      for (const file of Array.from(selected)) {
-        const upload = await client.execute(
-          fileResources.beginUpload({
-            workspaceId,
-            parentId: uploadParentRef.current,
-            fileName: file.name,
-            mediaType: file.type || 'application/octet-stream',
-            byteLength: file.size,
-            idempotencyKey: `web-file:${crypto.randomUUID()}`,
-          }),
-        );
-        await fileResources.uploadAndCompleteFile(client, upload, file);
-      }
+      const count = await uploadEntries(dropped, parentId, {
+        createFolder: async (title, folderParentId) =>
+          (
+            await client.execute(
+              coreItems.createItem(workspaceId, {
+                type: 'note',
+                title,
+                parentId: folderParentId,
+                idempotencyKey: `web-folder:${crypto.randomUUID()}`,
+              }),
+            )
+          ).id,
+        uploadFile: async (file, fileParentId) => {
+          const upload = await client.execute(
+            fileResources.beginUpload({
+              workspaceId,
+              parentId: fileParentId,
+              fileName: file.name,
+              mediaType: file.type || 'application/octet-stream',
+              byteLength: file.size,
+              idempotencyKey: `web-file:${crypto.randomUUID()}`,
+            }),
+          );
+          await fileResources.uploadAndCompleteFile(client, upload, file);
+        },
+      });
       await tree.reload();
-      announce(
-        selected.length === 1 ? 'File uploaded.' : `${String(selected.length)} files uploaded.`,
-      );
+      announce(count === 1 ? 'File uploaded.' : `${String(count)} files uploaded.`);
     } catch (error) {
       setRefusal(
         isNixApiError(error)
@@ -282,6 +297,15 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     <aside
       ref={asideRef}
       aria-label="Explorer"
+      // Rows handle their own OS drops; whatever reaches here landed on empty space: the root.
+      onDragOver={(event) => {
+        if (dragged === null && event.dataTransfer.types.includes('Files')) event.preventDefault();
+      }}
+      onDrop={(event) => {
+        if (dragged !== null || !event.dataTransfer.types.includes('Files')) return;
+        event.preventDefault();
+        void uploadFiles(collectDropped(event.dataTransfer), null);
+      }}
       className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-3">
@@ -334,7 +358,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
           aria-label="Upload files"
           disabled={uploading}
           onChange={(event) => {
-            void uploadFiles(event.currentTarget.files);
+            void uploadFiles(Array.from(event.currentTarget.files ?? []), uploadParentRef.current);
           }}
         />
       </div>
@@ -398,6 +422,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
             besideRefusal={besideRefusal}
             dragged={dragged}
             setDragged={setDragged}
+            onDropFiles={(dropped, parentId) => {
+              void uploadFiles(dropped, parentId);
+            }}
             onDeleteItem={onDeleteItem}
             landmarks={landmarks.landmarks}
             onChooseIcon={
@@ -563,6 +590,8 @@ interface TreeBodyProps {
   readonly besideRefusal: OpenBesideRefusal | null;
   readonly dragged: string | null;
   readonly setDragged: (itemId: string | null) => void;
+  /** Uploads files and folders dropped from the OS into a parent (null for the root). */
+  readonly onDropFiles: (dropped: (File | FileSystemEntry)[], parentId: string | null) => void;
 
   /** Deletes an item and starts its undo window. */
   readonly onDeleteItem: (item: TreeItem) => void;
@@ -747,6 +776,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     besideRefusal,
     dragged,
     setDragged,
+    onDropFiles,
     onDeleteItem,
   } = props;
 
@@ -765,7 +795,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
   const expandable = !childrenHidden && (item.hasChildren || expanded);
 
   const [zone, setZone] = useState<DropZone | null>(null);
-  const dropping = zone !== null && dragged !== null && dragged !== item.id;
+  const dropping = zone !== null && dragged !== item.id;
 
   const siblings = tree.childrenOf(item.parentId);
   const index = siblings.findIndex((sibling) => sibling.id === item.id);
@@ -784,6 +814,15 @@ function TreeNode(props: TreeNodeProps): ReactNode {
 
     const landing = zone;
     setZone(null);
+
+    if (dragged === null && event.dataTransfer.types.includes('Files')) {
+      event.stopPropagation(); // handled here, not as an empty-space drop on the sidebar
+      onDropFiles(
+        collectDropped(event.dataTransfer),
+        landing === 'inside' ? item.id : item.parentId,
+      );
+      return;
+    }
 
     if (dragged === null || dragged === item.id || landing === null) {
       return;
@@ -1059,6 +1098,8 @@ function TreeNode(props: TreeNodeProps): ReactNode {
               setZone(null);
             }}
             onDragOver={(event) => {
+              // A text or link drag is not ours to take; an OS file drag is.
+              if (dragged === null && !event.dataTransfer.types.includes('Files')) return;
               event.preventDefault();
               const box = event.currentTarget.getBoundingClientRect();
               setZone(dropZoneAt(event.clientY - box.top, box.height));
