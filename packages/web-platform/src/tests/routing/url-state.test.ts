@@ -4,7 +4,7 @@ import {
   DEFAULT_STATE_PREVIEW,
   parseStatePreview,
   statePreviewSearch,
-} from '@nix/web-platform/routing/url-state';
+} from '../../routing/url-state';
 
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);

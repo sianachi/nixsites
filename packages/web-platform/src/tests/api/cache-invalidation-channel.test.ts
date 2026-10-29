@@ -1,7 +1,7 @@
 import { createNixClient } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { connectCacheInvalidationChannel } from '@nix/web-platform/api/cache-invalidation-channel';
+import { connectCacheInvalidationChannel } from '../../api/cache-invalidation-channel';
 
 const channels = new Set<TestChannel>();
 class TestChannel {

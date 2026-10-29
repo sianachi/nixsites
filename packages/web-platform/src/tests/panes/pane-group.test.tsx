@@ -2,9 +2,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PaneGroup } from '@nix/web-platform/panes/pane-group';
-import { paneElementId } from '@nix/web-platform/panes/pane-params';
-import type { PaneState } from '@nix/web-platform/panes/pane-state';
+import { PaneGroup } from '../../panes/pane-group';
+import { paneElementId } from '../../panes/pane-params';
+import type { PaneState } from '../../panes/pane-state';
 
 /**
  * The arrangement on screen, and how the group wires the handles between the panes.

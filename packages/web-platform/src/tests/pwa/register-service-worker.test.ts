@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { onNotice } from '@nix/web-foundation/lib/notices';
-import { registerServiceWorker } from '@nix/web-platform/pwa/register-service-worker';
+import { registerServiceWorker } from '../../pwa/register-service-worker';
 
 let unregister = (): void => undefined;
 

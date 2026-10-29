@@ -1,11 +1,7 @@
 import type { ExportFormat } from '@nix/api-client';
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatFor,
-  formatPreamble,
-  preferredFormat,
-} from '@nix/web-platform/export/export-formats';
+import { formatFor, formatPreamble, preferredFormat } from '../../export/export-formats';
 
 const markdown: ExportFormat = {
   format: 'markdown',

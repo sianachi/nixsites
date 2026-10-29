@@ -3,12 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ExportDialog } from '@nix/web-platform/export/export-dialog';
-import * as archiveRequests from '@nix/web-platform/export/export-archive';
+import { ExportDialog } from '../../export/export-dialog';
+import * as archiveRequests from '../../export/export-archive';
 
 let client: NixClient;
 
-vi.mock('@nix/web-platform/api/api-client-provider', () => ({
+vi.mock('../../api/api-client-provider', () => ({
   useApiClient: () => client,
 }));
 

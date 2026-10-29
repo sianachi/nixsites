@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { z } from 'zod';
 
-import { ApiClientProvider, useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
+import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
+import { AuthProvider } from '../../auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
 import * as drafts from '@nix/web-foundation/lib/draft-journal';
