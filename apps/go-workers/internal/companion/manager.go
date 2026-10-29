@@ -1041,9 +1041,10 @@ func (a *account) notify(method string, raw json.RawMessage) {
 			Phase string `json:"phase"`
 		} `json:"item"`
 		Turn struct {
-			Status     string     `json:"status"`
-			DurationMs *int64     `json:"durationMs"`
-			Error      *turnError `json:"error"`
+			Status     string         `json:"status"`
+			DurationMs *int64         `json:"durationMs"`
+			Error      *turnError     `json:"error"`
+			Usage      *providerUsage `json:"usage"`
 		} `json:"turn"`
 		Error     *turnError `json:"error"`
 		WillRetry bool       `json:"willRetry"`
@@ -1126,6 +1127,7 @@ func (a *account) notify(method string, raw json.RawMessage) {
 			a.bumpLocked(c)
 		}
 		if method == "turn/completed" {
+			c.timing.usage = p.Turn.Usage
 			c.timing.log(a.logger, key, p.Turn.Status)
 			if p.Turn.Status != "completed" && p.Turn.Status != "interrupted" {
 				meta := []any{"status", p.Turn.Status}

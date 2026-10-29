@@ -97,10 +97,12 @@ func startThreadAndTurn(t *testing.T, transport Transport, tools []any, text str
 func TestAnthropicStreamsTextIntoCodexShapedNotifications(t *testing.T) {
 	var seen []byte
 	server := sseServer(t, http.StatusOK, []string{
+		"event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":12,\"cache_read_input_tokens\":9000,\"cache_creation_input_tokens\":40,\"output_tokens\":1}}}\n\n",
 		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\"}}\n\n",
 		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"}}\n\n",
 		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" there\"}}\n\n",
 		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+		"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":7}}\n\n",
 		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
 	}, func(r *http.Request, body []byte) {
 		seen = body
@@ -120,8 +122,12 @@ func TestAnthropicStreamsTextIntoCodexShapedNotifications(t *testing.T) {
 	if !strings.Contains(joined, thread) {
 		t.Fatalf("notifications must name the thread: %s", joined)
 	}
-	if !strings.Contains(string(seen), `"system":"base\n\ndev"`) || !strings.Contains(string(seen), `"content":"Hi"`) {
-		t.Fatalf("request body missing system or user message: %s", seen)
+	if !strings.Contains(joined, `"usage":{"input_tokens":12,"cache_read_input_tokens":9000,"cache_creation_input_tokens":40,"output_tokens":7}`) {
+		t.Fatalf("turn/completed must carry the turn's token counts:\n%s", joined)
+	}
+	// The system prompt and the newest message each carry a cache breakpoint.
+	if !strings.Contains(string(seen), `"system":[{"cache_control":{"type":"ephemeral"},"text":"base\n\ndev","type":"text"}]`) || !strings.Contains(string(seen), `"content":[{"cache_control":{"type":"ephemeral"},"text":"Hi","type":"text"}]`) {
+		t.Fatalf("request body missing a cached system prompt or user message: %s", seen)
 	}
 }
 
@@ -686,6 +692,25 @@ func TestToolImageIsAcceptedOnlyAsAJpegDataURLWithAToolResult(t *testing.T) {
 	} {
 		if got := validToolImage(Request{Operation: tc.operation, ToolImage: tc.image}); got != tc.ok {
 			t.Errorf("validToolImage(%s, %.40q) = %v, want %v", tc.operation, tc.image, got, tc.ok)
+		}
+	}
+}
+
+func TestOpenRouterMarksTheSystemPromptCachedOnlyForClaudeModels(t *testing.T) {
+	for model, cached := range map[string]bool{"anthropic/claude-opus-5-5": true, "openai/gpt-5": false} {
+		var seen []byte
+		server := sseServer(t, http.StatusOK, []string{
+			"data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"finish_reason\":\"stop\"}]}\n\n",
+			"data: [DONE]\n\n",
+		}, func(_ *http.Request, body []byte) { seen = body })
+		thread := &httpThread{Model: model, System: "sys", Messages: []providerMessage{{Role: "user", Text: "Hello"}}}
+		if _, _, err := (openrouterWire{}).stream(context.Background(), server.Client(), server.URL, "sk-or-test", thread, func(string) {}); err != nil {
+			t.Fatal(err)
+		}
+		server.Close()
+		marked := strings.Contains(string(seen), `{"content":[{"cache_control":{"type":"ephemeral"},"text":"sys","type":"text"}],"role":"system"}`)
+		if marked != cached {
+			t.Fatalf("%s: cache marker %v, want %v: %s", model, marked, cached, seen)
 		}
 	}
 }

@@ -78,6 +78,8 @@ type httpThread struct {
 	Tools     []json.RawMessage `json:"tools"`
 	Messages  []providerMessage `json:"messages"`
 	Ephemeral bool              `json:"-"`
+	// usage sums the current turn's token counts; runTurn resets it and reports it on completion.
+	usage providerUsage
 }
 
 type toolReply struct {
@@ -392,8 +394,9 @@ func (t *httpTransport) runTurn(ctx context.Context, thread *httpThread, turnID 
 		}
 		t.mu.Unlock()
 	}()
+	thread.usage = providerUsage{}
 	finish := func(status string, failure error) {
-		turn := map[string]any{"status": status}
+		turn := map[string]any{"status": status, "usage": thread.usage}
 		if failure != nil {
 			turn["error"] = map[string]any{"message": failure.Error(), "nixProviderError": providerFailureToken(failure)}
 		}

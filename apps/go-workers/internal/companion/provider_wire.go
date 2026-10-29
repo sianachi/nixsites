@@ -152,7 +152,14 @@ func (anthropicWire) stream(ctx context.Context, client *http.Client, base, apiK
 			tools = append(tools, map[string]any{"name": tool.Name, "description": tool.Description, "input_schema": tool.InputSchema})
 		}
 	}
-	body := map[string]any{"model": thread.Model, "max_tokens": anthropicMaxTokens, "system": thread.System, "messages": messages, "stream": true}
+	// Two cache breakpoints: the system prompt, which with the tools ahead of it is the same on
+	// every request in a thread, and the newest message, so each tool round rereads the turn so
+	// far from cache instead of paying for it again.
+	markLastBlockCached(messages)
+	body := map[string]any{"model": thread.Model, "max_tokens": anthropicMaxTokens, "messages": messages, "stream": true}
+	if thread.System != "" {
+		body["system"] = []map[string]any{{"type": "text", "text": thread.System, "cache_control": ephemeralCache}}
+	}
 	if len(tools) > 0 {
 		body["tools"] = tools
 	}
@@ -198,6 +205,10 @@ func (anthropicWire) stream(ctx context.Context, client *http.Client, base, apiK
 			Error *struct {
 				Message string `json:"message"`
 			} `json:"error"`
+			Message *struct {
+				Usage providerUsage `json:"usage"`
+			} `json:"message"`
+			Usage *providerUsage `json:"usage"`
 		}
 		if json.Unmarshal(data, &event) != nil {
 			return nil
@@ -207,9 +218,19 @@ func (anthropicWire) stream(ctx context.Context, client *http.Client, base, apiK
 			if event.Error != nil {
 				return errors.New("Anthropic reported an error during the response")
 			}
+		case "message_start":
+			if event.Message != nil {
+				thread.usage.InputTokens += event.Message.Usage.InputTokens
+				thread.usage.CacheReadInputTokens += event.Message.Usage.CacheReadInputTokens
+				thread.usage.CacheCreationInputTokens += event.Message.Usage.CacheCreationInputTokens
+			}
 		case "message_delta":
 			if event.Delta != nil && event.Delta.StopReason != "" {
 				stopReason = event.Delta.StopReason
+			}
+			// message_delta carries the message's final output count; message_start's is a stub.
+			if event.Usage != nil {
+				thread.usage.OutputTokens += event.Usage.OutputTokens
 			}
 		case "message_stop":
 			stopped = true
@@ -260,6 +281,36 @@ func (anthropicWire) stream(ctx context.Context, client *http.Client, base, apiK
 		return "", nil, errors.New("Anthropic ended the response early, so nothing was changed. Try again")
 	}
 	return text.String(), calls, nil
+}
+
+var ephemeralCache = map[string]any{"type": "ephemeral"}
+
+// providerUsage is one turn's token counts as Anthropic reports them, summed over its requests.
+// Counts only: it reaches the per-turn log line (turnlog.go), never content.
+type providerUsage struct {
+	InputTokens              int64 `json:"input_tokens"`
+	CacheReadInputTokens     int64 `json:"cache_read_input_tokens"`
+	CacheCreationInputTokens int64 `json:"cache_creation_input_tokens"`
+	OutputTokens             int64 `json:"output_tokens"`
+}
+
+// markLastBlockCached puts a cache breakpoint on the last content block of the last message,
+// turning plain string content into one text block so it has somewhere to go.
+func markLastBlockCached(messages []map[string]any) {
+	if len(messages) == 0 {
+		return
+	}
+	last := messages[len(messages)-1]
+	switch content := last["content"].(type) {
+	case string:
+		if content != "" {
+			last["content"] = []map[string]any{{"type": "text", "text": content, "cache_control": ephemeralCache}}
+		}
+	case []map[string]any:
+		if len(content) > 0 {
+			content[len(content)-1]["cache_control"] = ephemeralCache
+		}
+	}
 }
 
 type openrouterWire struct{}
@@ -348,6 +399,11 @@ func (openrouterWire) stream(ctx context.Context, client *http.Client, base, api
 	ctx, cancel := context.WithTimeout(ctx, providerTimeout)
 	defer cancel()
 	messages := []map[string]any{{"role": "system", "content": thread.System}}
+	// OpenRouter passes Anthropic's cache breakpoints through, and only Claude models need one;
+	// the others it routes to cache a repeated prefix on their own.
+	if strings.HasPrefix(thread.Model, "anthropic/") && thread.System != "" {
+		messages[0]["content"] = []map[string]any{{"type": "text", "text": thread.System, "cache_control": ephemeralCache}}
+	}
 	for _, message := range thread.Messages {
 		switch {
 		case message.Role == "user" && len(message.ToolResults) > 0:
