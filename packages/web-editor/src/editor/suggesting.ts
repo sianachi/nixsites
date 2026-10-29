@@ -31,8 +31,10 @@ import { ySyncPluginKey } from 'y-prosemirror';
  *
  * **What it never touches.** Remote edits and undo (they carry the y-sync meta; the Markdown
  * mode's whole-body swap arrives the same way), its own commands, and other plugins' appended
- * repairs. While an IME composes, only its deletes are tracked: it owns the DOM mid-word, so the
- * composed range is marked as an insert after `compositionend`.
+ * repairs. An IME owns the DOM mid-word (it rewrites its preedit text over and over, and may commit
+ * after `compositionend`), so a composition is tracked as one net change: the document from before
+ * it is diffed against the document once it settles, the lost text is restored as a delete and
+ * what replaced it is marked as one insert.
  *
  * shortcut: attribute changes (text alignment, task checkboxes, column widths) and text typed
  * over an IME selection are not tracked; a restructure rejects by restoring its snapshot, which
@@ -139,33 +141,21 @@ function insertStamp(tr: Transaction, from: number, to: number, authorId: string
     : stamp(authorId);
 }
 
-/**
- * Marks `from..to` as inserted by `who`, and the blocks that start inside it as inserted blocks.
- * `keepDeletes` leaves struck text struck (a composition range can hold text it deleted).
- */
-function markInserted(
-  tr: Transaction,
-  from: number,
-  to: number,
-  authorId: string,
-  keepDeletes = false,
-): void {
+/** Marks `from..to` as inserted by `who`, and the blocks that start inside it as inserted blocks. */
+function markInserted(tr: Transaction, from: number, to: number, authorId: string): void {
   if (from >= to) return;
   const { marks } = tr.doc.type.schema;
   const attrs = insertStamp(tr, from, to, authorId);
   // Text carried in from elsewhere (a paste, text typed inside a struck run) brings its own marks.
   for (const name of SUGGESTION_MARKS) {
-    if (!keepDeletes || name !== 'suggestionDelete') tr.removeMark(from, to, marks[name]);
+    tr.removeMark(from, to, marks[name]);
   }
   const insert = markType(tr.doc.type.schema, 'suggestionInsert').create(attrs);
   const blocks: number[] = [];
   tr.doc.nodesBetween(from, to, (node, pos) => {
     if (pos >= from && isSuggestible(node)) blocks.push(pos);
-    if (keepDeletes && node.isInline && !hasMark(node, 'suggestionDelete')) {
-      tr.addMark(Math.max(pos, from), Math.min(pos + node.nodeSize, to), insert);
-    }
   });
-  if (!keepDeletes) tr.addMark(from, to, insert);
+  tr.addMark(from, to, insert);
   for (const pos of blocks) tr.setNodeAttribute(pos, 'suggestion', { ...attrs, op: 'insert' });
 }
 
@@ -257,8 +247,8 @@ function isBoundaryJoin(doc: ProseMirrorNode, step: ReplaceStep): boolean {
 
 function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean): Plugin {
   let lastKey: string | null = null;
-  /** The range a composition has written so far, marked once it ends. */
-  let composed: { from: number; to: number } | null = null;
+  /** The document from before the running (or just ended, not yet settled) IME composition. */
+  let base: ProseMirrorNode | null = null;
 
   /** Not the user's edit: ours, a remote or undo one, or another plugin's repair appended to it. */
   const external = (tr: Transaction): boolean =>
@@ -270,11 +260,19 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
   const active = (): boolean => storage.enabled && storage.authorId !== '' && isEditable();
 
   const flushComposition = (view: EditorView): void => {
-    const range = composed;
-    composed = null;
-    if (range === null || view.isDestroyed || !active()) return;
+    const before = base;
+    base = null;
+    if (before === null || view.isDestroyed || !active()) return;
     const tr = view.state.tr;
-    markInserted(tr, range.from, Math.min(range.to, tr.doc.content.size), storage.authorId, true);
+    const start = before.content.findDiffStart(tr.doc.content);
+    const end = before.content.findDiffEnd(tr.doc.content);
+    if (start === null || end === null) return;
+    const overlap = start - Math.min(end.a, end.b);
+    const [oldEnd, newEnd] = overlap > 0 ? [end.a + overlap, end.b + overlap] : [end.a, end.b];
+    markInserted(tr, start, newEnd, storage.authorId);
+    if (oldEnd > start) {
+      restoreDeleted(tr, before.slice(start, oldEnd), start, storage.authorId, null);
+    }
     view.dispatch(tr.setMeta(OWN, true));
   };
 
@@ -318,26 +316,10 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
 
       transactions.forEach((tr, index) => {
         if (!tr.docChanged) return;
-        if (composed !== null) {
-          composed = {
-            from: tr.mapping.map(composed.from, -1),
-            to: tr.mapping.map(composed.to, 1),
-          };
-        }
-        if (tr.getMeta('composition') !== undefined) {
-          tr.steps.forEach((step, i) => {
-            const rest = tr.mapping.slice(i + 1);
-            step.getMap().forEach((_from, _to, start, end) => {
-              composed = {
-                from: Math.min(composed?.from ?? Infinity, rest.map(start, -1)),
-                to: Math.max(composed?.to ?? 0, rest.map(end, 1)),
-              };
-            });
-          });
-        }
-        if (external(tr)) return;
-        // An IME owns the DOM mid-word, so its text is marked when it ends; its deletes are tracked now.
-        const composing = tr.getMeta('composition') !== undefined;
+        // shortcut: a remote edit during a composition drops the diff base, so that composition goes unmarked.
+        if (tr.getMeta(ySyncPluginKey) !== undefined) base = null;
+        if (tr.getMeta('composition') !== undefined) base ??= tr.docs[0] ?? null;
+        if (external(tr) || base !== null) return;
 
         // The splits that follow a restructure (a list wrap makes one item per paragraph) belong to it.
         let restructured = false;
@@ -354,12 +336,11 @@ function suggestingPlugin(storage: SuggestingStorage, isEditable: () => boolean)
           const before = tr.docs[i];
           if (before === undefined) return;
 
-          if (composing && !(step instanceof ReplaceStep)) return;
           if (step instanceof ReplaceStep) {
             const deletes = step.to > step.from;
             // A delete that only refits block structure inserts nothing.
             const fill = deletes && !hasLeaf(step.slice);
-            if (!composing && !fill && !(restructured && !hasLeaf(step.slice))) {
+            if (!fill && !(restructured && !hasLeaf(step.slice))) {
               markInserted(fix, at(step.from, -1), at(step.from + step.slice.size, 1), authorId);
             }
             if (deletes && !isBoundaryJoin(before, step)) {

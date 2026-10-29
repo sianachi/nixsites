@@ -2,7 +2,7 @@ import { nixEditingExtensions, rejectAllSuggestions } from '@nix/editor-schema';
 import { Editor } from '@tiptap/core';
 import { DOMParser as ProseDOMParser, Slice } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ySyncPluginKey } from 'y-prosemirror';
 
 import {
@@ -490,9 +490,36 @@ describe('rejecting matches the pure transform exports use', () => {
 });
 
 describe('composition', () => {
-  it('tracks a delete made while the IME is composing', () => {
+  /** A preedit replace step as the browser makes it, then compositionend and the settle delay. */
+  const compose = (target: Editor, from: number, to: number, text: string): void => {
+    target.view.dispatch(target.state.tr.insertText(text, from, to).setMeta('composition', 1));
+  };
+  const settle = (target: Editor): void => {
+    target.view.dom.dispatchEvent(new Event('compositionend'));
+    vi.advanceTimersByTime(100);
+  };
+
+  it('marks one insert for a preedit that is replaced and then committed', () => {
+    vi.useFakeTimers();
     const target = makeEditor();
-    target.view.dispatch(target.state.tr.delete(5, 6).setMeta('composition', 1));
-    expect(show(target)).toBe('Hell[-o] world | Second');
+    compose(target, 12, 12, 'k');
+    compose(target, 12, 13, 'ko');
+    compose(target, 12, 14, 'konni');
+    settle(target);
+    // Chromium may commit after compositionend, without the composition meta.
+    target.view.dispatch(target.state.tr.insertText('こんにちは', 12, 17));
+    vi.advanceTimersByTime(100);
+    expect(show(target)).toBe('Hello world[+こんにちは] | Second');
+    vi.useRealTimers();
+  });
+
+  it('marks one delete and one insert for a composition over a selection', () => {
+    vi.useFakeTimers();
+    const target = makeEditor();
+    compose(target, 7, 12, 'chi');
+    compose(target, 7, 10, '茶');
+    settle(target);
+    expect(show(target)).toBe('Hello [-world][+茶] | Second');
+    vi.useRealTimers();
   });
 });
