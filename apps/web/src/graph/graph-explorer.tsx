@@ -199,8 +199,9 @@ function WorkspaceGraphExplorer({
       ) : null}
       <div className="flex flex-wrap gap-2" aria-label="Graph presentation">
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-pressed={mode === 'browse'}
+          className={mode === 'browse' ? 'bg-surface text-foreground' : ''}
           onClick={() => {
             setChoice('browse');
           }}
@@ -208,8 +209,9 @@ function WorkspaceGraphExplorer({
           Browse connections
         </Button>
         <Button
-          variant="ghost"
+          variant="subtle"
           aria-pressed={mode === 'spatial'}
+          className={mode === 'spatial' ? 'bg-surface text-foreground' : ''}
           onClick={() => {
             setChoice('spatial');
             setVisitedSpatial(true);
@@ -375,14 +377,14 @@ function WorkspaceGraphExplorer({
                   )}
                 </ContextMenu>
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   aria-label={`Show ${titles.get(node.id) ?? 'Untitled'} in graph`}
                   onClick={showInGraph}
                 >
                   Show in graph
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="subtle"
                   aria-label={`Focus graph on ${titles.get(node.id) ?? 'Untitled'}`}
                   onClick={() => {
                     focusInGraph(node.id);

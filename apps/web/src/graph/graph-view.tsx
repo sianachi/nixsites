@@ -1585,7 +1585,7 @@ function GraphDrawing({
           <Icon icon={Maximize} size="sm" />
         </Button>
 
-        <Button variant="ghost" onClick={surprise}>
+        <Button variant="subtle" onClick={surprise}>
           <Icon icon={Shuffle} size="sm" />
           Surprise me
         </Button>
@@ -1593,7 +1593,7 @@ function GraphDrawing({
         {representation !== 'focused' && folded.parents.size > 0 && (
           <>
             <Button
-              variant="ghost"
+              variant="subtle"
               disabled={collapsed.size === 0}
               onClick={() => {
                 setCollapsed(new Set());
@@ -1602,7 +1602,7 @@ function GraphDrawing({
               Unfold all
             </Button>
             <Button
-              variant="ghost"
+              variant="subtle"
               onClick={() => {
                 setCollapsed(foldEverything(nodes));
               }}
@@ -1617,7 +1617,7 @@ function GraphDrawing({
             have to remember they did to understand this button. */}
         {nudged && (
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => {
               setOffsets(new Map());
             }}
@@ -1990,7 +1990,7 @@ function GraphDrawing({
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          variant="ghost"
+          variant="subtle"
           onClick={() => {
             if (playing) {
               setPlaying(false);
@@ -2021,7 +2021,7 @@ function GraphDrawing({
               className="w-48 max-w-full"
             />
             <Button
-              variant="ghost"
+              variant="subtle"
               onClick={() => {
                 setPlaying(false);
                 setLapse(null);
@@ -2053,7 +2053,7 @@ function GraphDrawing({
             Move
           </Button>
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => {
               setPendingMove(null);
             }}
