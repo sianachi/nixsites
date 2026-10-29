@@ -434,7 +434,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     renderAt(<App />);
 
     await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
-    await user.click(await screen.findByRole('button', { name: /test person/i }));
+    await user.click(await screen.findByRole('button', { name: /^test person(?!'s workspace)/i }));
     expect(screen.getByRole('dialog', { name: /account/i })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');

@@ -181,7 +181,7 @@ describe('reaching the settings screen', () => {
     renderAt(<App />, '/');
 
     // The menu button is named by the profile it shows once /me has answered.
-    await user.click(await screen.findByRole('button', { name: /test person/i }));
+    await user.click(await screen.findByRole('button', { name: /^test person(?!'s workspace)/i }));
     await user.click(
       within(screen.getByRole('dialog', { name: /account/i })).getByRole('link', {
         name: /settings/i,
