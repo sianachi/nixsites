@@ -22,7 +22,7 @@ import (
 // tools.go's 20-call cap and dedupe, watch.go's expiry and the browser's approval UI are unchanged;
 // only the process behind the seam differs. The API key lives in memory for the account's life and
 // is never written to disk or logs. Thread history is kept per thread under the account home so a
-// resumed thread survives a worker restart; it is bounded (maxThreadMessages) like the visible
+// resumed thread survives a worker restart; it is bounded (trimThread) like the visible
 // conversation.
 type httpTransport struct {
 	kind   string
@@ -45,7 +45,13 @@ type httpTransport struct {
 	seesImages map[string]bool
 }
 
-const maxThreadMessages = 32
+// A thread keeps its last maxThreadTurns turns, and drops more while its text passes
+// maxThreadBytes. Counting turns, not messages, matters because one turn with ten tool calls
+// adds twenty messages and would otherwise push every earlier turn out at once.
+const (
+	maxThreadTurns = 12
+	maxThreadBytes = 600_000
+)
 const maxToolRoundsPerTurn = 24
 
 // providerMessage is the provider-neutral record a thread keeps; the wire encodes it per provider.
@@ -72,12 +78,15 @@ type providerToolResult struct {
 }
 
 type httpThread struct {
-	ID        string            `json:"id"`
-	Model     string            `json:"model"`
-	System    string            `json:"system"`
-	Tools     []json.RawMessage `json:"tools"`
-	Messages  []providerMessage `json:"messages"`
-	Ephemeral bool              `json:"-"`
+	ID       string            `json:"id"`
+	Model    string            `json:"model"`
+	System   string            `json:"system"`
+	Tools    []json.RawMessage `json:"tools"`
+	Messages []providerMessage `json:"messages"`
+	// Opening is the thread's first user message, kept once trimming has dropped it: it alone
+	// carries the workspace map (manager.go's turnPrompt sends it only when a thread starts).
+	Opening   string `json:"opening,omitempty"`
+	Ephemeral bool   `json:"-"`
 	// usage sums the current turn's token counts; runTurn resets it and reports it on completion.
 	usage providerUsage
 }
@@ -333,20 +342,62 @@ func (t *httpTransport) save(thread *httpThread) {
 		return
 	}
 	t.mu.Lock()
-	if len(thread.Messages) > maxThreadMessages {
-		// Cut back to a plain user message: a cut between a tool call and its results leaves an
-		// orphan that every provider rejects from then on. The cap gives way rather than the turn.
-		start := len(thread.Messages) - maxThreadMessages
-		for start > 0 && (thread.Messages[start].Role != "user" || len(thread.Messages[start].ToolResults) > 0) {
-			start--
-		}
-		thread.Messages = thread.Messages[start:]
-	}
+	trimThread(thread)
 	raw, err := json.Marshal(thread)
 	t.mu.Unlock()
 	if err == nil {
 		_ = os.WriteFile(t.threadPath(thread.ID), raw, 0600)
 	}
+}
+
+// trimThread drops a thread's oldest turns past maxThreadTurns, and more while it is over
+// maxThreadBytes, always cutting at a turn's opening user message: a cut between a tool call
+// and its results leaves an orphan every provider rejects. The latest turn is never dropped, so
+// the bound gives way rather than the turn. The first message is kept as Opening and repeated at
+// the head of what remains, so a trimmed thread still knows the workspace.
+func trimThread(thread *httpThread) {
+	var starts []int
+	size := 0
+	for i, message := range thread.Messages {
+		if message.Role == "user" && len(message.ToolResults) == 0 {
+			starts = append(starts, i)
+		}
+		size += messageBytes(message)
+	}
+	cut := 0
+	if len(starts) > maxThreadTurns {
+		cut = len(starts) - maxThreadTurns
+	}
+	for cut < len(starts) {
+		dropped := 0
+		for _, message := range thread.Messages[:starts[cut]] {
+			dropped += messageBytes(message)
+		}
+		if size-dropped <= maxThreadBytes || cut == len(starts)-1 {
+			break
+		}
+		cut++
+	}
+	if cut == 0 || cut >= len(starts) {
+		return
+	}
+	if thread.Opening == "" {
+		thread.Opening = thread.Messages[0].Text
+	}
+	kept := append([]providerMessage(nil), thread.Messages[starts[cut]:]...)
+	kept[0].Text = "The conversation began with this message; its earlier turns were dropped to save space:\n" + thread.Opening + "\n\nThe message now:\n" + kept[0].Text
+	thread.Messages = kept
+}
+
+func messageBytes(message providerMessage) int {
+	size := len(message.Text)
+	for _, call := range message.ToolCalls {
+		size += len(call.Arguments)
+	}
+	for _, result := range message.ToolResults {
+		size += len(result.Text) + len(result.Image)
+	}
+	return size
 }
 
 func (t *httpTransport) startTurn(params json.RawMessage) (json.RawMessage, error) {

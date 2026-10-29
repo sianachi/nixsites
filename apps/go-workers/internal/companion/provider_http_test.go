@@ -714,3 +714,70 @@ func TestOpenRouterMarksTheSystemPromptCachedOnlyForClaudeModels(t *testing.T) {
 		}
 	}
 }
+
+func turnMessages(text string, toolRounds int, resultBytes int) []providerMessage {
+	messages := []providerMessage{{Role: "user", Text: text}}
+	for i := 0; i < toolRounds; i++ {
+		id := fmt.Sprintf("%s-%d", text, i)
+		messages = append(messages,
+			providerMessage{Role: "assistant", ToolCalls: []providerToolCall{{ID: id, Name: "nix_search", Arguments: json.RawMessage(`{}`)}}},
+			providerMessage{Role: "user", ToolResults: []providerToolResult{{CallID: id, Text: strings.Repeat("x", resultBytes)}}})
+	}
+	return append(messages, providerMessage{Role: "assistant", Text: "done " + text})
+}
+
+func TestABusyTurnNoLongerPushesEarlierTurnsOut(t *testing.T) {
+	thread := &httpThread{}
+	thread.Messages = append(thread.Messages, turnMessages(`{"workspaceMap":"map"}`, 0, 0)...)
+	thread.Messages = append(thread.Messages, turnMessages("second", 10, 10)...)
+	thread.Messages = append(thread.Messages, turnMessages("third", 0, 0)...)
+	before := len(thread.Messages)
+	trimThread(thread)
+	if len(thread.Messages) != before || thread.Opening != "" {
+		t.Fatalf("a 3-turn thread lost messages: %d of %d", len(thread.Messages), before)
+	}
+}
+
+func TestATrimmedThreadKeepsItsLastTurnsAndItsOpening(t *testing.T) {
+	thread := &httpThread{}
+	for i := 0; i < maxThreadTurns+2; i++ {
+		text := fmt.Sprintf("turn %d", i)
+		if i == 0 {
+			text = `{"workspaceMap":"map"}`
+		}
+		thread.Messages = append(thread.Messages, turnMessages(text, 1, 10)...)
+	}
+	trimThread(thread)
+	first := thread.Messages[0]
+	if first.Role != "user" || len(first.ToolResults) > 0 {
+		t.Fatalf("a trimmed thread must start at a turn's own message: %+v", first)
+	}
+	if !strings.Contains(first.Text, `{"workspaceMap":"map"}`) || !strings.HasSuffix(first.Text, "turn 2") {
+		t.Fatalf("the opening should lead the oldest kept turn: %q", first.Text)
+	}
+	turns := 0
+	for _, message := range thread.Messages {
+		if message.Role == "user" && len(message.ToolResults) == 0 {
+			turns++
+		}
+	}
+	if turns != maxThreadTurns {
+		t.Fatalf("kept %d turns, want %d", turns, maxThreadTurns)
+	}
+	// A later trim carries the original opening, not the previous carrier's text.
+	thread.Messages = append(thread.Messages, turnMessages("next", 0, 0)...)
+	trimThread(thread)
+	if strings.Count(thread.Messages[0].Text, "workspaceMap") != 1 || !strings.HasSuffix(thread.Messages[0].Text, "turn 3") {
+		t.Fatalf("the second trim should repeat the opening once: %q", thread.Messages[0].Text)
+	}
+}
+
+func TestTheByteBoundDropsOldTurnsButNeverTheLatest(t *testing.T) {
+	thread := &httpThread{}
+	thread.Messages = append(thread.Messages, turnMessages("old", 1, maxThreadBytes)...)
+	thread.Messages = append(thread.Messages, turnMessages("latest", 1, maxThreadBytes)...)
+	trimThread(thread)
+	if !strings.HasSuffix(thread.Messages[0].Text, "latest") || len(thread.Messages) != 4 {
+		t.Fatalf("expected only the latest turn: %d messages, first %q", len(thread.Messages), thread.Messages[0].Text)
+	}
+}
