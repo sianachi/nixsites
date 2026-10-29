@@ -24,6 +24,9 @@ public static class SearchErrors
     /// </remarks>
     public static NixError NotFound(string detail) => new(SearchEndpoints.NotFoundCode, detail);
 
+    /// <summary>A passage search took longer than the query timeout allows.</summary>
+    public static NixError TimedOut(string detail) => new(SearchEndpoints.TimedOutCode, detail);
+
     /// <summary>One request named more references than may be resolved at once.</summary>
     public static NixError TooManyReferences(string detail) =>
         new(SearchEndpoints.TooManyReferencesCode, detail);

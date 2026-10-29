@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CHUNK_CHARS, chunkNote } from './chunks.ts';
+import { CHUNK_CHARS, MAX_CHUNKS, chunkNote } from './chunks.ts';
 
 const paragraph = (text: string): unknown => ({
   type: 'paragraph',
@@ -14,6 +14,16 @@ const heading = (level: number, text: string): unknown => ({
 const doc = (...content: unknown[]): unknown => ({ type: 'doc', content });
 
 describe('chunking a note', () => {
+  it('keeps the first MAX_CHUNKS chunks of a very long note', () => {
+    const sections = Array.from({ length: MAX_CHUNKS + 5 }, (_, index) => [
+      heading(1, `Part ${String(index)}`),
+      paragraph(`Section ${String(index)}.`),
+    ]).flat();
+    const chunks = chunkNote(doc(...sections));
+    expect(chunks).toHaveLength(MAX_CHUNKS);
+    expect(chunks?.at(-1)?.body).toBe(`Section ${String(MAX_CHUNKS - 1)}.`);
+  });
+
   it('starts a chunk at every heading and carries the heading trail', () => {
     const chunks = chunkNote(
       doc(

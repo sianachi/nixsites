@@ -4,6 +4,7 @@ using Nix.Domain.Links;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Embeddings;
 using Nix.Persistence.Locks;
+using Nix.Persistence.Query;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
@@ -123,30 +124,37 @@ public sealed class ItemSearch(
         }
 
         var vector = embedder.EmbedQuery(query);
-        var rows = sql.QueryAsync<NotePassage, PassageMapper>(
-            SearchSql.SubtreePassages,
-            default,
-            [
-                Uuid("tenant_id", Tenant.Value),
-                Uuid("root_id", rootId.Value),
-                UuidArray("workspace_ids", readableWorkspaces),
-                new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
-                new NpgsqlParameter("query_embedding", NpgsqlDbType.Text)
-                {
-                    Value = vector is null ? DBNull.Value : LocalEmbedder.ToLiteral(vector),
-                },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
-                await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
-            ],
-            cancellationToken);
+        var locks = await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false);
 
-        var passages = new List<NotePassage>(limit);
-        await foreach (var passage in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
+        // The root may be a whole workspace's top folder and the cosine arm scans every chunk under
+        // it, so the read runs under the ad-hoc query timeout instead of holding a connection open.
+        return await ItemQueryReader.GuardedAsync<IReadOnlyList<NotePassage>>(sql, async () =>
         {
-            passages.Add(passage);
-        }
+            var rows = sql.QueryAsync<NotePassage, PassageMapper>(
+                SearchSql.SubtreePassages,
+                default,
+                [
+                    Uuid("tenant_id", Tenant.Value),
+                    Uuid("root_id", rootId.Value),
+                    UuidArray("workspace_ids", readableWorkspaces),
+                    new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
+                    new NpgsqlParameter("query_embedding", NpgsqlDbType.Text)
+                    {
+                        Value = vector is null ? DBNull.Value : LocalEmbedder.ToLiteral(vector),
+                    },
+                    new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                    locks,
+                ],
+                cancellationToken);
 
-        return passages;
+            var passages = new List<NotePassage>(limit);
+            await foreach (var passage in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                passages.Add(passage);
+            }
+
+            return passages;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

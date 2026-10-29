@@ -330,21 +330,55 @@ export async function replaceItemLinks(
 }
 
 /**
+ * Takes the item's chunk lock for the rest of the transaction. Snapshot writes for one document
+ * are already serialised by its ownership claim; the background backfill holds none, and without
+ * this it could insert an older snapshot's passages beside a newer write's.
+ */
+async function lockItemChunks(sql: ScopedQuery, tenantId: string, itemId: string): Promise<void> {
+  await sql.query(`SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || $2, 7043))`, [
+    tenantId,
+    itemId,
+  ]);
+}
+
+/**
  * Replaces a note's retrieval chunks.
  *
  * Guarded by `seq` like the search text. A chunk whose text was already embedded, at any position,
  * keeps that embedding, so an edit near the top of a long note does not re-embed every passage
- * after it just because their positions shifted. Changed passages are written with no embedding,
- * and Core's embedder fills them in. Rows past the new end are deleted.
+ * after it just because their positions shifted. A chunk unchanged at its position is not
+ * rewritten at all, so an edit costs the rows it changed rather than the whole note. Changed
+ * passages are written with no embedding, and Core's embedder fills them in. Rows past the new end
+ * are deleted. With `onlyIfEmpty`, nothing is written once the note has any chunks: a newer
+ * snapshot got there first. Returns whether it wrote.
  */
 export async function writeItemChunks(
   sql: ScopedQuery,
-  input: { tenantId: string; itemId: string; seq: bigint; chunks: readonly NoteChunk[] },
-): Promise<void> {
+  input: {
+    tenantId: string;
+    itemId: string;
+    seq: bigint;
+    chunks: readonly NoteChunk[];
+    onlyIfEmpty?: boolean;
+  },
+): Promise<boolean> {
   const seq = input.seq.toString();
+  await lockItemChunks(sql, input.tenantId, input.itemId);
+  if (input.onlyIfEmpty) {
+    const { rows } = await sql.query<{ present: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM item_chunk WHERE tenant_id = $1 AND item_id = $2) AS present`,
+      [input.tenantId, input.itemId],
+    );
+    if (rows[0]?.present) return false;
+  }
   await sql.query(
     `WITH incoming AS (
        SELECT * FROM unnest($4::int[], $5::text[], $6::text[], $7::text[]) AS c(ord, heading, body, hash)
+        WHERE NOT EXISTS (
+              SELECT 1 FROM item_chunk
+               WHERE tenant_id = $1 AND item_id = $2 AND item_chunk.ord = c.ord
+                 AND item_chunk.content_hash = c.hash
+        )
      ),
      known AS (
        SELECT DISTINCT ON (content_hash) content_hash, embedding
@@ -379,6 +413,23 @@ export async function writeItemChunks(
       WHERE tenant_id = $1 AND item_id = $2 AND ord >= $3 AND seq < $4`,
     [input.tenantId, input.itemId, input.chunks.length, seq],
   );
+  return true;
+}
+
+/**
+ * Drops every chunk of a note this build cannot parse into passages, so text the owner deleted
+ * cannot stay retrievable while the search text moves on.
+ */
+export async function clearItemChunks(
+  sql: ScopedQuery,
+  input: { tenantId: string; itemId: string; seq: bigint },
+): Promise<void> {
+  await lockItemChunks(sql, input.tenantId, input.itemId);
+  await sql.query(`DELETE FROM item_chunk WHERE tenant_id = $1 AND item_id = $2 AND seq < $3`, [
+    input.tenantId,
+    input.itemId,
+    input.seq.toString(),
+  ]);
 }
 
 /**

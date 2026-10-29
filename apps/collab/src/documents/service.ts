@@ -9,6 +9,7 @@ import {
   replaceItemLinks,
   snapshotAtOrBefore,
   updatesAfter,
+  clearItemChunks,
   writeItemChunks,
   writeItemSearchText,
   writeSnapshot,
@@ -524,14 +525,9 @@ export async function writeSnapshotNow(
 
   if (strategy === noteStrategy) {
     const chunks = chunkNote(materialized.json);
-    if (chunks !== null) {
-      await writeItemChunks(sql, {
-        tenantId: input.tenantId,
-        itemId: input.itemId,
-        seq: input.seq,
-        chunks,
-      });
-    }
+    const chunkTarget = { tenantId: input.tenantId, itemId: input.itemId, seq: input.seq };
+    if (chunks === null) await clearItemChunks(sql, chunkTarget);
+    else await writeItemChunks(sql, { ...chunkTarget, chunks });
   }
 
   // A body kind that cannot hold a reference does not implement extraction, and a document that

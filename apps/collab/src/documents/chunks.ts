@@ -8,13 +8,16 @@ import { nixSchema } from '@nix/editor-schema';
  *
  * A heading always starts a new chunk and blocks are packed up to {@link CHUNK_CHARS}, so a chunk
  * is one section or part of one. Each chunk carries its heading trail, which is what tells a
- * reader where a passage sits in a two-hundred-page note. There is deliberately no cap on the
- * number of chunks: the whole body is covered, unlike the search text, which stops at its
- * ceiling.
+ * reader where a passage sits in a two-hundred-page note. The first {@link MAX_CHUNKS} chunks are
+ * kept, which covers far more of a body than the search text does before its ceiling.
  */
 
 /** The most characters packed into one chunk; a single larger block is sliced. */
 export const CHUNK_CHARS = 1_500;
+
+/** shortcut: passages past the first 1,000 (about 1.5 million characters, several hundred pages)
+ * are not retrievable; raise it with per-snapshot write cost measured on the largest notes. */
+export const MAX_CHUNKS = 1_000;
 
 export interface NoteChunk {
   readonly ord: number;
@@ -47,7 +50,8 @@ export function chunkNote(json: unknown): NoteChunk[] | null {
   let size = 0;
 
   const flush = (): void => {
-    if (size === 0) return;
+    // Every snapshot rewrites a note's changed chunks, so an 8 MB body must not mean 5,000 rows.
+    if (size === 0 || chunks.length >= MAX_CHUNKS) return;
     const body = parts.join('\n');
     chunks.push({
       ord: chunks.length,

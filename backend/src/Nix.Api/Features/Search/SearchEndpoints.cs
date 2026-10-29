@@ -25,6 +25,9 @@ internal static class SearchEndpoints
     /// <summary>Stable code for "no such item, or the caller cannot see it".</summary>
     internal const string NotFoundCode = "items.not_found";
 
+    /// <summary>Stable code for a passage search that ran past its statement timeout.</summary>
+    internal const string TimedOutCode = "search.timed_out";
+
     /// <summary>Stable code for a resolution request naming too many identifiers.</summary>
     internal const string TooManyReferencesCode = "search.too_many_references";
 
@@ -186,6 +189,7 @@ internal static class SearchEndpoints
         var status = error.Code switch
         {
             NotFoundCode => StatusCodes.Status404NotFound,
+            TimedOutCode => StatusCodes.Status503ServiceUnavailable,
             TooManyReferencesCode or MalformedReferencesCode or MentionTextTooLongCode
                 or MentionWorkspaceRequiredCode or TooManyMentionExclusionsCode
                 => StatusCodes.Status400BadRequest,

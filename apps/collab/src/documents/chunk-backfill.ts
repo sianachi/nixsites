@@ -41,8 +41,17 @@ export async function backfillChunks(
   for (const row of rows) {
     const chunks = chunkNote(row.prosemirror_json);
     if (chunks === null || chunks.length === 0) continue;
-    await writeItemChunks(sql, { tenantId, itemId: row.item_id, seq: BigInt(row.seq), chunks });
-    written += 1;
+    // A snapshot may have chunked the note since the select above; its passages are newer.
+    if (
+      await writeItemChunks(sql, {
+        tenantId,
+        itemId: row.item_id,
+        seq: BigInt(row.seq),
+        chunks,
+        onlyIfEmpty: true,
+      })
+    )
+      written += 1;
   }
   return written;
 }

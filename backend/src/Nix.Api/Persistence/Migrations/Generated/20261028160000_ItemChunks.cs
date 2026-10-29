@@ -10,7 +10,8 @@ namespace Nix.Persistence.Migrations.Generated;
 /// chunks, and the application reads them. The one exception is the embedding, which Core computes.
 /// Core writes it only through <c>nix_set_chunk_embedding</c>, which cannot change a chunk's text,
 /// and finds work only through <c>nix_find_unembedded_chunks</c>, because the embedder runs for
-/// every tenant at once.
+/// every tenant at once. Collab can write the column too: it copies an existing embedding onto a
+/// chunk whose text it already has, so it is trusted with ranking as it is with the text.
 /// </para>
 /// <para>
 /// <c>vector(384)</c> is the one local model's dimension. There is no ANN index, because a search

@@ -14,6 +14,7 @@ import {
   scopeOf,
   type TestTenant,
 } from '../db/testing.ts';
+import { clearItemChunks, writeItemChunks } from '../db/documents.ts';
 import { withTenantScope } from '../db/tenant-scope.ts';
 import { backfillChunks } from './chunk-backfill.ts';
 import { FRAGMENT_NAME, applyUpdate, openDocument } from './service.ts';
@@ -141,6 +142,73 @@ describe.skipIf(!DB_TESTS_ENABLED)('note chunks, against Postgres', () => {
     await writeAndSnapshot(TENANTS.alpha, heading('A'), paragraph('One.'));
 
     expect((await chunksOf(TENANTS.alpha)).map((chunk) => chunk.body)).toEqual(['One.']);
+  });
+
+  async function seqsOf(tenant: TestTenant): Promise<string[]> {
+    const { rows } = await withTenantScope(pool, scopeOf(tenant), (sql) =>
+      sql.query<{ seq: string }>(
+        'SELECT seq FROM item_chunk WHERE tenant_id = $1 AND item_id = $2 ORDER BY ord',
+        [tenant.tenantId, tenant.itemId],
+      ),
+    );
+    return rows.map((row) => row.seq);
+  }
+
+  it('leaves a chunk that did not change untouched when another one does', async () => {
+    await writeAndSnapshot(
+      TENANTS.alpha,
+      heading('A'),
+      paragraph('Same.'),
+      heading('B'),
+      paragraph('Old.'),
+    );
+    const [first] = await seqsOf(TENANTS.alpha);
+
+    await writeAndSnapshot(
+      TENANTS.alpha,
+      heading('A'),
+      paragraph('Same.'),
+      heading('B'),
+      paragraph('New.'),
+    );
+
+    const [kept, changed] = await seqsOf(TENANTS.alpha);
+    expect(kept).toBe(first);
+    expect(BigInt(changed ?? '0')).toBeGreaterThan(BigInt(first ?? '0'));
+  });
+
+  it('lets a late backfill write nothing once a snapshot has chunked the note', async () => {
+    await writeAndSnapshot(TENANTS.alpha, paragraph('Current text.'));
+
+    const wrote = await withTenantScope(pool, scopeOf(TENANTS.alpha), (sql) =>
+      writeItemChunks(sql, {
+        tenantId: TENANTS.alpha.tenantId,
+        itemId: TENANTS.alpha.itemId,
+        seq: 0n,
+        chunks: [
+          { ord: 0, heading: '', body: 'Stale.', contentHash: 'a' },
+          { ord: 1, heading: '', body: 'Deleted later.', contentHash: 'b' },
+        ],
+        onlyIfEmpty: true,
+      }),
+    );
+
+    expect(wrote).toBe(false);
+    expect((await chunksOf(TENANTS.alpha)).map((chunk) => chunk.body)).toEqual(['Current text.']);
+  });
+
+  it('clears a note s chunks when its body cannot be chunked', async () => {
+    await writeAndSnapshot(TENANTS.alpha, paragraph('Soon unreadable.'));
+
+    await withTenantScope(pool, scopeOf(TENANTS.alpha), (sql) =>
+      clearItemChunks(sql, {
+        tenantId: TENANTS.alpha.tenantId,
+        itemId: TENANTS.alpha.itemId,
+        seq: 1_000_000n,
+      }),
+    );
+
+    expect(await chunksOf(TENANTS.alpha)).toEqual([]);
   });
 
   it('never shows one tenant the other tenant s chunks', async () => {

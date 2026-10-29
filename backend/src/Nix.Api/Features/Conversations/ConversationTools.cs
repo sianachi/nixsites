@@ -191,7 +191,15 @@ public static class ConversationTools
                 return new(false, "Search needs 1 to 1000 characters.");
             }
 
-            var passages = await services.GetRequiredService<IItemSearch>().FindPassagesAsync(item.Id, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false);
+            IReadOnlyList<NotePassage> passages;
+            try
+            {
+                passages = await services.GetRequiredService<IItemSearch>().FindPassagesAsync(item.Id, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false);
+            }
+            catch (ItemQueryFailedException)
+            {
+                return new(false, "The search took too long. Search a smaller note or folder.");
+            }
             var rows = new JsonArray();
             foreach (var passage in passages)
             {

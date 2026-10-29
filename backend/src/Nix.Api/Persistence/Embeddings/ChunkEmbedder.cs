@@ -23,6 +23,9 @@ public sealed class ChunkEmbedder(
 {
     // Small, because attention memory grows with batch × tokens²; four 1,500-character chunks stay
     // well inside the API container's memory limit.
+    // shortcut: nix_find_unembedded_chunks orders by tenant, so one tenant with a large backlog delays
+    // every later tenant's embeddings (search falls back to full text meanwhile); order by age or
+    // round-robin tenants in a new migration once an install hosts many tenants.
     private const int BatchSize = 4;
     private static readonly TimeSpan EmptyDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(30);

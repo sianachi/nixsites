@@ -62,9 +62,16 @@ public sealed class GetPassagesHandler(
             return Result.Failure<IReadOnlyList<NotePassage>>(notFound);
         }
 
-        return Result.Success(await search
-            .FindPassagesAsync(query.RootId, text, workspaces, Math.Clamp(query.Limit, 1, MaximumLimit), cancellationToken)
-            .ConfigureAwait(false));
+        try
+        {
+            return Result.Success(await search
+                .FindPassagesAsync(query.RootId, text, workspaces, Math.Clamp(query.Limit, 1, MaximumLimit), cancellationToken)
+                .ConfigureAwait(false));
+        }
+        catch (ItemQueryFailedException)
+        {
+            return Result.Failure<IReadOnlyList<NotePassage>>(SearchErrors.TimedOut("The search took too long. Search a smaller note or folder."));
+        }
     }
 }
 
