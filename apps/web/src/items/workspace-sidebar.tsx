@@ -281,10 +281,12 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     <aside
       ref={asideRef}
       aria-label="Explorer"
-      className={cn('flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
+      className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-3">
-        <Text as="span" variant="bodySmall" tone="muted" truncate className="min-w-0 flex-1">
+        {/* Shown only when the whole row fits: at the default width it could only show "E…", and
+            the region keeps its name for assistive technology either way. */}
+        <Text as="span" variant="bodySmall" tone="muted" className="hidden @xs:inline">
           Explorer
         </Text>
 
@@ -611,7 +613,7 @@ function TreeBody(props: TreeBodyProps): ReactNode {
       <Text variant="note" tone="muted" className="px-3 py-2">
         {tree.childrenOf(null).length > 0
           ? 'Items here are hidden for you. Open Hidden items to show them.'
-          : 'Nothing here yet. New creates the first item.'}
+          : 'Nothing here yet. New note creates the first item.'}
       </Text>
     );
   }
