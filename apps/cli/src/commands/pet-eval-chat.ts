@@ -119,7 +119,12 @@ export interface ChatEvalRuntime {
   readonly session: Session;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly today: () => string;
-  readonly seed?: (session: Session, workspaceId: string, today: string) => Promise<ChatFixture>;
+  readonly seed?: (
+    session: Session,
+    workspaceId: string,
+    today: string,
+    fixtureName?: string,
+  ) => Promise<ChatFixture>;
   readonly teardown?: (
     session: Session,
     workspaceId: string,
@@ -185,8 +190,10 @@ async function buildFixture(
   session: Session,
   workspaceId: string,
   today: string,
+  fixtureName?: string,
 ): Promise<ChatFixture> {
-  const raw = substituteDates(JSON.stringify(await readJson('fixture.json')), today);
+  const file = fixtureName ? `fixture-${fixtureName}.json` : 'fixture.json';
+  const raw = substituteDates(JSON.stringify(await readJson(file)), today);
   const blueprint = blueprintSchema.parse(JSON.parse(raw));
   const container = await session.client.execute(
     items.createItem(workspaceId, {
@@ -212,7 +219,8 @@ async function buildFixture(
     if (entry.itemId && !nodes.has(entry.nodeId)) nodes.set(entry.nodeId, entry.itemId);
   const fixture = { rootId: container.id, nodes };
   try {
-    await seedFixtureLinks(ports, session, fixture, wait);
+    // Only the main fixture has the hub and meeting notes the backlinks case links.
+    if (nodes.has('hub-note')) await seedFixtureLinks(ports, session, fixture, wait);
   } catch (reason) {
     await session.client.execute(items.deleteItem(workspaceId, container.id));
     throw reason;
@@ -1036,7 +1044,7 @@ export async function runChatSuite(
   for (let run = 1; run <= runs; run += 1) {
     for (const chatCase of cases) {
       // One fresh fixture per case: a case must never see another case's writes.
-      const built = await seed(runner.session, options.workspace, runner.today());
+      const built = await seed(runner.session, options.workspace, runner.today(), chatCase.fixture);
       const ownedTemplates = new Map<string, TemplateSummary>();
       const fixture: ChatFixture = {
         ...built,

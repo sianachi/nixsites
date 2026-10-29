@@ -1937,5 +1937,135 @@
       "require": ["list_templates|build_blueprint|create_structured"],
       "max": 8
     }
+  },
+  {
+    "id": "views-timeline-duration",
+    "prompt": "Review the Phase plan view in {node:views-timeline}. I want it to show how long each phase runs, from start to finish. Inspect its saved settings and its results, explain what is missing, and name the smallest fix. Do not edit.",
+    "noWrites": true,
+    "tools": {
+      "require": ["read_structure", "read_view"],
+      "requireSuccessful": ["read_structure", "read_view"],
+      "inOrder": ["read_structure", "read_view"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["end|finish", "Finish date|finish_date", "start"],
+      "references": ["timeline-research", "timeline-build"]
+    },
+    "fixture": "views"
+  },
+  {
+    "id": "views-matrix-read",
+    "prompt": "Using the Priority grid view in {node:views-matrix}, which High urgency work is still To do? Answer from the view's results, not from memory.",
+    "noWrites": true,
+    "tools": {
+      "require": ["read_view"],
+      "requireSuccessful": ["read_view"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["Fix login bug"],
+      "references": ["matrix-login"]
+    },
+    "fixture": "views"
+  },
+  {
+    "id": "views-sorted-read",
+    "prompt": "Which book comes first in the Top rated view of {node:views-sorted}, and why is it first? Read the view before answering.",
+    "noWrites": true,
+    "tools": {
+      "require": ["read_structure", "read_view"],
+      "requireSuccessful": ["read_structure", "read_view"],
+      "inOrder": ["read_structure", "read_view"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["Dune", "rating", "descend|highest|high to low|largest|5"],
+      "references": ["sorted-dune"]
+    },
+    "fixture": "views"
+  },
+  {
+    "id": "views-ignored-sort",
+    "prompt": "In {node:views-sorted}, does the Shelf outline view put the highest-rated book first? Inspect that view's saved settings and its results before answering. Do not edit.",
+    "noWrites": true,
+    "tools": {
+      "require": ["read_structure", "read_view"],
+      "requireSuccessful": ["read_structure", "read_view"],
+      "inOrder": ["read_structure", "read_view"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": [
+        "outline",
+        "ignore|not sort|doesn't sort|does not sort|isn't sorted|is not sorted|default order|child order|own order"
+      ]
+    },
+    "fixture": "views"
+  },
+  {
+    "id": "views-sort-update",
+    "prompt": "In {node:views-sorted}, change only the Top rated view so the lowest rating comes first. This change to that existing view is approved. Read it first, apply it, then read the view to confirm the new order.",
+    "tools": {
+      "require": ["read_structure", "update_view", "read_view"],
+      "requireSuccessful": ["read_structure", "update_view", "read_view"],
+      "inOrder": ["read_structure", "update_view", "read_view"],
+      "forbid": ["add_view", "create_structured"],
+      "max": 10
+    },
+    "asserts": [
+      {
+        "kind": "view",
+        "item": "views-sorted",
+        "name": "Top rated",
+        "equals": {
+          "kind": "list",
+          "sortBy": "rating",
+          "sortDescending": false
+        }
+      }
+    ],
+    "answerChecks": {
+      "all": ["Emma"]
+    },
+    "approvedOperations": ["update_view"],
+    "fixture": "views"
+  },
+  {
+    "id": "views-custom-review",
+    "prompt": "Does the Shelf table view in {node:views-sorted} show each book's rating? Inspect its saved program before answering, and say what would need to change. Do not edit.",
+    "noWrites": true,
+    "tools": {
+      "require": ["read_structure"],
+      "requireSuccessful": ["read_structure"],
+      "max": 8
+    },
+    "answerChecks": {
+      "all": ["rating", "not|doesn't|does not|only", "Title|Type|column"]
+    },
+    "fixture": "views"
+  },
+  {
+    "id": "views-preset-smart-list",
+    "prompt": "In {node:tasks}, add a smart list view named Overdue tasks that shows only overdue work, using the built-in overdue rule rather than hand-written filters.",
+    "tools": {
+      "require": ["add_view"],
+      "requireSuccessful": ["add_view"],
+      "forbid": ["create_structured", "build_blueprint"],
+      "max": 8
+    },
+    "asserts": [
+      {
+        "kind": "view",
+        "item": "tasks",
+        "name": "Overdue tasks",
+        "equals": {
+          "kind": "query"
+        }
+      }
+    ],
+    "answerChecks": {
+      "all": ["overdue"]
+    }
   }
 ]

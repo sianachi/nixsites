@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "title": "Pet view evaluation fixture",
+  "summary": "Timeline, matrix, sorted, outline and custom views for the pet view-understanding cases.",
+  "root": {
+    "id": "home",
+    "title": "View evaluation fixture",
+    "views": [
+      {
+        "kind": "list"
+      }
+    ],
+    "children": [
+      {
+        "id": "views-timeline",
+        "title": "Launch phases",
+        "fields": [
+          {
+            "label": "Start date",
+            "type": "date"
+          },
+          {
+            "label": "Finish date",
+            "type": "date"
+          }
+        ],
+        "views": [
+          {
+            "kind": "timeline",
+            "name": "Phase plan",
+            "date": "start_date",
+            "default": true
+          }
+        ],
+        "children": [
+          {
+            "id": "timeline-research",
+            "title": "Research",
+            "values": {
+              "start_date": "{today-10}",
+              "finish_date": "{today-3}"
+            },
+            "sample": true
+          },
+          {
+            "id": "timeline-build",
+            "title": "Build",
+            "values": {
+              "start_date": "{today-2}",
+              "finish_date": "{today+12}"
+            },
+            "sample": true
+          }
+        ]
+      },
+      {
+        "id": "views-matrix",
+        "title": "Priority work",
+        "fields": [
+          {
+            "label": "Urgency",
+            "type": "select",
+            "options": ["High", "Low"]
+          },
+          {
+            "label": "Status",
+            "type": "select",
+            "options": ["To do", "Done"]
+          }
+        ],
+        "views": [
+          {
+            "kind": "matrix",
+            "name": "Priority grid",
+            "rowBy": "urgency",
+            "columnBy": "status",
+            "default": true
+          }
+        ],
+        "children": [
+          {
+            "id": "matrix-login",
+            "title": "Fix login bug",
+            "values": {
+              "urgency": "High",
+              "status": "To do"
+            },
+            "sample": true
+          },
+          {
+            "id": "matrix-logo",
+            "title": "Update logo",
+            "values": {
+              "urgency": "Low",
+              "status": "To do"
+            },
+            "sample": true
+          },
+          {
+            "id": "matrix-notes",
+            "title": "Write release notes",
+            "values": {
+              "urgency": "High",
+              "status": "Done"
+            },
+            "sample": true
+          }
+        ]
+      },
+      {
+        "id": "views-sorted",
+        "title": "Book ratings",
+        "fields": [
+          {
+            "label": "Rating",
+            "type": "number"
+          }
+        ],
+        "views": [
+          {
+            "kind": "list",
+            "name": "Top rated",
+            "columns": ["rating"],
+            "sortBy": "rating",
+            "sortDescending": true,
+            "default": true
+          },
+          {
+            "kind": "outline",
+            "name": "Shelf outline",
+            "sortBy": "rating",
+            "sortDescending": true
+          },
+          {
+            "kind": "custom",
+            "name": "Shelf table",
+            "program": "root = Stack([heading, table])\nheading = Text(\"Shelf\", \"title\")\nrows = Query(\"list_items\", {parentId: $container}, {items: []})\ntable = Table([\"Title\", \"Type\"], @Each(rows.items, \"item\", [item.title, item.type]), \"Books on the shelf\")"
+          }
+        ],
+        "children": [
+          {
+            "id": "sorted-emma",
+            "title": "Emma",
+            "values": {
+              "rating": 3
+            },
+            "sample": true
+          },
+          {
+            "id": "sorted-dune",
+            "title": "Dune",
+            "values": {
+              "rating": 5
+            },
+            "sample": true
+          },
+          {
+            "id": "sorted-ulysses",
+            "title": "Ulysses",
+            "values": {
+              "rating": 4
+            },
+            "sample": true
+          }
+        ]
+      }
+    ]
+  }
+}

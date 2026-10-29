@@ -5,37 +5,44 @@ import { validateBlueprint } from '../blueprint/validate.js';
 import { chatCaseSchema, chatSuiteSchema } from './chat-schema.js';
 
 describe('chat review evaluation contract', () => {
-  it('keeps the dedicated fixture buildable and every suite reference local to it', () => {
-    const raw = readFileSync(
-      new URL('../../evals/chat/fixture.json', import.meta.url),
-      'utf8',
-    ).replaceAll(/\{today(?:[+-]\d+)?\}/g, '2026-10-09');
-    const fixture = blueprintSchema.parse(JSON.parse(raw));
-    const report = validateBlueprint(fixture, { inheritedFields: [], today: '2026-10-09' });
-    expect(report.problems).toEqual([]);
-    expect(report.ok).toBe(true);
-    const nodes = new Set<string>();
-    const collect = (node: typeof fixture.root) => {
-      nodes.add(node.id);
-      for (const child of node.children ?? []) collect(child);
-    };
-    collect(fixture.root);
+  it('keeps every fixture buildable and every suite reference local to its fixture', () => {
+    const nodesOf = new Map<string | undefined, Set<string>>();
+    for (const name of [undefined, 'views']) {
+      const file = name ? `fixture-${name}.json` : 'fixture.json';
+      const raw = readFileSync(
+        new URL(`../../evals/chat/${file}`, import.meta.url),
+        'utf8',
+      ).replaceAll(/\{today(?:[+-]\d+)?\}/g, '2026-10-09');
+      const fixture = blueprintSchema.parse(JSON.parse(raw));
+      const report = validateBlueprint(fixture, { inheritedFields: [], today: '2026-10-09' });
+      expect(report.problems, file).toEqual([]);
+      expect(report.ok).toBe(true);
+      const nodes = new Set<string>();
+      const collect = (node: typeof fixture.root) => {
+        nodes.add(node.id);
+        for (const child of node.children ?? []) collect(child);
+      };
+      collect(fixture.root);
+      nodesOf.set(name, nodes);
+    }
     const cases = chatSuiteSchema.parse(
       JSON.parse(readFileSync(new URL('../../evals/chat/cases.json', import.meta.url), 'utf8')),
     );
     expect(new Set(cases.map((entry) => entry.id)).size).toBe(cases.length);
     for (const entry of cases) {
-      if (entry.templateSource !== undefined) expect(nodes.has(entry.templateSource)).toBe(true);
-      for (const match of entry.prompt.matchAll(/\{node:([^}]+)\}/g))
-        expect(nodes.has(match[1] ?? '')).toBe(true);
-      for (const ref of entry.answerChecks?.references ?? []) expect(nodes.has(ref)).toBe(true);
-      for (const ref of entry.answerChecks?.cites ?? []) expect(nodes.has(ref)).toBe(true);
-      if (entry.currentItem !== undefined) expect(nodes.has(entry.currentItem)).toBe(true);
+      const nodes = nodesOf.get(entry.fixture);
+      expect(nodes, `${entry.id} names an unknown fixture`).toBeDefined();
+      const has = (ref: string) => expect(nodes?.has(ref), `${entry.id}: ${ref}`).toBe(true);
+      if (entry.templateSource !== undefined) has(entry.templateSource);
+      for (const match of entry.prompt.matchAll(/\{node:([^}]+)\}/g)) has(match[1] ?? '');
+      for (const ref of entry.answerChecks?.references ?? []) has(ref);
+      for (const ref of entry.answerChecks?.cites ?? []) has(ref);
+      if (entry.currentItem !== undefined) has(entry.currentItem);
       for (const assertion of entry.asserts) {
-        if ('item' in assertion) expect(nodes.has(assertion.item)).toBe(true);
-        if ('parent' in assertion) expect(nodes.has(assertion.parent)).toBe(true);
+        if ('item' in assertion) has(assertion.item);
+        if ('parent' in assertion) has(assertion.parent);
         for (const match of JSON.stringify(assertion).matchAll(/\{item:([^}]+)\}/g))
-          expect(nodes.has(match[1] ?? '')).toBe(true);
+          has(match[1] ?? '');
       }
     }
   });

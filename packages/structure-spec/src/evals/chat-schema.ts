@@ -116,6 +116,9 @@ export const chatCaseSchema = z
     /** The note the owner has open: sent as `itemId` with the message, which is what the web does
      * with the "This page" chip. Nothing in the prompt names it, so passing needs context use. */
     currentItem: nodeRef.optional(),
+    /** Builds `evals/chat/fixture-<name>.json` instead of the main fixture, which is at the
+     * blueprint size limits. */
+    fixture: nodeRef.optional(),
     /** Captures this deterministic synthetic fixture leaf before template cases. */
     templateSource: nodeRef.optional(),
     tools: chatToolExpectationsSchema.default({
