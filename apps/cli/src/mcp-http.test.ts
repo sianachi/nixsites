@@ -114,7 +114,7 @@ describe('nixctl mcp over HTTP', () => {
       requestInit: { headers: { authorization: 'Bearer nixpat_remote_owner' } },
     });
     // The SDK's own transport, typed with optional setters this project's strictness refuses.
-    await client.connect(transport as unknown as Parameters<Client['connect']>[0]);
+    await client.connect(transport);
     try {
       const tools = await client.listTools();
       const names = tools.tools.map((tool) => tool.name);
@@ -208,7 +208,7 @@ describe('nixctl mcp over HTTP', () => {
     const transport = new StreamableHTTPClientTransport(url, {
       requestInit: { headers: { authorization: 'Bearer nixpat_remote_owner' } },
     });
-    await client.connect(transport as unknown as Parameters<Client['connect']>[0]);
+    await client.connect(transport);
     try {
       const input = {
         name: 'get_item',

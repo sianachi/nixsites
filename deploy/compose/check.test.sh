@@ -32,7 +32,7 @@ PY
 python3 - "$fixture/compose.json" <<'PY'
 import json,sys
 c=json.load(open(sys.argv[1])); s=c['services']
-assert s['nix-versitygw']['image']=='versity/versitygw:v1.7.0'
+assert s['nix-versitygw']['image'].startswith('versity/versitygw:v1.7.0@sha256:')
 assert 'nix-indexer' not in s and 'nix-opensearch' not in s
 assert 'nix-opensearch-data' not in c['volumes']
 assert not any('OpenSearch' in key for key in s['nix-api']['environment'])
@@ -117,8 +117,16 @@ elif command=='export':
 else: print('{}')
 PY
 chmod +x "$fixture/bin/"*
-export PATH="$fixture/bin:$PATH" NIXCTL_BIN="$fixture/bin/nixctl" NIXCTL_PROFILE=test NIX_SMOKE_WORKSPACE=test NIX_SMOKE_ORIGIN=https://production.example TEST_LOG="$fixture/calls"
+# The app index answers with the framing headers the edge sends (TEST_FRAME overrides X-Frame-Options).
+cat > "$fixture/fetch.mjs" <<'JS'
+globalThis.fetch = async () => new Response('', { headers: { 'content-security-policy': "default-src 'self'; frame-ancestors 'none'", 'x-frame-options': process.env.TEST_FRAME ?? 'DENY' } });
+JS
+export PATH="$fixture/bin:$PATH" NIXCTL_BIN="$fixture/bin/nixctl" NIXCTL_PROFILE=test NIX_SMOKE_WORKSPACE=test NIX_SMOKE_ORIGIN=https://production.example TEST_LOG="$fixture/calls" NODE_OPTIONS="--import $fixture/fetch.mjs"
 node deploy/compose/smoke.mjs > "$fixture/result"
+if TEST_FRAME=SAMEORIGIN node deploy/compose/smoke.mjs > "$fixture/framing" 2>&1; then
+  echo 'smoke accepted an app that may be framed' >&2; exit 1
+fi
+rg -q "X-Frame-Options DENY" "$fixture/framing"
 rg -q 'item rm smoke-root --workspace test' "$TEST_LOG"
 rg -q 'Public import and export smoke checks passed' "$fixture/result"
 : > "$TEST_LOG"

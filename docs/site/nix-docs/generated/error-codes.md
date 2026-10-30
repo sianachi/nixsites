@@ -292,6 +292,11 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `calendar.request_invalid`
 - `chart.not_configured`
 - `chart.view_not_found`
+- `comments.forbidden`
+- `comments.invalid`
+- `comments.limit`
+- `comments.not_author`
+- `comments.not_found`
 - `finance.reserved_property`
 - `identity.principal_not_found`
 - `items.body_conflict`
@@ -325,6 +330,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `roles.administrator_required`
 - `roles.last_administrator`
 - `search.malformed_references`
+- `search.timed_out`
 - `search.too_many_references`
 - `sites.approval_not_needed`
 - `sites.approval_pending`
