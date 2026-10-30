@@ -276,8 +276,8 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
             <a href="#views" className={NAV_LINK}>
               Views
             </a>
-            <a href="#companion" className={NAV_LINK}>
-              Companion
+            <a href="#agents" className={NAV_LINK}>
+              AI agents
             </a>
             <a href="#own-it" className={NAV_LINK}>
               Own your data
@@ -296,13 +296,14 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
       <main>
         <section id="top" className={`${PAGE} pt-14 pb-16 sm:pt-22`}>
           <div className="flex max-w-3xl flex-col gap-6">
-            <Kicker>Self-hosted · open source · MIT</Kicker>
+            <Kicker>Free · open source · AGPL-3.0</Kicker>
             <Text variant="h1" as="h1" className={`${HERO} text-balance`}>
-              Notes, tasks, habits and money in one tree you run yourself.
+              Where people and their AI agents work together.
             </Text>
             <Text variant="body" as="p" tone="muted" className={`${LEAD} max-w-2xl text-pretty`}>
-              Nix is an open-source alternative to Notion and Obsidian. Capture, plan and review
-              your day in one place, on desktop or phone, and take your data with you whenever you
+              Nix is a free, open-source workspace where people and their AI agents work together:
+              notes, tasks, habits, calendars, spreadsheets, files and automations in one place. Run
+              it yourself, bring the AI you already use, and take your data with you whenever you
               like.
             </Text>
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -346,7 +347,8 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
                   src: '/landing/habits.png',
                   alt: 'Habit tracker view in Nix',
                   title: 'Habits',
-                  detail: 'Due tasks and habits arrive as quiet push notifications.',
+                  detail:
+                    'Automations create tasks and send reminders as quiet push notifications.',
                 },
                 {
                   src: '/landing/note.jpg',
@@ -372,22 +374,53 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
           </div>
         </section>
 
-        <section id="companion" className={`border-y ${RULE} bg-surface`}>
-          <div className={`${PAGE} grid items-center gap-12 py-20 md:grid-cols-5`}>
-            <div className="flex min-w-0 flex-col gap-4 md:col-span-2">
-              <Kicker>Companion</Kicker>
-              <Text variant="h2" as="h2" className={`${SECTION_HEAD} text-balance`}>
-                Ask for structure. Review it before it runs.
-              </Text>
-              <Text variant="body" as="p" tone="muted" className="text-lg text-pretty">
-                The companion builds structure on request, and every plan is previewed before
-                anything changes. For your own tools, <code className="font-mono">nixctl</code> is a
-                JSON CLI and <code className="font-mono">nixctl mcp</code> exposes the workspace to
-                AI tools.
-              </Text>
+        <section id="agents" className={`border-y ${RULE} bg-surface`}>
+          <div className={`${PAGE} flex flex-col gap-12 py-20`}>
+            <div className="grid items-center gap-12 md:grid-cols-5">
+              <div className="flex min-w-0 flex-col gap-4 md:col-span-2">
+                <Kicker>AI agents</Kicker>
+                <Text variant="h2" as="h2" className={`${SECTION_HEAD} text-balance`}>
+                  Your agents work where you work. They ask before they act.
+                </Text>
+                <Text variant="body" as="p" tone="muted" className="text-lg text-pretty">
+                  Every workspace has a companion that can do anything you can do in Nix. Bring your
+                  own agents too: Claude, Codex or any MCP client reaches the same workspace through
+                  the same permission checks as you.
+                </Text>
+              </div>
+              <div className="min-w-0 md:col-span-3">
+                <Shot
+                  src="/landing/companion.png"
+                  alt="The companion in a Nix chat, with an approval card for a change it proposed"
+                  large
+                />
+              </div>
             </div>
-            <div className="min-w-0 md:col-span-3">
-              <Shot src="/landing/companion.png" alt="Companion chat in Nix" large />
+            <div className={`grid border-t ${RULE} sm:grid-cols-2 lg:grid-cols-3`}>
+              <Point title="Asks before it acts">
+                Every change arrives as an approval card showing the exact request. Permanent
+                deletes, access changes and publishing carry a warning.
+              </Point>
+              <Point title="Answers from your notes">
+                It searches by meaning across the workspace, even a 200-page document, and links the
+                notes it answered from.
+              </Point>
+              <Point title="Remembers what matters">
+                It keeps the facts and preferences you tell it, asks before saving by default, and
+                lets you edit or forget each one.
+              </Point>
+              <Point title="Replies you can use">
+                Answers can be tables, charts and cards you can edit, and an approved change applies
+                in place.
+              </Point>
+              <Point title="Your model, your key">
+                Sign in with ChatGPT, or add an Anthropic or OpenRouter key. Search runs on a small
+                model inside your server, with no key and no cost.
+              </Point>
+              <Point title="Every agent, every action">
+                <code className="font-mono">nixctl</code> and its MCP server give AI tools every
+                operation Nix has, except credentials, and nothing more than you could do.
+              </Point>
             </div>
           </div>
         </section>

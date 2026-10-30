@@ -1,7 +1,7 @@
 {
   "name": "Nix",
   "short_name": "Nix",
-  "description": "A collaborative document and knowledge workspace.",
+  "description": "A free, open-source workspace where people and their AI agents work together.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

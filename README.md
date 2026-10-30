@@ -1,4 +1,4 @@
-# Nix (nixsites) — self-hosted workspace
+# Nix (nixsites): a workspace for people and their AI agents
 
 [![Release](https://img.shields.io/github/v/release/sianachi/nixsites?label=release)](https://github.com/sianachi/nixsites/releases/latest)
 [![Licence](https://img.shields.io/github/license/sianachi/nixsites?label=licence)](LICENSE)
@@ -7,12 +7,14 @@
 [![Container image](https://img.shields.io/badge/ghcr.io-sianachi%2Fnix-2496ED?logo=docker&logoColor=white)](https://github.com/sianachi/nixsites/packages)
 [![GitHub stars](https://img.shields.io/github/stars/sianachi/nixsites)](https://github.com/sianachi/nixsites)
 
-Nix ([nixsites](https://github.com/sianachi/nixsites)) is a self-hosted, open-source alternative to
-Notion and Obsidian: notes, tasks, habits, journal, files, calendar and finance in one item tree,
-for one person or a small group.
+Nix ([nixsites](https://github.com/sianachi/nixsites)) is a free, open-source workspace where people
+and their AI agents work together: notes, tasks, habits, calendars, spreadsheets, files and
+automations in one place.
 
-It syncs in real time with CRDTs, offers a CLI and an MCP server for AI tools, exports with no
-lock-in, and can publish a subtree as a static site.
+Every workspace has an AI companion that can do anything you can do and asks before it changes
+anything. Your own agents reach the same workspace through `nixctl` and its MCP server, under the
+same permissions. Nix syncs in real time, exports with no lock-in, runs on your own server, and can
+publish a subtree as a static site.
 
 **[Live demo and docs](https://nix.nixsites.com/).** That site is itself a Nix workspace, published
 as a static site.
