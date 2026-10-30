@@ -1,5 +1,13 @@
 import 'fake-indexeddb/auto';
-import { createNixClient, items, structure, views, workspaces } from '@nix/api-client';
+import {
+  conversations,
+  createNixClient,
+  items,
+  pets,
+  structure,
+  views,
+  workspaces,
+} from '@nix/api-client';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,6 +38,7 @@ const titlesUnder = async (
 describe('the demo', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('serves a workspace whose writes stick until the tab reloads', async () => {
@@ -38,7 +47,12 @@ describe('the demo', () => {
     expect((await nix.query(workspaces.workspaceById(DEMO_WORKSPACE))).name).toBe(
       'Northwind Studio',
     );
-    expect(await titlesUnder(nix)).toEqual(['Product launch', 'Priorities', 'Launch brief']);
+    expect(await titlesUnder(nix)).toEqual([
+      'Product launch',
+      'Priorities',
+      'Launch brief',
+      'Plan launch week with Pip',
+    ]);
 
     const created = await nix.execute(
       items.createItem(DEMO_WORKSPACE, {
@@ -101,5 +115,43 @@ describe('the demo', () => {
     expect(await screen.findByText('Press kit', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByText('Product launch').length).toBeGreaterThan(0);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('shows a connected pet and a conversation that already happened', async () => {
+    const nix = client();
+    const { settings } = await nix.query(pets.settings());
+    expect(settings.enabled).toBe(true);
+    expect(settings.profiles[0]?.provider).toBe('anthropic');
+
+    const chat = (await titlesUnder(nix)).includes('Plan launch week with Pip');
+    expect(chat).toBe(true);
+    const root = [];
+    for await (const item of nix.paginate(items.listItems(DEMO_WORKSPACE, {}))) root.push(item);
+    const itemId = root.find((item) => item.title === 'Plan launch week with Pip')?.id ?? '';
+    const { items: messages } = await nix.query(conversations.messages(itemId));
+    expect(messages).toHaveLength(6);
+    expect(messages[1]?.text).toContain('Beta tester outreach](/w/');
+    expect(messages[3]?.text).toContain('```openui-lang');
+    expect(messages[5]?.text).toContain('Friday launches');
+  });
+
+  it('answers a new message with the scripted reply', async () => {
+    vi.useFakeTimers();
+    const nix = client();
+    const root = [];
+    for await (const item of nix.paginate(items.listItems(DEMO_WORKSPACE, {}))) root.push(item);
+    const itemId = root.find((item) => item.title === 'Plan launch week with Pip')?.id ?? '';
+
+    const sent = await nix.execute(
+      conversations.send(itemId, { requestId: crypto.randomUUID(), text: 'Hello?' }),
+    );
+    expect(sent.turn?.status).toBe('running');
+    await vi.advanceTimersByTimeAsync(1000);
+    const { items: messages } = await nix.query(conversations.messages(itemId), {
+      forceRefresh: true,
+    });
+    expect(messages.at(-2)?.text).toBe('Hello?');
+    expect(messages.at(-1)?.text).toContain('my replies are scripted');
+    vi.useRealTimers();
   });
 });

@@ -1,3 +1,5 @@
+import { createDemoAi } from './demo-ai';
+
 export const DEMO_WORKSPACE = '0199a000-0000-7000-8000-000000000001';
 export const DEMO_PROFILE = {
   subject: 'demo-visitor',
@@ -37,6 +39,8 @@ const PRIORITIES = nextId();
 const LAUNCH_BRIEF = nextId();
 const LANDING_PAGE = nextId();
 const LAUNCH_VIDEO = nextId();
+const CHAT = nextId();
+const BETA_OUTREACH = nextId();
 
 /** Note bodies the demo opens with, by item id; every other note starts empty. */
 export const DEMO_NOTES: Readonly<Record<string, string>> = {
@@ -85,6 +89,7 @@ function sampleItems(): DemoItem[] {
     item(null, 'Product launch', 1, {}, PRODUCT_LAUNCH),
     item(null, 'Priorities', 2, {}, PRIORITIES),
     item(null, 'Launch brief', 3, {}, LAUNCH_BRIEF),
+    item(null, 'Plan launch week with Pip', 4, {}, CHAT),
     task('Press kit', 1, { priority: 'Low', start: day(4), due: day(12), status: 'To do' }),
     task('Email announcement', 2, {
       priority: 'Medium',
@@ -92,12 +97,13 @@ function sampleItems(): DemoItem[] {
       due: day(15),
       status: 'To do',
     }),
-    task('Beta tester outreach', 3, {
-      priority: 'High',
-      start: day(2),
-      due: day(9),
-      status: 'To do',
-    }),
+    item(
+      PRODUCT_LAUNCH,
+      'Beta tester outreach',
+      3,
+      { priority: 'High', start: day(2), due: day(9), status: 'To do' },
+      BETA_OUTREACH,
+    ),
     item(
       PRODUCT_LAUNCH,
       'Landing page design',
@@ -206,6 +212,7 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
       view('form', 'form', { columns: ['priority', 'due', 'status'] }),
     ],
   },
+  [CHAT]: { properties: [], views: [view('chat', 'chat')] },
   [PRIORITIES]: {
     properties: [
       select('urgency', 'Urgency', ['Urgent', 'Not urgent']),
@@ -369,15 +376,16 @@ export function createDemoFetch(): typeof fetch {
       /^\/api\/v1\/me\/notifications(\/watch)?$/,
       () => json({ items: [], nextCursor: null, unread: 0, revision: 0 }),
     ],
-    [
-      'GET',
-      /^\/api\/v1\/me\/pets\/settings$/,
-      () =>
-        json({
-          revision: 0,
-          settings: { enabled: false, activePetId: null, motion: 'system', profiles: [] },
-        }),
-    ],
+    ...createDemoAi({
+      workspaceId: DEMO_WORKSPACE,
+      ids: {
+        chat: CHAT,
+        brief: LAUNCH_BRIEF,
+        landing: LANDING_PAGE,
+        outreach: BETA_OUTREACH,
+      },
+      json,
+    }),
     [
       'GET',
       /^\/api\/v1\/me\/workspace-arrangement$/,
