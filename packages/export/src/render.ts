@@ -5,7 +5,7 @@
  * ProseMirror node or mark; schema changes touch TypeScript only. The vocabulary is what a page can
  * show - blocks of runs - and nothing the editor needs for editing (ids, suggestions, comments).
  * `visitProse` already rejects suggestions and reports unknown nodes, so those semantics are shared
- * with Markdown and published sites. Issue #273.
+ * with Markdown and published sites (GitHub issue 273).
  *
  * A reader rejects an unknown major version and skips (with a loss) an unknown block kind, so a
  * minor addition here is a new kind, never a changed one.
