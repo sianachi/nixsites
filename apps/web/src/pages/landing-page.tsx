@@ -391,7 +391,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
               <div className="min-w-0 md:col-span-3">
                 <Shot
                   src="/landing/companion.png"
-                  alt="The companion in a Nix chat, with an approval card for a change it proposed"
+                  alt="The companion planning launch week: a generated table, approved changes and a remembered preference"
                   large
                 />
               </div>

@@ -74,6 +74,9 @@ follows semantic versioning (`0.x` pre-1.0).
 - The landing page presents Nix as a free, open-source workspace where people and their AI agents
   work together, with a section on what the companion and your own agents can do, and screenshots
   retaken from the current interface.
+- The `/demo` includes the companion: a sample chat shows it answering from the workspace,
+  building a table, making an approved change and remembering a preference. Replies to new
+  messages are scripted, since the demo has no model.
 - Breaking: Nix is now licensed under AGPL-3.0-only, with additional permissions for plugins,
   content made with Nix and programs that use it through the API, `nixctl` or MCP. Using or
   self-hosting Nix, including commercially, is unaffected; running a modified Nix for other people
