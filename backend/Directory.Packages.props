@@ -57,8 +57,8 @@
 
   <!-- Local text embeddings for pet retrieval: bge-small-en-v1.5 run in-process on the CPU. -->
   <ItemGroup Label="Embeddings">
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
-    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
   </ItemGroup>
 
   <ItemGroup Label="Messaging">
@@ -78,7 +78,7 @@
     text, so Npgsql never sees a NodaTime type and its type-mapping plugin would map nothing.
   -->
   <ItemGroup Label="Time">
-    <PackageVersion Include="NodaTime" Version="3.3.6" />
+    <PackageVersion Include="NodaTime" Version="3.3.7" />
   </ItemGroup>
 
   <ItemGroup Label="Integration test harness">
