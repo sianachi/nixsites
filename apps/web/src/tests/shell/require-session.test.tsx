@@ -36,7 +36,7 @@ describe('the session gate', () => {
     );
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /notes, tasks, habits and money/i }),
+      screen.getByRole('heading', { level: 1, name: /people and their AI agents work together/i }),
     ).toBeVisible();
     expect(screen.getAllByRole('link', { name: 'Open the live demo' })[0]).toBeVisible();
   });
@@ -59,7 +59,7 @@ describe('the session gate', () => {
       </WebConfigContext>,
     );
     expect(
-      screen.getByRole('heading', { level: 1, name: /notes, tasks, habits and money/i }),
+      screen.getByRole('heading', { level: 1, name: /people and their AI agents work together/i }),
     ).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Open the live demo' })).not.toBeInTheDocument();
   });
