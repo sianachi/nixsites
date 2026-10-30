@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const baseUrl = process.argv[2] ?? 'http://localhost:5173';
+// Optional third argument: comma-separated shot names to retake, leaving the rest as they are.
+const only = process.argv[3]?.split(',');
 const out = fileURLToPath(new URL('../public/landing/', import.meta.url));
 await mkdir(out, { recursive: true });
 
@@ -41,6 +43,7 @@ async function capture(scheme) {
   const suffix = scheme === 'dark' ? '-dark' : '';
   const page = await demoPage(scheme);
   const shoot = async (name) => {
+    if (only && !only.includes(name)) return;
     await page.mouse.move(0, 0);
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}${name}${suffix}.jpg`, type: 'jpeg', quality: 85 });
@@ -68,6 +71,33 @@ async function capture(scheme) {
   await page.getByRole('link', { name: 'Graph' }).click();
   await page.waitForSelector('canvas, svg');
   await page.waitForTimeout(1500);
+  // This build names a graph node only on hover or selection, so show the names of the launch
+  // work and Pip's chat for the picture, and leave the side branches as plain nodes. The brief and
+  // the chat sit side by side, so one label moves up and the other down to stay legible.
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.waitForTimeout(800);
+  await page.evaluate(() => {
+    const hidden = new Set([
+      'Habits',
+      'Morning run',
+      'Read 20 pages',
+      'Drink water',
+      'Stretch before bed',
+      'Priorities',
+      'Fix the leaking tap',
+      'Plan the garden',
+      'Reply to the group chat',
+      'Sort old photos',
+    ]);
+    for (const text of document.querySelectorAll('svg text')) {
+      const name = text.textContent ?? '';
+      if (name.length < 2 || hidden.has(name)) continue;
+      text.style.opacity = '1';
+      if (name.startsWith('Plan launch week')) text.setAttribute('dy', '-1.1em');
+      if (name === 'Launch brief') text.setAttribute('dy', '1.6em');
+      if (name === 'Pricing page') text.setAttribute('dy', '1.5em');
+    }
+  });
   // Scroll past the controls so the drawing fills the frame.
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('#main, #main *')) {
