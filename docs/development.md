@@ -30,8 +30,8 @@ Storybook: `pnpm --filter @nix/ui storybook` (6006);
 ```
 dotnet format Nix.slnx --verify-no-changes
 dotnet build Nix.slnx --configuration Release
-dotnet test backend/tests/Nix.Tests/Nix.Tests.csproj              # unit, no Docker
-dotnet test backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj  # needs Docker
+dotnet test --project backend/tests/Nix.Tests/Nix.Tests.csproj              # unit, no Docker
+dotnet test --project backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj  # needs Docker
 ```
 
 For an API contract change, regenerate OpenAPI explicitly, then regenerate the

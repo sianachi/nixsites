@@ -44,7 +44,7 @@ Common commands are listed in [docs/development.md](docs/development.md):
 pnpm lint
 pnpm typecheck
 pnpm --filter @nix/web test
-dotnet test backend/tests/Nix.Tests/Nix.Tests.csproj
+dotnet test --project backend/tests/Nix.Tests/Nix.Tests.csproj
 go -C apps/go-workers test ./...
 ```
 
