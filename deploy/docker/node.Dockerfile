@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Collaboration service image.
-FROM node:22-slim AS deps
+FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS deps
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable
 WORKDIR /repo
@@ -15,7 +15,7 @@ COPY apps/web/package.json apps/web/
 # collaboration imports. Skipping it leaves those packages with empty dist/ folders.
 RUN pnpm install --frozen-lockfile
 
-FROM node:22-slim AS collab
+FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS collab
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production
 RUN corepack enable
 WORKDIR /repo

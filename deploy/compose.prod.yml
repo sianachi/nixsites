@@ -2,7 +2,7 @@ name: nix
 
 services:
   nix-versitygw:
-    image: versity/versitygw:v1.7.0
+    image: versity/versitygw:v1.7.0@sha256:c4cbd9d9cb8dedbb055ac788dbd02635651b9b1cebac95b095b3217231aa87ad
     restart: unless-stopped
     command: ["--health", "/health", "posix", "/data"]
     environment:
@@ -20,7 +20,7 @@ services:
       - no-new-privileges:true
 
   nix-storage-init:
-    image: amazon/aws-cli:2.36.31
+    image: amazon/aws-cli:2.36.31@sha256:f0dcd994da5c36ab09becf4259bba4c45ed4ecfd03d51c701912f4d8425b2d49
     profiles: [maintenance]
     restart: "no"
     environment:
@@ -38,7 +38,7 @@ services:
       - no-new-privileges:true
 
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -61,7 +61,7 @@ services:
           - postgres
 
   rabbitmq:
-    image: rabbitmq:4.1-management-alpine
+    image: rabbitmq:4.1-management-alpine@sha256:410a1c8844e9c9227f72735d95a391fca4559ca8b61cce9dad707ce5e2229a3a
     restart: unless-stopped
     user: "100:101"
     # This listener is plaintext by design and is reachable only on the private Compose network.
@@ -94,7 +94,7 @@ services:
       - no-new-privileges:true
 
   nix-api-init:
-    image: busybox:1.37
+    image: busybox:1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
     restart: "no"
     command: ["sh", "-c", "chown -R 1654:1654 /var/lib/nix/data-protection"]
     volumes:
@@ -124,7 +124,7 @@ services:
       - no-new-privileges:true
 
   nix-template-presets:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     restart: "no"
     depends_on:
       postgres:
@@ -149,7 +149,7 @@ services:
   # Opt-in identity bootstrap for a fresh install: deploy/compose/deploy.sh runs it after the
   # migrator when NIX_BOOTSTRAP_IDENTITY=true. See deploy/seed/bootstrap_identity.sql.
   nix-identity-bootstrap:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     restart: "no"
     profiles: ["bootstrap"]
     environment:
@@ -660,7 +660,7 @@ services:
           - nix-web.nix.svc.cluster.local
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:latest@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     restart: unless-stopped
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:

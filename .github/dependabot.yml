@@ -46,3 +46,12 @@ updates:
     groups:
       actions-minor-patch:
         update-types: [minor, patch]
+
+  # Third-party images in the production Compose file (digest-pinned; the bot moves tag and digest together).
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+    groups:
+      compose-minor-patch:
+        update-types: [minor, patch]

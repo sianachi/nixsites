@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Two images, one build: Core and the migration job share the same compilation.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS build
 WORKDIR /src
 
 # Restore against the manifests first so a source-only change does not re-resolve NuGet.
@@ -26,7 +26,7 @@ RUN dotnet publish backend/src/Nix.Api/Nix.Api.csproj \
 # InvariantGlobalization is false in backend/Directory.Build.props, so the runtime needs ICU.
 # The "-extra" chiseled variant carries it; plain "-chiseled" does not and the process will
 # fail at startup. If in doubt, fall back to mcr.microsoft.com/dotnet/aspnet:10.0.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS api
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8 AS api
 WORKDIR /app
 COPY --from=build /out/api ./
 ENV ASPNETCORE_HTTP_PORTS=8080 \
@@ -37,7 +37,7 @@ ENTRYPOINT ["dotnet", "Nix.Api.dll"]
 
 # The migrator references the API persistence assembly, which carries the ASP.NET shared
 # framework; use the same runtime family as Core so the migration job can start on ARM hosts.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS migrator
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8 AS migrator
 WORKDIR /app
 COPY --from=build /out/migrator ./
 USER $APP_UID

@@ -19,7 +19,7 @@ spec:
       automountServiceAccountToken: false
       initContainers:
         - name: sites-read-account
-          image: versity/versitygw:v1.7.0
+          image: versity/versitygw:v1.7.0@sha256:c4cbd9d9cb8dedbb055ac788dbd02635651b9b1cebac95b095b3217231aa87ad
           command: ["/bin/sh", "-ec"]
           args:
             - |
@@ -44,7 +44,7 @@ spec:
           resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 128Mi } }
       containers:
         - name: buckets
-          image: amazon/aws-cli:2.36.31
+          image: amazon/aws-cli:2.36.31@sha256:f0dcd994da5c36ab09becf4259bba4c45ed4ecfd03d51c701912f4d8425b2d49
           command: ["/bin/sh", "-ec"]
           args:
             - |

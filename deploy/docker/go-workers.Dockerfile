@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.26-alpine AS build
+FROM golang:1.26-alpine@sha256:a2012b4a1d1f9f7e9f44e0d39b805a901e856b1dd80b4e6ee4338db547050308 AS build
 WORKDIR /src
 COPY apps/go-workers/go.mod ./
 COPY apps/go-workers ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags='-s -w' -o /out/nix-worker ./cmd/nix-worker
 
-FROM node:22-bookworm-slim AS codex
+FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS codex
 ARG CODEX_VERSION=0.153.4
 RUN npm install --global @openai/codex@${CODEX_VERSION}
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates poppler-utils util-linux \
     && rm -rf /var/lib/apt/lists/* \
