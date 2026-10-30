@@ -73,7 +73,7 @@ services:
   # PAT install.sh uses once to register the Nix application. No healthcheck: the image is
   # distroless; install.sh waits on OIDC discovery instead.
   zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.16.1
+    image: ghcr.io/zitadel/zitadel:v4.20.0
     restart: unless-stopped
     command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "${NIX_ZITADEL_TLS_MODE:?set NIX_ZITADEL_TLS_MODE}"]
     environment:

@@ -2,7 +2,7 @@ name: nix
 
 services:
   nix-versitygw:
-    image: versity/versitygw:v1.7.0@sha256:c4cbd9d9cb8dedbb055ac788dbd02635651b9b1cebac95b095b3217231aa87ad
+    image: versity/versitygw:v1.10.0@sha256:89cad13cc981986ee284cbafea4613f9533ce6fd5f37a2c96c4c4fb8adb3a316
     restart: unless-stopped
     command: ["--health", "/health", "posix", "/data"]
     environment:
@@ -20,7 +20,7 @@ services:
       - no-new-privileges:true
 
   nix-storage-init:
-    image: amazon/aws-cli:2.36.31@sha256:f0dcd994da5c36ab09becf4259bba4c45ed4ecfd03d51c701912f4d8425b2d49
+    image: amazon/aws-cli:2.39.0@sha256:6014c77975a4ae237395924cc821333f20bf87c91964a45dd4ed5f3b13b424f5
     profiles: [maintenance]
     restart: "no"
     environment:

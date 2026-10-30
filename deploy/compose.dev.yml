@@ -102,7 +102,7 @@ services:
       start_period: 15s
 
   versitygw:
-    image: versity/versitygw:v1.7.0
+    image: versity/versitygw:v1.10.0
     profiles: ["core"]
     command: ["--health", "/health", "posix", "/data"]
     environment:
@@ -157,7 +157,7 @@ services:
   # Console: http://localhost:8300/ui/console
   # Issuer / OIDC discovery: http://localhost:8300/.well-known/openid-configuration
   zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.16.1
+    image: ghcr.io/zitadel/zitadel:v4.20.0
     profiles: ["core"]
     command:
       [
@@ -212,7 +212,7 @@ services:
   # at mailpit:1025 on the compose network; only the web UI is published.
   # Inbox: http://localhost:8325
   mailpit:
-    image: axllent/mailpit:v1.29
+    image: axllent/mailpit:v1.32
     profiles: ["core"]
     ports:
       # Loopback only: the inbox holds password-reset links for every dev account.
