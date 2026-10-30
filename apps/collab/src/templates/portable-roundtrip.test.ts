@@ -172,7 +172,7 @@ function sourceBundles(): readonly ItemBundle[] {
           content: [
             {
               type: 'paragraph',
-              attrs: { textAlign: 'center' },
+              attrs: { textAlign: 'center', suggestion: null },
               content: [
                 { type: 'text', text: 'See {{project_name}} ' },
                 {
