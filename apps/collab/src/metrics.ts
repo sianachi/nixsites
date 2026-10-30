@@ -1,4 +1,4 @@
-import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry } from '@prometheus-io/client';
 
 /**
  * The service's operational signals, named for the questions they answer.
@@ -14,10 +14,10 @@ export interface CollabMetrics {
   readonly registry: Registry;
 
   /** Sockets accepted, by outcome of the handshake. */
-  readonly connectionsTotal: Counter;
+  readonly connectionsTotal: Counter<'outcome'>;
 
   /** Handshakes refused, by close code. */
-  readonly refusalsTotal: Counter;
+  readonly refusalsTotal: Counter<'code'>;
 
   /** Sockets currently open. */
   readonly openSockets: Gauge;
@@ -41,7 +41,7 @@ export interface CollabMetrics {
   readonly authCacheSize: Gauge;
 
   /** Rows the retention sweep has deleted, by kind: update or snapshot. */
-  readonly retentionDeletedTotal: Counter;
+  readonly retentionDeletedTotal: Counter<'kind'>;
 
   /** Documents the retention sweep could not prune, logged and skipped rather than fatal. */
   readonly retentionFailuresTotal: Counter;
