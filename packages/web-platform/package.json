@@ -56,8 +56,8 @@
     "@nix/api-client": "workspace:*",
     "@nix/ui": "workspace:*",
     "@nix/web-foundation": "workspace:*",
-    "react-router": "^7.18.1",
-    "zod": "^4.4.3"
+    "react-router": "^7.18.5",
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^19.0.0"
@@ -79,7 +79,7 @@
     "react-dom": "^19.2.8",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.3.6",
-    "vitest": "^3.2.4",
+    "vitest": "^3.2.7",
     "yjs": "^13.6.31"
   }
 }

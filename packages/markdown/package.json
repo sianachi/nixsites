@@ -37,13 +37,13 @@
   "dependencies": {
     "@nix/editor-schema": "workspace:*",
     "@nix/export": "workspace:*",
-    "markdown-it": "^14.1.0",
+    "markdown-it": "^14.3.3",
     "prosemirror-markdown": "^1.13.2"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.15.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

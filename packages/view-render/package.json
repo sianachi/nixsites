@@ -29,6 +29,6 @@
     "@nix/design-tokens": "workspace:*",
     "@types/node": "^22.15.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }
