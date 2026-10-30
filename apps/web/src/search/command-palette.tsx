@@ -178,7 +178,7 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
     <div className="flex min-h-0 min-w-0 flex-col">
       <div
         className={[
-          'flex min-w-0 items-center gap-3 px-3 sm:px-5',
+          '-pt-2 pb-2 flex min-w-0 items-center gap-3 px-3 sm:px-5',
           options.length === 0 ? '' : 'border-b border-divider',
         ].join(' ')}
       >
@@ -203,7 +203,7 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
           onKeyDown={(event) => {
             listbox.onKeyDown(event);
           }}
-          className="h-[var(--control-lg)] text-lg"
+          className="h-(--control-lg) text-lg"
         />
       </div>
 
