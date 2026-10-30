@@ -201,7 +201,7 @@ describe('the workspaces resource', () => {
     });
   });
 
-  it('refuses legacy commenter as a newly assignable role', () => {
+  it('accepts commenter as an assignable role', () => {
     expect(
       workspaceMemberSchema.safeParse({
         subjectType: 'principal',
@@ -214,6 +214,6 @@ describe('the workspaces resource', () => {
         canRemove: true,
         assignableRoles: ['commenter'],
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 });
