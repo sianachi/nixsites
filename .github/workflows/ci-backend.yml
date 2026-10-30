@@ -150,7 +150,7 @@ jobs:
       # the two suites are separate projects rather than one.
       - name: Unit tests
         working-directory: backend
-        run: dotnet test tests/Nix.Tests/Nix.Tests.csproj --configuration Release
+        run: dotnet test --project tests/Nix.Tests/Nix.Tests.csproj --configuration Release
 
   # ── Stage 3: integration ───────────────────────────────────────────────────
   # Everything that needs a real Postgres: the tenant isolation policies, the
@@ -206,10 +206,10 @@ jobs:
           ) &
           diagnostic_pid=$!
           trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
-          # A test stuck past four minutes is aborted and named, instead of the step timing out silently.
-          dotnet test tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter "Category!=PlanEvidence" \
-            --blame-hang --blame-hang-timeout 4m --blame-hang-dump-type none --logger "console;verbosity=normal"
+          # The step timeout bounds a stuck test; the hang dump flags need an extension package xunit v4 does not bundle.
+          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
+            --filter-not-trait "Category=PlanEvidence" \
+            --output Detailed
 
   # ── Stage 3b: query-plan evidence ──────────────────────────────────────────
   # EXPLAIN-based proof that hot statements use their indexes over a large seeded corpus. It
@@ -235,6 +235,6 @@ jobs:
       - name: Plan evidence tests
         working-directory: backend
         run: |
-          dotnet test tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter "Category=PlanEvidence" \
-            --blame-hang --blame-hang-timeout 4m --blame-hang-dump-type none --logger "console;verbosity=normal"
+          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
+            --filter-trait "Category=PlanEvidence" \
+            --output Detailed

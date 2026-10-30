@@ -44,7 +44,7 @@ rabbit_output=$("$planner" deploy/rabbitmq/start.sh)
 assert_contains "$rabbit_output" 'node --test deploy/rabbitmq/definitions.test.mjs'
 
 backend_output=$("$planner" backend/src/Nix.Api/Authentication/UserInfoClient.cs)
-assert_contains "$backend_output" 'dotnet test backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj'
+assert_contains "$backend_output" 'dotnet test --project backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj'
 assert_contains "$backend_output" 'Required review: security'
 
 contract_output=$("$planner" backend/openapi/nix-api.json)

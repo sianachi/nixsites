@@ -197,7 +197,7 @@ if [ "$has_backend" = true ]; then
   emit './scripts/check-no-controllers.sh'
   emit './scripts/check-layering.sh'
   emit './scripts/check-root-is-unambiguous.sh'
-  emit 'dotnet test backend/tests/Nix.Tests/Nix.Tests.csproj'
+  emit 'dotnet test --project backend/tests/Nix.Tests/Nix.Tests.csproj'
 fi
 
 if [ "$has_openapi" = true ]; then
@@ -219,7 +219,7 @@ if [ "$has_catalog" = true ]; then
 fi
 
 if [ "$has_sensitive_backend" = true ]; then
-  emit 'dotnet test backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj'
+  emit 'dotnet test --project backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj'
   [ "$format" = commands ] || echo '  Required review: security; add backend-data review for persistence, SQL, or migrations.'
 fi
 
