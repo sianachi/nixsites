@@ -299,3 +299,14 @@ export type {
 
 export * as conversations from './resources/conversations.js';
 export * from './schemas/conversations.js';
+export {
+  OPERATIONS,
+  OperationCallError,
+  callOperation,
+  findOperations,
+  isCredentialOperation,
+  operationById,
+  operationRequest,
+  operationRisk,
+} from './operations.js';
+export type { OperationCall, OperationEntry, OperationRisk } from './operations.js';

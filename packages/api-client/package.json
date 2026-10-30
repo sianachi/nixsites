@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc --project tsconfig.build.json",
-    "generate": "openapi-typescript ../../backend/openapi/nix-api.json -o src/generated/api.ts && prettier --write src/generated/api.ts"
+    "generate": "openapi-typescript ../../backend/openapi/nix-api.json -o src/generated/api.ts && node --experimental-strip-types scripts/build-operations.ts && prettier --write src/generated/api.ts src/generated/operations.ts"
   },
   "dependencies": {
     "axios": "^1.12.0",
