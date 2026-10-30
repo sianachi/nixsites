@@ -72,6 +72,9 @@ try {
   throw new Error(`nixctl profile '${profile}' ${reason}. ${rotation}`);
 }
 if (auth.apiUrl?.replace(/\/$/, '') !== expectedURL.origin) throw new Error('nixctl profile URL does not match this deployment; refusing to verify another instance.');
+// The app frames nothing over the network (previews use blob:/srcdoc frames), so both edges forbid framing.
+const appIndex = await fetch(expectedURL, { redirect: 'manual' });
+if (!/(^|;)\s*frame-ancestors 'none'\s*($|;)/.test(appIndex.headers.get('content-security-policy') ?? '') || appIndex.headers.get('x-frame-options') !== 'DENY') throw new Error("The app index must send frame-ancestors 'none' and X-Frame-Options DENY.");
 await run(['item', 'ls', '--workspace', workspace]);
 if (process.argv.includes('--preflight')) {
   console.log('nixctl authentication and smoke workspace are available.');
