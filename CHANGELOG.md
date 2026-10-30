@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Charts can group by a priority, checkbox or completion property: priorities read P1 Urgent to
+  P4 Low in order, and checkboxes read Checked and Not checked. A line, area or period chart without
+  a date to group by now says that it needs one. (#266)
 - PDF and DOCX exports draw Mermaid diagrams as pictures instead of printing their code. Markdown
   exports keep the code block. A diagram that has not been captured yet, or cannot be drawn, is
   still exported as code.
@@ -68,6 +71,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The landing page presents Nix as a free, open-source workspace where people and their AI agents
+  work together, with a section on what the companion and your own agents can do, and screenshots
+  retaken from the current interface.
 - Breaking: Nix is now licensed under AGPL-3.0-only, with additional permissions for plugins,
   content made with Nix and programs that use it through the API, `nixctl` or MCP. Using or
   self-hosting Nix, including commercially, is unaffected; running a modified Nix for other people
@@ -125,6 +131,27 @@ follows semantic versioning (`0.x` pre-1.0).
   installed app without a connection shows the reconnect screen. Signing out deletes notes an
   earlier version downloaded. Notes created offline that never synced are not published; open
   Notes on this device in the current release and sync before updating to keep them.
+
+### Fixed
+
+- Creating an item with an empty title through MCP `create_item`, or as a blueprint child, keeps
+  the title empty instead of refusing it. (#265)
+
+### Security
+
+- **Breaking:** browser upload links now fix the uploaded object's type, so an uploader can no
+  longer store a file under a type of their choosing. Tabs and installed apps opened before the
+  update, and older `nixctl import`, get "upload failed (403)" until they reload or update. (#211)
+- The last-administrator guard counts only administrators who can act: suspended, deprovisioned
+  and service accounts, and groups with no active member, no longer let the last real
+  administrator be removed, and two administrators revoking each other at once can no longer
+  both succeed. (#164)
+- The Compose edge now forbids framing the app, as the Kubernetes edge already did. (#212)
+- Shipped dependencies with published advisories are updated (Fastify, Axios, Tiptap,
+  ProseMirror, the MCP SDK and others), and the Go workers build with Go 1.26.10. (#207)
+- CI actions are pinned to commit SHAs and third-party images to digests, with Dependabot keeping
+  them current. (#208)
+
 
 ## 0.4.0 - 2026-10-23
 
