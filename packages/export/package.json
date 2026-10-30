@@ -1,6 +1,6 @@
 {
   "name": "@nix/export",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "The Nix archive format: the item bundle every exporter reads and the .nix writer that packages it",

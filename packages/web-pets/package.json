@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-pets",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Pets: the companion (chat, conversation, approvals, work tools) and OpenUI generated UI (renderer, library, designer, artifacts)",

@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-foundation",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Web app foundations: framework-agnostic helpers, layout regions, a11y, keyboard, theme, audio and shared state components",

@@ -1,6 +1,6 @@
 {
   "name": "@nix/view-render",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "A view over an item's children, drawn as SVG: the picture an export puts in a page where the interface puts a board",
