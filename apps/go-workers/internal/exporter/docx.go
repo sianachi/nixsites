@@ -318,6 +318,12 @@ func writeDOCXBlocks(output io.Writer, record stream.Record, blocks []render.Blo
 				return err
 			}
 		case "code":
+			if raster := recordImage(record, block.Src); raster != nil {
+				if err := embed(*raster, "Diagram"); err != nil {
+					return err
+				}
+				continue
+			}
 			paragraph.style = "Code"
 			for _, line := range strings.Split(block.Text, "\n") {
 				if err := writeDOCXParagraph(output, []render.Run{{Text: line}}, paragraph); err != nil {

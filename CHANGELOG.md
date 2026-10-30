@@ -7,6 +7,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- PDF and DOCX exports draw Mermaid diagrams as pictures instead of printing their code. Markdown
+  exports keep the code block. A diagram that has not been captured yet, or cannot be drawn, is
+  still exported as code.
+- On desktop, a chevron beside the item menu slides out Chat, Import, Export and History as
+  one-click buttons and collapses them again.
 - Pets can do anything you can do in Nix. For actions without their own tool, a pet finds the
   action and asks before running it, and the approval card shows the exact request. Permanent
   deletes, access changes and publishing carry a warning. Pets never touch access tokens, AI keys,

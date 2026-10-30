@@ -130,6 +130,15 @@ public sealed class ExportHttpTests : IAsyncLifetime
             Assert.Equal(12, imageBody.RootElement.GetProperty("byteLength").GetInt64());
             Assert.Contains("X-Amz-Signature", imageBody.RootElement.GetProperty("url").GetString(), StringComparison.Ordinal);
         }
+        // A captured Mermaid diagram: an SVG the worker draws itself, so it needs no preview.
+        var diagramId = await CreateImageAsync("image/svg+xml", previewable: false);
+        using var diagram = await InternalAsync(HttpMethod.Get,
+            $"/internal/worker-executions/exports/{exportId:D}/images/{diagramId:D}", exportId, execution);
+        diagram.EnsureSuccessStatusCode();
+        var textId = await CreateImageAsync("text/plain", previewable: false);
+        using var text = await InternalAsync(HttpMethod.Get,
+            $"/internal/worker-executions/exports/{exportId:D}/images/{textId:D}", exportId, execution);
+        Assert.Equal(HttpStatusCode.NotFound, text.StatusCode);
         using var foreignImage = await InternalAsync(HttpMethod.Get,
             $"/internal/worker-executions/exports/{exportId:D}/images/{M0SchemaSeed.Beta.ItemId:D}", exportId, execution);
         Assert.Equal(HttpStatusCode.NotFound, foreignImage.StatusCode);
@@ -383,17 +392,17 @@ public sealed class ExportHttpTests : IAsyncLifetime
         Assert.Equal("exports.idempotency_conflict", await ProblemCodeAsync(conflict));
     }
 
-    private async Task<Guid> CreateImageAsync()
+    private async Task<Guid> CreateImageAsync(string mediaType = "image/png", bool previewable = true)
     {
         await using var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         var files = work.Resolve<IFileStore>();
         var upload = Assert.IsType<FileUploadRecord>(await files.BeginAsync(
             new BeginFileUpload(WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId), null, null,
-                "figure.png", "image/png", 12, "export-image"), Cancellation));
+                "figure", mediaType, 12, "export-image-" + mediaType), Cancellation));
         Assert.NotNull(await files.QueueInspectionAsync(FileUploadId.From(upload.Id), Cancellation));
         var file = Assert.IsType<FileRecord>(await files.CompleteAsync(
-            new CompleteFileUpload(FileUploadId.From(upload.Id), "image/png", 12, new string('a', 64),
-                Previewable: true, PixelWidth: 4, PixelHeight: 2), Cancellation));
+            new CompleteFileUpload(FileUploadId.From(upload.Id), mediaType, 12, new string('a', 64),
+                Previewable: previewable, PixelWidth: previewable ? 4 : null, PixelHeight: previewable ? 2 : null), Cancellation));
         await work.CommitAsync(Cancellation);
         return file.ItemId;
     }
