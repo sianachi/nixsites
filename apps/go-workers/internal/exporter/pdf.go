@@ -239,11 +239,13 @@ func pdfRuns(pdf *fpdf.Fpdf, runs []render.Run, base string, size float64) {
 		} else {
 			pdf.SetFont("Nix", style, size)
 		}
+		// `text` and the line height are mirrored by the editor's page guides (page-guides.test.ts).
+		text := run.Text
 		if run.Href != "" && safeDocumentLink(run.Href) {
-			pdf.WriteLinkString(size*1.45, pdfText(run.Text), run.Href)
+			pdf.WriteLinkString(size*1.45, pdfText(text), run.Href)
 			continue
 		}
-		pdf.Write(size*1.45, pdfText(run.Text))
+		pdf.Write(size*1.45, pdfText(text))
 	}
 }
 
