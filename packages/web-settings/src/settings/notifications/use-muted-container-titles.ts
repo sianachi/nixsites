@@ -59,7 +59,7 @@ export function useMutedContainerTitles(ids: readonly string[]): {
     };
     // `key` is `ids` flattened to a stable primitive so this only re-runs when the set of ids
     // actually changes, not on every render of a caller that passes a fresh array identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` is `ids` flattened to a primitive, so identity changes do not re-run it.
   }, [client, key]);
 
   return { containers, loading };

@@ -49,6 +49,6 @@ export function useOpenDailyOnLaunch(): void {
       void navigate(`${home}/daily`, { replace: true });
     }
     // Decided once, from where the shell first mounted; later navigation is the person's own.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- decided once, from where the shell first mounted.
   }, []);
 }

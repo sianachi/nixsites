@@ -283,7 +283,7 @@ export function AppShell(): ReactNode {
     // shellToasts.push is stable across renders (see use-shell-toasts's own state setter), and
     // openPreview is a useCallback from useOpenItem - only the inbox's own subscription needs to
     // move when the client that backs it changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `push` and `openPreview` are stable; only the inbox subscription moves.
     [notificationsInbox],
   );
 
@@ -303,7 +303,7 @@ export function AppShell(): ReactNode {
     // Only the workspace and the person identify which pending notice, if any, belongs here; re-running this
     // whenever the toast queue itself changes would re-read storage that consuming it already
     // cleared.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the workspace and person identify the notice; the toast queue must not re-run this.
   }, [workspaceId, subject]);
 
   /**

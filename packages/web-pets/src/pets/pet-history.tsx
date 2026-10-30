@@ -162,7 +162,7 @@ export function PetHistory({
       controller.abort();
     };
     // Once per mount: the parent remounts this panel when the conversation changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per mount; the parent remounts on a new conversation.
   }, []);
   const needle = query.trim().toLowerCase();
   const shown = needle

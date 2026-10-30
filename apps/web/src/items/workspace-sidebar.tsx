@@ -178,7 +178,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   useEffect(() => {
     selection.prune(treeItemIds.length === 0 ? [] : treeItemIds.split('\u0000'));
     // `prune` is stable; the joined ids are what change when the tree does.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `prune` is stable; the joined ids change when the tree does.
   }, [treeItemIds]);
   const selectionValue = {
     selected: selection.selected,
@@ -198,7 +198,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   const [shownCount, setShownCount] = useState(0);
   // After every render, but only while something is selected: the count feeds "Select all N", and
   // the drawn rows are DOM state that any render may have changed.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately no deps: the DOM rows can change on any render.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (selection.selected.size > 0) setShownCount(shownRows().length);
