@@ -38,6 +38,8 @@ export const workspaceToolSchema = z
       'build_blueprint',
       'read_calendar',
       'remember',
+      'find_action',
+      'run_action',
     ];
     if (!NO_ITEM_ID_REQUIRED.includes(args.operation)) required('itemId');
     if (
@@ -59,6 +61,8 @@ export const workspaceToolSchema = z
     if (args.operation === 'replace_section') required('markdown');
     if (
       args.operation === 'search' ||
+      args.operation === 'find_action' ||
+      args.operation === 'run_action' ||
       args.operation === 'search_note' ||
       args.operation === 'read_view'
     )
@@ -122,6 +126,14 @@ export const workspaceToolSchema = z
           code: 'custom',
           path: ['specJson'],
           message: 'read_calendar needs from and to as yyyy-MM-dd days.',
+        });
+    }
+    if (args.operation === 'move_item' && args.specJson.trim()) {
+      if (!z.uuid().safeParse(readSpecObject(args.specJson)?.destinationWorkspaceId).success)
+        context.addIssue({
+          code: 'custom',
+          path: ['specJson'],
+          message: 'destinationWorkspaceId must be a workspace UUID.',
         });
     }
     if (args.operation === 'complete_task') {

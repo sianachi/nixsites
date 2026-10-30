@@ -536,9 +536,9 @@ func TestToolArgSpecsMatchGeneratedSchemas(t *testing.T) {
 			if propertySchema["type"] == "object" {
 				wantKind = argObjectJSON
 			}
-			// A scalar folded into specJson (argSpecField) is the one other legal mapping for a
-			// non-object parameter, and it must land in specJson; a boolean can be nothing else.
-			if mapping.kind == argSpecField && propertySchema["type"] != "object" {
+			// A value folded into specJson (argSpecField) is the one other legal mapping, and it
+			// must land in specJson; a boolean can be nothing else.
+			if mapping.kind == argSpecField {
 				if mapping.flat != "specJson" {
 					t.Fatalf("%s.%s: argSpecField must target specJson, targets %q", name, property, mapping.flat)
 				}
@@ -611,7 +611,7 @@ func TestToolIdentityReadOnlyOperationsArePinned(t *testing.T) {
 	want := map[string]bool{
 		"list_items": true, "search": true, "read_item": true, "read_note": true, "search_note": true,
 		"read_structure": true, "read_view": true, "list_templates": true, "read_template": true,
-		"read_calendar": true,
+		"read_calendar": true, "remember": true, "find_action": true,
 	}
 	for operation := range want {
 		_, readOnly := toolIdentity(fmt.Sprintf(`{"operation":%q}`, operation))
@@ -1022,6 +1022,21 @@ func TestRememberTakesVisibleTextOnly(t *testing.T) {
 		raw, _ := json.Marshal(map[string]string{"operation": "remember", "markdown": fact, "itemId": "", "parentId": "", "title": "", "query": "", "propertiesJson": "", "specJson": ""})
 		if got := validateToolArguments(raw) == ""; got != ok {
 			t.Fatalf("%q: accepted %v, want %v (%s)", fact, got, ok, validateToolArguments(raw))
+		}
+	}
+}
+
+func TestActionToolsValidateTheirArguments(t *testing.T) {
+	cases := map[string]string{
+		`{"operation":"find_action","query":"bookmark"}`:                           "",
+		`{"operation":"find_action","query":" "}`:                                  "nix_find_action requires a nonempty query.",
+		`{"operation":"run_action","query":"KeepItem","specJson":"{\"path\":{}}"}`: "",
+		`{"operation":"run_action","query":""}`:                                    "nix_run_action requires actionId, an id from nix_find_action.",
+		`{"operation":"run_action","query":"KeepItem","specJson":"[1]"}`:           "nix_run_action path, params and body must be JSON objects.",
+	}
+	for raw, want := range cases {
+		if got := validateToolArguments(json.RawMessage(raw)); got != want {
+			t.Fatalf("%s: got %q, want %q", raw, got, want)
 		}
 	}
 }

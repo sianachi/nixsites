@@ -171,6 +171,7 @@ const WRITE_TEXT_SPEC_OPERATIONS: ReadonlySet<WorkspaceToolArgs['operation']> = 
   'apply_template',
   'build_blueprint',
   'save_as_template',
+  'run_action',
 ]);
 
 /** Every piece of text a pending write would store, for the section that shows it in full before

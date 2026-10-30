@@ -359,10 +359,11 @@ const TOOL_BUILDS: Readonly<Record<WorkspaceOperation, () => ToolBuild>> = {
   }),
   move_item: () => ({
     description:
-      'Move an item under a new parent. Supply an empty parentId to move it to the workspace root.',
+      "Move an item under a new parent. Supply an empty parentId to move it to the workspace root. To move it to another workspace, also give destinationWorkspaceId; parentId is then a parent there, or empty for that workspace's root.",
     properties: {
       itemId: stringProperty(ITEM_ID_DESCRIPTION),
       parentId: stringProperty(PARENT_ID_DESCRIPTION),
+      destinationWorkspaceId: stringProperty('Another workspace UUID to move the item into.'),
     },
     required: ['itemId', 'parentId'],
   }),
@@ -521,6 +522,23 @@ const TOOL_BUILDS: Readonly<Record<WorkspaceOperation, () => ToolBuild>> = {
       fact: stringProperty('The fact in one short sentence, at most 280 characters.'),
     },
     required: ['fact'],
+  }),
+  find_action: () => ({
+    description:
+      'Find Nix actions that have no tool of their own (bookmarks, sharing, members, publishing, settings, trash, files, automations and more). Returns each match with its id, request shape and risk. Read-only. Run one with nix_run_action.',
+    properties: { query: stringProperty('What to do, in plain words.') },
+    required: ['query'],
+  }),
+  run_action: () => ({
+    description:
+      'Run one action found with nix_find_action, as the owner. Always shown for approval. Never for tokens, pet settings, push or calendar connections: the owner does those in Settings.',
+    properties: {
+      actionId: stringProperty('The id nix_find_action returned.'),
+      path: { type: 'object', description: 'Path parameter values, by name.' },
+      params: { type: 'object', description: 'Query-string values, by name.' },
+      body: { type: 'object', description: 'The request body, in the shape find_action showed.' },
+    },
+    required: ['actionId'],
   }),
 };
 

@@ -243,6 +243,9 @@ export function renderCatalog(catalog: Catalog, patterns: string): string {
   for (const rule of catalog.neverOperations) {
     lines.push(`- ${rule}`);
   }
+  lines.push(
+    'For anything else without its own tool, find the action with nix_find_action, then run it with nix_run_action; each run asks the owner first. Never for credentials (tokens, pet settings, push, calendar connections): the owner does those in Settings.',
+  );
   lines.push('');
 
   lines.push('Section: Query operators');

@@ -7,6 +7,16 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Pets can do anything you can do in Nix. For actions without their own tool, a pet finds the
+  action and asks before running it, and the approval card shows the exact request. Permanent
+  deletes, access changes and publishing carry a warning. Pets never touch access tokens, AI keys,
+  pet settings, push subscriptions or calendar accounts. Pets can also move an item to another
+  workspace.
+- `nixctl api list` and `nixctl api call` reach every Core operation by id.
+- MCP tools `find_nix_action` and `run_nix_action` reach every operation except the
+  credential ones. New typed MCP tools: `move_item` (also to another workspace), `rename_item`,
+  `trash_item`, `restore_item`, `list_trash` and `set_item_properties`. There are also note history
+  tools: `list_note_history`, `restore_note_version` and `name_note_version`.
 - Homebase, the screen a workspace opens to when no note is open: a greeting with today's date
   and week, one-press New note, Structured note, Today's note, Calendar, Templates, Import,
   Automations and Settings beside the notes you opened last on this browser. It replaces Notes as the first entry in the side rail.

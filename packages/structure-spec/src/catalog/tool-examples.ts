@@ -99,12 +99,22 @@ export const TOOL_EXAMPLES: Readonly<
   read_calendar: { from: '2026-10-05', to: '2026-10-11' },
   complete_task: { itemId: EXAMPLE_ITEM_ID, completed: true },
   remember: { fact: 'Prefers metric units.' },
+  find_action: { query: 'bookmark a note' },
+  run_action: { actionId: 'KeepItem', path: { itemId: EXAMPLE_ITEM_ID } },
 };
 
 /** Typed parameters that are neither a flat field nor a whole JSON object: each one becomes a
  * key of the flat shape's `specJson` object, under its own name. The Go worker's `argSpecField`
  * mappings (`toolArgSpecs` in `tools.go`) are the same list. */
-export const SPEC_FIELD_PARAMETERS: ReadonlySet<string> = new Set(['from', 'to', 'completed']);
+export const SPEC_FIELD_PARAMETERS: ReadonlySet<string> = new Set([
+  'from',
+  'to',
+  'completed',
+  'destinationWorkspaceId',
+  'path',
+  'params',
+  'body',
+]);
 
 /** The flat shape `@nix/companion`'s `workspaceToolSchema` parses, and the Go worker's
  * `ToolCall.Arguments` stores - unchanged by this task. */
@@ -171,6 +181,7 @@ export function flattenToolExample(
         break;
       case 'heading':
       case 'find':
+      case 'actionId':
         flat.query = String(value);
         break;
       case 'replace':

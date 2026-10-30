@@ -372,6 +372,8 @@ export const WORKSPACE_OPERATIONS = [
   'read_calendar',
   'complete_task',
   'remember',
+  'find_action',
+  'run_action',
 ] as const satisfies readonly string[];
 
 export type WorkspaceOperation = (typeof WORKSPACE_OPERATIONS)[number];
@@ -390,4 +392,6 @@ export const READ_ONLY_OPERATION_NAMES = [
   'read_calendar',
   // Writes nothing in the workspace: only the owner's private memory, shown in Settings.
   'remember',
+  // Searches the local operation catalog; touches nothing.
+  'find_action',
 ] as const satisfies readonly WorkspaceOperation[];

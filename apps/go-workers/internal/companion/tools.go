@@ -89,8 +89,9 @@ type argKind int
 const (
 	argString     argKind = iota // copied verbatim into a flat string field
 	argObjectJSON                // must be a JSON object; marshaled to a canonical JSON string
-	// argSpecField is one scalar (string or boolean) parameter that becomes a key of a specJson
-	// object under its own name: nix_read_calendar's from/to and nix_complete_task's completed.
+	// argSpecField is one string, boolean or object parameter that becomes a key of a specJson
+	// object under its own name: nix_read_calendar's from/to, nix_complete_task's completed and
+	// nix_run_action's path/params/body.
 	// The flat shape gains no field; packages/structure-spec's SPEC_FIELD_PARAMETERS is the same
 	// list on the TS side.
 	argSpecField
@@ -123,7 +124,7 @@ var toolArgSpecs = map[string]map[string]argMapping{
 	"replace_section":   {"itemId": {"itemId", argString}, "heading": {"query", argString}, "markdown": {"markdown", argString}},
 	"replace_passage":   {"itemId": {"itemId", argString}, "find": {"query", argString}, "replace": {"markdown", argString}},
 	"rename_item":       {"itemId": {"itemId", argString}, "title": {"title", argString}},
-	"move_item":         {"itemId": {"itemId", argString}, "parentId": {"parentId", argString}},
+	"move_item":         {"itemId": {"itemId", argString}, "parentId": {"parentId", argString}, "destinationWorkspaceId": {"specJson", argSpecField}},
 	"set_properties":    {"itemId": {"itemId", argString}, "properties": {"propertiesJson", argObjectJSON}},
 	"trash_item":        {"itemId": {"itemId", argString}},
 	"restore_item":      {"itemId": {"itemId", argString}},
@@ -142,6 +143,8 @@ var toolArgSpecs = map[string]map[string]argMapping{
 	"save_as_template":  {"itemId": {"itemId", argString}, "title": {"title", argString}, "spec": {"specJson", argObjectJSON}},
 	"read_calendar":     {"from": {"specJson", argSpecField}, "to": {"specJson", argSpecField}},
 	"complete_task":     {"itemId": {"itemId", argString}, "completed": {"specJson", argSpecField}},
+	"find_action":       {"query": {"query", argString}},
+	"run_action":        {"actionId": {"query", argString}, "path": {"specJson", argSpecField}, "params": {"specJson", argSpecField}, "body": {"specJson", argSpecField}},
 }
 
 // flattenToolCall translates one typed nix_<operation> call's native-JSON arguments into the
@@ -206,13 +209,13 @@ func flattenToolCall(tool string, raw json.RawMessage) (json.RawMessage, string)
 		case argSpecField:
 			var scalar any
 			if json.Unmarshal(value, &scalar) != nil {
-				return nil, fmt.Sprintf("%s.%s must be a string or a boolean.", tool, key)
+				return nil, fmt.Sprintf("%s.%s must be a string, a boolean or an object.", tool, key)
 			}
 			switch scalar.(type) {
-			case string, bool:
+			case string, bool, map[string]any:
 				specFields[key] = scalar
 			default:
-				return nil, fmt.Sprintf("%s.%s must be a string or a boolean.", tool, key)
+				return nil, fmt.Sprintf("%s.%s must be a string, a boolean or an object.", tool, key)
 			}
 		}
 	}
@@ -515,7 +518,7 @@ func toolIdentity(raw string) (string, bool) {
 		return "", false
 	}
 	operation, _ := args["operation"].(string)
-	readOnly := operation == "list_items" || operation == "search" || operation == "read_item" || operation == "read_note" || operation == "search_note" || operation == "read_structure" || operation == "read_view" || operation == "list_templates" || operation == "read_template" || operation == "read_calendar"
+	readOnly := operation == "list_items" || operation == "search" || operation == "read_item" || operation == "read_note" || operation == "search_note" || operation == "read_structure" || operation == "read_view" || operation == "list_templates" || operation == "read_template" || operation == "read_calendar" || operation == "remember" || operation == "find_action"
 	if properties, ok := args["propertiesJson"].(string); ok && properties != "" {
 		var object map[string]any
 		decoder := json.NewDecoder(strings.NewReader(properties))
@@ -753,6 +756,17 @@ func validateToolArguments(raw json.RawMessage) string {
 		}
 		if to.Sub(from) > (calendarMaxDays-1)*24*time.Hour {
 			return fmt.Sprintf("nix_read_calendar reads at most %d days at a time. Split the range.", calendarMaxDays)
+		}
+	case "find_action":
+		if strings.TrimSpace(p.Query) == "" {
+			return "nix_find_action requires a nonempty query."
+		}
+	case "run_action":
+		if strings.TrimSpace(p.Query) == "" {
+			return "nix_run_action requires actionId, an id from nix_find_action."
+		}
+		if p.Spec != "" && !isJSONObject(p.Spec) {
+			return "nix_run_action path, params and body must be JSON objects."
 		}
 	case "complete_task":
 		if !uuid.MatchString(p.ItemID) {

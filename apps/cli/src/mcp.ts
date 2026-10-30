@@ -19,7 +19,7 @@ import {
   templateInitializationSchema,
   callOperation,
   findOperations,
-  isCredentialOperation,
+  isHumanOnlyOperation,
   operationById,
   operationRisk,
 } from '@nix/api-client';
@@ -2170,7 +2170,7 @@ export async function createWorkspaceMcpServer(
           operations: findOperations(
             query,
             limit ?? 8,
-            (entry) => !isCredentialOperation(entry),
+            (entry) => !isHumanOnlyOperation(entry),
           ).map((entry) => ({
             operationId: entry.id,
             method: entry.method,
@@ -2191,23 +2191,29 @@ export async function createWorkspaceMcpServer(
       description:
         'Run one operation found with find_nix_action. Prefer a typed tool when one exists. Core still ' +
         'enforces your permissions, locks and access scopes. An operation with a risk (irreversible, ' +
-        'access, public) changes things that are hard to undo or who can see them: confirm with the user first.',
+        'access, public) changes things that are hard to undo or who can see them: confirm with the user, then pass confirm: true.',
       inputSchema: {
         operationId: z.string().min(1).max(100),
         path: z.record(z.string(), z.string()).optional(),
         query: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
         body: z.unknown().optional(),
+        confirm: z.boolean().optional(),
       },
     },
-    ({ operationId, path, query, body }) =>
+    ({ operationId, path, query, body, confirm }) =>
       toolResult(async () => {
         const entry = operationById(operationId);
         if (entry === undefined) throw new Error(`There is no Nix operation '${operationId}'.`);
-        if (isCredentialOperation(entry))
+        if (isHumanOnlyOperation(entry))
           throw new Error(
-            `${operationId} manages credentials or the pet's own settings; do this yourself in Nix settings.`,
+            `${operationId} manages credentials, grants or approvals, or steers a chat; do this yourself in Nix.`,
           );
         const risk = operationRisk(entry);
+        // Same rule as the typed member and invitation tools: risky changes need an explicit yes.
+        if (risk !== undefined && confirm !== true)
+          throw new Error(
+            `${operationId} is ${risk === 'irreversible' ? 'irreversible' : risk === 'access' ? 'an access change' : 'a public change'}; confirm with the user, then call again with confirm: true.`,
+          );
         const result = await callOperation((await session()).client, operationId, {
           path,
           query,

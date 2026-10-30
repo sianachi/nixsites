@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseActionRun } from './action.js';
 import {
   describeToolCall,
   planBlueprintPreview,
@@ -538,5 +539,22 @@ describe('describeToolCall - note body edits', () => {
     expect(passage.bodyEdit?.subject).toBe(
       'Paragraph with “Book the venue by Friday and then confi…” in Trip plan',
     );
+  });
+});
+
+describe('describeToolCall - run_action', () => {
+  const id = '22222222-2222-4222-8222-222222222222';
+  const workspace = '11111111-1111-4111-8111-111111111111';
+
+  it('shows the request, the risk and every value, and promises no never-list', () => {
+    const specJson = JSON.stringify({ path: { itemId: id } });
+    const model = describeToolCall(
+      args({ operation: 'run_action', query: 'PurgeItem', specJson }),
+      context({ actionRun: parseActionRun('PurgeItem', specJson, workspace) }),
+    );
+    expect(model.headline).toBe('I will run “Permanently delete a trashed item” (PurgeItem).');
+    expect(model.warnings.map((warning) => warning.message)).toEqual(['This can’t be undone.']);
+    expect(model.notes).toContain(`DELETE /api/v1/items/${id}/purge`);
+    expect(model.neverDoes).toEqual([]);
   });
 });

@@ -70,6 +70,9 @@ for (const [path, methods] of Object.entries(contract.paths)) {
       summary: operation.summary ?? '',
       detail: firstSentence(operation.description),
       pathParams: parameters.filter((p) => p.in === 'path').map((p) => p.name),
+      uuidParams: parameters
+        .filter((p) => p.in === 'path' && (p.schema as Json | undefined)?.format === 'uuid')
+        .map((p) => p.name),
       queryParams: parameters
         .filter((p) => p.in === 'query')
         .map((p) => ({

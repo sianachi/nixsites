@@ -18,6 +18,8 @@ export interface OperationEntry {
   readonly summary: string;
   readonly detail: string;
   readonly pathParams: readonly string[];
+  /** Path parameters the contract types as UUIDs; anything else in them is refused. */
+  readonly uuidParams: readonly string[];
   readonly queryParams: readonly { name: string; required: boolean; type: unknown }[];
   readonly body?: unknown;
 }
@@ -31,23 +33,38 @@ export function operationById(id: string): OperationEntry | undefined {
 }
 
 /**
- * Operations an assistant (the pet, or an MCP client) never runs, whatever it is asked: they mint
- * or replace credentials, sign someone in, or change the pet's own settings and runtime. A person
- * still does them in the web app or with `nixctl api`.
+ * Operations an assistant (the pet, or an MCP client) never runs, whatever it is asked. They mint
+ * or replace credentials, change the pet's own settings or runtime, steer other chats, grant
+ * tenant-wide powers, or stand in for a human approval. A person still does them in the web app
+ * or with `nixctl api`. Mirrors Core's interactive-only routes plus the grants above them.
  */
-const CREDENTIAL_PATHS = [
-  /^\/api\/v1\/me\/tokens(\/|$)/,
-  /^\/api\/v1\/me\/pets(\/|$)/,
-  /^\/api\/v1\/me\/push-subscriptions(\/|$)/,
-  /^\/api\/v1\/me\/calendar\/connections(\/|$)/,
+const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
+  [/^\/api\/v1\/me\/tokens(\/|$)/, 'any'],
+  [/^\/api\/v1\/me\/pets(\/|$)/, 'any'],
+  [/^\/api\/v1\/me\/push-subscriptions(\/|$)/, 'any'],
+  [/^\/api\/v1\/me\/calendar\/connections(\/|$)/, 'any'],
+  [/^\/api\/v1\/me\/(preferences|ui-settings|workspace-arrangement)(\/|$)/, 'write'],
+  [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],
+  [/^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, 'write'],
+  [/^\/api\/v1\/tenant\/admins(\/|$)/, 'any'],
+  [/^\/api\/v1\/sites\/operators(\/|$)/, 'any'],
+  [/\/approval\/(approve|reject)$/, 'any'],
 ];
 
-export function isCredentialOperation(entry: OperationEntry): boolean {
-  return CREDENTIAL_PATHS.some((pattern) => pattern.test(entry.path));
+export function isHumanOnlyOperation(entry: OperationEntry): boolean {
+  return HUMAN_ONLY.some(
+    ([pattern, applies]) =>
+      pattern.test(entry.path) && (applies === 'any' || entry.method !== 'GET'),
+  );
 }
 
 /** What an approval card should warn about before this operation runs. */
 export type OperationRisk = 'irreversible' | 'access' | 'public' | undefined;
+
+/** Writes Core holds to its admin scope: they change access, act later with the caller's authority
+ * (automations, plugins, calendar links), or move items between workspaces. */
+const ACCESS_PATHS =
+  /\/(members|invitations|sharing|admins|operators|lock|unlock|protection|permissions|roles|recover|leave|archive|restore|plugins|automations|move)(\/|$)|^\/api\/v1\/me\/calendar\/links(?!.*\/sync$)|^\/api\/v1\/workspaces\/\{workspaceId\}\/(archive|restore)$/;
 
 export function operationRisk(entry: OperationEntry): OperationRisk {
   if (entry.method === 'GET') return undefined;
@@ -55,12 +72,11 @@ export function operationRisk(entry: OperationEntry): OperationRisk {
   if (/^(Purge|Delete|Unpublish)/.test(entry.id) && entry.id !== 'DeleteItem')
     return 'irreversible';
   if (
-    /\/(members|invitations|sharing|admins|operators|lock|unlock|protection|permissions|roles|recover|leave)(\/|$)/.test(
-      entry.path,
-    )
+    /\/(publish|public-link|approval)(\/|$)/.test(entry.path) ||
+    entry.path.startsWith('/api/v1/sites')
   )
-    return 'access';
-  if (/\/(publish|public-link)(\/|$)/.test(entry.path)) return 'public';
+    return 'public';
+  if (ACCESS_PATHS.test(entry.path) && entry.id !== 'RestoreItem') return 'access';
   return undefined;
 }
 
@@ -119,6 +135,8 @@ export interface OperationCall {
 
 export class OperationCallError extends Error {}
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The request an operation call would send, without sending it. */
 export function operationRequest(
   entry: OperationEntry,
@@ -132,7 +150,9 @@ export function operationRequest(
     const value = params[name];
     if (value === undefined || value === '')
       throw new OperationCallError(`${entry.id} needs the path parameter '${name}'.`);
-    // One path segment, never a traversal into another route.
+    // One path segment, never a traversal: URL parsing would fold "." and ".." into another route.
+    if (value === '.' || value === '..' || (entry.uuidParams.includes(name) && !UUID.test(value)))
+      throw new OperationCallError(`${entry.id}: '${name}' is not a valid ${name}.`);
     return encodeURIComponent(value);
   });
   const query: Record<string, QueryValue> = {};

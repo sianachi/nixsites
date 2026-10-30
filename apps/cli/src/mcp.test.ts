@@ -1486,12 +1486,18 @@ describe('nixctl mcp item and generic action tools', () => {
         arguments: { operationId: 'ListAccessTokens' },
       });
       expect(credential.isError).toBe(true);
-      expect(text(credential)).toContain('do this yourself in Nix settings');
+      expect(text(credential)).toContain('do this yourself in Nix');
       const unknown = await connected.client.callTool({
         name: 'run_nix_action',
         arguments: { operationId: 'NoSuchThing' },
       });
       expect(unknown.isError).toBe(true);
+      const unconfirmed = await connected.client.callTool({
+        name: 'run_nix_action',
+        arguments: { operationId: 'PurgeItem', path: { itemId: ITEM } },
+      });
+      expect(unconfirmed.isError).toBe(true);
+      expect(text(unconfirmed)).toContain('confirm: true');
     } finally {
       await connected.close();
     }

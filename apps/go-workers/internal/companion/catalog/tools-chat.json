@@ -232,7 +232,7 @@
   },
   {
     "name": "nix_move_item",
-    "description": "Move an item under a new parent. Supply an empty parentId to move it to the workspace root.",
+    "description": "Move an item under a new parent. Supply an empty parentId to move it to the workspace root. To move it to another workspace, also give destinationWorkspaceId; parentId is then a parent there, or empty for that workspace's root.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -243,6 +243,10 @@
         "parentId": {
           "type": "string",
           "description": "Parent, or root."
+        },
+        "destinationWorkspaceId": {
+          "type": "string",
+          "description": "Another workspace UUID to move the item into."
         }
       },
       "required": ["itemId", "parentId"],
@@ -2789,6 +2793,48 @@
         }
       },
       "required": ["fact"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nix_find_action",
+    "description": "Find Nix actions that have no tool of their own (bookmarks, sharing, members, publishing, settings, trash, files, automations and more). Returns each match with its id, request shape and risk. Read-only. Run one with nix_run_action.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "What to do, in plain words."
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nix_run_action",
+    "description": "Run one action found with nix_find_action, as the owner. Always shown for approval. Never for tokens, pet settings, push or calendar connections: the owner does those in Settings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actionId": {
+          "type": "string",
+          "description": "The id nix_find_action returned."
+        },
+        "path": {
+          "type": "object",
+          "description": "Path parameter values, by name."
+        },
+        "params": {
+          "type": "object",
+          "description": "Query-string values, by name."
+        },
+        "body": {
+          "type": "object",
+          "description": "The request body, in the shape find_action showed."
+        }
+      },
+      "required": ["actionId"],
       "additionalProperties": false
     }
   }

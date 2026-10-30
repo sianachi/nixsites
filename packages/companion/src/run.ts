@@ -16,6 +16,8 @@ import {
   saveSpecSchema,
 } from '@nix/structure-spec';
 import type { CompanionPorts } from './ports.js';
+import { confineActionRun, findActions, parseActionRun, runAction } from './action.js';
+import { crossWorkspaceMove } from './move.js';
 import { applyTemplate } from './templates/apply.js';
 import { listTemplates } from './templates/list.js';
 import { readTemplate } from './templates/read.js';
@@ -139,6 +141,8 @@ export async function runWorkspaceTool(
   let unboundedReadProvenance = false;
   let contentSources: (string | null | undefined)[] = [];
   let image: string | undefined;
+  let actionRead = false;
+  let actionItemIds: string[] = [];
   const check = (id: string) =>
     options.scope
       ? checkNoteScopedItem(ports, workspaceId, id, signal, options.scope)
@@ -197,11 +201,18 @@ export async function runWorkspaceTool(
       'list_templates',
       'read_calendar',
       'remember',
+      'find_action',
+      'run_action',
     ].includes(args.operation)
   ) {
     await check(args.itemId);
   }
-  if (args.parentId) await check(args.parentId);
+  // A move to another workspace names a parent there, which this workspace's check would refuse.
+  const crossMove =
+    args.operation === 'move_item'
+      ? await crossWorkspaceMove(ports, workspaceId, args, signal)
+      : undefined;
+  if (args.parentId && !crossMove) await check(args.parentId);
   let templatePreflight;
   if (args.operation === 'apply_template') {
     applySpecSchema.parse(rawSpec);
@@ -416,6 +427,19 @@ export async function runWorkspaceTool(
     }
     case 'remember': {
       result = await remember(client, args.markdown, requestOptions);
+      break;
+    }
+    case 'find_action':
+      result = findActions(args.query);
+      break;
+    case 'run_action': {
+      const run = parseActionRun(args.query, args.specJson, workspaceId);
+      await confineActionRun(client, run, workspaceId, check, signal);
+      result = await runAction(client, run, signal);
+      // An action cannot say which items its answer came from (POST queries and previews return
+      // content too), so every run counts as a locked read and later writes are held.
+      actionRead = true;
+      actionItemIds = run.itemIds;
       break;
     }
     case 'read_calendar': {
@@ -653,7 +677,10 @@ export async function runWorkspaceTool(
           break;
         case 'move_item':
           result = await client.execute(
-            items.moveItem(workspaceId, item.id, { parentId: args.parentId || null }),
+            items.moveItem(workspaceId, item.id, {
+              parentId: args.parentId || null,
+              ...(crossMove ? { workspaceId: crossMove.workspaceId } : {}),
+            }),
             requestOptions,
           );
           break;
@@ -680,7 +707,8 @@ export async function runWorkspaceTool(
       : JSON.stringify(result);
   const readOnly = READ_ONLY_OPERATIONS.has(args.operation);
   const lockedContent =
-    readOnly && (unboundedReadProvenance || (await anyUnderLock(ports, contentSources, signal)));
+    actionRead ||
+    (readOnly && (unboundedReadProvenance || (await anyUnderLock(ports, contentSources, signal))));
   return {
     lockedContent,
     text:
@@ -707,6 +735,6 @@ export async function runWorkspaceTool(
             'set_recurrence',
           ].includes(args.operation)
         ? [args.itemId]
-        : [],
+        : actionItemIds,
   };
 }

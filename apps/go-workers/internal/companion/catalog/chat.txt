@@ -53,6 +53,7 @@ Section: Never
 - Delete anything permanently
 - Remove a field
 - Delete a view
+For anything else without its own tool, find the action with nix_find_action, then run it with nix_run_action; each run asks the owner first. Never for credentials (tokens, pet settings, push, calendar connections): the owner does those in Settings.
 
 Section: Query operators
 - equals: a literal value, or "me" for the calling principal

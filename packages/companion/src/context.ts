@@ -16,6 +16,8 @@ import {
   type StructureFingerprint,
 } from './guards.js';
 import { WorkspaceToolRefusal } from './tool-args.js';
+import { confineActionRun, parseActionRun, type ActionRun } from './action.js';
+import { crossWorkspaceMove, type CrossWorkspaceMove } from './move.js';
 import { prepareNoteScopedTool, checkNoteScopedItem, type NoteToolScope } from './scope.js';
 import { validateBlueprint } from '@nix/structure-spec';
 import { findSandbox } from './blueprint/sandbox.js';
@@ -73,6 +75,10 @@ export interface PreviewContext {
   refusalQuotesLockedContent?: boolean;
   /** What a `complete_task` write will do, decided from the same reads the executor repeats. */
   taskCompletion?: TaskCompletionPlan;
+  /** The request a `run_action` call would send, once it passed every check. */
+  actionRun?: ActionRun;
+  /** Set when a `move_item` leaves this workspace. */
+  moveTo?: CrossWorkspaceMove;
 }
 
 /** The body edit a `replace_section` or `replace_passage` call names, from its flat arguments:
@@ -311,6 +317,33 @@ export async function loadPreviewContext(
     };
   }
 
+  if (args.operation === 'run_action') {
+    const root = { title: 'Workspace root', path: [] };
+    try {
+      const run = parseActionRun(args.query, args.specJson, workspaceId);
+      await confineActionRun(ports.core, run, workspaceId, check, signal);
+      const [first] = run.itemIds;
+      return {
+        destination:
+          first === undefined
+            ? root
+            : await itemDestination(ports, workspaceId, first, signal, scope),
+        inheritedFields: [],
+        fingerprint: 'action',
+        problems: [],
+        actionRun: run,
+      };
+    } catch (reason) {
+      if (!(reason instanceof WorkspaceToolRefusal)) throw reason;
+      return {
+        destination: root,
+        inheritedFields: [],
+        fingerprint: 'action:refused',
+        problems: [{ path: 'actionId', code: 'action_refused', message: reason.message }],
+      };
+    }
+  }
+
   if (args.operation === 'complete_task') {
     const destination = await itemDestination(ports, workspaceId, args.itemId, signal, scope);
     try {
@@ -358,18 +391,38 @@ export async function loadPreviewContext(
   ) {
     if (args.itemId && !['restore_item', 'read_template'].includes(args.operation))
       await check(args.itemId);
-    const destination = args.parentId
-      ? await destinationPath(ports, workspaceId, args.parentId, signal, scope)
-      : args.operation !== 'move_item' &&
-          args.itemId &&
-          !['restore_item', 'read_template'].includes(args.operation)
-        ? await itemDestination(ports, workspaceId, args.itemId, signal, scope)
-        : { title: 'Workspace root', path: [] };
+    let moveTo: CrossWorkspaceMove | undefined;
+    if (args.operation === 'move_item') {
+      try {
+        moveTo = await crossWorkspaceMove(ports, workspaceId, args, signal);
+      } catch (reason) {
+        if (!(reason instanceof WorkspaceToolRefusal)) throw reason;
+        return {
+          destination: { title: 'Workspace root', path: [] },
+          inheritedFields: [],
+          fingerprint: 'move:refused',
+          problems: [{ path: 'specJson', code: 'move_refused', message: reason.message }],
+        };
+      }
+    }
+    const destination = moveTo
+      ? {
+          title: moveTo.parentTitle ?? moveTo.workspaceName,
+          path: [moveTo.workspaceName, ...(moveTo.parentTitle ? [moveTo.parentTitle] : [])],
+        }
+      : args.parentId
+        ? await destinationPath(ports, workspaceId, args.parentId, signal, scope)
+        : args.operation !== 'move_item' &&
+            args.itemId &&
+            !['restore_item', 'read_template'].includes(args.operation)
+          ? await itemDestination(ports, workspaceId, args.itemId, signal, scope)
+          : { title: 'Workspace root', path: [] };
     return {
       destination,
       inheritedFields: [],
       fingerprint: structureFingerprint({ declared: [] }, []),
       problems: [],
+      ...(moveTo ? { moveTo } : {}),
     };
   }
 

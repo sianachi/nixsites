@@ -94,7 +94,7 @@ export async function prepareNoteScopedTool(
     await checkNoteScopedItem(ports, workspaceId, prepared.parentId, signal, scope);
   if (
     prepared.operation === 'move_item' &&
-    (!prepared.parentId || prepared.itemId === scope.rootItemId)
+    (!prepared.parentId || prepared.itemId === scope.rootItemId || prepared.specJson.trim())
   )
     throw new WorkspaceToolRefusal(
       'A note conversation cannot move its root or move an item outside its children. No changes were made.',

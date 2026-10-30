@@ -10,6 +10,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'invitationId'],
+    uuidParams: ['workspaceId', 'invitationId'],
     queryParams: [],
   },
   {
@@ -20,6 +21,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -41,6 +43,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -61,6 +64,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'The hostname is served once a TXT record `_nix-site.<hostname>` holds its token; the response lists the records to create.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -77,6 +81,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Matches exactly what POST /workspaces/{workspaceId}/query would - same rules, scope, permission, lifecycle and lock filters - and folds the matches instead of returning them: 'count' rows, or 'sum', 'avg', 'min' or 'max' of a numeric pro...",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -107,6 +112,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Appends the Markdown in { "markdown": "..." } as new blocks at the end of the note, at most 200,000 characters.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       oneOf: [
@@ -127,6 +133,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -174,6 +181,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Approve a first publish',
     detail: 'Runs the publish as the manager who asked, re-checking their manager rights; audited.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -184,6 +192,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -194,6 +203,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['provider'],
+    uuidParams: [],
     queryParams: [],
     body: {
       oneOf: [
@@ -214,6 +224,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -224,6 +235,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['exportId'],
+    uuidParams: ['exportId'],
     queryParams: [],
   },
   {
@@ -234,6 +246,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'versionId', required: false, type: 'string' },
       { name: 'preview', required: true, type: 'boolean' },
@@ -247,6 +260,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'versionId', required: false, type: 'string' }],
   },
   {
@@ -257,6 +271,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -290,6 +305,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -311,6 +327,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -342,6 +359,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -365,6 +383,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -386,6 +405,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -396,6 +416,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -406,6 +427,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['exportId'],
+    uuidParams: ['exportId'],
     queryParams: [],
   },
   {
@@ -416,6 +438,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['uploadId'],
+    uuidParams: ['uploadId'],
     queryParams: [],
   },
   {
@@ -426,6 +449,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['operationId'],
+    uuidParams: ['operationId'],
     queryParams: [],
   },
   {
@@ -436,6 +460,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -446,6 +471,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -464,6 +490,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'principalId'],
+    uuidParams: ['workspaceId', 'principalId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -479,6 +506,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -489,6 +517,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -504,6 +533,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['uploadId'],
+    uuidParams: ['uploadId'],
     queryParams: [],
   },
   {
@@ -515,6 +545,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Idempotent: completing an already-completed occurrence succeeds without writing anything a second time.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -530,6 +561,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -549,6 +581,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write' and 'admin', and an expiry of 1 to 365 days - both required, neither defaulted.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -568,6 +601,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -590,6 +624,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -626,6 +661,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -664,6 +700,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -689,6 +726,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -725,6 +763,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Record a transaction; the amount is its cash effect, negative when money left',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -747,6 +786,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Create an item',
     detail: "Creates an item under 'parentId', or at the workspace root when it is null.",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -768,6 +808,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Make an item's subtree a site",
     detail: 'Creates a draft site with its default hostname under the sites domain.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -804,6 +845,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -842,6 +884,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
   },
@@ -853,6 +896,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -871,6 +915,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'invitationId'],
+    uuidParams: ['workspaceId', 'invitationId'],
     queryParams: [],
   },
   {
@@ -881,6 +926,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Remove an entry from this item',
     detail: 'Removes an entry attached to this item.',
     pathParams: ['itemId', 'aclEntryId'],
+    uuidParams: ['itemId', 'aclEntryId'],
     queryParams: [],
   },
   {
@@ -891,6 +937,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [],
   },
   {
@@ -901,6 +948,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['connectionId'],
+    uuidParams: ['connectionId'],
     queryParams: [],
   },
   {
@@ -911,6 +959,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: 'Unlinks the calendar.',
     pathParams: ['linkId'],
+    uuidParams: ['linkId'],
     queryParams: [{ name: 'items', required: false, type: 'string' }],
   },
   {
@@ -921,6 +970,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'commentId'],
+    uuidParams: ['itemId', 'commentId'],
     queryParams: [],
   },
   {
@@ -933,6 +983,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Unlike the item delete, a repeat is refused with finance.transaction_not_found, because the ledger no longer holds the transaction.',
     pathParams: ['itemId', 'transactionId'],
+    uuidParams: ['itemId', 'transactionId'],
     queryParams: [],
   },
   {
@@ -943,6 +994,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'occurredOn'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -953,6 +1005,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Soft-delete an item',
     detail: 'Marks the item deleted.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -963,6 +1016,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Delete a site that is not live',
     detail: 'Refused while the site is live, building, or still has files being deleted.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -973,6 +1027,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['templateId'],
+    uuidParams: ['templateId'],
     queryParams: [],
   },
   {
@@ -983,6 +1038,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'commentId'],
+    uuidParams: ['itemId', 'commentId'],
     queryParams: [],
     body: { type: 'object', required: ['body'], properties: { body: { type: 'string' } } },
   },
@@ -995,6 +1051,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Takes 'text' (at most 4000 characters) and 'workspaceId', and returns up to 20 items in that workspace whose title appears in the text as a whole-word phrase, ignoring case, longest phrase first and at most three per phrase (the most rec...",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -1014,6 +1071,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [],
   },
   {
@@ -1024,6 +1082,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'The documents that refer to an item',
     detail: 'Returns the items whose documents link to this one, most-referring first.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'limit', required: false, type: ['integer', 'string'] }],
   },
   {
@@ -1034,6 +1093,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'What the caller has kept',
     detail: 'Returns the items the calling principal has bookmarked, most recently kept first.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1045,6 +1105,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the caller's personal set of reusable Nix canvas shapes - empty for a caller who has never saved one.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1056,6 +1117,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Returns the views in switcher order, plus the identifiers of any whose configured property no longer exists or no longer fits.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1066,6 +1128,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1076,6 +1139,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1090,6 +1154,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the caller's identity and whether tenant-wide administrative surfaces apply to them.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1100,6 +1165,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "A workspace's daily-note settings",
     detail: 'Returns the effective settings with defaults applied.',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1110,6 +1176,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -1121,6 +1188,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the merged result of every ancestor's declaration, nearest winning, alongside the subset this item declares itself.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1131,6 +1199,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['exportId'],
+    uuidParams: ['exportId'],
     queryParams: [],
   },
   {
@@ -1141,6 +1210,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1151,6 +1221,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['uploadId'],
+    uuidParams: ['uploadId'],
     queryParams: [],
   },
   {
@@ -1161,6 +1232,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Read a finance root's settings, accounts, budget lines and closed months",
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1171,6 +1243,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Every account with the figure that matters for it in a month',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'month', required: false, type: 'string' }],
   },
   {
@@ -1182,6 +1255,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
       'Lines by month with plan, actual and variance; defaults to the current month, narrowed to one account when asked',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'from', required: false, type: 'string' },
       { name: 'to', required: false, type: 'string' },
@@ -1197,6 +1271,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
       'Cash month by month across the horizon, actual for closed months and plan for open ones',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1207,6 +1282,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "The month's position, the cards, the loans, what needs watching and what is due soon",
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'month', required: false, type: 'string' }],
   },
   {
@@ -1217,6 +1293,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "A loan's repayment schedule, and what a different overpayment would buy",
     detail: '',
     pathParams: ['itemId', 'accountId'],
+    uuidParams: ['itemId', 'accountId'],
     queryParams: [{ name: 'overpayment', required: false, type: ['number', 'string'] }],
   },
   {
@@ -1227,6 +1304,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'What closing a month would leave unresolved',
     detail: '',
     pathParams: ['itemId', 'month'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1237,6 +1315,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'from', required: false, type: 'string' },
       { name: 'to', required: false, type: 'string' },
@@ -1251,6 +1330,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the named check's result, or an RFC 9457 problem with code 'health.check_not_found'.",
     pathParams: ['name'],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1261,6 +1341,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'One item',
     detail: "Returns the item, or a problem with code 'items.not_found'.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1271,6 +1352,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Read a note body as Markdown',
     detail: "Returns the item's prose body as Markdown, plus the losses Markdown could not carry.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1282,6 +1364,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns whether the item's body is behind a password and, when it is, until when the calling browser session or access token has it unlocked.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1293,6 +1376,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1303,6 +1387,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'The site rooted at an item',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1313,6 +1398,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['operationId'],
+    uuidParams: ['operationId'],
     queryParams: [],
   },
   {
@@ -1324,6 +1410,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'q', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1337,6 +1424,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1347,6 +1435,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1357,6 +1446,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1367,6 +1457,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'viewId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1377,6 +1468,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1388,6 +1480,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Returns the items that the documents linking to this one also link to, ranked by how many such documents they share, then by title.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'limit', required: false, type: ['integer', 'string'] }],
   },
   {
@@ -1398,6 +1491,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Service identity and clock',
     detail: "Reports the service name, the running build's version, and the server clock in UTC.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1408,6 +1502,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Read a site',
     detail: '',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -1418,6 +1513,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'One build of a site',
     detail: '',
     pathParams: ['siteId', 'buildId'],
+    uuidParams: ['siteId', 'buildId'],
     queryParams: [],
   },
   {
@@ -1428,6 +1524,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['templateId'],
+    uuidParams: ['templateId'],
     queryParams: [],
   },
   {
@@ -1438,6 +1535,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -1448,6 +1546,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['templateId', 'sourceId'],
+    uuidParams: ['templateId', 'sourceId'],
     queryParams: [],
   },
   {
@@ -1458,6 +1557,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "The caller's own synced interface settings",
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1468,6 +1568,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'One workspace',
     detail: "Returns the workspace, or a problem with code 'workspaces.not_found'.",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1478,6 +1579,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "The caller's own workspace groups and pins",
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1489,6 +1591,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the dated items of one workspace between 'from' and 'to' inclusive, both given as yyyy-MM-dd and both required.",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'from', required: false, type: 'string' },
       { name: 'to', required: false, type: 'string' },
@@ -1503,6 +1606,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Returns everything needed to draw one workspace as a graph: a node per item, carrying its identifier, parent, body kind and title, and a link per reference edge between two of those nodes.',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1513,6 +1617,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Let a person approve first publishes',
     detail: 'Idempotent.',
     pathParams: ['principalId'],
+    uuidParams: ['principalId'],
     queryParams: [],
   },
   {
@@ -1523,6 +1628,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Make a person a tenant administrator',
     detail: 'Idempotent; audited.',
     pathParams: ['principalId'],
+    uuidParams: ['principalId'],
     queryParams: [],
   },
   {
@@ -1533,6 +1639,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -1558,6 +1665,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Read a bank CSV into an account, previewing unless commit is true',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -1577,6 +1685,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Keep an item',
     detail: "Puts an item on the calling principal's shelf.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1587,6 +1696,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1598,6 +1708,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1608,6 +1719,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [{ name: 'cursor', required: false, type: 'string' }],
   },
   {
@@ -1618,6 +1730,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1628,6 +1741,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Recent nightly backup results',
     detail: 'Newest first.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [{ name: 'limit', required: false, type: ['integer', 'string'] }],
   },
   {
@@ -1638,6 +1752,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1648,6 +1763,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['linkId'],
+    uuidParams: ['linkId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1661,6 +1777,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [{ name: 'workspaceId', required: false, type: 'string' }],
   },
   {
@@ -1671,6 +1788,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -1681,6 +1799,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1691,6 +1810,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['connectionId'],
+    uuidParams: ['connectionId'],
     queryParams: [],
   },
   {
@@ -1701,6 +1821,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Search transaction history with date, account, category, source and amount filters',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'month', required: false, type: 'string' },
       { name: 'accountId', required: false, type: 'string' },
@@ -1725,6 +1846,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Writable destination workspaces for an item',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1739,6 +1861,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns the items directly under 'parentId', or the workspace's roots when it is omitted, in sibling order.",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'parentId', required: false, type: 'string' },
       { name: 'includeDeleted', required: false, type: 'boolean' },
@@ -1754,6 +1877,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'unreadOnly', required: false, type: 'boolean' },
@@ -1767,6 +1891,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1777,6 +1902,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Sites waiting for an operator's approval",
     detail: "Oldest request first, within the operator's organization.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1787,6 +1913,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "A site's builds, newest first",
     detail: '',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -1798,6 +1925,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Operators set in configuration come first (source 'configured'), then those granted in Settings ('granted').",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1808,6 +1936,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "A site's page paths",
     detail: '',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -1818,6 +1947,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Templates available in a workspace',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1828,6 +1958,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Tenant-wide role holders',
     detail: 'Returns the principals holding the tenant admin role.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1841,6 +1972,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Recoverable items in the workspace trash',
     detail: 'Returns directly deleted items the caller may read, newest first.',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1854,6 +1986,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Active principals who can be assigned in a workspace',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'query', required: false, type: 'string' },
       { name: 'cursor', required: false, type: 'string' },
@@ -1869,6 +2002,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'The containers in the workspace that have a calendar linked into them, whoever linked it.',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1879,6 +2013,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1892,6 +2027,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1906,6 +2042,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1919,6 +2056,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1929,6 +2067,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Workspaces the caller can see',
     detail: 'Returns the workspaces the calling principal is a member of, newest first.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -1942,6 +2081,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'The sites of a workspace',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -1952,6 +2092,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1962,6 +2103,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['notificationId'],
+    uuidParams: ['notificationId'],
     queryParams: [],
   },
   {
@@ -1972,6 +2114,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Move an item to a new parent',
     detail: 'Reparents the item and maintains the closure table.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -1991,6 +2134,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: "Opens the day's note, creating it when needed.",
     pathParams: ['workspaceId', 'date'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -2001,6 +2145,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Merge settings into the caller's own; a null value deletes that key",
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2017,6 +2162,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Sends the selected text to the companion and streams the answer back as server-sent events, unchanged from the worker.',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2042,6 +2188,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2084,6 +2231,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2126,6 +2274,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Post every scheduled line's planned amount for the month, once",
     detail: '',
     pathParams: ['itemId', 'month'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2136,6 +2285,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['templateId'],
+    uuidParams: ['templateId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2158,6 +2308,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -2168,6 +2319,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'sourceItemId'],
+    uuidParams: ['workspaceId', 'sourceItemId'],
     queryParams: [
       { name: 'includeChildren', required: true, type: 'boolean' },
       { name: 'excludeSampleDescendants', required: false, type: 'boolean' },
@@ -2181,6 +2333,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['importId'],
+    uuidParams: ['importId'],
     queryParams: [],
   },
   {
@@ -2191,6 +2344,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'viewId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2201,6 +2355,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Build the site and take it live',
     detail: 'Fixes what the caller can read as an immutable manifest and queues a build.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2220,6 +2375,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Permanently delete a trashed item',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2230,6 +2386,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Permanently delete an archived workspace',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -2240,6 +2397,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2255,6 +2413,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2288,6 +2447,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Reject a first publish',
     detail: "The note is shown to the site's managers; audited.",
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2303,6 +2463,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Stop keeping an item',
     detail: "Takes an item off the calling principal's shelf.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2313,6 +2474,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Close a locked item's body to this session again",
     detail: "Ends the calling session's unlock before it runs out.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2323,6 +2485,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Remove an item's lock",
     detail: 'Removes the lock, which needs write access and the password.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: { type: 'object', required: ['password'], properties: { password: { type: 'string' } } },
   },
@@ -2334,6 +2497,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['provider'],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -2344,6 +2508,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string' } } },
   },
@@ -2355,6 +2520,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Detach a custom hostname',
     detail: 'Stops serving it and deletes only the DNS records Nix created for it.',
     pathParams: ['siteId', 'hostname'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -2365,6 +2531,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'principalId'],
+    uuidParams: ['workspaceId', 'principalId'],
     queryParams: [],
   },
   {
@@ -2375,6 +2542,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
   },
@@ -2387,6 +2555,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Replaces the prose body with the Markdown in { "markdown": "..." }, at most 200,000 characters.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       oneOf: [
@@ -2407,6 +2576,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'viewId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2458,6 +2628,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'installationId'],
+    uuidParams: ['workspaceId', 'installationId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2473,6 +2644,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'threadId'],
+    uuidParams: ['itemId', 'threadId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2492,6 +2664,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Where the deployment requires it, a first publish (and the first after an unpublish) waits for an operator; approval publishes as the manager who asked.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2508,6 +2681,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Takes 'ids' as a comma-separated list of identifiers and returns one entry for each, in the order asked.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [{ name: 'ids', required: false, type: 'string' }],
   },
   {
@@ -2518,6 +2692,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Restore a soft-deleted item',
     detail: 'Returns the item to the active state.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2528,6 +2703,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
   },
   {
@@ -2539,6 +2715,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Ends a token immediately: the next request it would have authenticated is refused, without waiting out any session already exchanged.',
     pathParams: ['tokenId'],
+    uuidParams: ['tokenId'],
     queryParams: [],
   },
   {
@@ -2549,6 +2726,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'viewId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -2559,6 +2737,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Stop a person approving first publishes',
     detail: 'Idempotent.',
     pathParams: ['principalId'],
+    uuidParams: ['principalId'],
     queryParams: [],
   },
   {
@@ -2569,6 +2748,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Remove a person's tenant administrator role",
     detail: 'Idempotent; audited.',
     pathParams: ['principalId'],
+    uuidParams: ['principalId'],
     queryParams: [],
   },
   {
@@ -2579,6 +2759,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'invitationId'],
+    uuidParams: ['workspaceId', 'invitationId'],
     queryParams: [],
   },
   {
@@ -2589,6 +2770,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Serve a previous build again',
     detail: 'Only a previous build that has not been retired can be served again.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2604,6 +2786,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2620,6 +2803,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Summarises every active child of the item into buckets, the way the named chart view says to: grouped by the view's grouping property, counted, or totalled by the view's measured property.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'view', required: false, type: 'string' }],
   },
   {
@@ -2631,6 +2815,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Runs the saved query the named view stores: every active item the caller may read, in any container, whose properties satisfy the view's filters.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [
       { name: 'view', required: false, type: 'string' },
       { name: 'today', required: false, type: 'string' },
@@ -2645,6 +2830,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Runs the rule shape a query view stores, without a saved view, over one workspace the caller may read: every active item that satisfies 'filters' (ANDed, with one level of 'any' groups, at most eight with the preset's), optionally beneat...",
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2676,6 +2862,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Replaces the caller's native canvas library wholesale with its complete contents rather than a delta.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: { type: 'object', required: ['items'], properties: { items: { type: 'array' } } },
   },
@@ -2688,6 +2875,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'Allowed for a workspace owner, a tenant administrator, or the owner of a personal workspace; anyone else gets not found.',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2710,6 +2898,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['provider'],
+    uuidParams: [],
     queryParams: [],
     body: { type: 'object', required: ['key'], properties: { key: { type: 'string' } } },
   },
@@ -2721,6 +2910,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2751,6 +2941,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2789,6 +2980,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Replace the caller's own workspace groups and pins at the version they edited",
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [],
     body: {
       type: 'object',
@@ -2815,6 +3007,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first.",
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'q', required: false, type: 'string' },
       { name: 'limit', required: false, type: ['integer', 'string'] },
@@ -2829,6 +3022,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Returns up to 'limit' (default 8, at most 20) passages from every document the caller may read, or from one workspace when 'workspaceId' is given, ranked by full-text match fused with semantic similarity when the server's local embedding...",
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'q', required: false, type: 'string' },
       { name: 'workspaceId', required: false, type: 'string' },
@@ -2843,6 +3037,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2865,6 +3060,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'With nothing recorded yet, the whole amount is recorded as one transaction named after the line; otherwise an adjustment for the difference is recorded.',
     pathParams: ['itemId', 'lineId', 'month'],
+    uuidParams: ['itemId', 'lineId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2884,6 +3080,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'lineId'],
+    uuidParams: ['itemId', 'lineId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2920,6 +3117,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'threadId'],
+    uuidParams: ['itemId', 'threadId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2935,6 +3133,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'threadId'],
+    uuidParams: ['itemId', 'threadId'],
     queryParams: [],
     body: { type: 'object', required: ['resolved'], properties: { resolved: { type: 'boolean' } } },
   },
@@ -2946,6 +3145,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Replace the views a container offers',
     detail: 'A whole-set replacement, because the order is part of what is being edited.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -2990,6 +3190,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'accountId'],
+    uuidParams: ['itemId', 'accountId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3026,6 +3227,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Close or reopen a month',
     detail: '',
     pathParams: ['itemId', 'month'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: { type: 'object', required: ['closed'], properties: { closed: { type: 'boolean' } } },
   },
@@ -3038,6 +3240,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'The first call creates three child containers, Accounts, Budget lines and Transactions, and records their identifiers on the root.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3067,6 +3270,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'transactionId'],
+    uuidParams: ['itemId', 'transactionId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3089,6 +3293,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId', 'occurredOn'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3107,6 +3312,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3130,6 +3336,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: { type: 'object', required: ['status'], properties: { status: { type: 'string' } } },
   },
@@ -3141,6 +3348,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Lock an item's body behind a password, or change the password",
     detail: "Locks the item's body, which needs write access.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3157,6 +3365,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Merges the supplied properties into the item's bag: a member set to null clears that property, and anything not mentioned is left alone.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3172,6 +3381,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Protect an item from deletion or from new children',
     detail: 'Sets whether the item can be deleted and whether it accepts new children.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3191,6 +3401,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Set or clear an item's repeating rule",
     detail: 'A null request body clears the rule and the item stops repeating.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       oneOf: [
@@ -3216,6 +3427,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Declare the property schema for an item's subtree",
     detail: 'Replaces what this item declares.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3238,6 +3450,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       'A custom hostname is served only once its ownership is verified; until then it is listed as pending.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3253,6 +3466,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Set and pin one page's path",
     detail: 'The old path becomes a permanent redirect.',
     pathParams: ['siteId', 'itemId'],
+    uuidParams: ['siteId', 'itemId'],
     queryParams: [],
     body: { type: 'object', required: ['path'], properties: { path: { type: 'string' } } },
   },
@@ -3264,6 +3478,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId', 'installationId'],
+    uuidParams: ['workspaceId', 'installationId'],
     queryParams: [],
     body: { type: 'object', required: ['enabled'], properties: { enabled: { type: 'boolean' } } },
   },
@@ -3275,6 +3490,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['workspaceId'],
+    uuidParams: ['workspaceId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3293,6 +3509,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['linkId'],
+    uuidParams: ['linkId'],
     queryParams: [],
     body: {
       oneOf: [
@@ -3309,6 +3526,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3324,6 +3542,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: 'Unlinks the calendar on a container, whoever linked it.',
     pathParams: ['workspaceId', 'containerItemId'],
+    uuidParams: ['workspaceId', 'containerItemId'],
     queryParams: [{ name: 'items', required: false, type: 'string' }],
   },
   {
@@ -3335,6 +3554,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail:
       "Checks the password and opens the item's body to the calling browser session or access token for fifteen minutes.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: { type: 'object', required: ['password'], properties: { password: { type: 'string' } } },
   },
@@ -3346,6 +3566,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Withdraw the site',
     detail: 'Removes the host manifests and deletes the builds.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -3356,6 +3577,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['ruleId'],
+    uuidParams: ['ruleId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3385,6 +3607,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['linkId'],
+    uuidParams: ['linkId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3407,6 +3630,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Rename an item',
     detail: "Changes the item's own fields.",
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } },
   },
@@ -3418,6 +3642,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Change a site's settings, republish mode, exclusions or dated collections",
     detail: 'A field that is left out is left alone.',
     pathParams: ['siteId'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3475,6 +3700,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Make a hostname primary, or choose how an alias answers',
     detail: 'The primary hostname is canonical once it is served.',
     pathParams: ['siteId', 'hostname'],
+    uuidParams: ['siteId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3493,6 +3719,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: 'Grant or refuse a role on this item',
     detail: 'Creates or replaces the entry for the given subject and effect.',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
     body: {
       type: 'object',
@@ -3514,6 +3741,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: "Check a custom hostname's DNS records now",
     detail: 'Core looks the records up itself; nothing the client reports is trusted.',
     pathParams: ['siteId', 'hostname'],
+    uuidParams: ['siteId'],
     queryParams: [],
   },
   {
@@ -3524,6 +3752,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [{ name: 'revision', required: false, type: ['integer', 'string'] }],
   },
   {
@@ -3534,6 +3763,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: ['itemId'],
+    uuidParams: ['itemId'],
     queryParams: [],
   },
   {
@@ -3544,6 +3774,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [{ name: 'after', required: false, type: ['integer', 'string'] }],
   },
   {
@@ -3554,6 +3785,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'workspaceId', required: true, type: 'string' },
       { name: 'petId', required: true, type: 'string' },
@@ -3570,6 +3802,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     summary: '',
     detail: '',
     pathParams: [],
+    uuidParams: [],
     queryParams: [
       { name: 'workspaceId', required: true, type: 'string' },
       { name: 'petId', required: true, type: 'string' },

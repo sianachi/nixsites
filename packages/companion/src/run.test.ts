@@ -324,6 +324,162 @@ describe('workspace-scoped companion tools', () => {
       expect(execute).not.toHaveBeenCalled();
     });
   });
+  describe('find_action and run_action', () => {
+    const action = (id: string, extras: Record<string, unknown> = {}) =>
+      input('run_action', { query: id, specJson: JSON.stringify(extras) });
+
+    it('finds actions by plain words and never offers a credential', async () => {
+      const { ports, query, signal } = setup();
+      const found = await runWorkspaceTool(
+        ports,
+        workspace,
+        input('find_action', { query: 'bookmark a note' }),
+        signal,
+      );
+      expect(found.readOnly).toBe(true);
+      expect((JSON.parse(found.text) as { actions: unknown[] }).actions).toContainEqual(
+        expect.objectContaining({ id: 'KeepItem', method: 'PUT' }),
+      );
+      const tokens = await runWorkspaceTool(
+        ports,
+        workspace,
+        input('find_action', { query: 'create access token' }),
+        signal,
+      );
+      expect(tokens.text).not.toContain('AccessToken');
+      expect(query).not.toHaveBeenCalled();
+    });
+
+    it('runs an action after checking its item, and reports the item as touched', async () => {
+      const { ports, query, execute, signal } = setup();
+      execute.mockResolvedValue({ ok: true });
+      const outcome = await runWorkspaceTool(
+        ports,
+        workspace,
+        action('KeepItem', { path: { itemId } }),
+        signal,
+      );
+      expect(query).toHaveBeenCalledOnce();
+      expect(execute.mock.calls[0]?.[0]).toMatchObject({
+        method: 'PUT',
+        path: `/api/v1/items/${itemId}/bookmark`,
+      });
+      expect(outcome).toMatchObject({ readOnly: false, touchedParents: [itemId] });
+    });
+
+    it('refuses credentials, unknown actions, bad parameters and other workspaces', async () => {
+      const { ports, execute, signal } = setup();
+      for (const call of [
+        action('CreateAccessToken', { body: { name: 'x' } }),
+        action('NoSuchAction'),
+        action('KeepItem'),
+        action('KeepItem', { path: { itemId, extra: 'x' } }),
+        action('GetWorkspace', { path: { workspaceId: itemId } }),
+      ])
+        await expect(runWorkspaceTool(ports, workspace, call, signal)).rejects.toBeInstanceOf(
+          WorkspaceToolRefusal,
+        );
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it('keeps every workspace, item and site the request names inside this conversation', async () => {
+      const { ports, query, execute, signal } = setup();
+      const other = '33333333-3333-4333-8333-333333333333';
+      // A body naming another workspace: the generic path cannot move items out.
+      await expect(
+        runWorkspaceTool(
+          ports,
+          workspace,
+          action('MoveItem', {
+            path: { itemId },
+            body: { parentId: null, afterId: null, workspaceId: other },
+          }),
+          signal,
+        ),
+      ).rejects.toThrow('another workspace');
+      // A site owned by another workspace.
+      query.mockResolvedValue({ id: other, workspaceId: other, rootItemId: other });
+      await expect(
+        runWorkspaceTool(
+          ports,
+          workspace,
+          action('PublishSite', { path: { siteId: other } }),
+          signal,
+        ),
+      ).rejects.toThrow('another workspace');
+      // An item named only in the body still goes through the item check.
+      query.mockReset();
+      query.mockRejectedValue(new WorkspaceToolRefusal('not here'));
+      await expect(
+        runWorkspaceTool(
+          ports,
+          workspace,
+          action('RunWorkspaceQuery', {
+            path: { workspaceId: workspace },
+            body: { rootItemId: other },
+          }),
+          signal,
+        ),
+      ).rejects.toThrow('not here');
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it('treats a query sent as POST as locked content too', async () => {
+      const { ports, execute, signal } = setup();
+      execute.mockResolvedValue({ results: [] });
+      const outcome = await runWorkspaceTool(
+        ports,
+        workspace,
+        action('RunWorkspaceQuery', { path: { workspaceId: workspace }, body: {} }),
+        signal,
+      );
+      expect(outcome.lockedContent).toBe(true);
+    });
+
+    it('treats a read through an action as locked content', async () => {
+      const { ports, query, signal } = setup();
+      query.mockResolvedValue({ id: itemId, workspaceId: workspace, parentId: null });
+      const outcome = await runWorkspaceTool(
+        ports,
+        workspace,
+        action('GetWorkspace', { path: { workspaceId: workspace } }),
+        signal,
+      );
+      expect(outcome.lockedContent).toBe(true);
+    });
+  });
+  describe('move_item to another workspace', () => {
+    const other = '33333333-3333-4333-8333-333333333333';
+    const move = (destination: string) =>
+      input('move_item', {
+        itemId,
+        specJson: JSON.stringify({ destinationWorkspaceId: destination }),
+      });
+
+    it('sends the destination workspace when Core offers it', async () => {
+      const { ports, execute, paginate, signal } = setup();
+      paginate.mockImplementation(async function* () {
+        await Promise.resolve();
+        yield { id: other, name: 'Other' };
+      });
+      await runWorkspaceTool(ports, workspace, move(other), signal);
+      expect(execute.mock.calls[0]?.[0]).toMatchObject({
+        body: { parentId: null, workspaceId: other },
+      });
+    });
+
+    it('refuses a workspace Core does not offer', async () => {
+      const { ports, execute, paginate, signal } = setup();
+      paginate.mockImplementation(async function* () {
+        await Promise.resolve();
+        yield { id: itemId, name: 'Elsewhere' };
+      });
+      await expect(runWorkspaceTool(ports, workspace, move(other), signal)).rejects.toBeInstanceOf(
+        WorkspaceToolRefusal,
+      );
+      expect(execute).not.toHaveBeenCalled();
+    });
+  });
   it('refuses unknown operations and model-provided URLs', async () => {
     const { ports, execute, signal } = setup();
     await expect(runWorkspaceTool(ports, workspace, input('shell'), signal)).rejects.toThrow();

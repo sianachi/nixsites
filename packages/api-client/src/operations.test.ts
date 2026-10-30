@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   OPERATIONS,
   findOperations,
-  isCredentialOperation,
+  isHumanOnlyOperation,
   operationById,
   operationRequest,
   operationRisk,
@@ -38,12 +38,21 @@ describe('operation catalog', () => {
   });
 
   it('keeps credentials and the pet itself away from assistants', () => {
-    const denied = OPERATIONS.filter(isCredentialOperation).map((op) => op.id);
+    const denied = OPERATIONS.filter(isHumanOnlyOperation).map((op) => op.id);
     expect(denied).toEqual(
       expect.arrayContaining(['CreateAccessToken', 'SavePetProviderKey', 'SavePetSettings']),
     );
-    expect(isCredentialOperation(entry('MoveItem'))).toBe(false);
-    expect(isCredentialOperation(entry('KeepItem'))).toBe(false);
+    for (const id of [
+      'GrantTenantAdmin',
+      'GrantSiteOperator',
+      'ApproveSitePublish',
+      'SendConversation',
+      'SavePreferences',
+    ])
+      expect(isHumanOnlyOperation(entry(id)), id).toBe(true);
+    expect(isHumanOnlyOperation(entry('GetPreferences'))).toBe(false);
+    expect(isHumanOnlyOperation(entry('MoveItem'))).toBe(false);
+    expect(isHumanOnlyOperation(entry('KeepItem'))).toBe(false);
   });
 
   it('warns about final, access and public changes, not about trashing', () => {
@@ -52,21 +61,33 @@ describe('operation catalog', () => {
     expect(operationRisk(entry('RemoveWorkspaceMember'))).toBe('access');
     expect(operationRisk(entry('PublishSite'))).toBe('public');
     expect(operationRisk(entry('GetBookmarks'))).toBeUndefined();
+    expect(operationRisk(entry('RestoreItem'))).toBeUndefined();
+    for (const id of ['CreateAutomation', 'ArchiveWorkspace', 'MoveItem'])
+      expect(operationRisk(entry(id)), id).toBe('access');
+    expect(operationRisk(entry('UpdateSite'))).toBe('public');
   });
 
   it('builds the request from the template and refuses anything outside it', () => {
+    const id = '01a18c5b-3b64-70bf-8468-b159e5454a52';
     expect(
       operationRequest(entry('MoveItem'), {
-        path: { itemId: 'a/../b' },
+        path: { itemId: id },
         body: { parentId: null, afterId: null },
       }),
-    ).toEqual({ method: 'POST', path: '/api/v1/items/a%2F..%2Fb/move', query: {} });
+    ).toEqual({ method: 'POST', path: `/api/v1/items/${id}/move`, query: {} });
+    expect(() => operationRequest(entry('MoveItem'), { path: { itemId: 'a/../b' } })).toThrow(
+      /not a valid/,
+    );
+    // ".." would fold DELETE /sites/S/hostnames/.. into DeleteSite.
+    expect(() =>
+      operationRequest(entry('RemoveSiteHostname'), { path: { siteId: id, hostname: '..' } }),
+    ).toThrow(/not a valid/);
     expect(
-      operationRequest(entry('ListItems'), { path: { workspaceId: 'w' }, query: { limit: 5 } }),
-    ).toEqual({ method: 'GET', path: '/api/v1/workspaces/w/items', query: { limit: 5 } });
+      operationRequest(entry('ListItems'), { path: { workspaceId: id }, query: { limit: 5 } }),
+    ).toEqual({ method: 'GET', path: `/api/v1/workspaces/${id}/items`, query: { limit: 5 } });
     expect(() => operationRequest(entry('MoveItem'), {})).toThrow(/itemId/);
     expect(() =>
-      operationRequest(entry('ListItems'), { path: { workspaceId: 'w' }, query: { evil: 1 } }),
+      operationRequest(entry('ListItems'), { path: { workspaceId: id }, query: { evil: 1 } }),
     ).toThrow(/no query parameter/);
     expect(() => operationRequest(entry('GetBookmarks'), { body: { anything: true } })).toThrow(
       /no request body/,

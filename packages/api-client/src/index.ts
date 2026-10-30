@@ -304,7 +304,7 @@ export {
   OperationCallError,
   callOperation,
   findOperations,
-  isCredentialOperation,
+  isHumanOnlyOperation,
   operationById,
   operationRequest,
   operationRisk,

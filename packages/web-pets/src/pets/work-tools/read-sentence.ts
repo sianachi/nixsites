@@ -41,6 +41,14 @@ function readPhrase(args: WorkspaceToolArgs): ReadPhrase {
         progressive: `Remembering: ${args.markdown}`,
         past: `Remembered: ${args.markdown} (Settings > Pets > Memory)`,
       };
+    case 'find_action': {
+      const target = `an action for "${args.query}"`;
+      return {
+        base: `Look for ${target}`,
+        progressive: `Looking for ${target}`,
+        past: `Looked for ${target}`,
+      };
+    }
     case 'read_structure':
       return {
         base: "Read an item's structure",

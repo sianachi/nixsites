@@ -170,7 +170,12 @@ export const chatCaseSchema = z
     workspaceAccess: z.boolean().default(true),
     /** An explicit fixture-only approval, honoured only together with --allow-writes. */
     approvedOperations: z
-      .array(z.enum(['update_view', 'move_item', 'trash_item', 'save_as_template']))
+      .array(z.enum(['update_view', 'move_item', 'trash_item', 'save_as_template', 'run_action']))
+      .max(4)
+      .default([]),
+    /** With `run_action` approved: the only action ids it may run, on fixture items only. */
+    approvedActions: z
+      .array(z.string().regex(/^[A-Za-z]{1,80}$/))
       .max(4)
       .default([]),
     /** Known capability gaps to count in the report. Only the code is retained, never an excerpt. */
@@ -192,6 +197,12 @@ export const chatCaseSchema = z
         code: 'custom',
         path: ['approvedOperations'],
         message: 'Template captures require a synthetic fixture source.',
+      });
+    if (item.approvedOperations.includes('run_action') !== item.approvedActions.length > 0)
+      context.addIssue({
+        code: 'custom',
+        path: ['approvedActions'],
+        message: 'Approving run_action needs the action ids it may run, and only then.',
       });
     if (item.noWrites && item.approvedOperations.length > 0)
       context.addIssue({

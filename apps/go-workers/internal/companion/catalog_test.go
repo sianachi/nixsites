@@ -22,8 +22,8 @@ func TestCatalogIsEmbeddedAndBounded(t *testing.T) {
 	if chatCatalog == "" {
 		t.Fatal("chatCatalog is empty")
 	}
-	if len(chatCatalog) > 13000 {
-		t.Fatalf("chatCatalog is %d chars, want <= 13000", len(chatCatalog))
+	if len(chatCatalog) > 13600 {
+		t.Fatalf("chatCatalog is %d chars, want <= 13600", len(chatCatalog))
 	}
 }
 
@@ -43,8 +43,8 @@ func TestCatalogNamesEveryStructureOperation(t *testing.T) {
 // is offered once, the design tools among them, and neither the old single nix_workspace tool nor
 // the retired nix_validate_blueprint is.
 func TestWorkspaceToolsOffersOneToolPerOperation(t *testing.T) {
-	if len(toolNamesChat) != 32 || len(workspaceTools()) != 32 {
-		t.Fatalf("offers %d tools, want 32", len(toolNamesChat))
+	if len(toolNamesChat) != 34 || len(workspaceTools()) != 34 {
+		t.Fatalf("offers %d tools, want 34", len(toolNamesChat))
 	}
 	for _, name := range []string{"nix_workspace", "workspace", "nix_validate_blueprint"} {
 		if _, ok := toolNamesChat[name]; ok {

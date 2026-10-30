@@ -9,6 +9,7 @@ const alwaysAsk = [
   'save_as_template',
   'update_view',
   'edit_fields',
+  'run_action',
 ] as const;
 
 describe('canApplyWithoutAsking', () => {

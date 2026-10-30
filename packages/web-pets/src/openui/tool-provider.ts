@@ -87,9 +87,13 @@ export function createQueryTools(
   };
 }
 
-/** Every operation a `Mutation()` may name: each of the pet's write tools. */
+/**
+ * Every operation a `Mutation()` may name: each of the pet's typed write tools. A component can be
+ * a stored program a teammate wrote, so it never gets `run_action` (any Core operation) and never
+ * moves an item out of its workspace.
+ */
 export const MUTATION_TOOLS = WORKSPACE_OPERATIONS.filter(
-  (operation) => !READ_ONLY_OPERATIONS.has(operation),
+  (operation) => !READ_ONLY_OPERATIONS.has(operation) && operation !== 'run_action',
 );
 
 /** One write a component asks for, already parsed exactly as the pet's tool calls are. */
@@ -127,6 +131,8 @@ export function createMutationTools(
         throw new Error(
           `This ${operation} request is invalid: ${parsed.error.issues.map((issue) => issue.message).join('; ')}`,
         );
+      if (operation === 'move_item' && parsed.data.specJson.includes('destinationWorkspaceId'))
+        throw new Error('A component cannot move an item to another workspace.');
       const decision = await approve({ workspaceId, args: parsed.data });
       if (!decision.approved) throw new Error('Declined by the owner.');
       const outcome = await run(workspaceId, decision.args, decision.fence);

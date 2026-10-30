@@ -27,6 +27,7 @@ import {
   type ValidationContext,
 } from '@nix/structure-spec';
 import type { Problem } from '@nix/structure-spec';
+import { describeActionRun } from './action.js';
 import type { PreviewContext } from './context.js';
 import type { BodyEditPlan } from './ports.js';
 export type { PreviewContext } from './context.js';
@@ -295,6 +296,10 @@ function legacyHeadline(args: PreviewToolArgs): string {
       return 'I will read what is on this workspace’s calendars for the dates asked.';
     case 'complete_task':
       return 'I will change whether the linked task is done.';
+    case 'find_action':
+      return `I will look for an action matching “${args.query}”.`;
+    case 'run_action':
+      return `I will run the action “${args.query}”.`;
     case 'create_structured':
     case 'add_view':
     case 'create_entries':
@@ -338,6 +343,35 @@ function describeLegacyOperation(args: PreviewToolArgs, context: PreviewContext)
       tree: [],
       notes: copy.notes,
       warnings: [],
+      problems: context.problems,
+      neverDoes: NEVER_DOES.slice(),
+    };
+  }
+  if (args.operation === 'run_action') {
+    const copy = context.actionRun
+      ? describeActionRun(context.actionRun)
+      : { headline: 'I cannot run this request as written.', notes: [], warnings: [] };
+    return {
+      headline: copy.headline,
+      destination: context.destination,
+      counts: { ...emptyCounts(), writes: 1 },
+      tree: [],
+      notes: copy.notes,
+      warnings: copy.warnings,
+      problems: context.problems,
+      // The never-list covers the dedicated tools; an action can publish or delete for good.
+      neverDoes: [],
+    };
+  }
+  if (args.operation === 'move_item' && context.moveTo) {
+    const { moveTo } = context;
+    return {
+      headline: `I will move the linked item from “${moveTo.sourceName}” to the workspace “${moveTo.workspaceName}”, ${moveTo.parentTitle ? `inside “${moveTo.parentTitle}”` : 'at its top level'}.`,
+      destination: context.destination,
+      counts: { ...emptyCounts(), writes: 1 },
+      tree: [],
+      notes: ['Moving it to another workspace changes who can see it.'],
+      warnings: context.warnings ?? [],
       problems: context.problems,
       neverDoes: NEVER_DOES.slice(),
     };

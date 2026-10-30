@@ -373,6 +373,7 @@ export async function declineReason(
   workspaceId?: string,
   onPreview?: (fingerprint: string) => void,
   approvedOperations: readonly ChatCase['approvedOperations'][number][] = [],
+  approvedActions: readonly string[] = [],
 ): Promise<string | undefined> {
   let parsed: ReturnType<typeof workspaceToolSchema.safeParse>;
   try {
@@ -393,6 +394,20 @@ export async function declineReason(
   if (!canApplyWithoutAsking(args.operation) && !approved.has(args.operation))
     return `${args.operation} always asks`;
   if (lockedRead) return "earlier reads need the owner's review before changes";
+  if (args.operation === 'run_action') {
+    // A generic action could be anything, so a case names the ones it approves, on its own items.
+    if (!approvedActions.includes(args.query))
+      return `only ${approvedActions.join(', ')} is approved`;
+    // Every id the action names, in its path, query or body, must be one this fixture created,
+    // and it must name at least one.
+    const fixtureIds = new Set(fixture.nodes.values());
+    const named = args.specJson.match(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    );
+    if (named === null || named.some((id) => !fixtureIds.has(id)))
+      return 'actions may only target fixture items';
+    return undefined;
+  }
   const bodyEdit = args.operation === 'replace_section' || args.operation === 'replace_passage';
   const viewEdit = args.operation === 'update_view';
   const templateSave = args.operation === 'save_as_template';
@@ -801,6 +816,7 @@ export async function runChatCase(
                   fingerprint = value;
                 },
                 chatCase.approvedOperations,
+                chatCase.approvedActions,
               );
         if (reason !== undefined) {
           await declineTool(session, options.workspace, options.pet, tool, reason);
