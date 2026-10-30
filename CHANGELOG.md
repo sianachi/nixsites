@@ -42,8 +42,8 @@ follows semantic versioning (`0.x` pre-1.0).
   you pick is saved with the embed, so everyone opening the page sees the same one.
 - Comments on notes: select text and choose Comment, or leave a comment on the whole page.
   Threads take replies, can be resolved and reopened, and update live. @mentions and replies
-  notify the people in the thread. The Commenter role can now comment without editing. Exports can
-  include comments, and `.nix` archives carry them. The MCP tools `list_comments`, `add_comment`,
+  notify the people in the thread. People can be invited as Commenters, who read and comment
+  but cannot edit. Exports can include comments, and `.nix` archives carry them. The MCP tools `list_comments`, `add_comment`,
   `reply_comment` and `resolve_comment` read and write them.
 - Suggesting mode: turn it on to propose edits instead of making them. Typing, deleting,
   formatting and block changes (new paragraphs, lists, indents) show as suggestions that others
