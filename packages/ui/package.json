@@ -35,7 +35,7 @@
     "@fontsource/nunito-sans": "^5.3.0",
     "@mdx-js/react": "^3.1.0",
     "@storybook/addon-a11y": "^9.1.20",
-    "@storybook/addon-docs": "^9.1.20",
+    "@storybook/addon-docs": "^10.6.3",
     "@storybook/addon-vitest": "^9.1.20",
     "@storybook/react-vite": "^9.1.20",
     "@tailwindcss/vite": "^4.1.11",
