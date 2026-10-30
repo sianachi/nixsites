@@ -19,6 +19,8 @@ export function useAnchoredPanel(
   panelRef: RefObject<HTMLElement | null>,
   anchor: () => FloatingMenuAnchor | null,
   remeasure: unknown,
+  /** Pixels at the bottom of the visual viewport the phone sheet must stay clear of (a dock). */
+  sheetClearance?: () => number,
 ): void {
   useLayoutEffect(() => {
     const panel = panelRef.current;
@@ -35,8 +37,10 @@ export function useAnchoredPanel(
   }, [panelRef]);
 
   const latest = useRef(anchor);
+  const clearance = useRef(sheetClearance);
   useEffect(() => {
     latest.current = anchor;
+    clearance.current = sheetClearance;
   });
 
   useEffect(() => {
@@ -55,7 +59,8 @@ export function useAnchoredPanel(
       panel.style.removeProperty('max-width');
       panel.style.removeProperty('max-height');
       if (!desktop) {
-        const maxHeight = Math.max(0, viewport.height * 0.7);
+        const lift = clearance.current?.() ?? 0;
+        const maxHeight = Math.max(0, (viewport.height - lift) * 0.7);
         panel.style.setProperty('width', `${String(viewport.width)}px`);
         panel.style.setProperty('min-width', '0');
         panel.style.setProperty('max-width', `${String(viewport.width)}px`);
@@ -63,7 +68,7 @@ export function useAnchoredPanel(
         panel.style.setProperty('left', `${String(viewport.left)}px`);
         panel.style.setProperty(
           'top',
-          `${String(viewport.top + viewport.height - panel.getBoundingClientRect().height)}px`,
+          `${String(viewport.top + viewport.height - lift - panel.getBoundingClientRect().height)}px`,
         );
         panel.style.setProperty('bottom', 'auto');
         panel.style.setProperty('transform', 'none');
@@ -103,12 +108,16 @@ export function useAnchoredPanel(
     };
 
     place();
+    // Content that grows after opening (a thread's replies, a composer) re-places the panel.
+    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    resized?.observe(panel);
     const viewport = window.visualViewport;
     window.addEventListener('resize', place);
     document.addEventListener('scroll', onScroll, true);
     viewport?.addEventListener('resize', place);
     viewport?.addEventListener('scroll', place);
     return () => {
+      resized?.disconnect();
       window.removeEventListener('resize', place);
       document.removeEventListener('scroll', onScroll, true);
       viewport?.removeEventListener('resize', place);

@@ -43,7 +43,7 @@ import { ySyncPluginKey } from 'y-prosemirror';
 
 export interface SuggestingStorage {
   enabled: boolean;
-  /** The signed-in principal's subject; every suggestion is stamped with it. */
+  /** The signed-in principal's id; every suggestion is stamped with it. */
   authorId: string;
 }
 

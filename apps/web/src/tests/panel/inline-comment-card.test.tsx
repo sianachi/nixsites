@@ -147,7 +147,7 @@ describe('the suggestion card', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Suggested change' })).toBeVisible();
     expect(screen.getByText('Added “new words”')).toBeVisible();
-    expect(screen.getByText(/Someone/)).toBeVisible();
+    expect(screen.getByText(/A collaborator/)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Accept' }));
 
     expect(accept).toHaveBeenCalledWith('s1');
@@ -243,6 +243,22 @@ describe('the thread card', () => {
           body: { body: 'Fixed it', mentionIds: [] },
         },
       ]);
+    });
+  });
+});
+
+describe('a thread that is not there', () => {
+  it('waits while loading, then closes once the feed is ready without it', async () => {
+    patchComments(ITEM, {
+      threads: [],
+      status: 'loading',
+      card: { kind: 'thread', threadId: THREAD.id },
+    });
+    renderCard();
+    expect(await screen.findByText('Loading comment…')).toBeVisible();
+    patchComments(ITEM, { status: 'ready' });
+    await waitFor(() => {
+      expect(readComments(ITEM).card).toBeNull();
     });
   });
 });

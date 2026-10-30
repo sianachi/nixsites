@@ -80,8 +80,10 @@ export function useCommentWrites(itemId: string): {
       const created = await client.execute(
         comments.add(itemId, { body, mentionIds, ...(anchor === null ? {} : { anchor }) }),
       );
-      // The new thread's card opens at the text it was made on.
+      // The new thread's card opens at the text it was made on; the thread is added now so the
+      // card does not take it for a missing one while the refresh below is on its way.
       patchComments(itemId, {
+        threads: [...readComments(itemId).threads.filter((t) => t.id !== created.id), created],
         draft: null,
         card: { kind: 'thread', threadId: created.id },
         activeThreadId: created.id,
@@ -122,7 +124,7 @@ export function ThreadCard({
         active ? 'border-accent' : 'border-divider'
       }`}
     >
-      {thread.quote === null || inline ? null : (
+      {thread.quote === null || (inline && !detached) ? null : (
         <button
           type="button"
           onClick={() => {
@@ -135,7 +137,7 @@ export function ThreadCard({
       )}
       {detached ? (
         <Text variant="caption" tone="muted">
-          The text this comment was on has changed or been removed.
+          The text it was on is gone.
         </Text>
       ) : null}
 

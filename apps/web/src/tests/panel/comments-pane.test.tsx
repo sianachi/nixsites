@@ -156,7 +156,7 @@ describe('the comments pane', () => {
 
     expect(await screen.findByText('Is this the right date?')).toBeVisible();
     expect(screen.getByText('quarterly review')).toBeVisible();
-    expect(screen.getByText(/text this comment was on has changed/i)).toBeVisible();
+    expect(screen.getByText(/text it was on is gone/i)).toBeVisible();
     expect(screen.queryByText('Old question.')).not.toBeInTheDocument();
   });
 

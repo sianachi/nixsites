@@ -52,6 +52,16 @@ export function describeSuggestion(entry: SuggestionEntry): string {
   return `Restructured ${name}`;
 }
 
+/** The phone sheet sits above the writing dock and the keyboard the dock rides on. */
+function clearOfWritingDock(): number {
+  const dock = Number.parseFloat(
+    document.documentElement.style.getPropertyValue('--mobile-note-toolbar-clearance'),
+  );
+  const viewport = window.visualViewport;
+  const covered = viewport ? window.innerHeight - viewport.height - viewport.offsetTop : 0;
+  return Number.isFinite(dock) ? Math.max(0, dock - Math.max(0, covered) + 8) : 0;
+}
+
 export function InlineCommentCard({ itemId }: { readonly itemId: string }): ReactNode {
   const { card, editor } = useItemComments(itemId);
   if (card === null || editor === null) return null;
@@ -78,10 +88,19 @@ function CardFrame({
     closeCard(itemId);
   };
 
-  // Beside the text, or at the top of the note when the text is gone (a detached thread).
+  // Beside the text, or centered when the text is gone (a detached thread).
   const anchor = (): CardAnchor | null =>
-    editor.anchorOf(card) ?? { left: 16, top: 72, bottom: 72 };
-  useAnchoredPanel(ref, anchor, `${card.kind}${'threadId' in card ? card.threadId : ''}`);
+    editor.anchorOf(card) ?? {
+      left: Math.max(8, (window.innerWidth - 384) / 2),
+      top: window.innerHeight / 4,
+      bottom: window.innerHeight / 4,
+    };
+  useAnchoredPanel(
+    ref,
+    anchor,
+    `${card.kind}${'threadId' in card ? card.threadId : ''}`,
+    clearOfWritingDock,
+  );
 
   // Focus in on open, back to the text on close.
   useEffect(() => {
@@ -104,9 +123,15 @@ function CardFrame({
       if (target.closest('.ProseMirror, [role="dialog"], [role="menu"]') !== null) return;
       closeCard(itemId);
     }
+    // Focus is usually back in the text after the click that opened the card, so Escape is heard here.
+    function onEscape(event: globalThis.KeyboardEvent): void {
+      if (event.key === 'Escape') closeCard(itemId);
+    }
     document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onEscape);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onEscape);
     };
   }, [itemId]);
 
@@ -154,6 +179,11 @@ function ThreadBody({
   const { principal } = useCurrentPrincipal();
   const { problem, act } = useCommentWrites(itemId);
   const thread = state.threads.find((candidate) => candidate.id === threadId);
+  // Deleted elsewhere: once the feed has answered and the thread is absent, close the card.
+  const gone = thread === undefined && state.status === 'ready';
+  useEffect(() => {
+    if (gone) closeCard(itemId);
+  }, [gone, itemId]);
   return (
     <>
       {problem === null ? null : (
@@ -163,7 +193,7 @@ function ThreadBody({
       )}
       {thread === undefined ? (
         <Text variant="note" tone="muted" role="status">
-          Loading comment…
+          {state.status === 'error' ? 'This comment could not be loaded.' : 'Loading comment…'}
         </Text>
       ) : (
         <ThreadCard
@@ -230,8 +260,21 @@ function NamedSuggestions(props: {
   readonly ids: readonly string[];
   readonly editor: CommentsEditorHandle;
 }): ReactNode {
-  const { principals } = useWorkspaceAssignablePrincipals();
-  const names = new Map(principals.map((person) => [person.principalId, person.displayName]));
+  const { principals, hasMore, loadingMore, loadMore } = useWorkspaceAssignablePrincipals();
+  const { threads } = useItemComments(props.itemId);
+  // Comment authors are named by Core; the people list is paged, so it is read on until every
+  // author here is found or it ends.
+  const names = new Map<string, string>();
+  for (const thread of threads)
+    for (const comment of thread.comments) names.set(comment.authorId, comment.authorName);
+  for (const person of principals) names.set(person.principalId, person.displayName);
+  const { suggestions } = useItemComments(props.itemId);
+  const missing = suggestions.some(
+    (entry) => props.ids.includes(entry.id) && !names.has(entry.authorId),
+  );
+  useEffect(() => {
+    if (missing && hasMore && !loadingMore) void loadMore();
+  }, [missing, hasMore, loadingMore, loadMore]);
   return <SuggestionList {...props} names={names} />;
 }
 
@@ -271,7 +314,7 @@ function SuggestionList({
   const author = (entry: SuggestionEntry): string =>
     entry.authorId !== '' && (entry.authorId === subject || entry.authorId === principal?.id)
       ? 'You'
-      : (names.get(entry.authorId) ?? 'Someone');
+      : (names.get(entry.authorId) ?? 'A collaborator');
 
   return (
     <>

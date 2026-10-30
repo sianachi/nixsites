@@ -39,6 +39,7 @@ import * as Y from 'yjs';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { ItemBlockView, PageBreakView, NoteSourcesProvider } from './note-block-views';
 import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';
@@ -477,6 +478,10 @@ export function NoteEditor({
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const profile = useSessionStore((state) => state.profile);
   const subject = profile?.subject;
+  // Suggestions are stamped with the workspace principal id (what names resolve from), not the
+  // OIDC subject; the subject only stands in if /me fails. Off while /me loads: no mixed stamps.
+  const me = useCurrentPrincipal();
+  const suggestAs = me.status === 'loading' ? '' : (me.principal?.id ?? subject ?? '');
   const [draftState, setDraftState] = useState<DraftState | undefined>();
   const [syncState, setSyncState] = useState<SyncState>('connecting');
   const [readOnly, setReadOnly] = useState(false);
@@ -849,8 +854,8 @@ export function NoteEditor({
     selector: ({ editor: current }) => hasSuggestions(current.state.doc),
   });
   useEffect(() => {
-    setSuggesting(editor, { enabled: suggesting && !readOnly && !stale, authorId: subject ?? '' });
-  }, [editor, readOnly, stale, subject, suggesting]);
+    setSuggesting(editor, { enabled: suggesting && !readOnly && !stale, authorId: suggestAs });
+  }, [editor, readOnly, stale, suggestAs, suggesting]);
 
   // The server's read-only mode and stale copies cannot save edits.
   useLayoutEffect(() => {
