@@ -418,7 +418,7 @@ export interface StubMember {
   readonly grantedAt: string;
   readonly canChangeRole?: boolean;
   readonly canRemove?: boolean;
-  readonly assignableRoles?: readonly ('owner' | 'editor' | 'viewer')[];
+  readonly assignableRoles?: readonly ('owner' | 'editor' | 'commenter' | 'viewer')[];
 }
 
 /** As `GET/PUT /api/v1/me/workspace-arrangement` reports the document. */
@@ -496,7 +496,7 @@ export interface StubInvitation {
   readonly id: string;
   readonly emailNormalized: string;
   readonly targetPrincipalId: string | null;
-  readonly role: 'owner' | 'editor' | 'viewer';
+  readonly role: 'owner' | 'editor' | 'commenter' | 'viewer';
   readonly status: 'pending' | 'accepted' | 'revoked';
   readonly invitedByPrincipalId: string;
   readonly invitedAt: string;
@@ -1109,7 +1109,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
       if (invitationList !== null && method === 'POST') {
         const body = JSON.parse(typeof requestBody === 'string' ? requestBody : '{}') as {
           principalId?: string;
-          role?: 'owner' | 'editor' | 'viewer';
+          role?: 'owner' | 'editor' | 'commenter' | 'viewer';
         };
         const target = heldInvitees.find((entry) => entry.principalId === body.principalId);
         if (target === undefined || target.canInvite === false || target.email === null) {

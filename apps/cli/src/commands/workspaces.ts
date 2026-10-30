@@ -334,8 +334,8 @@ function validatePage(page: WorkspacePageOptions): WorkspacePageOptions {
 }
 
 function assertUiRole(role: string): asserts role is AssignableWorkspaceRole {
-  if (role !== 'owner' && role !== 'editor' && role !== 'viewer')
-    throw new Error("Role must be 'owner', 'editor', or 'viewer'.");
+  if (role !== 'owner' && role !== 'editor' && role !== 'commenter' && role !== 'viewer')
+    throw new Error("Role must be 'owner', 'editor', 'commenter', or 'viewer'.");
 }
 
 /** Read the effective settings or replace them from a validated JSON file. */

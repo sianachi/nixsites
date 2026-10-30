@@ -74,17 +74,45 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidName.StatusCode);
         Assert.Equal("workspaces.invalid_name", await ProblemCodeAsync(invalidName));
 
-        var commenterInvitation = await SendAsync(HttpMethod.Post,
+        var unknownRoleInvitation = await SendAsync(HttpMethod.Post,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/invitations", jwt,
-            new { principalId = Invitee, role = "commenter" });
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, commenterInvitation.StatusCode);
-        Assert.Equal("workspaces.invalid_invitation", await ProblemCodeAsync(commenterInvitation));
+            new { principalId = Invitee, role = "admin" });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, unknownRoleInvitation.StatusCode);
+        Assert.Equal("workspaces.invalid_invitation", await ProblemCodeAsync(unknownRoleInvitation));
 
-        var commenterMember = await SendAsync(HttpMethod.Patch,
+        var unknownRoleMember = await SendAsync(HttpMethod.Patch,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/members/{Viewer:D}", jwt,
-            new { role = "commenter" });
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, commenterMember.StatusCode);
-        Assert.Equal("workspaces.invalid_role", await ProblemCodeAsync(commenterMember));
+            new { role = "admin" });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, unknownRoleMember.StatusCode);
+        Assert.Equal("workspaces.invalid_role", await ProblemCodeAsync(unknownRoleMember));
+    }
+
+    [Fact]
+    public async Task The_commenter_role_can_be_invited_accepted_and_assigned()
+    {
+        var ownerJwt = await JwtAsync(Owner);
+        var invited = await SendAsync(HttpMethod.Post,
+            $"/api/v1/workspaces/{PersonalWorkspace:D}/invitations", ownerJwt,
+            new { principalId = Invitee, role = "commenter" });
+        Assert.Equal(HttpStatusCode.Created, invited.StatusCode);
+        using var invitation = JsonDocument.Parse(await invited.Content.ReadAsStringAsync(Cancellation));
+        var invitationId = invitation.RootElement.GetProperty("id").GetGuid();
+        Assert.Equal("commenter", invitation.RootElement.GetProperty("role").GetString());
+
+        var accepted = await SendAsync(HttpMethod.Post,
+            $"/api/v1/workspaces/{PersonalWorkspace:D}/invitations/{invitationId:D}/accept",
+            await JwtAsync(Invitee));
+        Assert.True(accepted.IsSuccessStatusCode, await accepted.Content.ReadAsStringAsync(Cancellation));
+
+        var changed = await SendAsync(HttpMethod.Patch,
+            $"/api/v1/workspaces/{PersonalWorkspace:D}/members/{Viewer:D}", ownerJwt, new { role = "commenter" });
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        using var member = JsonDocument.Parse(await changed.Content.ReadAsStringAsync(Cancellation));
+        Assert.Equal("commenter", member.RootElement.GetProperty("role").GetString());
+
+        var members = await SendAsync(HttpMethod.Get, $"/api/v1/workspaces/{PersonalWorkspace:D}/members", ownerJwt);
+        var body = await members.Content.ReadAsStringAsync(Cancellation);
+        Assert.Contains(Invitee.ToString("D"), body, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -454,6 +454,7 @@ builder.Services.AddOpenApi(options =>
             {
                 System.Text.Json.Nodes.JsonValue.Create("owner"),
                 System.Text.Json.Nodes.JsonValue.Create("editor"),
+                System.Text.Json.Nodes.JsonValue.Create("commenter"),
                 System.Text.Json.Nodes.JsonValue.Create("viewer"),
             };
         }

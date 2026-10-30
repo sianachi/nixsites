@@ -71,9 +71,9 @@ export function PeopleList(props: {
                   Owner
                 </option>
               ) : null}
-              {member.role === 'commenter' ? (
-                <option value="commenter" disabled>
-                  Commenter (legacy)
+              {member.assignableRoles.includes('commenter') || member.role === 'commenter' ? (
+                <option value="commenter" disabled={!member.assignableRoles.includes('commenter')}>
+                  Commenter
                 </option>
               ) : null}
               {member.assignableRoles.includes('editor') || member.role === 'editor' ? (

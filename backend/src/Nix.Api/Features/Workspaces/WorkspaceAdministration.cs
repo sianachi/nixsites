@@ -38,11 +38,11 @@ internal sealed record WorkspaceInvitationResponse(
 
 internal sealed record CreateWorkspaceInvitationRequest(
     Guid PrincipalId,
-    [property: AllowedValues("owner", "editor", "viewer")] string Role);
+    [property: AllowedValues("owner", "editor", "commenter", "viewer")] string Role);
 internal sealed record WorkspaceInviteeResponse(
     Guid PrincipalId, string DisplayName, string? Email, bool CanInvite, string? CannotInviteReason);
 internal sealed record ChangeWorkspaceMemberRoleRequest(
-    [property: AllowedValues("owner", "editor", "viewer")] string Role);
+    [property: AllowedValues("owner", "editor", "commenter", "viewer")] string Role);
 internal sealed record RecoverWorkspaceRequest(Guid NewOwnerPrincipalId);
 
 internal static class WorkspaceAdministrationRules
@@ -53,6 +53,7 @@ internal static class WorkspaceAdministrationRules
         {
             "owner" => "owner",
             "editor" => "editor",
+            "commenter" => "commenter",
             "viewer" => "viewer",
             _ => string.Empty,
         };

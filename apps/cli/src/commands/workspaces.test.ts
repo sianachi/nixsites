@@ -247,10 +247,10 @@ describe('workspace administration commands', () => {
     await profile.done();
   });
 
-  it('refuses commenter on the new CLI assignment surface before opening a session', async () => {
+  it('refuses an unknown role before opening a session', async () => {
     await expect(
-      inviteWorkspaceMember(undefined, WORKSPACE, PRINCIPAL, 'commenter', outputOptions(true)),
-    ).rejects.toThrow("Role must be 'owner', 'editor', or 'viewer'.");
+      inviteWorkspaceMember(undefined, WORKSPACE, PRINCIPAL, 'admin', outputOptions(true)),
+    ).rejects.toThrow("Role must be 'owner', 'editor', 'commenter', or 'viewer'.");
   });
 
   it('requires explicit acknowledgement for every destructive workspace command', async () => {

@@ -15364,6 +15364,7 @@
             "enum": [
               "owner",
               "editor",
+              "commenter",
               "viewer"
             ],
             "type": "string"
@@ -16444,6 +16445,7 @@
             "enum": [
               "owner",
               "editor",
+              "commenter",
               "viewer"
             ],
             "type": "string"

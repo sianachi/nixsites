@@ -77,7 +77,7 @@ import { toFailure } from './output.ts';
 import type { Session } from './session.ts';
 
 const identifier = z.uuid();
-const workspaceRole = z.enum(['owner', 'editor', 'viewer']);
+const workspaceRole = z.enum(['owner', 'editor', 'commenter', 'viewer']);
 const financeMonthInput = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const financeMoneyInput = z.number().refine((value) => Math.round(value * 100) === value * 100);
 const financeAccountInput = {
@@ -362,7 +362,8 @@ export async function createWorkspaceMcpServer(
   server.registerTool(
     'invite_workspace_member',
     {
-      description: 'Grant an existing Nix user provisional access as an owner, editor, or viewer.',
+      description:
+        'Grant an existing Nix user provisional access as an owner, editor, commenter (read and comment, no edits), or viewer.',
       inputSchema: {
         workspaceId: identifier,
         principalId: identifier,

@@ -3818,7 +3818,7 @@ export interface components {
     };
     ChangeWorkspaceMemberRoleRequest: {
       /** @enum {string} */
-      role: 'owner' | 'editor' | 'viewer';
+      role: 'owner' | 'editor' | 'commenter' | 'viewer';
     };
     ChartBucketResponse: {
       value: null | string;
@@ -4072,7 +4072,7 @@ export interface components {
       /** Format: uuid */
       principalId: string;
       /** @enum {string} */
-      role: 'owner' | 'editor' | 'viewer';
+      role: 'owner' | 'editor' | 'commenter' | 'viewer';
     };
     CreateWorkspaceRequest: {
       name: string;

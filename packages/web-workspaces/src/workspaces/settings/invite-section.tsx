@@ -74,6 +74,7 @@ export function InviteSection(props: {
         >
           {workspace.kind === 'shared' ? <option value="owner">Owner</option> : null}
           <option value="editor">Editor</option>
+          <option value="commenter">Commenter</option>
           <option value="viewer">Viewer</option>
         </Select>
         <Button type="submit" disabled={administration.working || picked === null}>
@@ -82,7 +83,7 @@ export function InviteSection(props: {
       </form>
       <Text variant="note" tone="muted">
         People who have signed in to Nix here can be invited. They see nothing in this workspace
-        until they accept.
+        until they accept. Commenter: can read and comment, not edit.
       </Text>
       {administration.inviteesStatus === 'partial' ? (
         <Text role="alert" tone="muted">

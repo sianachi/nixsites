@@ -438,8 +438,8 @@ public static class WorkspaceAdministrationSql
                  WHEN wm.subject_type <> 'principal' OR NOT authorized.can_manage
                    OR state.protected_owner OR state.last_owner OR state.provisional
                    THEN ARRAY[]::text[]
-                 WHEN authorized.personal_owner_principal_id IS NOT NULL THEN ARRAY['editor','viewer']::text[]
-                 ELSE ARRAY['owner','editor','viewer']::text[]
+                 WHEN authorized.personal_owner_principal_id IS NOT NULL THEN ARRAY['editor','commenter','viewer']::text[]
+                 ELSE ARRAY['owner','editor','commenter','viewer']::text[]
                END AS assignable_roles
         FROM workspace_member wm
         CROSS JOIN authorized

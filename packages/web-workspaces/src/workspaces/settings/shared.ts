@@ -1,7 +1,7 @@
 import type { useWorkspace } from '../workspace-context';
 import type { useWorkspaceAdministration } from '../use-workspace-administration';
 
-export type AssignableRole = 'owner' | 'editor' | 'viewer';
+export type AssignableRole = 'owner' | 'editor' | 'commenter' | 'viewer';
 export type Administration = ReturnType<typeof useWorkspaceAdministration>;
 export type CurrentWorkspace = ReturnType<typeof useWorkspace>['workspace'];
 

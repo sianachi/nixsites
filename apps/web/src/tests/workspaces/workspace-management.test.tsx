@@ -453,23 +453,23 @@ describe('workspace management', () => {
     expect(screen.queryByText('No invitation history yet.')).not.toBeInTheDocument();
   });
 
-  it('shows a legacy commenter without offering that role as a new assignment', async () => {
+  it('offers the commenter role for assignment and invitation', async () => {
     stubCoreApi({
       members: [
         {
           ...EDITOR_MEMBER,
           subjectDisplayName: 'Legacy commenter',
           role: 'commenter',
-          assignableRoles: ['editor', 'viewer'],
+          assignableRoles: ['editor', 'commenter', 'viewer'],
         },
       ],
     });
     renderAt(<App />, '/settings');
 
     const role = await screen.findByRole('combobox', { name: 'Role for Legacy commenter' });
-    expect(within(role).getByRole('option', { name: 'Commenter (legacy)' })).toBeDisabled();
+    expect(within(role).getByRole('option', { name: 'Commenter' })).toBeEnabled();
     // The invite form renders from its own request, so it can arrive after the member list.
-    expect(await screen.findByRole('combobox', { name: 'Role' })).not.toContainHTML('commenter');
+    expect(await screen.findByRole('combobox', { name: 'Role' })).toContainHTML('commenter');
   });
 
   it('remounts workspace-owned form, notice and confirmation state on a switch', async () => {

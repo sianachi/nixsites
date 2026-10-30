@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import type { AssignableRole } from './settings/shared';
 import { useWorkspace } from './workspace-context';
 
 type LoadStatus = 'loading' | 'ready' | 'partial' | 'error';
@@ -32,12 +33,9 @@ export interface WorkspaceAdministration {
   readonly working: boolean;
   readonly reload: () => void;
   readonly rename: (name: string) => Promise<boolean>;
-  readonly invite: (principalId: string, role: 'owner' | 'editor' | 'viewer') => Promise<boolean>;
+  readonly invite: (principalId: string, role: AssignableRole) => Promise<boolean>;
   readonly revokeInvitation: (invitationId: string) => Promise<boolean>;
-  readonly changeRole: (
-    principalId: string,
-    role: 'owner' | 'editor' | 'viewer',
-  ) => Promise<boolean>;
+  readonly changeRole: (principalId: string, role: AssignableRole) => Promise<boolean>;
   readonly removeMember: (principalId: string) => Promise<boolean>;
   readonly leave: () => Promise<boolean>;
   readonly archive: () => Promise<boolean>;
