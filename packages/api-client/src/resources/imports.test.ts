@@ -143,6 +143,7 @@ describe('the durable document import resource', () => {
 
   it('uploads through a capability, waits for RabbitMQ work, and verifies the plan', async () => {
     let uploaded = '';
+    let uploadType: string | null = null;
     server.use(
       http.post(testUrl('/api/v1/imports'), () =>
         HttpResponse.json({
@@ -155,6 +156,7 @@ describe('the durable document import resource', () => {
       ),
       http.put('http://localhost:9444/source', async ({ request }) => {
         uploaded = await request.text();
+        uploadType = request.headers.get('content-type');
         return new HttpResponse(null, { status: 200 });
       }),
       http.post(testUrl(`/api/v1/imports/${IMPORT_ID}/preview`), () =>
@@ -194,6 +196,7 @@ describe('the durable document import resource', () => {
     );
 
     expect(uploaded).toBe('hello');
+    expect(uploadType).toBe('application/octet-stream');
     expect(result.operation.status).toBe('preview_ready');
     expect(result.plan.items).toHaveLength(1);
   });
