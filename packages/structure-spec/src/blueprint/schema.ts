@@ -165,7 +165,8 @@ export const nodeSchema: z.ZodType<Node> = z.lazy(() =>
   z
     .object({
       id: z.string().regex(NODE_ID_PATTERN),
-      title: z.string().min(1).max(240),
+      // Empty is allowed: Core keeps an empty title, and the plan must not invent one.
+      title: z.string().max(240),
       why: z.string().max(200).optional(),
       fields: z.array(fieldSpecSchema).max(30).optional(),
       inherit: z.boolean().optional(),

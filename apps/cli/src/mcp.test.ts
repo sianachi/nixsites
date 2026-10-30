@@ -1478,6 +1478,21 @@ describe('nixctl mcp item and generic action tools', () => {
     }
   });
 
+  it('create_item keeps an empty title as given', async () => {
+    const { fetchImpl, calls } = stub(() => Response.json({ ...itemRow, title: '' }));
+    const connected = await connect('owner', fetchImpl);
+    try {
+      const result = await connected.client.callTool({
+        name: 'create_item',
+        arguments: { workspaceId: OTHER, title: '' },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(calls[0]?.body).toMatchObject({ title: '' });
+    } finally {
+      await connected.close();
+    }
+  });
+
   it('refuses credential and unknown operations without a request', async () => {
     const connected = await connect('owner', async () => unexpectedRequest());
     try {
