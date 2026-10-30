@@ -3,7 +3,11 @@ import { Readable } from 'node:stream';
 import { exportFileName, writeArchive, type ItemBundle } from '@nix/export';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-import { ContentPositionUnavailableError } from '../../export/assemble.ts';
+import {
+  ContentPositionUnavailableError,
+  readShape,
+  type BundleShape,
+} from '../../export/assemble.ts';
 import { STREAM_MEDIA_TYPE, writeBundleStream } from '../../export/ndjson.ts';
 import {
   prepareExport,
@@ -71,7 +75,13 @@ export function registerExportRoutes(app: FastifyInstance, deps: RouteDependenci
       expandEmbeds?: string;
       includeComments?: string;
       atSeq?: string;
+      shape?: string;
     };
+
+    const shape = readShape(query.shape ?? 'body');
+    if (shape === null) {
+      return problem(reply, 400, 'invalid_shape', "'shape' must be 'body' or 'render'.");
+    }
 
     // A pinned content position is for site builds, which read one page at a time.
     let atSeq: number | undefined;
@@ -97,6 +107,7 @@ export function registerExportRoutes(app: FastifyInstance, deps: RouteDependenci
       query.expandEmbeds === 'true',
       atSeq,
       query.includeComments === 'true',
+      shape,
     );
     if (prepared === null) {
       return reply;
@@ -150,6 +161,7 @@ async function establishExport(
   expandEmbeds = false,
   atSeq?: number,
   includeComments = false,
+  shape: BundleShape = 'body',
 ): Promise<PreparedExport | null> {
   const context = await establish(request, reply, deps);
   if (context === null) {
@@ -187,6 +199,7 @@ async function establishExport(
     includeDeleted: false,
     expandEmbeds,
     includeComments,
+    shape,
     atSeq,
     exportedAt,
   });

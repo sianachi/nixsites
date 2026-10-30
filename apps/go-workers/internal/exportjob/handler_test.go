@@ -27,7 +27,7 @@ func TestHandlerObtainsLeaseBoundCapabilitiesAndPublishesAnImmutableExport(t *te
 	const executionID = "exporter:execution"
 	root := "123e4567-e89b-12d3-a456-426614174000"
 	bundleStream := `{"format":"nix-archive","formatVersion":1,"schemaVersion":3,"exportedAt":"2026-08-31T00:00:00Z","root":"` + root + `","rootEffectiveSchema":null,"includesDeleted":false,"items":[{"id":"` + root + `","parentId":null,"seq":"1","title":"Title","type":"note"}],"omitted":[{"id":null,"parentId":"` + root + `","reason":"hidden","detail":"A child was unavailable."}],"loss":[{"itemId":"` + root + `","kind":"canvas","detail":"Canvas vectors were flattened."}]}` + "\n" +
-		`{"id":"` + root + `","parentId":null,"workspaceId":"workspace","type":"note","title":"Title","seq":"1","lifecycleState":"active","createdAt":"2026-08-31T00:00:00Z","updatedAt":"2026-08-31T00:00:00Z","properties":{},"schema":null,"views":null,"viewRows":[],"viewRowsTruncated":false,"body":{"schemaVersion":2,"prosemirror":{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Plan"}]},{"type":"paragraph","content":[{"type":"text","text":"Read "},{"type":"text","text":"carefully","marks":[{"type":"bold"}]},{"type":"image","attrs":{"src":"https://objects.example/diagram.png","alt":"Diagram","width":640,"height":480}}]},{"type":"details","content":[{"type":"detailsSummary","content":[{"type":"text","text":"More"}]},{"type":"detailsContent","content":[{"type":"paragraph","content":[{"type":"text","text":"Expanded"}]}]}]}]}}}` + "\n" +
+		`{"id":"` + root + `","parentId":null,"workspaceId":"workspace","type":"note","title":"Title","seq":"1","lifecycleState":"active","createdAt":"2026-08-31T00:00:00Z","updatedAt":"2026-08-31T00:00:00Z","properties":{},"schema":null,"views":null,"viewRows":[],"viewRowsTruncated":false,"body":null,"render":{"format":"nix-render","version":1,"blocks":[{"kind":"heading","level":2,"runs":[{"text":"Plan"}]},{"kind":"paragraph","runs":[{"text":"Read "},{"text":"carefully","styles":["bold"]}]},{"kind":"image","src":"https://objects.example/diagram.png","alt":"Diagram","width":640},{"kind":"details","summary":[{"text":"More"}],"blocks":[{"kind":"paragraph","runs":[{"text":"Expanded"}]}]}],"losses":[]}}` + "\n" +
 		`{"end":true,"items":1}` + "\n"
 	const imageID = "11111111-1111-4111-8111-111111111111"
 	var imageBytes bytes.Buffer
@@ -35,7 +35,7 @@ func TestHandlerObtainsLeaseBoundCapabilitiesAndPublishesAnImmutableExport(t *te
 		t.Fatal(err)
 	}
 	imageDigest := sha256.Sum256(imageBytes.Bytes())
-	bundleStream = strings.Replace(bundleStream, `"content":[{"type":"heading"`, `"content":[{"type":"image","attrs":{"fileItemId":"`+imageID+`","alt":"Uploaded diagram","width":240}},{"type":"heading"`, 1)
+	bundleStream = strings.Replace(bundleStream, `"blocks":[{"kind":"heading"`, `"blocks":[{"kind":"image","src":"","alt":"Uploaded diagram","file":"`+imageID+`","width":240},{"kind":"heading"`, 1)
 
 	uploaded := make(chan []byte, 1)
 	var server *httptest.Server

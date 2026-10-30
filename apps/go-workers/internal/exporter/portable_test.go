@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/nixarchive"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
@@ -22,13 +23,13 @@ func TestEveryViewHasReadableContentInEveryDocumentFormat(t *testing.T) {
 				Schema:   json.RawMessage(`{"properties":[{"key":"status","label":"Progress","type":"select","options":["Open","Done"]}]}`),
 				ViewRows: []json.RawMessage{json.RawMessage(`{"id":"child","title":"Finish report","properties":{"status":"Open","due_date":"2026-10-30","chat_text":"Saved reply","$chat_config":{"secret":"must not appear"}}}`)},
 			}
-			body, _, _, err := ProjectBundle(bundle, 1<<20, nil)
+			projected, err := ProjectBundle(bundle, 1<<20, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for _, format := range []string{"markdown", "docx", "pdf"} {
 				var output bytes.Buffer
-				if err := Write(format, []stream.Record{{ID: bundle.ID, Title: bundle.Title, Body: body}}, &output, stream.Limits{MaxBytes: 4 << 20, MaxLine: 1 << 20, MaxRecords: 1}); err != nil {
+				if err := Write(format, []stream.Record{{ID: bundle.ID, Title: bundle.Title, Blocks: projected.Blocks}}, &output, stream.Limits{MaxBytes: 4 << 20, MaxLine: 1 << 20, MaxRecords: 1}); err != nil {
 					t.Fatal(err)
 				}
 				text := output.String()
@@ -68,9 +69,10 @@ func TestPortableBodiesKeepSheetCanvasAndFutureContent(t *testing.T) {
 		{`{"schemaVersion":1,"canvas":{"elements":{"text":{"type":"text","text":"Launch plan","x":10},"gone":{"type":"text","text":"Deleted text","isDeleted":true}}}}`, "Launch plan"},
 		{`{"schemaVersion":99,"future":{"text":"Future content"}}`, "Future content"},
 	} {
-		output, losses, err := ProjectBody(json.RawMessage(test.body), true, 1<<20)
-		if err != nil || !strings.Contains(output, test.want) || len(losses) == 0 {
-			t.Fatalf("projection = %q, %v, %v", output, losses, err)
+		projected, err := ProjectBundle(nixarchive.Bundle{Body: json.RawMessage(test.body)}, 1<<20, nil)
+		output := render.Markdown(projected.Blocks)
+		if err != nil || !strings.Contains(output, test.want) || len(projected.Losses) == 0 {
+			t.Fatalf("projection = %q, %v, %v", output, projected.Losses, err)
 		}
 		if strings.Contains(output, "Deleted text") || strings.Contains(output, "not rendered") {
 			t.Fatal(output)
@@ -83,17 +85,19 @@ func TestPortableViewsKeepAllProvidedRowsAndStateUpstreamLimits(t *testing.T) {
 	for index := 0; index < 100; index++ {
 		bundle.ViewRows = append(bundle.ViewRows, json.RawMessage(fmt.Sprintf(`{"title":"Task %03d"}`, index)))
 	}
-	output, _, losses, err := ProjectBundle(bundle, 1<<20, nil)
-	if err != nil || !strings.Contains(output, "Task 099") || !strings.Contains(output, "incomplete") || len(losses) == 0 {
-		t.Fatalf("projection = %q, %v, %v", output, losses, err)
+	projected, err := ProjectBundle(bundle, 1<<20, nil)
+	output := render.Markdown(projected.Blocks)
+	if err != nil || !strings.Contains(output, "Task 099") || !strings.Contains(output, "incomplete") || len(projected.Losses) == 0 {
+		t.Fatalf("projection = %q, %v, %v", output, projected.Losses, err)
 	}
-	if _, _, _, err := ProjectBundle(bundle, 50, nil); err == nil {
+	if _, err := ProjectBundle(bundle, 50, nil); err == nil {
 		t.Fatal("accepted an oversized projection")
 	}
 }
 
 func TestPortableAttachmentsLinkToTheirOriginal(t *testing.T) {
-	output, _, _, err := ProjectBundle(nixarchive.Bundle{ID: "file-id", Type: "file", Title: "report.docx"}, 4096, nil)
+	projected, err := ProjectBundle(nixarchive.Bundle{ID: "file-id", Type: "file", Title: "report.docx"}, 4096, nil)
+	output := render.Markdown(projected.Blocks)
 	if err != nil || !strings.Contains(output, "[report.docx](nix://item/file-id)") {
 		t.Fatalf("projection = %q, %v", output, err)
 	}
@@ -105,7 +109,8 @@ func TestPortablePropertiesKeepExactDecimalText(t *testing.T) {
 		Views:    json.RawMessage(`{"views":[{"name":"Amounts","kind":"finance"}]}`),
 		ViewRows: []json.RawMessage{json.RawMessage(`{"title":"Transaction","properties":{"amount":9007199254740993.123456789}}`)},
 	}
-	output, _, _, err := ProjectBundle(bundle, 4096, nil)
+	projected, err := ProjectBundle(bundle, 4096, nil)
+	output := render.Markdown(projected.Blocks)
 	if err != nil || strings.Count(output, "9007199254740993.123456789") != 2 {
 		t.Fatalf("projection = %q, %v", output, err)
 	}
@@ -115,7 +120,8 @@ func TestPortableCommentsFollowTheBodyWithQuoteAuthorAndDate(t *testing.T) {
 	bundle := nixarchive.Bundle{
 		Comments: json.RawMessage(`[{"id":"t","quote":"the plan","resolved":true,"comments":[{"author":"Ada","body":"# Why?","createdAt":"2026-10-29T10:00:00Z"}]}]`),
 	}
-	output, _, _, err := ProjectBundle(bundle, 1<<20, nil)
+	projected, err := ProjectBundle(bundle, 1<<20, nil)
+	output := render.Markdown(projected.Blocks)
 	for _, want := range []string{"## Comments", "> the plan", "(Resolved)", "**Ada** · 2026-10-29", `\# Why?`} {
 		if err != nil || !strings.Contains(output, want) {
 			t.Fatalf("missing %q in %q (%v)", want, output, err)

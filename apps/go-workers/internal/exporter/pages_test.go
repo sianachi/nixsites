@@ -3,19 +3,16 @@ package exporter
 import (
 	"archive/zip"
 	"bytes"
-	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
+	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
 func TestExplicitPageBreakSurvivesBothPrintFormats(t *testing.T) {
-	body := []byte(`{"schemaVersion":4,"prosemirror":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"First page"}]},{"type":"pageBreak"},{"type":"paragraph","content":[{"type":"text","text":"Second page"}]}]}}`)
-	projected, _, err := ProjectBody(body, true, 1<<20)
-	if err != nil {
-		t.Fatal(err)
-	}
-	records := []stream.Record{{ID: "one", Title: "Pages", Body: projected}}
+	records := []stream.Record{{ID: "one", Title: "Pages", Blocks: []render.Block{render.Paragraph("First page"), {Kind: "pageBreak"}, render.Paragraph("Second page")}}}
 	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}
 	var pdf bytes.Buffer
 	if err := Write("pdf", records, &pdf, limits); err != nil {

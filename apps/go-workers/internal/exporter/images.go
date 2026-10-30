@@ -2,14 +2,13 @@ package exporter
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
-	"strings"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 	_ "golang.org/x/image/webp"
 )
@@ -17,72 +16,49 @@ import (
 // ImageLoader is supplied by the job host; projection itself has no network authority.
 type ImageLoader func(fileID string) ([]byte, error)
 
-// ProjectBodyWithImages preserves supported file images in a bounded per-record resource set.
-func ProjectBodyWithImages(body json.RawMessage, maximumBytes int, load ImageLoader) (string, []stream.Image, []string, error) {
-	if maximumBytes <= 0 {
-		return "", nil, nil, errors.New("prose projection limit must be positive")
-	}
+// loadImages fetches the raster for every image block that names a file item, within a bounded
+// per-record resource set, and points the block's source at the raster it got. A block whose
+// raster is unavailable keeps its description and records a loss.
+func loadImages(blocks []render.Block, load ImageLoader, losses *[]string) ([]stream.Image, error) {
 	if load == nil {
 		load = func(string) ([]byte, error) { return nil, errors.New("image loader unavailable") }
 	}
-	if len(body) == 0 || bytes.Equal(bytes.TrimSpace(body), []byte("null")) {
-		text, losses, err := ProjectBody(body, true, maximumBytes)
-		return text, nil, losses, err
-	}
-	decoded, err := decodeProseBody(body, proseAllocationLimit(len(body), maximumBytes))
-	if err != nil {
-		return "", nil, nil, err
-	}
-	if decoded.root == nil || decoded.schemaVersion < 1 {
-		text, losses, err := ProjectBody(body, true, maximumBytes)
-		return text, nil, losses, err
-	}
-	projection := proseProjection{markdown: true, writer: newProseWriter(maximumBytes), losses: make(map[string]struct{})}
 	var images []stream.Image
 	remaining := 32 << 20
-	var visit func(*proseNode) error
-	visit = func(node *proseNode) error {
-		if (node.Type == "image" || node.Type == "fileImage") && node.Attrs.fileID != "" {
-			if len(images) >= 64 || remaining <= 0 {
-				return stream.ErrLimitExceeded
-			}
-			data, err := load(node.Attrs.fileID)
-			if err == nil && len(data) > remaining {
-				return stream.ErrLimitExceeded
-			}
-			var raster stream.Image
-			if err == nil {
-				raster, err = validatedImage(data)
-			}
-			if err != nil {
-				projection.noteLoss("An unavailable or unsupported image was represented by its description.")
-				node.Attrs.source = ""
-			} else {
-				if len(raster.Data) > remaining {
-					return stream.ErrLimitExceeded
-				}
-				remaining -= len(raster.Data)
-				raster.Source = fmt.Sprintf("https://nix.invalid/export-image/%d/resource", len(images))
-				raster.Width = node.Attrs.width
-				node.Attrs.source = raster.Source
-				node.Attrs.dimensions = false
-				images = append(images, raster)
-			}
+	var failure error
+	render.Walk(blocks, func(block *render.Block) {
+		if failure != nil || block.Kind != "image" || block.File == "" {
+			return
 		}
-		for index := range node.Content {
-			if err := visit(&node.Content[index]); err != nil {
-				return err
-			}
+		if len(images) >= 64 || remaining <= 0 {
+			failure = stream.ErrLimitExceeded
+			return
 		}
-		return nil
-	}
-	if err := visit(decoded.root); err != nil {
-		return "", nil, nil, err
-	}
-	if err := projection.render(decoded.root, 0); err != nil {
-		return "", nil, nil, err
-	}
-	return strings.TrimSpace(projection.writer.String()), images, projection.lossList, nil
+		data, err := load(block.File)
+		if err == nil && len(data) > remaining {
+			failure = stream.ErrLimitExceeded
+			return
+		}
+		var raster stream.Image
+		if err == nil {
+			raster, err = validatedImage(data)
+		}
+		if err != nil {
+			appendLoss(losses, "An unavailable or unsupported image was represented by its description.")
+			block.Src = ""
+			return
+		}
+		if len(raster.Data) > remaining {
+			failure = stream.ErrLimitExceeded
+			return
+		}
+		remaining -= len(raster.Data)
+		raster.Source = fmt.Sprintf("https://nix.invalid/export-image/%d/resource", len(images))
+		raster.Width = block.Width
+		block.Src = raster.Source
+		images = append(images, raster)
+	})
+	return images, failure
 }
 
 func validatedImage(data []byte) (stream.Image, error) {
@@ -133,22 +109,4 @@ func imageSize(raster stream.Image, maxWidth, maxHeight float64) (float64, float
 		height = maxHeight
 	}
 	return width, height
-}
-
-// Projected block images may carry a quote or list prefix.
-func blockImage(value string) (string, string, bool) {
-	value = strings.TrimSpace(value)
-	for strings.HasPrefix(value, ">") {
-		value = strings.TrimSpace(strings.TrimPrefix(value, ">"))
-	}
-	if body, _, ok := markdownBullet(value); ok {
-		value = body
-	} else if body, _, ok := markdownOrdered(value); ok {
-		value = body
-	}
-	if !strings.HasPrefix(value, "![") {
-		return "", "", false
-	}
-	alt, target, rest, ok := markdownLink(value[1:])
-	return alt, target, ok && strings.TrimSpace(rest) == ""
 }

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 )
 
 var ErrLimitExceeded = errors.New("stream limit exceeded")
@@ -21,7 +23,10 @@ type Image struct {
 }
 
 type Record struct {
-	Images     []Image        `json:"-"`
+	Images []Image `json:"-"`
+	// Blocks is the body as a render tree, for the Markdown, DOCX and PDF writers. The archive and
+	// NDJSON formats carry Body as text and never see it.
+	Blocks     []render.Block `json:"-"`
 	ID         string         `json:"id"`
 	ParentID   string         `json:"parentId,omitempty"`
 	Title      string         `json:"title"`

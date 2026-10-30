@@ -10,6 +10,8 @@ import {
   type SchemaSnapshot,
   type ViewRowSnapshot,
   type ViewsSnapshot,
+  createLossReport,
+  renderDocument,
 } from '@nix/export';
 
 import {
@@ -454,6 +456,8 @@ export async function* streamBundles(input: {
   readonly resolveEmbeddedItem?: ((id: string) => Promise<CoreItem | null>) | undefined;
   /** Read each body as it stood after this log position instead of at the head. One item only. */
   readonly atSeq?: number | undefined;
+  /** How a prose body leaves: as itself, or reshaped for a converter that never sees the schema. */
+  readonly shape?: BundleShape | undefined;
 }): AsyncGenerator<ItemBundle> {
   const { sql, tenantId, items, metadata } = input;
 
@@ -474,6 +478,17 @@ export async function* streamBundles(input: {
     (await isLocked(source.id)) ? null : readBody(sql, tenantId, source, input.atSeq);
 
   for (const item of items) {
+    const body =
+      input.resolveEmbeddedItem === undefined
+        ? await readUnlocked(item)
+        : await expandEmbeddedSections(await readUnlocked(item), async (id) => {
+            const source = await input.resolveEmbeddedItem?.(id);
+            if (source?.type !== 'note' || source.lifecycleState !== 'active') return null;
+            // An embedded section is the source's body copied into this one, so a locked source
+            // stays out exactly as it would on its own.
+            const body = await readUnlocked(source);
+            return body === null ? null : { title: source.title, body };
+          });
     yield {
       id: item.id,
       parentId: item.parentId,
@@ -492,19 +507,32 @@ export async function* streamBundles(input: {
       ...(metadata.comments?.get(item.id)
         ? { comments: metadata.comments.get(item.id) ?? [] }
         : {}),
-      body:
-        input.resolveEmbeddedItem === undefined
-          ? await readUnlocked(item)
-          : await expandEmbeddedSections(await readUnlocked(item), async (id) => {
-              const source = await input.resolveEmbeddedItem?.(id);
-              if (source?.type !== 'note' || source.lifecycleState !== 'active') return null;
-              // An embedded section is the source's body copied into this one, so a locked source
-              // stays out exactly as it would on its own.
-              const body = await readUnlocked(source);
-              return body === null ? null : { title: source.title, body };
-            }),
+      ...reshape(item.id, body, input.shape ?? 'body'),
     };
   }
+}
+
+export type BundleShape = 'body' | 'render';
+
+/** Whether a query-string shape is one this service serves. */
+export function readShape(value: unknown): BundleShape | null {
+  return value === 'body' || value === 'render' ? value : null;
+}
+
+/**
+ * A prose body in the shape the reader asked for. Sheets, canvases and absent bodies are passed
+ * through: only a document has a presentation to reshape, and `body: null` keeps meaning "never
+ * opened" rather than "could not be drawn" (that is a loss, and it is reported as one).
+ */
+export function reshape(
+  itemId: string,
+  body: ItemBundle['body'],
+  shape: BundleShape,
+): Pick<ItemBundle, 'body' | 'render' | 'bodyLosses'> {
+  if (shape === 'body' || body === null || !('prosemirror' in body)) return { body };
+  const report = createLossReport();
+  const render = renderDocument(body.prosemirror, { itemId, report });
+  return { body: null, render, bodyLosses: report.entries().map((entry) => entry.detail) };
 }
 
 /**

@@ -6,6 +6,8 @@
  * bodies, and stream them, without opening a single one.
  */
 
+import type { RenderDocument } from './render.js';
+
 /** What a `.nix` file says it is. A reader that finds anything else should refuse it. */
 export const ARCHIVE_FORMAT = 'nix-archive';
 
@@ -385,6 +387,15 @@ export interface ItemBundle {
 
   /** Its own document body, or null when it has never been opened. */
   readonly body: ItemBody | null;
+
+  /**
+   * The body as a `nix-render` tree instead of ProseMirror, when the reader asked for that shape
+   * (`?shape=render`): a converter that never sees the schema. Only a prose body is reshaped;
+   * sheets and canvases keep `body`.
+   */
+  readonly render?: RenderDocument | null;
+  /** What reshaping the body could not carry, as sentences. */
+  readonly bodyLosses?: readonly string[];
 
   /** Comment threads, present only when the export asked for them and the caller could read them. */
   readonly comments?: readonly CommentThreadSnapshot[];

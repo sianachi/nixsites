@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
@@ -77,11 +78,11 @@ func writeMarkdown(output io.Writer, next RecordSource, limits stream.Limits, re
 		if record.Title == "" {
 			return errors.New("export record title is required")
 		}
-		title, _ := ProjectTitle(record.Title, true)
-		if _, err := io.WriteString(limited, "# "+title+"\n\n"); err != nil {
+		title, _ := ProjectTitle(record.Title)
+		if _, err := io.WriteString(limited, "# "+escapeMarkdownTitle(title)+"\n\n"); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(limited, strings.TrimSpace(sanitizeText(markdownImages(record)))); err != nil {
+		if _, err := io.WriteString(limited, markdownImages(record, render.Markdown(blocksOf(record)))); err != nil {
 			return err
 		}
 		_, err := io.WriteString(limited, "\n\n")
@@ -91,6 +92,15 @@ func writeMarkdown(output io.Writer, next RecordSource, limits stream.Limits, re
 		return err
 	}
 	return limited.err
+}
+
+// blocksOf is the record's tree, or its plain-text body as one paragraph for the NDJSON-fed
+// internal endpoint, which carries text only.
+func blocksOf(record stream.Record) []render.Block {
+	if record.Blocks == nil && record.Body != "" {
+		return []render.Block{render.Paragraph(record.Body)}
+	}
+	return record.Blocks
 }
 
 func eachRecord(next RecordSource, maximum int, consume func(stream.Record) error, limited *limitedWriter) error {
@@ -208,10 +218,22 @@ func nullable(value string) any {
 	return value
 }
 
-func markdownImages(record stream.Record) string {
+// markdownImages embeds each loaded raster as a data URL where the tree pointed at it.
+func markdownImages(record stream.Record, markdown string) string {
 	replacements := make([]string, 0, len(record.Images)*2)
 	for _, raster := range record.Images {
 		replacements = append(replacements, raster.Source, "data:image/"+raster.Format+";base64,"+base64.StdEncoding.EncodeToString(raster.Data))
 	}
-	return strings.NewReplacer(replacements...).Replace(record.Body)
+	return strings.NewReplacer(replacements...).Replace(markdown)
+}
+
+func escapeMarkdownTitle(title string) string {
+	var output strings.Builder
+	for _, character := range title {
+		if strings.ContainsRune("\\`*_[]<|~#", character) {
+			output.WriteByte('\\')
+		}
+		output.WriteRune(character)
+	}
+	return output.String()
 }

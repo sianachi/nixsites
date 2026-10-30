@@ -18,6 +18,7 @@ import (
 	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
 	"github.com/sianachi/Nix/apps/go-workers/internal/nixarchive"
 	"github.com/sianachi/Nix/apps/go-workers/internal/objecttransfer"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
 	"github.com/sianachi/Nix/apps/go-workers/internal/worktemp"
@@ -344,41 +345,55 @@ func recordSource(ctx context.Context, input *nixarchive.BundleStream, format st
 		if !ok {
 			return stream.Record{}, false, nil
 		}
-		var body string
-		var observed []string
-		var images []stream.Image
 		var loader exporter.ImageLoader
 		if len(loaders) > 0 {
 			loader = loaders[0]
 		}
-		body, images, observed, err = exporter.ProjectBundle(bundle, maximumBodyBytes, loader)
+		projected, err := exporter.ProjectBundle(bundle, maximumBodyBytes, loader)
 		if err != nil {
 			return stream.Record{}, false, err
 		}
-		for _, loss := range observed {
+		for _, loss := range projected.Losses {
 			appendUnique(losses, loss)
 		}
-		if format != "markdown" && strings.Count(body, "![") > len(images) {
+		images, details, pageBreaks := 0, false, false
+		render.Walk(projected.Blocks, func(block *render.Block) {
+			switch block.Kind {
+			case "image":
+				images++
+			case "details":
+				details = true
+			case "pageBreak":
+				pageBreaks = true
+			}
+		})
+		if format != "markdown" && images > len(projected.Images) {
 			appendUnique(losses, "Images are linked or described rather than embedded in the converted document.")
 		}
-		if format != "markdown" && strings.Contains(body, "<details") {
+		if format != "markdown" && details {
 			appendUnique(losses, "Collapsible sections were expanded into always-visible document content.")
 		}
-		if format == "markdown" && len(images) > 0 {
+		if format == "markdown" && len(projected.Images) > 0 {
 			appendUnique(losses, "Embedded images use data URLs, which some Markdown readers do not display; saved image widths are not preserved.")
 		}
-		if format == "markdown" && strings.Contains(body, "<!-- nix-page-break -->") {
+		if format == "markdown" && pageBreaks {
 			appendUnique(losses, "Explicit page breaks are represented by markers in Markdown; page layout is not preserved.")
 		}
-		if _, titleLoss := exporter.ProjectTitle(bundle.Title, format == "markdown"); titleLoss {
+		if _, titleLoss := exporter.ProjectTitle(bundle.Title); titleLoss {
 			appendUnique(losses, "Title control characters or line breaks were removed in the converted document.")
 		}
-		if format == "pdf" && (exporter.PDFTextRequiresSubstitution(bundle.Title) || exporter.PDFTextRequiresSubstitution(body)) {
-			appendUnique(losses, "Characters not supported by the embedded PDF font were replaced in the PDF output.")
+		if format == "pdf" {
+			substituted := exporter.PDFTextRequiresSubstitution(bundle.Title)
+			render.Walk(projected.Blocks, func(block *render.Block) {
+				substituted = substituted || exporter.PDFTextRequiresSubstitution(render.Plain(block.Runs)+block.Text)
+			})
+			if substituted {
+				appendUnique(losses, "Characters not supported by the embedded PDF font were replaced in the PDF output.")
+			}
 		}
 		return stream.Record{
 			ID: bundle.ID, ParentID: pointerValue(bundle.ParentID), Title: bundle.Title,
-			Body: body, Properties: bundle.Properties, Images: images,
+			Blocks: projected.Blocks, Properties: bundle.Properties, Images: projected.Images,
 		}, true, nil
 	}
 }

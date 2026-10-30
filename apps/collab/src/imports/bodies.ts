@@ -1,5 +1,5 @@
 import { SCHEMA_VERSION } from '@nix/editor-schema';
-import type { ItemBody } from '@nix/export';
+import { documentFromRender, parseRenderDocument, type ItemBody } from '@nix/export';
 import { markdownToDocument } from '@nix/markdown';
 import type { Pool } from 'pg';
 
@@ -17,9 +17,10 @@ export interface ImportBodyService {
 }
 
 interface PlannedBody {
-  readonly encoding: 'markdown' | 'plain_text' | 'prosemirror' | 'archive';
+  readonly encoding: 'markdown' | 'plain_text' | 'nix-render' | 'archive';
   readonly text?: string;
-  readonly document?: unknown;
+  /** A `nix-render` tree (packages/export): the only document shape a worker may post. */
+  readonly render?: unknown;
   readonly archive?: unknown;
 }
 
@@ -117,7 +118,7 @@ function parseWrites(value: unknown): readonly PlannedWrite[] {
     if (
       encoding !== 'markdown' &&
       encoding !== 'plain_text' &&
-      encoding !== 'prosemirror' &&
+      encoding !== 'nix-render' &&
       encoding !== 'archive'
     ) {
       throw invalid('An imported body uses an unsupported encoding.');
@@ -125,7 +126,7 @@ function parseWrites(value: unknown): readonly PlannedWrite[] {
     if (
       ((encoding === 'markdown' || encoding === 'plain_text') &&
         typeof candidate.body.text !== 'string') ||
-      (encoding === 'prosemirror' && !isRecord(candidate.body.document)) ||
+      (encoding === 'nix-render' && !isRecord(candidate.body.render)) ||
       (encoding === 'archive' && !isRecord(candidate.body.archive))
     ) {
       throw invalid('An imported body does not contain its declared representation.');
@@ -135,7 +136,7 @@ function parseWrites(value: unknown): readonly PlannedWrite[] {
       body: {
         encoding,
         ...(typeof candidate.body.text === 'string' ? { text: candidate.body.text } : {}),
-        ...(isRecord(candidate.body.document) ? { document: candidate.body.document } : {}),
+        ...(isRecord(candidate.body.render) ? { render: candidate.body.render } : {}),
         ...(isRecord(candidate.body.archive) ? { archive: candidate.body.archive } : {}),
       },
     };
@@ -149,8 +150,16 @@ function materializeBody(item: ImportBodyAuthorizationItem, body: PlannedBody): 
   if (item.itemType === 'canvas' || item.itemType === 'sheet' || item.itemType === 'spreadsheet') {
     throw invalid('Only native archive bodies can initialize this item type.');
   }
-  if (body.encoding === 'prosemirror') {
-    return { schemaVersion: SCHEMA_VERSION, prosemirror: body.document };
+  if (body.encoding === 'nix-render') {
+    const render = parseRenderDocument(body.render);
+    if (render === null) {
+      throw new ImportBodyError(
+        422,
+        'import_body_invalid',
+        'The render tree is not a nix-render v1 document.',
+      );
+    }
+    return { schemaVersion: SCHEMA_VERSION, prosemirror: documentFromRender(render) };
   }
   if (body.encoding === 'markdown') {
     const parsed = markdownToDocument(body.text ?? '');

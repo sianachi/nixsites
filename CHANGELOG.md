@@ -63,6 +63,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- PDF, DOCX and Markdown exports and DOCX imports go through a presentation tree (`nix-render`)
+  that the collaboration server produces from the document. The export worker no longer reads the
+  editor's document format, so a new block type cannot silently degrade an export; a tree the worker
+  cannot read fails the export instead. Headings below level three now import from DOCX as
+  headings. (#273)
 - With an Anthropic or OpenRouter key, the companion keeps the last 12 turns of a conversation
   instead of the last 32 messages, so one request that runs many tools no longer makes it forget
   everything before it, and its prompt is cached, so later steps and replies cost less and start

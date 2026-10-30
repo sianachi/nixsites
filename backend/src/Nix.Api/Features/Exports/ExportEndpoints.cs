@@ -322,6 +322,7 @@ internal static class ExportEndpoints
             $"documents/{payload.ItemId:D}/bundles?scope={Uri.EscapeDataString(payload.Scope)}"
             + $"&exportedAt={Uri.EscapeDataString(job.CreatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}"
             + (payload.Format is "pdf" or "docx" ? "&expandEmbeds=true" : string.Empty)
+            + (payload.Format is "pdf" or "docx" or "markdown" ? "&shape=render" : string.Empty)
             + (payload.IncludeComments ? "&includeComments=true" : string.Empty));
         var bearer = tokens.MintWorkerExecution(
             scoped.PrincipalId,

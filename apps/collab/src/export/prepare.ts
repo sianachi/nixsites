@@ -11,6 +11,7 @@ import {
   gatherMetadata,
   streamBundles,
   type ExportScope,
+  type BundleShape,
 } from './assemble.ts';
 
 /**
@@ -54,6 +55,7 @@ export interface PrepareRequest {
   readonly includeDeleted: boolean;
   readonly expandEmbeds?: boolean | undefined;
   readonly includeComments?: boolean | undefined;
+  readonly shape?: BundleShape | undefined;
 
   /** Read the body at this content position; only meaningful for `scope: 'item'`. */
   readonly atSeq?: number | undefined;
@@ -120,6 +122,7 @@ export async function prepareExport(request: PrepareRequest): Promise<PreparedEx
         items: tree.items,
         metadata,
         atSeq: request.atSeq,
+        shape: request.shape,
         resolveEmbeddedItem:
           request.expandEmbeds === true
             ? async (id) => {

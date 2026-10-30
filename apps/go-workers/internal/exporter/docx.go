@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 	"github.com/sianachi/Nix/apps/go-workers/internal/worktemp"
 )
@@ -55,12 +56,12 @@ func writeDOCX(output io.Writer, next RecordSource, limits stream.Limits, report
 			return errors.New("export record title is required")
 		}
 		records++
-		title, _ := ProjectTitle(record.Title, false)
-		if err := writeDOCXParagraph(document, title, docxParagraph{style: "Title", pageBreakBefore: records > 1}); err != nil {
+		title, _ := ProjectTitle(record.Title)
+		if err := writeDOCXParagraph(document, []render.Run{{Text: title}}, docxParagraph{style: "Title", pageBreakBefore: records > 1}); err != nil {
 			return err
 		}
-		// Flush each note's prose and images without retaining image bytes across records.
-		if err := writeDOCXMarkdownImages(document, record, func(raster stream.Image, alt string) error {
+		// Flush each note's blocks and images without retaining image bytes across records.
+		if err := writeDOCXBlocks(document, record, blocksOf(record), docxParagraph{}, func(raster stream.Image, alt string) error {
 			imageID++
 			name := fmt.Sprintf("media/image%d.%s", imageID, raster.Format)
 			rel := fmt.Sprintf("rImage%d", imageID)
@@ -142,10 +143,9 @@ type docxParagraph struct {
 	numbering       int
 	level           int
 	pageBreakBefore bool
-	plain           bool
 }
 
-func writeDOCXParagraph(output io.Writer, text string, options docxParagraph) error {
+func writeDOCXParagraph(output io.Writer, runs []render.Run, options docxParagraph) error {
 	if _, err := io.WriteString(output, `<w:p>`); err != nil {
 		return err
 	}
@@ -173,199 +173,11 @@ func writeDOCXParagraph(output io.Writer, text string, options docxParagraph) er
 			return err
 		}
 	}
-	if options.plain {
-		if err := writeDOCXRun(output, text, inlineStyle{}); err != nil {
-			return err
-		}
-	} else if err := writeDOCXInline(output, text, 0, inlineStyle{}); err != nil {
+	if err := writeDOCXRuns(output, runs); err != nil {
 		return err
 	}
 	_, err := io.WriteString(output, `</w:p>`)
 	return err
-}
-
-func writeDOCXMarkdown(output io.Writer, markdown string) error {
-	lines := strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n")
-	inCode := false
-	for index := 0; index < len(lines); index++ {
-		line := strings.TrimSuffix(lines[index], "\r")
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") {
-			inCode = !inCode
-			continue
-		}
-		if inCode {
-			if err := writeDOCXParagraph(output, sanitizeText(line), docxParagraph{style: "Code", plain: true}); err != nil {
-				return err
-			}
-			continue
-		}
-		if trimmed == "<!-- nix-page-break -->" {
-			if _, err := io.WriteString(output, `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`); err != nil {
-				return err
-			}
-			continue
-		}
-		if trimmed == "" || trimmed == "<details>" || strings.HasPrefix(trimmed, `<details data-toggle-level=`) || trimmed == "</details>" {
-			continue
-		}
-		if strings.HasPrefix(trimmed, "<summary>") && strings.HasSuffix(trimmed, "</summary>") {
-			trimmed = strings.TrimSuffix(strings.TrimPrefix(trimmed, "<summary>"), "</summary>")
-			if err := writeDOCXParagraph(output, trimmed, docxParagraph{style: "Heading3"}); err != nil {
-				return err
-			}
-			continue
-		}
-		if index+1 < len(lines) && strings.Contains(line, "|") && tableSeparator(lines[index+1]) {
-			end := index + 2
-			for end < len(lines) && strings.Contains(lines[end], "|") && strings.TrimSpace(lines[end]) != "" {
-				end++
-			}
-			if err := writeDOCXTable(output, append([]string{line}, lines[index+2:end]...)); err != nil {
-				return err
-			}
-			index = end - 1
-			continue
-		}
-		if level, body, ok := markdownHeading(line); ok {
-			if err := writeDOCXParagraph(output, body, docxParagraph{style: "Heading" + strconv.Itoa(min(level, 3))}); err != nil {
-				return err
-			}
-			continue
-		}
-		if body, level, ok := markdownBullet(line); ok {
-			if err := writeDOCXParagraph(output, body, docxParagraph{numbering: 1, level: level}); err != nil {
-				return err
-			}
-			continue
-		}
-		if body, level, ok := markdownOrdered(line); ok {
-			if err := writeDOCXParagraph(output, body, docxParagraph{numbering: 2, level: level}); err != nil {
-				return err
-			}
-			continue
-		}
-		if strings.HasPrefix(trimmed, ">") {
-			body := strings.TrimSpace(strings.TrimPrefix(trimmed, ">"))
-			if err := writeDOCXParagraph(output, body, docxParagraph{style: "Quote"}); err != nil {
-				return err
-			}
-			continue
-		}
-		if trimmed == "---" || trimmed == "***" {
-			if err := writeDOCXParagraph(output, "", docxParagraph{}); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := writeDOCXParagraph(output, line, docxParagraph{}); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func writeDOCXTable(output io.Writer, rows []string) error {
-	if _, err := io.WriteString(output, `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>`); err != nil {
-		return err
-	}
-	for _, row := range rows {
-		if _, err := io.WriteString(output, `<w:tr>`); err != nil {
-			return err
-		}
-		for _, cell := range splitTableRow(row) {
-			if _, err := io.WriteString(output, `<w:tc>`); err != nil {
-				return err
-			}
-			if err := writeDOCXParagraph(output, cell, docxParagraph{}); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(output, `</w:tc>`); err != nil {
-				return err
-			}
-		}
-		if _, err := io.WriteString(output, `</w:tr>`); err != nil {
-			return err
-		}
-	}
-	_, err := io.WriteString(output, `</w:tbl>`)
-	return err
-}
-
-type inlineStyle struct {
-	bold, italic, strike, code bool
-}
-
-func writeDOCXInline(output io.Writer, value string, depth int, style inlineStyle) error {
-	if depth > 8 {
-		return writeDOCXRun(output, unescapeMarkdown(value), style)
-	}
-	for len(value) > 0 {
-		if value[0] == '\\' && len(value) > 1 {
-			if err := writeDOCXRun(output, value[1:2], style); err != nil {
-				return err
-			}
-			value = value[2:]
-			continue
-		}
-		if strings.HasPrefix(value, "![") {
-			if label, target, rest, ok := markdownLink(value[1:]); ok {
-				if err := writeDOCXLink(output, "Image: "+label, target, style); err != nil {
-					return err
-				}
-				value = rest
-				continue
-			}
-		}
-		if value[0] == '[' {
-			if label, target, rest, ok := markdownLink(value); ok {
-				if err := writeDOCXLink(output, label, target, style); err != nil {
-					return err
-				}
-				value = rest
-				continue
-			}
-		}
-		matched := false
-		for _, mark := range []struct {
-			token string
-			apply func(*inlineStyle)
-		}{
-			{"**", func(next *inlineStyle) { next.bold = true }},
-			{"~~", func(next *inlineStyle) { next.strike = true }},
-			{"*", func(next *inlineStyle) { next.italic = true }},
-			{"`", func(next *inlineStyle) { next.code = true }},
-		} {
-			if !strings.HasPrefix(value, mark.token) {
-				continue
-			}
-			end := strings.Index(value[len(mark.token):], mark.token)
-			if end < 0 {
-				continue
-			}
-			end += len(mark.token)
-			nextStyle := style
-			mark.apply(&nextStyle)
-			if err := writeDOCXInline(output, value[len(mark.token):end], depth+1, nextStyle); err != nil {
-				return err
-			}
-			value = value[end+len(mark.token):]
-			matched = true
-			break
-		}
-		if matched {
-			continue
-		}
-		next := nextMarkdownToken(value)
-		if next == 0 {
-			next = len(value)
-		}
-		if err := writeDOCXRun(output, unescapeMarkdown(value[:next]), style); err != nil {
-			return err
-		}
-		value = value[next:]
-	}
-	return nil
 }
 
 func writeDOCXRun(output io.Writer, value string, style inlineStyle) error {
@@ -376,7 +188,7 @@ func writeDOCXRun(output io.Writer, value string, style inlineStyle) error {
 	if _, err := io.WriteString(output, `<w:r>`); err != nil {
 		return err
 	}
-	if style.bold || style.italic || style.strike || style.code {
+	if style.bold || style.italic || style.strike || style.code || style.underline || style.highlight {
 		if _, err := io.WriteString(output, `<w:rPr>`); err != nil {
 			return err
 		}
@@ -395,6 +207,16 @@ func writeDOCXRun(output io.Writer, value string, style inlineStyle) error {
 				return err
 			}
 		}
+		if style.underline {
+			if _, err := io.WriteString(output, `<w:u w:val="single"/>`); err != nil {
+				return err
+			}
+		}
+		if style.highlight {
+			if _, err := io.WriteString(output, `<w:highlight w:val="yellow"/>`); err != nil {
+				return err
+			}
+		}
 		if style.code {
 			if _, err := io.WriteString(output, `<w:shd w:val="clear" w:fill="EDEDED"/>`); err != nil {
 				return err
@@ -410,13 +232,13 @@ func writeDOCXRun(output io.Writer, value string, style inlineStyle) error {
 
 func writeDOCXLink(output io.Writer, label, target string, style inlineStyle) error {
 	if !safeDocumentLink(target) {
-		return writeDOCXRun(output, unescapeMarkdown(label), style)
+		return writeDOCXRun(output, label, style)
 	}
 	instruction := html.EscapeString(` HYPERLINK "` + target + `" `)
 	if _, err := io.WriteString(output, `<w:fldSimple w:instr="`+instruction+`">`); err != nil {
 		return err
 	}
-	if err := writeDOCXRun(output, unescapeMarkdown(label), style); err != nil {
+	if err := writeDOCXRun(output, label, style); err != nil {
 		return err
 	}
 	_, err := io.WriteString(output, `</w:fldSimple>`)
@@ -434,217 +256,168 @@ func safeDocumentLink(raw string) bool {
 	return oneOf(strings.ToLower(parsed.Scheme), "http", "https", "mailto", "nix")
 }
 
-func markdownLink(value string) (string, string, string, bool) {
-	if !strings.HasPrefix(value, "[") {
-		return "", "", value, false
-	}
-	closeLabel := -1
-	for index := 1; index+1 < len(value); index++ {
-		if value[index] == '\\' && index+1 < len(value) {
-			index++
-			continue
-		}
-		if value[index] == ']' && value[index+1] == '(' {
-			closeLabel = index
-			break
-		}
-	}
-	if closeLabel < 1 {
-		return "", "", value, false
-	}
-	targetStart := closeLabel + 2
-	closeTarget := -1
-	inAngle, inTitle := false, false
-	for index := targetStart; index < len(value); index++ {
-		if value[index] == '\\' && index+1 < len(value) {
-			index++
-			continue
-		}
-		switch value[index] {
-		case '<':
-			if !inTitle {
-				inAngle = true
-			}
-		case '>':
-			if !inTitle {
-				inAngle = false
-			}
-		case '"':
-			if !inAngle {
-				inTitle = !inTitle
-			}
-		case ')':
-			if !inAngle && !inTitle {
-				closeTarget = index
-			}
-		}
-		if closeTarget >= 0 {
-			break
-		}
-	}
-	if closeTarget < 0 {
-		return "", "", value, false
-	}
-	rawTarget := strings.TrimSpace(value[targetStart:closeTarget])
-	if rawTarget == "" {
-		return "", "", value, false
-	}
-	if rawTarget[0] == '<' {
-		end := -1
-		for index := 1; index < len(rawTarget); index++ {
-			if rawTarget[index] == '\\' && index+1 < len(rawTarget) {
-				index++
-				continue
-			}
-			if rawTarget[index] == '>' {
-				end = index
-				break
-			}
-		}
-		if end < 0 {
-			return "", "", value, false
-		}
-		rawTarget = rawTarget[1:end]
-	} else {
-		for index := 0; index < len(rawTarget); index++ {
-			if rawTarget[index] == '\\' && index+1 < len(rawTarget) {
-				index++
-				continue
-			}
-			if rawTarget[index] == ' ' || rawTarget[index] == '\t' {
-				rawTarget = rawTarget[:index]
-				break
-			}
-		}
-	}
-	return value[1:closeLabel], unescapeMarkdown(rawTarget), value[closeTarget+1:], true
-}
-
-func nextMarkdownToken(value string) int {
-	for index := 1; index < len(value); index++ {
-		if strings.ContainsRune(`\\*![`+"`~", rune(value[index])) {
-			return index
-		}
-	}
-	return 0
-}
-
-func unescapeMarkdown(value string) string {
-	var output strings.Builder
-	output.Grow(len(value))
-	for index := 0; index < len(value); index++ {
-		if value[index] == '\\' && index+1 < len(value) {
-			index++
-		}
-		output.WriteByte(value[index])
-	}
-	return output.String()
-}
-
-func markdownHeading(line string) (int, string, bool) {
-	trimmed := strings.TrimLeft(line, " \t")
-	level := 0
-	for level < len(trimmed) && level < 6 && trimmed[level] == '#' {
-		level++
-	}
-	if level == 0 || level >= len(trimmed) || trimmed[level] != ' ' {
-		return 0, "", false
-	}
-	return level, strings.TrimSpace(trimmed[level+1:]), true
-}
-
-func markdownBullet(line string) (string, int, bool) {
-	trimmed := strings.TrimLeft(line, " \t")
-	indent := len(line) - len(trimmed)
-	if len(trimmed) < 2 || !strings.ContainsRune("-*+", rune(trimmed[0])) || trimmed[1] != ' ' {
-		return "", 0, false
-	}
-	return strings.TrimSpace(trimmed[2:]), min(indent/2, 8), true
-}
-
-func markdownOrdered(line string) (string, int, bool) {
-	trimmed := strings.TrimLeft(line, " \t")
-	indent := len(line) - len(trimmed)
-	index := 0
-	for index < len(trimmed) && trimmed[index] >= '0' && trimmed[index] <= '9' {
-		index++
-	}
-	if index == 0 || index+1 >= len(trimmed) || trimmed[index] != '.' || trimmed[index+1] != ' ' {
-		return "", 0, false
-	}
-	return strings.TrimSpace(trimmed[index+2:]), min(indent/2, 8), true
-}
-
-func tableSeparator(line string) bool {
-	cells := splitTableRow(line)
-	if len(cells) == 0 {
-		return false
-	}
-	for _, cell := range cells {
-		cell = strings.Trim(strings.TrimSpace(cell), ":")
-		if len(cell) < 3 || strings.Trim(cell, "-") != "" {
-			return false
-		}
-	}
-	return true
-}
-
-func splitTableRow(line string) []string {
-	line = strings.TrimSpace(line)
-	line = strings.TrimPrefix(line, "|")
-	line = strings.TrimSuffix(line, "|")
-	var cells []string
-	start := 0
-	escaped := false
-	for index := 0; index < len(line); index++ {
-		if escaped {
-			escaped = false
-			continue
-		}
-		if line[index] == '\\' {
-			escaped = true
-			continue
-		}
-		if line[index] == '|' {
-			cells = append(cells, strings.TrimSpace(unescapeMarkdown(line[start:index])))
-			start = index + 1
-		}
-	}
-	cells = append(cells, strings.TrimSpace(unescapeMarkdown(line[start:])))
-	return cells
-}
-
-func writeDOCXMarkdownImages(output io.Writer, record stream.Record, embed func(stream.Image, string) error) error {
-	// Images are block nodes. Keep intervening Markdown together so tables and lists still parse.
-	var pending strings.Builder
-	flush := func() error { err := writeDOCXMarkdown(output, pending.String()); pending.Reset(); return err }
-	for _, line := range strings.Split(record.Body, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if alt, target, ok := blockImage(trimmed); ok {
-			if raster := recordImage(record, target); ok && raster != nil {
-				if pending.Len() > 0 {
-					if err := flush(); err != nil {
-						return err
-					}
-				}
-				if err := embed(*raster, unescapeMarkdown(alt)); err != nil {
-					return err
-				}
-				continue
-			}
-		}
-		pending.WriteString(line)
-		pending.WriteByte('\n')
-	}
-	if pending.Len() > 0 {
-		return flush()
-	}
-	return nil
-}
-
 func writeDOCXImage(output io.Writer, raster stream.Image, alt, rel string, id int) error {
 	width, height := imageSize(raster, 468, 648)
 	cx, cy := int64(width*12700), int64(height*12700)
 	_, err := fmt.Fprintf(output, `<w:p><w:r><w:drawing><wp:inline><wp:extent cx="%d" cy="%d"/><wp:docPr id="%d" name="Image %d" descr="%s"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="%d" name="Image %d"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="%s"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`, cx, cy, id, id, html.EscapeString(alt), id, id, rel, cx, cy)
+	return err
+}
+
+type inlineStyle struct {
+	bold, italic, strike, code, underline, highlight bool
+}
+
+func styleOf(run render.Run) inlineStyle {
+	return inlineStyle{
+		bold: run.Has("bold"), italic: run.Has("italic"), strike: run.Has("strike"),
+		code: run.Has("code"), underline: run.Has("underline"), highlight: run.Has("highlight"),
+	}
+}
+
+func writeDOCXRuns(output io.Writer, runs []render.Run) error {
+	for _, run := range runs {
+		if run.Text == "\n" {
+			if _, err := io.WriteString(output, `<w:r><w:br/></w:r>`); err != nil {
+				return err
+			}
+			continue
+		}
+		if run.Href != "" {
+			if err := writeDOCXLink(output, run.Text, run.Href, styleOf(run)); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := writeDOCXRun(output, run.Text, styleOf(run)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeDOCXBlocks walks a render tree. `inherited` carries list numbering and depth into nested
+// blocks: OOXML lists are flat paragraphs with a level, so the nesting is a number here rather than
+// a structure.
+func writeDOCXBlocks(output io.Writer, record stream.Record, blocks []render.Block, inherited docxParagraph, embed func(stream.Image, string) error) error {
+	for _, block := range blocks {
+		paragraph := inherited
+		switch block.Kind {
+		case "heading":
+			paragraph.style = "Heading" + strconv.Itoa(min(max(block.Level, 1), 3))
+			if err := writeDOCXParagraph(output, block.Runs, paragraph); err != nil {
+				return err
+			}
+		case "quote", "callout":
+			paragraph.style = "Quote"
+			if block.Kind == "callout" && block.Tone != "" {
+				if err := writeDOCXParagraph(output, []render.Run{{Text: block.Tone, Styles: []string{"bold"}}}, paragraph); err != nil {
+					return err
+				}
+			}
+			if err := writeDOCXBlocks(output, record, block.Blocks, paragraph, embed); err != nil {
+				return err
+			}
+		case "code":
+			paragraph.style = "Code"
+			for _, line := range strings.Split(block.Text, "\n") {
+				if err := writeDOCXParagraph(output, []render.Run{{Text: line}}, paragraph); err != nil {
+					return err
+				}
+			}
+		case "rule":
+			if err := writeDOCXParagraph(output, nil, docxParagraph{}); err != nil {
+				return err
+			}
+		case "pageBreak":
+			if _, err := io.WriteString(output, `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`); err != nil {
+				return err
+			}
+		case "image":
+			if raster := recordImage(record, block.Src); raster != nil {
+				if err := embed(*raster, block.Alt); err != nil {
+					return err
+				}
+				continue
+			}
+			label := "Image: " + block.Alt
+			if err := writeDOCXParagraph(output, []render.Run{{Text: label, Href: block.Src}}, paragraph); err != nil {
+				return err
+			}
+		case "list":
+			numbering, level := 1, 0
+			if block.Ordered {
+				numbering = 2
+			}
+			if inherited.numbering != 0 {
+				level = inherited.level + 1
+			}
+			for _, item := range block.Items {
+				itemParagraph := docxParagraph{numbering: numbering, level: level}
+				itemBlocks := item.Blocks
+				if item.Checked != nil && len(itemBlocks) > 0 && itemBlocks[0].Kind == "paragraph" {
+					box := "☐ "
+					if *item.Checked {
+						box = "☑ "
+					}
+					first := itemBlocks[0]
+					first.Runs = append([]render.Run{{Text: box}}, first.Runs...)
+					itemBlocks = append([]render.Block{first}, itemBlocks[1:]...)
+				}
+				if err := writeDOCXBlocks(output, record, itemBlocks, itemParagraph, embed); err != nil {
+					return err
+				}
+			}
+		case "table":
+			if err := writeDOCXTable(output, block.Rows); err != nil {
+				return err
+			}
+		case "details":
+			if err := writeDOCXParagraph(output, block.Summary, docxParagraph{style: "Heading3"}); err != nil {
+				return err
+			}
+			if err := writeDOCXBlocks(output, record, block.Blocks, inherited, embed); err != nil {
+				return err
+			}
+		default: // paragraph, and any kind this build does not know but whose runs it can keep.
+			if err := writeDOCXParagraph(output, block.Runs, paragraph); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func writeDOCXTable(output io.Writer, rows []render.Row) error {
+	if _, err := io.WriteString(output, `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>`); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if _, err := io.WriteString(output, `<w:tr>`); err != nil {
+			return err
+		}
+		for _, cell := range row.Cells {
+			if _, err := io.WriteString(output, `<w:tc>`); err != nil {
+				return err
+			}
+			runs := cell
+			if row.Header {
+				runs = make([]render.Run, 0, len(cell))
+				for _, run := range cell {
+					run.Styles = append(append([]string(nil), run.Styles...), "bold")
+					runs = append(runs, run)
+				}
+			}
+			if err := writeDOCXParagraph(output, runs, docxParagraph{}); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(output, `</w:tc>`); err != nil {
+				return err
+			}
+		}
+		if _, err := io.WriteString(output, `</w:tr>`); err != nil {
+			return err
+		}
+	}
+	_, err := io.WriteString(output, `</w:tbl>`)
 	return err
 }

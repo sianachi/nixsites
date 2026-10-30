@@ -709,6 +709,17 @@ describe('the bundle stream', () => {
     expect(response.json<{ code: string }>().code).toBe('unauthenticated');
   });
 
+  it('refuses a shape it does not serve before asking Core anything', async () => {
+    const response = await track(server({ authorizer: granting })).inject({
+      method: 'GET',
+      url: `/documents/${ITEM}/bundles?shape=tree`,
+      headers: { authorization: 'Bearer token', 'x-nix-internal-secret': INTERNAL_SECRET },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ code: string }>().code).toBe('invalid_shape');
+  });
+
   it('refuses when Core will not show the caller the item, secret or no secret', async () => {
     const response = await track(server({ authorizer: granting })).inject({
       method: 'GET',

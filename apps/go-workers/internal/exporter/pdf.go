@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
 	"codeberg.org/go-pdf/fpdf"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/gofont/gobolditalic"
@@ -84,7 +86,10 @@ func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report 
 		if record.Title == "" {
 			return errors.New("export record title is required")
 		}
-		remaining -= int64(len(record.Body) + len(record.Title))
+		remaining -= int64(len(record.Title))
+		render.Walk(record.Blocks, func(block *render.Block) {
+			remaining -= int64(len(render.Plain(block.Runs)) + len(block.Text))
+		})
 		for _, raster := range record.Images {
 			remaining -= int64(len(raster.Data))
 		}
@@ -92,12 +97,12 @@ func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report 
 			return stream.ErrLimitExceeded
 		}
 		addPDFPage(pdf)
-		title, _ := ProjectTitle(record.Title, false)
+		title, _ := ProjectTitle(record.Title)
 		pdf.SetFont("Nix", "B", 24)
 		pdf.SetTextColor(25, 25, 25)
 		pdf.MultiCell(pdfWidth, 30, pdfText(title), "", "L", false)
 		pdf.Ln(12)
-		renderPDFMarkdown(pdf, record, records)
+		renderPDFBlocks(pdf, record, blocksOf(record), 0, records)
 		if pdf.Error() != nil {
 			return pdf.Error()
 		}
@@ -122,184 +127,146 @@ func pdfSpace(pdf *fpdf.Fpdf, height float64) {
 	}
 }
 
-func renderPDFMarkdown(pdf *fpdf.Fpdf, record stream.Record, recordIndex int) {
-	lines := strings.Split(strings.ReplaceAll(record.Body, "\r\n", "\n"), "\n")
-	code := false
-	for index := 0; index < len(lines); index++ {
+// renderPDFBlocks draws a render tree. `indent` is the left inset inherited from quotes and lists.
+func renderPDFBlocks(pdf *fpdf.Fpdf, record stream.Record, blocks []render.Block, indent float64, recordIndex int) {
+	for index, block := range blocks {
 		if pdf.Error() != nil {
 			return
 		}
-		line := lines[index]
-		trimmed := strings.TrimSpace(line)
 		pdf.SetFont("Nix", "", 11)
 		pdf.SetTextColor(35, 35, 35)
-		if strings.HasPrefix(trimmed, "```") {
-			code = !code
+		switch block.Kind {
+		case "heading":
+			size := []float64{20, 17, 14, 13, 12, 11}[min(max(block.Level, 1)-1, 5)]
+			pdfSpace(pdf, size*2+22)
+			pdfParagraph(pdf, block.Runs, indent, "B", size)
+		case "quote", "callout":
+			if block.Kind == "callout" && block.Tone != "" {
+				pdfParagraph(pdf, []render.Run{{Text: block.Tone, Styles: []string{"bold"}}}, indent+16, "I", 11)
+			}
+			renderPDFBlocks(pdf, record, block.Blocks, indent+16, recordIndex)
+		case "code":
 			pdf.Ln(6)
-			continue
-		}
-		if code {
 			pdf.SetFont("NixMono", "", 10)
 			pdf.SetFillColor(243, 244, 246)
-			pdf.MultiCell(pdfWidth, 15, pdfText(line), "", "L", true)
-			continue
-		}
-		if trimmed == "<!-- nix-page-break -->" {
-			addPDFPage(pdf)
-			continue
-		}
-		if trimmed == "<details>" || strings.HasPrefix(trimmed, `<details data-toggle-level=`) || trimmed == "</details>" {
-			continue
-		}
-		if strings.HasPrefix(trimmed, "<summary>") {
-			line = "**" + strings.TrimSuffix(strings.TrimPrefix(trimmed, "<summary>"), "</summary>") + "**"
-			trimmed = line
-		}
-		if trimmed == "" {
+			pdf.SetLeftMargin(pdfMargin + indent)
+			pdf.SetX(pdfMargin + indent)
+			for _, line := range strings.Split(block.Text, "\n") {
+				pdf.MultiCell(pdfWidth-indent, 15, pdfText(line), "", "L", true)
+			}
+			pdf.SetLeftMargin(pdfMargin)
 			pdf.Ln(6)
-			continue
-		}
-		if _, target, ok := blockImage(trimmed); ok {
-			if raster := recordImage(record, target); ok && raster != nil {
-				width, height := imageSize(*raster, pdfWidth, pdfBottom-pdfMargin)
-				pdfSpace(pdf, height+8)
-				name := fmt.Sprintf("image-%d-%d", recordIndex, index)
-				options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
-				pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))
-				y := pdf.GetY()
-				pdf.ImageOptions(name, pdfMargin, y, width, height, false, options, 0, "")
-				pdf.SetY(y + height + 8)
-				continue
-			}
-		}
-		if index+1 < len(lines) && strings.Contains(line, "|") && tableSeparator(lines[index+1]) {
-			rows := [][]string{splitTableRow(line)}
-			index++
-			for index+1 < len(lines) && strings.Contains(lines[index+1], "|") && strings.TrimSpace(lines[index+1]) != "" {
-				index++
-				rows = append(rows, splitTableRow(lines[index]))
-			}
-			renderPDFTable(pdf, rows)
-			continue
-		}
-		size, style, indent := 11.0, "", 0.0
-		if level, body, ok := markdownHeading(line); ok {
-			size = []float64{20, 17, 14, 13, 12, 11}[min(level-1, 5)]
-			style = "B"
-			line = body
-			pdfSpace(pdf, size*2+22)
-		} else if body, level, ok := markdownBullet(line); ok {
-			indent = float64(min(level+1, 9)) * 14
-			line = "• " + body
-		} else if _, level, ok := markdownOrdered(line); ok {
-			indent = float64(min(level+1, 9)) * 14
-			line = strings.TrimSpace(line)
-		} else if strings.HasPrefix(trimmed, ">") {
-			indent = 16
-			line = strings.TrimSpace(strings.TrimPrefix(trimmed, ">"))
-			style = "I"
-		}
-		if trimmed == "---" || trimmed == "***" {
+		case "rule":
 			pdfSpace(pdf, 12)
 			pdf.SetDrawColor(190, 190, 190)
 			pdf.Line(pdfMargin, pdf.GetY(), pdfMargin+pdfWidth, pdf.GetY())
 			pdf.Ln(8)
-			continue
-		}
-		pdf.SetLeftMargin(pdfMargin + indent)
-		pdf.SetX(pdfMargin + indent)
-		pdf.SetFont("Nix", style, size)
-		pdfInline(pdf, line, 0, style, size)
-		pdf.Ln(size * 1.45)
-		pdf.SetLeftMargin(pdfMargin)
-	}
-}
-
-func pdfInline(pdf *fpdf.Fpdf, value string, depth int, style string, size float64) {
-	write := func(text string) { pdf.SetFont("Nix", style, size); pdf.Write(size*1.45, pdfText(text)) }
-	if depth > 8 {
-		write(unescapeMarkdown(value))
-		return
-	}
-	for len(value) > 0 {
-		if value[0] == '\\' && len(value) > 1 {
-			write(value[1:2])
-			value = value[2:]
-			continue
-		}
-		if strings.HasPrefix(value, "![") {
-			if label, _, rest, ok := markdownLink(value[1:]); ok {
-				write("Image: " + unescapeMarkdown(label))
-				value = rest
+		case "pageBreak":
+			addPDFPage(pdf)
+		case "image":
+			if raster := recordImage(record, block.Src); raster != nil {
+				width, height := imageSize(*raster, pdfWidth-indent, pdfBottom-pdfMargin)
+				pdfSpace(pdf, height+8)
+				name := fmt.Sprintf("image-%d-%d-%d", recordIndex, int(indent), index)
+				options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
+				pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))
+				y := pdf.GetY()
+				pdf.ImageOptions(name, pdfMargin+indent, y, width, height, false, options, 0, "")
+				pdf.SetY(y + height + 8)
 				continue
 			}
-		}
-		if value[0] == '[' {
-			if label, target, rest, ok := markdownLink(value); ok {
-				pdf.SetFont("Nix", style, size)
-				if safeDocumentLink(target) {
-					pdf.WriteLinkString(size*1.45, pdfText(unescapeMarkdown(label)), target)
+			pdfParagraph(pdf, []render.Run{{Text: "Image: " + block.Alt, Href: block.Src}}, indent, "", 11)
+		case "list":
+			for item, entry := range block.Items {
+				marker := "• "
+				if block.Ordered {
+					start := block.Start
+					if start < 1 {
+						start = 1
+					}
+					marker = strconv.Itoa(start+item) + ". "
+				}
+				if entry.Checked != nil {
+					marker = "☐ "
+					if *entry.Checked {
+						marker = "☑ "
+					}
+				}
+				itemBlocks := entry.Blocks
+				if len(itemBlocks) > 0 && itemBlocks[0].Kind == "paragraph" {
+					first := itemBlocks[0]
+					first.Runs = append([]render.Run{{Text: marker}}, first.Runs...)
+					itemBlocks = append([]render.Block{first}, itemBlocks[1:]...)
 				} else {
-					write(unescapeMarkdown(label))
+					itemBlocks = append([]render.Block{render.Paragraph(marker)}, itemBlocks...)
 				}
-				value = rest
-				continue
+				renderPDFBlocks(pdf, record, itemBlocks, indent+14, recordIndex)
 			}
+		case "table":
+			renderPDFTable(pdf, block.Rows)
+		case "details":
+			pdfParagraph(pdf, block.Summary, indent, "B", 11)
+			renderPDFBlocks(pdf, record, block.Blocks, indent, recordIndex)
+		default: // paragraph, and any kind this build does not know but whose runs it can keep.
+			pdfParagraph(pdf, block.Runs, indent, "", 11)
 		}
-		matched := false
-		for _, mark := range []struct{ token, style string }{{"**", "B"}, {"*", "I"}, {"~~", "S"}, {"`", "code"}} {
-			if !strings.HasPrefix(value, mark.token) {
-				continue
-			}
-			end := strings.Index(value[len(mark.token):], mark.token)
-			if end < 0 {
-				continue
-			}
-			end += len(mark.token)
-			inner := value[len(mark.token):end]
-			if mark.style == "code" {
-				pdf.SetFont("NixMono", "", size)
-				pdf.Write(size*1.45, pdfText(inner))
-			} else {
-				next := style
-				if !strings.Contains(next, mark.style) {
-					next += mark.style
-				}
-				pdfInline(pdf, inner, depth+1, next, size)
-			}
-			value = value[end+len(mark.token):]
-			matched = true
-			break
-		}
-		if matched {
-			continue
-		}
-		length := nextMarkdownToken(value)
-		if length == 0 {
-			length = len(value)
-		}
-		write(unescapeMarkdown(value[:length]))
-		value = value[length:]
 	}
 }
 
-func renderPDFTable(pdf *fpdf.Fpdf, rows [][]string) {
-	columns := len(rows[0])
+func pdfParagraph(pdf *fpdf.Fpdf, runs []render.Run, indent float64, style string, size float64) {
+	pdf.SetLeftMargin(pdfMargin + indent)
+	pdf.SetX(pdfMargin + indent)
+	pdf.SetFont("Nix", style, size)
+	pdfRuns(pdf, runs, style, size)
+	pdf.Ln(size * 1.45)
+	pdf.SetLeftMargin(pdfMargin)
+}
+
+func pdfRuns(pdf *fpdf.Fpdf, runs []render.Run, base string, size float64) {
+	for _, run := range runs {
+		if run.Text == "\n" {
+			pdf.Ln(size * 1.45)
+			continue
+		}
+		style := base
+		for _, mark := range []struct{ name, style string }{{"bold", "B"}, {"italic", "I"}, {"strike", "S"}, {"underline", "U"}} {
+			if run.Has(mark.name) && !strings.Contains(style, mark.style) {
+				style += mark.style
+			}
+		}
+		if run.Has("code") {
+			pdf.SetFont("NixMono", "", size)
+		} else {
+			pdf.SetFont("Nix", style, size)
+		}
+		if run.Href != "" && safeDocumentLink(run.Href) {
+			pdf.WriteLinkString(size*1.45, pdfText(run.Text), run.Href)
+			continue
+		}
+		pdf.Write(size*1.45, pdfText(run.Text))
+	}
+}
+
+func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
+	columns := 0
+	for _, row := range rows {
+		columns = max(columns, len(row.Cells))
+	}
 	if columns == 0 {
 		return
 	}
 	width := pdfWidth / float64(columns)
 	for rowIndex, row := range rows {
 		style := ""
-		if rowIndex == 0 {
+		if row.Header {
 			style = "B"
 		}
 		pdf.SetFont("Nix", style, 10)
 		cells := make([][]string, columns)
 		count := 1
 		for i := 0; i < columns; i++ {
-			if i < len(row) {
-				cells[i] = pdf.SplitText(pdfText(markdownPlainInline(row[i])), max(width-12, 1))
+			if i < len(row.Cells) {
+				cells[i] = pdf.SplitText(pdfText(strings.ReplaceAll(render.Plain(row.Cells[i]), "\n", " ")), max(width-12, 1))
 				count = max(count, len(cells[i]))
 			}
 		}
@@ -317,7 +284,7 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows [][]string) {
 				pdf.SetDrawColor(205, 210, 215)
 				pdf.SetFillColor(244, 246, 248)
 				mode := "D"
-				if rowIndex == 0 {
+				if row.Header || rowIndex == 0 && style == "B" {
 					mode = "FD"
 				}
 				pdf.Rect(x, y, width, height, mode)
@@ -331,38 +298,4 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows [][]string) {
 		}
 	}
 	pdf.Ln(8)
-}
-
-func markdownPlainInline(value string) string {
-	var output strings.Builder
-	output.Grow(len(value))
-	for len(value) > 0 {
-		if value[0] == '\\' && len(value) > 1 {
-			output.WriteByte(value[1])
-			value = value[2:]
-			continue
-		}
-		if strings.HasPrefix(value, "![") {
-			if label, _, rest, ok := markdownLink(value[1:]); ok {
-				output.WriteString("Image: ")
-				output.WriteString(unescapeMarkdown(label))
-				value = rest
-				continue
-			}
-		}
-		if value[0] == '[' {
-			if label, _, rest, ok := markdownLink(value); ok {
-				output.WriteString(unescapeMarkdown(label))
-				value = rest
-				continue
-			}
-		}
-		if strings.ContainsRune("*~`", rune(value[0])) {
-			value = value[1:]
-			continue
-		}
-		output.WriteByte(value[0])
-		value = value[1:]
-	}
-	return sanitizeText(output.String())
 }

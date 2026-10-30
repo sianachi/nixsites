@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/nixarchive"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,12 +15,23 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
+// para is a record whose body is one paragraph, for tests about the writers rather than the tree.
+func para(id, title, body string) stream.Record {
+	return stream.Record{ID: id, Title: title, Blocks: []render.Block{render.Paragraph(body)}}
+}
+
+func link(label, href string) render.Run { return render.Run{Text: label, Href: href} }
+func styled(label string, styles ...string) render.Run {
+	return render.Run{Text: label, Styles: styles}
+}
+
 func TestMarkdownExportIsDeterministic(t *testing.T) {
 	var output bytes.Buffer
-	err := Write("markdown", []stream.Record{{ID: "one", Title: "One", Body: "Body"}}, &output, stream.Limits{MaxBytes: 1000, MaxLine: 1000, MaxRecords: 10})
+	err := Write("markdown", []stream.Record{para("one", "One", "Body")}, &output, stream.Limits{MaxBytes: 1000, MaxLine: 1000, MaxRecords: 10})
 	if err != nil || output.String() != "# One\n\nBody\n\n" {
 		t.Fatalf("Write() = %q, %v", output.String(), err)
 	}
@@ -37,14 +50,14 @@ func TestNixExportWritesManifestBeforePayloads(t *testing.T) {
 }
 
 func TestExportRefusesOversizedMarkdown(t *testing.T) {
-	err := Write("md", []stream.Record{{ID: "one", Title: "One", Body: strings.Repeat("x", 100)}}, &bytes.Buffer{}, stream.Limits{MaxBytes: 10, MaxLine: 1000, MaxRecords: 10})
+	err := Write("md", []stream.Record{para("one", "One", strings.Repeat("x", 100))}, &bytes.Buffer{}, stream.Limits{MaxBytes: 10, MaxLine: 1000, MaxRecords: 10})
 	if err != stream.ErrLimitExceeded {
 		t.Fatalf("Write() error = %v, want ErrLimitExceeded", err)
 	}
 }
 
 func TestWriteProducesDOCXAndPDF(t *testing.T) {
-	records := []stream.Record{{ID: "one", Title: "Title", Body: "Body"}}
+	records := []stream.Record{para("one", "Title", "Body")}
 	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}
 	for _, format := range []string{"docx", "pdf"} {
 		var output bytes.Buffer
@@ -57,19 +70,22 @@ func TestWriteProducesDOCXAndPDF(t *testing.T) {
 	}
 }
 
-func TestProseProjectionRetainsReadableStructureWithoutLeakingJSON(t *testing.T) {
-	body := json.RawMessage(`{"schemaVersion":2,"prosemirror":{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Plan"}]},{"type":"paragraph","content":[{"type":"text","text":"Ship it","marks":[{"type":"bold"}]}]}]}}`)
-	projected, losses, err := ProjectBody(body, true, 4096)
+func TestRenderTreeBodyIsWrittenAsMarkdownWithItsLosses(t *testing.T) {
+	bundle := nixarchive.Bundle{ID: "one", Title: "Plan", Render: json.RawMessage(`{"format":"nix-render","version":1,"blocks":[{"kind":"heading","level":2,"runs":[{"text":"Plan"}]},{"kind":"paragraph","runs":[{"text":"Ship it","styles":["bold"]}]}],"losses":["Comments were dropped."]}`)}
+	projected, err := ProjectBundle(bundle, 4096, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if projected != "## Plan\n\n**Ship it**" || len(losses) != 0 || strings.Contains(projected, "prosemirror") {
-		t.Fatalf("ProjectBody() = %q, %#v", projected, losses)
+	if markdown := render.Markdown(projected.Blocks); markdown != "## Plan\n\n**Ship it**" || len(projected.Losses) != 1 {
+		t.Fatalf("ProjectBundle() = %q, %#v", markdown, projected.Losses)
+	}
+	if _, err := ProjectBundle(nixarchive.Bundle{Render: json.RawMessage(`{"format":"nix-render","version":2,"blocks":[]}`)}, 4096, nil); err == nil {
+		t.Fatal("a tree from another version must fail the job, not flatten")
 	}
 }
 
 func TestStreamingMarkdownConsumesEachRecordOnce(t *testing.T) {
-	records := []stream.Record{{ID: "one", Title: "One", Body: "First"}, {ID: "two", Title: "Two", Body: "Second"}}
+	records := []stream.Record{para("one", "One", "First"), para("two", "Two", "Second")}
 	index := 0
 	var output bytes.Buffer
 	err := WriteStream("markdown", func() (stream.Record, bool, error) {
@@ -86,7 +102,7 @@ func TestStreamingMarkdownConsumesEachRecordOnce(t *testing.T) {
 }
 
 func TestConvertedFilesDoNotEmbedInternalLossReports(t *testing.T) {
-	records := []stream.Record{{ID: "one", Title: "One", Body: "Body"}}
+	records := []stream.Record{para("one", "One", "Body")}
 	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}
 	index := 0
 	var output bytes.Buffer
@@ -107,7 +123,13 @@ func TestConvertedFilesDoNotEmbedInternalLossReports(t *testing.T) {
 }
 
 func TestDOCXPreservesProjectedHeadingsListsLinksAndTablesWithoutInternalReport(t *testing.T) {
-	body := "## Plan\n\n**Bold** and *italic* with [site](https://example.test/a_\\(b\\) \"A title\").\n\n- First\n1. Step\n\n| Name | State |\n| --- | --- |\n| Nix | Ready |"
+	body := []render.Block{
+		render.Heading(2, "Plan"),
+		{Kind: "paragraph", Runs: []render.Run{styled("Bold", "bold"), {Text: " and "}, styled("italic", "italic"), {Text: " with "}, link("site", "https://example.test/a_(b)"), {Text: "."}}},
+		render.Bullets([]string{"First"}),
+		{Kind: "list", Ordered: true, Items: []render.ListItem{{Blocks: []render.Block{render.Paragraph("Step")}}}},
+		{Kind: "table", Rows: []render.Row{{Header: true, Cells: [][]render.Run{{{Text: "Name"}}, {{Text: "State"}}}}, {Cells: [][]render.Run{{{Text: "Nix"}}, {{Text: "Ready"}}}}}},
+	}
 	var output bytes.Buffer
 	index := 0
 	err := WriteStreamWithReport("docx", func() (stream.Record, bool, error) {
@@ -115,7 +137,7 @@ func TestDOCXPreservesProjectedHeadingsListsLinksAndTablesWithoutInternalReport(
 			return stream.Record{}, false, nil
 		}
 		index++
-		return stream.Record{ID: "one", Title: "Title", Body: body}, true, nil
+		return stream.Record{ID: "one", Title: "Title", Blocks: body}, true, nil
 	}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}, func() []string {
 		return []string{"A property was omitted."}
 	})
@@ -153,7 +175,7 @@ func TestDOCXPreservesProjectedHeadingsListsLinksAndTablesWithoutInternalReport(
 func TestDOCXFlattensAFieldInstructionTargetToVisibleText(t *testing.T) {
 	var output bytes.Buffer
 	err := Write("docx", []stream.Record{{
-		ID: "one", Title: "Title", Body: `[unsafe](https://example.test/a\"\\l) after`,
+		ID: "one", Title: "Title", Blocks: []render.Block{{Kind: "paragraph", Runs: []render.Run{link("unsafe", `https://example.test/a"\l`), {Text: " after"}}}},
 	}}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10})
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +201,7 @@ func TestPDFFlattensMarkdownSyntaxWithoutInternalReport(t *testing.T) {
 			return stream.Record{}, false, nil
 		}
 		index++
-		return stream.Record{ID: "one", Title: "Title", Body: "## Plan\n\n**Bold** [site](https://example.test)"}, true, nil
+		return stream.Record{ID: "one", Title: "Title", Blocks: []render.Block{render.Heading(2, "Plan"), {Kind: "paragraph", Runs: []render.Run{styled("Bold", "bold"), {Text: " "}, link("site", "https://example.test")}}}}, true, nil
 	}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}, func() []string {
 		return []string{"A view was omitted."}
 	})
@@ -192,14 +214,14 @@ func TestPDFFlattensMarkdownSyntaxWithoutInternalReport(t *testing.T) {
 			t.Fatalf("PDF omitted %q: %s", expected, text)
 		}
 	}
-	if strings.Contains(text, "A view was omitted.") || strings.Contains(text, "**Bold**") {
+	if strings.Contains(text, "A view was omitted.") || strings.Contains(text, "**") {
 		t.Fatalf("Unexpected PDF content: %s", text)
 	}
 
 }
 
 func TestDOCXAndPDFAreDeterministicForTheSameRecords(t *testing.T) {
-	records := []stream.Record{{ID: "one", Title: "Title", Body: "Body"}}
+	records := []stream.Record{para("one", "Title", "Body")}
 	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}
 	for _, format := range []string{"docx", "pdf"} {
 		var first, second bytes.Buffer
@@ -217,9 +239,7 @@ func TestDOCXAndPDFAreDeterministicForTheSameRecords(t *testing.T) {
 
 func TestDOCXContainsOnlyWellFormedXMLAfterHostileText(t *testing.T) {
 	var output bytes.Buffer
-	err := Write("docx", []stream.Record{{
-		ID: "one", Title: "Line\nwith\u0001control", Body: "Body\ufffe text",
-	}}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10})
+	err := Write("docx", []stream.Record{para("one", "Line\nwith\u0001control", "Body\ufffe text")}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +272,7 @@ func TestDOCXContainsOnlyWellFormedXMLAfterHostileText(t *testing.T) {
 
 func TestPDFStartXrefPointsAtTheCrossReferenceTable(t *testing.T) {
 	var output bytes.Buffer
-	if err := Write("pdf", []stream.Record{{ID: "one", Title: "Title", Body: strings.Repeat("line\n", 80)}}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}); err != nil {
+	if err := Write("pdf", []stream.Record{para("one", "Title", strings.Repeat("line\n", 80))}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}); err != nil {
 		t.Fatal(err)
 	}
 	text := output.String()
@@ -277,7 +297,7 @@ func TestPDFPassesPopplerValidationWhenAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeErr := Write("pdf", []stream.Record{{ID: "one", Title: "Title", Body: strings.Repeat("line\n", 80)}}, file, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10})
+	writeErr := Write("pdf", []stream.Record{para("one", "Title", strings.Repeat("line\n", 80))}, file, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10})
 	closeErr := file.Close()
 	if writeErr != nil {
 		t.Fatal(writeErr)
@@ -291,7 +311,7 @@ func TestPDFPassesPopplerValidationWhenAvailable(t *testing.T) {
 }
 
 func TestProjectedTitleIsOneSafeLine(t *testing.T) {
-	title, lost := ProjectTitle("  A\nB\u0001\ufffe  ", false)
+	title, lost := ProjectTitle("  A\nB\u0001\ufffe  ")
 	if title != "A B" || !lost {
 		t.Fatalf("ProjectTitle() = %q, %v", title, lost)
 	}

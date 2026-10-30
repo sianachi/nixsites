@@ -41,10 +41,11 @@ type Item struct {
 }
 
 type Body struct {
-	Encoding string          `json:"encoding"`
-	Text     string          `json:"text,omitempty"`
-	Document json.RawMessage `json:"document,omitempty"`
-	Archive  json.RawMessage `json:"archive,omitempty"`
+	Encoding string `json:"encoding"`
+	Text     string `json:"text,omitempty"`
+	// Render is a nix-render tree (internal/render), the only document shape this worker emits.
+	Render  json.RawMessage `json:"render,omitempty"`
+	Archive json.RawMessage `json:"archive,omitempty"`
 }
 
 type File struct {

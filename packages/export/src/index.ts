@@ -78,3 +78,16 @@ export {
   type ReadArchiveResult,
 } from './reader.js';
 export { readBundleStream, type BundleStream } from './bundle-stream.js';
+export {
+  RENDER_FORMAT,
+  RENDER_VERSION,
+  RUN_STYLES,
+  renderDocument,
+  type RenderBlock,
+  type RenderDocument,
+  type RenderListItem,
+  type RenderRun,
+  type RenderTableRow,
+  type RunStyle,
+} from './render.js';
+export { documentFromRender, parseRenderDocument } from './render-from.js';

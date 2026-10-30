@@ -37,6 +37,44 @@ describe('staged import body materialization', () => {
     expect(commands.some((command) => command.includes('INSERT INTO content_update'))).toBe(true);
   });
 
+  it('turns a nix-render tree from the worker into a document, and refuses another version', async () => {
+    const commands: string[] = [];
+    const service = createImportBodyService({
+      pool: fakePool(commands),
+      core: fakeCore([
+        { sourceId: 'root', targetItemId: ITEM, itemType: 'note', bodyRequired: true },
+      ]),
+    });
+    const request = (version: number) => ({
+      importId: IMPORT,
+      jobId: '77777777-7777-4777-8777-777777777777',
+      executionId: 'worker:lease',
+      body: {
+        writes: [
+          {
+            sourceId: 'root',
+            body: {
+              encoding: 'nix-render',
+              render: {
+                format: 'nix-render',
+                version,
+                blocks: [{ kind: 'heading', level: 1, runs: [{ text: 'Title' }] }],
+                losses: [],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(service.write(request(1))).resolves.toEqual({ written: 1 });
+    expect(commands.some((command) => command.includes('INSERT INTO content_update'))).toBe(true);
+    await expect(service.write(request(2))).rejects.toMatchObject({
+      status: 422,
+      code: 'import_body_invalid',
+    });
+  });
+
   it('rejects an incomplete body set before opening a database connection', async () => {
     let connected = false;
     const pool = {

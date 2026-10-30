@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"hash/crc32"
 	"os"
 	"path/filepath"
@@ -81,13 +82,15 @@ func TestDOCXImportPreservesRichBlocksAndExtractsImages(t *testing.T) {
 	if len(plan.Items) != 3 || plan.Items[2].File == nil || !plan.Items[2].File.Previewable || plan.Items[2].File.AssetPath == nil {
 		t.Fatalf("items = %#v", plan.Items)
 	}
-	var documentJSON map[string]any
-	if err := json.Unmarshal(plan.Items[0].Body.Document, &documentJSON); err != nil {
+	if plan.Items[0].Body.Encoding != "nix-render" {
+		t.Fatalf("encoding = %q", plan.Items[0].Body.Encoding)
+	}
+	if _, err := render.Decode(plan.Items[0].Body.Render); err != nil {
 		t.Fatal(err)
 	}
-	encoded, _ := json.Marshal(documentJSON)
-	for _, expected := range []string{`"type":"heading"`, `"type":"orderedList"`, `"type":"table"`, `"src":"nix-file:asset-0001"`, `"href":"https://example.test/docs"`} {
-		if !strings.Contains(string(encoded), expected) {
+	encoded := string(plan.Items[0].Body.Render)
+	for _, expected := range []string{`"kind":"heading"`, `"ordered":true`, `"kind":"table"`, `"src":"nix-file:asset-0001"`, `"href":"https://example.test/docs"`} {
+		if !strings.Contains(encoded, expected) {
 			t.Fatalf("document %s does not contain %s", encoded, expected)
 		}
 	}

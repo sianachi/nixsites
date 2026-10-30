@@ -1,0 +1,1257 @@
+{
+  "prosemirror": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "itemBlock",
+        "attrs": {
+          "suggestion": null,
+          "view": null,
+          "targetId": "00000000-0000-4000-8000-000000000001",
+          "presentation": "embed"
+        }
+      },
+      {
+        "type": "pageBreak",
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "A paragraph."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "suggestion": null,
+          "level": 2,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "A heading"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Before"
+          },
+          {
+            "type": "hardBreak"
+          },
+          {
+            "type": "text",
+            "text": "after"
+          }
+        ]
+      },
+      {
+        "type": "blockquote",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "suggestion": null,
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Quoted."
+              }
+            ]
+          }
+        ],
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "codeBlock",
+        "attrs": {
+          "suggestion": null,
+          "language": "typescript",
+          "renderFileId": null,
+          "renderSourceHash": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "const answer = 42;"
+          }
+        ]
+      },
+      {
+        "type": "horizontalRule",
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "First"
+                  }
+                ]
+              }
+            ],
+            "attrs": {
+              "suggestion": null
+            }
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Second"
+                  }
+                ]
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  {
+                    "type": "listItem",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "attrs": {
+                          "suggestion": null,
+                          "textAlign": null
+                        },
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Nested"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "suggestion": null
+                    }
+                  }
+                ],
+                "attrs": {
+                  "suggestion": null
+                }
+              }
+            ],
+            "attrs": {
+              "suggestion": null
+            }
+          }
+        ],
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "suggestion": null,
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Step one"
+                  }
+                ]
+              }
+            ],
+            "attrs": {
+              "suggestion": null
+            }
+          }
+        ]
+      },
+      {
+        "type": "taskList",
+        "content": [
+          {
+            "type": "taskItem",
+            "attrs": {
+              "suggestion": null,
+              "checked": true
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Done"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "taskItem",
+            "attrs": {
+              "suggestion": null,
+              "checked": false
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Not done"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "callout",
+        "attrs": {
+          "suggestion": null,
+          "tone": "warning"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "suggestion": null,
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Mind the gap."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "image",
+        "attrs": {
+          "suggestion": null,
+          "src": "https://example.test/diagram.png",
+          "fileItemId": null,
+          "alt": "A diagram",
+          "title": null,
+          "width": null,
+          "height": null
+        }
+      },
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "suggestion": null,
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Name"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "suggestion": null,
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Value"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "suggestion": null,
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Answer"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "suggestion": null,
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "42"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "columnBlock",
+        "content": [
+          {
+            "type": "column",
+            "attrs": {
+              "width": 2
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The wider side."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "column",
+            "attrs": {
+              "width": null
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The other side."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "attrs": {
+          "suggestion": null
+        }
+      },
+      {
+        "type": "details",
+        "attrs": {
+          "suggestion": null,
+          "toggleLevel": 2
+        },
+        "content": [
+          {
+            "type": "detailsSummary",
+            "attrs": {
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Show the details"
+              }
+            ]
+          },
+          {
+            "type": "detailsContent",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "suggestion": null,
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Here they are."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "See "
+          },
+          {
+            "type": "reference",
+            "attrs": {
+              "kind": "item",
+              "targetId": "0199c0de-0000-7000-8000-000000000001",
+              "label": "The other note"
+            }
+          },
+          {
+            "type": "text",
+            "text": " and ask "
+          },
+          {
+            "type": "reference",
+            "attrs": {
+              "kind": "principal",
+              "targetId": "0199c0de-0000-7000-8000-000000000002",
+              "label": "Ada"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "strong"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ],
+            "text": "emphasis"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "underline"
+              }
+            ],
+            "text": "underlined"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "strike"
+              }
+            ],
+            "text": "struck"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "code"
+              }
+            ],
+            "text": "inline()"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "highlight"
+              }
+            ],
+            "text": "highlighted"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://example.test/page",
+                  "target": "_blank",
+                  "rel": "noopener noreferrer nofollow",
+                  "class": null,
+                  "title": null
+                }
+              }
+            ],
+            "text": "a link"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textColor",
+                "attrs": {
+                  "text": "danger",
+                  "background": null
+                }
+              }
+            ],
+            "text": "coloured by name"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "comment",
+                "attrs": {
+                  "threadId": "0199c0de-0000-7000-8000-000000000003"
+                }
+              }
+            ],
+            "text": "somebody had a question about this"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "suggestionInsert",
+                "attrs": {
+                  "id": "s-1",
+                  "authorId": "0199c0de-0000-7000-8000-000000000004",
+                  "createdAt": "2026-10-29T00:00:00.000Z"
+                }
+              }
+            ],
+            "text": "proposed"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "suggestionDelete",
+                "attrs": {
+                  "id": "s-1",
+                  "authorId": "0199c0de-0000-7000-8000-000000000004",
+                  "createdAt": "2026-10-29T00:00:00.000Z"
+                }
+              }
+            ],
+            "text": "struck"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "suggestionFormat",
+                "attrs": {
+                  "id": "s-1",
+                  "authorId": "0199c0de-0000-7000-8000-000000000004",
+                  "createdAt": "2026-10-29T00:00:00.000Z",
+                  "before": "[]"
+                }
+              }
+            ],
+            "text": "restyled"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": null,
+          "textAlign": "center"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "A centered line."
+          }
+        ]
+      },
+      {
+        "type": "codeBlock",
+        "attrs": {
+          "suggestion": null,
+          "language": "mermaid",
+          "renderFileId": "22222222-2222-4222-8222-222222222222",
+          "renderSourceHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "flowchart LR\n  A --> B"
+          }
+        ]
+      },
+      {
+        "type": "itemBlock",
+        "attrs": {
+          "suggestion": null,
+          "view": "0199c0de-0000-7000-8000-000000000005",
+          "targetId": "00000000-0000-4000-8000-000000000001",
+          "presentation": "embed"
+        }
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "suggestion": {
+            "id": "s-2",
+            "authorId": "0199c0de-0000-7000-8000-000000000004",
+            "createdAt": "2026-10-29T00:00:00.000Z",
+            "op": "insert"
+          },
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "A suggested paragraph."
+          }
+        ]
+      }
+    ]
+  },
+  "render": {
+    "format": "nix-render",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "Linked item",
+            "href": "nix://item/00000000-0000-4000-8000-000000000001"
+          }
+        ]
+      },
+      {
+        "kind": "pageBreak"
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "A paragraph."
+          }
+        ]
+      },
+      {
+        "kind": "heading",
+        "level": 2,
+        "runs": [
+          {
+            "text": "A heading"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "Before"
+          },
+          {
+            "text": "\n"
+          },
+          {
+            "text": "after"
+          }
+        ]
+      },
+      {
+        "kind": "quote",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "runs": [
+              {
+                "text": "Quoted."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "code",
+        "language": "typescript",
+        "text": "const answer = 42;"
+      },
+      {
+        "kind": "rule"
+      },
+      {
+        "kind": "list",
+        "ordered": false,
+        "items": [
+          {
+            "blocks": [
+              {
+                "kind": "paragraph",
+                "runs": [
+                  {
+                    "text": "First"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "kind": "paragraph",
+                "runs": [
+                  {
+                    "text": "Second"
+                  }
+                ]
+              },
+              {
+                "kind": "list",
+                "ordered": false,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "kind": "paragraph",
+                        "runs": [
+                          {
+                            "text": "Nested"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "list",
+        "ordered": true,
+        "items": [
+          {
+            "blocks": [
+              {
+                "kind": "paragraph",
+                "runs": [
+                  {
+                    "text": "Step one"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "list",
+        "ordered": false,
+        "items": [
+          {
+            "blocks": [
+              {
+                "kind": "paragraph",
+                "runs": [
+                  {
+                    "text": "Done"
+                  }
+                ]
+              }
+            ],
+            "checked": true
+          },
+          {
+            "blocks": [
+              {
+                "kind": "paragraph",
+                "runs": [
+                  {
+                    "text": "Not done"
+                  }
+                ]
+              }
+            ],
+            "checked": false
+          }
+        ]
+      },
+      {
+        "kind": "callout",
+        "tone": "warning",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "runs": [
+              {
+                "text": "Mind the gap."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "image",
+        "src": "https://example.test/diagram.png",
+        "alt": "A diagram"
+      },
+      {
+        "kind": "table",
+        "rows": [
+          {
+            "header": true,
+            "cells": [
+              [
+                {
+                  "text": "Name"
+                }
+              ],
+              [
+                {
+                  "text": "Value"
+                }
+              ]
+            ]
+          },
+          {
+            "header": false,
+            "cells": [
+              [
+                {
+                  "text": "Answer"
+                }
+              ],
+              [
+                {
+                  "text": "42"
+                }
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "The wider side."
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "The other side."
+          }
+        ]
+      },
+      {
+        "kind": "details",
+        "summary": [
+          {
+            "text": "Show the details"
+          }
+        ],
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "runs": [
+              {
+                "text": "Here they are."
+              }
+            ]
+          }
+        ],
+        "level": 2
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "See "
+          },
+          {
+            "text": "The other note",
+            "href": "nix://item/0199c0de-0000-7000-8000-000000000001"
+          },
+          {
+            "text": " and ask "
+          },
+          {
+            "text": "Ada",
+            "href": "nix://principal/0199c0de-0000-7000-8000-000000000002"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "strong",
+            "styles": ["bold"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "emphasis",
+            "styles": ["italic"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "underlined",
+            "styles": ["underline"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "struck",
+            "styles": ["strike"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "inline()",
+            "styles": ["code"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "highlighted",
+            "styles": ["highlight"]
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "a link",
+            "href": "https://example.test/page"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "coloured by name"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "somebody had a question about this"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": []
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "struck"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "restyled"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "A centered line."
+          }
+        ],
+        "align": "center"
+      },
+      {
+        "kind": "code",
+        "language": "mermaid",
+        "text": "flowchart LR\n  A --> B",
+        "renderFile": "22222222-2222-4222-8222-222222222222"
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "Linked item",
+            "href": "nix://item/00000000-0000-4000-8000-000000000001"
+          }
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "runs": [
+          {
+            "text": "A suggested paragraph."
+          }
+        ]
+      }
+    ],
+    "losses": [
+      "A linked section is represented by its link; its live content is not included. This happened 2 times.",
+      "Columns were laid out one after another.",
+      "Text colour is not carried into exported documents.",
+      "Comments are not carried into exported documents."
+    ]
+  }
+}

@@ -169,6 +169,10 @@ type Bundle struct {
 	ViewRows          []json.RawMessage `json:"viewRows"`
 	ViewRowsTruncated bool              `json:"viewRowsTruncated"`
 	Body              json.RawMessage   `json:"body"`
+	// Render is the body as a nix-render tree when the stream was asked for `shape=render`; Body is
+	// then null for a document. BodyLosses is what the reshaping could not carry.
+	Render     json.RawMessage `json:"render,omitempty"`
+	BodyLosses []string        `json:"bodyLosses,omitempty"`
 	// Comments is present only when the export asked for comment threads.
 	Comments json.RawMessage `json:"comments,omitempty"`
 }

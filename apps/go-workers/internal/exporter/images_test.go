@@ -3,6 +3,7 @@ package exporter
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"image"
 	"image/color"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sianachi/Nix/apps/go-workers/internal/nixarchive"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
@@ -27,15 +30,16 @@ func TestNoteImageExportsEmbedBytesAndPreserveSize(t *testing.T) {
 	if err := png.Encode(&raster, picture); err != nil {
 		t.Fatal(err)
 	}
-	body := []byte(`{"schemaVersion":4,"prosemirror":{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Image notes"}]},{"type":"image","attrs":{"fileItemId":"11111111-1111-4111-8111-111111111111","src":"","alt":"Sample image","width":240,"height":null}}]}}`)
-	markdown, images, losses, err := ProjectBodyWithImages(body, 1<<20, func(id string) ([]byte, error) { return raster.Bytes(), nil })
+	bundle := nixarchive.Bundle{ID: "note", Title: "Resized image", Render: json.RawMessage(`{"format":"nix-render","version":1,"blocks":[{"kind":"heading","level":2,"runs":[{"text":"Image notes"}]},{"kind":"image","src":"","alt":"Sample image","file":"11111111-1111-4111-8111-111111111111","width":240}],"losses":[]}`)}
+	projected, err := ProjectBundle(bundle, 1<<20, func(id string) ([]byte, error) { return raster.Bytes(), nil })
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(images) != 1 || images[0].Width != 240 || len(losses) != 0 {
-		t.Fatalf("image count=%d losses=%v", len(images), losses)
+	images := projected.Images
+	if len(images) != 1 || images[0].Width != 240 || len(projected.Losses) != 0 {
+		t.Fatalf("image count=%d losses=%v", len(images), projected.Losses)
 	}
-	records := []stream.Record{{ID: "note", Title: "Resized image", Body: markdown, Images: images}}
+	records := []stream.Record{{ID: "note", Title: "Resized image", Blocks: projected.Blocks, Images: images}}
 	limits := stream.Limits{MaxBytes: 2 << 20, MaxLine: 1 << 20, MaxRecords: 10}
 	for _, format := range []string{"pdf", "docx", "markdown"} {
 		t.Run(format, func(t *testing.T) {
@@ -88,17 +92,26 @@ func TestNoteImageExportsEmbedBytesAndPreserveSize(t *testing.T) {
 }
 
 func TestInvalidImageFallsBackWithAnExplicitLoss(t *testing.T) {
-	body := []byte(`{"schemaVersion":4,"prosemirror":{"type":"doc","content":[{"type":"image","attrs":{"fileItemId":"file","alt":"Unavailable figure"}}]}}`)
-	markdown, images, losses, err := ProjectBodyWithImages(body, 1<<20, func(string) ([]byte, error) { return []byte("not an image"), nil })
-	if err != nil || len(images) != 0 || len(losses) == 0 || !strings.Contains(markdown, "Unavailable figure") {
-		t.Fatalf("%s %v %v", markdown, losses, err)
+	bundle := nixarchive.Bundle{Render: json.RawMessage(`{"format":"nix-render","version":1,"blocks":[{"kind":"image","src":"","alt":"Unavailable figure","file":"file"}],"losses":[]}`)}
+	projected, err := ProjectBundle(bundle, 1<<20, func(string) ([]byte, error) { return []byte("not an image"), nil })
+	if markdown := render.Markdown(projected.Blocks); err != nil || len(projected.Images) != 0 || len(projected.Losses) == 0 || !strings.Contains(markdown, "Unavailable figure") {
+		t.Fatalf("%s %v %v", markdown, projected.Losses, err)
 	}
 }
 
 func TestPDFFormatsUnicodeListsTablesAndLongContent(t *testing.T) {
-	body := "## Résumé – café\n\n**Bold** and *italic* with `code`.\n\n1. First\n2. Second\n\n| Column | Value |\n| --- | --- |\n| Alpha | " + strings.Repeat("long cell ", 120) + " |\n\n```go\nfmt.Println(\"hello\")\n```\n\n<!-- nix-page-break -->\n\n## Next page\n"
+	language := "go"
+	body := []render.Block{
+		render.Heading(2, "Résumé – café"),
+		{Kind: "paragraph", Runs: []render.Run{{Text: "Bold", Styles: []string{"bold"}}, {Text: " and "}, {Text: "italic", Styles: []string{"italic"}}, {Text: " with "}, {Text: "code", Styles: []string{"code"}}, {Text: "."}}},
+		{Kind: "list", Ordered: true, Items: []render.ListItem{{Blocks: []render.Block{render.Paragraph("First")}}, {Blocks: []render.Block{render.Paragraph("Second")}}}},
+		{Kind: "table", Rows: []render.Row{{Header: true, Cells: [][]render.Run{{{Text: "Column"}}, {{Text: "Value"}}}}, {Cells: [][]render.Run{{{Text: "Alpha"}}, {{Text: strings.Repeat("long cell ", 120)}}}}}},
+		{Kind: "code", Language: &language, Text: "fmt.Println(\"hello\")"},
+		{Kind: "pageBreak"},
+		render.Heading(2, "Next page"),
+	}
 	var output bytes.Buffer
-	if err := Write("pdf", []stream.Record{{ID: "one", Title: "Formatting sample", Body: body}}, &output, stream.Limits{MaxBytes: 2 << 20, MaxLine: 1 << 20, MaxRecords: 10}); err != nil {
+	if err := Write("pdf", []stream.Record{{ID: "one", Title: "Formatting sample", Blocks: body}}, &output, stream.Limits{MaxBytes: 2 << 20, MaxLine: 1 << 20, MaxRecords: 10}); err != nil {
 		t.Fatal(err)
 	}
 	text := extractPDFText(t, output.Bytes())
@@ -120,7 +133,11 @@ func saveQA(t *testing.T, name string, data []byte) {
 
 func TestPDFPageBudgetStopsPathologicalDocuments(t *testing.T) {
 	var output bytes.Buffer
-	err := Write("pdf", []stream.Record{{ID: "one", Title: "Page limit", Body: strings.Repeat("<!-- nix-page-break -->\n", maximumPDFPages)}}, &output, stream.Limits{MaxBytes: 2 << 20, MaxLine: 1 << 20, MaxRecords: 1})
+	breaks := make([]render.Block, maximumPDFPages)
+	for index := range breaks {
+		breaks[index] = render.Block{Kind: "pageBreak"}
+	}
+	err := Write("pdf", []stream.Record{{ID: "one", Title: "Page limit", Blocks: breaks}}, &output, stream.Limits{MaxBytes: 2 << 20, MaxLine: 1 << 20, MaxRecords: 1})
 	if !errors.Is(err, stream.ErrLimitExceeded) {
 		t.Fatalf("expected page limit, got %v", err)
 	}

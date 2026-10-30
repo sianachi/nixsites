@@ -3,65 +3,154 @@ package exporter
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/nixarchive"
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
 )
 
-// ProjectBundle gives every body and stored view a readable static representation. It consumes
-// only the permission-filtered snapshot; it cannot fetch additional items or execute saved rules.
-func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader) (string, []stream.Image, []string, error) {
+const maximumPortableDepth = 64
+
+// Projected is one bundle ready to draw: the body as Collab shaped it, followed by the sections
+// the worker adds (properties, fields, views, comments), with the rasters the image blocks name.
+type Projected struct {
+	Blocks []render.Block
+	Images []stream.Image
+	Losses []string
+}
+
+// ProjectBundle turns a bundle into blocks. The document body arrives as a `nix-render` tree
+// (Collab's `?shape=render`); a sheet, canvas or unknown body kind still arrives as JSON and is
+// inventoried as text, because those have no presentation to reshape. `maximumBytes` bounds the
+// text this produces, counted over every run.
+func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader) (Projected, error) {
+	if maximumBytes <= 0 {
+		return Projected{}, errors.New("projection limit must be positive")
+	}
 	// Keep decimal text exact instead of going through the archive reader's generic float values.
 	if len(bundle.Raw) > 0 {
 		var metadata struct {
 			Properties map[string]any `json:"properties"`
 		}
 		if err := decodePortableJSON(bundle.Raw, &metadata); err != nil {
-			return "", nil, nil, err
+			return Projected{}, err
 		}
 		bundle.Properties = metadata.Properties
 	}
-	body, images, losses, err := ProjectBodyWithImages(bundle.Body, maximumBytes, load)
+	var out Projected
+	out.Losses = append(out.Losses, bundle.BodyLosses...)
+	switch {
+	case bundle.Type == "file":
+		out.Blocks = append(out.Blocks,
+			render.Heading(2, "Attachment"),
+			render.Block{Kind: "paragraph", Runs: []render.Run{{Text: bundle.Title, Href: "nix://item/" + bundle.ID}}},
+			render.Paragraph("Open the original attachment in Nix."))
+		out.Losses = append(out.Losses, "Attachments are linked to their original Nix items; binary contents are not embedded as editable text.")
+	case isJSONValue(bundle.Render):
+		document, err := render.Decode(bundle.Render)
+		if err != nil {
+			return Projected{}, err
+		}
+		out.Losses = append(out.Losses, document.Losses...)
+		out.Blocks = document.Blocks
+		render.Walk(out.Blocks, func(block *render.Block) {
+			if !render.Known(block.Kind) {
+				appendLoss(&out.Losses, fmt.Sprintf("A %q block written by a newer version of Nix was drawn as its text only.", block.Kind))
+			}
+		})
+		images, err := loadImages(out.Blocks, load, &out.Losses)
+		if err != nil {
+			return Projected{}, err
+		}
+		out.Images = images
+	case isJSONValue(bundle.Body):
+		blocks, losses, err := projectNonProseBody(bundle.Body)
+		if err != nil {
+			return Projected{}, err
+		}
+		out.Blocks, out.Losses = append(out.Blocks, blocks...), append(out.Losses, losses...)
+	}
+	sections, losses, err := portableSections(bundle)
 	if err != nil {
-		return "", nil, nil, err
+		return Projected{}, err
 	}
-	if len(bundle.Body) == 0 || bytes.Equal(bytes.TrimSpace(bundle.Body), []byte("null")) {
-		body, losses = "", nil
+	out.Blocks = append(out.Blocks, sections...)
+	out.Losses = append(out.Losses, losses...)
+	if len(out.Blocks) == 0 {
+		out.Blocks = []render.Block{render.Paragraph("Empty item.")}
 	}
-	if bundle.Type == "file" {
-		body = "## Attachment\n\n[" + portableLiteral(bundle.Title) + "](nix://item/" + bundle.ID + ")\n\nOpen the original attachment in Nix."
-		losses = append(losses, "Attachments are linked to their original Nix items; binary contents are not embedded as editable text.")
+	if err := sanitizeBlocks(out.Blocks, maximumBytes); err != nil {
+		return Projected{}, err
 	}
-	writer := newProseWriter(maximumBytes)
-	if err := writer.write(body); err != nil {
-		return "", nil, nil, err
-	}
-	var writeErr error
-	write := func(value string) {
-		if writeErr == nil {
-			writeErr = writer.write(value)
+	return out, nil
+}
+
+func isJSONValue(raw json.RawMessage) bool {
+	return len(raw) > 0 && !bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
+}
+
+func appendLoss(losses *[]string, loss string) {
+	for _, existing := range *losses {
+		if existing == loss {
+			return
 		}
 	}
-	if len(publicKeys(bundle.Properties)) > 0 {
-		write("\n\n## Properties\n\n")
-		writeProperties(write, bundle.Properties)
+	*losses = append(*losses, loss)
+}
+
+// sanitizeBlocks cleans every piece of text once and enforces the byte budget, so no renderer
+// has to do either.
+func sanitizeBlocks(blocks []render.Block, maximumBytes int) error {
+	remaining := maximumBytes
+	spend := func(text *string) {
+		*text = sanitizeText(*text)
+		remaining -= len(*text)
 	}
-	if len(bundle.Schema) > 0 && !bytes.Equal(bytes.TrimSpace(bundle.Schema), []byte("null")) {
+	runs := func(runs []render.Run) {
+		for index := range runs {
+			spend(&runs[index].Text)
+		}
+	}
+	render.Walk(blocks, func(block *render.Block) {
+		runs(block.Runs)
+		runs(block.Summary)
+		spend(&block.Text)
+		spend(&block.Alt)
+		for row := range block.Rows {
+			for _, cell := range block.Rows[row].Cells {
+				runs(cell)
+			}
+		}
+	})
+	if remaining < 0 {
+		return errors.New("projection exceeds the byte limit")
+	}
+	return nil
+}
+
+// Sections the worker adds after the body. They are text the worker owns, not document content.
+func portableSections(bundle nixarchive.Bundle) ([]render.Block, []string, error) {
+	var blocks []render.Block
+	var losses []string
+	if keys := publicKeys(bundle.Properties); len(keys) > 0 {
+		blocks = append(blocks, render.Heading(2, "Properties"), propertyList(bundle.Properties))
+	}
+	if isJSONValue(bundle.Schema) {
 		var schema struct {
 			Properties []map[string]any `json:"properties"`
 		}
 		if err := json.Unmarshal(bundle.Schema, &schema); err != nil {
-			return "", nil, nil, err
+			return nil, nil, err
 		}
 		if len(schema.Properties) > 0 {
-			write("\n\n## Fields\n\n")
+			blocks = append(blocks, render.Heading(2, "Fields"))
 		}
 		for _, property := range schema.Properties {
-			write("### " + portableLiteral(displayValue(property["label"], 0)) + "\n\n")
-			writeProperties(write, property)
+			blocks = append(blocks, render.Heading(3, displayValue(property["label"], 0)), propertyList(property))
 		}
 	}
 	var configuration struct {
@@ -75,39 +164,38 @@ func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader)
 			InteractiveForm map[string]any `json:"interactiveForm"`
 		} `json:"views"`
 	}
-	if len(bundle.Views) > 0 && !bytes.Equal(bytes.TrimSpace(bundle.Views), []byte("null")) {
+	if isJSONValue(bundle.Views) {
 		if err := json.Unmarshal(bundle.Views, &configuration); err != nil {
-			return "", nil, nil, fmt.Errorf("decode export views: %w", err)
+			return nil, nil, fmt.Errorf("decode export views: %w", err)
 		}
 	}
 	if len(configuration.Views) > 0 {
-		write("\n\n## Views\n\n")
+		blocks = append(blocks, render.Heading(2, "Views"))
 		for _, view := range configuration.Views {
-			write("### " + portableLiteral(view.Name) + " (" + portableLiteral(strings.ReplaceAll(view.Kind, "_", " ")) + ")\n\n")
+			blocks = append(blocks, render.Heading(3, view.Name+" ("+strings.ReplaceAll(view.Kind, "_", " ")+")"))
 			if len(view.Columns) > 0 {
-				write("Fields: " + portableLiteral(strings.Join(view.Columns, ", ")) + "\n\n")
+				blocks = append(blocks, render.Paragraph("Fields: "+strings.Join(view.Columns, ", ")))
 			}
 			if view.GroupBy != "" {
-				write("Group by: " + portableLiteral(view.GroupBy) + "\n\n")
+				blocks = append(blocks, render.Paragraph("Group by: "+view.GroupBy))
 			}
 			if view.DateProperty != "" {
-				write("Date field: " + portableLiteral(view.DateProperty) + "\n\n")
+				blocks = append(blocks, render.Paragraph("Date field: "+view.DateProperty))
 			}
 			if len(view.Filters) > 0 {
-				write("Saved filters: " + portableLiteral(displayValue(view.Filters, 0)) + "\n\n")
+				blocks = append(blocks, render.Paragraph("Saved filters: "+displayValue(view.Filters, 0)))
 			}
 			if view.Kind == "interactive_form" && view.InteractiveForm != nil {
-				write("Static form. All pages and conditional fields are shown.\n\n")
-				writePortableFields(write, view.InteractiveForm, 0)
+				blocks = append(blocks, render.Paragraph("Static form. All pages and conditional fields are shown."), propertyList(view.InteractiveForm))
 			} else {
-				write("Readable source records are included below.\n\n")
+				blocks = append(blocks, render.Paragraph("Readable source records are included below."))
 			}
 		}
-		write("### Source records\n\n")
-		write("Static snapshot of accessible children. Saved queries, filters, chart calculations, habit check-in history and live controls are not evaluated here.\n\n")
+		blocks = append(blocks, render.Heading(3, "Source records"),
+			render.Paragraph("Static snapshot of accessible children. Saved queries, filters, chart calculations, habit check-in history and live controls are not evaluated here."))
 		losses = append(losses, "Views are represented by their accessible source records and form content; live queries, calculations and interactions are not reproduced.")
 		if len(bundle.ViewRows) == 0 {
-			write("No accessible source records were included.\n\n")
+			blocks = append(blocks, render.Paragraph("No accessible source records were included."))
 		}
 		for _, raw := range bundle.ViewRows {
 			var row struct {
@@ -116,20 +204,20 @@ func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader)
 				Properties map[string]any `json:"properties"`
 			}
 			if err := decodePortableJSON(raw, &row); err != nil {
-				return "", nil, nil, fmt.Errorf("decode export source row: %w", err)
+				return nil, nil, fmt.Errorf("decode export source row: %w", err)
 			}
-			write("#### " + portableLiteral(row.Title) + "\n\n")
+			blocks = append(blocks, render.Heading(4, row.Title))
 			if row.ID != "" {
-				write("[Open source](nix://item/" + row.ID + ")\n\n")
+				blocks = append(blocks, render.Block{Kind: "paragraph", Runs: []render.Run{{Text: "Open source", Href: "nix://item/" + row.ID}}})
 			}
-			writeProperties(write, row.Properties)
+			blocks = append(blocks, propertyList(row.Properties))
 		}
 		if bundle.ViewRowsTruncated {
-			write("Source records are incomplete: the export limit was reached or some records were unavailable.\n\n")
+			blocks = append(blocks, render.Paragraph("Source records are incomplete: the export limit was reached or some records were unavailable."))
 			losses = append(losses, "The exported view source records are incomplete.")
 		}
 	}
-	if len(bundle.Comments) > 0 && !bytes.Equal(bytes.TrimSpace(bundle.Comments), []byte("null")) {
+	if isJSONValue(bundle.Comments) {
 		var threads []struct {
 			Quote    string `json:"quote"`
 			Resolved bool   `json:"resolved"`
@@ -140,56 +228,43 @@ func ProjectBundle(bundle nixarchive.Bundle, maximumBytes int, load ImageLoader)
 			} `json:"comments"`
 		}
 		if err := json.Unmarshal(bundle.Comments, &threads); err != nil {
-			return "", nil, nil, fmt.Errorf("decode export comments: %w", err)
+			return nil, nil, fmt.Errorf("decode export comments: %w", err)
 		}
 		if len(threads) > 0 {
-			write("\n\n## Comments\n\n")
+			blocks = append(blocks, render.Heading(2, "Comments"))
 		}
 		for _, thread := range threads {
 			if thread.Quote != "" {
-				write("> " + strings.ReplaceAll(portableLiteral(thread.Quote), "\n", "\n> ") + "\n\n")
+				blocks = append(blocks, render.Quote(thread.Quote))
 			}
 			if thread.Resolved {
-				write("(Resolved)\n\n")
+				blocks = append(blocks, render.Paragraph("(Resolved)"))
 			}
 			for _, comment := range thread.Comments {
 				date := comment.CreatedAt
 				if len(date) >= 10 {
 					date = date[:10]
 				}
-				write("**" + portableLiteral(comment.Author) + "** · " + portableLiteral(date) + "\n\n")
-				write(escapeMarkdownLiteral(sanitizeText(comment.Body), true) + "\n\n")
+				blocks = append(blocks,
+					render.Block{Kind: "paragraph", Runs: []render.Run{{Text: comment.Author, Styles: []string{"bold"}}, {Text: " · " + date}}},
+					render.Paragraph(comment.Body))
 			}
 		}
 	}
-	if writeErr != nil {
-		return "", nil, nil, writeErr
-	}
-	if strings.TrimSpace(writer.String()) == "" {
-		return "Empty item.", images, losses, nil
-	}
-	return strings.TrimSpace(writer.String()), images, losses, nil
+	return blocks, losses, nil
 }
 
-// Non-prose bodies use text inventories rather than disappearing from document exports.
-func projectNonProseBody(body json.RawMessage, markdown bool, maximumBytes int) (string, []string, bool, error) {
-	if len(body) == 0 || len(body) > maximumProseInputBytes {
-		return "", nil, false, nil
-	}
+// Non-prose bodies are inventoried as text rather than disappearing from document exports.
+func projectNonProseBody(body json.RawMessage) ([]render.Block, []string, error) {
 	var envelope map[string]json.RawMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return "", nil, false, nil // The bounded prose decoder reports malformed JSON.
+		return nil, nil, fmt.Errorf("decode body: %w", err)
 	}
 	if _, prose := envelope["prosemirror"]; prose {
-		return "", nil, false, nil
+		// The worker reads no schema: a document must arrive reshaped by Collab (`?shape=render`).
+		return nil, nil, errors.New("document body arrived as ProseMirror; the export source must be fetched with shape=render")
 	}
-	writer := newProseWriter(maximumBytes)
-	var writeErr error
-	write := func(value string) {
-		if writeErr == nil {
-			writeErr = writer.write(value)
-		}
-	}
+	var blocks []render.Block
 	var losses []string
 	switch {
 	case envelope["sheet"] != nil:
@@ -197,14 +272,17 @@ func projectNonProseBody(body json.RawMessage, markdown bool, maximumBytes int) 
 			Cells map[string]string `json:"cells"`
 		}
 		if err := json.Unmarshal(envelope["sheet"], &sheet); err != nil {
-			return "", nil, true, fmt.Errorf("decode spreadsheet: %w", err)
+			return nil, nil, fmt.Errorf("decode spreadsheet: %w", err)
 		}
-		write("## Spreadsheet\n\nCell contents, including formulas as written.\n\n")
+		blocks = append(blocks, render.Heading(2, "Spreadsheet"), render.Paragraph("Cell contents, including formulas as written."))
+		lines := make([]string, 0, len(sheet.Cells))
 		for _, key := range sortedKeys(sheet.Cells) {
-			write("- " + portableLiteral(key) + ": " + portableLiteral(sheet.Cells[key]) + "\n")
+			lines = append(lines, key+": "+sheet.Cells[key])
 		}
-		if len(sheet.Cells) == 0 {
-			write("Empty spreadsheet.\n")
+		if len(lines) == 0 {
+			blocks = append(blocks, render.Paragraph("Empty spreadsheet."))
+		} else {
+			blocks = append(blocks, render.Bullets(lines))
 		}
 		losses = append(losses, "Spreadsheet cells and formulas are shown as text; formulas are not recalculated and grid styling is not preserved.")
 	case envelope["canvas"] != nil:
@@ -212,9 +290,9 @@ func projectNonProseBody(body json.RawMessage, markdown bool, maximumBytes int) 
 			Elements map[string]map[string]any `json:"elements"`
 		}
 		if err := json.Unmarshal(envelope["canvas"], &canvas); err != nil {
-			return "", nil, true, fmt.Errorf("decode canvas: %w", err)
+			return nil, nil, fmt.Errorf("decode canvas: %w", err)
 		}
-		write("## Canvas\n\nStatic element inventory with text, geometry and connections.\n\n")
+		blocks = append(blocks, render.Heading(2, "Canvas"), render.Paragraph("Static element inventory with text, geometry and connections."))
 		count := 0
 		for _, id := range sortedKeys(canvas.Elements) {
 			element := canvas.Elements[id]
@@ -222,43 +300,43 @@ func projectNonProseBody(body json.RawMessage, markdown bool, maximumBytes int) 
 				continue
 			}
 			count++
-			write("### " + portableLiteral(displayValue(element["type"], 0)) + " " + portableLiteral(id) + "\n\n")
+			blocks = append(blocks, render.Heading(3, displayValue(element["type"], 0)+" "+id))
+			var lines []string
 			for _, key := range []string{"text", "originalText", "x", "y", "width", "height", "angle", "link", "strokeColor", "backgroundColor", "fillStyle", "fontSize", "startBinding", "endBinding", "points", "customData"} {
 				if value, exists := element[key]; exists {
-					write("- " + portableLiteral(key) + ": " + portableLiteral(displayValue(value, 0)) + "\n")
+					lines = append(lines, key+": "+displayValue(value, 0))
 				}
 			}
-			write("\n")
+			if len(lines) > 0 {
+				blocks = append(blocks, render.Bullets(lines))
+			}
 		}
 		if count == 0 {
-			write("Empty canvas.\n")
+			blocks = append(blocks, render.Paragraph("Empty canvas."))
 		}
 		losses = append(losses, "Canvas elements are represented as a text inventory; their visual arrangement is described rather than drawn.")
 	default:
 		if len(envelope) == 0 {
-			return "", nil, false, nil
+			return nil, nil, nil
 		}
-		write("## Content\n\nReadable representation of this body's stored fields.\n\n")
+		blocks = append(blocks, render.Heading(2, "Content"), render.Paragraph("Readable representation of this body's stored fields."))
+		var lines []string
 		for _, key := range sortedKeys(envelope) {
 			if key == "schemaVersion" || strings.HasPrefix(key, "$") {
 				continue
 			}
 			var value any
 			if err := json.Unmarshal(envelope[key], &value); err != nil {
-				return "", nil, true, err
+				return nil, nil, err
 			}
-			write("- " + portableLiteral(key) + ": " + portableLiteral(displayValue(value, 0)) + "\n")
+			lines = append(lines, key+": "+displayValue(value, 0))
+		}
+		if len(lines) > 0 {
+			blocks = append(blocks, render.Bullets(lines))
 		}
 		losses = append(losses, "An unfamiliar body kind was represented by its readable stored fields.")
 	}
-	if writeErr != nil {
-		return "", nil, true, writeErr
-	}
-	result := strings.TrimSpace(writer.String())
-	if !markdown {
-		result = strings.ReplaceAll(result, "\\", "")
-	}
-	return result, losses, true, nil
+	return blocks, losses, nil
 }
 
 func publicKeys(values map[string]any) []string {
@@ -287,15 +365,18 @@ func decodePortableJSON(raw []byte, value any) error {
 	return decoder.Decode(value)
 }
 
-func writeProperties(write func(string), values map[string]any) {
-	for _, key := range publicKeys(values) {
-		write("- " + portableLiteral(key) + ": " + portableLiteral(displayValue(values[key], 0)) + "\n")
+// propertyList is one bullet per public key, in key order.
+func propertyList(values map[string]any) render.Block {
+	keys := publicKeys(values)
+	lines := make([]string, 0, len(keys))
+	for _, key := range keys {
+		lines = append(lines, key+": "+displayValue(values[key], 0))
 	}
-	write("\n")
+	return render.Bullets(lines)
 }
 
 func displayValue(value any, depth int) string {
-	if depth > maximumProseDepth {
+	if depth > maximumPortableDepth {
 		return "[Value exceeds nesting limit]"
 	}
 	switch value := value.(type) {
@@ -318,16 +399,4 @@ func displayValue(value any, depth int) string {
 	default:
 		return fmt.Sprint(value)
 	}
-}
-
-func portableLiteral(value string) string {
-	return escapeMarkdownLiteral(sanitizeText(value), false)
-}
-
-// Form objects are displayed as labelled text so every page, help text and condition survives.
-func writePortableFields(write func(string), values map[string]any, depth int) {
-	for _, key := range publicKeys(values) {
-		write("- " + portableLiteral(key) + ": " + portableLiteral(displayValue(values[key], depth+1)) + "\n")
-	}
-	write("\n")
 }

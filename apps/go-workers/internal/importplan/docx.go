@@ -3,7 +3,6 @@ package importplan
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/sianachi/Nix/apps/go-workers/internal/render"
 )
 
 const docxMediaType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -66,7 +67,7 @@ type docxParser struct {
 	used        map[string]bool
 	loss        []string
 	omissions   []string
-	blocks      []map[string]any
+	blocks      []render.Block
 	table       *docxTable
 	tableDepth  int
 	paragraph   *docxParagraph
@@ -78,17 +79,17 @@ type docxParser struct {
 }
 
 type docxParagraph struct {
-	style   string
-	numID   string
-	level   int
-	content []map[string]any
-	images  []string
+	style  string
+	numID  string
+	level  int
+	runs   []render.Run
+	images []string
 }
 
 type docxTable struct {
-	rows        [][][]map[string]any
-	currentRow  [][]map[string]any
-	currentCell []map[string]any
+	rows        [][][]render.Block
+	currentRow  [][]render.Block
+	currentCell []render.Block
 	inCell      bool
 }
 
@@ -148,14 +149,14 @@ func parseDOCX(source Source, limits Limits) (Plan, error) {
 		return Plan{}, err
 	}
 	if len(parser.blocks) == 0 {
-		parser.blocks = append(parser.blocks, map[string]any{"type": "paragraph"})
+		parser.blocks = append(parser.blocks, render.Block{Kind: "paragraph"})
 	}
-	documentJSON, err := json.Marshal(map[string]any{"type": "doc", "content": parser.blocks})
+	tree, err := render.Document{Blocks: parser.blocks}.Encode()
 	if err != nil {
 		return Plan{}, err
 	}
 	items := []Item{
-		noteItem("root", nil, 0, source.Title, &Body{Encoding: "prosemirror", Document: documentJSON}),
+		noteItem("root", nil, 0, source.Title, &Body{Encoding: "nix-render", Render: tree}),
 		originalItem(source, docxMediaType, 0),
 	}
 	parent := "root"
@@ -336,7 +337,7 @@ func (parser *docxParser) start(value xml.StartElement) {
 		parser.appendText("\t")
 	case "br":
 		if parser.paragraph != nil {
-			parser.paragraph.content = append(parser.paragraph.content, map[string]any{"type": "hardBreak"})
+			parser.paragraph.runs = append(parser.paragraph.runs, render.Run{Text: "\n"})
 		}
 	case "blip":
 		if parser.paragraph != nil {
@@ -368,7 +369,7 @@ func (parser *docxParser) end(value xml.EndElement) {
 	case "tc":
 		if parser.table != nil && parser.tableDepth == 1 {
 			if len(parser.table.currentCell) == 0 {
-				parser.table.currentCell = append(parser.table.currentCell, map[string]any{"type": "paragraph"})
+				parser.table.currentCell = append(parser.table.currentCell, render.Block{Kind: "paragraph"})
 			}
 			parser.table.currentRow = append(parser.table.currentRow, parser.table.currentCell)
 			parser.table.currentCell = nil
@@ -393,23 +394,13 @@ func (parser *docxParser) appendText(text string) {
 	if parser.paragraph == nil || text == "" {
 		return
 	}
-	node := map[string]any{"type": "text", "text": text}
-	marks := make([]map[string]any, 0, 5)
+	run := render.Run{Text: text, Href: parser.hyperlink}
 	for _, mark := range []string{"bold", "italic", "underline", "strike"} {
 		if parser.runMarks[mark] {
-			marks = append(marks, map[string]any{"type": mark})
+			run.Styles = append(run.Styles, mark)
 		}
 	}
-	if parser.hyperlink != "" {
-		marks = append(marks, map[string]any{
-			"type":  "link",
-			"attrs": map[string]any{"href": parser.hyperlink, "target": "_blank", "rel": "noopener noreferrer nofollow", "class": nil, "title": nil},
-		})
-	}
-	if len(marks) > 0 {
-		node["marks"] = marks
-	}
-	parser.paragraph.content = append(parser.paragraph.content, node)
+	parser.paragraph.runs = append(parser.paragraph.runs, run)
 }
 
 func (parser *docxParser) finishParagraph() {
@@ -418,37 +409,16 @@ func (parser *docxParser) finishParagraph() {
 	}
 	paragraph := parser.paragraph
 	parser.paragraph = nil
-	typeName := "paragraph"
-	attrs := map[string]any(nil)
+	node := render.Block{Kind: "paragraph", Runs: paragraph.runs}
 	lowerStyle := strings.ToLower(paragraph.style)
 	if strings.HasPrefix(lowerStyle, "heading") {
-		level, err := strconv.Atoi(strings.TrimPrefix(lowerStyle, "heading"))
-		if err == nil && level >= 1 && level <= 3 {
-			typeName = "heading"
-			attrs = map[string]any{"level": level}
-		} else if level > 3 {
-			parser.loss = appendUnique(parser.loss, "DOCX headings below level three are imported as paragraphs.")
+		if level, err := strconv.Atoi(strings.TrimPrefix(lowerStyle, "heading")); err == nil && level >= 1 && level <= 6 {
+			node.Kind, node.Level = "heading", level
 		}
-	}
-	node := map[string]any{"type": typeName}
-	if attrs != nil {
-		node["attrs"] = attrs
-	}
-	if len(paragraph.content) > 0 {
-		node["content"] = paragraph.content
 	}
 	if paragraph.numID != "" {
-		listType := "bulletList"
-		if format := parser.numbering[paragraph.numID]; format != "" && format != "bullet" {
-			listType = "orderedList"
-		}
-		list := map[string]any{
-			"type":    listType,
-			"content": []map[string]any{{"type": "listItem", "content": []map[string]any{node}}},
-		}
-		if listType == "orderedList" {
-			list["attrs"] = map[string]any{"start": 1, "type": nil}
-		}
+		format := parser.numbering[paragraph.numID]
+		list := render.Block{Kind: "list", Ordered: format != "" && format != "bullet", Items: []render.ListItem{{Blocks: []render.Block{node}}}}
 		if paragraph.level > 0 {
 			parser.loss = appendUnique(parser.loss, "Nested DOCX list indentation is flattened while list semantics are retained.")
 		}
@@ -466,17 +436,15 @@ func (parser *docxParser) finishParagraph() {
 			parser.used[relationID] = true
 			parser.usedAssets = append(parser.usedAssets, asset)
 		}
-		parser.appendBlock(map[string]any{
-			"type": "image",
-			"attrs": map[string]any{
-				"src": "nix-file:" + asset.SourceID, "alt": asset.File.FileName,
-				"title": nil, "width": asset.File.PixelWidth, "height": asset.File.PixelHeight,
-			},
-		})
+		image := render.Block{Kind: "image", Src: "nix-file:" + asset.SourceID, Alt: asset.File.FileName}
+		if asset.File.PixelWidth != nil {
+			image.Width = *asset.File.PixelWidth
+		}
+		parser.appendBlock(image)
 	}
 }
 
-func (parser *docxParser) appendBlock(node map[string]any) {
+func (parser *docxParser) appendBlock(node render.Block) {
 	if parser.table != nil && parser.table.inCell {
 		parser.table.currentCell = append(parser.table.currentCell, node)
 		return
@@ -493,19 +461,23 @@ func (parser *docxParser) finishTable() {
 	if len(table.rows) == 0 {
 		return
 	}
-	rows := make([]map[string]any, 0, len(table.rows))
+	rows := make([]render.Row, 0, len(table.rows))
 	for _, row := range table.rows {
-		cells := make([]map[string]any, 0, len(row))
+		cells := make([][]render.Run, 0, len(row))
 		for _, content := range row {
-			cells = append(cells, map[string]any{
-				"type":    "tableCell",
-				"attrs":   map[string]any{"colspan": 1, "rowspan": 1, "colwidth": nil, "align": nil},
-				"content": content,
-			})
+			// A cell holds runs only; its paragraphs are joined by line breaks.
+			var runs []render.Run
+			for index, block := range content {
+				if index > 0 {
+					runs = append(runs, render.Run{Text: "\n"})
+				}
+				runs = append(runs, block.Runs...)
+			}
+			cells = append(cells, runs)
 		}
-		rows = append(rows, map[string]any{"type": "tableRow", "content": cells})
+		rows = append(rows, render.Row{Cells: cells})
 	}
-	parser.blocks = append(parser.blocks, map[string]any{"type": "table", "content": rows})
+	parser.blocks = append(parser.blocks, render.Block{Kind: "table", Rows: rows})
 }
 
 func attribute(element xml.StartElement, local string) string {
