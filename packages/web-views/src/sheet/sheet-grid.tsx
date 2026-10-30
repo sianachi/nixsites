@@ -152,7 +152,7 @@ export function SheetGrid({ sheet }: SheetGridProps): ReactNode {
     // Justification: this runs once per entry into edit mode, to place the caret. Reacting to
     // selection.draft.length too would reset the caret to the end on every keystroke, undoing
     // whatever the person just typed in the middle of the text.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per entry into edit mode; draft length would reset the caret every keystroke.
   }, [selection.mode, selection.editSource]);
 
   const activeKey = cellKey(selection.active);

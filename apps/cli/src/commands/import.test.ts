@@ -197,6 +197,7 @@ describe('nixctl import', () => {
     const importId = 'a1111111-1111-4111-8111-111111111111';
     const operationId = 'a2222222-2222-4222-8222-222222222222';
     let uploadUrlSeen = false;
+    let uploadType: string | null = null;
     let operationRead = false;
     let commitSeen = false;
     let cancelSeen = false;
@@ -210,8 +211,9 @@ describe('nixctl import', () => {
           expiresAt: '2026-09-01T01:00:00Z',
         }),
       ),
-      http.put('http://127.0.0.1:9445/private-capability', () => {
+      http.put('http://127.0.0.1:9445/private-capability', ({ request }) => {
         uploadUrlSeen = true;
+        uploadType = request.headers.get('content-type');
         return new HttpResponse(null, { status: 200 });
       }),
       http.post(`${API}/api/v1/imports/${importId}/preview`, () =>
@@ -264,6 +266,7 @@ describe('nixctl import', () => {
         operationStatus: 'queued',
       });
       expect(uploadUrlSeen).toBe(true);
+      expect(uploadType).toBe('application/octet-stream');
       expect(operationRead).toBe(false);
       expect(commitSeen).toBe(false);
       expect(cancelSeen).toBe(false);

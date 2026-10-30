@@ -1,4 +1,4 @@
-import { Button, Field, Input, Select, Table, Text } from '@nix/ui';
+import { ScrollRegion, Button, Field, Input, Select, Table, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
@@ -160,13 +160,7 @@ function PeopleBlock({
               ))}
             </ul>
           ) : (
-            <div
-              className="min-w-0 overflow-x-auto"
-              role="region"
-              aria-label={`${title} table`}
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll the table horizontally.
-              tabIndex={0}
-            >
+            <ScrollRegion className="min-w-0 overflow-x-auto" aria-label={`${title} table`}>
               <Table
                 caption={title}
                 columns={columns}
@@ -176,7 +170,7 @@ function PeopleBlock({
                 loadingMessage={`Loading ${title.toLocaleLowerCase()}.`}
                 emptyMessage="Nobody is listed yet."
               />
-            </div>
+            </ScrollRegion>
           )}
           <PersonPicker
             label={title}

@@ -6,13 +6,11 @@
  * goes back to its `before` marks, and a restructure goes back to its snapshot.
  */
 
+import { isRecord } from './is-record.js';
+
 type Json = Record<string, unknown>;
 
 const TEXTBLOCKS = new Set(['paragraph', 'heading', 'codeBlock', 'detailsSummary']);
-
-function isRecord(value: unknown): value is Json {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function parseJson(text: unknown): unknown {
   if (typeof text !== 'string') return null;

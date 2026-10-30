@@ -44,7 +44,7 @@ import {
   removeEvalTemplates,
 } from './pet-eval-templates.ts';
 
-/** docs/plans/pet-tool-use-plan.md, lane E: the chat suite. A fixture is built from one
+/** The chat suite (eval lane E). A fixture is built from one
  * blueprint, every case is one owner message, tools run for real under the lane F policy
  * (plus "inside the fixture"), and the case is scored on which tools were attempted and on the
  * workspace state read back afterwards. Nothing here teaches the model anything: the point is

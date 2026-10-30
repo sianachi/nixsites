@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { createNixClient, itemChartSchema, NixApiError } from '@nix/api-client';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-import { ChartView } from '../../../chart/chart-view';
+import { ChartBody, ChartView } from '../../../chart/chart-view';
 import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { aView } from '@nix/web-collections/testing/view-fixture';
 
@@ -246,5 +246,46 @@ describe('the chart view', () => {
 
     expect(await screen.findByText(/Finish it in the settings for this view/)).toBeVisible();
     expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
+  });
+});
+
+describe('a chart grouped by a priority or a checkbox', () => {
+  const field = (key: string, type: string) =>
+    [{ key, label: key, type }] as unknown as Parameters<typeof ChartBody>[0]['fields'];
+  const rowNames = () => screen.getAllByRole('rowheader').map((header) => header.textContent);
+
+  it('names priority levels and lists them 1 to 4, with no value last', () => {
+    const chart = itemChartSchema.parse(
+      chartOf({
+        groupBy: 'priority',
+        buckets: [
+          { value: null, children: 5, total: null },
+          { value: '3', children: 4, total: null },
+          { value: '1', children: 2, total: null },
+        ],
+        children: 11,
+        distinctValues: 3,
+      }),
+    );
+    render(<ChartBody chart={chart} fields={field('priority', 'priority')} />);
+
+    expect(rowNames()).toEqual(['P1 Urgent', 'P3 Normal', 'Unset (no value)']);
+  });
+
+  it('names checkbox buckets Not checked and Checked, in that order', () => {
+    const chart = itemChartSchema.parse(
+      chartOf({
+        groupBy: 'resolved',
+        buckets: [
+          { value: 'true', children: 7, total: null },
+          { value: 'false', children: 2, total: null },
+        ],
+        children: 9,
+        distinctValues: 2,
+      }),
+    );
+    render(<ChartBody chart={chart} fields={field('resolved', 'checkbox')} />);
+
+    expect(rowNames()).toEqual(['Not checked', 'Checked']);
   });
 });

@@ -80,6 +80,29 @@ export interface LabelledProperty {
   readonly type: string;
 }
 
+/** The priority scale's words, as `priorityLabel` in web-collections reads them. */
+const PRIORITY_WORDS: Readonly<Record<string, string>> = {
+  '1': 'P1 Urgent',
+  '2': 'P2 High',
+  '3': 'P3 Normal',
+  '4': 'P4 Low',
+};
+
+/**
+ * Where a bucket sits when its grouping is a closed set: priority 1 to 4, a checkbox unchecked
+ * then checked, an absent value last. Null for any other type, which keeps the server's
+ * biggest-first order.
+ */
+export function naturalBucketRank(type: string | undefined, value: string | null): number | null {
+  if (type !== 'priority' && type !== 'checkbox' && type !== 'completion') {
+    return null;
+  }
+  if (value === null) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return type === 'priority' ? Number(value) : value === 'true' ? 1 : 0;
+}
+
 /** Labels from a container's definitions; `unset` is what an absent value is called. */
 export function labelsFor(fields: readonly LabelledProperty[], unset: string): ChartLabels {
   const byKey = new Map(fields.map((field) => [field.key, field]));
@@ -92,6 +115,9 @@ export function labelsFor(fields: readonly LabelledProperty[], unset: string): C
       const type = key === null ? undefined : byKey.get(key)?.type;
       if (type === 'checkbox' || type === 'completion') {
         return value === 'true' ? 'Checked' : value === 'false' ? 'Not checked' : value;
+      }
+      if (type === 'priority') {
+        return PRIORITY_WORDS[value] ?? value;
       }
       return value;
     },

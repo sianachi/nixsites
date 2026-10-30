@@ -7,6 +7,7 @@
  * the import mapping that resolves it.
  */
 
+import { isRecord } from '@nix/editor-schema';
 import {
   RENDER_FORMAT,
   RENDER_VERSION,
@@ -17,10 +18,6 @@ import {
 } from './render.js';
 
 type Json = Record<string, unknown>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Parses a tree a worker posted. Returns null for anything that is not a `nix-render` v1 document. */
 export function parseRenderDocument(value: unknown): RenderDocument | null {

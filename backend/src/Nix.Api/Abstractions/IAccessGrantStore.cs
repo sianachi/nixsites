@@ -38,7 +38,11 @@ public interface IAccessGrantStore
     /// <summary>Removes the principal's direct admin role; <see langword="false"/> when they had none.</summary>
     public ValueTask<bool> RemoveTenantAdminAsync(PrincipalId principalId, CancellationToken cancellationToken);
 
-    /// <summary>Whether any admin grant (principal or group) other than this principal's remains.</summary>
+    /// <summary>
+    /// Whether an admin who can act other than this principal remains: an active principal grant, or a
+    /// group grant with another active member. Also locks the tenant's admin grants until the
+    /// transaction ends, so call it in the transaction that deletes.
+    /// </summary>
     public ValueTask<bool> AnyOtherTenantAdminAsync(PrincipalId principalId, CancellationToken cancellationToken);
 
     /// <summary>Queues one audit event, saved with <see cref="SaveAsync"/>.</summary>

@@ -112,7 +112,7 @@ export function createMcpHttpHandler(
     });
     try {
       // The SDK's own transport, typed with optional setters this project's strictness refuses.
-      await server.connect(transport as unknown as Parameters<McpServer['connect']>[0]);
+      await server.connect(transport);
       await transport.handleRequest(request, response);
     } catch (error) {
       if (!response.headersSent) {

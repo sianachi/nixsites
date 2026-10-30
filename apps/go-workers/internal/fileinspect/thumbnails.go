@@ -62,7 +62,8 @@ func (handler *Handler) attachThumbnail(ctx context.Context, uploadID, fileName,
 		slog.Info("thumbnail upload not authorized", "uploadId", uploadID, "reason", err.Error())
 		return
 	}
-	if err := handler.transfer.Upload(ctx, target, "image/jpeg", bytes.NewReader(result.JPEG), size, ""); err != nil {
+	// The capability signs content-type octet-stream (PutSized); reads set image/jpeg via GetForBrowser.
+	if err := handler.transfer.Upload(ctx, target, "application/octet-stream", bytes.NewReader(result.JPEG), size, ""); err != nil {
 		if !errors.Is(err, objecttransfer.ErrAlreadyExists) {
 			slog.Info("thumbnail upload failed", "uploadId", uploadID, "reason", err.Error())
 		}

@@ -77,6 +77,9 @@ if (process.argv.includes('--preflight')) {
   console.log('nixctl authentication and smoke workspace are available.');
   process.exit(0);
 }
+// Checked after preflight, which runs against the stack being replaced. The app frames nothing over the network (previews use blob:/srcdoc frames).
+const appIndex = await fetch(expectedURL, { redirect: 'manual' });
+if (!/(^|;)\s*frame-ancestors 'none'\s*($|;)/.test(appIndex.headers.get('content-security-policy') ?? '') || appIndex.headers.get('x-frame-options') !== 'DENY') throw new Error("The app index must send frame-ancestors 'none' and X-Frame-Options DENY.");
 const directory = await mkdtemp(join(tmpdir(), 'nix-release-smoke-'));
 let root;
 let failure;

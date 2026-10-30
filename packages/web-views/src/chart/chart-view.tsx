@@ -14,6 +14,7 @@ import {
   chartCaption,
   chartKindOf,
   chartLabels,
+  inNaturalOrder,
   countOf,
   formatDay,
   isChartPeriod,
@@ -103,7 +104,8 @@ export interface ChartBodyProps {
  * A loaded chart, drawn as its type says. Separate from {@link ChartView} so stories and tests can
  * hand it a payload without a server.
  */
-export function ChartBody({ chart, fields = [] }: ChartBodyProps): ReactNode {
+export function ChartBody({ chart: loaded, fields = [] }: ChartBodyProps): ReactNode {
+  const chart = inNaturalOrder(loaded, fields);
   const labels = chartLabels(fields);
   const kind = chartKindOf(chart.chartKind);
   const timeAxis = isChartPeriod(chart.period);

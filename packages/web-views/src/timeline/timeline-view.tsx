@@ -1,5 +1,5 @@
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import { Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
@@ -306,14 +306,8 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
             Focusable and named, which is the standard treatment for a scrollable region: without a
             tab stop the axis can only be scrolled by tabbing through the bars inside it, so a
             keyboard user who wants to read the dates has to activate something to move. */}
-          <div
-            role="region"
+          <ScrollRegion
             aria-label={`${view.name}, ${axis.label}`}
-            // The rule cannot see that this element scrolls, and only its author can. Without a tab
-            // stop the axis is reachable by keyboard only by tabbing through the bars inside it, so
-            // somebody who wants to read the dates has to activate something to move.
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-            tabIndex={0}
             className={cn('overflow-x-auto', focusRing)}
           >
             <TimelineTable
@@ -323,7 +317,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
               todayText={todayText}
               aside={aside}
             />
-          </div>
+          </ScrollRegion>
         </Blueprint>
       )}
 

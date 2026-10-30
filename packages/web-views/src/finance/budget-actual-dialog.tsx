@@ -1,4 +1,5 @@
 import {
+  ScrollRegion,
   Button,
   Dialog,
   Field,
@@ -455,11 +456,8 @@ function ActualSummary({
                   {String(query.data.total)}; the total above counts them all.
                 </Text>
               ) : null}
-              <div
-                role="region"
+              <ScrollRegion
                 aria-label={`${line.name} transactions`}
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach horizontally clipped budget transaction columns.
-                tabIndex={0}
                 className={cn('min-w-0 overflow-x-auto', focusRing)}
               >
                 <Table<FinanceTransaction>
@@ -487,7 +485,7 @@ function ActualSummary({
                   ]}
                   emptyMessage={`Nothing recorded on ${line.name} this month.`}
                 />
-              </div>
+              </ScrollRegion>
             </>
           )}
         </div>

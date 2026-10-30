@@ -21,8 +21,7 @@ import type {
  * The compile-time tie between `@nix/structure-spec`'s structural types and this app's own,
  * Zod-parsed ones.
  *
- * `@nix/structure-spec` may depend only on `zod` and `@nix/sheet` (task 0.3 of
- * `docs/plans/pet-structure-consult-plan.md`; see
+ * `@nix/structure-spec` may depend only on `zod` and `@nix/sheet` (see
  * `docs/adr/0050-companion-structure-tools-compile-declarative-specs.md`), so it cannot import
  * `container-model.ts`'s types directly - they are tied to `@nix/api-client`'s generated
  * contract. Instead it declares its own `StructureProperty`, `StructureView` and their form and

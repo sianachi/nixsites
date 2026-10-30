@@ -7,7 +7,7 @@ import type { CollabMetrics } from '../metrics.ts';
 /**
  * The version-history retention sweep.
  *
- * `docs/plans/version-history.md` describes this as a walk over "documents whose workspace has
+ * The design was a walk over "documents whose workspace has
  * a non-null `version_retention_days`". In practice the column is `NOT NULL` - every workspace
  * has always had a retention setting, defaulted at creation - so "no retention" is expressed the
  * way the rest of this service already expresses "disabled": zero. `sweepTenant` below skips a

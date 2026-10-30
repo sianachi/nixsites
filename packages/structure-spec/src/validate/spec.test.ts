@@ -203,6 +203,42 @@ describe('validateSpec create_structured', () => {
     expect(report.problems).toEqual([]);
   });
 
+  it.each([
+    ['priority', { label: 'Severity', type: 'priority' }, 'severity'],
+    ['checkbox', { label: 'Resolved', type: 'checkbox' }, 'resolved'],
+  ])('accepts a bar and a pie chart grouped by a %s', (_name, field, key) => {
+    for (const chartKind of ['bar', 'pie']) {
+      const report = validateSpec(
+        'create_structured',
+        { recipe: 'sheet', fields: [field], views: [{ kind: 'chart', groupBy: key, chartKind }] },
+        context(),
+      );
+      expect(report.problems, chartKind).toEqual([]);
+    }
+  });
+
+  it('names the date requirement when a period chart has no date to group by', () => {
+    const fields = [
+      { label: 'Severity', type: 'priority' },
+      { label: 'Wrote on', type: 'date' },
+    ];
+    for (const view of [
+      { kind: 'chart', groupBy: 'severity', chartKind: 'line', period: 'week' },
+      { kind: 'chart', groupBy: 'severity', period: 'month' },
+      { kind: 'chart', chartKind: 'area', period: 'week' },
+    ]) {
+      const report = validateSpec(
+        'create_structured',
+        { recipe: 'sheet', fields, views: [view] },
+        context(),
+      );
+      expect(report.ok, JSON.stringify(view)).toBe(false);
+      expect(JSON.stringify(report.problems), JSON.stringify(view)).toContain(
+        'needs a date property to group by',
+      );
+    }
+  });
+
   it('refuses a line chart over categories, a split by free text, and a year grid by month', () => {
     const fields = [
       { label: 'Status', type: 'select', options: ['Open', 'Done'] },

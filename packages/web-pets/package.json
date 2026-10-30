@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-pets",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Pets: the companion (chat, conversation, approvals, work tools) and OpenUI generated UI (renderer, library, designer, artifacts)",
@@ -229,12 +229,12 @@
     "@nix/web-workspaces": "workspace:*",
     "@openuidev/lang-core": "1.0.1",
     "@openuidev/react-lang": "1.0.1",
-    "@tiptap/pm": "^3.29.0",
+    "@tiptap/pm": "^3.32.2",
     "lucide-react": "^1.27.0",
-    "react-router": "^7.18.1",
+    "react-router": "^7.18.5",
     "y-prosemirror": "^1.3.7",
     "yjs": "^13.6.31",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^19.0.0"
@@ -254,6 +254,6 @@
     "react": "^19.2.8",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.3.6",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

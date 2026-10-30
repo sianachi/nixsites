@@ -1,6 +1,6 @@
 {
   "name": "@nix/editor-schema",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "The Nix document schema: the block and mark set every stored document is validated against, shared by the web editor and the collaboration service",
@@ -23,31 +23,32 @@
     "build": "tsc --project tsconfig.build.json"
   },
   "dependencies": {
-    "@tiptap/core": "^3.29.0",
-    "@tiptap/extension-blockquote": "^3.29.0",
-    "@tiptap/extension-bold": "^3.29.0",
-    "@tiptap/extension-code": "^3.29.0",
-    "@tiptap/extension-code-block": "^3.29.0",
-    "@tiptap/extension-details": "^3.29.2",
-    "@tiptap/extension-document": "^3.29.0",
-    "@tiptap/extension-hard-break": "^3.29.0",
-    "@tiptap/extension-heading": "^3.29.0",
-    "@tiptap/extension-highlight": "^3.29.0",
-    "@tiptap/extension-horizontal-rule": "^3.29.0",
-    "@tiptap/extension-image": "^3.29.0",
-    "@tiptap/extension-italic": "^3.29.0",
-    "@tiptap/extension-link": "^3.29.0",
-    "@tiptap/extension-list": "^3.29.0",
-    "@tiptap/extension-paragraph": "^3.29.0",
-    "@tiptap/extension-strike": "^3.29.0",
-    "@tiptap/extension-table": "^3.29.0",
-    "@tiptap/extension-text": "^3.29.0",
-    "@tiptap/extension-underline": "^3.29.0",
-    "@tiptap/pm": "^3.29.0"
+    "@tiptap/core": "^3.32.2",
+    "@tiptap/extension-blockquote": "^3.32.2",
+    "@tiptap/extension-bold": "^3.32.2",
+    "@tiptap/extension-code": "^3.32.2",
+    "@tiptap/extension-code-block": "^3.32.2",
+    "@tiptap/extension-details": "^3.32.2",
+    "@tiptap/extension-document": "^3.32.2",
+    "@tiptap/extension-hard-break": "^3.32.2",
+    "@tiptap/extension-heading": "^3.32.2",
+    "@tiptap/extension-highlight": "^3.32.2",
+    "@tiptap/extension-horizontal-rule": "^3.32.2",
+    "@tiptap/extension-image": "^3.32.2",
+    "@tiptap/extension-italic": "^3.32.2",
+    "@tiptap/extension-link": "^3.32.2",
+    "@tiptap/extension-list": "^3.32.2",
+    "@tiptap/extension-paragraph": "^3.32.2",
+    "@tiptap/extension-strike": "^3.32.2",
+    "@tiptap/extension-table": "^3.32.2",
+    "@tiptap/extension-text": "^3.32.2",
+    "@tiptap/extension-text-style": "^3.32.2",
+    "@tiptap/extension-underline": "^3.32.2",
+    "@tiptap/pm": "^3.32.2"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

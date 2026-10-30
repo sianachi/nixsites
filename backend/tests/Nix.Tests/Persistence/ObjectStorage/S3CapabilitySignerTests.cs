@@ -118,7 +118,7 @@ public sealed class S3CapabilitySignerTests
         var sized = Signer().PutSized("files/upload", 42).Url;
         var immutable = Signer().PutImmutable("files/version", 42).Url;
 
-        Assert.Contains("X-Amz-SignedHeaders=content-length%3Bhost", sized.Query, StringComparison.Ordinal);
+        Assert.Contains("X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost", sized.Query, StringComparison.Ordinal);
         Assert.Contains(
             "X-Amz-SignedHeaders=content-length%3Bhost%3Bif-none-match",
             immutable.Query,

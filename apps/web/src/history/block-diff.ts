@@ -1,8 +1,7 @@
 /**
  * A block-level diff over two ProseMirror documents, reduced to plaintext first.
  *
- * The history sidebar never diffs a document at the character level (out of scope, see
- * `docs/plans/version-history.md`); it diffs the top-level blocks as plain strings, which is
+ * The history sidebar never diffs a document at the character level (character-level diffing is out of scope); it diffs the top-level blocks as plain strings, which is
  * cheap, has no dependency on ProseMirror's own transform machinery, and reads the way a person
  * skimming two revisions of a note actually thinks about the change: "this paragraph is new",
  * "this one moved", not "these twelve characters changed".

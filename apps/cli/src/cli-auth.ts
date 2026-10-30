@@ -94,6 +94,7 @@ export function trustedVerificationUrl(
   return url.href;
 }
 
+// Duplicated with apps/sites/src/shared/object-transfer.ts: the CLI and the sites app share no package.
 function isLoopback(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
 }

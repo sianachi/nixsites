@@ -91,7 +91,7 @@ export function ContainerView({
   useEffect(() => {
     selection.prune(childKey.length === 0 ? [] : childKey.split('\u0000'));
     // `prune` is stable; the join is what changes when the children do.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `prune` is stable; the joined child ids change when the children do.
   }, [childKey]);
   const selecting = capabilities.select && !container.locked;
   // What the view says it draws, for Select all and Cmd/Ctrl-A: filters live in the view, so it reports.

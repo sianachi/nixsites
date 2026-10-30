@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-foundation",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Web app foundations: framework-agnostic helpers, layout regions, a11y, keyboard, theme, audio and shared state components",
@@ -66,7 +66,7 @@
     "fflate": "^0.8.3",
     "lucide-react": "^1.27.0",
     "yjs": "^13.6.31",
-    "zod": "^4.4.3",
+    "zod": "^4.6.7",
     "zustand": "^5.0.14"
   },
   "peerDependencies": {
@@ -86,9 +86,9 @@
     "jsdom": "^29.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router": "^7.18.1",
+    "react-router": "^7.18.5",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.3.6",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

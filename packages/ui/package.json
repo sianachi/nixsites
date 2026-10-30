@@ -1,6 +1,6 @@
 {
   "name": "@nix/ui",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "The Industry design system as React components: primitives, controls and their stories",
@@ -58,6 +58,6 @@
     "storybook": "^9.1.20",
     "tailwindcss": "^4.1.11",
     "vite": "^7.0.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

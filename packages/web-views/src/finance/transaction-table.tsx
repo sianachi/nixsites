@@ -1,4 +1,4 @@
-import { Checkbox, Table, Tag, Text, cn, focusRing, type TableColumn } from '@nix/ui';
+import { ScrollRegion, Checkbox, Table, Tag, Text, cn, focusRing, type TableColumn } from '@nix/ui';
 import type { BudgetLine, FinanceAccount, FinanceTransaction } from '@nix/api-client';
 import type { ReactNode } from 'react';
 import { Money, editableTextButton } from './finance-shared';
@@ -96,11 +96,8 @@ export function TransactionTable({
     },
   ];
   return (
-    <div
-      role="region"
+    <ScrollRegion
       aria-label="Transaction history"
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach horizontally clipped transaction columns.
-      tabIndex={0}
       className={cn('min-w-0 overflow-x-auto', focusRing)}
     >
       <Table<FinanceTransaction>
@@ -120,6 +117,6 @@ export function TransactionTable({
         ]}
         emptyMessage="No matching transactions. Try another date range or clear your filters."
       />
-    </div>
+    </ScrollRegion>
   );
 }

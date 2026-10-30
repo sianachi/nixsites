@@ -235,6 +235,32 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_chart_buckets_by_a_priority_and_a_checkbox_with_an_unset_value_apart()
+    {
+        // JSON numbers and booleans read as text through `->>`: "2", "true". A child with no value
+        // lands in the null bucket, so unchecked-by-omission stays distinct from a stored false.
+        await SetPropertiesAsync(VisibleChild, """{"title":"A","severity":1,"resolved":true}""");
+        await AddChildAsync(new Guid("201100f0-1111-4111-8111-201100f00040"),
+            """{"title":"B","severity":1,"resolved":false}""");
+        await AddChildAsync(new Guid("201100f0-1111-4111-8111-201100f00041"),
+            """{"title":"C","severity":3}""");
+
+        await using var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var reader = work.Resolve<IChildAggregates>();
+        var workspace = WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId);
+        var parent = ItemId.From(VisibleContainer);
+
+        var severity = await reader.BucketAsync(workspace, parent, "severity", null, 10, Cancellation);
+        var resolved = await reader.BucketAsync(workspace, parent, "resolved", null, 10, Cancellation);
+
+        Assert.Equal(2L, severity.Buckets.Single(bucket => bucket.Value == "1").Children);
+        Assert.Equal(1L, severity.Buckets.Single(bucket => bucket.Value == "3").Children);
+        Assert.Equal(1L, resolved.Buckets.Single(bucket => bucket.Value == "true").Children);
+        Assert.Equal(1L, resolved.Buckets.Single(bucket => bucket.Value == "false").Children);
+        Assert.Equal(1L, resolved.Buckets.Single(bucket => bucket.Value is null).Children);
+    }
+
+    [Fact]
     public async Task An_ordinary_large_total_is_still_answered()
     {
         // The other half of the bound: it has to admit a total a real workspace could reach. Two

@@ -1,4 +1,4 @@
-import { Button, Tag, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Button, Tag, Text, cn, focusRing } from '@nix/ui';
 import {
   finance as financeApi,
   type Finance,
@@ -102,11 +102,8 @@ export function FinanceDashboard({
               <LoadingPanel label="previous month" />
             ) : null
           ) : (
-            <div
-              role="region"
+            <ScrollRegion
               aria-label="Monthly finance comparison"
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach horizontally clipped comparison columns.
-              tabIndex={0}
               className={cn('mt-3 min-w-0 overflow-x-auto', focusRing)}
             >
               <table className="w-full min-w-max border-collapse text-left">
@@ -151,7 +148,7 @@ export function FinanceDashboard({
               {previous.status === 'error' ? (
                 <PartialNotice pending="the latest comparison" />
               ) : null}
-            </div>
+            </ScrollRegion>
           )}
         </details>
       )}

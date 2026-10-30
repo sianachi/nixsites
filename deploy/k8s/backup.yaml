@@ -46,7 +46,7 @@ spec:
           automountServiceAccountToken: false
           initContainers:
             - name: dump
-              image: pgvector/pgvector:pg16
+              image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
               env:
                 - { name: PGHOST, value: postgres }
                 - { name: PGUSER, value: postgres }
@@ -145,7 +145,7 @@ spec:
                 - { name: restic-cache, mountPath: /cache }
           containers:
             - name: record
-              image: pgvector/pgvector:pg16
+              image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
               env:
                 - { name: PGHOST, value: postgres }
                 - { name: PGUSER, value: postgres }

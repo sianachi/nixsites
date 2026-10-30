@@ -167,8 +167,19 @@ describe('the capability catalog', () => {
     );
     // Board grouping is single select until the web board learns the other types (ADR-0054).
     expect(accepts.get('board')).toEqual(['select']);
-    // A chart buckets by a select, or puts itself on a time axis along any date-shaped type.
-    expect(accepts.get('chart')).toEqual(['select', ...(accepts.get('calendar') ?? [])]);
+    // A chart buckets by a select, a priority or a checkbox, or puts itself on a time axis along
+    // any date-shaped type.
+    expect(accepts.get('chart')).toEqual([
+      'select',
+      'date',
+      'timestamp',
+      'datetime',
+      'checkbox',
+      'due_date',
+      'start_date',
+      'completion',
+      'priority',
+    ]);
     // Assignee is listed even though the pet may not declare one: the list is checked against
     // every PropertyType the backend defines.
     expect(accepts.get('calendar')).toEqual([

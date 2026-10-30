@@ -485,7 +485,7 @@ export default function ProgramDesigner({
       },
     }),
     // dropInto closes over the program and the drag, which are what this depends on
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `dropInto` closes over the program and the drag, which are listed.
     [selected, dragging, value],
   );
 

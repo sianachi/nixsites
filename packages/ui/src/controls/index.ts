@@ -18,6 +18,7 @@ export { Menu, type MenuAction, type MenuEntry } from './Menu';
 export { Popover } from './Popover';
 export { useAnchoredPanel } from './use-anchored-panel';
 export { PaneDivider } from './PaneDivider';
+export { ScrollRegion, type ScrollRegionProps } from './ScrollRegion';
 export { Segmented } from './Segmented';
 export { Select } from './Select';
 export { Nav } from './Nav';

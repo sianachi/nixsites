@@ -236,6 +236,11 @@ export function itemIdFromNixLink(link: string | null): string | null {
   }
 }
 
+/** The one place a loosely typed stored record is trusted to be an Excalidraw element. */
+function nixElement(value: object): ExcalidrawElement {
+  return value as unknown as ExcalidrawElement;
+}
+
 function prepareElement(element: ElementRecord): ExcalidrawElement {
   const prepared =
     element.type === 'freehand'
@@ -247,7 +252,7 @@ function prepareElement(element: ElementRecord): ExcalidrawElement {
           : element.type === 'line' || element.type === 'arrow'
             ? linearElement(element)
             : EXCALIDRAW_TYPES.has(element.type)
-              ? (element as unknown as ExcalidrawElement)
+              ? nixElement(element)
               : unknownElement(element);
 
   return isCompleteExcalidrawElement(element)
@@ -331,7 +336,7 @@ function legacyFreehand(element: ElementRecord): ExcalidrawElement {
       })
     : [];
 
-  return {
+  return nixElement({
     ...element,
     type: 'freedraw',
     x,
@@ -340,12 +345,12 @@ function legacyFreehand(element: ElementRecord): ExcalidrawElement {
     pressures: [],
     simulatePressure: true,
     lastCommittedPoint: points.at(-1) ?? null,
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function legacyCard(element: ElementRecord): ExcalidrawElement {
   const itemId = typeof element.itemId === 'string' ? element.itemId : '';
-  return {
+  return nixElement({
     ...element,
     type: 'rectangle',
     link: itemId === '' ? null : nixItemLink(itemId),
@@ -353,7 +358,7 @@ function legacyCard(element: ElementRecord): ExcalidrawElement {
       kind: 'item',
       itemId,
     }),
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function bindLegacyCardLabel(container: ExcalidrawElement, labelId: string): ExcalidrawElement {
@@ -401,7 +406,7 @@ function legacyCardLabel(element: ElementRecord, id: string): ExcalidrawElement 
   const x = Math.min(containerX, containerX + rawWidth);
   const y = Math.min(containerY, containerY + rawHeight);
 
-  return {
+  return nixElement({
     id,
     type: 'text',
     x: x + LEGACY_CARD_HORIZONTAL_PADDING,
@@ -437,7 +442,7 @@ function legacyCardLabel(element: ElementRecord, id: string): ExcalidrawElement 
     originalText: text,
     autoResize: true,
     lineHeight,
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function legacyCardText(element: ElementRecord): string {
@@ -496,7 +501,7 @@ function stablePositiveInteger(value: string): number {
 }
 
 function imageElement(element: ElementRecord): ExcalidrawElement {
-  const currentMetadata = nixMetadata(element as unknown as ExcalidrawElement);
+  const currentMetadata = nixMetadata(nixElement(element));
   const existingFileId = typeof element.fileId === 'string' ? element.fileId : null;
   const markedFileItemId =
     currentMetadata?.kind === 'file' &&
@@ -530,7 +535,7 @@ function imageElement(element: ElementRecord): ExcalidrawElement {
           })
         : element.customData;
 
-  return {
+  return nixElement({
     ...element,
     type: 'image',
     fileId,
@@ -538,16 +543,16 @@ function imageElement(element: ElementRecord): ExcalidrawElement {
     scale: validScale(element.scale),
     crop: record(element.crop) ? element.crop : null,
     customData: metadata,
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function linearElement(element: ElementRecord): ExcalidrawElement {
   if (Array.isArray(element.points) && element.points.length > 1) {
-    return element as unknown as ExcalidrawElement;
+    return nixElement(element);
   }
   const width = finite(element.width, 1);
   const height = finite(element.height, 1);
-  return {
+  return nixElement({
     ...element,
     points: [
       [0, 0],
@@ -559,17 +564,17 @@ function linearElement(element: ElementRecord): ExcalidrawElement {
     startArrowhead: null,
     endArrowhead: element.type === 'arrow' ? 'arrow' : null,
     ...(element.type === 'arrow' ? { elbowed: false } : {}),
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function unknownElement(element: ElementRecord): ExcalidrawElement {
-  return {
+  return nixElement({
     ...element,
     type: 'rectangle',
     customData: withNixMetadata(element.customData, {
       legacyType: element.type,
     }),
-  } as unknown as ExcalidrawElement;
+  });
 }
 
 function nixMetadata(element: ExcalidrawElement): NixElementMetadata | null {

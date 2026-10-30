@@ -175,7 +175,7 @@ async function putCapability(url: string, source: Blob, signal?: AbortSignal): P
     method: 'PUT',
     body: source,
     ...(signal === undefined ? {} : { signal }),
-    headers: { 'content-type': source.type || 'application/octet-stream' },
+    headers: { 'content-type': 'application/octet-stream' },
   });
   if (!response.ok) throw new Error(`The document upload failed (${String(response.status)}).`);
 }

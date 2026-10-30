@@ -146,6 +146,10 @@ func renderPDFBlocks(pdf *fpdf.Fpdf, record stream.Record, blocks []render.Block
 			}
 			renderPDFBlocks(pdf, record, block.Blocks, indent+16, recordIndex)
 		case "code":
+			if raster := recordImage(record, block.Src); raster != nil {
+				pdfImage(pdf, *raster, indent, fmt.Sprintf("diagram-%d-%d-%d", recordIndex, int(indent), index))
+				continue
+			}
 			pdf.Ln(6)
 			pdf.SetFont("NixMono", "", 10)
 			pdf.SetFillColor(243, 244, 246)
@@ -165,14 +169,7 @@ func renderPDFBlocks(pdf *fpdf.Fpdf, record stream.Record, blocks []render.Block
 			addPDFPage(pdf)
 		case "image":
 			if raster := recordImage(record, block.Src); raster != nil {
-				width, height := imageSize(*raster, pdfWidth-indent, pdfBottom-pdfMargin)
-				pdfSpace(pdf, height+8)
-				name := fmt.Sprintf("image-%d-%d-%d", recordIndex, int(indent), index)
-				options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
-				pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))
-				y := pdf.GetY()
-				pdf.ImageOptions(name, pdfMargin+indent, y, width, height, false, options, 0, "")
-				pdf.SetY(y + height + 8)
+				pdfImage(pdf, *raster, indent, fmt.Sprintf("image-%d-%d-%d", recordIndex, int(indent), index))
 				continue
 			}
 			pdfParagraph(pdf, []render.Run{{Text: "Image: " + block.Alt, Href: block.Src}}, indent, "", 11)
@@ -300,4 +297,14 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
 		}
 	}
 	pdf.Ln(8)
+}
+
+func pdfImage(pdf *fpdf.Fpdf, raster stream.Image, indent float64, name string) {
+	width, height := imageSize(raster, pdfWidth-indent, pdfBottom-pdfMargin)
+	pdfSpace(pdf, height+8)
+	options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
+	pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))
+	y := pdf.GetY()
+	pdf.ImageOptions(name, pdfMargin+indent, y, width, height, false, options, 0, "")
+	pdf.SetY(y + height + 8)
 }

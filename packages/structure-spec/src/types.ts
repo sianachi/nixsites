@@ -13,8 +13,7 @@
  * `z.infer` results and hold mutable arrays, and a `readonly string[]` here would not be
  * assignable back to that mutable array type, breaking the tie in one direction.
  *
- * This package may depend only on `zod` and `@nix/sheet` (task 0.3 of
- * `docs/plans/pet-structure-consult-plan.md`; see
+ * This package may depend only on `zod` and `@nix/sheet` (see
  * `docs/adr/0050-companion-structure-tools-compile-declarative-specs.md`), so it cannot import the
  * web's Zod-parsed contract types directly - `container-model.ts` is tied to `@nix/api-client`,
  * and `@nix/structure-spec` must stay outside that dependency graph. This boundary is not checked

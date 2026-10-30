@@ -293,7 +293,7 @@ async function putCapability(address, bytes) {
   }
   const response = await fetch(url, {
     method: 'PUT',
-    headers: { 'content-type': TEMPLATE_MEDIA_TYPE },
+    headers: { 'content-type': 'application/octet-stream' },
     body: bytes,
     credentials: 'omit',
     redirect: 'error',

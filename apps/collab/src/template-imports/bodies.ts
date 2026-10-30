@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 
 import { TemplateBodyError, writeArchiveBodies } from '../templates/bodies.ts';
 import type { CoreTemplateImportClient } from './core.ts';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 const BODY_WRITE_LIMIT = 10_000;
 const WRITE_BATCH_SIZE = 32;

@@ -86,6 +86,25 @@ public sealed class ChartOptionsTests
         Assert.Contains(reason, refusal, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(null, "week", "needs a date property to group by")]
+    [InlineData("line", null, "needs a date property to group by")]
+    [InlineData(null, null, "needs a property to group by")]
+    public void A_period_chart_with_nothing_to_group_by_names_the_date_it_needs(
+        string? kind,
+        string? period,
+        string reason)
+    {
+        var view = new ViewDefinition(
+            "chart", "Spend", ViewKind.Chart, [], null, [], null, null, false,
+            Chart: kind is null && period is null ? null : new ChartOptions(kind, period));
+
+        var refusal = ViewDefinitionRules.Refuse([view], null);
+
+        Assert.NotNull(refusal);
+        Assert.Contains(reason, refusal, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Windows_need_a_period_one_shape_and_an_order()
     {

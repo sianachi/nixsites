@@ -1,5 +1,5 @@
 import type { CommentThreadSnapshot, SchemaSnapshot, ViewsSnapshot } from '@nix/export';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 /**
  * Reads from Core, with the caller's own token.

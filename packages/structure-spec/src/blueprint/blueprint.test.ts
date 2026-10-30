@@ -222,6 +222,14 @@ describe('validateBlueprint', () => {
     });
   }
 
+  it('keeps an empty child title instead of refusing or inventing one', () => {
+    const report = validateBlueprint(
+      blueprint({ id: 'root', title: 'Log', children: [{ id: 'entry', title: '' }] }),
+      context(),
+    );
+    expect(report.problems).toEqual([]);
+  });
+
   it('accepts the reading-log sample blueprint clean', () => {
     const report = validateBlueprint(fixture('reading-log.json'), context());
     expect(report.problems).toEqual([]);

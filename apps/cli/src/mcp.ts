@@ -151,7 +151,7 @@ export async function createWorkspaceMcpServer(
   options: WorkspaceMcpOptions = {},
 ): Promise<McpServer> {
   const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
-  const server = new McpServer({ name: 'nixctl', version: '0.4.0' });
+  const server = new McpServer({ name: 'nixctl', version: '0.5.0' });
   const resolver = options.resolve ?? resolveSession;
   const session = lazy(() => resolver(options.profileName, options.sessionDeps ?? {}));
 
@@ -1932,10 +1932,11 @@ export async function createWorkspaceMcpServer(
   server.registerTool(
     'create_item',
     {
-      description: 'Create an item (a note by default) under a parent, or at the workspace root.',
+      description:
+        'Create an item (a note by default) under a parent, or at the workspace root. An empty title is kept as given.',
       inputSchema: {
         workspaceId: identifier,
-        title: z.string().min(1).max(500),
+        title: z.string().max(500),
         type: z.string().min(1).max(40).optional(),
         parentId: identifier.optional(),
       },

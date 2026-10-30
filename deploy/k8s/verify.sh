@@ -143,6 +143,10 @@ curl -s -o /dev/null -w '%{http_code} internal (want 404)\n' "https://$DOMAIN/in
 
 echo "== Security headers keep provider communication server-side =="
 curl -sI "https://$DOMAIN/" | grep -i content-security-policy
+if ! curl -sI "https://$DOMAIN/" | grep -qi "^content-security-policy:.*frame-ancestors 'none'" || ! curl -sI "https://$DOMAIN/" | grep -qi '^x-frame-options: DENY'; then
+  echo "The app must send frame-ancestors 'none' and X-Frame-Options DENY." >&2
+  exit 1
+fi
 
 echo "== Sites: the apex stays the app, a site host is anonymous =="
 apex_headers="$(curl -sSI "https://$DOMAIN/")"

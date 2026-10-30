@@ -32,6 +32,11 @@ on:
       - 'scripts/check-text-primitive.test.sh'
       - 'scripts/check-frontend-layering.sh'
       - 'scripts/check-frontend-layering.test.sh'
+      - 'scripts/sigv4-presign.mts'
+      - 'scripts/*.test.mts'
+      - 'scripts/backup-r2.test.py'
+      - 'scripts/backup-r2.py'
+      - 'scripts/stress/mvp1-evidence*.mjs'
       - '.github/workflows/ci-frontend.yml'
   pull_request:
     paths:
@@ -53,6 +58,11 @@ on:
       - 'scripts/check-text-primitive.test.sh'
       - 'scripts/check-frontend-layering.sh'
       - 'scripts/check-frontend-layering.test.sh'
+      - 'scripts/sigv4-presign.mts'
+      - 'scripts/*.test.mts'
+      - 'scripts/backup-r2.test.py'
+      - 'scripts/backup-r2.py'
+      - 'scripts/stress/mvp1-evidence*.mjs'
       - '.github/workflows/ci-frontend.yml'
 
 concurrency:
@@ -68,13 +78,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # No version input: pnpm/action-setup reads the root package.json
       # "packageManager" field, keeping CI pinned with the repo.
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           # mise.toml pins node = "22"; track the same major here.
           node-version: 22
@@ -160,6 +170,13 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Tests that live outside every workspace package, so `pnpm test` never visits them.
+      - name: Script tests outside packages
+        run: |
+          node --experimental-strip-types --test scripts/sigv4-presign.test.mts scripts/browser-object-capabilities.test.mts
+          node --test scripts/stress/mvp1-evidence.test.mjs
+          python3 scripts/backup-r2.test.py
+
       # The guard's own tests run first: a broken matcher and a dirty tree both
       # turn this job red, and only the order tells them apart.
       - name: Design-token guard self-test
@@ -199,11 +216,11 @@ jobs:
     timeout-minutes: 20
     needs: frontend-static
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: pnpm
@@ -234,11 +251,11 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: pnpm
@@ -259,11 +276,11 @@ jobs:
     # turns a wedged runner into a red job instead of a six-hour default.
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: pnpm
@@ -307,16 +324,16 @@ jobs:
           --health-retries 20
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: pnpm
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
 

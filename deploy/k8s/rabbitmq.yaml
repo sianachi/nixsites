@@ -29,7 +29,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: rabbitmq
-          image: rabbitmq:4.1-management-alpine
+          image: rabbitmq:4.1-management-alpine@sha256:410a1c8844e9c9227f72735d95a391fca4559ca8b61cce9dad707ce5e2229a3a
           command: ["/bin/sh", "/etc/rabbitmq/nix-start.sh"]
           ports: [{ name: amqp, containerPort: 5672 }]
           env:

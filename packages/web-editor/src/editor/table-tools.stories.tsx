@@ -32,7 +32,7 @@ function InTable(): ReactElement {
   const editor = useEditor({
     extensions: [...storyExtensions, TableControls, ColumnWidthControls],
     content: TABLE_NOTE,
-    editorProps: { attributes: { class: `${proseRoot} outline-none` } },
+    editorProps: { attributes: { class: `${proseRoot} outline-none`, 'aria-label': 'Note body' } },
   });
   useEffect(() => {
     // The caret in "1,022": second data row, third column.

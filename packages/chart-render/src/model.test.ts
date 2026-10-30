@@ -7,6 +7,7 @@ import {
   chartKindOf,
   cumulative,
   labelsFor,
+  naturalBucketRank,
   plottedSeries,
   seriesPattern,
   trailingAverage,
@@ -24,6 +25,21 @@ describe('the chart model', () => {
     expect(labels.value('done', 'true')).toBe('Checked');
     expect(labels.value('status', null)).toBe('Unset');
     expect(bucketLabel(null, null, labels)).toBe('Unset');
+  });
+
+  it('names priority levels and ranks closed-set buckets naturally', () => {
+    const priority = labelsFor([{ key: 'sev', label: 'Severity', type: 'priority' }], 'Unset');
+    expect(priority.value('sev', '2')).toBe('P2 High');
+    expect(naturalBucketRank('priority', '1')).toBeLessThan(
+      naturalBucketRank('priority', '4') ?? 0,
+    );
+    expect(naturalBucketRank('checkbox', 'false')).toBeLessThan(
+      naturalBucketRank('checkbox', 'true') ?? 0,
+    );
+    expect(naturalBucketRank('priority', null)).toBeGreaterThan(
+      naturalBucketRank('priority', '4') ?? 0,
+    );
+    expect(naturalBucketRank('select', 'x')).toBeNull();
   });
 
   it('formats periods in a fixed locale and UTC', () => {

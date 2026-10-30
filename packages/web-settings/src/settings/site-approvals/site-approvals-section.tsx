@@ -1,5 +1,5 @@
 import type { SiteApprovalEntry } from '@nix/api-client';
-import { Button, Dialog, Field, Table, Text, Textarea } from '@nix/ui';
+import { ScrollRegion, Button, Dialog, Field, Table, Text, Textarea } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
@@ -118,13 +118,7 @@ export function SiteApprovalsSection(): ReactElement {
           ))}
         </ul>
       ) : (
-        <div
-          className="min-w-0 overflow-x-auto"
-          role="region"
-          aria-label="Site approvals table"
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll the table horizontally.
-          tabIndex={0}
-        >
+        <ScrollRegion className="min-w-0 overflow-x-auto" aria-label="Site approvals table">
           <Table
             caption="Sites waiting for a decision on their first publish."
             columns={columns}
@@ -134,7 +128,7 @@ export function SiteApprovalsSection(): ReactElement {
             loadingMessage="Loading the site approvals."
             emptyMessage="No site is waiting for approval. A request appears here when a site’s manager asks to publish for the first time."
           />
-        </div>
+        </ScrollRegion>
       )}
 
       {deciding === null ? null : (

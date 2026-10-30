@@ -1,4 +1,4 @@
-import { Blueprint, Button, SkeletonLines, Text, focusRing } from '@nix/ui';
+import { ScrollRegion, Blueprint, Button, SkeletonLines, Text, focusRing } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
@@ -308,17 +308,14 @@ export function ConfirmLaunch(props: {
               {sharedNoteTitle(intent)}
             </Text>
             {intent.text === '' ? null : (
-              <div
-                role="region"
+              <ScrollRegion
                 aria-label="Shared text"
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: the shared-text preview scrolls and needs keyboard access.
-                tabIndex={0}
                 className={`${focusRing} max-h-64 overflow-y-auto`}
               >
                 <Text as="p" variant="bodySmall" className="wrap-anywhere whitespace-pre-wrap">
                   {intent.text}
                 </Text>
-              </div>
+              </ScrollRegion>
             )}
             {intent.url === null || intent.text.includes(intent.url) ? null : (
               <Text as="p" variant="bodySmall" className="break-all">

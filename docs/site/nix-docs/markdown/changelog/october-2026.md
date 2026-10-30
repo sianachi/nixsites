@@ -2,6 +2,49 @@
 
 # October 2026
 
+## Version 0.5.0
+
+### A workspace for people and their AI agents
+
+- Nix is now presented as a free, open-source workspace where people and their AI agents work together, and is licensed under AGPL-3.0 from this version. Using and self-hosting Nix, including commercially, is unaffected; running a modified Nix for other people means offering them its source. Versions up to 0.4.x stay MIT.
+- The landing page and the live demo show the companion at work: in the demo, a sample chat answers from the workspace, builds a table, makes an approved change and remembers a preference.
+
+### The companion
+
+- Pets can do anything you can do in Nix. For actions without their own tool, a pet finds the action and asks before running it; the approval card shows the exact request, and permanent deletes, access changes and publishing carry a warning. Pets never touch access tokens, AI keys, pet settings or calendar accounts.
+- Search by meaning across the workspace, so a note that says "holiday" answers a question about a trip, and across a note far too long to read in one go, such as a 200-page document. The small search model runs inside the server, with no key or cost.
+- The companion remembers lasting facts and preferences. Settings > Pets > Memory lists them to edit or forget, and chooses whether pets don't remember, ask first (the default) or remember automatically, with Undo in the chat.
+- With an Anthropic or OpenRouter key, long tool runs no longer make it forget the start of a conversation, and replies cost less and start sooner.
+
+### Working together
+
+- Comments on notes, with replies, resolving and @mentions, and a Commenter role that can read and comment but not edit.
+- Suggesting mode: propose edits for others to accept or reject one by one or all at once.
+- Live collaboration can be switched off for a workspace or a file, so one person edits at a time.
+- Invitations arrive in the inbox and grant nothing until accepted. Owners can close a workspace to new members.
+
+### Everyday use
+
+- Homebase is where a workspace opens: today's date, one-press New note, Today's note, Calendar, Templates and your recent notes. It replaces My Day.
+- The note tree is now the Explorer. Drag files and folders from your computer onto it, and use its New note button for an untitled note in one press.
+- An embedded note shows its views, with tabs to switch between them. Every note shows a word count, reading time and heading outline.
+- Charts can group by priority, checkbox or completion, and a period chart without a date says so.
+- PDF and DOCX exports draw Mermaid diagrams as pictures.
+
+### nixctl and MCP
+
+- `nixctl api list` and `nixctl api call` reach every operation by id, and the MCP tools `find_nix_action` and `run_nix_action` do the same for agents, except credentials. New MCP tools move, rename, trash and restore items, set properties, and work with comments and note history.
+
+### Removed
+
+- My Day, offline notes and the "Show status footer" setting. Sync any notes created offline in 0.4 before updating.
+
+### Security
+
+- Upload links now fix the stored file's type. Reload tabs and installed apps opened before the update, and update `nixctl`, or uploads fail with a 403.
+- The last-administrator guard counts only administrators who can act, and two administrators can no longer remove each other at once.
+- Both production edges forbid framing the app, dependencies with advisories are updated, and CI actions and images are pinned.
+
 ## Version 0.4.0
 
 ### Site style choices

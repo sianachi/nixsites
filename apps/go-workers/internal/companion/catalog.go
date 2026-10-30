@@ -20,8 +20,8 @@ var openUICatalog string
 // toolsChatJSON is @nix/structure-spec's buildPetTools(), written by `pnpm --filter
 // @nix/structure-spec catalog` (scripts/build-catalog.ts) from the same Zod schemas
 // @nix/companion/run.ts parses with. One typed function tool per operation, each already reduced
-// to the JSON Schema keys Codex 0.153.4 keeps and, per docs/plans/pet-speed-accuracy-plan.md
-// L1.2, at or under its 4800-byte normalized budget - see catalog_test.go's
+// to the JSON Schema keys Codex 0.153.4 keeps and, and
+// at or under its 4800-byte normalized budget - see catalog_test.go's
 // TestEmbeddedToolSchemasFitTheCodexBudget, which re-measures with the same key filter in Go
 // rather than trusting the TS side alone.
 //

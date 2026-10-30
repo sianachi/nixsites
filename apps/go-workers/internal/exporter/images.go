@@ -27,24 +27,36 @@ func loadImages(blocks []render.Block, load ImageLoader, losses *[]string) ([]st
 	remaining := 32 << 20
 	var failure error
 	render.Walk(blocks, func(block *render.Block) {
-		if failure != nil || block.Kind != "image" || block.File == "" {
+		// A code block's file is the diagram its author's browser captured; see diagram.go.
+		file, diagram := block.File, false
+		if block.Kind == "code" {
+			file, diagram = block.RenderFile, true
+		}
+		if failure != nil || block.Kind != "image" && !diagram || file == "" {
 			return
 		}
 		if len(images) >= 64 || remaining <= 0 {
 			failure = stream.ErrLimitExceeded
 			return
 		}
-		data, err := load(block.File)
+		data, err := load(file)
 		if err == nil && len(data) > remaining {
 			failure = stream.ErrLimitExceeded
 			return
+		}
+		if err == nil && diagram {
+			data, block.Width, err = rasterizeDiagram(data)
 		}
 		var raster stream.Image
 		if err == nil {
 			raster, err = validatedImage(data)
 		}
 		if err != nil {
-			appendLoss(losses, "An unavailable or unsupported image was represented by its description.")
+			if diagram {
+				appendLoss(losses, "A diagram that could not be drawn was represented by its code.")
+			} else {
+				appendLoss(losses, "An unavailable or unsupported image was represented by its description.")
+			}
 			block.Src = ""
 			return
 		}

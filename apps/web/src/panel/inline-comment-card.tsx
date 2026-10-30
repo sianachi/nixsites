@@ -112,7 +112,7 @@ function CardFrame({
       editor.focus();
     };
     // Only on open: a thread posting its reply must not steal focus again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focus moves only on open and close, not when a reply posts.
   }, []);
 
   // A press outside closes it; one in the text is left to the editor, which opens the next card.

@@ -13,7 +13,7 @@
 export type ViewKindRequirement =
   | { readonly field: 'groupBy'; readonly shape: 'select' }
   | { readonly field: 'columnBy'; readonly shape: 'select or checkbox' }
-  | { readonly field: 'groupBy'; readonly shape: 'select-or-date' }
+  | { readonly field: 'groupBy'; readonly shape: 'select, priority, checkbox or date' }
   | { readonly field: 'date'; readonly shape: 'date-shaped' }
   | null;
 
@@ -116,13 +116,13 @@ export const VIEW_KIND_RULES = [
   {
     kind: 'chart',
     label: 'Chart',
-    requires: { field: 'groupBy', shape: 'select-or-date' },
+    requires: { field: 'groupBy', shape: 'select, priority, checkbox or date' },
     optional: [
       { field: 'measureField', shape: 'number' },
       { field: 'splitBy', shape: 'select-or-checkbox' },
     ],
     description:
-      'Children counted or totalled per select value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date; splitBy makes series.',
+      'Children counted or totalled per select, priority or checkbox value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date (a period needs a date groupBy); splitBy makes series.',
   },
   {
     kind: 'habit_tracker',

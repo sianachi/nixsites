@@ -310,7 +310,7 @@ public sealed class NixPostgresFixture : IAsyncLifetime
             $"Nothing is listening on the Docker endpoint {endpoint}. Nix.Integration.Tests runs "
             + "against a real Postgres through Testcontainers and cannot run without a daemon. "
             + "Start Docker, or run the daemon-free suite instead: "
-            + "dotnet test backend/tests/Nix.Tests/Nix.Tests.csproj");
+            + "dotnet test --project backend/tests/Nix.Tests/Nix.Tests.csproj");
     }
 
     /// <summary>

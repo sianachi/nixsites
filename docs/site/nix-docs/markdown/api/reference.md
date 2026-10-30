@@ -16,6 +16,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [CalendarSync](#calendarsync)
 - [Canvas](#canvas)
 - [Charts](#charts)
+- [Comments](#comments)
 - [Conversations](#conversations)
 - [Exports](#exports)
 - [Files](#files)
@@ -721,6 +722,170 @@ Parameters:
 - `view` in query (optional, string)
 
 Responses: `200`.
+
+## Comments
+
+<a id="comments"></a>
+
+### GET /api/v1/items/{itemId}/comments
+
+<a id="listcomments"></a>
+
+Operation id: `ListComments`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`, `404`, `422`, `423`.
+
+### POST /api/v1/items/{itemId}/comments
+
+<a id="addcomment"></a>
+
+Operation id: `AddComment`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `AddCommentRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`, `423`.
+
+### GET /api/v1/items/{itemId}/comments/watch
+
+<a id="watchcomments"></a>
+
+Operation id: `WatchComments`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `revision` in query (optional, integer | string)
+
+Responses: `200`, `404`, `422`, `423`, `429`.
+
+### PATCH /api/v1/items/{itemId}/comments/{commentId}
+
+<a id="editcomment"></a>
+
+Operation id: `EditComment`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `commentId` in path (required, string (uuid))
+
+Request body: `EditCommentRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`, `423`.
+
+### DELETE /api/v1/items/{itemId}/comments/{commentId}
+
+<a id="deletecomment"></a>
+
+Operation id: `DeleteComment`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `commentId` in path (required, string (uuid))
+
+Responses: `204`, `403`, `404`, `409`, `423`.
+
+### PUT /api/v1/items/{itemId}/comments/{threadId}/anchor
+
+<a id="setcommentanchor"></a>
+
+Operation id: `SetCommentAnchor`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `threadId` in path (required, string (uuid))
+
+Request body: `CommentAnchorPositions`.
+
+Responses: `200`, `403`, `404`, `409`, `422`, `423`.
+
+### POST /api/v1/items/{itemId}/comments/{threadId}/replies
+
+<a id="replycomment"></a>
+
+Operation id: `ReplyComment`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `threadId` in path (required, string (uuid))
+
+Request body: `ReplyCommentRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`, `423`.
+
+### PUT /api/v1/items/{itemId}/comments/{threadId}/resolved
+
+<a id="setcommentresolved"></a>
+
+Operation id: `SetCommentResolved`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `threadId` in path (required, string (uuid))
+
+Request body: `CommentResolvedRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`, `423`.
 
 ## Conversations
 
@@ -3261,6 +3426,30 @@ Parameters:
 
 Responses: `200`, `404`.
 
+### GET /api/v1/items/{itemId}/passages
+
+<a id="getpassages"></a>
+
+The passages of a note and the notes under it that best answer a query
+
+Operation id: `GetPassages`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned, opened or not. Passages are derived when a document is snapshotted, so the newest edits may not be searchable yet. An item the caller may not read is reported as not found.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `q` in query (optional, string)
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`.
+
 ### GET /api/v1/items/{itemId}/related
 
 <a id="getrelateditems"></a>
@@ -3326,6 +3515,30 @@ Takes 'text' (at most 4000 characters) and 'workspaceId', and returns up to 20 i
 Request body: `MentionsRequest`.
 
 Responses: `200`, `400`, `413`, `429`.
+
+### GET /api/v1/search/passages
+
+<a id="searchpassages"></a>
+
+The passages across the caller's workspaces that best answer a query
+
+Operation id: `SearchPassages`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Returns up to 'limit' (default 8, at most 20) passages from every document the caller may read, or from one workspace when 'workspaceId' is given, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned. A workspace the caller cannot read returns no passages.
+
+Parameters:
+
+- `q` in query (optional, string)
+- `workspaceId` in query (optional, string (uuid))
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `503`.
 
 ### GET /api/v1/search/references
 

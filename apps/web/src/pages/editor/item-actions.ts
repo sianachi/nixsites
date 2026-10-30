@@ -6,6 +6,7 @@ import {
   LayoutTemplate,
   Lock,
   LockOpen,
+  MessageCircle,
   MessageSquare,
   PanelRightClose,
   Save,
@@ -74,6 +75,7 @@ export function itemActionEntries({
           {
             key: 'note-chat',
             label: 'Chat about this note',
+            icon: MessageCircle,
             onSelect: () => {
               onNavigateAway?.();
               openChat(itemId);

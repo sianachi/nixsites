@@ -434,16 +434,24 @@ public static class PropertyTypes
 
     /// <summary>Whether a chart may bucket its bars by this type.</summary>
     /// <param name="type">The type.</param>
-    /// <returns><see langword="true"/> for a single select or a date-shaped type.</returns>
+    /// <returns>
+    /// <see langword="true"/> for a single select, a priority, a checkbox (or completion) or a
+    /// date-shaped type.
+    /// </returns>
     /// <remarks>
     /// Kept apart from <see cref="CanGroupBy"/> so the two can widen apart: a chart's buckets are
     /// folded on the server (<c>RunItemChart</c>), which reads one value per item. A multi-select
     /// would count an item in several bars and an assignee bar would be labelled by an identifier.
-    /// A date is the time axis (plan 2.2): the chart folds each item's day into a period, which a
-    /// board has no use for.
+    /// A priority (1 to 4) and a checkbox (true or false; an unset one lands in the "no value"
+    /// bucket) are each one value from a small closed set. A date is the time axis (plan 2.2): the
+    /// chart folds each item's day into a period, which a board has no use for. The web's
+    /// counterpart is <c>canChartBy</c> in <c>packages/structure-spec</c>; the two must widen
+    /// together.
     /// </remarks>
     public static bool CanChartBy(this PropertyType type) =>
-        type is PropertyType.Select || type.CanPlaceOnCalendar();
+        type is PropertyType.Select or PropertyType.Priority or PropertyType.Checkbox
+            or PropertyType.Completion
+        || type.CanPlaceOnCalendar();
 
     /// <summary>Whether a chart may split its buckets into series by this type.</summary>
     /// <param name="type">The type.</param>

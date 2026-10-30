@@ -166,7 +166,7 @@ export function useDocumentHistory(itemId: string): DocumentHistoryState {
     };
     // Justification: `refresh` is recreated every time `itemId` changes (it closes over it), so
     // listing it too would run this effect twice per change for no different effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `refresh` is recreated whenever `itemId` changes, so `itemId` alone is the trigger.
   }, [itemId]);
 
   useEffect(

@@ -41,7 +41,10 @@ public sealed class S3CapabilitySigner
     /// <summary>Signs an upload capability.</summary>
     public ObjectCapability Put(string key) => Sign("PUT", key);
 
-    /// <summary>Signs an upload whose HTTP body must have the declared byte length.</summary>
+    /// <summary>
+    /// Signs an upload whose HTTP body must have the declared byte length and be stored as
+    /// <c>application/octet-stream</c>, so an uploader cannot choose the object's served type.
+    /// </summary>
     public ObjectCapability PutSized(string key, long byteLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(byteLength);
@@ -51,6 +54,7 @@ public sealed class S3CapabilitySigner
             requestHeaders: new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["content-length"] = byteLength.ToString(CultureInfo.InvariantCulture),
+                ["content-type"] = "application/octet-stream",
             });
     }
 

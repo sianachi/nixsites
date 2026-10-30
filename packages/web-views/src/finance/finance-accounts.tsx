@@ -1,4 +1,15 @@
-import { Button, Field, Input, Table, Tag, Text, cn, focusRing, type TableColumn } from '@nix/ui';
+import {
+  ScrollRegion,
+  Button,
+  Field,
+  Input,
+  Table,
+  Tag,
+  Text,
+  cn,
+  focusRing,
+  type TableColumn,
+} from '@nix/ui';
 import {
   finance as financeApi,
   type Finance,
@@ -410,11 +421,8 @@ function LoanWhatIf({
             {showSchedule ? 'Hide the repayment schedule' : 'Show the repayment schedule'}
           </Button>
           {showSchedule ? (
-            <div
-              role="region"
+            <ScrollRegion
               aria-label={`Repayment schedule for ${loan.name}`}
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach horizontally clipped repayment columns.
-              tabIndex={0}
               className={cn('min-w-0 overflow-x-auto', focusRing)}
             >
               <Table<LoanSchedule['months'][number]>
@@ -424,7 +432,7 @@ function LoanWhatIf({
                 rowKey={(row) => String(row.number)}
                 emptyMessage="The loan has nothing left to pay."
               />
-            </div>
+            </ScrollRegion>
           ) : null}
         </>
       )}

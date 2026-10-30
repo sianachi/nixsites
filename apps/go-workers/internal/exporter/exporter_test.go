@@ -287,11 +287,21 @@ func TestPDFStartXrefPointsAtTheCrossReferenceTable(t *testing.T) {
 	}
 }
 
-func TestPDFPassesPopplerValidationWhenAvailable(t *testing.T) {
-	pdfinfo, err := exec.LookPath("pdfinfo")
+// lookPopplerTool skips locally when poppler is missing but fails in CI, so the PDF checks cannot silently not run.
+func lookPopplerTool(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
 	if err != nil {
-		t.Skip("pdfinfo is not installed")
+		if os.Getenv("CI") != "" {
+			t.Fatalf("%s is not installed (poppler-utils is required in CI)", name)
+		}
+		t.Skipf("%s is not installed", name)
 	}
+	return path
+}
+
+func TestPDFPassesPopplerValidationWhenAvailable(t *testing.T) {
+	pdfinfo := lookPopplerTool(t, "pdfinfo")
 	path := filepath.Join(t.TempDir(), "export.pdf")
 	file, err := os.Create(path)
 	if err != nil {
@@ -343,10 +353,7 @@ func readZipText(t *testing.T, archive *zip.Reader, name string) string {
 
 func extractPDFText(t *testing.T, data []byte) string {
 	t.Helper()
-	binary, err := exec.LookPath("pdftotext")
-	if err != nil {
-		t.Skip("pdftotext is not installed")
-	}
+	binary := lookPopplerTool(t, "pdftotext")
 	path := filepath.Join(t.TempDir(), "export.pdf")
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)

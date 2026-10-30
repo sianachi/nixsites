@@ -1,3 +1,7 @@
+import { createDemoAi } from './demo-ai';
+import { seededUpdate } from './demo-collab';
+import { createDemoHabits, type DemoHabit } from './demo-habits';
+
 export const DEMO_WORKSPACE = '0199a000-0000-7000-8000-000000000001';
 export const DEMO_PROFILE = {
   subject: 'demo-visitor',
@@ -37,9 +41,40 @@ const PRIORITIES = nextId();
 const LAUNCH_BRIEF = nextId();
 const LANDING_PAGE = nextId();
 const LAUNCH_VIDEO = nextId();
+const CHAT = nextId();
+const BETA_OUTREACH = nextId();
+const HABITS = nextId();
+const BUDGET = nextId();
+const HABIT_LIST: readonly DemoHabit[] = [
+  { id: nextId(), target: 1, unit: 'times' },
+  { id: nextId(), target: 1, unit: 'times' },
+  { id: nextId(), target: 8, unit: 'glasses' },
+  { id: nextId(), target: 1, unit: 'times' },
+];
+const HABIT_TITLES = ['Morning run', 'Read 20 pages', 'Drink water', 'Stretch before bed'];
+
+/** An artifact is one OpenUI program in its body, as the pet's "Save as artifact" writes it. */
+const BUDGET_PROGRAM = [
+  'root = Stack([title, inputs, totals, split])',
+  'title = Text("Launch budget", "title")',
+  'inputs = Grid([video, ads, events], 3)',
+  'video = NumberInput("Launch video", $video, 0)',
+  'ads = NumberInput("Paid ads", $ads, 0)',
+  'events = NumberInput("Events", $events, 0)',
+  'totals = Grid([spend, left, countdown], 3)',
+  'spend = Stat("Planned spend", $video + $ads + $events, "USD")',
+  'left = Stat("Left of budget", $budget - ($video + $ads + $events), "USD")',
+  'countdown = Stat("Days to launch", @DaysBetween(@Today(), @AddDays(@Today(), 15)))',
+  'split = Chart("column", "Where the budget goes", ["Launch video", "Paid ads", "Events"], [{label: "USD", values: [$video, $ads, $events]}])',
+  '$video = 4200',
+  '$ads = 3000',
+  '$events = 1800',
+  '$budget = 12000',
+].join('\n');
 
 /** Note bodies the demo opens with, by item id; every other note starts empty. */
 export const DEMO_NOTES: Readonly<Record<string, string>> = {
+  [BUDGET]: ['```openui-lang', BUDGET_PROGRAM, '```'].join('\n'),
   [LAUNCH_BRIEF]: [
     '# Launch brief',
     '',
@@ -69,6 +104,7 @@ export const DEMO_NOTES: Readonly<Record<string, string>> = {
     '- [ ] Accessibility pass',
   ].join('\n'),
 };
+
 export const DEMO_ENTRY = `/w/${DEMO_WORKSPACE}?item=${PRODUCT_LAUNCH}`;
 
 function sampleItems(): DemoItem[] {
@@ -85,6 +121,12 @@ function sampleItems(): DemoItem[] {
     item(null, 'Product launch', 1, {}, PRODUCT_LAUNCH),
     item(null, 'Priorities', 2, {}, PRIORITIES),
     item(null, 'Launch brief', 3, {}, LAUNCH_BRIEF),
+    item(null, 'Plan launch week with Pip', 4, {}, CHAT),
+    item(null, 'Habits', 5, {}, HABITS),
+    { ...item(null, 'Launch budget', 6, {}, BUDGET), type: 'artifact' },
+    ...HABIT_LIST.map((habit, index) =>
+      item(HABITS, HABIT_TITLES[index] ?? 'Habit', index + 1, {}, habit.id),
+    ),
     task('Press kit', 1, { priority: 'Low', start: day(4), due: day(12), status: 'To do' }),
     task('Email announcement', 2, {
       priority: 'Medium',
@@ -92,12 +134,13 @@ function sampleItems(): DemoItem[] {
       due: day(15),
       status: 'To do',
     }),
-    task('Beta tester outreach', 3, {
-      priority: 'High',
-      start: day(2),
-      due: day(9),
-      status: 'To do',
-    }),
+    item(
+      PRODUCT_LAUNCH,
+      'Beta tester outreach',
+      3,
+      { priority: 'High', start: day(2), due: day(9), status: 'In progress' },
+      BETA_OUTREACH,
+    ),
     item(
       PRODUCT_LAUNCH,
       'Landing page design',
@@ -206,6 +249,8 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
       view('form', 'form', { columns: ['priority', 'due', 'status'] }),
     ],
   },
+  [CHAT]: { properties: [], views: [view('chat', 'chat')] },
+  [HABITS]: { properties: [], views: [view('habits', 'habit_tracker')] },
   [PRIORITIES]: {
     properties: [
       select('urgency', 'Urgency', ['Urgent', 'Not urgent']),
@@ -369,14 +414,57 @@ export function createDemoFetch(): typeof fetch {
       /^\/api\/v1\/me\/notifications(\/watch)?$/,
       () => json({ items: [], nextCursor: null, unread: 0, revision: 0 }),
     ],
+    ...createDemoAi({
+      workspaceId: DEMO_WORKSPACE,
+      ids: {
+        chat: CHAT,
+        brief: LAUNCH_BRIEF,
+        landing: LANDING_PAGE,
+        outreach: BETA_OUTREACH,
+      },
+      json,
+    }),
+    ...createDemoHabits({ habits: HABIT_LIST, json }),
     [
       'GET',
-      /^\/api\/v1\/me\/pets\/settings$/,
-      () =>
-        json({
-          revision: 0,
-          settings: { enabled: false, activePetId: null, motion: 'system', profiles: [] },
-        }),
+      /^\/api\/v1\/search$/,
+      ({ query }) => {
+        const needle = (query.get('q') ?? '').trim().toLowerCase();
+        const limit = Number(query.get('limit') ?? 20);
+        // Titles first, then note bodies: the same two places the real search reads.
+        const matches = live().filter((entry) => entry.title.toLowerCase().includes(needle));
+        const inBody = live().filter(
+          (entry) =>
+            !matches.includes(entry) && (DEMO_NOTES[entry.id] ?? '').toLowerCase().includes(needle),
+        );
+        const all = needle.length < 3 ? [] : [...matches, ...inBody];
+        return json({
+          query: query.get('q') ?? '',
+          results: all.slice(0, limit).map((entry) => ({
+            id: entry.id,
+            workspaceId: DEMO_WORKSPACE,
+            type: entry.type,
+            title: entry.title,
+            parentId: entry.parentId,
+            updatedAt: entry.updatedAt,
+          })),
+          limit,
+          truncated: all.length > limit,
+        });
+      },
+    ],
+    [
+      'GET',
+      /^\/collab\/documents\/([^/]+)\/updates$/,
+      (_, [, id]) => {
+        const body = id === undefined ? undefined : DEMO_NOTES[id];
+        return json({
+          headSeq: body === undefined ? '0' : '1',
+          schemaVersion: 1,
+          hasMore: false,
+          updates: body === undefined ? [] : [{ seq: '1', update: seededUpdate(body) }],
+        });
+      },
     ],
     [
       'GET',
@@ -445,7 +533,17 @@ export function createDemoFetch(): typeof fetch {
             createdAt: CREATED,
             lastModifiedAt: entry.updatedAt,
           })),
-          links: [],
+          // Who refers to whom: the brief and the chat link the work they talk about.
+          links: [
+            [LAUNCH_BRIEF, LANDING_PAGE],
+            [LAUNCH_BRIEF, BETA_OUTREACH],
+            [LAUNCH_BRIEF, LAUNCH_VIDEO],
+            [LAUNCH_BRIEF, BUDGET],
+            [CHAT, LAUNCH_BRIEF],
+            [CHAT, BETA_OUTREACH],
+            [CHAT, LANDING_PAGE],
+            [BUDGET, LAUNCH_VIDEO],
+          ].map(([sourceId, targetId]) => ({ sourceId, targetId, occurrences: 1 })),
           nodeLimit: 1000,
           linkLimit: 1000,
           nodesTruncated: false,

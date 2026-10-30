@@ -15,7 +15,7 @@ import { CANVAS_ELEMENTS, FRAGMENT_NAME, strategyFor } from '../documents/body-k
 import { checkMergedDocument } from '../documents/service.ts';
 import { LIMITS } from '../documents/limits.ts';
 import { boundSearchText } from '../documents/links.ts';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 export interface OperationItemAuthorization {
   readonly tenantId: string;

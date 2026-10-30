@@ -55,12 +55,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: apps/go-workers/go.mod
           cache-dependency-path: apps/go-workers/go.mod
+
+      - name: Install poppler (PDF validation tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
 
       - name: Format check
         working-directory: apps/go-workers
@@ -87,9 +90,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           # mise.toml pins dotnet = "10"; track the same major here.
           dotnet-version: 10.0.x
@@ -135,9 +138,9 @@ jobs:
     timeout-minutes: 15
     needs: backend-static
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
 
@@ -147,7 +150,7 @@ jobs:
       # the two suites are separate projects rather than one.
       - name: Unit tests
         working-directory: backend
-        run: dotnet test tests/Nix.Tests/Nix.Tests.csproj --configuration Release
+        run: dotnet test --project tests/Nix.Tests/Nix.Tests.csproj --configuration Release
 
   # ── Stage 3: integration ───────────────────────────────────────────────────
   # Everything that needs a real Postgres: the tenant isolation policies, the
@@ -169,9 +172,9 @@ jobs:
     timeout-minutes: 35
     needs: backend-static
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
 
@@ -203,10 +206,10 @@ jobs:
           ) &
           diagnostic_pid=$!
           trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
-          # A test stuck past four minutes is aborted and named, instead of the step timing out silently.
-          dotnet test tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter "Category!=PlanEvidence" \
-            --blame-hang --blame-hang-timeout 4m --blame-hang-dump-type none --logger "console;verbosity=normal"
+          # The step timeout bounds a stuck test; the hang dump flags need an extension package xunit v4 does not bundle.
+          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
+            --filter-not-trait "Category=PlanEvidence" \
+            --output Detailed
 
   # ── Stage 3b: query-plan evidence ──────────────────────────────────────────
   # EXPLAIN-based proof that hot statements use their indexes over a large seeded corpus. It
@@ -220,9 +223,9 @@ jobs:
     timeout-minutes: 25
     needs: backend-static
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
 
@@ -232,6 +235,6 @@ jobs:
       - name: Plan evidence tests
         working-directory: backend
         run: |
-          dotnet test tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter "Category=PlanEvidence" \
-            --blame-hang --blame-hang-timeout 4m --blame-hang-dump-type none --logger "console;verbosity=normal"
+          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
+            --filter-trait "Category=PlanEvidence" \
+            --output Detailed

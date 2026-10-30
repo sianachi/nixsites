@@ -28,6 +28,12 @@ function seeded(markdown: string): Y.Doc {
   return document;
 }
 
+/** A note body as the single Yjs update the companion's body reader expects, base64-encoded. */
+export function seededUpdate(markdown: string): string {
+  const bytes = Y.encodeStateAsUpdate(seeded(markdown));
+  return btoa(String.fromCharCode(...bytes));
+}
+
 /**
  * The collaboration service for the server-free demo: note bodies sync with documents held in this
  * tab, one per note, so edits survive closing and reopening a note until the tab reloads. Installed

@@ -1,6 +1,6 @@
 {
   "name": "@nix/chart-render",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "A chart view's arithmetic, geometry and SVG, with no React: what the web chart and a published site both draw from",
@@ -25,6 +25,6 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

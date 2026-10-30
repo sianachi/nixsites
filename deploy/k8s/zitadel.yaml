@@ -23,7 +23,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: database
-          image: pgvector/pgvector:pg16
+          image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
           env:
             - { name: PGHOST, value: postgres }
             - { name: PGUSER, value: postgres }
@@ -95,7 +95,7 @@ spec:
       securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
       initContainers:
         - name: schema
-          image: ghcr.io/zitadel/zitadel:v4.16.1
+          image: ghcr.io/zitadel/zitadel:v4.16.1@sha256:fea7ea2e4648d2dfe6a22a446252f084e4a370d8caedf08d3af4632cf517d4ef
           args: ["init", "zitadel"]
           envFrom: [{ configMapRef: { name: nix-zitadel-env } }]
           env: &database-secrets
@@ -111,7 +111,7 @@ spec:
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
       containers:
         - name: zitadel
-          image: ghcr.io/zitadel/zitadel:v4.16.1
+          image: ghcr.io/zitadel/zitadel:v4.16.1@sha256:fea7ea2e4648d2dfe6a22a446252f084e4a370d8caedf08d3af4632cf517d4ef
           args: ["start-from-setup", "--masterkeyFromEnv", "--tlsMode", "${ZITADEL_TLS_MODE}"]
           ports: [{ containerPort: 8080 }]
           envFrom: [{ configMapRef: { name: nix-zitadel-env } }]
@@ -125,7 +125,7 @@ spec:
           volumeMounts: [{ name: machinekey, mountPath: /machinekey }]
         # Zitadel's image has no shell; this is what `kubectl exec -c pat` reads the PAT through.
         - name: pat
-          image: busybox:1.37
+          image: busybox:1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
           command: ["sleep", "infinity"]
           volumeMounts: [{ name: machinekey, mountPath: /machinekey, readOnly: true }]
           resources: { requests: { cpu: 1m, memory: 4Mi }, limits: { memory: 16Mi } }

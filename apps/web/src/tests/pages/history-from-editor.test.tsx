@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -47,9 +47,10 @@ describe('the document’s history, from the page', () => {
     expect(screen.queryByRole('complementary', { name: 'History' })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Item actions' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'History' }));
-    expect(await screen.findByRole('complementary', { name: 'History' })).toBeVisible();
+    const pane = await screen.findByRole('complementary', { name: 'History' });
+    expect(pane).toBeVisible();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Close history' }));
+    await userEvent.click(within(pane).getByRole('button', { name: 'Close history' }));
     await waitFor(() => {
       expect(screen.queryByRole('complementary', { name: 'History' })).not.toBeInTheDocument();
     });

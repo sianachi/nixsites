@@ -117,7 +117,7 @@ export async function putUploadCapability(
     ...(signal === undefined ? {} : { signal }),
     credentials: 'omit',
     redirect: 'error',
-    headers: { 'content-type': file.type || 'application/octet-stream' },
+    headers: { 'content-type': 'application/octet-stream' },
   });
   if (!response.ok) throw new Error(`The file upload failed (${String(response.status)}).`);
 }

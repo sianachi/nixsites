@@ -351,8 +351,18 @@
       "label": "Chart",
       "requires": {
         "field": "groupBy",
-        "shape": "select-or-date",
-        "accepts": ["select", "date", "timestamp", "datetime", "due_date", "start_date"]
+        "shape": "select, priority, checkbox or date",
+        "accepts": [
+          "select",
+          "date",
+          "timestamp",
+          "datetime",
+          "checkbox",
+          "due_date",
+          "start_date",
+          "completion",
+          "priority"
+        ]
       },
       "optional": [
         {
@@ -364,7 +374,7 @@
           "shape": "select-or-checkbox"
         }
       ],
-      "description": "Children counted or totalled per select value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date; splitBy makes series."
+      "description": "Children counted or totalled per select, priority or checkbox value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date (a period needs a date groupBy); splitBy makes series."
     },
     {
       "kind": "habit_tracker",

@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#permissions">Permissions</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#permissions">Permissions</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -422,6 +422,102 @@
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>view</code> in query (optional, string)</li></ul>
 
 <p>Responses: <code>200</code>.</p>
+</article></section>
+<section id="comments"><h2>Comments</h2><article id="listcomments" data-search="get /api/v1/items/{itemid}/comments listcomments   comments">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/comments</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ListComments</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>423</code>.</p>
+</article>
+<article id="addcomment" data-search="post /api/v1/items/{itemid}/comments addcomment   comments">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/comments</code></h3>
+<p></p>
+<p class="id">Operation id: <code>AddComment</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>AddCommentRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>, <code>423</code>.</p>
+</article>
+<article id="watchcomments" data-search="get /api/v1/items/{itemid}/comments/watch watchcomments   comments">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/comments/watch</code></h3>
+<p></p>
+<p class="id">Operation id: <code>WatchComments</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>revision</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>423</code>, <code>429</code>.</p>
+</article>
+<article id="editcomment" data-search="patch /api/v1/items/{itemid}/comments/{commentid} editcomment   comments">
+<h3><span class="verb">PATCH</span> <code>/api/v1/items/{itemId}/comments/{commentId}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>EditComment</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>commentId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>EditCommentRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>, <code>423</code>.</p>
+</article>
+<article id="deletecomment" data-search="delete /api/v1/items/{itemid}/comments/{commentid} deletecomment   comments">
+<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/comments/{commentId}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>DeleteComment</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>commentId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>423</code>.</p>
+</article>
+<article id="setcommentanchor" data-search="put /api/v1/items/{itemid}/comments/{threadid}/anchor setcommentanchor   comments">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/comments/{threadId}/anchor</code></h3>
+<p></p>
+<p class="id">Operation id: <code>SetCommentAnchor</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>threadId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>CommentAnchorPositions</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>, <code>423</code>.</p>
+</article>
+<article id="replycomment" data-search="post /api/v1/items/{itemid}/comments/{threadid}/replies replycomment   comments">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/comments/{threadId}/replies</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ReplyComment</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>threadId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>ReplyCommentRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>, <code>423</code>.</p>
+</article>
+<article id="setcommentresolved" data-search="put /api/v1/items/{itemid}/comments/{threadid}/resolved setcommentresolved   comments">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/comments/{threadId}/resolved</code></h3>
+<p></p>
+<p class="id">Operation id: <code>SetCommentResolved</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>threadId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>CommentResolvedRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>, <code>423</code>.</p>
 </article></section>
 <section id="conversations"><h2>Conversations</h2><article id="getconversation" data-search="get /api/v1/conversations/{itemid} getconversation   conversations">
 <h3><span class="verb">GET</span> <code>/api/v1/conversations/{itemId}</code></h3>
@@ -1887,6 +1983,18 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
+<article id="getpassages" data-search="get /api/v1/items/{itemid}/passages getpassages the passages of a note and the notes under it that best answer a query returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. locked, trashed and template content is never returned, opened or not. passages are derived when a document is snapshotted, so the newest edits may not be searchable yet. an item the caller may not read is reported as not found. search">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/passages</code></h3>
+<p>The passages of a note and the notes under it that best answer a query</p>
+<p class="id">Operation id: <code>GetPassages</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Returns up to 'limit' (default 8, at most 20) passages from this item's document and every readable document beneath it, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned, opened or not. Passages are derived when a document is snapshotted, so the newest edits may not be searchable yet. An item the caller may not read is reported as not found.</p>
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>q</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
 <article id="getrelateditems" data-search="get /api/v1/items/{itemid}/related getrelateditems the items most often linked alongside an item returns the items that the documents linking to this one also link to, ranked by how many such documents they share, then by title. 'limit' defaults to 10 and is capped at 25. only referring documents the caller may read, and that are not locked, count towards a ranking - a locked document's links come from its body - and only items the caller may read are returned. the ranking considers the item's 200 most-referring readable documents, so a heavily linked item is ranked from its strongest sources rather than all of them. an item the caller may not read is reported as not found. search">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/related</code></h3>
 <p>The items most often linked alongside an item</p>
@@ -1922,6 +2030,18 @@
 
 <p>Request body: <code>MentionsRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>400</code>, <code>413</code>, <code>429</code>.</p>
+</article>
+<article id="searchpassages" data-search="get /api/v1/search/passages searchpassages the passages across the caller's workspaces that best answer a query returns up to 'limit' (default 8, at most 20) passages from every document the caller may read, or from one workspace when 'workspaceid' is given, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. locked, trashed and template content is never returned. a workspace the caller cannot read returns no passages. search">
+<h3><span class="verb">GET</span> <code>/api/v1/search/passages</code></h3>
+<p>The passages across the caller's workspaces that best answer a query</p>
+<p class="id">Operation id: <code>SearchPassages</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Returns up to 'limit' (default 8, at most 20) passages from every document the caller may read, or from one workspace when 'workspaceId' is given, ranked by full-text match fused with semantic similarity when the server's local embedding model is loaded. Locked, trashed and template content is never returned. A workspace the caller cannot read returns no passages.</p>
+<ul><li><code>q</code> in query (optional, string)</li><li><code>workspaceId</code> in query (optional, string (uuid))</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>503</code>.</p>
 </article>
 <article id="resolvereferences" data-search="get /api/v1/search/references resolvereferences resolve the items a document's references point at takes 'ids' as a comma-separated list of identifiers and returns one entry for each, in the order asked. an entry the caller may read carries the item's current title; one they may not carries 'readable: false' and no title at all. the two are distinguishable on purpose, because a reference node caches the target's title for rendering and must show a stub rather than that cache when the reader has no permission on it. why an identifier did not resolve is deliberately not reported: deleted, never existed, and not visible to you are one answer. search">
 <h3><span class="verb">GET</span> <code>/api/v1/search/references</code></h3>

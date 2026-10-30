@@ -18,7 +18,7 @@
  * a `LossKind` behind. See ADR-0037.
  */
 
-import { rejectAllSuggestions } from '@nix/editor-schema';
+import { isRecord, rejectAllSuggestions } from '@nix/editor-schema';
 
 import type { LossReport, LossSink } from './loss.js';
 
@@ -318,8 +318,4 @@ export function readNumber(attrs: Readonly<Record<string, unknown>>, key: string
 
 export function readBoolean(attrs: Readonly<Record<string, unknown>>, key: string): boolean {
   return attrs[key] === true;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

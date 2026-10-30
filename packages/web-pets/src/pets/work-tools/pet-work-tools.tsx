@@ -50,7 +50,7 @@ function PetWorkToolsView({
    * without asking, nor one already decided - so the header, avatar and launcher only say
    * "needs approval" when that is true. Called whenever the set changes. */
   readonly onNeedsDecisionChange?: (toolIds: readonly string[]) => void;
-  /** Lane F (docs/plans/pet-tool-use-plan.md): the owner's per-conversation switch to run clean
+  /** Lane F: the owner's per-conversation switch to run clean
    * writes without a click. Only `canApplyWithoutAsking` writes whose preview loaded with no
    * problems run on their own; a preview that failed, or a write with problems, still waits. */
   readonly applyWithoutAsking?: boolean;

@@ -1,4 +1,4 @@
-import { Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Text, cn, focusRing } from '@nix/ui';
 import { useEffect, useRef, type ReactElement } from 'react';
 import type { PreviewBodyEdit } from '@nix/structure-spec';
 import { lineSegments, rangeSegments, type DiffSegment } from '@nix/web-foundation/lib/text-diff';
@@ -46,12 +46,9 @@ function TextSide({
       <Text variant="note" tone="muted">
         {label}
       </Text>
-      <div
+      <ScrollRegion
         ref={box}
-        role="region"
         aria-label={name}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-        tabIndex={0}
         className={cn(
           'relative max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-sm border border-divider p-2',
           focusRing,
@@ -78,7 +75,7 @@ function TextSide({
             ),
           )}
         </Text>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Button, Dialog, Table, Tag, Text } from '@nix/ui';
+import { ScrollRegion, Button, Dialog, Table, Tag, Text } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 
@@ -189,12 +189,9 @@ export function AccessTokensSection(): ReactElement {
         />
       ) : (
         <>
-          <div
+          <ScrollRegion
             className="hidden min-w-0 overflow-x-auto sm:block"
-            role="region"
             aria-label="Access tokens table"
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll the token table horizontally.
-            tabIndex={0}
           >
             <Table
               caption="Your personal access tokens, newest first"
@@ -205,7 +202,7 @@ export function AccessTokensSection(): ReactElement {
               loadingMessage="Loading your access tokens."
               emptyMessage="You have no access tokens. Create one to let a script or machine act as you."
             />
-          </div>
+          </ScrollRegion>
           <MobileTokenList
             status={status}
             tokens={tokens}

@@ -66,8 +66,8 @@ func TestWorkspaceToolsOffersOneToolPerOperation(t *testing.T) {
 }
 
 // TestEmbeddedToolSchemasFitTheCodexBudget re-measures every embedded tool's inputSchema against
-// Codex 0.153.4's own normalized-key set (docs/plans/pet-speed-accuracy-plan.md, "Codex 0.153.4
-// facts"), independently of packages/structure-spec/src/catalog/tools.ts's own budget test, so a
+// Codex 0.153.4's own normalized-key set (Codex drops every other key and caps a
+// dynamic tool schema at 4800 normalized bytes), independently of packages/structure-spec/src/catalog/tools.ts's own budget test, so a
 // schema that grew past 4800 bytes on the way through JSON, embed and re-parse fails here too.
 func TestEmbeddedToolSchemasFitTheCodexBudget(t *testing.T) {
 	for _, tool := range workspaceTools() {

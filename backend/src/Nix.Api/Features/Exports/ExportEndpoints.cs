@@ -368,9 +368,11 @@ internal static class ExportEndpoints
         {
             return Problem(context, 404, "exports.image_unavailable", "Image unavailable", "The image is not available to this export.");
         }
+        // A captured Mermaid diagram is an SVG the worker rasterises itself; it is never previewable.
         var image = await files.AuthorizeDownloadAsync(ItemId.From(itemId), null, context.RequestAborted).ConfigureAwait(false);
-        if (image is null || !image.Previewable || image.ByteLength is <= 0 or > 10 * 1024 * 1024
-            || image.MediaType is not ("image/png" or "image/jpeg" or "image/webp"))
+        if (image is null || image.ByteLength is <= 0 or > 10 * 1024 * 1024
+            || !(image.Previewable && image.MediaType is "image/png" or "image/jpeg" or "image/webp"
+                || image.MediaType is "image/svg+xml"))
         {
             return Problem(context, 404, "exports.image_unavailable", "Image unavailable", "The image is not a supported preview.");
         }

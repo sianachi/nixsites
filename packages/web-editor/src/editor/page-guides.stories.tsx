@@ -55,7 +55,7 @@ function Example(): ReactElement {
   const editor = useEditor({
     extensions: [...storyExtensions, TableControls],
     content: LONG_NOTE,
-    editorProps: { attributes: { class: `${proseRoot} outline-none` } },
+    editorProps: { attributes: { class: `${proseRoot} outline-none`, 'aria-label': 'Note body' } },
   });
   return (
     <div ref={setHost} className="relative">

@@ -403,7 +403,7 @@ async function runWorkerDocumentImport(
       method: 'PUT',
       body: createReadStream(options.path),
       headers: {
-        'content-type': documentMediaType(format),
+        'content-type': 'application/octet-stream',
         'content-length': String(info.size),
       },
       duplex: 'half',
