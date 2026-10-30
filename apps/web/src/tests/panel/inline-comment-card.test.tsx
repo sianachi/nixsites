@@ -231,9 +231,8 @@ describe('the thread card', () => {
     renderCard();
 
     expect(await screen.findByText('Is this the right date?')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Reply' }));
     await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'Fixed it');
-    await user.click(must(screen.getAllByRole('button', { name: 'Reply' }).at(-1)));
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
 
     await waitFor(() => {
       expect(sent).toEqual([
@@ -244,6 +243,55 @@ describe('the thread card', () => {
         },
       ]);
     });
+  });
+});
+
+describe('the thread card controls', () => {
+  it('sends a reply with Enter, and keeps Shift+Enter for a new line', async () => {
+    const user = userEvent.setup();
+    patchComments(ITEM, { card: { kind: 'thread', threadId: THREAD.id } });
+    renderCard();
+
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Reply' }),
+      'a{Shift>}{Enter}{/Shift}b',
+    );
+    expect(sent).toEqual([]);
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(sent[0]?.body).toEqual({ body: 'a\nb', mentionIds: [] });
+    });
+  });
+
+  it('resolves from the header and closes with the x', async () => {
+    const user = userEvent.setup();
+    patchComments(ITEM, { card: { kind: 'thread', threadId: THREAD.id } });
+    renderCard();
+
+    await user.click(await screen.findByRole('button', { name: 'Resolve' }));
+    await waitFor(() => {
+      expect(sent[0]).toMatchObject({ method: 'PUT' });
+    });
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(readComments(ITEM).card).toBeNull();
+  });
+
+  it('closes a suggestion card with the x', async () => {
+    const user = userEvent.setup();
+    patchComments(ITEM, { card: { kind: 'suggestions', ids: ['s1'] } });
+    renderCard();
+
+    await user.click(await screen.findByRole('button', { name: 'Close' }));
+    expect(readComments(ITEM).card).toBeNull();
+  });
+
+  it('hides the reply field and Resolve from someone who cannot comment', async () => {
+    patchComments(ITEM, { card: { kind: 'thread', threadId: THREAD.id }, canComment: false });
+    renderCard();
+
+    expect(await screen.findByText('Is this the right date?')).toBeVisible();
+    expect(screen.queryByRole('textbox', { name: 'Reply' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument();
   });
 });
 

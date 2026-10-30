@@ -1,6 +1,17 @@
 import { comments, isNixApiError, type Comment, type CommentThread } from '@nix/api-client';
-import { Button, Input, Text, Textarea, focusRing } from '@nix/ui';
-import { useState, type ReactNode } from 'react';
+import { Button, Icon, Input, Menu, Text, Textarea, focusRing } from '@nix/ui';
+import {
+  AtSign,
+  Check,
+  MoreHorizontal,
+  Pencil,
+  RotateCcw,
+  SendHorizontal,
+  Trash2,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import {
   openThreadCard,
@@ -93,6 +104,31 @@ export function useCommentWrites(itemId: string): {
   return { problem, act, addThread };
 }
 
+/** A quiet icon-only button for card headers and row menus. */
+export function CardIconButton({
+  label,
+  icon,
+  onClick,
+  className = '',
+}: {
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly onClick: () => void;
+  readonly className?: string;
+}): ReactNode {
+  return (
+    <Button
+      variant="subtle"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={`px-2 pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg) ${className}`}
+    >
+      <Icon icon={icon} size="sm" />
+    </Button>
+  );
+}
+
 export function ThreadCard({
   itemId,
   thread,
@@ -102,9 +138,12 @@ export function ThreadCard({
   canComment,
   act,
   inline = false,
+  onClose,
 }: {
   /** Shown at the text itself, where the quote is already highlighted behind the card. */
   readonly inline?: boolean;
+  /** The card's own close control, drawn beside Resolve in the first comment's row. */
+  readonly onClose?: (() => void) | undefined;
   readonly itemId: string;
   readonly thread: CommentThread;
   readonly me: string | null;
@@ -114,14 +153,27 @@ export function ThreadCard({
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
 }): ReactNode {
   const client = useApiClient();
-  const [replying, setReplying] = useState(false);
   const isResolved = thread.resolvedAt !== null;
+  const header = (
+    <>
+      {canComment ? (
+        <CardIconButton
+          label={isResolved ? 'Reopen' : 'Resolve'}
+          icon={isResolved ? RotateCcw : Check}
+          onClick={() => {
+            void act(() => client.execute(comments.setResolved(itemId, thread.id, !isResolved)));
+          }}
+        />
+      ) : null}
+      {onClose === undefined ? null : <CardIconButton label="Close" icon={X} onClick={onClose} />}
+    </>
+  );
 
   return (
     <article
       aria-label={`Comment thread${thread.quote === null ? '' : ` on ${thread.quote}`}`}
-      className={`flex flex-col gap-2 rounded-sm border p-2 ${
-        active ? 'border-accent' : 'border-divider'
+      className={`flex flex-col gap-3 ${
+        inline ? '' : `rounded-sm border p-2 ${active ? 'border-accent' : 'border-divider'}`
       }`}
     >
       {thread.quote === null || (inline && !detached) ? null : (
@@ -141,8 +193,15 @@ export function ThreadCard({
         </Text>
       ) : null}
 
-      {thread.comments.map((comment) => (
-        <CommentRow key={comment.id} itemId={itemId} comment={comment} me={me} act={act} />
+      {thread.comments.map((comment, index) => (
+        <CommentRow
+          key={comment.id}
+          itemId={itemId}
+          comment={comment}
+          me={me}
+          act={act}
+          trailing={index === 0 ? header : null}
+        />
       ))}
 
       {isResolved ? (
@@ -152,42 +211,16 @@ export function ThreadCard({
       ) : null}
 
       {canComment ? (
-        <div className="flex flex-wrap gap-1">
-          <Button
-            variant="ghost"
-            aria-expanded={replying}
-            onClick={() => {
-              setReplying((current) => !current);
-            }}
-          >
-            Reply
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              void act(() => client.execute(comments.setResolved(itemId, thread.id, !isResolved)));
-            }}
-          >
-            {isResolved ? 'Reopen' : 'Resolve'}
-          </Button>
+        <div className="sticky bottom-0 -mb-1 bg-background pb-1">
+          <Composer
+            compact
+            label="Reply"
+            submitLabel="Reply"
+            onSubmit={(body, mentionIds) =>
+              act(() => client.execute(comments.reply(itemId, thread.id, { body, mentionIds })))
+            }
+          />
         </div>
-      ) : null}
-
-      {canComment && replying ? (
-        <Composer
-          label="Reply"
-          submitLabel="Reply"
-          onSubmit={async (body, mentionIds) => {
-            const sent = await act(() =>
-              client.execute(comments.reply(itemId, thread.id, { body, mentionIds })),
-            );
-            if (sent) setReplying(false);
-            return sent;
-          }}
-          onCancel={() => {
-            setReplying(false);
-          }}
-        />
       ) : null}
     </article>
   );
@@ -198,11 +231,13 @@ function CommentRow({
   comment,
   me,
   act,
+  trailing,
 }: {
   readonly itemId: string;
   readonly comment: Comment;
   readonly me: string | null;
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
+  readonly trailing: ReactNode;
 }): ReactNode {
   const client = useApiClient();
   const [editing, setEditing] = useState(false);
@@ -210,18 +245,63 @@ function CommentRow({
 
   if (comment.deleted) {
     return (
-      <Text variant="bodySmall" tone="muted">
-        Comment deleted
-      </Text>
+      <div className="flex items-center justify-between gap-2">
+        <Text variant="bodySmall" tone="muted">
+          Comment deleted
+        </Text>
+        <div className="-my-1 flex">{trailing}</div>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <Text variant="caption" tone="muted">
-        {authorLabel(comment)}, {formatRelativeTime(new Date(comment.createdAt))}
-        {comment.editedAt === null ? '' : ' (edited)'}
-      </Text>
+    <div className="group flex flex-col gap-1">
+      <div className="-my-1.5 flex items-center gap-2">
+        <Text variant="bodySmall" className="min-w-0 flex-1">
+          <span className="font-medium">{authorLabel(comment)}</span>
+          <span className="text-muted">
+            {' · '}
+            {formatRelativeTime(new Date(comment.createdAt))}
+            {comment.editedAt === null ? '' : ' (edited)'}
+          </span>
+        </Text>
+        <div className="flex shrink-0">
+          {mine && !editing ? (
+            <Menu
+              label="Comment actions"
+              items={[
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onSelect: () => {
+                    setEditing(true);
+                  },
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  destructive: true,
+                  onSelect: () => {
+                    void act(() => client.execute(comments.remove(itemId, comment.id)));
+                  },
+                },
+              ]}
+            >
+              {(trigger) => (
+                <Button
+                  {...trigger}
+                  variant="subtle"
+                  aria-label="More actions"
+                  className="px-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 aria-expanded:opacity-100 pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg) pointer-coarse:opacity-100"
+                >
+                  <Icon icon={MoreHorizontal} size="sm" />
+                </Button>
+              )}
+            </Menu>
+          ) : null}
+          {trailing}
+        </div>
+      </div>
       {editing ? (
         <Composer
           label="Edit comment"
@@ -241,26 +321,6 @@ function CommentRow({
           {comment.body}
         </Text>
       )}
-      {mine && !editing ? (
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setEditing(true);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              void act(() => client.execute(comments.remove(itemId, comment.id)));
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -271,9 +331,12 @@ export function Composer({
   submitLabel,
   quote = null,
   initial = '',
+  compact = false,
   onSubmit,
   onCancel,
 }: {
+  /** One quiet line that grows as you type, with icon buttons: the reply field of a thread. */
+  readonly compact?: boolean;
   readonly label: string;
   readonly submitLabel: string;
   readonly quote?: string | null;
@@ -301,42 +364,100 @@ export function Composer({
     }
   }
 
+  // The house convention (see the inline AI panel): Enter sends, Shift+Enter breaks the line,
+  // Ctrl/Cmd+Enter always sends, and a touch keyboard keeps Enter for new lines.
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    const touch = typeof matchMedia === 'function' && matchMedia('(any-pointer: coarse)').matches;
+    if (
+      event.key === 'Enter' &&
+      !event.nativeEvent.isComposing &&
+      (event.ctrlKey || event.metaKey || (!touch && !event.shiftKey))
+    ) {
+      event.preventDefault();
+      if (!busy) void send();
+    }
+  }
+
+  const field = (
+    <Textarea
+      aria-label={label}
+      placeholder={`${label}…`}
+      value={body}
+      maxLength={10000}
+      rows={1}
+      autoGrow
+      resize="none"
+      className={compact ? 'max-h-32 min-h-(--control-md) flex-1 py-1.5' : 'max-h-48'}
+      onKeyDown={onKeyDown}
+      onChange={(event) => {
+        setBody(event.target.value);
+      }}
+    />
+  );
+  const picker =
+    picking && workspace !== null ? (
+      <MentionPicker
+        onPick={(id, name) => {
+          setMentions((current) => new Map(current).set(id, name));
+          setBody(
+            (current) => `${current}${current === '' || current.endsWith(' ') ? '' : ' '}@${name} `,
+          );
+          setPicking(false);
+        }}
+      />
+    ) : null;
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-end gap-1">
+          {field}
+          {workspace === null ? null : (
+            <CardIconButton
+              label="Mention"
+              icon={AtSign}
+              onClick={() => {
+                setPicking((current) => !current);
+              }}
+            />
+          )}
+          <Button
+            variant="icon"
+            aria-label={submitLabel}
+            title={submitLabel}
+            disabled={busy || body.trim() === ''}
+            onClick={() => void send()}
+          >
+            <Icon icon={SendHorizontal} size="sm" />
+          </Button>
+        </div>
+        {picker}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {quote === null ? null : (
-        <Text variant="caption" tone="muted" className="border-l-2 border-divider pl-2">
+        <Text
+          variant="caption"
+          tone="muted"
+          className="line-clamp-2 border-l-2 border-divider pl-2"
+        >
           {quote}
         </Text>
       )}
-      <Textarea
-        aria-label={label}
-        placeholder={`${label}…`}
-        value={body}
-        maxLength={10000}
-        onChange={(event) => {
-          setBody(event.target.value);
-        }}
-      />
-      {picking && workspace !== null ? (
-        <MentionPicker
-          onPick={(id, name) => {
-            setMentions((current) => new Map(current).set(id, name));
-            setBody(
-              (current) =>
-                `${current}${current === '' || current.endsWith(' ') ? '' : ' '}@${name} `,
-            );
-            setPicking(false);
-          }}
-        />
-      ) : null}
+      {field}
+      {picker}
       <div className="flex flex-wrap gap-1">
-        <Button
-          variant="secondary"
-          disabled={busy || body.trim() === ''}
-          onClick={() => void send()}
-        >
+        <Button variant="primary" disabled={busy || body.trim() === ''} onClick={() => void send()}>
           {submitLabel}
         </Button>
+        {onCancel === undefined ? null : (
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         {workspace === null ? null : (
           <Button
             variant="ghost"
@@ -346,11 +467,6 @@ export function Composer({
             }}
           >
             Mention
-          </Button>
-        )}
-        {onCancel === undefined ? null : (
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
           </Button>
         )}
       </div>

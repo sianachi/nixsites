@@ -1,4 +1,5 @@
 import { Button, Text, blueprintFrame, chromeSurface, useAnchoredPanel } from '@nix/ui';
+import { X } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import {
@@ -15,7 +16,7 @@ import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
-import { Composer, ThreadCard, useCommentWrites } from './comment-thread-card';
+import { CardIconButton, Composer, ThreadCard, useCommentWrites } from './comment-thread-card';
 
 /**
  * The card that opens at the text: a comment thread, the suggestions under a click, or the box for
@@ -91,7 +92,7 @@ function CardFrame({
   // Beside the text, or centered when the text is gone (a detached thread).
   const anchor = (): CardAnchor | null =>
     editor.anchorOf(card) ?? {
-      left: Math.max(8, (window.innerWidth - 384) / 2),
+      left: Math.max(8, (window.innerWidth - 320) / 2),
       top: window.innerHeight / 4,
       bottom: window.innerHeight / 4,
     };
@@ -151,18 +152,15 @@ function CardFrame({
       aria-label={label}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      className={`${blueprintFrame} ${chromeSurface} fixed inset-auto z-50 m-0 flex w-[min(24rem,calc(100vw-16px))] flex-col gap-2 overflow-y-auto bg-background p-3 text-foreground shadow-md max-sm:rounded-b-none max-sm:pb-[max(var(--spacing)*3,env(safe-area-inset-bottom))]`}
+      className={`${blueprintFrame} ${chromeSurface} fixed inset-auto z-50 m-0 flex w-[min(20rem,calc(100vw-16px))] max-h-[min(28rem,70dvh)] flex-col gap-3 overflow-y-auto bg-background p-3 text-foreground shadow-md max-sm:rounded-b-none max-sm:pb-[max(var(--spacing)*3,env(safe-area-inset-bottom))]`}
     >
       {card.kind === 'thread' ? (
-        <ThreadBody itemId={itemId} threadId={card.threadId} />
+        <ThreadBody itemId={itemId} threadId={card.threadId} onClose={close} />
       ) : card.kind === 'suggestions' ? (
-        <SuggestionsBody itemId={itemId} ids={card.ids} editor={editor} />
+        <SuggestionsBody itemId={itemId} ids={card.ids} editor={editor} onClose={close} />
       ) : (
         <ComposeBody itemId={itemId} onDone={close} />
       )}
-      <Button variant="ghost" onClick={close}>
-        Close
-      </Button>
     </div>
   );
   /* eslint-enable jsx-a11y/no-noninteractive-element-interactions */
@@ -171,9 +169,11 @@ function CardFrame({
 function ThreadBody({
   itemId,
   threadId,
+  onClose,
 }: {
   readonly itemId: string;
   readonly threadId: string;
+  readonly onClose: () => void;
 }): ReactNode {
   const state = useItemComments(itemId);
   const { principal } = useCurrentPrincipal();
@@ -199,6 +199,7 @@ function ThreadBody({
         <ThreadCard
           inline
           itemId={itemId}
+          onClose={onClose}
           thread={thread}
           me={principal?.id ?? null}
           active={false}
@@ -242,16 +243,18 @@ function SuggestionsBody({
   itemId,
   ids,
   editor,
+  onClose,
 }: {
   readonly itemId: string;
   readonly ids: readonly string[];
   readonly editor: CommentsEditorHandle;
+  readonly onClose: () => void;
 }): ReactNode {
   // Names come from the workspace's people; a note outside a workspace names nobody.
   return useOptionalWorkspace() === null ? (
-    <SuggestionList itemId={itemId} ids={ids} editor={editor} names={new Map()} />
+    <SuggestionList itemId={itemId} ids={ids} editor={editor} names={new Map()} onClose={onClose} />
   ) : (
-    <NamedSuggestions itemId={itemId} ids={ids} editor={editor} />
+    <NamedSuggestions itemId={itemId} ids={ids} editor={editor} onClose={onClose} />
   );
 }
 
@@ -259,6 +262,7 @@ function NamedSuggestions(props: {
   readonly itemId: string;
   readonly ids: readonly string[];
   readonly editor: CommentsEditorHandle;
+  readonly onClose: () => void;
 }): ReactNode {
   const { principals, hasMore, loadingMore, loadMore } = useWorkspaceAssignablePrincipals();
   const { threads } = useItemComments(props.itemId);
@@ -283,10 +287,12 @@ function SuggestionList({
   ids,
   editor,
   names,
+  onClose,
 }: {
   readonly itemId: string;
   readonly ids: readonly string[];
   readonly editor: CommentsEditorHandle;
+  readonly onClose: () => void;
   readonly names: ReadonlyMap<string, string>;
 }): ReactNode {
   const { suggestions } = useItemComments(itemId);
@@ -318,21 +324,29 @@ function SuggestionList({
 
   return (
     <>
-      {entries.map((entry) => (
+      {entries.map((entry, index) => (
         <section
           key={entry.id}
           aria-label={describeSuggestion(entry)}
-          className="flex flex-col gap-1"
+          className="flex flex-col gap-2"
         >
-          <Text variant="caption" tone="muted">
-            {author(entry)}
-            {entry.createdAt === '' ? '' : `, ${formatRelativeTime(new Date(entry.createdAt))}`}
-          </Text>
+          <div className="-my-1.5 flex items-center gap-2">
+            <Text variant="bodySmall" className="min-w-0 flex-1">
+              <span className="text-muted">Suggested by </span>
+              <span className="font-medium">{author(entry)}</span>
+              <span className="text-muted">
+                {entry.createdAt === ''
+                  ? ''
+                  : ` · ${formatRelativeTime(new Date(entry.createdAt))}`}
+              </span>
+            </Text>
+            {index === 0 ? <CardIconButton label="Close" icon={X} onClick={onClose} /> : null}
+          </div>
           <Text variant="bodySmall">{describeSuggestion(entry)}</Text>
           {editor.editable ? (
             <div className="flex gap-1">
               <Button
-                variant="secondary"
+                variant="primary"
                 onClick={() => {
                   decide(entry, true);
                 }}
@@ -340,7 +354,7 @@ function SuggestionList({
                 Accept
               </Button>
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={() => {
                   decide(entry, false);
                 }}

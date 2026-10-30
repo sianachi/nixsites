@@ -170,16 +170,17 @@ describe('the comments pane', () => {
     expect(screen.getByRole('button', { name: 'Reopen' })).toBeVisible();
   });
 
-  it("offers edit and delete only on the viewer's own comments", async () => {
+  it("offers edit and delete, in a menu, only on the viewer's own comments", async () => {
+    const user = userEvent.setup();
     renderPane();
     const mine = must((await screen.findByText('Checking now.')).parentElement);
     const theirs = must(screen.getByText('Is this the right date?').parentElement);
 
-    await waitFor(() => {
-      expect(within(mine).getByRole('button', { name: 'Edit' })).toBeVisible();
-    });
-    expect(within(mine).getByRole('button', { name: 'Delete' })).toBeVisible();
-    expect(within(theirs).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(within(theirs).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    await user.click(await within(mine).findByRole('button', { name: 'More actions' }));
+    expect(await screen.findByRole('menuitem', { name: 'Edit' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   });
 
   it('shows a deleted root as muted text with no actions, and keeps its replies', async () => {
@@ -199,17 +200,15 @@ describe('the comments pane', () => {
 
     expect(await screen.findByText('Comment deleted')).toBeVisible();
     expect(screen.getByText('Still here.')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
   it('posts a reply to the thread', async () => {
     const user = userEvent.setup();
     renderPane();
 
-    await user.click(await screen.findByRole('button', { name: 'Reply' }));
-    await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'Fixed it');
-    await user.click(must(screen.getAllByRole('button', { name: 'Reply' }).at(-1)));
+    await user.type(await screen.findByRole('textbox', { name: 'Reply' }), 'Fixed it');
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
 
     await waitFor(() => {
       expect(sent).toEqual([
