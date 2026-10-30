@@ -136,7 +136,7 @@ public sealed class AccessGrantStore(NixDbContext db, INixSessionContextAccessor
                          AND EXISTS (SELECT 1 FROM principal p
                                       WHERE p.tenant_id = grant_row.tenant_id
                                         AND p.principal_id = grant_row.subject_id
-                                        AND p.status = 'active'))
+                                        AND p.status = 'active' AND p.kind = 'user'))
                      OR (grant_row.subject_type = 'group'
                          AND EXISTS (SELECT 1
                                        FROM group_membership m
@@ -144,7 +144,7 @@ public sealed class AccessGrantStore(NixDbContext db, INixSessionContextAccessor
                                       WHERE m.tenant_id = grant_row.tenant_id
                                         AND m.group_id = grant_row.subject_id
                                         AND m.principal_id <> {excluded}
-                                        AND p.status = 'active'))
+                                        AND p.status = 'active' AND p.kind = 'user'))
                    )) AS "Value"
             """).SingleAsync(cancellationToken).ConfigureAwait(false);
     }

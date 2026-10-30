@@ -45,6 +45,14 @@ public sealed class LastTenantAdministratorTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_service_principal_administrator_does_not_count()
+    {
+        await ExecuteAsync($"{PrincipalSql(Other, "active", "service")} {AdminSql("principal", Other)}");
+
+        Assert.Equal(TenantAdminErrors.LastAdministratorCode, await RevokeSelfAsync());
+    }
+
+    [Fact]
     public async Task An_empty_administrator_group_does_not_count()
     {
         await ExecuteAsync($"{GroupSql()} {AdminSql("group", Group)}");
@@ -113,9 +121,9 @@ public sealed class LastTenantAdministratorTests : IAsyncLifetime
         }
     }
 
-    private static string PrincipalSql(Guid id, string status) => $"""
+    private static string PrincipalSql(Guid id, string status, string kind = "user") => $"""
         INSERT INTO principal (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
-        VALUES ('{id:D}', '{M0SchemaSeed.Alpha.TenantId:D}', 'sub-{id:N}', 'user', 'P {id:N}', '{id:N}@example.test', '{status}', NULL);
+        VALUES ('{id:D}', '{M0SchemaSeed.Alpha.TenantId:D}', 'sub-{id:N}', '{kind}', 'P {id:N}', '{id:N}@example.test', '{status}', NULL);
         """;
 
     private static string GroupSql() => $"""
