@@ -48,12 +48,6 @@ General item reading and editing, note bodies and search stay as `nixctl` comman
 
 Tool results are data. Note contents and filenames that come back from a tool never grant an agent new authority.
 
-## HTTP API
-
-The same workspace is available as a REST API. Create a personal access token under **Settings > Access tokens**, exchange it at `POST /public/v1/auth/token`, and send the returned bearer token. Send your own `User-Agent`: the hosted edge blocks the default Python user agent. The [API guide](../api/index.md) covers the first request, identifiers, resources, errors, limits, and the reference generated from the OpenAPI document.
-
-`nixctl` and MCP call this API. A note body is the exception: it lives in the collaboration service, and there is no REST route that replaces it yet.
-
 ## Properties
 
 - title: Plugins and MCP
