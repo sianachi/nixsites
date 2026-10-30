@@ -96,7 +96,7 @@ function findByKey(
 
 /**
  * A board needs a property it can group by (`canGroupBy`) and a chart one it can bucket by
- * (`canChartBy`) - both a single select for now - and a calendar or timeline needs a
+ * (`canChartBy`: a select, priority, checkbox or date) - and a calendar or timeline needs a
  * date-shaped one to place items by - the same requirement `ViewKinds.All`
  * (`backend/src/Nix.Api/Domain/Views/ViewDefinition.cs:182-252`) declares per kind. Stricter than
  * `ViewDefinitionRules.Refuse` actually enforces on write, though: that check only asks whether
@@ -166,6 +166,14 @@ function refuseKindRequirement(
 
   if (view.kind === 'chart') {
     const property = findByKey(effective, view.groupBy);
+    // A period chart (line, area, year grid, or any chart with a period) folds dates into periods,
+    // so its grouping must be date-shaped: say so rather than the generic sentence.
+    const periodic =
+      view.chart?.period != null ||
+      (view.chart?.kind != null && TIME_AXIS_CHART_KINDS.has(view.chart.kind));
+    if (periodic && (property === undefined || !isDateShaped(property.type))) {
+      return `'${view.name}': a period chart (line, area, or any chart with a period) needs a date property to group by; set groupBy to one.`;
+    }
     if (property === undefined || !canChartBy(property.type)) {
       return `'${view.name}': a chart needs a property to group by.`;
     }

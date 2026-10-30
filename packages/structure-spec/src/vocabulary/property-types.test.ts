@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isDateShaped, PROPERTY_TYPES, valueShapeOf } from './property-types.js';
+import { canChartBy, isDateShaped, PROPERTY_TYPES, valueShapeOf } from './property-types.js';
 
 describe('valueShapeOf', () => {
   const expected: Record<string, string> = {
@@ -37,5 +37,20 @@ describe('isDateShaped', () => {
     for (const entry of PROPERTY_TYPES) {
       expect(isDateShaped(entry.value)).toBe(dateShaped.has(entry.value));
     }
+  });
+});
+
+describe('canChartBy', () => {
+  it.each([
+    ['select', true],
+    ['priority', true],
+    ['checkbox', true],
+    ['completion', true],
+    ['due_date', true],
+    ['multi_select', false],
+    ['assignee', false],
+    ['number', false],
+  ])('%s -> %s', (type, expected) => {
+    expect(canChartBy(type)).toBe(expected);
   });
 });

@@ -25,7 +25,7 @@ Columns may include title; it is an item-title marker, never a form field.
 - Form (form): optional: mode (saved or temporary). A single-page form; answers stay temporary or create a child.
 - Interactive form (interactive_form): optional: mode (saved or temporary). A multi-page, conditional form; answers stay temporary or create a child.
 - Smart list (query). Saved query rows show filter fields; columns are not configurable.
-- Chart (chart): needs a select-or-date property; optional: measureField (number), splitBy (select-or-checkbox). Children counted or totalled per select value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date; splitBy makes series.
+- Chart (chart): needs a select, priority, checkbox or date property; optional: measureField (number), splitBy (select-or-checkbox). Children counted or totalled per select, priority or checkbox value, or per period of a date (set period). chartKind: bar, column, pie, or line/area/year on a date (a period needs a date groupBy); splitBy makes series.
 - Habit tracker (habit_tracker). Child habit settings and dated check-ins, not column mappings.
 - Checklist (checklist): optional: doneProperty (checkbox). A box to tick per child, with progress; first property column appears beside title.
 - Matrix (matrix): needs a select or checkbox property; optional: rowBy (select or checkbox, required). Cards in a grid of cells, placed by two properties at once.

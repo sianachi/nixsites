@@ -3,6 +3,7 @@ import {
   bucketLabel as drawnBucketLabel,
   chartCaption as drawnChartCaption,
   labelsFor,
+  naturalBucketRank,
   plottedSeries as drawnPlottedSeries,
   seriesPattern,
   type ChartLabels,
@@ -42,6 +43,19 @@ export {
 
 export function chartLabels(fields: readonly PropertyDefinition[]): ChartLabels {
   return labelsFor(fields, UNSET_LABEL);
+}
+
+/**
+ * The chart with its buckets in the grouping's natural order (priority 1 to 4, unchecked before
+ * checked, no value last), when the grouping is one of those; any other chart comes back as it is.
+ */
+export function inNaturalOrder(chart: ItemChart, fields: readonly PropertyDefinition[]): ItemChart {
+  const type = fields.find((field) => field.key === chart.groupBy)?.type;
+  if (chart.period !== null || naturalBucketRank(type, null) === null) {
+    return chart;
+  }
+  const rank = (bucket: ChartBucket) => naturalBucketRank(type, bucket.value) ?? 0;
+  return { ...chart, buckets: [...chart.buckets].sort((a, b) => rank(a) - rank(b)) };
 }
 
 /** Labels that know no definitions: keys and values as stored. */

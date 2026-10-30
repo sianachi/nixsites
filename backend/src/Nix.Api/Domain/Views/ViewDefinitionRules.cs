@@ -68,6 +68,14 @@ public static class ViewDefinitionRules
             if (ViewKinds.Find(view.Kind)?.Requirement is { } requirement
                 && requirement.Read(view) is null)
             {
+                if (view.Kind == ViewKind.Chart
+                    && (view.Chart?.Period is not null || ChartKinds.NeedsTimeAxis(view.Chart?.Kind)))
+                {
+                    // Named apart so a period chart set through the API says what it is missing.
+                    return $"'{view.Name}': a period chart (line, area, or any chart with a period) "
+                        + "needs a date property to group by; set groupBy to one.";
+                }
+
                 return $"'{view.Name}': {requirement.Missing}.";
             }
 
