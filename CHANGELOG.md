@@ -73,7 +73,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - The landing page presents Nix as a free, open-source workspace where people and their AI agents
   work together, with a section on what the companion and your own agents can do, and screenshots
-  retaken from the current interface.
+  retaken from the current interface. The gallery adds Homebase, graph, artifact and search shots,
+  and the habit tracker now comes from the demo. Every screenshot follows the light or dark theme
+  chosen in the page header.
 - The `/demo` includes the companion: a sample chat shows it answering from the workspace,
   building a table, making an approved change and remembering a preference. Replies to new
   messages are scripted, since the demo has no model.

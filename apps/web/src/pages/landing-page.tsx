@@ -1,6 +1,6 @@
 import { Icon, Text } from '@nix/ui';
-import { FileText, type LucideIcon } from 'lucide-react';
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Blocks, FileText, House, Network, Search, type LucideIcon } from 'lucide-react';
+import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react';
 
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
@@ -37,18 +37,50 @@ function Kicker({ children }: { readonly children: ReactNode }): ReactNode {
   );
 }
 
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+/**
+ * The ground the page is drawn on, read from where the theme lands: the root's `data-theme`, or
+ * the machine's own setting when the visitor follows it. ThemeChoice and this page each own a
+ * `useTheme` state that does not reach the other, so the root attribute is the shared signal.
+ */
+function useGround(): 'light' | 'dark' {
+  const subscribe = (notify: () => void): (() => void) => {
+    const observer = new MutationObserver(notify);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    const media = typeof matchMedia === 'function' ? matchMedia(DARK_QUERY) : null;
+    media?.addEventListener('change', notify);
+    return () => {
+      observer.disconnect();
+      media?.removeEventListener('change', notify);
+    };
+  };
+  const read = (): 'light' | 'dark' => {
+    const chosen = document.documentElement.getAttribute('data-theme');
+    if (chosen === 'light' || chosen === 'dark') return chosen;
+    return typeof matchMedia === 'function' && matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
+  };
+  return useSyncExternalStore(subscribe, read, () => 'light');
+}
+
+/** A screenshot in the page's current theme: only the shown variant is ever in the page. */
 function Shot(props: {
-  readonly src: string;
+  /** The picture's name under /landing/; the dark variant is `<name>-dark.jpg`. */
+  readonly name: string;
   readonly alt: string;
   readonly large?: boolean;
   readonly eager?: boolean;
 }): ReactNode {
+  const ground = useGround();
   return (
     <div
       className={`overflow-hidden border ${RULE} bg-surface ${props.large === true ? 'rounded-lg' : 'rounded-md'}`}
     >
       <img
-        src={props.src}
+        src={`/landing/${props.name}${ground === 'dark' ? '-dark' : ''}.jpg`}
         alt={props.alt}
         width={1600}
         height={1000}
@@ -80,108 +112,123 @@ const kindIcon = (kind: string | null): LucideIcon =>
 const VIEWS: readonly {
   readonly id: string;
   readonly label: string;
-  /** The view kind whose icon the tab shows; null for the note, which is not a view. */
+  /** The view kind whose icon the tab shows; null for pages that are not views. */
   readonly kind: string | null;
-  readonly src: string;
+  /** The icon for a tab that has no view kind. */
+  readonly icon?: LucideIcon;
   readonly alt: string;
 }[] = [
+  {
+    id: 'homebase',
+    label: 'Homebase',
+    kind: null,
+    icon: House,
+    alt: 'Homebase, the screen a workspace opens to, with ways to start and recently viewed items',
+  },
   {
     id: 'note',
     label: 'Notes',
     kind: null,
-    src: '/landing/note.jpg',
     alt: 'A launch brief note with headings, a list and a table',
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    kind: null,
+    icon: Search,
+    alt: 'The search dialog listing the items that match "launch"',
+  },
+  {
+    id: 'graph',
+    label: 'Graph',
+    kind: null,
+    icon: Network,
+    alt: 'The workspace graph: every note as a node, with arrows for the links between them',
   },
   {
     id: 'board',
     label: 'Board',
     kind: 'board',
-    src: '/landing/board.jpg',
     alt: 'Launch tasks as a board, in columns by status',
   },
   {
     id: 'list',
     label: 'List',
     kind: 'list',
-    src: '/landing/list.jpg',
     alt: 'Launch tasks as a list with status, priority and due date',
   },
   {
     id: 'calendar',
     label: 'Calendar',
     kind: 'calendar',
-    src: '/landing/calendar.jpg',
     alt: 'Launch tasks on a month calendar by due date',
   },
   {
     id: 'timeline',
     label: 'Timeline',
     kind: 'timeline',
-    src: '/landing/timeline.jpg',
     alt: 'Launch tasks as bars on a quarter timeline',
   },
   {
     id: 'sheet',
     label: 'Spreadsheet',
     kind: 'sheet',
-    src: '/landing/sheet.jpg',
     alt: 'Launch tasks as an editable spreadsheet',
   },
   {
     id: 'gallery',
     label: 'Gallery',
     kind: 'gallery',
-    src: '/landing/gallery.jpg',
     alt: 'Launch tasks as gallery cards',
   },
   {
     id: 'checklist',
     label: 'Checklist',
     kind: 'checklist',
-    src: '/landing/checklist.jpg',
     alt: 'Launch tasks as a checklist with ticked items',
   },
   {
     id: 'matrix',
     label: 'Matrix',
     kind: 'matrix',
-    src: '/landing/matrix.jpg',
     alt: 'Priorities in an urgent and important matrix',
   },
   {
     id: 'outline',
     label: 'Outline',
     kind: 'outline',
-    src: '/landing/outline.jpg',
     alt: 'Launch tasks as an outline with nested steps',
   },
   {
     id: 'chart',
     label: 'Chart',
     kind: 'chart',
-    src: '/landing/chart.jpg',
     alt: 'A chart counting launch tasks by status',
   },
   {
     id: 'form',
     label: 'Form',
     kind: 'form',
-    src: '/landing/form.jpg',
     alt: 'A form that adds a launch task',
   },
   {
     id: 'habits',
     label: 'Habit tracker',
     kind: 'habit_tracker',
-    src: '/landing/habits.png',
-    alt: 'Habit tracker view in Nix',
+    alt: 'Habit tracker view with a week of check-ins for four habits',
   },
   {
     id: 'companion',
     label: 'Companion',
     kind: 'chat',
-    src: '/landing/companion.png',
     alt: 'Companion chat in Nix',
+  },
+  {
+    id: 'artifact',
+    label: 'Artifact',
+    kind: null,
+    icon: Blocks,
+    alt: 'A launch budget calculator the companion built, saved as an artifact',
   },
 ];
 
@@ -234,14 +281,14 @@ function ViewGallery(): ReactNode {
               }}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm whitespace-nowrap outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent ${selected ? 'border-divider bg-foreground/7 text-foreground' : 'border-transparent text-muted hover:bg-foreground/5'}`}
             >
-              <Icon icon={kindIcon(view.kind)} size="sm" />
+              <Icon icon={view.icon ?? kindIcon(view.kind)} size="sm" />
               {view.label}
             </button>
           );
         })}
       </div>
       <div id="view-panel" role="tabpanel" aria-labelledby={`view-tab-${current.id}`}>
-        <Shot src={current.src} alt={current.alt} large eager />
+        <Shot name={current.id} alt={current.alt} large eager />
       </div>
     </div>
   );
@@ -338,20 +385,20 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
             <div className="grid gap-8 md:grid-cols-3">
               {[
                 {
-                  src: '/landing/calendar.jpg',
+                  name: 'calendar',
                   alt: 'Calendar view in Nix',
                   title: 'Calendar',
                   detail: 'Google and Outlook calendars sync both ways, with a visible log.',
                 },
                 {
-                  src: '/landing/habits.png',
+                  name: 'habits',
                   alt: 'Habit tracker view in Nix',
                   title: 'Habits',
                   detail:
                     'Automations create tasks and send reminders as quiet push notifications.',
                 },
                 {
-                  src: '/landing/note.jpg',
+                  name: 'note',
                   alt: 'A rich note open in Nix',
                   title: 'Notes',
                   detail:
@@ -359,7 +406,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
                 },
               ].map((figure) => (
                 <figure key={figure.title} className="m-0 flex flex-col gap-3">
-                  <Shot src={figure.src} alt={figure.alt} />
+                  <Shot name={figure.name} alt={figure.alt} />
                   <figcaption>
                     <Text variant="h4" as="h3" className="font-bold">
                       {figure.title}
@@ -390,7 +437,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
               </div>
               <div className="min-w-0 md:col-span-3">
                 <Shot
-                  src="/landing/companion.png"
+                  name="companion"
                   alt="The companion planning launch week: a generated table, approved changes and a remembered preference"
                   large
                 />
@@ -451,7 +498,11 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
                 </Point>
               </div>
               <div className="min-w-0">
-                <Shot src="/landing/dark-theme.jpg" alt="Nix in its dark theme" large />
+                <Shot
+                  name="graph"
+                  alt="The workspace graph: every note as a node, with arrows for the links between them"
+                  large
+                />
               </div>
             </div>
           </div>
