@@ -30,11 +30,11 @@
   },
   "dependencies": {
     "@nix/sheet": "workspace:*",
-    "zod": "^4.1.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
-    "prettier": "^3.6.0",
+    "prettier": "^3.9.10",
     "typescript": "^5.9.0",
     "vitest": "^3.2.4"
   }
