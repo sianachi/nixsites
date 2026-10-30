@@ -111,7 +111,7 @@ describe('the shell', () => {
     await screen.findByRole('button', { name: /^search/i });
     await user.keyboard('{Control>}k{/Control}');
 
-    expect(screen.getByRole('dialog', { name: /search/i })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: /search/i })).toBeInTheDocument();
   });
 
   it('does not open search when the focused control already handled the shortcut', async () => {
