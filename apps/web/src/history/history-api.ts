@@ -1,6 +1,5 @@
 /**
- * Document history: fetch wrappers for the six collaboration-service routes named in
- * `docs/plans/version-history.md`.
+ * Document history: fetch wrappers for the six collaboration-service history routes.
  *
  * **Same service, same seam as the editor's body.** History lives in the collaboration service,
  * not Core, exactly like the note body itself - so this module reaches it the way

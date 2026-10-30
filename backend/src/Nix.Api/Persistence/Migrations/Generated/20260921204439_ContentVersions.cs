@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Nix.Persistence.Migrations.Generated
 {
     // [SEC] Adds content_version, a new tenant-isolated content table (RLS policy, grant split and
-    // a bound, applied below via ContentVersionSecuritySql). Per docs/plans/version-history.md this
+    // a bound, applied below via ContentVersionSecuritySql). This
     // migration requires owner approval before merge.
     /// <inheritdoc />
     public partial class ContentVersions : Migration

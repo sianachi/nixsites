@@ -13,8 +13,8 @@ import (
 	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 )
 
-// Calendar* types and methods implement contracts C1-C6 from
-// docs/plans/life-os-scheduling-and-sync-plan.md: the `calendar` role's worker-execution surface
+// Calendar* types and methods implement contracts C1-C6 (see
+// docs/adr/0052-two-way-calendar-sync.md): the `calendar` role's worker-execution surface
 // for job kind calendar.sync, payload {"linkId":uuid,"full":bool}. Every route lives under
 // /internal/worker-executions/calendar/ and is bound to the leased job execution the same way as
 // every other worker-executions call (see Client.newRequest).

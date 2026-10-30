@@ -69,8 +69,8 @@ const CODEX_SCHEMA_KEYS = new Set([
  * Reduces an arbitrary JSON Schema (as `z.toJSONSchema` produces it) to exactly the shape
  * Codex 0.153.4 keeps for a dynamic tool's `inputSchema`. Every tool schema in this module is
  * normalized before it is measured or shipped, so the 4800-byte budget in `tools.test.ts` is the
- * budget Codex itself applies (see "Codex 0.153.4 facts" in
- * `docs/plans/pet-speed-accuracy-plan.md`), not a looser one this package might otherwise send.
+ * budget Codex itself applies (Codex caps a dynamic tool schema at 4800
+ * normalized bytes), not a looser one this package might otherwise send.
  */
 export function normalizeForCodex(schema: unknown): unknown {
   if (schema === true) return { type: 'string' };

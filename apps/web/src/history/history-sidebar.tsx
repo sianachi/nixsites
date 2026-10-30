@@ -11,13 +11,13 @@ import { blockTexts, diffBlocks, type DiffEntry } from './block-diff';
 /**
  * The history sidebar, built as pure components driven entirely by props.
  *
- * `use-document-history.ts` (owned elsewhere, see `docs/plans/version-history.md`) is where the
+ * `use-document-history.ts` (owned elsewhere) is where the
  * data actually comes from - fetching, paging, and the mutations. Nothing here imports it or
- * `history-api.ts`; every one of these types is this file's own, shaped to match the plan's
- * `Revision`/`NamedVersion` records so the hook is a drop-in once it lands.
+ * `history-api.ts`; every one of these types is this file's own, shaped to match the
+ * history `Revision`/`NamedVersion` records so the hook is a drop-in once it lands.
  */
 
-/** A run of consecutive updates by one actor - see `docs/plans/version-history.md`. */
+/** A run of consecutive updates by one actor (a revision). */
 export interface HistoryRevision {
   readonly seq: number;
   readonly fromSeq: number;

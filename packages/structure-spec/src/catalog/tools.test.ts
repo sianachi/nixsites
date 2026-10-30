@@ -22,8 +22,8 @@ import { WORKSPACE_OPERATIONS, LIMITS } from './tables.js';
 import { flattenToolExample, TOOL_EXAMPLES } from './tool-examples.js';
 
 /**
- * The Codex 0.153.4 dynamic-tool byte budget (see "Codex 0.153.4 facts",
- * `docs/plans/pet-speed-accuracy-plan.md`): a schema at or under this size is never compacted.
+ * The Codex 0.153.4 dynamic-tool byte budget (Codex caps a dynamic tool schema at 4800
+ * normalized bytes): a schema at or under this size is never compacted.
  */
 const CODEX_SCHEMA_BUDGET = 4800;
 

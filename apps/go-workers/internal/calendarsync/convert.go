@@ -1,7 +1,6 @@
 // Package calendarsync implements the Go `calendar` role: pulling and pushing events between
 // Google Calendar, Microsoft Graph calendars and Nix items, behind the worker-executions
-// contracts C1-C6 (see docs/adr/0052-two-way-calendar-sync.md and
-// docs/plans/life-os-scheduling-and-sync-plan.md).
+// contracts C1-C6 (see docs/adr/0052-two-way-calendar-sync.md).
 package calendarsync
 
 import (

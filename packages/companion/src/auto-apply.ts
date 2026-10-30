@@ -13,7 +13,7 @@ const ALWAYS_ASK_OPERATIONS: ReadonlySet<WorkspaceToolArgs['operation']> = new S
 
 /** Whether a pending write may run without a click once its preview has loaded clean. Reads
  * are governed separately (`readWithoutAsking`); this only answers for writes. Lives in this
- * package rather than the web app so the eval harness (docs/plans/pet-tool-use-plan.md, F.2)
+ * package rather than the web app so the eval harness
  * applies the same rule when it is built. A preview with problems, no preview at all, and text with an
  * external link (`hasExternalLink`) are the caller's own checks: this function only knows the
  * operation. */
