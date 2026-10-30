@@ -240,6 +240,8 @@ kubectl -n nix rollout restart statefulset/nix-rabbitmq
 kubectl -n nix rollout status statefulset/nix-rabbitmq --timeout=180s
 
 echo "== Seed =="
+# A Job's pod template is immutable; the seed is idempotent, so re-create it rather than apply over it.
+kubectl -n nix delete job/nix-db-seed --ignore-not-found
 kubectl apply -f deploy/k8s/job-seed.yaml
 kubectl -n nix wait --for=condition=complete job/nix-db-seed --timeout=180s
 
