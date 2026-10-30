@@ -5,8 +5,8 @@
 //
 // Usage: start the web dev server (`pnpm --filter @nix/web dev`), then
 //   node apps/web/scripts/capture-landing.mjs [baseUrl]
-// Writes apps/web/public/landing/<name>.jpg. Habits and companion are not in the demo and keep
-// their hand-taken pictures.
+// Writes apps/web/public/landing/<name>.jpg, and companion.png (the pet's panel over its seeded
+// chat). Habits are not in the demo and keep their hand-taken picture.
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -33,10 +33,14 @@ async function demoPage(colorScheme) {
   return page;
 }
 
-async function shoot(page, name) {
+async function shoot(page, name, type = 'jpeg') {
   await page.mouse.move(0, 0);
   await page.waitForTimeout(600);
-  await page.screenshot({ path: `${out}${name}.jpg`, type: 'jpeg', quality: 85 });
+  await page.screenshot(
+    type === 'png'
+      ? { path: `${out}${name}.png`, type }
+      : { path: `${out}${name}.jpg`, type, quality: 85 },
+  );
   console.log('captured', name);
 }
 
@@ -78,6 +82,12 @@ for (const view of [
 await openInSidebar('Priorities');
 await page.waitForSelector('text=Fix the leaking tap');
 await shoot(page, 'matrix');
+
+await openInSidebar('Plan launch week with Pip');
+await page.waitForSelector('text=Sources: Northwind Studio');
+await page.getByRole('button', { name: 'Talk with Pip' }).click();
+await page.waitForSelector('text=Remembered: Prefers Friday launches');
+await shoot(page, 'companion', 'png');
 
 const dark = await demoPage('dark');
 await shoot(dark, 'dark-theme');

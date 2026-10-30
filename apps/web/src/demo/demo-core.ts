@@ -101,7 +101,7 @@ function sampleItems(): DemoItem[] {
       PRODUCT_LAUNCH,
       'Beta tester outreach',
       3,
-      { priority: 'High', start: day(2), due: day(9), status: 'To do' },
+      { priority: 'High', start: day(2), due: day(9), status: 'In progress' },
       BETA_OUTREACH,
     ),
     item(
