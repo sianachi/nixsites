@@ -87,11 +87,9 @@ func TestHandlerObtainsLeaseBoundCapabilitiesAndPublishesAnImmutableExport(t *te
 	}))
 	defer server.Close()
 
-	payload, _ := json.Marshal(Payload{
-		ItemID: root, WorkspaceID: "123e4567-e89b-12d3-a456-426614174001", Format: "pdf",
-		Scope: "subtree", Title: "Title", Extension: "pdf", MediaType: "application/pdf",
-		DeclaredLoss: []string{"Interactive workspace behavior is flattened into a document."},
-	})
+	// The payload exactly as Core's ExportJobPayload serialises it, not marshalled from the Go
+	// struct: the decoder refuses unknown fields, so a field Core adds must be mirrored here.
+	payload := json.RawMessage(`{"itemId":"` + root + `","workspaceId":"123e4567-e89b-12d3-a456-426614174001","format":"pdf","scope":"subtree","title":"Title","extension":"pdf","mediaType":"application/pdf","declaredLoss":["Interactive workspace behavior is flattened into a document."],"includeComments":false}`)
 	handler := New(
 		workerapi.New(server.URL, "secret", "exporter", time.Second),
 		objecttransfer.New(time.Second, server.URL),

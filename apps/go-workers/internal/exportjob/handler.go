@@ -42,6 +42,9 @@ type Payload struct {
 	Extension    string   `json:"extension"`
 	MediaType    string   `json:"mediaType"`
 	DeclaredLoss []string `json:"declaredLoss"`
+	// IncludeComments is acted on by Core when it builds the source URL; the worker only has to
+	// accept it, since the payload is decoded strictly.
+	IncludeComments bool `json:"includeComments"`
 }
 
 type Result struct {
