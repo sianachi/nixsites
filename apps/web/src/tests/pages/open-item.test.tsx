@@ -76,6 +76,27 @@ describe('an item nobody has configured', () => {
     expect(await screen.findByRole('button', { name: /settings/i })).toBeVisible();
   });
 
+  it('slides a strip of quick actions out beside the menu and back', async () => {
+    stubCoreApi({ items: [NOTES, CHILD] });
+    renderAt(<App />, `/?item=${NOTES.id}`);
+
+    const toggle = await screen.findByRole('button', { name: 'Quick actions' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    // Collapsed, the strip is inert: nothing in it can be reached (jsdom keeps inert nodes in the
+    // tree, so the attribute is what is checked).
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    expect(exportButton.closest('[inert]')).not.toBeNull();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(exportButton.closest('[inert]')).toBeNull();
+    await userEvent.click(exportButton);
+    expect(await screen.findByRole('dialog', { name: /export/i })).toBeVisible();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('updates item template actions when the shell catalog resolves after the editor mounts', async () => {
     let releaseCatalog = (): void => undefined;
     const templateCatalogGate = new Promise<void>((resolve) => {

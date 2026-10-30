@@ -1,5 +1,5 @@
 import { Button, Dialog, Icon, Menu, Text } from '@nix/ui';
-import { MoreHorizontal, Settings2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Settings2, Maximize2 } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -39,6 +39,9 @@ import { ItemHeader } from './item-header';
 import { ItemPanels } from './item-panels';
 import { InlineCommentCard } from '../../panel/inline-comment-card';
 import { bodyNoun, clockTime } from './lock-copy';
+
+/** The menu entries the quick-actions strip beside "..." shows, in menu order. */
+const QUICK_ACTION_KEYS = new Set(['note-chat', 'import', 'export', 'history']);
 
 interface OpenItemProps {
   readonly tree: ShellContext['tree'];
@@ -118,6 +121,7 @@ export function OpenItem({
   const [dialog, setDialog] = useState<ItemDialogName | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const { getAccessToken } = useAuth();
 
   // Whether the body and views may be drawn. Core refuses a locked body, and the children every
@@ -265,6 +269,11 @@ export function OpenItem({
   });
 
   const zenAvailable = lock.open;
+  // The four actions the menu hides that people reach for most, as icon buttons that slide out
+  // beside "..." on request. The grid column animates from nothing to its content width.
+  const quickEntries = actionEntries.filter(
+    (entry) => entry.key !== undefined && QUICK_ACTION_KEYS.has(entry.key) && entry.icon,
+  );
   const desktopControls = (
     <div className="flex shrink-0 items-center gap-1">
       {/* The framed icon button, like the two beside it, so the three read as one set. */}
@@ -277,6 +286,41 @@ export function OpenItem({
         onClick={togglePanel}
       >
         <Icon icon={Settings2} size="sm" />
+      </Button>
+      <div
+        inert={!quickOpen}
+        className={`grid transition-[grid-template-columns,opacity] duration-200 ease-out motion-reduce:transition-none ${
+          quickOpen ? 'grid-cols-[1fr] opacity-100' : 'grid-cols-[0fr] opacity-0'
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-1 overflow-hidden">
+          {quickEntries.map((entry) => (
+            <Button
+              key={entry.key}
+              variant="icon"
+              aria-label={entry.label}
+              title={entry.label}
+              onClick={entry.onSelect}
+            >
+              {entry.icon === undefined ? null : <Icon icon={entry.icon} size="sm" />}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Button
+        variant="icon"
+        aria-label="Quick actions"
+        title={quickOpen ? 'Hide quick actions' : 'Show quick actions'}
+        aria-expanded={quickOpen}
+        onClick={() => {
+          setQuickOpen((open) => !open);
+        }}
+      >
+        <Icon
+          icon={ChevronLeft}
+          size="sm"
+          className={`transition-transform duration-200 motion-reduce:transition-none ${quickOpen ? 'rotate-180' : ''}`}
+        />
       </Button>
       <Menu label="Item actions" items={actionEntries}>
         {(trigger) => (
