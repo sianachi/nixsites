@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CommentThread } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -222,6 +222,18 @@ describe('the comments pane', () => {
     expect(await screen.findByText('new words')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Jump' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+  });
+
+  it('only hints at suggestion mode when the note can be edited', async () => {
+    const editor = { jumpTo: vi.fn(), accept: vi.fn(), reject: vi.fn() };
+    patchComments(ITEM, { suggestions: [], editor: { ...editor, editable: false } });
+    renderPane();
+    expect(await screen.findByText('No suggestions.')).toBeVisible();
+
+    act(() => {
+      patchComments(ITEM, { editor: { ...editor, editable: true } });
+    });
+    expect(await screen.findByText(/Turn on suggestion mode/)).toBeVisible();
   });
 
   it('loads threads by quote with no editor mounted, and forgets them on unmount', async () => {

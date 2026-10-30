@@ -259,19 +259,18 @@ it('reports sync and save failures in one dialog without a footer or warning ban
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('stops read-only notes accepting edits and explains that pre-connection edits were not saved', async () => {
+it('stops read-only notes accepting edits without warning a user who made no edits', async () => {
   await open();
   const sync = syncOptions;
   if (!sync) throw new Error('The editor must start document sync');
   act(() => {
     sync.onState('readonly');
   });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Note body' })).toHaveAttribute(
     'contenteditable',
     'false',
   );
-  expect(screen.getByRole('dialog')).toHaveTextContent('edits cannot be saved');
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(screen.queryByRole('toolbar', { name: 'Formatting' })).not.toBeInTheDocument();
   act(() => {
     sync.onState('connecting');

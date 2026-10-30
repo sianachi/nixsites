@@ -179,7 +179,10 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
         </Text>
         {state.suggestions.length === 0 ? (
           <Text variant="note" tone="muted">
-            No suggestions. Turn on suggestion mode in the toolbar to propose edits.
+            No suggestions.
+            {state.editor?.editable === true
+              ? ' Turn on suggestion mode in the toolbar to propose edits.'
+              : ''}
           </Text>
         ) : (
           state.suggestions.map((suggestion) => (

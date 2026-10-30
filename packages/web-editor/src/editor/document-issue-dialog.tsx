@@ -61,7 +61,10 @@ export function DocumentIssueDialog({
     const connection: DocumentIssue | null | undefined =
       state === 'connecting'
         ? undefined
-        : stale || state === 'live'
+        : stale ||
+            state === 'live' ||
+            // Read-only by role from the start: nothing local to lose, so nothing to warn about.
+            (state === 'readonly' && (draftState === undefined || draftState === 'synced'))
           ? null
           : {
               key: state === 'readonly' ? 'read-only' : 'connection',

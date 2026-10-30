@@ -17,12 +17,21 @@ describe('one document issue dialog', () => {
     expect(container.querySelector('footer')).toBeNull();
   });
 
+  it('stays silent for a note that is read-only by role with no local edits', () => {
+    render(<DocumentIssueDialog noun="note" state="readonly" draftState="synced" />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    render(<DocumentIssueDialog noun="note" state="readonly" />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('explains read-only access once and keeps retries quiet', async () => {
-    const { rerender } = render(<DocumentIssueDialog noun="note" state="readonly" />);
+    const { rerender } = render(
+      <DocumentIssueDialog noun="note" state="readonly" draftState="local" />,
+    );
     expect(screen.getByRole('dialog')).toHaveTextContent('edits cannot be saved');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Dismiss' }));
     rerender(<DocumentIssueDialog noun="note" state="connecting" />);
-    rerender(<DocumentIssueDialog noun="note" state="readonly" />);
+    rerender(<DocumentIssueDialog noun="note" state="readonly" draftState="local" />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
