@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import type { CommentThread } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { patchComments, readComments } from '@nix/web-editor/editor/comment-anchors';
+import {
+  patchComments,
+  readComments,
+  type CommentsEditorHandle,
+} from '@nix/web-editor/editor/comment-anchors';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
@@ -60,6 +64,20 @@ const RESOLVED: CommentThread = {
 };
 
 const accept = vi.fn();
+function handle(
+  editable: boolean,
+  overrides: Partial<CommentsEditorHandle> = {},
+): CommentsEditorHandle {
+  return {
+    editable,
+    jumpTo: vi.fn(),
+    accept: vi.fn(),
+    reject: vi.fn(),
+    focus: vi.fn(),
+    anchorOf: () => null,
+    ...overrides,
+  };
+}
 function must<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error('Expected a value.');
   return value;
@@ -113,7 +131,7 @@ beforeEach(() => {
       },
     ],
     draft: null,
-    editor: { editable: true, jumpTo: vi.fn(), accept, reject: vi.fn() },
+    editor: handle(true, { accept }),
     refresh: vi.fn(),
   });
 });
@@ -215,7 +233,7 @@ describe('the comments pane', () => {
 
   it('hides accept and reject when the note cannot be edited', async () => {
     patchComments(ITEM, {
-      editor: { editable: false, jumpTo: vi.fn(), accept: vi.fn(), reject: vi.fn() },
+      editor: handle(false),
     });
     renderPane();
 
@@ -225,15 +243,29 @@ describe('the comments pane', () => {
   });
 
   it('only hints at suggestion mode when the note can be edited', async () => {
-    const editor = { jumpTo: vi.fn(), accept: vi.fn(), reject: vi.fn() };
-    patchComments(ITEM, { suggestions: [], editor: { ...editor, editable: false } });
+    patchComments(ITEM, { suggestions: [], editor: handle(false) });
     renderPane();
     expect(await screen.findByText('No suggestions.')).toBeVisible();
 
     act(() => {
-      patchComments(ITEM, { editor: { ...editor, editable: true } });
+      patchComments(ITEM, { editor: handle(true) });
     });
     expect(await screen.findByText(/Turn on suggestion mode/)).toBeVisible();
+  });
+
+  it('opens a thread card at the text from the pane, and a suggestion card from Jump', async () => {
+    const user = userEvent.setup();
+    const jumpTo = vi.fn();
+    patchComments(ITEM, { editor: handle(true, { jumpTo }) });
+    renderPane();
+
+    await user.click(await screen.findByRole('button', { name: 'quarterly review' }));
+    expect(readComments(ITEM).card).toEqual({ kind: 'thread', threadId: OPEN.id });
+    expect(readComments(ITEM).activeThreadId).toBe(OPEN.id);
+
+    await user.click(screen.getByRole('button', { name: 'Jump' }));
+    expect(jumpTo).toHaveBeenCalledWith(5);
+    expect(readComments(ITEM).card).toEqual({ kind: 'suggestions', ids: ['s1'] });
   });
 
   it('loads threads by quote with no editor mounted, and forgets them on unmount', async () => {

@@ -8,7 +8,6 @@ import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
-import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { paneClip } from '@nix/web-foundation/layout/regions';
 import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
@@ -38,6 +37,7 @@ import { ItemBody } from './item-body';
 import { ItemDialogs, type ItemDialogName } from './item-dialogs';
 import { ItemHeader } from './item-header';
 import { ItemPanels } from './item-panels';
+import { InlineCommentCard } from '../../panel/inline-comment-card';
 import { bodyNoun, clockTime } from './lock-copy';
 
 interface OpenItemProps {
@@ -112,17 +112,6 @@ export function OpenItem({
   const [overlayPanelOpen, setOverlayPanelOpen] = useState(false);
   const panelOpen = overlayDetails ? overlayPanelOpen : inlinePanelOpen;
   const [panelPane, setPanelPane] = useState<Pane>('details');
-
-  // The Comment button in the editor's selection menu asks for the pane; adjusting state while
-  // rendering (not in an effect) opens it in the same pass.
-  const { openRequest } = useItemComments(itemId);
-  const [seenRequest, setSeenRequest] = useState(openRequest);
-  if (seenRequest !== openRequest) {
-    setSeenRequest(openRequest);
-    setPanelPane('comments');
-    setOverlayPanelOpen(true);
-    setInlinePanelOpen(true);
-  }
 
   // The dialog is mounted only while it is open, so an export that was never started costs nothing
   // and a closed one keeps no half-chosen format from last time.
@@ -436,6 +425,8 @@ export function OpenItem({
       {/* A fixed-height strip between the item's own controls and the body, so the body keeps the
           one scroller it always had. Absent for every note that is not a daily note. */}
       {dailyDate === null || zen ? null : <DailyNoteBar date={dailyDate} itemId={itemId} />}
+
+      <InlineCommentCard itemId={itemId} />
 
       <div className={`flex flex-1 ${paneClip}`}>
         <ItemBody

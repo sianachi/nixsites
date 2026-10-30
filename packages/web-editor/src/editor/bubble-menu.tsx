@@ -278,10 +278,10 @@ function readPlacement(editor: Editor): MenuPlacement | null {
   const { state } = editor;
   const { from, to, empty } = state.selection;
 
-  // Only a selection that actually holds text. An empty selection is a caret; a non-empty
-  // one over no text (a bare node selection, a table cell boundary) has nothing this menu's
-  // commands could colour.
-  if (empty ? suggestionIdsAt(state).length === 0 : !hasText(state.doc, from, to)) {
+  // Only a selection that actually holds text. An empty selection is a caret (a caret in a
+  // suggestion gets the suggestion card instead); a non-empty one over no text (a bare node
+  // selection, a table cell boundary) has nothing this menu's commands could colour.
+  if (empty || !hasText(state.doc, from, to)) {
     return null;
   }
 
@@ -351,7 +351,7 @@ export function BubbleMenu({
     placement !== null &&
     !(dismissed !== null && dismissed.from === placement.from && dismissed.to === placement.to);
 
-  // Choosing Comment opens the pane, so the menu steps aside for this selection (like Escape).
+  // Choosing Comment opens the comment card at the text, so the menu steps aside for this selection (like Escape).
   const comment =
     onComment === undefined
       ? undefined

@@ -161,4 +161,48 @@ describe('comment anchors', () => {
     expect(marks[0]?.textContent).toBe('world');
     expect(readComments(ITEM).detached).toEqual([]);
   });
+
+  it('opens the thread card on a click in a highlight, and closes it on a click elsewhere', () => {
+    const target = makeEditor();
+    target.commands.setTextSelection({ from: 7, to: 12 });
+    const anchor = captureAnchor(target.view);
+    if (anchor === null) throw new Error('Expected an anchor.');
+    const open = thread({ anchorStart: anchor.start, anchorEnd: anchor.end, quote: 'world' });
+    patchComments(ITEM, { threads: [open], ready: true });
+    target.view.dispatch(target.state.tr.setMeta('refresh', true));
+
+    const click = (position: number): void => {
+      target.view.someProp('handleClick', (handler) =>
+        handler(target.view, position, new MouseEvent('click')),
+      );
+    };
+    click(9);
+    expect(readComments(ITEM).card).toEqual({ kind: 'thread', threadId: open.id });
+    expect(readComments(ITEM).activeThreadId).toBe(open.id);
+
+    click(3);
+    expect(readComments(ITEM).card).toBeNull();
+    expect(readComments(ITEM).activeThreadId).toBeNull();
+  });
+
+  it('opens the suggestion card on a click in suggested text, and gives its place', () => {
+    const target = makeEditor();
+    target.commands.setContent(
+      '<p>Hi <ins data-suggestion="" data-suggestion-id="s1" data-suggestion-authorId="a" data-suggestion-createdAt="2026-10-29T09:00:00.000Z">there</ins></p>',
+    );
+    const inserted = target.view.dom.querySelector('ins');
+    if (inserted === null) throw new Error('Expected the suggestion to render.');
+
+    target.view.someProp('handleClick', (handler) =>
+      handler(target.view, 6, { target: inserted } as unknown as MouseEvent),
+    );
+    expect(readComments(ITEM).card).toEqual({ kind: 'suggestions', ids: ['s1'] });
+    expect(readComments(ITEM).suggestions.map((entry) => entry.excerpt)).toEqual(['there']);
+
+    // A click on plain text beside it names no suggestion.
+    target.view.someProp('handleClick', (handler) =>
+      handler(target.view, 2, { target: target.view.dom } as unknown as MouseEvent),
+    );
+    expect(readComments(ITEM).card).toBeNull();
+  });
 });

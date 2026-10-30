@@ -11,7 +11,7 @@ import {
 import * as Y from 'yjs';
 import { create } from 'zustand';
 
-import type { SuggestionEntry } from './suggesting';
+import { listSuggestions, suggestionIdsAtClick, type SuggestionEntry } from './suggesting';
 
 /**
  * Comment threads drawn on the text they were made on.
@@ -30,9 +30,26 @@ export interface CapturedAnchor {
   readonly quote: string;
 }
 
-/** What the comments pane can ask the editor to do. */
+/** The card open at the text: one thread, the suggestions under a click, or the new-comment box. */
+export type CommentCard =
+  | { readonly kind: 'thread'; readonly threadId: string }
+  | { readonly kind: 'suggestions'; readonly ids: readonly string[] }
+  | { readonly kind: 'compose' };
+
+/** A point in the viewport to hang a card from. */
+export interface CardAnchor {
+  readonly left: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/** What the comments pane and the cards can ask the editor to do. */
 export interface CommentsEditorHandle {
   readonly editable: boolean;
+  /** Where the card's text is on screen now, or null when it has no place in the text. */
+  readonly anchorOf: (card: CommentCard) => CardAnchor | null;
+  /** Puts the caret back in the text, as a closed card does. */
+  readonly focus: () => void;
   readonly jumpTo: (position: number) => void;
   readonly accept: (suggestionId: string) => void;
   readonly reject: (suggestionId: string) => void;
@@ -56,8 +73,8 @@ export interface ItemComments {
   readonly suggestions: readonly SuggestionEntry[];
   /** A selection the Comment button captured, waiting for its text in the pane. */
   readonly draft: CapturedAnchor | null;
-  /** Counts Comment button presses, so the note page opens the pane on each. */
-  readonly openRequest: number;
+  /** The card open at the text, if any; only one at a time. */
+  readonly card: CommentCard | null;
   readonly editor: CommentsEditorHandle | null;
   /** Re-reads the threads now; set by the sync hook. */
   readonly refresh: () => void;
@@ -75,7 +92,7 @@ const EMPTY: ItemComments = {
   detached: [],
   suggestions: [],
   draft: null,
-  openRequest: 0,
+  card: null,
   editor: null,
   refresh: () => undefined,
 };
@@ -108,9 +125,19 @@ export function useItemComments(itemId: string | null): ItemComments {
   return useCommentsStore((state) => (itemId === null ? EMPTY : (state.items[itemId] ?? EMPTY)));
 }
 
-/** Asks the note page to open the comments pane, with `anchor` as the draft's place (or none). */
+/** Opens the new-comment card at the text, with `anchor` as the draft's place (or none). */
 export function requestComment(itemId: string, anchor: CapturedAnchor | null): void {
-  patchComments(itemId, { draft: anchor, openRequest: readComments(itemId).openRequest + 1 });
+  patchComments(itemId, { draft: anchor, card: { kind: 'compose' }, activeThreadId: null });
+}
+
+/** Opens a thread's card (its text lights up while it is open). */
+export function openThreadCard(itemId: string, threadId: string): void {
+  patchComments(itemId, { card: { kind: 'thread', threadId }, activeThreadId: threadId });
+}
+
+/** Closes whatever card is open. */
+export function closeCard(itemId: string): void {
+  patchComments(itemId, { card: null, activeThreadId: null, draft: null });
 }
 
 const MAX_QUOTE = 1000;
@@ -345,12 +372,27 @@ function commentsPlugin(getItemId: () => string | null): Plugin<Computed | null>
     },
     props: {
       decorations: (state) => commentAnchorsKey.getState(state)?.decorations ?? null,
-      handleClick: (view, position) => {
+      handleClick: (view, position, event) => {
         const itemId = getItemId();
+        if (itemId === null) return false;
+        // Suggested text wins over a comment on the same words: the change is what needs a decision.
+        const ids = suggestionIdsAtClick(view.state.doc, position, event.target);
+        if (ids.length > 0) {
+          patchComments(itemId, {
+            suggestions: listSuggestions(view.state.doc),
+            card: { kind: 'suggestions', ids },
+            activeThreadId: null,
+          });
+          return false;
+        }
         const hit = commentAnchorsKey.getState(view.state)?.decorations.find(position, position)[0];
         const threadId = (hit?.spec as { threadId?: string } | undefined)?.threadId;
-        if (itemId === null || threadId === undefined) return false;
-        patchComments(itemId, { activeThreadId: threadId });
+        if (threadId === undefined) {
+          // A click elsewhere in the text closes the card.
+          if (readComments(itemId).card !== null) closeCard(itemId);
+          return false;
+        }
+        openThreadCard(itemId, threadId);
         return false;
       },
     },
@@ -431,6 +473,29 @@ export const CommentAnchors = Extension.create<Record<string, never>, { itemId: 
 export function editorHandle(editor: Editor): CommentsEditorHandle {
   return {
     editable: editor.isEditable,
+    focus: () => {
+      editor.commands.focus(null, { scrollIntoView: false });
+    },
+    anchorOf: (card) => {
+      let from: number | undefined;
+      if (card.kind === 'thread') {
+        from = commentAnchorsKey.getState(editor.state)?.ranges.get(card.threadId)?.from;
+      } else if (card.kind === 'suggestions') {
+        from = listSuggestions(editor.state.doc)
+          .filter((entry) => card.ids.includes(entry.id))
+          .reduce<number | undefined>(
+            (least, entry) => Math.min(least ?? entry.from, entry.from),
+            undefined,
+          );
+      } else from = editor.state.selection.from;
+      if (from === undefined) return null;
+      try {
+        const { left, top, bottom } = editor.view.coordsAtPos(from);
+        return { left, top, bottom };
+      } catch {
+        return null;
+      }
+    },
     jumpTo: (position) => {
       editor.chain().focus().setTextSelection(position).scrollIntoView().run();
     },

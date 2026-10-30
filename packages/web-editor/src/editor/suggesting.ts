@@ -720,6 +720,35 @@ export function suggestionIdsAt(state: EditorState): string[] {
   return [...ids];
 }
 
+/**
+ * The suggestions a click at `position` landed on: the marked text under `target` (the clicked
+ * element, so the edge of a suggestion does not claim its neighbour) and any suggested block
+ * around the position.
+ */
+export function suggestionIdsAtClick(
+  doc: ProseMirrorNode,
+  position: number,
+  target: EventTarget | null,
+): string[] {
+  const ids = new Set<string>();
+  const $pos = doc.resolve(position);
+  if (target instanceof Element && target.closest('[data-suggestion],[data-suggestion-format]')) {
+    for (const node of [$pos.nodeBefore, $pos.nodeAfter]) {
+      for (const mark of node?.marks ?? []) {
+        if (SUGGESTION_MARKS.has(mark.type.name) && typeof mark.attrs.id === 'string') {
+          ids.add(mark.attrs.id);
+        }
+      }
+    }
+  }
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth);
+    const suggestion = isSuggestible(node) ? blockSuggestion(node) : null;
+    if (suggestion !== null) ids.add(suggestion.id);
+  }
+  return [...ids];
+}
+
 const holdsSuggestion = new WeakMap<ProseMirrorNode, boolean>();
 
 /**
@@ -752,6 +781,8 @@ export interface SuggestionEntry {
   readonly excerpt: string;
   readonly from: number;
   readonly to: number;
+  /** For `block` entries: what the suggestion does and to which kind of block. */
+  readonly block?: { readonly op: BlockSuggestion['op']; readonly node: string };
 }
 
 const EXCERPT_LENGTH = 120;
@@ -776,7 +807,7 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
     from: number,
     to: number,
     text: string,
-    block = false,
+    block?: { readonly op: BlockSuggestion['op']; readonly node: string },
   ): void => {
     if (typeof attrs.id !== 'string') return;
     const known = entries.get(attrs.id);
@@ -793,6 +824,7 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
           excerpt: '',
           from,
           to,
+          ...(block === undefined ? {} : { block }),
         },
       });
       return;
@@ -806,6 +838,7 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
     known.entry = {
       ...known.entry,
       kind: known.entry.kind === 'block' ? kind : known.entry.kind,
+      ...(known.entry.block === undefined && block !== undefined ? { block } : {}),
       from: Math.min(known.entry.from, from),
       to: Math.max(known.entry.to, to),
     };
@@ -821,7 +854,10 @@ export function listSuggestions(doc: ProseMirrorNode): SuggestionEntry[] {
     }
     const suggestion = blockSuggestion(node);
     if (suggestion !== null)
-      note(suggestion, 'block', pos, pos + node.nodeSize, node.textContent, true);
+      note(suggestion, 'block', pos, pos + node.nodeSize, node.textContent, {
+        op: suggestion.op,
+        node: node.type.name,
+      });
     return true;
   });
 

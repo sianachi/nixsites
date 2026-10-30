@@ -16,6 +16,7 @@ export { Field, type FieldControlProps } from './Field';
 export { Input, type InputProps } from './Input';
 export { Menu, type MenuAction, type MenuEntry } from './Menu';
 export { Popover } from './Popover';
+export { useAnchoredPanel } from './use-anchored-panel';
 export { PaneDivider } from './PaneDivider';
 export { Segmented } from './Segmented';
 export { Select } from './Select';
