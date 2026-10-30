@@ -38,7 +38,7 @@ services:
   # Zitadel's own database: a separate trust domain from the app database, never reachable
   # through the app roles.
   zitadel-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
