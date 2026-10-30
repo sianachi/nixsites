@@ -122,6 +122,17 @@ describe('nixctl mcp workspace tools', () => {
         'search_items',
         'read_note',
         'write_note',
+        'move_item',
+        'rename_item',
+        'trash_item',
+        'restore_item',
+        'list_trash',
+        'set_item_properties',
+        'list_note_history',
+        'restore_note_version',
+        'name_note_version',
+        'find_nix_action',
+        'run_nix_action',
         'create_chat_note',
         'import_chat_note',
         'get_chat_note',
@@ -1395,6 +1406,147 @@ describe('nixctl mcp notification, reminder and automation tools', () => {
         method: 'PATCH',
         path: `/api/v1/items/${ITEM}/properties`,
         body: { properties: { reminder: '2026-10-01T09:00:00+01:00[Europe/London]' } },
+      });
+    } finally {
+      await connected.close();
+    }
+  });
+});
+
+describe('nixctl mcp item and generic action tools', () => {
+  const ITEM = '11111111-1111-4111-8111-111111111111';
+  const OTHER = '33333333-3333-4333-8333-333333333333';
+
+  function stub(respond: (method: string, path: string) => Response) {
+    const calls: { method: string; path: string; body: unknown }[] = [];
+    const fetchImpl: FetchImpl = (url, init) => {
+      if (url.endsWith('/public/v1/auth/token')) {
+        return Promise.resolve(
+          Response.json({ accessToken: 'jwt-owner', tokenType: 'Bearer', expiresInSeconds: 600 }),
+        );
+      }
+      const method = init?.method ?? 'GET';
+      const path = new URL(url).pathname;
+      calls.push({
+        method,
+        path,
+        body: typeof init?.body === 'string' ? JSON.parse(init.body) : null,
+      });
+      return Promise.resolve(respond(method, path));
+    };
+    vi.stubGlobal('fetch', fetchImpl);
+    return { fetchImpl, calls };
+  }
+
+  const itemRow = {
+    id: ITEM,
+    workspaceId: OTHER,
+    parentId: null,
+    type: 'note',
+    title: 'Moved',
+    hasChildren: false,
+    seq: 1,
+    lifecycleState: 'active',
+    properties: { status: 'done' },
+    createdAt: '2026-08-19T09:00:00.000Z',
+    updatedAt: '2026-08-19T09:00:00.000Z',
+  };
+  const text = (result: unknown) =>
+    (result as { content: { text: string }[] }).content.map((part) => part.text).join('');
+
+  it('finds actions without offering credential operations', async () => {
+    const connected = await connect('owner', async () => unexpectedRequest());
+    try {
+      const found = await connected.client.callTool({
+        name: 'find_nix_action',
+        arguments: { query: 'access token create revoke', limit: 20 },
+      });
+      expect(found.isError).toBeFalsy();
+      const { operations } = JSON.parse(text(found)) as { operations: { path: string }[] };
+      expect(operations.some((entry) => entry.path.startsWith('/api/v1/me/tokens'))).toBe(false);
+      const move = JSON.parse(
+        text(
+          await connected.client.callTool({
+            name: 'find_nix_action',
+            arguments: { query: 'move an item to a new parent' },
+          }),
+        ),
+      ) as { operations: { operationId: string }[] };
+      expect(move.operations.map((entry) => entry.operationId)).toContain('MoveItem');
+    } finally {
+      await connected.close();
+    }
+  });
+
+  it('refuses credential and unknown operations without a request', async () => {
+    const connected = await connect('owner', async () => unexpectedRequest());
+    try {
+      const credential = await connected.client.callTool({
+        name: 'run_nix_action',
+        arguments: { operationId: 'ListAccessTokens' },
+      });
+      expect(credential.isError).toBe(true);
+      expect(text(credential)).toContain('do this yourself in Nix settings');
+      const unknown = await connected.client.callTool({
+        name: 'run_nix_action',
+        arguments: { operationId: 'NoSuchThing' },
+      });
+      expect(unknown.isError).toBe(true);
+    } finally {
+      await connected.close();
+    }
+  });
+
+  it('runs a catalog operation through the caller session', async () => {
+    const { fetchImpl, calls } = stub(() => Response.json({ kept: true }));
+    const connected = await connect('owner', fetchImpl);
+    try {
+      const result = await connected.client.callTool({
+        name: 'run_nix_action',
+        arguments: { operationId: 'KeepItem', path: { itemId: ITEM } },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(JSON.parse(text(result))).toEqual({ result: { kept: true } });
+      expect(calls).toEqual([
+        { method: 'PUT', path: `/api/v1/items/${ITEM}/bookmark`, body: null },
+      ]);
+    } finally {
+      await connected.close();
+    }
+  });
+
+  it('moves an item into another workspace', async () => {
+    const { fetchImpl, calls } = stub(() => Response.json(itemRow));
+    const connected = await connect('owner', fetchImpl);
+    try {
+      const result = await connected.client.callTool({
+        name: 'move_item',
+        arguments: { workspaceId: WORKSPACE, itemId: ITEM, destinationWorkspaceId: OTHER },
+      });
+      expect(result.isError, text(result)).toBeFalsy();
+      expect(calls[0]).toMatchObject({
+        method: 'POST',
+        path: `/api/v1/items/${ITEM}/move`,
+        body: { parentId: null, afterId: null, workspaceId: OTHER },
+      });
+    } finally {
+      await connected.close();
+    }
+  });
+
+  it('sets item properties', async () => {
+    const { fetchImpl, calls } = stub(() => Response.json(itemRow));
+    const connected = await connect('owner', fetchImpl);
+    try {
+      const result = await connected.client.callTool({
+        name: 'set_item_properties',
+        arguments: { itemId: ITEM, properties: { status: 'done' } },
+      });
+      expect(result.isError, text(result)).toBeFalsy();
+      expect(calls[0]).toMatchObject({
+        method: 'PATCH',
+        path: `/api/v1/items/${ITEM}/properties`,
+        body: { properties: { status: 'done' } },
       });
     } finally {
       await connected.close();

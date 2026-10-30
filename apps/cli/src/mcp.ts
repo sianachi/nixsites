@@ -13,9 +13,15 @@ import {
   notifications,
   operations,
   search,
+  structure,
   workspaces,
   templates as templateResources,
   templateInitializationSchema,
+  callOperation,
+  findOperations,
+  isCredentialOperation,
+  operationById,
+  operationRisk,
 } from '@nix/api-client';
 import { downloadFileValue, uploadFileValue } from './commands/files.ts';
 import { runImport } from './commands/import.ts';
@@ -46,6 +52,7 @@ import { readStructureForSession } from './commands/structure.ts';
 import { evaluateBlueprint, executeBlueprintBuild } from './commands/blueprint.ts';
 import { requireAccessToken, resolveSession, type SessionDeps } from './commands/shared.ts';
 import { readBodyMarkdown, writeBodyMarkdown } from './body.ts';
+import { listNamedVersions, listRevisions, nameVersion, restoreRevision } from './history.ts';
 import {
   executeListNotifications,
   executeReadAllNotifications,
@@ -1986,6 +1993,227 @@ export async function createWorkspaceMcpServer(
           token,
           markdown,
         });
+      }),
+  );
+
+  server.registerTool(
+    'move_item',
+    {
+      description:
+        'Move an item under a new parent (omit parentId for the workspace root), after a sibling if afterId is given. ' +
+        'Pass destinationWorkspaceId to move it into another workspace.',
+      inputSchema: {
+        workspaceId: identifier,
+        itemId: identifier,
+        parentId: identifier.nullable().optional(),
+        afterId: identifier.nullable().optional(),
+        destinationWorkspaceId: identifier.optional(),
+      },
+    },
+    ({ workspaceId, itemId, parentId, afterId, destinationWorkspaceId }) =>
+      toolResult(async () =>
+        (await session()).client.execute(
+          items.moveItem(workspaceId, itemId, {
+            parentId: parentId ?? null,
+            afterId,
+            workspaceId: destinationWorkspaceId,
+          }),
+        ),
+      ),
+  );
+  server.registerTool(
+    'rename_item',
+    {
+      description: "Change an item's title.",
+      inputSchema: {
+        workspaceId: identifier,
+        itemId: identifier,
+        title: z.string().min(1).max(500),
+      },
+    },
+    ({ workspaceId, itemId, title }) =>
+      toolResult(async () =>
+        (await session()).client.execute(items.renameItem(workspaceId, itemId, title)),
+      ),
+  );
+  server.registerTool(
+    'trash_item',
+    {
+      description: 'Move an item to the trash. It can be restored with restore_item until purged.',
+      inputSchema: { workspaceId: identifier, itemId: identifier },
+    },
+    ({ workspaceId, itemId }) =>
+      toolResult(async () => {
+        await (await session()).client.execute(items.deleteItem(workspaceId, itemId));
+        return { id: itemId, deleted: true };
+      }),
+  );
+  server.registerTool(
+    'restore_item',
+    {
+      description: 'Restore an item from the trash.',
+      inputSchema: { workspaceId: identifier, itemId: identifier },
+    },
+    ({ workspaceId, itemId }) =>
+      toolResult(async () =>
+        (await session()).client.execute(items.restoreItem(workspaceId, itemId)),
+      ),
+  );
+  server.registerTool(
+    'list_trash',
+    {
+      description: "List a workspace's trashed items.",
+      inputSchema: { workspaceId: identifier, limit: z.number().int().min(1).max(200).optional() },
+    },
+    ({ workspaceId, limit }) =>
+      toolResult(async () => {
+        const ceiling = limit ?? 100;
+        const rows: unknown[] = [];
+        for await (const item of (await session()).client.paginate(
+          items.listTrash(workspaceId, Math.min(ceiling, 100)),
+        )) {
+          rows.push(item);
+          if (rows.length >= ceiling) break;
+        }
+        return { items: rows, count: rows.length };
+      }),
+  );
+  server.registerTool(
+    'set_item_properties',
+    {
+      description: 'Merge property values onto an item by key; a null value clears that key.',
+      inputSchema: { itemId: identifier, properties: jsonObjectInput },
+    },
+    ({ itemId, properties }) =>
+      toolResult(async () =>
+        (await session()).client.execute(structure.setItemProperties(itemId, properties)),
+      ),
+  );
+
+  // History lives in the collaboration service, so these reach it the way read_note does.
+  const history = async (itemId: string) => {
+    const current = await session();
+    return {
+      collabUrl: current.endpoints.collabUrl,
+      itemId,
+      token: await requireAccessToken(current),
+    };
+  };
+  server.registerTool(
+    'list_note_history',
+    {
+      description:
+        "List a note's revisions, newest first (page back with before), and its named versions.",
+      inputSchema: {
+        itemId: identifier,
+        limit: z.number().int().min(1).max(100).optional(),
+        before: z.number().int().min(0).optional(),
+      },
+    },
+    ({ itemId, limit, before }) =>
+      toolResult(async () => {
+        const target = await history(itemId);
+        const [revisions, named] = await Promise.all([
+          listRevisions({
+            ...target,
+            limit: limit ?? 50,
+            ...(before === undefined ? {} : { before }),
+          }),
+          listNamedVersions(target),
+        ]);
+        return { revisions, namedVersions: named.versions };
+      }),
+  );
+  server.registerTool(
+    'restore_note_version',
+    {
+      description:
+        'Replace the note with its state at a revision (seq), as one new revision; history is kept. ' +
+        'Everyone sees the restored text, so confirm with the user first.',
+      inputSchema: { itemId: identifier, seq: z.number().int().min(0), confirm: z.boolean() },
+    },
+    ({ itemId, seq, confirm }) =>
+      toolResult(async () => {
+        if (!confirm) throw new Error('Set confirm: true to restore this version.');
+        return restoreRevision({ ...(await history(itemId)), seq });
+      }),
+  );
+  server.registerTool(
+    'name_note_version',
+    {
+      description: 'Name a revision (seq) so retention never removes it.',
+      inputSchema: {
+        itemId: identifier,
+        seq: z.number().int().min(0),
+        name: z.string().min(1).max(200),
+      },
+    },
+    ({ itemId, seq, name }) =>
+      toolResult(async () => nameVersion({ ...(await history(itemId)), seq, name })),
+  );
+
+  server.registerTool(
+    'find_nix_action',
+    {
+      description:
+        'Find Nix operations for anything the typed tools do not cover, by plain-language query. ' +
+        'Returns each operation with its path, query and body shape; run one with run_nix_action. ' +
+        'Operations that manage your credentials, pet settings, push subscriptions or calendar connections are not offered.',
+      inputSchema: {
+        query: z.string().min(1).max(300),
+        limit: z.number().int().min(1).max(20).optional(),
+      },
+    },
+    ({ query, limit }) =>
+      toolResult(() =>
+        Promise.resolve({
+          operations: findOperations(
+            query,
+            limit ?? 8,
+            (entry) => !isCredentialOperation(entry),
+          ).map((entry) => ({
+            operationId: entry.id,
+            method: entry.method,
+            path: entry.path,
+            summary: entry.summary,
+            detail: entry.detail,
+            pathParams: entry.pathParams,
+            queryParams: entry.queryParams,
+            body: entry.body,
+            risk: operationRisk(entry),
+          })),
+        }),
+      ),
+  );
+  server.registerTool(
+    'run_nix_action',
+    {
+      description:
+        'Run one operation found with find_nix_action. Prefer a typed tool when one exists. Core still ' +
+        'enforces your permissions, locks and access scopes. An operation with a risk (irreversible, ' +
+        'access, public) changes things that are hard to undo or who can see them: confirm with the user first.',
+      inputSchema: {
+        operationId: z.string().min(1).max(100),
+        path: z.record(z.string(), z.string()).optional(),
+        query: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+        body: z.unknown().optional(),
+      },
+    },
+    ({ operationId, path, query, body }) =>
+      toolResult(async () => {
+        const entry = operationById(operationId);
+        if (entry === undefined) throw new Error(`There is no Nix operation '${operationId}'.`);
+        if (isCredentialOperation(entry))
+          throw new Error(
+            `${operationId} manages credentials or the pet's own settings; do this yourself in Nix settings.`,
+          );
+        const risk = operationRisk(entry);
+        const result = await callOperation((await session()).client, operationId, {
+          path,
+          query,
+          body,
+        });
+        return risk === undefined ? { result } : { risk, result };
       }),
   );
 
