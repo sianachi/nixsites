@@ -1,5 +1,5 @@
 import type { ItemChart } from '@nix/api-client';
-import { Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Text, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import { UNSET_LABEL } from '@nix/web-collections/core/container-model';
@@ -38,11 +38,8 @@ export function BarTable({
   return (
     <div className="flex flex-col gap-3">
       {split ? <ChartLegend entries={series} lines={false} /> : null}
-      <div
-        role="region"
+      <ScrollRegion
         aria-label={caption}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-        tabIndex={0}
         className={cn('min-w-0 max-w-full overflow-x-auto rounded-sm', focusRing)}
       >
         <table className="w-full border-collapse">
@@ -125,7 +122,7 @@ export function BarTable({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

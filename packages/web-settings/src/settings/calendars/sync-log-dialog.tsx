@@ -1,5 +1,5 @@
 import type { CalendarLink, CalendarSyncLogEntry } from '@nix/api-client';
-import { Button, Dialog, Table, Text } from '@nix/ui';
+import { ScrollRegion, Button, Dialog, Table, Text } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
 import { formatMoment } from './calendar-labels';
@@ -56,13 +56,7 @@ export function SyncLogDialog({ link, sync, onClose }: SyncLogDialogProps): Reac
       actions={<Button onClick={onClose}>Done</Button>}
     >
       {refusal === null ? (
-        <div
-          className="min-w-0 overflow-x-auto"
-          role="region"
-          aria-label="Calendar sync log table"
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll sync log columns horizontally.
-          tabIndex={0}
-        >
+        <ScrollRegion className="min-w-0 overflow-x-auto" aria-label="Calendar sync log table">
           <Table
             caption="The newest fifty sync events, newest first."
             columns={columns}
@@ -72,7 +66,7 @@ export function SyncLogDialog({ link, sync, onClose }: SyncLogDialogProps): Reac
             loadingMessage="Reading the sync log."
             emptyMessage="Nothing has been synced yet."
           />
-        </div>
+        </ScrollRegion>
       ) : (
         <Text variant="note" role="alert">
           {refusal}

@@ -1,4 +1,4 @@
-import { Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Text, cn, focusRing } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 import { dayLabel, dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
@@ -181,14 +181,8 @@ export function HourGrid(props: HourGridProps): ReactNode {
        * one, this content is reachable only by dragging a scrollbar, which a keyboard user does not
        * have.
        */}
-      <div
-        role="region"
+      <ScrollRegion
         aria-label={regionLabel(days)}
-        // The rule cannot see that this element scrolls, and only its author can. Without a tab
-        // stop the grid is reachable by keyboard only by tabbing through the controls inside it, so
-        // somebody who wants to read a later day has to activate something to get there.
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-        tabIndex={0}
         className={cn('min-h-0 flex-1 overflow-auto', focusRing)}
       >
         {/* The one element whose own box actually spans the true scroll-content width. `min-w-max`
@@ -282,7 +276,7 @@ export function HourGrid(props: HourGridProps): ReactNode {
             ))}
           </div>
         </div>
-      </div>
+      </ScrollRegion>
 
       {/* One dialog, at the root of the grid, for whichever placed item asked. Placed items used
           to answer only to `onOpen` - a click opened the item, and there was no way to move it

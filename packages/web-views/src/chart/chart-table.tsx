@@ -1,4 +1,4 @@
-import { Table, Text, cn, focusRing, type TableColumn } from '@nix/ui';
+import { ScrollRegion, Table, Text, cn, focusRing, type TableColumn } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import { formatMeasure } from './chart-model';
@@ -71,11 +71,8 @@ export function ChartTable({
   ];
 
   const figures = (
-    <div
-      role="region"
+    <ScrollRegion
       aria-label={caption}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-      tabIndex={0}
       className={cn('min-w-0 max-w-full overflow-x-auto rounded-sm', focusRing)}
     >
       <Table
@@ -85,7 +82,7 @@ export function ChartTable({
         rowKey={(row) => row.key}
         emptyMessage="There are no figures to show."
       />
-    </div>
+    </ScrollRegion>
   );
 
   return collapse ? (

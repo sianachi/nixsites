@@ -1,4 +1,4 @@
-import { Blueprint, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Blueprint, Text, cn, focusRing } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import {
@@ -187,11 +187,8 @@ export function MonthGrid(props: MonthGridProps): ReactNode {
       as a single column of Mondays with the other six days far off to the right; jsdom cannot verify any
       of the layout above, so the classes here are asserted as a contract in calendar-view.test.tsx.
     */
-    <div
-      role="region"
+    <ScrollRegion
       aria-label={monthLabel(month)}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: a scrollable region needs a tab stop or its content cannot be scrolled without a pointer.
-      tabIndex={0}
       className={cn(regionClassName, 'overflow-x-auto', focusRing)}
     >
       <Blueprint className="min-w-fit overflow-hidden p-0">
@@ -228,6 +225,6 @@ export function MonthGrid(props: MonthGridProps): ReactNode {
           </tbody>
         </table>
       </Blueprint>
-    </div>
+    </ScrollRegion>
   );
 }

@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 
 import { ELEVATION_STEPS, RADIUS_STEPS, SPACING_STEPS } from './specimens';
 
-import { Card, Text, cn } from '@nix/ui';
+import { ScrollRegion, Card, Text, cn } from '@nix/ui';
 
 /**
  * Spacing, radius and elevation specimens.
@@ -19,13 +19,7 @@ import { Card, Text, cn } from '@nix/ui';
 
 function SpacingScale(): ReactElement {
   return (
-    <div
-      className="min-w-0 overflow-x-auto"
-      role="region"
-      aria-label="Spacing scale"
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to inspect full-width spacing specimens.
-      tabIndex={0}
-    >
+    <ScrollRegion className="min-w-0 overflow-x-auto" aria-label="Spacing scale">
       <dl className="flex min-w-max flex-col gap-2">
         {SPACING_STEPS.map((entry) => (
           <div key={entry.step} className="flex items-center gap-4">
@@ -38,7 +32,7 @@ function SpacingScale(): ReactElement {
           </div>
         ))}
       </dl>
-    </div>
+    </ScrollRegion>
   );
 }
 

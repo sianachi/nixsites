@@ -1,4 +1,5 @@
 import {
+  ScrollRegion,
   Button,
   Dialog,
   Field,
@@ -118,11 +119,8 @@ function ImportForm({ state, finance, onClose }: ImportDialogProps): ReactNode {
               matching something already typed, {String(preview.duplicates)} already imported,{' '}
               {String(preview.unreadable)} unreadable.
             </Text>
-            <div
-              role="region"
+            <ScrollRegion
               aria-label="Statement import preview"
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach the scrollable statement preview.
-              tabIndex={0}
               className={cn('max-h-64 min-w-0 overflow-auto', focusRing)}
             >
               <Table<FinanceImport['preview'][number]>
@@ -170,7 +168,7 @@ function ImportForm({ state, finance, onClose }: ImportDialogProps): ReactNode {
                 rowKey={(row) => String(row.row)}
                 emptyMessage="No rows were read."
               />
-            </div>
+            </ScrollRegion>
           </div>
         )}
         <WriteError message={error} />

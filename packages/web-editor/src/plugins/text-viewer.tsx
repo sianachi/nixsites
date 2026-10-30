@@ -1,4 +1,4 @@
-import { Text } from '@nix/ui';
+import { ScrollRegion, Text } from '@nix/ui';
 import type { ReactElement } from 'react';
 
 import { bareMediaType, fileExtension, type FileViewerPlugin } from './file-viewer-registry';
@@ -130,11 +130,8 @@ export function TextViewer({
           the file for the rest.
         </Text>
       ) : null}
-      <div
-        role="region"
+      <ScrollRegion
         aria-label={`${fileName} source`}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to scroll wider source listings.
-        tabIndex={0}
         className="min-h-0 min-w-0 flex-1 overflow-auto py-4"
       >
         {/* text-primitive-exempt: a source listing is monospace by nature and takes its
@@ -155,7 +152,7 @@ export function TextViewer({
             </span>
           ))}
         </pre>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

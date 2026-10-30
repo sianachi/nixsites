@@ -1,4 +1,5 @@
 import {
+  ScrollRegion,
   Button,
   Input,
   Select,
@@ -515,15 +516,11 @@ function OpenPanel({
 
           {state.phase === 'streaming' || hasText ? (
             // The live region is the output itself, so a screen reader hears the text arrive.
-            <div
+            <ScrollRegion
               ref={output}
-              role="region"
               aria-label="AI writing result"
               aria-live="polite"
               aria-busy={streaming}
-              // Focusable so a keyboard user can scroll a long result with the arrow keys.
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-              tabIndex={0}
               onScroll={(event) => {
                 const element = event.currentTarget;
                 followOutput.current =
@@ -534,7 +531,7 @@ function OpenPanel({
               <Text variant="bodySmall" className="whitespace-pre-wrap wrap-anywhere">
                 {state.text === '' ? 'Writing…' : state.text}
               </Text>
-            </div>
+            </ScrollRegion>
           ) : null}
 
           {streaming ? (

@@ -1,4 +1,4 @@
-import { Text } from '@nix/ui';
+import { ScrollRegion, Text } from '@nix/ui';
 import { useMemo, type ReactElement } from 'react';
 
 import { bareMediaType, fileExtension, type FileViewerPlugin } from './file-viewer-registry';
@@ -96,11 +96,8 @@ export function CsvViewer({
           Download the file for the rest.
         </Text>
       ) : null}
-      <div
-        role="region"
+      <ScrollRegion
         aria-label={`${fileName} table`}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to scroll wider tables.
-        tabIndex={0}
         className="min-h-0 min-w-0 flex-1 overflow-auto px-2 py-4 sm:px-8"
       >
         <table aria-label={fileName} className="border-collapse text-sm">
@@ -132,7 +129,7 @@ export function CsvViewer({
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { markdownToDocument } from '@nix/markdown';
-import { Text } from '@nix/ui';
+import { ScrollRegion, Text } from '@nix/ui';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useMemo, type ReactElement } from 'react';
 
@@ -46,15 +46,12 @@ function RenderedMarkdown({
     [doc],
   );
   return (
-    <div
-      role="region"
+    <ScrollRegion
       aria-label={`${fileName} document`}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to scroll documents and wider tables.
-      tabIndex={0}
       className="min-h-0 min-w-0 flex-1 overflow-auto px-2 py-4 sm:px-8 sm:py-6"
     >
       <EditorContent editor={editor} />
-    </div>
+    </ScrollRegion>
   );
 }
 

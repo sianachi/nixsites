@@ -1,4 +1,4 @@
-import { Button, ContextMenu, Dialog, Icon, Text } from '@nix/ui';
+import { ScrollRegion, Button, ContextMenu, Dialog, Icon, Text } from '@nix/ui';
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useId, useState, useSyncExternalStore, type ReactElement } from 'react';
 
@@ -171,15 +171,13 @@ export function MermaidViewer({
         ]}
       >
         {(target) => (
-          <div
+          <ScrollRegion
             {...target}
             className={
               expanded
                 ? 'min-w-0 max-w-full max-h-[calc(100dvh-var(--spacing)*32)] overflow-auto rounded-md bg-surface p-2 sm:p-4'
                 : 'min-w-0 max-w-full max-h-96 overflow-auto rounded-md bg-surface p-2 sm:p-4'
             }
-            tabIndex={0} // eslint-disable-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users must be able to scroll zoomed diagrams.
-            role="region"
             aria-label="Scrollable diagram"
           >
             <div
@@ -189,7 +187,7 @@ export function MermaidViewer({
               style={{ width: `${String(zoom * 100)}%` }} // design-token-exempt: zoom is a user-controlled diagram scale.
               dangerouslySetInnerHTML={html}
             />
-          </div>
+          </ScrollRegion>
         )}
       </ContextMenu>
     );

@@ -1,7 +1,17 @@
 import type { WorkspaceCalendarLink, CalendarConnection, CalendarLink } from '@nix/api-client';
-import { Button, Dialog, Icon, Menu, Select, Table, Text, type MenuEntry } from '@nix/ui';
+import {
+  ScrollRegion,
+  Button,
+  Dialog,
+  Icon,
+  Menu,
+  Select,
+  Table,
+  Text,
+  type MenuEntry,
+} from '@nix/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
@@ -348,7 +358,7 @@ export function CalendarsSection(): ReactElement {
               actionsFor={connectionActions}
             />
           ) : (
-            <ScrollRegion label="Calendar accounts table">
+            <ScrollRegion className="min-w-0 overflow-x-auto" aria-label="Calendar accounts table">
               <Table
                 caption="Connected accounts"
                 columns={connectionColumns}
@@ -375,7 +385,7 @@ export function CalendarsSection(): ReactElement {
               onDirection={changeDirection}
             />
           ) : (
-            <ScrollRegion label="Linked calendars table">
+            <ScrollRegion className="min-w-0 overflow-x-auto" aria-label="Linked calendars table">
               <Table
                 caption="Linked calendars"
                 columns={linkColumns}
@@ -404,7 +414,10 @@ export function CalendarsSection(): ReactElement {
               {narrow ? (
                 <OthersCards entries={othersLinks} onUnlink={setUnlinkingOthers} />
               ) : (
-                <ScrollRegion label="Other members' calendars table">
+                <ScrollRegion
+                  className="min-w-0 overflow-x-auto"
+                  aria-label="Other members' calendars table"
+                >
                   <Table
                     caption="Calendars linked by other members"
                     columns={
@@ -529,23 +542,5 @@ export function CalendarsSection(): ReactElement {
         />
       )}
     </SettingsSection>
-  );
-}
-
-/** A table wider than its column scrolls inside this region, which keyboard users can reach. */
-function ScrollRegion(props: {
-  readonly label: string;
-  readonly children: ReactNode;
-}): ReactElement {
-  return (
-    <div
-      className="min-w-0 overflow-x-auto"
-      role="region"
-      aria-label={props.label}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll table columns horizontally.
-      tabIndex={0}
-    >
-      {props.children}
-    </div>
   );
 }

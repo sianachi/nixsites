@@ -1,4 +1,4 @@
-import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
@@ -244,11 +244,8 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
           ))}
         </div>
       ) : (
-        <div
-          role="region"
+        <ScrollRegion
           aria-label={`${view.name} matrix`}
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll wider matrices.
-          tabIndex={0}
           className={cn('min-w-0 max-w-full overflow-x-auto', focusRing)}
         >
           <table className="w-full border-collapse">
@@ -297,7 +294,7 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
 
       <CreateItemControl

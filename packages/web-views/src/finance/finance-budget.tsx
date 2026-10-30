@@ -1,4 +1,5 @@
 import {
+  ScrollRegion,
   Button,
   Input,
   Segmented,
@@ -339,11 +340,8 @@ export function FinanceBudget({
               Swipe horizontally to compare the plan, actual and remaining amounts.
             </Text>
           ) : null}
-          <div
-            role="region"
+          <ScrollRegion
             aria-label="Budget figures"
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need a tab stop on the horizontal scroll owner to reach clipped budget columns.
-            tabIndex={0}
             className={cn('relative min-w-0 overflow-x-auto', focusRing)}
           >
             <table className="w-full min-w-max border-collapse">
@@ -557,7 +555,7 @@ export function FinanceBudget({
                 )}
               </tfoot>
             </table>
-          </div>
+          </ScrollRegion>
         </>
       )}
       <LineDialog

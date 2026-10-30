@@ -1,4 +1,4 @@
-import { Button, cn, focusRing, Text } from '@nix/ui';
+import { ScrollRegion, Button, cn, focusRing, Text } from '@nix/ui';
 import { items } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ShownItems } from '@nix/web-collections/core/item-selection-context';
@@ -305,11 +305,8 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
           }
         />
       ) : habits.length > 0 && screen === 'checkins' ? (
-        <div
-          role="region"
+        <ScrollRegion
           aria-label={todayOnly ? 'Today habit check-ins' : 'Weekly habit check-ins'}
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to scroll weekly check-ins.
-          tabIndex={0}
           className={cn('min-w-0 max-w-full overflow-x-auto', focusRing)}
         >
           {todayOnly ? (
@@ -378,7 +375,7 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       ) : null}
       <Text variant="bodySmall" tone="muted" className="sr-only">
         Progress is calculated from saved check-ins. Select a habit name to open its details.

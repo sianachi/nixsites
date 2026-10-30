@@ -1,4 +1,4 @@
-import { Table, Tag, Text, cn, focusRing, type TableColumn } from '@nix/ui';
+import { ScrollRegion, Table, Tag, Text, cn, focusRing, type TableColumn } from '@nix/ui';
 import {
   finance as financeApi,
   type CashFlow,
@@ -206,11 +206,8 @@ export function FinanceCashFlow({
             caption="The first month the net position covers that month's target."
           />
         </div>
-        <div
-          role="region"
+        <ScrollRegion
           aria-label="Monthly cash flow"
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Justification: keyboard users need to reach horizontally clipped cash flow columns.
-          tabIndex={0}
           className={cn('min-w-0 overflow-x-auto', focusRing)}
         >
           <Table<CashFlowMonth>
@@ -220,7 +217,7 @@ export function FinanceCashFlow({
             rowKey={(row) => row.month}
             emptyMessage="The plan has no months."
           />
-        </div>
+        </ScrollRegion>
       </details>
       <Text variant="bodySmall" tone="muted">
         Cash held is the bank balance. The cash and card position adds card credits and deducts
