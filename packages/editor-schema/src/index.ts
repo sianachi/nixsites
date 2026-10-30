@@ -56,3 +56,4 @@ export { BASE_SCHEMA_VERSION, requiredSchemaVersion } from './versions.js';
 export { TEXT_ALIGNMENTS, readTextAlignment } from './text-alignment.js';
 export { rejectAllSuggestions } from './reject-suggestions.js';
 export { SUGGESTIBLE_BLOCKS, readBlockSuggestion, type BlockSuggestion } from './suggestions.js';
+export { isRecord } from './is-record.js';

@@ -5,7 +5,7 @@ import type { Pool } from 'pg';
 
 import { TemplateBodyError, writeArchiveBodies } from '../templates/bodies.ts';
 import type { CoreImportClient, ImportBodyAuthorizationItem } from './core.ts';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 export interface ImportBodyService {
   write(input: {

@@ -1,5 +1,5 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 const AUTHORIZATION_RESPONSE_BYTES = 2 * 1024 * 1024;
 const AUTHORIZATION_ITEM_LIMIT = 10_000;

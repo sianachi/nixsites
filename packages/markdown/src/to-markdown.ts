@@ -25,7 +25,7 @@ import {
   type NodeHandlers,
   type ProseNode,
 } from '@nix/export';
-import { CALLOUT_TONES, REFERENCE_KINDS, readToggleLevel } from '@nix/editor-schema';
+import { CALLOUT_TONES, REFERENCE_KINDS, isRecord, readToggleLevel } from '@nix/editor-schema';
 
 import {
   MARKDOWN_LOSSES,
@@ -36,10 +36,6 @@ import {
 
 /** A stand-in item id: this boundary has no real one, and losses are folded by kind, not by item. */
 const DOC_ITEM_ID = 'document';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /**
  * The characters that would otherwise start Markdown inline syntax mid-text.

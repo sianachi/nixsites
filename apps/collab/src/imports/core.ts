@@ -1,5 +1,5 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@nix/editor-schema';
 
 export interface ImportBodyAuthorizationItem {
   readonly sourceId: string;

@@ -13,6 +13,7 @@
 
 import {
   CALLOUT_TONES,
+  isRecord,
   REFERENCE_KINDS,
   readTextAlignment,
   readToggleLevel,
@@ -144,10 +145,6 @@ function blocks(pieces: Piece[]): RenderBlock[] {
   }
   flush();
   return out;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Plain text of a raw subtree, for table cells (not recursed by the visitor) and labels. */
