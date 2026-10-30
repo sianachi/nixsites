@@ -63,6 +63,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Breaking: Nix is now licensed under AGPL-3.0-only, with additional permissions for plugins,
+  content made with Nix and programs that use it through the API, `nixctl` or MCP. Using or
+  self-hosting Nix, including commercially, is unaffected; running a modified Nix for other people
+  now means offering them its source. Releases up to v0.4.x stay MIT. A commercial licence is also
+  offered. See `docs/licensing.md`.
 - PDF, DOCX and Markdown exports and DOCX imports go through a presentation tree (`nix-render`)
   that the collaboration server produces from the document. The export worker no longer reads the
   editor's document format, so a new block type cannot silently degrade an export; a tree the worker

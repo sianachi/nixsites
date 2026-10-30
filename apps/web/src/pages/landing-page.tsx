@@ -443,7 +443,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
       <footer className={`border-t ${RULE}`}>
         <div className={`${PAGE} flex flex-wrap justify-between gap-x-6 gap-y-2 py-6`}>
           <Text variant="bodySmall" as="p" tone="muted" className="flex min-h-11 items-center">
-            Nix is MIT licensed.
+            Nix is open source under AGPL-3.0.
           </Text>
           <nav aria-label="Project" className="flex flex-wrap gap-x-6 gap-y-2 text-base">
             <a

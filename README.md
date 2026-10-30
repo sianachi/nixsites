@@ -63,7 +63,7 @@ Nix is for a workspace you run yourself: structured views, and a copy of the dat
 | | Nix | Notion | Obsidian |
 | --- | --- | --- | --- |
 | Where it runs | Your machine or server, with Docker or Kubernetes | Notion's hosted service | A folder of Markdown on your devices. Sync is [Obsidian Sync](https://obsidian.md/sync) or your own |
-| Licence | [MIT](LICENSE) | Proprietary | Proprietary. Free for personal use |
+| Licence | [AGPL-3.0](LICENSE), with [permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for plugins and your content | Proprietary | Proprietary. Free for personal use |
 | Shape | One item tree: lists, boards, calendars, sheets, habits, finance and the rest | Pages and databases | Notes, plus a large plugin ecosystem |
 | Editing together | Real-time CRDT editing, with presence, for a small group | Real-time collaboration | Files synced between devices |
 | Leaving | Lossless `.nix` archives, plus PDF, DOCX and Markdown. An Obsidian vault can be imported | Markdown, HTML and CSV export | The notes are already files |
@@ -160,7 +160,10 @@ Generated OpenAPI and client code is never edited by hand.
 
 ## Licence
 
-[MIT](LICENSE)
+[AGPL-3.0-only](LICENSE) from v0.5, with [additional permissions](LICENSE-ADDITIONAL-PERMISSIONS.md)
+for plugins, your content and programs that use Nix. Using Nix, including at work, asks nothing of
+you; see [what AGPL means for you](docs/licensing.md). Releases up to v0.4.x stay under the
+[MIT licence](LICENSE-MIT-before-v0.5). A commercial licence is also available.
 
 ## Star, or open an issue
 
