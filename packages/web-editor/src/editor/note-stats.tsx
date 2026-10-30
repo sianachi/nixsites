@@ -3,6 +3,9 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Button, Popover, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
+/** Each heading level indents one step further in the outline. */
+const OUTLINE_INDENT = ['', 'pl-3', 'pl-6', 'pl-9', 'pl-12', 'pl-15'] as const;
+
 const WORDS_PER_MINUTE = 230;
 const DEBOUNCE_MS = 400;
 
@@ -27,12 +30,12 @@ export function readNoteStats(doc: ProseMirrorNode): NoteStats {
     let text = '';
     node.forEach((child) => {
       if (child.isText) {
-        if (!child.marks.some((m) => m.type.name === 'suggestionDelete')) text += child.text;
+        if (!child.marks.some((m) => m.type.name === 'suggestionDelete')) text += child.text ?? '';
       } else if (child.isLeaf) text += ' '; // hard breaks and other inline leaves separate words
     });
     words += text.split(/\s+/).filter(Boolean).length;
     if (node.type.name === 'heading') {
-      outline.push({ pos, level: Number(node.attrs['level'] ?? 1), text: text.trim() });
+      outline.push({ pos, level: Number(node.attrs.level ?? 1), text: text.trim() });
     }
     return false;
   });
@@ -84,7 +87,7 @@ export function NoteStatsFooter({
           ) : (
             <ul className="flex max-h-72 flex-col overflow-y-auto">
               {stats.outline.map((entry, index) => (
-                <li key={entry.pos} style={{ paddingLeft: `${(entry.level - 1) * 12}px` }}>
+                <li key={entry.pos} className={OUTLINE_INDENT[entry.level - 1] ?? 'pl-15'}>
                   <Button
                     variant="subtle"
                     className="w-full justify-start"

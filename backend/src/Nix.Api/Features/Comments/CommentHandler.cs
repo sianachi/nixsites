@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
-using Npgsql;
 using Nix.Domain.Comments;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Features.Items;
 using Nix.Messaging;
+using Npgsql;
 
 namespace Nix.Features.Comments;
 

@@ -843,6 +843,7 @@ export function NoteEditor({
   useEffect(() => {
     if (readOnly || stale) return;
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- applies a stored preference once the note becomes editable
       if (localStorage.getItem(suggestingKey) === '1') setSuggestingOn(true);
     } catch {
       // Storage can be blocked; suggesting then starts off each time.

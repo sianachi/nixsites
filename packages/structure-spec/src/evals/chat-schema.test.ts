@@ -32,7 +32,9 @@ describe('chat review evaluation contract', () => {
     for (const entry of cases) {
       const nodes = nodesOf.get(entry.fixture);
       expect(nodes, `${entry.id} names an unknown fixture`).toBeDefined();
-      const has = (ref: string) => expect(nodes?.has(ref), `${entry.id}: ${ref}`).toBe(true);
+      const has = (ref: string) => {
+        expect(nodes?.has(ref), `${entry.id}: ${ref}`).toBe(true);
+      };
       if (entry.templateSource !== undefined) has(entry.templateSource);
       for (const match of entry.prompt.matchAll(/\{node:([^}]+)\}/g)) has(match[1] ?? '');
       for (const ref of entry.answerChecks?.references ?? []) has(ref);

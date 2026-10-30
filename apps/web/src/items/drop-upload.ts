@@ -82,6 +82,7 @@ export async function uploadEntries(
         await io.uploadFile(next.file, next.parentId);
         uploaded++;
       } catch (caught) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- another worker may have failed first
         if (!failed) error = caught;
         failed = true;
       }

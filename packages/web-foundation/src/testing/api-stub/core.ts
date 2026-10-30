@@ -1431,9 +1431,9 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
         // A long-poll: like the real one it answers only when something changes, so it stays open
         // until the caller aborts (a loop re-asking at once would spin).
         return new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () =>
-            reject(new DOMException('Aborted', 'AbortError')),
-          );
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
         });
       }
       if (parsedUrl.pathname === '/api/v1/me/notifications/watch') {

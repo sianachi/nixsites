@@ -13,7 +13,7 @@ const views = [
   aView({ id: 'by-status', name: 'By status', kind: 'board', groupBy: 'status' }),
 ];
 
-const container = vi.hoisted(() => ({ status: 'ready' as string }));
+const container = vi.hoisted(() => ({ status: 'ready' }));
 vi.mock('@nix/web-collections/core/use-container', () => ({
   useContainer: () => ({
     status: container.status,

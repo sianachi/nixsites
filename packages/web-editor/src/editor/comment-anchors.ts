@@ -112,7 +112,7 @@ export function patchComments(itemId: string, patch: Partial<ItemComments>): voi
 /** Forgets a note's entry once nothing shows it any more. */
 export function dropComments(itemId: string): void {
   useCommentsStore.setState((state) => {
-    const { [itemId]: _gone, ...items } = state.items;
+    const items = Object.fromEntries(Object.entries(state.items).filter(([id]) => id !== itemId));
     return { items };
   });
 }
@@ -264,7 +264,7 @@ export function findQuote(
     return false;
   });
   const first = text.indexOf(quote);
-  if (first < 0 || quote.length === 0 || text.indexOf(quote, first + 1) >= 0) return null;
+  if (first < 0 || quote.length === 0 || text.includes(quote, first + 1)) return null;
   const end = first + quote.length;
   const from = blocks.find((block) => first < block.start + block.length);
   const to = blocks.find((block) => end > block.start && end <= block.start + block.length);
@@ -360,8 +360,7 @@ function commentsPlugin(getItemId: () => string | null): Plugin<Computed | null>
         const { threads, activeThreadId, ready } = readComments(itemId);
         if (!ready) return null;
         const fromYjs =
-          value === null ||
-          value.threads !== threads ||
+          value?.threads !== threads ||
           value.activeThreadId !== activeThreadId ||
           tr.getMeta(commentAnchorsKey) !== undefined ||
           tr.getMeta(ySyncPluginKey) !== undefined;

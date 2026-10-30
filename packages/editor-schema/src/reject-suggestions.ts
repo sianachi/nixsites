@@ -38,7 +38,8 @@ function rejectText(node: Json): Json | null {
   const kept = Array.isArray(before)
     ? before
     : marks.filter((mark) => mark.type !== 'suggestionDelete' && mark.type !== 'suggestionFormat');
-  const { marks: _marks, ...rest } = node;
+  const rest: Json = { ...node };
+  delete rest.marks;
   return kept.length === 0 ? rest : { ...rest, marks: kept };
 }
 
@@ -68,18 +69,20 @@ function push(out: unknown[], node: unknown): void {
 /** Moves the text a split block still holds onto the block before it. */
 function mergeInto(previous: Json, node: Json): boolean {
   if (!Array.isArray(previous.content) || !Array.isArray(node.content)) return false;
+  const before = previous.content as unknown[];
+  const after = node.content as unknown[];
   if (TEXTBLOCKS.has(String(previous.type)) && TEXTBLOCKS.has(String(node.type))) {
     const content: unknown[] = [];
-    for (const child of [...previous.content, ...node.content]) push(content, child);
+    for (const child of [...before, ...after]) push(content, child);
     previous.content = content;
     return true;
   }
-  const last = previous.content[previous.content.length - 1];
-  const [first, ...rest] = node.content;
+  const last = before[before.length - 1];
+  const [first, ...rest] = after;
   if (!isRecord(last) || !isRecord(first)) return false;
   const merged = { ...last };
   if (!mergeInto(merged, first)) return false;
-  previous.content = [...previous.content.slice(0, -1), merged, ...rest];
+  previous.content = [...before.slice(0, -1), merged, ...rest];
   return true;
 }
 
@@ -126,7 +129,8 @@ function rejectNode(node: Json): Json {
   const { content, attrs, ...rest } = node;
   const result: Json = { ...rest };
   if (isRecord(attrs)) {
-    const { suggestion: _suggestion, ...others } = attrs;
+    const others: Json = { ...attrs };
+    delete others.suggestion;
     result.attrs = others;
   }
   if (Array.isArray(content)) result.content = rejectChildren(content);

@@ -95,6 +95,7 @@ function runFeed(client: NixClient, itemId: string): () => void {
           apply(answer);
         }
       } catch (reason) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- aborted can flip during the await
         if (isCanceledError(reason) || signal.aborted) return;
         const status = isNixApiError(reason) ? reason.status : undefined;
         if (status !== undefined && FINAL.has(status)) {
@@ -210,6 +211,7 @@ export function useCommentSync(editor: Editor, itemId: string, ready: boolean): 
     let cancelled = false;
     void (async () => {
       for (const id of detached) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by the effect cleanup between awaits
         if (cancelled) return;
         if (attempted.has(`${itemId}:${id}`)) continue;
         attempted.add(`${itemId}:${id}`);

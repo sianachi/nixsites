@@ -58,6 +58,6 @@ describe('readNoteStats', () => {
       [1, 'Title'],
       [2, 'Part'],
     ]);
-    expect(doc.nodeAt(outline[1]!.pos)?.type.name).toBe('heading');
+    expect(doc.nodeAt(outline[1]?.pos ?? -1)?.type.name).toBe('heading');
   });
 });
