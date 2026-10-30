@@ -107,13 +107,46 @@ public sealed class AccessGrantStore(NixDbContext db, INixSessionContextAccessor
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Locks every admin grant row of the tenant (<c>FOR UPDATE</c>, in key order) before counting, and
+    /// the caller deletes in the same transaction. Two administrators revoking each other therefore
+    /// serialize: the second blocks on the lock, then counts with a fresh read-committed snapshot that
+    /// no longer holds the first's grant. Only grants that can act count: a principal grant whose
+    /// principal is active, or a group grant with at least one other active member.
+    /// shortcut: membership rows are not locked, so a concurrent removal of the last member of the only
+    /// admin group can slip past; lock group_membership too if that ever matters.
+    /// </remarks>
     public async ValueTask<bool> AnyOtherTenantAdminAsync(PrincipalId principalId, CancellationToken cancellationToken)
     {
-        var tenant = Tenant;
-        return await db.TenantRoleGrants.AsNoTracking().AnyAsync(
-            row => row.TenantId == tenant && row.Role == AdminRole
-                && !(row.SubjectType == SubjectType.Principal && row.SubjectId == principalId.Value),
-            cancellationToken).ConfigureAwait(false);
+        var tenant = Tenant.Value;
+        var excluded = principalId.Value;
+        _ = await db.Database.SqlQuery<int>($"""
+            SELECT 1 AS "Value" FROM tenant_role
+             WHERE tenant_id = {tenant} AND role = 'admin'
+             ORDER BY subject_type, subject_id
+               FOR UPDATE
+            """).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return await db.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1
+                  FROM tenant_role grant_row
+                 WHERE grant_row.tenant_id = {tenant} AND grant_row.role = 'admin'
+                   AND (
+                        (grant_row.subject_type = 'principal' AND grant_row.subject_id <> {excluded}
+                         AND EXISTS (SELECT 1 FROM principal p
+                                      WHERE p.tenant_id = grant_row.tenant_id
+                                        AND p.principal_id = grant_row.subject_id
+                                        AND p.status = 'active'))
+                     OR (grant_row.subject_type = 'group'
+                         AND EXISTS (SELECT 1
+                                       FROM group_membership m
+                                       JOIN principal p ON p.tenant_id = m.tenant_id AND p.principal_id = m.principal_id
+                                      WHERE m.tenant_id = grant_row.tenant_id
+                                        AND m.group_id = grant_row.subject_id
+                                        AND m.principal_id <> {excluded}
+                                        AND p.status = 'active'))
+                   )) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

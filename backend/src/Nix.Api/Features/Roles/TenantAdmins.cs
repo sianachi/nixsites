@@ -79,8 +79,7 @@ public sealed class TenantAdminHandlers(
         }
 
         var target = PrincipalId.From(command.PrincipalId);
-        // shortcut: two administrators revoking each other in the same instant could both pass this
-        // check; add a row lock on the tenant if that ever matters.
+        // The check locks the tenant's admin grants; the delete below runs in the same transaction.
         if (!await grants.AnyOtherTenantAdminAsync(target, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Guid>(new(TenantAdminErrors.LastAdministratorCode, "The last administrator cannot be removed; make someone else an administrator first."));
