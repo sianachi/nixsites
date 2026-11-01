@@ -78,12 +78,13 @@ export const RENDER_TIMEOUT_MS = 10_000;
 function withTimeout<T>(work: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error('Mermaid took too long to render this diagram.')),
-      RENDER_TIMEOUT_MS,
-    );
+    timer = setTimeout(() => {
+      reject(new Error('Mermaid took too long to render this diagram.'));
+    }, RENDER_TIMEOUT_MS);
   });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+  return Promise.race([work, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
 }
 
 /**

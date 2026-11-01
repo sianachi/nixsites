@@ -58,8 +58,8 @@ export function SiteExclusionsPicker({
   }, [attempt, listChildren, open, parentId]);
 
   function loadMore(): void {
-    const more = children?.loadMore;
-    if (!more || !children) return;
+    if (!children?.loadMore) return;
+    const more = children.loadMore;
     setLoadingMore(true);
     more()
       .then((page) => {

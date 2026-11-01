@@ -33,7 +33,9 @@ describe('the exported page', () => {
     const [left, top, right, bottom] = EXPORT_PAGE.margins;
     expect(new Set([left, top, right, bottom]).size, 'the Go margin is uniform').toBe(1);
     expect(source).toContain(`const pdfMargin = ${String(left)}.0`);
-    expect(source).toContain(`fpdf.New("P", "pt", "A4", "")`);
+    // A4 is the default page; Letter is an explicit per-export choice.
+    expect(source).toContain(`size := "A4"`);
+    expect(source).toContain(`fpdf.New("P", "pt", size, "")`);
     expect(source).toContain(`pdf.SetFont("Nix", "", ${String(EXPORT_PAGE.bodySize)})`);
     expect(source).toContain(`pdf.Write(size*${String(EXPORT_PAGE.lineHeight)}, pdfText(text))`);
   });
