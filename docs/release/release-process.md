@@ -79,8 +79,8 @@ Added, Changed, Fixed, Security. Entries say what a person can now do, not which
 
 Roll back by releasing the previous SHA (`release.sh <previous>`); the ledger in
 `NIX_RELEASE_LEDGER` records it. Migrations are forward-only, so a rollback must stay compatible
-with the newer schema, which the additive rule guarantees. Data recovery follows
-`docs/operations.md` and the backup runbooks.
+with the newer schema, which the additive rule guarantees. Data recovery follows the backup
+runbooks.
 
 ## Hotfixes
 
