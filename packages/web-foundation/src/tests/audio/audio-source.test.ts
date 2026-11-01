@@ -27,6 +27,13 @@ describe('audio capabilities', () => {
       expect.objectContaining({ forceRefresh: true }),
     );
   });
+  it("plays the shell's own blob of a downloaded recording, and no other blob", async () => {
+    const own = `blob:${location.origin}/0199a000`;
+    expect(await authorisedAudioUrl(source(own).client, 'file')).toBe(own);
+    await expect(
+      authorisedAudioUrl(source('blob:https://evil.example/0199a000').client, 'file'),
+    ).rejects.toThrow(TypeError);
+  });
   it.each([
     'http://files.example.test/audio',
     'ftp://localhost/audio',

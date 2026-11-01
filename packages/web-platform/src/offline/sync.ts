@@ -24,6 +24,8 @@ export interface SyncDeps {
   readonly capability: (itemId: string, versionId: string) => Promise<FileCapability>;
   readonly signal?: AbortSignal;
   readonly concurrency?: number;
+  /** Called when a pass replayed queued changes or found conflicts, so screens can refetch. */
+  readonly onReplayed?: () => void;
 }
 
 export type SyncOutcome = 'done' | 'revoked';
@@ -103,6 +105,12 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
       api: deps.api,
     }).catch(() => null);
     if (result?.status === 'revoked' && result.scope === 'account') return 'revoked';
+    if (
+      result !== null &&
+      (result.status === 'complete' || result.status === 'partial') &&
+      result.replayedOperations + result.conflicts > 0
+    )
+      deps.onReplayed?.();
   }
   await syncFiles(
     deps,

@@ -400,6 +400,32 @@ describe('SQLite mirror with real SQLite', () => {
     }
   });
 
+  it('dismisses a conflict together with its recovery data', async () => {
+    const { store } = await setup();
+    await snapshot(store, [item()]);
+    const doc = new Y.Doc();
+    try {
+      doc.getText('content').insert(0, 'recoverable draft');
+      await store.enqueueBodyUpdate(workspace, itemId, {
+        clientId: 'draft',
+        update: Y.encodeStateAsUpdate(doc),
+      });
+      await store.applyChangesPage(workspace, {
+        cursor: '2',
+        hasMore: false,
+        resync: false,
+        items: [item({ bodyDocId: secondId })],
+        serverTime,
+      });
+      expect(await store.listConflicts(workspace)).toHaveLength(1);
+      await store.dismissConflict(workspace, `body:${itemId}`);
+      expect(await store.listConflicts(workspace)).toEqual([]);
+      expect(await store.readConflictRecovery(workspace, `body:${itemId}`)).toBeNull();
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it('makes pending update retries idempotent and preserves the newest confirmed head', async () => {
     const { store } = await setup();
     await snapshot(store, [item()]);

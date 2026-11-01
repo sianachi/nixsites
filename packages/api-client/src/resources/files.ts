@@ -160,6 +160,15 @@ export async function uploadAndCompleteFile(
   }
 }
 
+/**
+ * The iOS shell answers offline with a blob of the file it downloaded, made by this page. Such an
+ * address never leaves the page, so it needs neither HTTPS nor an object store.
+ */
+export function isOwnBlobUrl(url: string): boolean {
+  const pageOrigin = (globalThis as { location?: { origin?: string } }).location?.origin;
+  return pageOrigin !== undefined && url.startsWith(`blob:${pageOrigin}/`);
+}
+
 export async function fetchFileContent(
   client: NixClient,
   itemId: string,
@@ -172,14 +181,8 @@ export async function fetchFileContent(
     forceRefresh: true,
   });
   const url = new URL(capability.url);
-  // The iOS shell answers offline with a blob of the file it downloaded, made by this page.
-  const pageOrigin = (globalThis as { location?: { origin?: string } }).location?.origin;
-  const ownBlob =
-    url.protocol === 'blob:' &&
-    pageOrigin !== undefined &&
-    capability.url.startsWith(`blob:${pageOrigin}/`);
   if (
-    !ownBlob &&
+    !isOwnBlobUrl(capability.url) &&
     url.protocol !== 'https:' &&
     url.hostname !== 'localhost' &&
     url.hostname !== '127.0.0.1'

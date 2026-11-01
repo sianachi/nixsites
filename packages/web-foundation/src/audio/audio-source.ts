@@ -19,7 +19,11 @@ export async function authorisedAudioUrl(
   });
   const url = new URL(capability.url);
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) {
+  if (
+    !fileResources.isOwnBlobUrl(capability.url) &&
+    url.protocol !== 'https:' &&
+    !(url.protocol === 'http:' && local)
+  ) {
     throw new TypeError('Download capabilities must use HTTPS outside local development.');
   }
   if (url.username !== '' || url.password !== '') {

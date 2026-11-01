@@ -1208,6 +1208,24 @@ export class SqliteMirrorStore implements MirrorStore {
     }).then((conflicts) => (this.sealedWorkspaces.has(workspaceId) ? [] : conflicts));
   }
 
+  /** Forgets one conflict and its recovery data; the person has seen it (and copied what they need). */
+  async dismissConflict(workspaceId: string, conflictId: string): Promise<void> {
+    await this.forWorkspace(
+      workspaceId,
+      async (tx) => {
+        await tx.execute(
+          'DELETE FROM mirror_conflict_recovery WHERE conflict_id IN (SELECT id FROM mirror_conflict WHERE workspace_id=? AND id=?)',
+          [workspaceId, conflictId],
+        );
+        await tx.execute('DELETE FROM mirror_conflict WHERE workspace_id=? AND id=?', [
+          workspaceId,
+          conflictId,
+        ]);
+      },
+      true,
+    );
+  }
+
   resolveItemId(workspaceId: string, itemId: string): Promise<string> {
     return this.forWorkspace(workspaceId, async (tx) => {
       if (this.sealedWorkspaces.has(workspaceId)) return itemId;

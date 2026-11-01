@@ -10,7 +10,9 @@ follows semantic versioning (`0.x` pre-1.0).
 - The iOS app keeps a full offline copy of every workspace you can reach: the tree, properties,
   note bodies and files. It opens and reads everything with no connection, shows a small "Offline"
   notice, and removes the copy when you sign out. Settings > About shows how much space it takes.
-  Changes to structure need a connection for now; note edits still queue.
+  Creating, renaming, moving, trashing and editing properties work offline too: they queue and
+  replay when the connection returns, and a change the server refuses is listed with a way to
+  dismiss it. Other changes still need a connection.
 - A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
@@ -50,6 +52,8 @@ follows semantic versioning (`0.x` pre-1.0).
 - Creating or deleting a site in the item's site pane relabels the item menu straight away.
 - The site pane's page pickers load more children on request instead of stopping at 500.
 - Nightly backup sizes are recorded in exact bytes instead of rounded-up KiB.
+- Signing out of the iOS app without a connection now ends the server session at the next launch,
+  instead of signing you straight back in.
 
 ### Security
 

@@ -34,3 +34,16 @@ it('does not retain thumbnail bytes if sign-out happens while Core answers the c
   expect(query).toHaveBeenCalledTimes(2);
   expect(download).toHaveBeenCalledTimes(2);
 });
+
+it("reads the shell's own blob of a downloaded image and keeps nothing of it", async () => {
+  await forgetThumbnails();
+  const url = `blob:${location.origin}/0199a000`;
+  const client = { query: vi.fn().mockResolvedValue({ url }) } as unknown as NixClient;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(new Response(new Blob(['png'], { type: 'image/png' }))),
+  );
+  const blob = await loadServerThumbnail(client, 'file', new AbortController().signal);
+  expect(blob.size).toBeGreaterThan(0);
+  expect(recallAuthorisedBytes(`${location.origin}/0199a000`)).toBeNull();
+});

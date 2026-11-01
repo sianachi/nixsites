@@ -1,16 +1,27 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
+import { planWrite, type PlannedWrite } from './mirror-writes';
+
 /**
  * Core, answered from the iOS shell's synced copy. The API client's `fetch` goes through
  * `createMirrorFetch` there: the network first, the mirror when the network is gone (or when the
- * app opened offline). Only reads the app needs to browse are answered, in Core's JSON shapes;
- * everything else says plainly that it needs a connection. Nothing here runs in a browser.
+ * app opened offline). Reads the app needs to browse are answered, in Core's JSON shapes. Create,
+ * rename, move, trash and property edits are queued for replay (see `mirror-writes.ts`) and
+ * answered as Core would; everything else says plainly that it needs a connection. Nothing here
+ * runs in a browser.
  */
 
 export type MirrorReader = Pick<
   SqliteMirrorStore,
-  'readItems' | 'listItems' | 'searchItems' | 'readWorkspaceList' | 'getSetting' | 'setSetting'
+  | 'readItems'
+  | 'listItems'
+  | 'searchItems'
+  | 'readWorkspaceList'
+  | 'getSetting'
+  | 'setSetting'
+  | 'enqueue'
+  | 'listOutbox'
 > & { subscribe(listener: () => void): () => void };
 
 export interface MirrorFetchDeps {
@@ -84,8 +95,27 @@ function isRecord(value: unknown): value is Json {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const propertyList = (schema: Json | null): unknown[] =>
-  isRecord(schema) && Array.isArray(schema.properties) ? schema.properties : [];
+/** A stored schema's properties in Core's response shape (stored entries omit empty fields). */
+const definitions = (schema: Json | null): Json[] =>
+  (isRecord(schema) && Array.isArray(schema.properties) ? schema.properties : [])
+    .filter(
+      (entry): entry is Json =>
+        isRecord(entry) &&
+        typeof entry.key === 'string' &&
+        entry.key !== '' &&
+        typeof entry.type === 'string',
+    )
+    .map((entry) => ({
+      key: entry.key,
+      label: typeof entry.label === 'string' && entry.label !== '' ? entry.label : entry.key,
+      type: entry.type,
+      options: Array.isArray(entry.options) ? entry.options : [],
+      required: entry.required === true,
+      choiceSource: entry.choiceSource ?? null,
+      expression: entry.expression ?? null,
+      aggregate: entry.aggregate ?? null,
+      source: entry.source ?? null,
+    }));
 
 export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
   const indexes = new Map<string, Promise<WorkspaceIndex>>();
@@ -223,9 +253,10 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       });
     }
 
-    const itemMatch = /^\/api\/v1\/items\/([^/]+)(?:\/(schema|views|lock|file\/download))?$/.exec(
-      path,
-    );
+    const itemMatch =
+      /^\/api\/v1\/items\/([^/]+)(?:\/(schema|views|lock|file\/download|file\/thumbnail|file))?$/.exec(
+        path,
+      );
     if (itemMatch?.[1] === undefined) return null;
     const item = (await store.readItems([itemMatch[1]]))[0];
     if (item?.lifecycleState !== 'active')
@@ -244,43 +275,86 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       });
 
     if (part === 'schema') {
-      // shortcut: ancestors' schemas merge by key with the nearest winning; Core's finer rules
-      // (choice sources, rollups) are not re-derived. Upgrade if offline forms look wrong.
-      const own = propertyList(item.schema);
+      // Core's rules (SchemaResolver): walk from the item outwards, nearer wins per key and keeps
+      // the farther position, an item declaring `inherit: false` is the last to contribute.
+      // shortcut: choice sources, formulas and rollups are passed through as stored, not
+      // re-validated. Upgrade if offline forms look wrong.
+      const own = definitions(item.schema);
       const inherit = !isRecord(item.schema) || item.schema.inherit !== false;
-      const properties = new Map<string, unknown>();
-      if (inherit)
-        for (const ancestor of (await chain(store, item)).slice(1).reverse())
-          for (const property of propertyList(ancestor.schema))
-            if (isRecord(property)) properties.set(String(property.key), property);
-      for (const property of own)
-        if (isRecord(property)) properties.set(String(property.key), property);
+      const properties = new Map<string, Json>();
+      const layers: Json[][] = [];
+      for (const level of await chain(store, item)) {
+        layers.unshift(definitions(level.schema));
+        if (isRecord(level.schema) && level.schema.inherit === false) break;
+      }
+      for (const layer of layers)
+        for (const property of layer) properties.set(String(property.key), property);
       return json({ properties: [...properties.values()], declared: own, inherit });
     }
 
     if (part === 'views') {
       const raw = isRecord(item.views) ? item.views : {};
-      const views = Array.isArray(raw.views) ? raw.views : [];
-      const first = isRecord(views[0]) ? views[0].id : undefined;
+      const listed = (Array.isArray(raw.views) ? raw.views : []).filter(
+        (view): view is Json =>
+          isRecord(view) &&
+          typeof view.id === 'string' &&
+          typeof view.name === 'string' &&
+          typeof view.kind === 'string',
+      );
+      const views = listed.filter(
+        (view, index) => listed.findIndex((other) => other.id === view.id) === index,
+      );
+      // Core's StoredViews.Resolve: a missing or dangling default opens the document, unless the
+      // document tab is hidden, when the first view stands in.
+      const hideDocument = raw.hideDocument === true && views.length > 0;
+      const stored = views.find((view) => view.id === raw.default)?.id;
       return json({
         views,
-        unrenderable: Array.isArray(raw.unrenderable) ? raw.unrenderable : [],
-        default:
-          typeof raw.default === 'string'
-            ? raw.default
-            : typeof first === 'string'
-              ? first
-              : 'document',
-        hideDocument: raw.hideDocument === true,
-        version: typeof raw.version === 'string' ? raw.version : null,
+        // shortcut: whether a view's property still exists is not re-derived offline.
+        unrenderable: [],
+        default: typeof stored === 'string' ? stored : hideDocument ? views[0]?.id : 'document',
+        hideDocument,
+        version: null,
       });
     }
 
-    // file/download: a capability whose url is a blob of the downloaded bytes.
+    // file: the one version the copy holds, as Core's file record.
+    if (part === 'file') {
+      const stored = item.file;
+      if (stored === null || item.locked)
+        return problem(404, 'file.not_found', 'This file is not in the synced copy.');
+      const version = {
+        id: stored.versionId,
+        // shortcut: only the current version is mirrored, so history reads as version 1.
+        version: 1,
+        fileName: stored.fileName,
+        mediaType: stored.mediaType,
+        byteLength: stored.byteLength,
+        sha256: stored.sha256,
+        previewable: /^(image|audio|video)\/|^application\/pdf$/.test(stored.mediaType),
+        pixelWidth: null,
+        pixelHeight: null,
+        createdAt: item.createdAt,
+        current: true,
+        thumbnail: null,
+      };
+      return json({
+        itemId: item.id,
+        workspaceId: item.workspaceId,
+        current: version,
+        versions: [version],
+      });
+    }
+
+    // file/download and file/thumbnail: a capability whose url is a blob of the downloaded bytes.
     const file = item.file;
     const wanted = query.get('versionId');
     if (file === null || item.locked || (wanted !== null && wanted !== file.versionId))
       return problem(404, 'file.not_found', 'This file version is not in the synced copy.');
+    // Only the full file is stored. An image stands in for its thumbnail; anything else has none,
+    // which is Core's own answer for a file without one.
+    if (part === 'file/thumbnail' && !file.mediaType.startsWith('image/'))
+      return problem(404, 'file.not_found', 'This file has no thumbnail in the synced copy.');
     const bytes = await deps.readFile(item.id, file.versionId);
     if (bytes === null)
       return problem(
@@ -291,9 +365,14 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     const blobUrl =
       deps.createBlobUrl?.(bytes, file.mediaType) ??
       URL.createObjectURL(new Blob([bytes.slice().buffer], { type: file.mediaType }));
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    // shortcut: the thumbnail's size is not known without decoding the image, and the app reads
+    // only its bytes; give real dimensions if a screen ever lays out by them.
+    if (part === 'file/thumbnail')
+      return json({ url: blobUrl, expiresAt, width: 1, height: 1, byteLength: file.byteLength });
     return json({
       url: blobUrl,
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      expiresAt,
       fileName: file.fileName,
       mediaType: file.mediaType,
       byteLength: file.byteLength,
@@ -302,6 +381,126 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       unscanned: false,
       noSniff: true,
     });
+  }
+
+  /** Queues a supported write for replay and answers with the item as Core would. */
+  async function write(store: MirrorReader, plan: PlannedWrite): Promise<Response> {
+    const respondWith = async (itemId: string, status = 200): Promise<Response> => {
+      indexes.clear();
+      const found = (await store.readItems([itemId]))[0];
+      return found === undefined
+        ? problem(404, 'item.not_found', 'This item is not in the synced copy.')
+        : new Response(
+            JSON.stringify(toItem(found, await workspaceIndex(store, found.workspaceId))),
+            {
+              status,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+    };
+    // A temporary id that has since been replaced by the server's resolves to the real item.
+    const real = async (id: string | null): Promise<string | null> =>
+      id === null ? null : ((await store.readItems([id]))[0]?.id ?? id);
+    try {
+      if (plan.kind === 'create') {
+        const operationId = plan.key ?? crypto.randomUUID();
+        // A retry of a create whose answer was lost finds the one already queued.
+        const queued = (await store.listOutbox(plan.workspaceId)).find(
+          (entry) => entry.operationId === operationId,
+        );
+        if (queued !== undefined) return await respondWith(queued.itemId, 201);
+        const itemId = crypto.randomUUID();
+        await store.enqueue(plan.workspaceId, {
+          kind: 'create',
+          operationId,
+          itemId,
+          payload: {
+            type: plan.type,
+            title: plan.title,
+            parentId: await real(plan.parentId),
+            ...(plan.properties === undefined ? {} : { properties: { ...plan.properties } }),
+          },
+        });
+        return await respondWith(itemId, 201);
+      }
+      const item = (await store.readItems([plan.itemId]))[0];
+      if (item === undefined)
+        return problem(404, 'item.not_found', 'This item is not in the synced copy.');
+      const base = {
+        operationId: crypto.randomUUID(),
+        itemId: item.id,
+        expectedRevision: item.revision,
+      };
+      if (plan.kind === 'rename')
+        await store.enqueue(item.workspaceId, {
+          ...base,
+          kind: 'rename',
+          payload: { title: plan.title },
+        });
+      else if (plan.kind === 'move')
+        await store.enqueue(item.workspaceId, {
+          ...base,
+          kind: 'move',
+          payload: { parentId: await real(plan.parentId), afterId: await real(plan.afterId) },
+        });
+      else if (plan.kind === 'properties')
+        await store.enqueue(item.workspaceId, {
+          ...base,
+          kind: 'properties',
+          payload: { changes: { ...plan.changes } },
+        });
+      else {
+        await store.enqueue(item.workspaceId, { ...base, kind: 'archive', payload: {} });
+        indexes.clear();
+        return new Response(null, { status: 204 });
+      }
+      return await respondWith(item.id);
+    } catch (error) {
+      return problem(
+        403,
+        'offline.not_allowed',
+        error instanceof Error && error.message !== ''
+          ? `${error.message}. This change was not made offline.`
+          : 'This change cannot be made offline.',
+      );
+    }
+  }
+
+  /** Local ids the server has since replaced, found in a request's path, query and body. */
+  async function withServerIds(
+    store: MirrorReader,
+    url: URL,
+    init: RequestInit | undefined,
+  ): Promise<{ url: URL; init: RequestInit | undefined } | null> {
+    const map = new Map<string, string>();
+    const resolve = async (id: string | null): Promise<void> => {
+      if (id === null || map.has(id) || !/^[0-9a-fA-F-]{36}$/.test(id)) return;
+      const found = (await store.readItems([id]))[0];
+      if (found !== undefined && found.id !== id) map.set(id, found.id);
+    };
+    const body = typeof init?.body === 'string' ? init.body : null;
+    let parsed: Json | null = null;
+    try {
+      const value: unknown = body === null ? null : JSON.parse(body);
+      parsed = isRecord(value) ? value : null;
+    } catch {
+      /* A body that is not JSON carries no ids of ours. */
+    }
+    for (const segment of url.pathname.split('/')) await resolve(segment);
+    await resolve(url.searchParams.get('parentId'));
+    for (const key of ['parentId', 'afterId'])
+      await resolve(typeof parsed?.[key] === 'string' ? parsed[key] : null);
+    if (map.size === 0) return null;
+    const swap = (text: string): string => {
+      let out = text;
+      for (const [from, to] of map) out = out.split(from).join(to);
+      return out;
+    };
+    const next = new URL(swap(url.href));
+    return {
+      url: next,
+      init: body === null || init === undefined ? init : { ...init, body: swap(body) },
+    };
   }
 
   function remember(store: MirrorReader, path: string, response: Response): void {
@@ -334,6 +533,16 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
           deps.onReachability(true);
           const store = deps.store();
           if (store !== null && method === 'GET') remember(store, url.pathname, response);
+          // A screen still addressing an item by the temporary id it was created under, after the
+          // server's replacement landed: ask again with the real one.
+          if (
+            store !== null &&
+            !(input instanceof Request) &&
+            [400, 404, 409, 422].includes(response.status)
+          ) {
+            const swapped = await withServerIds(store, url, init).catch(() => null);
+            if (swapped !== null) return await deps.inner(swapped.url.href, swapped.init);
+          }
           return response;
         }
         unreachable = response;
@@ -353,12 +562,22 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     if (store === null) {
       return unreachable ?? problem(503, 'offline.unavailable', 'Nix cannot reach the server.');
     }
-    if (method !== 'GET')
-      return problem(
-        503,
-        'offline.read_only',
-        'You are offline. This change needs a connection and was not made.',
-      );
+    if (method !== 'GET') {
+      let body: unknown = null;
+      try {
+        body = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+      } catch {
+        /* An unreadable body is not a write we can queue. */
+      }
+      const plan = planWrite(method, url.pathname, body);
+      return plan === null
+        ? problem(
+            503,
+            'offline.read_only',
+            'You are offline. This change needs a connection and was not made.',
+          )
+        : write(store, plan);
+    }
     const local = await answer(store, url).catch(() => null);
     return (
       local ?? unreachable ?? problem(503, 'offline.unavailable', 'This is not available offline.')

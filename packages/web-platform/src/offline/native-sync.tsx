@@ -9,7 +9,12 @@ import { useAuth } from '../auth/auth-provider';
 import { createMirrorBodyCache } from './mirror-body-cache';
 import { REMEMBERED, rememberKey } from './mirror-fetch';
 import { discardNativeMirror, getNativeMirror } from './native-mirror';
-import { setOfflineState, useOfflineState } from './offline-state';
+import {
+  getOfflineState,
+  setOfflineState,
+  subscribeOfflineState,
+  useOfflineState,
+} from './offline-state';
 import { getShellFetch } from './shell-fetch';
 import { createSyncScheduler, runFullSync } from './sync';
 
@@ -90,6 +95,11 @@ export function NativeSync(): ReactNode {
               all.push(workspace);
             return all;
           },
+          // Queued changes were replayed: item ids and lists the screens hold may have changed.
+          onReplayed: () => {
+            client.invalidate(['items']);
+            client.invalidate(['workspaces']);
+          },
           capability: (itemId, versionId) =>
             client.query(files.downloadFile(itemId, versionId), { forceRefresh: true }),
         });
@@ -99,7 +109,18 @@ export function NativeSync(): ReactNode {
           await warmRemembered(() => getAccessToken());
         }
       });
-      stop = scheduler.start();
+      const stopScheduler = scheduler.start();
+      // Writes queued while the connection was flaky go out as soon as a request gets through.
+      let wasDown = getOfflineState().networkDown;
+      const unsubscribe = subscribeOfflineState(() => {
+        const down = getOfflineState().networkDown;
+        if (wasDown && !down) void scheduler.trigger();
+        wasDown = down;
+      });
+      stop = () => {
+        unsubscribe();
+        stopScheduler();
+      };
     })().catch(() => undefined);
 
     return () => {

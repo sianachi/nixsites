@@ -30,7 +30,13 @@ export async function loadServerThumbnail(
     forceRefresh: true,
   });
   const url = new URL(capability.url);
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+  const ownBlob = fileResources.isOwnBlobUrl(capability.url);
+  if (
+    !ownBlob &&
+    url.protocol !== 'https:' &&
+    url.hostname !== 'localhost' &&
+    url.hostname !== '127.0.0.1'
+  ) {
     throw new TypeError('Thumbnail capabilities must use HTTPS outside local development.');
   }
   if (url.username !== '' || url.password !== '') {
@@ -42,12 +48,12 @@ export async function loadServerThumbnail(
   // so it is unique per tenant and per file version. A signer that moved identity into the host
   // or the query would need this key to follow it.
   const objectAddress = `${url.origin}${url.pathname}`;
-  const held = recallAuthorisedBytes(objectAddress);
+  const held = ownBlob ? null : recallAuthorisedBytes(objectAddress);
   if (held !== null) return held;
   const response = await fetch(url, { signal, credentials: 'omit', redirect: 'error' });
   if (!response.ok) throw new Error('The thumbnail download failed.');
   const blob = await response.blob();
   // Not kept if a sign-out cleared the tab while this was in flight.
-  rememberAuthorisedBytes(objectAddress, blob, generation);
+  if (!ownBlob) rememberAuthorisedBytes(objectAddress, blob, generation);
   return blob;
 }

@@ -1,4 +1,11 @@
-import type { MirrorItem } from '@nix/sync-core/mirror';
+import type { MirrorItem, OutboxOperation } from '@nix/sync-core/mirror';
+import {
+  createInMemoryTokenStore,
+  createNixClient,
+  files,
+  structure,
+  views,
+} from '@nix/api-client';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -65,9 +72,26 @@ const items = [
   }),
 ];
 
-function fakeStore(settings: Record<string, string> = {}): MirrorReader {
+function fakeStore(
+  settings: Record<string, string> = {},
+  extra: { outbox?: OutboxOperation[]; aliases?: Record<string, string>; refuse?: string } = {},
+): MirrorReader {
+  const outbox = extra.outbox ?? [];
   return {
-    readItems: (ids) => Promise.resolve(items.filter((entry) => ids.includes(entry.id))),
+    enqueue: (_ws, operation) => {
+      if (extra.refuse !== undefined) return Promise.reject(new Error(extra.refuse));
+      outbox.push(operation);
+      if (operation.kind === 'create')
+        items.push(item(operation.itemId, { title: operation.payload.title, revision: '0' }));
+      return Promise.resolve();
+    },
+    listOutbox: () => Promise.resolve([...outbox]),
+    readItems: (ids) =>
+      Promise.resolve(
+        items.filter((entry) =>
+          ids.some((id) => id === entry.id || extra.aliases?.[id] === entry.id),
+        ),
+      ),
     listItems: () => Promise.resolve(items),
     searchItems: (_ws, q) => Promise.resolve(items.filter((entry) => entry.title.includes(q))),
     readWorkspaceList: () => Promise.resolve([{ id: WS, name: 'Home' }]),
@@ -230,5 +254,186 @@ describe('mirror fetch router', () => {
     });
     await run('https://files.example/x');
     expect(inner).toHaveBeenCalled();
+  });
+
+  describe('offline writes', () => {
+    const post = (path: string, body: unknown, method = 'POST') =>
+      ({ path, init: { method, body: JSON.stringify(body) } }) as const;
+
+    it('queues a rename with the revision it saw and answers with the item', async () => {
+      const outbox: OutboxOperation[] = [];
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const { path, init } = post(`/api/v1/items/${CHILD}`, { title: 'Renamed' }, 'PATCH');
+      const response = await get(path, init);
+      expect(response.status).toBe(200);
+      expect(((await response.json()) as { id: string }).id).toBe(CHILD);
+      expect(outbox).toMatchObject([
+        { kind: 'rename', itemId: CHILD, expectedRevision: '1', payload: { title: 'Renamed' } },
+      ]);
+    });
+
+    it('queues a create under its idempotency key, once, and returns a local item', async () => {
+      const outbox: OutboxOperation[] = [];
+      const store = fakeStore({}, { outbox });
+      const { get } = setup({ store });
+      const key = '0199a000-0000-7000-8000-0000000000aa';
+      const { path, init } = post(`/api/v1/workspaces/${WS}/items`, {
+        type: 'note',
+        title: 'New',
+        parentId: ROOT,
+        properties: null,
+        idempotencyKey: key,
+      });
+      const first = await get(path, init);
+      const second = await get(path, init);
+      expect(first.status).toBe(201);
+      const created = (await first.json()) as { id: string; title: string };
+      expect(created.title).toBe('New');
+      expect(((await second.json()) as { id: string }).id).toBe(created.id);
+      expect(outbox).toHaveLength(1);
+      expect(outbox[0]).toMatchObject({ kind: 'create', operationId: key, itemId: created.id });
+    });
+
+    it('queues trash as archive and property edits as changes', async () => {
+      const outbox: OutboxOperation[] = [];
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const trashed = await get(`/api/v1/items/${CHILD}`, { method: 'DELETE' });
+      expect(trashed.status).toBe(204);
+      const { path, init } = post(
+        `/api/v1/items/${CHILD}/properties`,
+        { properties: { status: 'done', old: null } },
+        'PATCH',
+      );
+      await get(path, init);
+      expect(outbox).toMatchObject([
+        { kind: 'archive', itemId: CHILD },
+        { kind: 'properties', itemId: CHILD, payload: { changes: { status: 'done', old: null } } },
+      ]);
+    });
+
+    it('refuses writes the replay endpoint cannot carry, and cross-workspace moves', async () => {
+      const outbox: OutboxOperation[] = [];
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      for (const [path, init] of [
+        [`/api/v1/items/${CHILD}/restore`, { method: 'POST', body: '{}' }],
+        [`/api/v1/items/${CHILD}/protection`, { method: 'PUT', body: '{}' }],
+        [`/api/v1/workspaces/${WS}/structured-items`, { method: 'POST', body: '{}' }],
+        [
+          `/api/v1/items/${CHILD}/move`,
+          { method: 'POST', body: JSON.stringify({ parentId: null, workspaceId: WS }) },
+        ],
+      ] as const) {
+        const response = await get(path, init);
+        expect(response.status).toBe(503);
+        expect(((await response.json()) as { code: string }).code).toBe('offline.read_only');
+      }
+      expect(outbox).toEqual([]);
+    });
+
+    it('says why when the mirror will not take a change', async () => {
+      const { get } = setup({
+        store: fakeStore({}, { refuse: 'Item is not admitted for offline writes' }),
+      });
+      const { path, init } = post(`/api/v1/items/${CHILD}`, { title: 'x' }, 'PATCH');
+      const response = await get(path, init);
+      expect(response.status).toBe(403);
+      expect(((await response.json()) as { detail: string }).detail).toContain('not admitted');
+    });
+
+    it('re-asks the server with the real id once a temporary id has been replaced', async () => {
+      const temp = '0199a000-0000-7000-8000-0000000000bb';
+      const inner = vi.fn((input: RequestInfo | URL) => {
+        const href = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
+        return Promise.resolve(
+          href.includes(temp) ? new Response('{}', { status: 404 }) : Response.json({ id: CHILD }),
+        );
+      });
+      const { get } = setup({
+        inner: inner as unknown as typeof fetch,
+        store: fakeStore({}, { aliases: { [temp]: CHILD } }),
+      });
+      const response = await get(`/api/v1/items/${temp}`);
+      expect(response.status).toBe(200);
+      expect(inner).toHaveBeenLastCalledWith(
+        expect.stringContaining(`/api/v1/items/${CHILD}`),
+        undefined,
+      );
+    });
+  });
+
+  describe('responses parse with the real client schemas', () => {
+    const HEX = 'a'.repeat(64);
+    const stored = [
+      item(ROOT, {
+        schema: { properties: [{ key: 'status', type: 'select', options: ['A'] }] },
+        views: {
+          views: [
+            { id: 'v1', name: 'List', kind: 'list' },
+            { id: 'v1', name: 'Dupe', kind: 'list' },
+          ],
+          default: 'gone',
+          hideDocument: true,
+        },
+      }),
+      item(CHILD, {
+        parentId: ROOT,
+        schema: { inherit: true, properties: [{ key: 'due', label: 'Due', type: 'date' }] },
+      }),
+      item(FILE, {
+        parentId: CHILD,
+        type: 'file',
+        file: {
+          versionId: VERSION,
+          fileName: 'p.png',
+          mediaType: 'image/png',
+          byteLength: 3,
+          sha256: HEX,
+        },
+      }),
+    ];
+    const reader = {
+      ...fakeStore(),
+      readItems: (ids: string[]) => Promise.resolve(stored.filter((e) => ids.includes(e.id))),
+    };
+    const client = createNixClient({
+      baseUrl: location.origin,
+      tokens: createInMemoryTokenStore({
+        initialAccessToken: 't',
+        refresh: () => Promise.resolve(null),
+      }),
+      fetch: createMirrorFetch({
+        inner: () => Promise.reject(new TypeError('Load failed')),
+        store: () => reader,
+        readFile: () => Promise.resolve(new Uint8Array([1, 2, 3])),
+        isBootOffline: () => true,
+        onReachability: () => undefined,
+        createBlobUrl: () => `blob:${location.origin}/abc`,
+      }),
+    });
+
+    it('merges the schema in Core order and fills the fields Core always sends', async () => {
+      const schema = await client.query(structure.effectiveSchema(CHILD), { forceRefresh: true });
+      expect(schema.properties.map((p) => p.key)).toEqual(['status', 'due']);
+      expect(schema.properties[0]).toMatchObject({
+        label: 'status',
+        options: ['A'],
+        required: false,
+      });
+      expect(schema.declared.map((p) => p.key)).toEqual(['due']);
+    });
+
+    it('resolves the views default like Core: dangling opens the document, hidden opens the first', async () => {
+      const set = await client.query(views.containerViews(ROOT), { forceRefresh: true });
+      expect(set.views.map((v) => v.id)).toEqual(['v1']);
+      expect(set).toMatchObject({ default: 'v1', hideDocument: true, unrenderable: [] });
+    });
+
+    it('answers the file record and the thumbnail capability', async () => {
+      const record = await client.query(files.fileByItem(FILE), { forceRefresh: true });
+      expect(record.current).toMatchObject({ fileName: 'p.png', previewable: true });
+      const thumbnail = await client.query(files.thumbnailFile(FILE), { forceRefresh: true });
+      expect(thumbnail.url).toBe(`blob:${location.origin}/abc`);
+      expect(files.isOwnBlobUrl(thumbnail.url)).toBe(true);
+    });
   });
 });
