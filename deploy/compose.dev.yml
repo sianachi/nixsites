@@ -124,7 +124,7 @@ services:
   # a separate trust domain, migrates on its own schedule, and must never be
   # reachable through the app roles. Not published to the host on purpose.
   zitadel-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     profiles: ["core"]
     environment:
       POSTGRES_USER: postgres
