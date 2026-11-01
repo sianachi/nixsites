@@ -21,7 +21,7 @@ import (
 )
 
 const pdfMargin = 50.0
-const pdfBottom = 792.0
+
 const maximumPDFPages = 1000
 
 var pdfFont, _ = sfnt.Parse(goregular.TTF)
@@ -46,6 +46,12 @@ func PDFTextRequiresSubstitution(value string) bool { return pdfText(value) != s
 func pdfContentWidth(pdf *fpdf.Fpdf) float64 {
 	width, _ := pdf.GetPageSize()
 	return width - 2*pdfMargin
+}
+
+// pdfBottom is the lowest y content may reach: the page height less the bottom margin.
+func pdfBottom(pdf *fpdf.Fpdf) float64 {
+	_, height := pdf.GetPageSize()
+	return height - pdfMargin
 }
 
 func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report ReportSource, pageSize string) error {
@@ -131,7 +137,7 @@ func addPDFPage(pdf *fpdf.Fpdf) {
 }
 
 func pdfSpace(pdf *fpdf.Fpdf, height float64) {
-	if pdf.GetY()+height > pdfBottom {
+	if pdf.GetY()+height > pdfBottom(pdf) {
 		addPDFPage(pdf)
 	}
 }
@@ -284,7 +290,7 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
 				return
 			}
 			pdfSpace(pdf, 22)
-			take := min(count-start, max(1, int((pdfBottom-pdf.GetY()-8)/14)))
+			take := min(count-start, max(1, int((pdfBottom(pdf)-pdf.GetY()-8)/14)))
 			height := float64(take)*14 + 8
 			y := pdf.GetY()
 			for i := 0; i < columns; i++ {
@@ -309,7 +315,7 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
 }
 
 func pdfImage(pdf *fpdf.Fpdf, raster stream.Image, indent float64, name string) {
-	width, height := imageSize(raster, pdfContentWidth(pdf)-indent, pdfBottom-pdfMargin)
+	width, height := imageSize(raster, pdfContentWidth(pdf)-indent, pdfBottom(pdf)-pdfMargin)
 	pdfSpace(pdf, height+8)
 	options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
 	pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))
