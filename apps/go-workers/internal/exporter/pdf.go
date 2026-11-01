@@ -22,7 +22,6 @@ import (
 
 const pdfMargin = 50.0
 const pdfBottom = 792.0
-const pdfWidth = 495.28
 const maximumPDFPages = 1000
 
 var pdfFont, _ = sfnt.Parse(goregular.TTF)
@@ -43,8 +42,18 @@ func pdfText(value string) string {
 
 func PDFTextRequiresSubstitution(value string) bool { return pdfText(value) != sanitizeText(value) }
 
-func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report ReportSource) error {
-	pdf := fpdf.New("P", "pt", "A4", "")
+// pdfContentWidth is the text width between the margins, which follows the page size.
+func pdfContentWidth(pdf *fpdf.Fpdf) float64 {
+	width, _ := pdf.GetPageSize()
+	return width - 2*pdfMargin
+}
+
+func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report ReportSource, pageSize string) error {
+	size := "A4"
+	if pageSize == "letter" {
+		size = "Letter"
+	}
+	pdf := fpdf.New("P", "pt", size, "")
 	pdf.SetCreationDate(time.Unix(0, 0).UTC())
 	pdf.SetModificationDate(time.Unix(0, 0).UTC())
 	pdf.SetCatalogSort(true)
@@ -66,7 +75,7 @@ func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report 
 		pdf.SetY(-32)
 		pdf.SetFont("Nix", "", 9)
 		pdf.SetTextColor(100, 100, 100)
-		pdf.CellFormat(pdfWidth, 12, fmt.Sprint(pdf.PageNo()), "", 0, "C", false, 0, "")
+		pdf.CellFormat(pdfContentWidth(pdf), 12, fmt.Sprint(pdf.PageNo()), "", 0, "C", false, 0, "")
 	})
 	// The PDF library retains pages and raster resources until Output. Bound cumulative input
 	// in addition to the output writer limit, rather than implying a streaming memory budget.
@@ -100,7 +109,7 @@ func writePDF(output io.Writer, next RecordSource, limits stream.Limits, report 
 		title, _ := ProjectTitle(record.Title)
 		pdf.SetFont("Nix", "B", 24)
 		pdf.SetTextColor(25, 25, 25)
-		pdf.MultiCell(pdfWidth, 30, pdfText(title), "", "L", false)
+		pdf.MultiCell(pdfContentWidth(pdf), 30, pdfText(title), "", "L", false)
 		pdf.Ln(12)
 		renderPDFBlocks(pdf, record, blocksOf(record), 0, records)
 		if pdf.Error() != nil {
@@ -156,14 +165,14 @@ func renderPDFBlocks(pdf *fpdf.Fpdf, record stream.Record, blocks []render.Block
 			pdf.SetLeftMargin(pdfMargin + indent)
 			pdf.SetX(pdfMargin + indent)
 			for _, line := range strings.Split(block.Text, "\n") {
-				pdf.MultiCell(pdfWidth-indent, 15, pdfText(line), "", "L", true)
+				pdf.MultiCell(pdfContentWidth(pdf)-indent, 15, pdfText(line), "", "L", true)
 			}
 			pdf.SetLeftMargin(pdfMargin)
 			pdf.Ln(6)
 		case "rule":
 			pdfSpace(pdf, 12)
 			pdf.SetDrawColor(190, 190, 190)
-			pdf.Line(pdfMargin, pdf.GetY(), pdfMargin+pdfWidth, pdf.GetY())
+			pdf.Line(pdfMargin, pdf.GetY(), pdfMargin+pdfContentWidth(pdf), pdf.GetY())
 			pdf.Ln(8)
 		case "pageBreak":
 			addPDFPage(pdf)
@@ -254,7 +263,7 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
 	if columns == 0 {
 		return
 	}
-	width := pdfWidth / float64(columns)
+	width := pdfContentWidth(pdf) / float64(columns)
 	for rowIndex, row := range rows {
 		style := ""
 		if row.Header {
@@ -300,7 +309,7 @@ func renderPDFTable(pdf *fpdf.Fpdf, rows []render.Row) {
 }
 
 func pdfImage(pdf *fpdf.Fpdf, raster stream.Image, indent float64, name string) {
-	width, height := imageSize(raster, pdfWidth-indent, pdfBottom-pdfMargin)
+	width, height := imageSize(raster, pdfContentWidth(pdf)-indent, pdfBottom-pdfMargin)
 	pdfSpace(pdf, height+8)
 	options := fpdf.ImageOptions{ImageType: raster.Format, ReadDpi: false}
 	pdf.RegisterImageOptionsReader(name, options, bytes.NewReader(raster.Data))

@@ -19,7 +19,8 @@ public sealed record BeginExportRequest(
     string Format,
     string Scope,
     string IdempotencyKey,
-    bool IncludeComments = false);
+    bool IncludeComments = false,
+    string? PageSize = null);
 
 public sealed record ExportResponse(
     Guid Id,
@@ -61,7 +62,8 @@ public sealed record ExportJobPayload(
     string Extension,
     string MediaType,
     IReadOnlyList<string> DeclaredLoss,
-    bool IncludeComments = false);
+    bool IncludeComments = false,
+    string PageSize = "a4");
 
 public sealed record WorkerExportSourceResponse(
     Guid ExportId,

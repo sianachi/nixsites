@@ -113,7 +113,7 @@ func TestConvertedFilesDoNotEmbedInternalLossReports(t *testing.T) {
 		record := records[index]
 		index++
 		return record, true, nil
-	}, &output, limits, func() []string { return []string{"A view was omitted."} })
+	}, &output, limits, func() []string { return []string{"A view was omitted."} }, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestDOCXPreservesProjectedHeadingsListsLinksAndTablesWithoutInternalReport(
 		return stream.Record{ID: "one", Title: "Title", Blocks: body}, true, nil
 	}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}, func() []string {
 		return []string{"A property was omitted."}
-	})
+	}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func TestPDFFlattensMarkdownSyntaxWithoutInternalReport(t *testing.T) {
 		return stream.Record{ID: "one", Title: "Title", Blocks: []render.Block{render.Heading(2, "Plan"), {Kind: "paragraph", Runs: []render.Run{styled("Bold", "bold"), {Text: " "}, link("site", "https://example.test")}}}}, true, nil
 	}, &output, stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}, func() []string {
 		return []string{"A view was omitted."}
-	})
+	}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +382,7 @@ func TestLossyDocumentExportsOmitInternalReportsInEveryFormat(t *testing.T) {
 			return stream.Record{ID: "one", Title: "Lossy", Blocks: projected.Blocks}, true, nil
 		}
 		var output bytes.Buffer
-		if err := WriteStreamWithReport(format, next, &output, limits, func() []string { return projected.Losses }); err != nil {
+		if err := WriteStreamWithReport(format, next, &output, limits, func() []string { return projected.Losses }, ""); err != nil {
 			t.Fatalf("%s: %v", format, err)
 		}
 		text := output.String()
@@ -403,6 +403,24 @@ func TestLossyDocumentExportsOmitInternalReportsInEveryFormat(t *testing.T) {
 			if strings.Contains(text, banned) {
 				t.Errorf("%s embedded %q", format, banned)
 			}
+		}
+	}
+}
+
+func TestPDFPageSizeSelectsLetterOrA4(t *testing.T) {
+	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 10}
+	for pageSize, box := range map[string]string{"": "595.28 841.89", "a4": "595.28 841.89", "letter": "612.00 792.00"} {
+		index := 0
+		var output bytes.Buffer
+		err := WriteStreamWithReport("pdf", func() (stream.Record, bool, error) {
+			if index > 0 {
+				return stream.Record{}, false, nil
+			}
+			index++
+			return para("one", "Title", "Body"), true, nil
+		}, &output, limits, nil, pageSize)
+		if err != nil || !strings.Contains(output.String(), "/MediaBox [0 0 "+box+"]") {
+			t.Fatalf("pageSize %q: want MediaBox %s, err %v", pageSize, box, err)
 		}
 	}
 }

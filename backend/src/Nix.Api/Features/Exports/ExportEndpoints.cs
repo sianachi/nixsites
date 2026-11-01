@@ -93,13 +93,15 @@ internal static class ExportEndpoints
     {
         var format = NormalizeFormat(request.Format);
         var scope = NormalizeScope(request.Scope);
+        var pageSize = request.PageSize ?? "a4";
         if (format.Length == 0
             || scope.Length == 0
+            || pageSize is not ("a4" or "letter")
             || string.IsNullOrWhiteSpace(request.IdempotencyKey)
             || request.IdempotencyKey.Length > 160
             || request.ItemId == Guid.Empty)
         {
-            return Problem(context, 400, "exports.request_invalid", "Export request invalid", "The item, format, scope, and idempotency key must be valid.");
+            return Problem(context, 400, "exports.request_invalid", "Export request invalid", "The item, format, scope, page size, and idempotency key must be valid.");
         }
         if (!signer.IsConfigured
             || !tokens.IsConfigured
@@ -159,7 +161,8 @@ internal static class ExportEndpoints
             descriptor.Extension,
             descriptor.MediaType,
             descriptor.DeclaredLoss.ToArray(),
-            request.IncludeComments);
+            request.IncludeComments,
+            pageSize);
         WorkerJobRecord job;
         try
         {

@@ -392,6 +392,27 @@ public sealed class ExportHttpTests : IAsyncLifetime
         Assert.Equal("exports.idempotency_conflict", await ProblemCodeAsync(conflict));
     }
 
+    [Fact]
+    public async Task Export_page_size_is_a4_or_letter_and_anything_else_is_refused()
+    {
+        var itemId = await CreateItemAsync("Page size", M0SchemaSeed.Alpha.ItemId);
+        var token = await AccessTokenAsync();
+        using var refused = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/exports",
+            token,
+            new { itemId, format = "pdf", scope = "item", idempotencyKey = "export-http-page-legal", pageSize = "legal" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal("exports.request_invalid", await ProblemCodeAsync(refused));
+
+        using var letter = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/exports",
+            token,
+            new { itemId, format = "pdf", scope = "item", idempotencyKey = "export-http-page-letter", pageSize = "letter" });
+        Assert.Equal(HttpStatusCode.Accepted, letter.StatusCode);
+    }
+
     private async Task<Guid> CreateImageAsync(string mediaType = "image/png", bool previewable = true)
     {
         await using var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);

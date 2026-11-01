@@ -316,6 +316,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
         scope: { type: 'string' },
         idempotencyKey: { type: 'string' },
         includeComments: { type: 'boolean' },
+        pageSize: { type: ['null', 'string'] },
       },
     },
   },

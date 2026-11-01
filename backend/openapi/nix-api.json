@@ -13888,6 +13888,12 @@
           "includeComments": {
             "type": "boolean",
             "default": false
+          },
+          "pageSize": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

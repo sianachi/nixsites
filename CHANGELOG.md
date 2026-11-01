@@ -10,6 +10,7 @@ follows semantic versioning (`0.x` pre-1.0).
 - A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
+- PDF exports can be set to Letter instead of A4 from the export dialog.
 
 ### Changed
 

@@ -3475,6 +3475,7 @@ export interface components {
       idempotencyKey: string;
       /** @default false */
       includeComments: boolean;
+      pageSize?: null | string;
     };
     BeginFileUploadRequest: {
       /** Format: uuid */
