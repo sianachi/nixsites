@@ -15,6 +15,11 @@ follows semantic versioning (`0.x` pre-1.0).
 - Compose installs serve `/web-config.json`, so `NIX_WEB_LANDING` and `NIX_WEB_DEMO` work there as
   they do on Kubernetes.
 
+### Fixed
+
+- A Kubernetes deploy re-creates the database seed Job, so a release that changes the seed image
+  (as the 0.5.0 digest pins did) no longer stops at the seed step.
+
 ### Security
 
 - **Breaking:** tenant administrators no longer see or open workspaces they are not a member of.
