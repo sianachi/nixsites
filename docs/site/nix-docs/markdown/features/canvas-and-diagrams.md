@@ -15,12 +15,12 @@ Because canvas is a body kind, a canvas can also have children and views, like a
 
 Write a code block with the language `mermaid` in any note and Nix renders it as a diagram, keeping the source editable beside it:
 
-````text
+```text
 ```mermaid
 flowchart LR
   Idea --> Draft --> Review --> Published
 ```
-````
+```
 
 Uploaded `.mmd` and `.mermaid` files open in the same viewer. Diagrams render with strict security settings and follow the light or dark theme. The source is what is stored; the picture is derived from it.
 

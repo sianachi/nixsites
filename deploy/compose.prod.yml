@@ -193,6 +193,9 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       ASPNETCORE_ENVIRONMENT: Production
       Logging__Console__FormatterName: json
       ConnectionStrings__Nix: ${NIX_CORE_DATABASE_URL:?set NIX_CORE_DATABASE_URL}
@@ -289,6 +292,9 @@ services:
       nix-api:
         condition: service_started
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_COLLAB_DATABASE_URL: ${NIX_COLLAB_DATABASE_URL:?set NIX_COLLAB_DATABASE_URL}
       NIX_COLLAB_CORE_BASE_URL: http://nix-api:8080
       NIX_COLLAB_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -332,6 +338,9 @@ services:
       nix-collab:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: import
       NIX_COMPANION_DATA_DIR: /var/lib/nix-worker/companion
@@ -376,6 +385,9 @@ services:
       nix-collab:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: export
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -416,6 +428,9 @@ services:
       nix-api:
         condition: service_started
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: plugin-events
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -456,6 +471,9 @@ services:
       nix-api:
         condition: service_started
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: calendar
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -493,6 +511,9 @@ services:
       nix-api:
         condition: service_started
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: notify
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -533,6 +554,9 @@ services:
       nix-collab:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_SITES_API_URL: http://nix-api:8080
       NIX_SITES_COLLAB_URL: http://nix-collab:8100
       NIX_SITES_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -566,6 +590,9 @@ services:
       nix-versitygw:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_SITES_SERVE_ADDRESS: ":8400"
       NIX_SITES_ALLOWED_SUFFIX: ${NIX_SITES_DOMAIN:-}
       NIX_SITES_DEFAULT_LABEL_SUFFIX: ${NIX_SITES_DEFAULT_LABEL_SUFFIX:-}
@@ -605,6 +632,9 @@ services:
       nix-api:
         condition: service_started
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_API_URL: http://nix-api:8080
       NIX_COLLAB_URL: http://nix-collab:8100
     healthcheck:
@@ -631,6 +661,9 @@ services:
       nix-collab:
         condition: service_healthy
     environment:
+      # The release this container runs, shown in Settings > About.
+      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
+      NIX_RELEASE_COMMIT: ${NIX_WEB_IMAGE_TAG}
       NIX_OBJECT_STORE_PUBLIC_ORIGIN: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
       NIX_OBJECT_STORE_BUCKET: ${NIX_OBJECT_STORE_BUCKET:?set NIX_OBJECT_STORE_BUCKET}
       # Unset keeps the sites host block on a name that never resolves.

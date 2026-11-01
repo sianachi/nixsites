@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-workspaces",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "description": "Workspaces, document import and launch: workspace context and switcher, administration, import dialog and runner, launch page",

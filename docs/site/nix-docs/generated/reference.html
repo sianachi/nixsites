@@ -1167,6 +1167,18 @@
 
 <p>Responses: <code>200</code>.</p>
 </article>
+<article id="getsystemversions" data-search="get /api/v1/system/versions getsystemversions the release each service runs lists the version and image tag of core and of every service that has called core's internal routes since core started: collab, the workers and the sites worker. health">
+<h3><span class="verb">GET</span> <code>/api/v1/system/versions</code></h3>
+<p>The release each service runs</p>
+<p class="id">Operation id: <code>GetSystemVersions</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Lists the version and image tag of Core and of every service that has called Core's internal routes since Core started: collab, the workers and the sites worker.</p>
+
+
+<p>Responses: <code>200</code>, <code>401</code>.</p>
+</article>
 <article id="getliveness" data-search="get /healthz getliveness liveness probe answers 200 whenever the process can serve http. touches no dependency. health">
 <h3><span class="verb">GET</span> <code>/healthz</code></h3>
 <p>Liveness probe</p>

@@ -70,6 +70,38 @@
         }
       }
     },
+    "/api/v1/system/versions": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "The release each service runs",
+        "description": "Lists the version and image tag of Core and of every service that has called Core's internal routes since Core started: collab, the workers and the sites worker.",
+        "operationId": "GetSystemVersions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemVersionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/backups": {
       "get": {
         "tags": [
@@ -22344,6 +22376,30 @@
           }
         }
       },
+      "ServiceVersionResponse": {
+        "required": [
+          "service",
+          "version",
+          "commit",
+          "reportedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string"
+          },
+          "reportedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "SetItemLockRequest": {
         "required": [
           "password",
@@ -23283,6 +23339,20 @@
           "jobId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "SystemVersionsResponse": {
+        "required": [
+          "services"
+        ],
+        "type": "object",
+        "properties": {
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceVersionResponse"
+            }
           }
         }
       },

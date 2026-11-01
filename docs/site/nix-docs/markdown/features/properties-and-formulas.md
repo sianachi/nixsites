@@ -71,13 +71,13 @@ A blank number counts as zero in arithmetic. Use `ISBLANK` when an incomplete ro
 
 | Error | Meaning |
 | --- | --- |
-| #PARSE! | The expression cannot be parsed |
-| #NAME? | A field key or function name is unknown |
-| #VALUE! | A value cannot be used by an operator or function |
-| #DIV/0! | Division by zero |
-| #REF! | A formula field tried to read spreadsheet cells |
-| #CYCLE! | A formula refers back to itself, directly or through others |
-| #LIMIT! | The expression, its text or its work exceeded a bound |
+| \#PARSE! | The expression cannot be parsed |
+| \#NAME? | A field key or function name is unknown |
+| \#VALUE! | A value cannot be used by an operator or function |
+| \#DIV/0! | Division by zero |
+| \#REF! | A formula field tried to read spreadsheet cells |
+| \#CYCLE! | A formula refers back to itself, directly or through others |
+| \#LIMIT! | The expression, its text or its work exceeded a bound |
 
 The editor checks syntax, function names, argument counts and field keys as you type, and points at the position of any mistake.
 

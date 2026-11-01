@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -24,6 +25,14 @@ var ErrResponseTooLarge = errors.New("worker API response exceeds its size limit
 type Client struct {
 	baseURL, secret, owner string
 	httpClient             *http.Client
+}
+
+// release is what this process runs, sent on every call so Core can show it in Settings > About.
+// The service name carries the roles, because one image runs as several workers.
+var release = struct{ service, version, commit string }{
+	service: "worker:" + strings.ReplaceAll(os.Getenv("NIX_WORKER_ROLES"), " ", ""),
+	version: os.Getenv("NIX_RELEASE_VERSION"),
+	commit:  os.Getenv("NIX_RELEASE_COMMIT"),
 }
 
 type executionContextKey struct{}
@@ -1435,6 +1444,11 @@ func (client *Client) newRequest(ctx context.Context, method, path string, body 
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-Nix-Internal-Secret", client.secret)
+	if release.version != "" || release.commit != "" {
+		request.Header.Set("X-Nix-Service", release.service)
+		request.Header.Set("X-Nix-Release-Version", release.version)
+		request.Header.Set("X-Nix-Release-Commit", release.commit)
+	}
 	if execution, ok := ctx.Value(executionContextKey{}).(executionContext); ok {
 		request.Header.Set("X-Nix-Worker-Job-Id", execution.jobID)
 		request.Header.Set("X-Nix-Worker-Execution-Id", execution.executionID)

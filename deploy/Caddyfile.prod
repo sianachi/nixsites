@@ -49,6 +49,13 @@
 		reverse_proxy nix-collab:8100
 	}
 
+	# The web app's per-install switches and the release this web image runs (packages/web-foundation/src/lib/web-config.ts).
+	handle /web-config.json {
+		header Content-Type application/json
+		header Cache-Control no-store
+		respond `{"landing":{$NIX_WEB_LANDING:false},"demo":{$NIX_WEB_DEMO:false},"release":{"version":"{$NIX_RELEASE_VERSION}","commit":"{$NIX_RELEASE_COMMIT}"}}` 200
+	}
+
 	handle {
 		try_files {path} /index.html
 		file_server

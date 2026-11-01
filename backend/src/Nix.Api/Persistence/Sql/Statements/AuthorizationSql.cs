@@ -124,46 +124,14 @@ public static class AuthorizationSql
         """;
 
     /// <summary>
-    /// Every workspace in the tenant, for a principal whose reach is the tenant.
-    /// </summary>
-    /// <remarks>
-    /// Asked only after <see cref="PrincipalIsTenantAdministrator"/> has said yes. An administrator
-    /// who could be locked out of a workspace could not administer the tenant, which is the same
-    /// rule the per-workspace resolution applies - stated here as a second statement rather than as
-    /// a third arm of the union above, so that an ordinary member never pays for the table scan an
-    /// administrator needs.
-    ///
-    /// Index dependency: <c>IX_workspace_tenant_id</c>.
-    /// </remarks>
-    public const string WorkspacesInTenant = """
-        SELECT workspace.workspace_id
-        FROM workspace
-        WHERE workspace.tenant_id = @tenant_id
-          AND workspace.lifecycle_state = 'active'
-        """;
-
-    /// <summary>Whether one exact workspace belongs to the current tenant.</summary>
-    public const string WorkspaceExistsInTenant = """
-        SELECT EXISTS (
-            SELECT 1
-            FROM workspace
-            WHERE workspace.tenant_id = @tenant_id
-              AND workspace.workspace_id = @workspace_id
-              AND workspace.lifecycle_state = 'active'
-        )
-        """;
-
-    /// <summary>
     /// Whether the acting principal holds a tenant-wide administrative role, by name or through a
     /// group.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Asked once per unit of work. It decides both whether administrative surfaces are offered at
-    /// all and whether a workspace the principal was never added to is nonetheless reachable —
-    /// which is what being a tenant administrator means. Under per-item access control that reach
-    /// becomes an audited override; at workspace granularity there is nothing finer to audit
-    /// against, so it is simply part of the answer.
+    /// Asked once per unit of work. It decides whether tenant administration (administrators, site
+    /// approvals, workspace recovery) is offered. It grants no workspace access: an administrator
+    /// reads or changes a workspace only as a member of it.
     /// </para>
     /// <para>
     /// Index dependencies: <c>PK_tenant_role</c> for the direct arm and

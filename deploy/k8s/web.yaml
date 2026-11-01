@@ -22,6 +22,11 @@ spec:
           image: ${REGISTRY}/web:${TAG}
           ports: [{ containerPort: 8090 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             # Must match Core's browser capability origin so Caddy admits the signed download and
             # upload requests without broadening connect-src to arbitrary hosts.
             - name: NIX_OBJECT_STORE_PUBLIC_ORIGIN

@@ -589,6 +589,43 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_administrator_who_is_not_a_member_recovers_a_workspace_without_gaining_access_to_it()
+    {
+        await SetPersonalOwnerAsync();
+        await SetPrincipalStatusAsync(Alice, "suspended");
+        await InsertHumanAsync(Dana, "dana", "dana@example.test", verified: true);
+        await GrantTenantAdminAsync(Dana);
+
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(Context(Dana), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var permissions = work.Resolve<IPermissionResolver>();
+            Assert.False(await permissions.CanReadWorkspaceAsync(WorkspaceId.From(Visible), Cancellation));
+
+            var recovered = await work.Resolve<NixDispatcher>().SendAsync<RecoverWorkspace, WorkspaceSnapshot>(
+                new RecoverWorkspace(WorkspaceId.From(Visible), PrincipalId.From(Bob)), Cancellation);
+            Assert.True(recovered.IsSuccess, recovered.IsFailure ? recovered.Error.Message : null);
+            Assert.Null(recovered.Value.PersonalOwnerPrincipalId);
+            Assert.False(recovered.Value.CanManageMembers);
+            await work.CommitAsync(Cancellation);
+        }
+
+        var after = await _fixture.Application.BeginUnitOfWorkAsync(Context(Dana), Cancellation);
+        await using (after.ConfigureAwait(false))
+        {
+            Assert.False(await after.Resolve<IPermissionResolver>().CanReadWorkspaceAsync(
+                WorkspaceId.From(Visible), Cancellation));
+        }
+
+        var owner = await _fixture.Application.BeginUnitOfWorkAsync(Context(Bob), Cancellation);
+        await using (owner.ConfigureAwait(false))
+        {
+            Assert.Equal("owner", (await owner.Resolve<WorkspaceAdministrationStore>()
+                .FindPrincipalMemberAsync(WorkspaceId.From(Visible), PrincipalId.From(Bob), Cancellation))?.Role);
+        }
+    }
+
+    [Fact]
     public async Task Two_simultaneous_daily_opens_return_the_one_deterministic_item()
     {
         await SetPersonalOwnerAsync();

@@ -10,11 +10,17 @@ export interface WebConfig {
   readonly landing: boolean;
   /** `/demo` draws the views over sample data held in the browser. */
   readonly demo: boolean;
+  /** The release this web image runs, set by the deployment; absent on an install that does not. */
+  readonly release?: { readonly version: string; readonly commit: string } | undefined;
 }
 
 export const WEB_CONFIG_OFF: WebConfig = { landing: false, demo: false };
 
-const webConfigSchema = z.object({ landing: z.boolean(), demo: z.boolean() });
+const webConfigSchema = z.object({
+  landing: z.boolean(),
+  demo: z.boolean(),
+  release: z.object({ version: z.string(), commit: z.string() }).optional(),
+});
 
 /**
  * Reads the switches once at boot. Anything but a clean answer leaves both off: an install that

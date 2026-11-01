@@ -6,8 +6,6 @@ What has shipped in Nix, one entry per month, newest first. Every commit on `mai
 
 - title: Changelog
 
-
-
 ## Fields
 
 ### Date

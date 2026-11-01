@@ -3,6 +3,31 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## 0.5.1 - 2026-11-01
+
+### Added
+
+- Settings > About lists the exact release each service runs: the web app, Core, collaboration,
+  every worker and the sites worker, each with its version and image commit, flagging one that
+  differs from Core. Deployments set it from the release checkout; a service shows up once it has
+  called Core since Core last started. `GET /api/v1/system/versions` returns the same list, and
+  Core's status endpoint now reports the release version instead of `1.0.0`.
+- Compose installs serve `/web-config.json`, so `NIX_WEB_LANDING` and `NIX_WEB_DEMO` work there as
+  they do on Kubernetes.
+
+### Fixed
+
+- A Kubernetes deploy re-creates the database seed Job, so a release that changes the seed image
+  (as the 0.5.0 digest pins did) no longer stops at the seed step.
+
+### Security
+
+- **Breaking:** tenant administrators no longer see or open workspaces they are not a member of.
+  Being an administrator now means managing the tenant: administrators, site approvals and handing
+  a departed person's personal workspace to a new owner. To work in a workspace, an administrator
+  is invited to it like anyone else. Rename, sharing, member, invitation, archive, restore and
+  daily-note settings follow the same rule.
+
 ## 0.5.0 - 2026-10-30
 
 ### Added

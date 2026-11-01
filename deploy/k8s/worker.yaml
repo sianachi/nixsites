@@ -32,6 +32,11 @@ spec:
           image: ${REGISTRY}/worker:${TAG}
           ports: [{ containerPort: 8301 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: NIX_WORKER_ROLES
               value: import,export,plugin-events,calendar,notify
             # The image's spool is on the read-only root; stage in the writable /tmp mount.

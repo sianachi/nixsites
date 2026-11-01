@@ -2006,6 +2006,24 @@ Reports the service name, the running build's version, and the server clock in U
 
 Responses: `200`.
 
+### GET /api/v1/system/versions
+
+<a id="getsystemversions"></a>
+
+The release each service runs
+
+Operation id: `GetSystemVersions`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Lists the version and image tag of Core and of every service that has called Core's internal routes since Core started: collab, the workers and the sites worker.
+
+Responses: `200`, `401`.
+
 ### GET /healthz
 
 <a id="getliveness"></a>

@@ -16,5 +16,6 @@ namespace Nix.Serialization;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(LivenessResponse))]
 [JsonSerializable(typeof(ServiceStatusResponse))]
+[JsonSerializable(typeof(SystemVersionsResponse))]
 [JsonSerializable(typeof(HealthCheckResponse))]
 internal sealed partial class HealthJsonContext : JsonSerializerContext;

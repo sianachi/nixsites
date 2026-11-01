@@ -25,6 +25,9 @@ export interface CollabConfig {
    */
   readonly internalSecret: string;
 
+  /** The release this container runs, reported to Core for Settings > About; empty when unset. */
+  readonly release: { readonly version: string; readonly commit: string };
+
   /**
    * The issuers whose tokens are accepted, each with an optional JWKS override.
    *
@@ -109,6 +112,7 @@ export function readConfig(env: NodeJS.ProcessEnv): CollabConfig {
     databaseUrl,
     coreBaseUrl: stripTrailingSlash(required(env, 'NIX_COLLAB_CORE_BASE_URL')),
     internalSecret: required(env, 'NIX_COLLAB_INTERNAL_SECRET'),
+    release: { version: env.NIX_RELEASE_VERSION ?? '', commit: env.NIX_RELEASE_COMMIT ?? '' },
     oidcIssuers: readIssuers(env),
     oidcAudiences: required(env, 'NIX_COLLAB_OIDC_AUDIENCE')
       .split(',')

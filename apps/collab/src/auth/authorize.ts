@@ -69,6 +69,8 @@ export interface Authorizer {
 export function createAuthorizer(options: {
   coreBaseUrl: string;
   internalSecret: string;
+  /** Sent on every call so Core can show what this service runs in Settings > About. */
+  release?: { readonly version: string; readonly commit: string };
   fetch?: typeof globalThis.fetch;
   timeoutMs?: number;
 }): Authorizer {
@@ -87,6 +89,13 @@ export function createAuthorizer(options: {
             authorization: `Bearer ${token}`,
             'x-nix-internal-secret': options.internalSecret,
             accept: 'application/json',
+            ...(options.release === undefined
+              ? {}
+              : {
+                  'x-nix-service': 'collab',
+                  'x-nix-release-version': options.release.version,
+                  'x-nix-release-commit': options.release.commit,
+                }),
           },
           // Bounded, because a Core that has stopped answering must not turn into this
           // service holding connections open until it runs out of them.

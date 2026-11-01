@@ -225,8 +225,6 @@
 - tags: offline; sites; views; charts; formulas; calendar; pets; cli; deploy
 - title: October 2026
 
-
-
 ## Fields
 
 ### Date

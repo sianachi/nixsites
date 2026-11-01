@@ -60,8 +60,6 @@ August turned the foundations laid at the end of July (the item tree, cascading 
 - tags: editor; views; formulas; templates; import; export; cli; pwa
 - title: August 2026
 
-
-
 ## Fields
 
 ### Date

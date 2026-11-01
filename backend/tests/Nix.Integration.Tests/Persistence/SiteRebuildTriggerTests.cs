@@ -149,7 +149,7 @@ public sealed class SiteRebuildTriggerTests(NixPostgresFixture fixture) : IAsync
 
         // The seeded principal is a tenant administrator, which is what makes them an owner of the
         // workspace; without that grant they are the editor the seed also gives them.
-        await Sql($"DELETE FROM tenant_role WHERE tenant_id = '{TestTenants.Alpha}' AND subject_id = '{TestTenants.AlphaPrincipal}'");
+        await Sql($"UPDATE workspace_member SET role = 'editor' WHERE tenant_id = '{TestTenants.Alpha}' AND workspace_id = '{TestTenants.AlphaWorkspace}' AND subject_id = '{TestTenants.AlphaPrincipal}'");
 
         var outcome = await FireAsync(trigger);
 

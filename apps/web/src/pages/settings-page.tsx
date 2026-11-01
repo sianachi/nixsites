@@ -10,6 +10,7 @@ import { AccessTokensSection } from '@nix/web-settings/settings/access-tokens/ac
 import { AdministratorsSection } from '@nix/web-settings/settings/administrators/administrators-section';
 import { SiteApprovalsSection } from '@nix/web-settings/settings/site-approvals/site-approvals-section';
 import { BackupsSection } from '@nix/web-settings/settings/backups/backups-section';
+import { AboutSection } from '@nix/web-settings/settings/about/about-section';
 import { ApiSection } from '@nix/web-settings/settings/api/api-section';
 import { McpSection } from '@nix/web-settings/settings/mcp/mcp-section';
 import { CalendarsSection } from '@nix/web-settings/settings/calendars/calendars-section';
@@ -51,6 +52,7 @@ const settingsSections: readonly { id: SettingsTab; label: string; group: Group;
   { id: 'notifications', label: 'Notifications', group: 'You' },
   { id: 'integrations', label: 'Calendars', group: 'You' },
   { id: 'pets', label: 'Pets', group: 'You' },
+  { id: 'about', label: 'About', group: 'You' },
   { id: 'workspace', label: 'Workspace', group: 'Workspace' },
   { id: 'access-tokens', label: 'Access tokens', group: 'Workspace' },
   { id: 'mcp', label: 'MCP', group: 'Workspace' },
@@ -98,6 +100,8 @@ function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
       return <SiteApprovalsSection />;
     case 'administrators':
       return <AdministratorsSection />;
+    case 'about':
+      return <AboutSection />;
   }
 }
 

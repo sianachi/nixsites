@@ -44,6 +44,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/system/versions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The release each service runs
+     * @description Lists the version and image tag of Core and of every service that has called Core's internal routes since Core started: collab, the workers and the sites worker.
+     */
+    get: operations['GetSystemVersions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/backups': {
     parameters: {
       query?: never;
@@ -5523,6 +5543,13 @@ export interface components {
       /** Format: date-time */
       utcNow: string;
     };
+    ServiceVersionResponse: {
+      service: string;
+      version: string;
+      commit: string;
+      /** Format: date-time */
+      reportedAt: string;
+    };
     SetItemLockRequest: {
       password: string;
       currentPassword: null | string;
@@ -5741,6 +5768,9 @@ export interface components {
     SyncCalendarLinkResponse: {
       /** Format: uuid */
       jobId: string;
+    };
+    SystemVersionsResponse: {
+      services: components['schemas']['ServiceVersionResponse'][];
     };
     TemplateAdditionsResponse: {
       /** Format: int32 */
@@ -6462,6 +6492,35 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetSystemVersions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SystemVersionsResponse'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };

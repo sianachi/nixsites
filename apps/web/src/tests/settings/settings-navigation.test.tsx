@@ -88,6 +88,7 @@ describe('reaching the settings screen', () => {
       'Notifications',
       'Calendars',
       'Pets',
+      'About',
       'Workspace',
       'Access tokens',
       'MCP',

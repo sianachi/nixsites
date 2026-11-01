@@ -1517,6 +1517,18 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     queryParams: [],
   },
   {
+    id: 'GetSystemVersions',
+    method: 'GET',
+    path: '/api/v1/system/versions',
+    area: 'Health',
+    summary: 'The release each service runs',
+    detail:
+      "Lists the version and image tag of Core and of every service that has called Core's internal routes since Core started: collab, the workers and the sites worker.",
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+  },
+  {
     id: 'GetTemplate',
     method: 'GET',
     path: '/api/v1/templates/{templateId}',

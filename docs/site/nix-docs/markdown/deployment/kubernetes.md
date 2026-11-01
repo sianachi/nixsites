@@ -108,7 +108,7 @@ Other settings:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | NIX\_SITES\_REQUIRE\_OPERATOR\_APPROVAL | true | Holds each site's first publish until an operator approves it |
-| SITES\_FOREIGN\_LABEL\_SUFFIX | -home | A label suffix owned by another deployment sharing the sites domain; slugs ending in it are refused. Set it empty when nothing shares the domain |
+| SITES\_FOREIGN\_LABEL\_SUFFIX | \-home | A label suffix owned by another deployment sharing the sites domain; slugs ending in it are refused. Set it empty when nothing shares the domain |
 | POD\_CIDR | 10.42.0.0/16 | The pod network, which Caddy trusts for the client address header. Confirm yours |
 
 ## Ingress

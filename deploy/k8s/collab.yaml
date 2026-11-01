@@ -36,6 +36,11 @@ spec:
           image: ${REGISTRY}/collab:${TAG}
           ports: [{ containerPort: 8100 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: NIX_COLLAB_DATABASE_URL
               valueFrom: { secretKeyRef: { name: nix-connections, key: collab } }
             - name: NIX_COLLAB_CORE_BASE_URL

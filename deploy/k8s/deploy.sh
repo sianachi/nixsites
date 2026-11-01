@@ -113,10 +113,13 @@ case "$NIX_WEB_LANDING:$NIX_WEB_DEMO" in
   true:true | true:false | false:true | false:false) ;;
   *) echo "NIX_WEB_LANDING and NIX_WEB_DEMO must be true or false" >&2; exit 1 ;;
 esac
+# The release every pod reports in Settings > About: this checkout's version, and TAG as its commit.
+NIX_RELEASE_VERSION="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json)"
+export NIX_RELEASE_VERSION
 SITES_FOREIGN_LABEL_SUFFIX="${SITES_FOREIGN_LABEL_SUFFIX--home}"
 export REGISTRY TAG OIDC_ISSUER OIDC_CLIENT_ID DOMAIN SITES_REQUIRE_OPERATOR_APPROVAL SITES_FOREIGN_LABEL_SUFFIX BACKUP_OFFSITE
 
-render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${BACKUP_OFFSITE} ${RABBITMQ_SECRET_VERSION} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO}' < "$1"; }
+render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${BACKUP_OFFSITE} ${RABBITMQ_SECRET_VERSION} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION}' < "$1"; }
 
 if ! kubectl -n nix get secret nix-db >/dev/null 2>&1; then
   echo "secret nix-db not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
@@ -240,6 +243,8 @@ kubectl -n nix rollout restart statefulset/nix-rabbitmq
 kubectl -n nix rollout status statefulset/nix-rabbitmq --timeout=180s
 
 echo "== Seed =="
+# A Job's pod template is immutable; the seed is idempotent, so re-create it rather than apply over it.
+kubectl -n nix delete job/nix-db-seed --ignore-not-found
 kubectl apply -f deploy/k8s/job-seed.yaml
 kubectl -n nix wait --for=condition=complete job/nix-db-seed --timeout=180s
 

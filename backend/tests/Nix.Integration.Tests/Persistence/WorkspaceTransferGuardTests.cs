@@ -33,6 +33,9 @@ public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITes
                 coalesce_window_min, storage_quota_bytes, created_at, lifecycle_state)
             VALUES ('{Destination:D}'::uuid, '{alpha.TenantId:D}'::uuid, 'Transfer guard destination',
                 90, 10, 10737418240, now(), 'active');
+            INSERT INTO workspace_member (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
+            VALUES ('{Destination:D}'::uuid, 'principal', '{alpha.PrincipalId:D}'::uuid, '{alpha.TenantId:D}'::uuid,
+                'owner', '{alpha.PrincipalId:D}'::uuid, now());
             DELETE FROM worker_job;
             """);
     }

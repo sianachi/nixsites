@@ -323,9 +323,11 @@ internal static class M0SchemaSeed
                 (tenant_id, subject_type, subject_id, role, granted_by, granted_at)
             VALUES ({tenant}, 'principal', {principal}, 'admin', {principal}, now());
 
+            -- Owner, not editor: tenant administration grants no workspace access, and the seeded
+            -- principal has always acted as this workspace's owner.
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({workspace}, 'principal', {principal}, {tenant}, 'editor', {principal}, now());
+            VALUES ({workspace}, 'principal', {principal}, {tenant}, 'owner', {principal}, now());
 
             INSERT INTO workspace_invitation
                 (invitation_id, tenant_id, workspace_id, email_normalized, role,
