@@ -108,6 +108,7 @@ function setup(
   over: { bootOffline?: boolean; store?: MirrorReader | null; inner?: typeof fetch } = {},
 ) {
   const onReachability = vi.fn();
+  const onUnlocked = vi.fn();
   const inner = over.inner ?? vi.fn(() => Promise.reject(new TypeError('Load failed')));
   const store = over.store === undefined ? fakeStore() : over.store;
   const run = createMirrorFetch({
@@ -117,9 +118,10 @@ function setup(
     isBootOffline: () => over.bootOffline ?? false,
     onReachability,
     createBlobUrl: () => `blob:${location.origin}/abc`,
+    onUnlocked,
   });
   const get = async (path: string, init?: RequestInit) => run(`${location.origin}${path}`, init);
-  return { get, inner, onReachability };
+  return { get, inner, onReachability, onUnlocked };
 }
 
 describe('mirror fetch router', () => {
@@ -241,6 +243,19 @@ describe('mirror fetch router', () => {
     const write = await get(`/api/v1/items/${CHILD}`, { method: 'PATCH', body: '{}' });
     expect(write.status).toBe(503);
     expect(((await write.json()) as { code: string }).code).toBe('offline.read_only');
+  });
+
+  it('reports a successful online unlock so the workspace is rebuilt', async () => {
+    const status = { value: 200 };
+    const inner = vi.fn(() => Promise.resolve(new Response('{}', { status: status.value })));
+    const { get, onUnlocked } = setup({ inner: inner as unknown as typeof fetch });
+    await get('/api/v1/items/abc/unlock', { method: 'POST' });
+    expect(onUnlocked).toHaveBeenCalledWith('abc');
+    onUnlocked.mockClear();
+    status.value = 403;
+    await get('/api/v1/items/abc/unlock', { method: 'POST' });
+    await get('/api/v1/items/abc/unlock');
+    expect(onUnlocked).not.toHaveBeenCalled();
   });
 
   it('does not intercept other origins', async () => {

@@ -33,6 +33,11 @@ export interface MirrorFetchDeps {
   /** Told whether the last call to Core got an answer, for the offline indicator. */
   readonly onReachability: (up: boolean) => void;
   readonly createBlobUrl?: (bytes: Uint8Array, mediaType: string) => string;
+  /**
+   * Told when an unlock succeeded. Core's change feed does not announce unlocks (a grant belongs to
+   * one credential), so this device rebuilds the workspace from a fresh snapshot to see under it.
+   */
+  readonly onUnlocked?: (itemId: string) => void;
 }
 
 type Json = Record<string, unknown>;
@@ -531,6 +536,9 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         const response = await deps.inner(input, init);
         if (!(method === 'GET' && GATEWAY_DOWN.has(response.status) && deps.store() !== null)) {
           deps.onReachability(true);
+          const unlocked = /^\/api\/v1\/items\/([^/]+)\/unlock$/.exec(url.pathname)?.[1];
+          if (method === 'POST' && response.ok && unlocked !== undefined)
+            deps.onUnlocked?.(unlocked);
           const store = deps.store();
           if (store !== null && method === 'GET') remember(store, url.pathname, response);
           // A screen still addressing an item by the temporary id it was created under, after the

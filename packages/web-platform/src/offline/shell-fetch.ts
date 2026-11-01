@@ -19,6 +19,17 @@ export function getShellFetch(): typeof fetch | undefined {
             onReachability: (up) => {
               setOfflineState({ networkDown: !up });
             },
+            onUnlocked: (itemId) => {
+              const store = mirror.current();
+              if (store === null) return;
+              void (async () => {
+                const [item] = await store.readItems([itemId]);
+                if (item === undefined) return;
+                // A sealed workspace is rebuilt from a fresh snapshot on the next pass.
+                await store.sealWorkspace(item.workspaceId);
+                setOfflineState({ resyncRequestedAt: Date.now() });
+              })().catch(() => undefined);
+            },
           });
   }
   return instance ?? undefined;

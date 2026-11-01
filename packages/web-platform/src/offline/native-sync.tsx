@@ -122,10 +122,12 @@ export function NativeSync(): ReactNode {
       const stopScheduler = scheduler.start();
       // Writes queued while the connection was flaky go out as soon as a request gets through.
       let wasDown = getOfflineState().networkDown;
+      let resyncAt = getOfflineState().resyncRequestedAt;
       const unsubscribe = subscribeOfflineState(() => {
-        const down = getOfflineState().networkDown;
-        if (wasDown && !down) void scheduler.trigger();
+        const { networkDown: down, resyncRequestedAt } = getOfflineState();
+        if ((wasDown && !down) || resyncRequestedAt !== resyncAt) void scheduler.trigger();
         wasDown = down;
+        resyncAt = resyncRequestedAt;
       });
       stop = () => {
         unsubscribe();

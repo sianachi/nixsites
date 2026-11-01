@@ -10,9 +10,16 @@ export interface OfflineState {
   /** The last request to Core got no answer. Cleared by the next one that does. */
   readonly networkDown: boolean;
   readonly lastSyncedAt: number | null;
+  /** Bumped when something on this device needs a sync pass now (an unlock). */
+  readonly resyncRequestedAt: number | null;
 }
 
-let state: OfflineState = { bootOffline: false, networkDown: false, lastSyncedAt: null };
+let state: OfflineState = {
+  bootOffline: false,
+  networkDown: false,
+  lastSyncedAt: null,
+  resyncRequestedAt: null,
+};
 const listeners = new Set<() => void>();
 
 export function getOfflineState(): OfflineState {
@@ -24,7 +31,8 @@ export function setOfflineState(patch: Partial<OfflineState>): void {
   if (
     next.bootOffline === state.bootOffline &&
     next.networkDown === state.networkDown &&
-    next.lastSyncedAt === state.lastSyncedAt
+    next.lastSyncedAt === state.lastSyncedAt &&
+    next.resyncRequestedAt === state.resyncRequestedAt
   )
     return;
   state = next;
