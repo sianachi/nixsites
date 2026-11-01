@@ -110,6 +110,34 @@ final class NixStoreTests: XCTestCase {
         XCTAssertEqual(rows.count, 1)
     }
 
+    func testPageSqlCannotReachOtherFilesOrTheTransactionGate() async throws {
+        let stores = Stores(baseDir: dir)
+        _ = try await call(stores, "https://b.example", ["op": "execute", "sql": "CREATE TABLE secret(a); INSERT INTO secret VALUES ('b')"])
+        let other = dir.appendingPathComponent("\(sha256Hex("https://b.example")).sqlite").path
+        let refused = [
+            "ATTACH '\(other)' AS v",
+            "VACUUM INTO '\(dir.appendingPathComponent("copy.sqlite").path)'",
+            "PRAGMA database_list",
+            "PRAGMA writable_schema = ON",
+            "BEGIN",
+            "SAVEPOINT s",
+        ]
+        for sql in refused {
+            do {
+                _ = try await call(stores, "https://a.example", ["op": "execute", "sql": sql])
+                XCTFail("allowed: \(sql)")
+            } catch {}
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("copy.sqlite").path))
+        for sql in ["PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON"] {
+            _ = try await call(stores, "https://a.example", ["op": "execute", "sql": sql])
+        }
+        // The store's own transactions still work.
+        let tx = try await call(stores, "https://a.example", ["op": "begin"])["tx"] as! String
+        _ = try await call(stores, "https://a.example", ["op": "execute", "sql": "CREATE TABLE t(a)", "tx": tx])
+        _ = try await call(stores, "https://a.example", ["op": "commit", "tx": tx])
+    }
+
     func testFilesUsageAndWipe() async throws {
         let stores = Stores(baseDir: dir)
         let s = await stores.store("https://a.example")

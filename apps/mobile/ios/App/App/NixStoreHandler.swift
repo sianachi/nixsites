@@ -25,10 +25,13 @@ final class NixStoreHandler: NSObject, WKScriptMessageHandlerWithReply {
             return
         }
         Task {
+            // WebKit expects the reply on the main thread.
             do {
-                replyHandler(try await Self.stores.handle(origin: origin, request: request), nil)
+                let reply = try await Self.stores.handle(origin: origin, request: request)
+                await MainActor.run { replyHandler(reply, nil) }
             } catch {
-                replyHandler(nil, error.localizedDescription)
+                let message = error.localizedDescription
+                await MainActor.run { replyHandler(nil, message) }
             }
         }
     }

@@ -5,8 +5,11 @@ import WebKit
 class ShellViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NixShellPlugin())
-        bridge?.webView?.configuration.userContentController
-            .addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
+        let controller = bridge?.webView?.configuration.userContentController
+        controller?.addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
+        if let localURL = bridge?.config.localURL {
+            controller?.addScriptMessageHandler(NixPickerHandler(localURL: localURL), contentWorld: .page, name: NixPickerHandler.name)
+        }
     }
 
     /// WebKit runs service workers (the web app's offline shell) only for app-bound domains, and
@@ -29,12 +32,10 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NixShellPlugin"
     public let jsName = "NixShell"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "getServers", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setServers", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "showPicker", returnType: CAPPluginReturnPromise)
     ]
 
-    private static let key = "nix.servers"
+    static let key = "nix.servers"
     /// Written into Info.generated.plist by scripts/app-bound-domains.mjs; empty when the build has none.
     static let boundDomains = Bundle.main.object(forInfoDictionaryKey: "WKAppBoundDomains") as? [String] ?? []
 
@@ -50,7 +51,7 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private var servers: [[String: String]] { Self.savedServers }
 
-    private static var savedServers: [[String: String]] {
+    static var savedServers: [[String: String]] {
         UserDefaults.standard.array(forKey: key) as? [[String: String]] ?? []
     }
 
@@ -64,38 +65,59 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         return allowed.contains(origin) ? false : nil
     }
 
-    @objc func getServers(_ call: CAPPluginCall) {
-        call.resolve(["servers": servers, "boundDomains": Self.boundDomains])
-    }
-
-    /// Only the bundled picker may change the list: a server page that could would widen the
-    /// allowlist above to any origin it liked.
-    @objc func setServers(_ call: CAPPluginCall) {
-        DispatchQueue.main.async { [self] in
-            guard let bridge, bridge.webView?.url?.scheme == bridge.config.localURL.scheme else {
-                call.reject("Servers can only be changed from the server picker.")
-                return
-            }
-            let entries = (call.getArray("servers") as? [[String: Any]] ?? []).compactMap { entry -> [String: String]? in
-                guard let origin = Self.origin(URL(string: entry["origin"] as? String ?? "")) else { return nil }
-                var saved = ["origin": origin]
-                saved["loginOrigin"] = Self.origin(URL(string: entry["loginOrigin"] as? String ?? ""))
-                return saved
-            }
-            let dropped = Self.savedOrigins.subtracting(entries.compactMap { $0["origin"] })
-            UserDefaults.standard.set(entries, forKey: Self.key)
-            for origin in dropped {
-                Task { try? await NixStoreHandler.stores.wipe(origin: origin) }
-            }
-            call.resolve(["servers": entries])
-        }
-    }
-
     @objc func showPicker(_ call: CAPPluginCall) {
         DispatchQueue.main.async { [self] in
             guard let bridge else { return call.reject("No bridge.") }
             bridge.webView?.load(URLRequest(url: bridge.config.localURL))
             call.resolve()
+        }
+    }
+}
+
+/// The picker's channel for reading and changing the saved servers. A message handler, not a plugin
+/// method, so the check uses the sending frame's own origin: `webView.url` already reports a pending
+/// navigation, so a server page could call showPicker and then change the list before it loads.
+/// Only the bundled picker may change the list, since it is the navigation allowlist above and the
+/// set of origins that get a store.
+final class NixPickerHandler: NSObject, WKScriptMessageHandlerWithReply {
+    static let name = "nixPicker"
+    private let localURL: URL
+
+    init(localURL: URL) { self.localURL = localURL }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping (Any?, String?) -> Void) {
+        let frame = message.frameInfo.securityOrigin
+        guard message.frameInfo.isMainFrame, frame.protocol == localURL.scheme, frame.host == localURL.host,
+              let body = message.body as? [String: Any] else {
+            return replyHandler(nil, "Servers can only be changed from the server picker.")
+        }
+        switch body["op"] as? String {
+        case "getServers":
+            replyHandler(["servers": NixShellPlugin.savedServers, "boundDomains": NixShellPlugin.boundDomains], nil)
+        case "setServers":
+            let entries = (body["servers"] as? [[String: Any]] ?? []).compactMap { entry -> [String: String]? in
+                guard let origin = NixShellPlugin.origin(URL(string: entry["origin"] as? String ?? "")) else { return nil }
+                var saved = ["origin": origin]
+                saved["loginOrigin"] = NixShellPlugin.origin(URL(string: entry["loginOrigin"] as? String ?? ""))
+                return saved
+            }
+            let dropped = NixShellPlugin.savedOrigins.subtracting(entries.compactMap { $0["origin"] })
+            UserDefaults.standard.set(entries, forKey: NixShellPlugin.key)
+            Task { @MainActor in
+                // A removed server's offline copy goes with it; say so if any of it stays behind.
+                var failed: [String] = []
+                for origin in dropped {
+                    do { try await NixStoreHandler.stores.wipe(origin: origin) } catch { failed.append(origin) }
+                }
+                if failed.isEmpty {
+                    replyHandler(["servers": entries], nil)
+                } else {
+                    replyHandler(nil, "Removed, but the offline copy of \(failed.joined(separator: ", ")) could not be deleted.")
+                }
+            }
+        default:
+            replyHandler(nil, "Unknown request.")
         }
     }
 }

@@ -4,6 +4,27 @@ import SQLite3
 
 private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+/// Pragmas the page's SQL may run (packages/sync-sqlite opens with these); every other pragma is
+/// refused, as are ATTACH/DETACH (another origin's database is a file next to this one) and raw
+/// transaction statements (the store's begin/commit gate owns transactions).
+private let pagePragmas: Set<String> = ["foreign_keys", "journal_mode", "synchronous", "secure_delete"]
+
+/// Set while the page's SQL is being prepared; the store's own statements run with it unset.
+final class PageGate { var active = false }
+
+private let authorize: @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?,
+                                       UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32 = { context, action, first, _, _, _ in
+    guard let context, Unmanaged<PageGate>.fromOpaque(context).takeUnretainedValue().active else { return SQLITE_OK }
+    switch action {
+    case SQLITE_ATTACH, SQLITE_DETACH, SQLITE_TRANSACTION, SQLITE_SAVEPOINT:
+        return SQLITE_DENY
+    case SQLITE_PRAGMA:
+        return pagePragmas.contains(first.map { String(cString: $0).lowercased() } ?? "") ? SQLITE_OK : SQLITE_DENY
+    default:
+        return SQLITE_OK
+    }
+}
+
 func sha256Hex(_ s: String) -> String {
     SHA256.hash(data: Data(s.utf8)).map { String(format: "%02x", $0) }.joined()
 }
@@ -16,6 +37,7 @@ public actor Store {
     private let idleTimeout: TimeInterval
     private let downloadConfiguration: () -> URLSessionConfiguration
     private var db: OpaquePointer?
+    private let pageGate = PageGate()
 
     private var activeTx: String?
     private var txGeneration = 0
@@ -43,6 +65,8 @@ public actor Store {
             throw StoreError.sqlite(message)
         }
         db = handle
+        sqlite3_limit(handle, SQLITE_LIMIT_ATTACHED, 0)
+        sqlite3_set_authorizer(handle, authorize, Unmanaged.passUnretained(pageGate).toOpaque())
         do {
             try run("PRAGMA journal_mode = WAL", on: handle)
             try run("PRAGMA foreign_keys = ON", on: handle)
@@ -69,6 +93,8 @@ public actor Store {
         while !tail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             var stmt: OpaquePointer?
             var rest: UnsafePointer<CChar>?
+            pageGate.active = true
+            defer { pageGate.active = false }
             let rc = tail.withCString { c -> Int32 in
                 let r = sqlite3_prepare_v2(handle, c, -1, &stmt, &rest)
                 if let rest { tail = String(cString: rest) } else { tail = "" }
