@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto';
  * want that metadata public removes it before attaching the file.
  */
 
+// shortcut: MP4 and WebM are published as stored, so location and device metadata stay in the file; strip it or warn the publisher at publish time (#177).
 export const MAX_DOWNLOAD_BYTES = 20 << 20;
 export const MAX_VIDEO_BYTES = 50 << 20;
 
