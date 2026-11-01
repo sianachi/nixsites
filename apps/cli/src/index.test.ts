@@ -153,3 +153,14 @@ describe('automations create flag collection', () => {
     }
   });
 });
+
+describe('search --limit', () => {
+  it.each(['abc', '0', '-3'])('rejects --limit %s before any request', async (limit) => {
+    const program = buildProgram();
+    overrideExitRecursively(program);
+
+    await expect(
+      program.parseAsync(['search', 'x', '--limit', limit], { from: 'user' }),
+    ).rejects.toThrow(/--limit must be a positive integer\./);
+  });
+});

@@ -1931,7 +1931,14 @@ export function buildProgram(): Command {
   program
     .command('search <query>')
     .description('Full-text search across the items you can see.')
-    .option('--limit <n>', 'cap the number of hits', (value) => Number.parseInt(value, 10))
+    .option('--limit <n>', 'cap the number of hits', (value: string) => {
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new InvalidArgumentError('--limit must be a positive integer.');
+      }
+
+      return parsed;
+    })
     .action((query: string, options: { limit?: number }, command: Command) =>
       act(command, (profile, output) =>
         runSearch(profile, query, { limit: options.limit }, output),
