@@ -75,6 +75,29 @@ describe('Settings > Site approvals', () => {
     expect(await screen.findByText(/No site is waiting for approval/)).toBeVisible();
   });
 
+  it('names the requester from the workspace members, and falls back to the short id', async () => {
+    stubCoreApi({
+      siteApprover: true,
+      members: [
+        {
+          subjectType: 'principal',
+          subjectId: entry.requestedBy,
+          subjectDisplayName: 'Ada Lovelace',
+          role: 'owner',
+          grantedAt: '2026-10-01T00:00:00.000Z',
+        },
+      ],
+    });
+    serve();
+    renderAt(<App />, '/settings?tab=site-approvals');
+    expect(await screen.findByText('Ada Lovelace')).toBeVisible();
+
+    stubCoreApi({ siteApprover: true, membersFail: true });
+    serve();
+    renderAt(<App />, '/settings?tab=site-approvals');
+    expect((await screen.findAllByText('9b9b9b9b')).length).toBeGreaterThan(0);
+  });
+
   it('rejects with an optional note', async () => {
     stubCoreApi({ siteApprover: true });
     const calls = serve();

@@ -6,7 +6,7 @@ import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels'
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { SettingsSection } from '../shared/settings-section';
 import { formatDateTime } from '@nix/web-foundation/lib/date-format';
-import { useSiteApprovals } from './use-site-approvals';
+import { useRequesterNames, useSiteApprovals } from './use-site-approvals';
 
 interface Deciding {
   readonly entry: SiteApprovalEntry;
@@ -20,6 +20,7 @@ interface Deciding {
 export function SiteApprovalsSection(): ReactElement {
   const { status, approvals, error, busySiteId, reload, decide } = useSiteApprovals();
   const [deciding, setDeciding] = useState<Deciding | null>(null);
+  const requesterNames = useRequesterNames(approvals);
   const narrow = useNarrowViewport();
 
   const decisionButtons = (entry: SiteApprovalEntry): ReactElement => (
@@ -58,7 +59,9 @@ export function SiteApprovalsSection(): ReactElement {
       key: 'requestedBy',
       header: 'Asked by',
       cell: (entry: SiteApprovalEntry) => (
-        <span title={entry.requestedBy}>{entry.requestedBy.slice(0, 8)}</span>
+        <span title={entry.requestedBy}>
+          {requesterNames.get(entry.requestedBy) ?? entry.requestedBy.slice(0, 8)}
+        </span>
       ),
     },
     {
