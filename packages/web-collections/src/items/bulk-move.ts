@@ -10,7 +10,8 @@ import type { TreeItem, WorkspaceTree } from './use-workspace-tree';
  * is no batch endpoint, and pretending the sequence is atomic would be a lie the report below
  * exists to avoid.
  *
- * shortcut: sequential moves; add a batch endpoint if moves of more than ~50 items get slow.
+ * shortcut: sequential moves, because each lands at the end of the target and concurrent ones would
+ * scramble the selection order; add an ordered batch endpoint if moves of more than ~50 items get slow.
  */
 
 export interface BulkMovePlan {
