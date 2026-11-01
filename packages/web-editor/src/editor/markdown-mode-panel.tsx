@@ -1,4 +1,4 @@
-import { Button, Dialog, Listbox, Text, Textarea, useListbox } from '@nix/ui';
+import { Button, Dialog, Listbox, Text, useListbox } from '@nix/ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type * as Y from 'yjs';
 
@@ -13,6 +13,26 @@ import {
 } from './markdown-mode';
 import { findTrigger } from './reference-menu';
 
+/** The highlighter is its own chunk; until it arrives, and whenever it is behind the text, the
+ * layer shows the plain text so the two never disagree. */
+function useHighlighted(code: string): string | null {
+  const [html, setHtml] = useState<{ readonly code: string; readonly html: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void import('@nix/site-render/highlight').then((module) => {
+      if (live) setHtml({ code, html: module.highlightCode(code, 'markdown') });
+    });
+    return () => {
+      live = false;
+    };
+  }, [code]);
+  return html?.code === code ? html.html : null;
+}
+
+// Both layers share these so a character sits in the same place in each.
+const TEXT_LAYER =
+  'absolute inset-0 m-0 box-border whitespace-pre-wrap break-words p-2 font-mono text-sm leading-5 [tab-size:2]';
+
 export interface MarkdownModePanelProps {
   readonly doc: Y.Doc;
   readonly fragment: Y.XmlFragment;
@@ -26,7 +46,10 @@ export interface MarkdownModePanelProps {
  * banner when a colleague changes the note underneath, and a report when the text cannot be read
  * back. Nothing is written until Apply; closing discards the text, and the banner says so.
  *
- * shortcut: a plain textarea with no highlighting; upgrade to a code editor if people ask.
+ * The textarea sits over a highlighted copy of its text (its own text is transparent), so the
+ * caret, selection and undo stay the browser's.
+ *
+ * shortcut: no autocomplete, bracket matching or find; add a code-editor library if people ask.
  */
 export function MarkdownModePanel({
   doc,
@@ -40,6 +63,8 @@ export function MarkdownModePanel({
   const [error, setError] = useState<string | null>(null);
   const hintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const layerRef = useRef<HTMLPreElement>(null);
+  const highlighted = useHighlighted(text);
   // Where the caret is; null while a range is selected, which never opens the picker.
   const [caret, setCaret] = useState<number | null>(0);
   const [dismissed, setDismissed] = useState<number | null>(null);
@@ -109,55 +134,66 @@ export function MarkdownModePanel({
         Nothing is saved until you apply. Closing without applying discards this text.
       </Text>
       <div className="flex min-h-0 flex-1 flex-col gap-1">
-        <Textarea
-          ref={textareaRef}
-          aria-label="Note as Markdown"
-          aria-describedby={hintId}
-          aria-controls={trigger === null ? undefined : listbox.id}
-          aria-activedescendant={trigger === null ? undefined : listbox.activeOptionId}
-          value={text}
-          spellCheck={false}
-          rows={24}
-          resize="vertical"
-          className="min-h-0 flex-1 font-mono text-sm"
-          onChange={(event) => {
-            setText(event.currentTarget.value);
-            setCaret(event.currentTarget.selectionStart);
-            setError(null);
-          }}
-          onSelect={(event) => {
-            const { selectionStart, selectionEnd } = event.currentTarget;
-            // A range selection is not a caret, so it never opens the picker.
-            setCaret(selectionStart === selectionEnd ? selectionStart : null);
-          }}
-          onBlur={() => {
-            if (trigger !== null) setDismissed(trigger.start);
-          }}
-          onKeyDown={(event) => {
-            if (trigger !== null) {
-              // The innermost open layer takes Escape, so it does not also close the dialog behind.
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                event.stopPropagation();
-                setDismissed(trigger.start);
-                return;
+        <div className="relative min-h-96 flex-1 rounded-sm border border-divider bg-surface focus-within:border-foreground">
+          <pre ref={layerRef} aria-hidden className={`${TEXT_LAYER} overflow-hidden`}>
+            {highlighted === null ? (
+              text
+            ) : (
+              <code dangerouslySetInnerHTML={{ __html: highlighted }} />
+            )}
+            {'\n'}
+          </pre>
+          <textarea
+            ref={textareaRef}
+            aria-label="Note as Markdown"
+            aria-describedby={hintId}
+            aria-controls={trigger === null ? undefined : listbox.id}
+            aria-activedescendant={trigger === null ? undefined : listbox.activeOptionId}
+            value={text}
+            spellCheck={false}
+            className={`${TEXT_LAYER} resize-none overflow-auto bg-transparent text-transparent caret-foreground outline-none selection:bg-accent/30`}
+            onScroll={(event) => {
+              if (layerRef.current) layerRef.current.scrollTop = event.currentTarget.scrollTop;
+            }}
+            onChange={(event) => {
+              setText(event.currentTarget.value);
+              setCaret(event.currentTarget.selectionStart);
+              setError(null);
+            }}
+            onSelect={(event) => {
+              const { selectionStart, selectionEnd } = event.currentTarget;
+              // A range selection is not a caret, so it never opens the picker.
+              setCaret(selectionStart === selectionEnd ? selectionStart : null);
+            }}
+            onBlur={() => {
+              if (trigger !== null) setDismissed(trigger.start);
+            }}
+            onKeyDown={(event) => {
+              if (trigger !== null) {
+                // The innermost open layer takes Escape, so it does not also close the dialog behind.
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setDismissed(trigger.start);
+                  return;
+                }
+                listbox.onKeyDown(event);
+                if (event.defaultPrevented) return;
               }
-              listbox.onKeyDown(event);
-              if (event.defaultPrevented) return;
-            }
-            // Tab indents inside the text, the way a Markdown editor is expected to behave.
-            if (event.key === 'Tab' && !event.shiftKey) {
-              event.preventDefault();
-              const target = event.currentTarget;
-              const { selectionStart, selectionEnd } = target;
-              const next = `${text.slice(0, selectionStart)}  ${text.slice(selectionEnd)}`;
-              setText(next);
-              requestAnimationFrame(() => {
-                target.setSelectionRange(selectionStart + 2, selectionStart + 2);
-              });
-            }
-          }}
-        />
+              // Tab indents inside the text, the way a Markdown editor is expected to behave.
+              if (event.key === 'Tab' && !event.shiftKey) {
+                event.preventDefault();
+                const target = event.currentTarget;
+                const { selectionStart, selectionEnd } = target;
+                const next = `${text.slice(0, selectionStart)}  ${text.slice(selectionEnd)}`;
+                setText(next);
+                requestAnimationFrame(() => {
+                  target.setSelectionRange(selectionStart + 2, selectionStart + 2);
+                });
+              }
+            }}
+          />
+        </div>
         {trigger === null ? null : (
           // shortcut: the list sits under the textarea, not at the caret (textareas have no caret rect); upgrade if users find it far from the cursor
           <div className="flex max-h-64 shrink-0 flex-col overflow-y-auto rounded-md border border-divider bg-background">
