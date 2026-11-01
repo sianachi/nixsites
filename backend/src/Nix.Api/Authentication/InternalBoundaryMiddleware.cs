@@ -69,6 +69,8 @@ public sealed class InternalBoundaryMiddleware
 
         if (_secretDigest is not null && PresentsSecret(context.Request))
         {
+            // Only a caller holding the secret may say which release it runs.
+            context.RequestServices.GetService<Nix.Features.Health.ServiceVersions>()?.Record(context.Request);
             await _next(context).ConfigureAwait(false);
             return;
         }

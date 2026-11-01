@@ -56,6 +56,11 @@ spec:
           image: ${REGISTRY}/api:${TAG}
           ports: [{ containerPort: 8080 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: ASPNETCORE_ENVIRONMENT
               value: Production
             - name: Logging__Console__FormatterName

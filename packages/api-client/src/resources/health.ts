@@ -34,3 +34,27 @@ export function serviceStatus(): QueryEndpoint<ServiceStatus> {
     cacheKey: ['health', 'status'],
   });
 }
+
+const serviceVersionSchema = z.object({
+  service: z.string().min(1),
+  version: z.string(),
+  commit: z.string(),
+  reportedAt: z.iso.datetime({ offset: true }),
+}) satisfies z.ZodType<components['schemas']['ServiceVersionResponse']>;
+
+const systemVersionsSchema = z.object({
+  services: z.array(serviceVersionSchema),
+}) satisfies z.ZodType<components['schemas']['SystemVersionsResponse']>;
+
+export type ServiceVersion = z.infer<typeof serviceVersionSchema>;
+export type SystemVersions = z.infer<typeof systemVersionsSchema>;
+
+/** The release Core and each service that has called it runs, for Settings > About. Signed in. */
+export function systemVersions(): QueryEndpoint<SystemVersions> {
+  return defineQuery({
+    operation: 'health.systemVersions',
+    path: '/api/v1/system/versions',
+    schema: systemVersionsSchema,
+    cacheKey: ['health', 'versions'],
+  });
+}

@@ -81,6 +81,8 @@ export interface PurgeTarget {
 export interface CoreClientOptions {
   readonly baseUrl: string;
   readonly secret: string;
+  /** Sent on every call so Core can show what this service runs in Settings > About. */
+  readonly release?: { readonly version: string; readonly commit: string };
   readonly fetch?: typeof globalThis.fetch;
   readonly timeoutMs?: number;
 }
@@ -117,6 +119,11 @@ export class CoreClient {
       accept: 'application/json',
     };
     if (body !== undefined) headers['content-type'] = 'application/json';
+    if (this.options.release !== undefined) {
+      headers['x-nix-service'] = 'sites-worker';
+      headers['x-nix-release-version'] = this.options.release.version;
+      headers['x-nix-release-commit'] = this.options.release.commit;
+    }
     if (execution !== null) {
       headers['x-nix-worker-job-id'] = execution.jobId;
       headers['x-nix-worker-execution-id'] = execution.executionId;

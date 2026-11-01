@@ -30,6 +30,11 @@ spec:
           image: ${REGISTRY}/sites:${TAG}
           ports: [{ containerPort: 8301 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: NIX_SITES_API_URL
               value: http://nix-api:8080
             - name: NIX_SITES_COLLAB_URL
@@ -85,6 +90,11 @@ spec:
           command: ["node", "--experimental-strip-types", "src/serve/index.ts"]
           ports: [{ containerPort: 8400 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: NIX_SITES_SERVE_ADDRESS
               value: ":8400"
             # The apex is the app's and is refused (421); only <slug>.$DOMAIN is answered.

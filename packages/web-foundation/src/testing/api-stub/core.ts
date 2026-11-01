@@ -150,6 +150,8 @@ export interface StubOptions {
   readonly backupRuns?: readonly Record<string, unknown>[];
   /** Makes the backups read fail. */
   readonly backupsFail?: boolean;
+  /** The services `GET /api/v1/system/versions` returns. */
+  readonly systemVersions?: readonly Record<string, unknown>[];
   readonly displayName?: string;
   readonly email?: string | null;
   readonly items?: readonly StubItem[];
@@ -589,6 +591,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
     siteApprover = false,
     backupRuns = [],
     backupsFail = false,
+    systemVersions = [],
     displayName = 'Test Person',
     email = 'test@example.test',
     items = [],
@@ -1719,6 +1722,10 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
             ? json({ code: 'workspaces.not_found' }, 404)
             : json({ items: heldMembers, nextCursor: null }),
         );
+      }
+
+      if (url.includes('/api/v1/system/versions') && method === 'GET') {
+        return Promise.resolve(json({ services: systemVersions }));
       }
 
       if (url.includes('/api/v1/admin/backups') && method === 'GET') {

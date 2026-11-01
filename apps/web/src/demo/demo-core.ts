@@ -404,6 +404,17 @@ export function createDemoFetch(): typeof fetch {
         }),
     ],
     ['POST', /^\/api\/v1\/search\/mentions$/, () => json({ mentions: [], truncated: false })],
+    // Settings > About: the demo runs in this tab, with no server release behind it.
+    [
+      'GET',
+      /^\/api\/v1\/system\/versions$/,
+      () =>
+        json({
+          services: [
+            { service: 'api', version: 'demo', commit: '', reportedAt: new Date().toISOString() },
+          ],
+        }),
+    ],
     [
       'GET',
       /^\/api\/v1\/me\/ui-settings$/,

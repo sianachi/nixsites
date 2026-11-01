@@ -26,6 +26,11 @@ spec:
           args: ["nixctl", "mcp", "--listen", "0.0.0.0:8500"]
           ports: [{ containerPort: 8500 }]
           env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
             - name: NIX_API_URL
               value: http://nix-api:8080
             - name: NIX_COLLAB_URL

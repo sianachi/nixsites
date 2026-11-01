@@ -9,6 +9,9 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 case "$NIX_BACKUP_REFERENCE" in /*) ;; *) echo 'NIX_BACKUP_REFERENCE must be an absolute backup directory path' >&2; exit 2;; esac
 bash "$root/deploy/compose/backup.sh" --check "$NIX_BACKUP_REFERENCE"
 case "$NIX_DEPLOY_ENV" in /*) ;; *) echo 'NIX_DEPLOY_ENV must be absolute' >&2; exit 2;; esac
+# The release every container reports in Settings > About; the commit is each service's image tag.
+NIX_RELEASE_VERSION=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' "$root/package.json")
+export NIX_RELEASE_VERSION
 compose=(docker compose -p nix --env-file "$NIX_DEPLOY_ENV" -f "$root/deploy/compose.prod.yml")
 # Validate without printing interpolated credentials.
 "${compose[@]}" config --quiet

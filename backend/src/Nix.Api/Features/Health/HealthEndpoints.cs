@@ -72,14 +72,39 @@ internal static class HealthEndpoints
         return endpoints;
     }
 
+    /// <summary>
+    /// Registers the signed-in route that lists the release each service runs, for Settings &gt; About.
+    /// Kept apart from the health group, which answers anonymous probes.
+    /// </summary>
+    internal static IEndpointRouteBuilder MapSystemVersionsEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapGet("/api/v1/system/versions", static (ServiceVersions versions) => TypedResults.Ok(versions.Snapshot()))
+            .WithTags("Health")
+            .WithName("GetSystemVersions")
+            .WithSummary("The release each service runs")
+            .WithDescription(
+                "Lists the version and image tag of Core and of every service that has called Core's "
+                + "internal routes since Core started: collab, the workers and the sites worker.")
+            .Produces<SystemVersionsResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        return endpoints;
+    }
+
     private static Ok<LivenessResponse> GetLiveness() =>
         TypedResults.Ok(new LivenessResponse(HealthyStatus));
 
-    private static Ok<ServiceStatusResponse> GetStatus(TimeProvider timeProvider) =>
-        TypedResults.Ok(new ServiceStatusResponse(
+    private static Ok<ServiceStatusResponse> GetStatus(TimeProvider timeProvider, ServiceVersions versions)
+    {
+        // The deployment's release when it names one; the assembly's version otherwise.
+        var release = versions.Core.Version;
+        return TypedResults.Ok(new ServiceStatusResponse(
             ServiceName,
-            ServiceVersion,
+            release.Length > 0 ? release : ServiceVersion,
             timeProvider.GetUtcNow()));
+    }
 
     /// <summary>
     /// The reference shape for a typed failure: no exception, no stringly-typed

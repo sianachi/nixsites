@@ -48,4 +48,23 @@ describe('the Core authorizer', () => {
     });
     expect(await unreachable.authorize('token', ITEM)).toBe('unavailable');
   });
+
+  it('tells Core which release it runs', async () => {
+    let sent: Headers | undefined;
+    const authorizer = createAuthorizer({
+      coreBaseUrl: 'http://core.test',
+      internalSecret: 'secret',
+      release: { version: '0.5.0', commit: 'abc123' },
+      fetch: (_url, init) => {
+        sent = new Headers(init?.headers);
+        return Promise.resolve(Response.json({}, { status: 404 }));
+      },
+    });
+
+    await authorizer.authorize('token', ITEM);
+
+    expect(sent?.get('x-nix-service')).toBe('collab');
+    expect(sent?.get('x-nix-release-version')).toBe('0.5.0');
+    expect(sent?.get('x-nix-release-commit')).toBe('abc123');
+  });
 });

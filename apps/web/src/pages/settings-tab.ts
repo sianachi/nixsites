@@ -20,6 +20,7 @@ export const SettingsTabSchema = z.enum([
   'backups',
   'site-approvals',
   'administrators',
+  'about',
 ]);
 
 export type SettingsTab = z.infer<typeof SettingsTabSchema>;

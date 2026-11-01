@@ -5,6 +5,16 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ## Unreleased
 
+### Added
+
+- Settings > About lists the exact release each service runs: the web app, Core, collaboration,
+  every worker and the sites worker, each with its version and image commit, flagging one that
+  differs from Core. Deployments set it from the release checkout; a service shows up once it has
+  called Core since Core last started. `GET /api/v1/system/versions` returns the same list, and
+  Core's status endpoint now reports the release version instead of `1.0.0`.
+- Compose installs serve `/web-config.json`, so `NIX_WEB_LANDING` and `NIX_WEB_DEMO` work there as
+  they do on Kubernetes.
+
 ### Security
 
 - **Breaking:** tenant administrators no longer see or open workspaces they are not a member of.

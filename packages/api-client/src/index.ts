@@ -150,6 +150,7 @@ export type {
  */
 export * as accessTokens from './resources/access-tokens.js';
 export * as health from './resources/health.js';
+export type { ServiceVersion, SystemVersions } from './resources/health.js';
 export * as principal from './resources/principal.js';
 export * as pets from './resources/pets.js';
 export { petSettingsSchema, petConnectionSchema, petProviderSchema } from './schemas/pets.js';

@@ -20,7 +20,14 @@ const log = (message: string, fields?: Record<string, unknown>): void => {
   process.stdout.write(`${JSON.stringify({ at: new Date().toISOString(), message, ...fields })}\n`);
 };
 
-const core = new CoreClient({ baseUrl: config.apiUrl, secret: config.internalSecret });
+const core = new CoreClient({
+  baseUrl: config.apiUrl,
+  secret: config.internalSecret,
+  release: {
+    version: process.env.NIX_RELEASE_VERSION ?? '',
+    commit: process.env.NIX_RELEASE_COMMIT ?? '',
+  },
+});
 const objects = new ObjectTransfer({ origins: config.objectOrigins });
 const collab = new ObjectTransfer({ origins: [config.collabUrl] });
 const broker = new Broker(config.rabbitmqUrl, log);

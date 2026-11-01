@@ -44,6 +44,7 @@ public sealed class AccessTokenScopePolicyTests
         // Reads: everything a read-only agent may do.
         ["GetHealthCheck"] = Requirement.Read,
         ["GetServiceStatus"] = Requirement.Read,
+        ["GetSystemVersions"] = Requirement.Read,
         ["GetLiveness"] = Requirement.Read,
         ["GetItem"] = Requirement.Read,
         ["ListItemMoveWorkspaces"] = Requirement.Read,

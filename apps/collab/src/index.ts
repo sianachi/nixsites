@@ -51,6 +51,7 @@ const sessions = createSessionAuthenticator({
   authorizer: createAuthorizer({
     coreBaseUrl: config.coreBaseUrl,
     internalSecret: config.internalSecret,
+    release: config.release,
   }),
   templateItems: {
     authorize: (token, templateId, sourceId) =>

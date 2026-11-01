@@ -112,6 +112,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Injected clock: endpoints never read DateTimeOffset.UtcNow directly, so time is
 // controllable in tests.
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<Nix.Features.Health.ServiceVersions>();
 builder.Services.AddSingleton<PublicFormTokenService>();
 builder.Services.AddNixObjectStorage(builder.Configuration);
 
@@ -597,6 +598,7 @@ app.MapExportEndpoints();
 app.MapPluginEndpoints();
 app.MapOperationEndpoints();
 app.MapMeEndpoints();
+app.MapSystemVersionsEndpoints();
 app.MapUiSettingsEndpoints();
 app.MapBackupEndpoints();
 app.MapStructureEndpoints();

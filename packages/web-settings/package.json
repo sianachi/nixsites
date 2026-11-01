@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Settings sections: access tokens, administrators, API, backups, calendars, daily notes, editor preferences, MCP, members, notifications, preferences, publishing, site approvals",
   "exports": {
+    "./settings/about/about-section": {
+      "types": "./src/settings/about/about-section.tsx",
+      "default": "./src/settings/about/about-section.tsx"
+    },
     "./settings/access-tokens/access-token-create-dialog": {
       "types": "./src/settings/access-tokens/access-token-create-dialog.tsx",
       "default": "./src/settings/access-tokens/access-token-create-dialog.tsx"
