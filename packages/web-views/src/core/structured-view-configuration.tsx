@@ -253,6 +253,14 @@ function SortChoice({
           >
             <option value="">No sorting</option>
             <option value="title">Title</option>
+            {view.kind === 'drive'
+              ? (['kind', 'size', 'modified'] as const).map((key) => (
+                  <option key={key} value={key}>
+                    {key[0]?.toUpperCase()}
+                    {key.slice(1)}
+                  </option>
+                ))
+              : null}
             {fields.map((field) => (
               <option key={field.key} value={field.key}>
                 {field.label}

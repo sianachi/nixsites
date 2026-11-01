@@ -192,6 +192,7 @@ function driveOf(options: {
   readonly items: readonly Item[];
   readonly onOpen?: (id: string) => void;
   readonly layout?: string;
+  readonly sortDescending?: boolean;
 }) {
   const container: ContainerData = aContainer({
     itemId: null, // a workspace root: no "Parent" destination to resolve
@@ -202,7 +203,12 @@ function driveOf(options: {
   return (
     <DriveView
       container={container}
-      view={aView({ kind: 'drive', layout: options.layout ?? 'list' })}
+      view={aView({
+        kind: 'drive',
+        layout: options.layout ?? 'list',
+        sortBy: options.sortDescending === undefined ? null : 'title',
+        sortDescending: options.sortDescending ?? false,
+      })}
       onOpen={options.onOpen ?? (() => undefined)}
     />
   );
@@ -325,6 +331,15 @@ describe('the drive view', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Name/ }));
     expect(names()).toEqual(['Delta file', 'Bravo note', 'Alpha folder']);
+  });
+
+  it('starts from the sort saved on the view record', () => {
+    render(driveOf({ items: [FILE_B, NOTE, FOLDER], sortDescending: true }));
+
+    const names = screen
+      .getAllByRole('button', { name: /^\w+ (note|folder|file)$/i })
+      .map((b) => b.textContent);
+    expect(names).toEqual(['Delta file', 'Bravo note', 'Alpha folder']);
   });
 
   it('uses the shared selection tray and downloads only selected files', async () => {
