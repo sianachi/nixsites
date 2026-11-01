@@ -364,3 +364,45 @@ func extractPDFText(t *testing.T, data []byte) string {
 	}
 	return string(output)
 }
+
+func TestLossyDocumentExportsOmitInternalReportsInEveryFormat(t *testing.T) {
+	render := `{"format":"nix-render","version":1,"blocks":[{"kind":"paragraph","runs":[{"text":"Kept text"}]},{"kind":"hologram","runs":[{"text":"x"}]}],"losses":["Comments were dropped."]}`
+	projected, err := ProjectBundle(nixarchive.Bundle{ID: "one", Title: "Lossy", Render: json.RawMessage(render)}, 1<<20, nil)
+	if err != nil || len(projected.Losses) == 0 {
+		t.Fatalf("expected losses, got %v (%v)", projected.Losses, err)
+	}
+	limits := stream.Limits{MaxBytes: 1 << 20, MaxLine: 1 << 20, MaxRecords: 1}
+	for _, format := range []string{"markdown", "docx", "pdf"} {
+		sent := false
+		next := func() (stream.Record, bool, error) {
+			if sent {
+				return stream.Record{}, false, nil
+			}
+			sent = true
+			return stream.Record{ID: "one", Title: "Lossy", Blocks: projected.Blocks}, true, nil
+		}
+		var output bytes.Buffer
+		if err := WriteStreamWithReport(format, next, &output, limits, func() []string { return projected.Losses }); err != nil {
+			t.Fatalf("%s: %v", format, err)
+		}
+		text := output.String()
+		switch format {
+		case "docx":
+			archive, err := zip.NewReader(bytes.NewReader(output.Bytes()), int64(output.Len()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			text = readZipText(t, archive, "word/document.xml")
+		case "pdf":
+			text = extractPDFText(t, output.Bytes())
+		}
+		if !strings.Contains(text, "Kept text") {
+			t.Errorf("%s lost the body: %q", format, text)
+		}
+		for _, banned := range append([]string{"What did not come across"}, projected.Losses...) {
+			if strings.Contains(text, banned) {
+				t.Errorf("%s embedded %q", format, banned)
+			}
+		}
+	}
+}
