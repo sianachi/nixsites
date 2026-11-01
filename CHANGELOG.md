@@ -17,6 +17,12 @@ follows semantic versioning (`0.x` pre-1.0).
 - Settings > Site approvals shows the requester's name where the approver can read the
   requester's workspace members, and the short id otherwise.
 - Deleting several selected items runs up to four deletes at a time instead of one after another.
+- A Drive view opens with its saved sort, and Kind, Size and Modified can be saved as its sort.
+- Markdown mode highlights Markdown syntax as you type.
+- Mermaid diagrams follow dark mode, and a diagram that takes over ten seconds, or is larger than
+  50,000 characters or 500 edges, shows an error instead of rendering.
+- Uploaded DOCX, XLSX and PPTX files are recognised as such instead of as ZIP archives.
+- A refused call that lacks a token scope now says which scope it needs and how to get one.
 
 ### Removed
 
@@ -28,6 +34,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - `nixctl search --limit` rejects a value that is not a positive integer instead of sending it.
 - Creating or deleting a site in the item's site pane relabels the item menu straight away.
+- The site pane's page pickers load more children on request instead of stopping at 500.
+- Nightly backup sizes are recorded in exact bytes instead of rounded-up KiB.
 
 ### Security
 
