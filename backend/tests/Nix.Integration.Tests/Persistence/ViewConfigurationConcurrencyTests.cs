@@ -138,7 +138,11 @@ public sealed class ViewConfigurationConcurrencyTests(NixPostgresFixture fixture
         output.WriteLine("Conditional view update, 3200 other rows per tenant, runtime role:");
         output.WriteLine(plan);
         Assert.Contains("Index Scan", plan, StringComparison.Ordinal);
-        Assert.True(plan.Contains("PK_item", StringComparison.Ordinal) || plan.Contains("AK_item_tenant_id_id", StringComparison.Ordinal));
+        // item_native_snapshot (tenant_id, workspace_id, id) is the sync feed's index; with id in its
+        // condition it is a point lookup too, and the planner may prefer it.
+        Assert.True(plan.Contains("PK_item", StringComparison.Ordinal)
+            || plan.Contains("AK_item_tenant_id_id", StringComparison.Ordinal)
+            || plan.Contains("Index Scan using item_native_snapshot", StringComparison.Ordinal));
         Assert.DoesNotContain("Seq Scan on item", plan, StringComparison.Ordinal);
         Assert.Contains("actual", plan, StringComparison.Ordinal);
         Assert.Contains("Buffers:", plan, StringComparison.Ordinal);
