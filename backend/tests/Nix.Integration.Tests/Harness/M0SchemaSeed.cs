@@ -252,6 +252,11 @@ internal static class M0SchemaSeed
                 INSERT INTO principal_ui_settings (tenant_id, principal_id, settings, revision)
                 VALUES ({Literal(rows.TenantId)}, {Literal(rows.PrincipalId)}, jsonb_build_object(), 1);
 
+                INSERT INTO native_replay_receipt
+                    (tenant_id, principal_id, operation_id, workspace_id, request_fingerprint, response)
+                VALUES ({Literal(rows.TenantId)}, {Literal(rows.PrincipalId)}, {Literal(rows.ItemId)}, {Literal(rows.WorkspaceId)},
+                    repeat('a', 64), jsonb_build_object()::text);
+
                 INSERT INTO pet_provider_credential
                     (tenant_id, principal_id, provider, protected_key, key_hint, saved_at)
                 VALUES ({Literal(rows.TenantId)}, {Literal(rows.PrincipalId)}, 'anthropic',

@@ -116,6 +116,21 @@ public static class NixTables
     /// <summary>One person's workspace groups and pins; a convenience, never a permission.</summary>
     public const string WorkspaceArrangement = "workspace_arrangement";
 
+    /// <summary>Transaction-held workspace change counters.</summary>
+    public const string WorkspaceSyncRevision = "workspace_sync_revision";
+
+    /// <summary>Thirty-day rebuildable sync change markers.</summary>
+    public const string WorkspaceSyncChange = "workspace_sync_change";
+
+    /// <summary>Durable metadata revisions retained independently of feed retention and rebuilding.</summary>
+    public const string WorkspaceSyncItemRevision = "workspace_sync_item_revision";
+
+    /// <summary>Transaction-local change staging, emptied by its deferred publication trigger.</summary>
+    public const string WorkspaceSyncPending = "workspace_sync_pending";
+
+    /// <summary>One principal's stored answer to an offline replay operation; immutable.</summary>
+    public const string NativeReplayReceipt = "native_replay_receipt";
+
     /// <summary>One person's protected API key per model provider for their pets.</summary>
     public const string PetProviderCredential = "pet_provider_credential";
 
@@ -281,6 +296,11 @@ public static class NixTables
         PrincipalPreferences,
         PrincipalUiSettings,
         WorkspaceArrangement,
+        WorkspaceSyncRevision,
+        WorkspaceSyncChange,
+        WorkspaceSyncItemRevision,
+        WorkspaceSyncPending,
+        NativeReplayReceipt,
         PetProviderCredential,
         Notification,
         PushSubscription,
@@ -481,6 +501,13 @@ public static class NixTables
             [PrincipalPreferences] = FullDml,
             [PrincipalUiSettings] = FullDml,
             [WorkspaceArrangement] = FullDml,
+            // Markers are written only by the definer triggers in NativeWorkspaceSyncSecuritySql;
+            // the staging table is not even readable.
+            [WorkspaceSyncRevision] = ReadOnly,
+            [WorkspaceSyncChange] = ReadOnly,
+            [WorkspaceSyncItemRevision] = ReadOnly,
+            [WorkspaceSyncPending] = [],
+            [NativeReplayReceipt] = ImmutableRegistration,
             [PetProviderCredential] = FullDml,
             [Notification] = FullDml,
             [PushSubscription] = FullDml,

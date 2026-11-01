@@ -58,7 +58,8 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
     /// <remarks>
     /// <c>audit_event</c> is absent because the runtime role holds only INSERT on it, so a
     /// select-based isolation check would fail on the privilege before it ever reached the policy
-    /// and would prove nothing either way. Its isolation is asserted through the one privilege it
+    /// and would prove nothing either way. The private sync staging table is absent for the same
+    /// reason. The audit table's isolation is asserted through the one privilege it
     /// does have, in
     /// <see cref="A_tenant_cannot_insert_an_audit_event_belonging_to_another_tenant"/>.
     /// </remarks>
@@ -69,7 +70,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
             var tables = new TheoryData<string>();
             foreach (var table in NixTables.TenantScoped)
             {
-                if (!string.Equals(table, NixTables.AuditEvent, StringComparison.Ordinal))
+                if (NixTables.ExpectedApplicationPrivileges[table].Contains("SELECT"))
                 {
                     tables.Add(table);
                 }

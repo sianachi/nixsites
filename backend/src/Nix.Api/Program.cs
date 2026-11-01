@@ -36,6 +36,7 @@ using Nix.Features.Recurrence;
 using Nix.Features.Roles;
 using Nix.Features.Search;
 using Nix.Features.Sites;
+using Nix.Features.Sync;
 using Nix.Features.TemplateImports;
 using Nix.Features.Templates;
 using Nix.Features.Tokens;
@@ -45,6 +46,7 @@ using Nix.Http;
 using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.RabbitMq;
+using Nix.Persistence.Sync;
 using Nix.Serialization;
 
 const string nixConnectionStringName = "Nix";
@@ -105,6 +107,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(ExportsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PluginsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.Sites.SitesJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(WorkspaceSyncJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(NativeReplayJsonContext.Default);
 });
 
 // Injected clock: endpoints never read DateTimeOffset.UtcNow directly, so time is
@@ -624,6 +628,8 @@ app.MapTemplateEndpoints();
 app.MapTokenEndpoints();
 app.MapTokenExchangeEndpoints();
 app.MapSiteEndpoints();
+app.MapWorkspaceSyncEndpoints();
+app.MapNativeReplayEndpoints();
 
 app.Run();
 

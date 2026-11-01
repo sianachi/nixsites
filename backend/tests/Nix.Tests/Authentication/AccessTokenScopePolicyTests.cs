@@ -93,6 +93,10 @@ public sealed class AccessTokenScopePolicyTests
         // ingest token must not be able to use them to read the workspace out.
         ["RunWorkspaceQuery"] = Requirement.Read,
         ["AggregateWorkspaceQuery"] = Requirement.Read,
+        ["GetWorkspaceSyncSnapshot"] = Requirement.Read,
+        ["GetWorkspaceSyncChanges"] = Requirement.Read,
+        ["ReconcileWorkspaceSync"] = Requirement.Read,
+        ["ReplayNativeOperation"] = Requirement.Write,
 
         // A summary of children the caller can already list. Nothing about a chart discloses more
         // than the listing beside it, so it is a read like the listing.

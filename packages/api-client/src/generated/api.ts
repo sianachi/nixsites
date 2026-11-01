@@ -222,6 +222,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/workspaces/{workspaceId}/sync/replay': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['ReplayNativeOperation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/health/status': {
     parameters: {
       query?: never;
@@ -3295,6 +3311,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/workspaces/{workspaceId}/sync/snapshot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Enumerate all authorized metadata with a committed feed boundary */
+    get: operations['GetWorkspaceSyncSnapshot'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/sync/changes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read current authorized metadata for committed change markers */
+    get: operations['GetWorkspaceSyncChanges'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/sync/reconcile': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Recheck device-held identifiers without revealing unknown inaccessible identifiers */
+    post: operations['ReconcileWorkspaceSync'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4901,6 +4968,73 @@ export interface components {
       /** Format: uuid */
       workspaceId?: null | string;
     };
+    NativeFileSnapshot: {
+      /** Format: uuid */
+      versionId: string;
+      fileName: string;
+      mediaType: string;
+      /** Format: int64 */
+      byteLength: number | string;
+      sha256: string;
+    };
+    NativeItemSnapshot: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      workspaceId: string;
+      revision: string;
+      /** Format: uuid */
+      parentId: null | string;
+      type: string;
+      title: string;
+      /** Format: int64 */
+      seq: number | string;
+      lifecycleState: string;
+      properties: components['schemas']['JsonObject'];
+      schema: null | components['schemas']['JsonObject'];
+      views: null | components['schemas']['JsonObject'];
+      recurrence: null | components['schemas']['JsonObject'];
+      noDelete: boolean;
+      noChildren: boolean;
+      managedBy: null | string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: null | string;
+      canWrite: boolean;
+      locked: boolean;
+      canPersistBody: boolean;
+      /** Format: date-time */
+      metadataExpiresAt: null | string;
+      /** Format: uuid */
+      bodyDocId: null | string;
+      bodyHeadSeq: null | string;
+      file: null | components['schemas']['NativeFileSnapshot'];
+    };
+    NativeRemovedItem: {
+      /** Format: uuid */
+      itemId: string;
+      reason: string;
+    };
+    NativeReplayRequest: {
+      /** Format: uuid */
+      operationId: string;
+      kind: string;
+      /** Format: uuid */
+      itemId: string;
+      expectedRevision: null | string;
+      payload: components['schemas']['JsonElement'];
+    };
+    NativeReplayResponse: {
+      /** Format: uuid */
+      operationId: string;
+      status: string;
+      /** Format: uuid */
+      itemId: string;
+      revision: null | string;
+      item: null | components['schemas']['NativeItemSnapshot'];
+      code: null | string;
+    };
     NotificationDto: {
       /** Format: uuid */
       id: string;
@@ -5326,6 +5460,9 @@ export interface components {
     QuerySortContract: {
       property: null | string;
       descending: null | boolean;
+    };
+    ReconcileWorkspaceSyncRequest: {
+      itemIds: string[];
     };
     RecoverWorkspaceRequest: {
       /** Format: uuid */
@@ -6343,6 +6480,31 @@ export interface components {
       membershipLocked: boolean;
       collaboration: boolean;
     };
+    WorkspaceSyncChanges: {
+      cursor: string;
+      hasMore: boolean;
+      resync: boolean;
+      items: components['schemas']['NativeItemSnapshot'][];
+      /** Format: date-time */
+      serverTime: string;
+    };
+    WorkspaceSyncReconciliation: {
+      items: components['schemas']['NativeItemSnapshot'][];
+      removed: components['schemas']['NativeRemovedItem'][];
+      /** Format: date-time */
+      serverTime: string;
+    };
+    WorkspaceSyncSnapshot: {
+      boundary: string;
+      /** Format: uuid */
+      nextCursor: null | string;
+      complete: boolean;
+      items: components['schemas']['NativeItemSnapshot'][];
+      /** Format: date-time */
+      serverTime: string;
+      /** @default false */
+      resync: boolean;
+    };
     WriteItemBodyRequest: {
       markdown: null | string;
     };
@@ -6871,6 +7033,50 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReplayNativeOperation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NativeReplayRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NativeReplayResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -15926,6 +16132,128 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetWorkspaceSyncSnapshot: {
+    parameters: {
+      query?: {
+        boundary?: string;
+        cursor?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceSyncSnapshot'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetWorkspaceSyncChanges: {
+    parameters: {
+      query?: {
+        after?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceSyncChanges'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReconcileWorkspaceSync: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReconcileWorkspaceSyncRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceSyncReconciliation'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };

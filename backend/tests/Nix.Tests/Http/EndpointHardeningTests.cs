@@ -141,6 +141,19 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
         Assert.Empty(raisedReads);
     }
 
+    [Fact]
+    public void The_native_reconciliation_body_bound_accepts_five_hundred_identifiers()
+    {
+        var endpoint = Assert.Single(MutatingEndpoints(),
+            e => e.RoutePattern.RawText == "/api/v1/workspaces/{workspaceId:guid}/sync/reconcile");
+        var declared = endpoint.Metadata.GetMetadata<RequestBodyLimitMetadata>();
+        Assert.NotNull(declared);
+        var request = new { itemIds = Enumerable.Range(0, 500).Select(_ => Guid.NewGuid()).ToArray() };
+        Assert.True(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, WebJson).Length <= declared.MaxRequestBodyBytes);
+        var oversized = new { itemIds = Enumerable.Range(0, 1_000).Select(_ => Guid.NewGuid()).ToArray() };
+        Assert.True(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(oversized, WebJson).Length > declared.MaxRequestBodyBytes);
+    }
+
     /// <summary>
     /// The policy each mutating route is expected to carry. The two unauthenticated public
     /// surfaces carry their own windows; every other mutation shares the writes policy.
@@ -164,7 +177,8 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
         // The ad-hoc query and its aggregate: reads sent as POSTs, on their own window, so a
         // dashboard's tiles or an assistant's lookups never spend a person's saves.
         "/api/v1/workspaces/{workspaceId:guid}/query"
-            or "/api/v1/workspaces/{workspaceId:guid}/query/aggregate" => RateLimitRefusal.QueriesPolicyName,
+            or "/api/v1/workspaces/{workspaceId:guid}/query/aggregate"
+            or "/api/v1/workspaces/{workspaceId:guid}/sync/reconcile" => RateLimitRefusal.QueriesPolicyName,
         _ => RateLimitRefusal.WritesPolicyName,
     };
 

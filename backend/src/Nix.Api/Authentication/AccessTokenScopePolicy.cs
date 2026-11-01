@@ -215,7 +215,8 @@ public static class AccessTokenScopePolicy
 
         var tail = rest[(slash + 1)..];
         return string.Equals(tail, "query", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(tail, "query/aggregate", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(tail, "query/aggregate", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(tail, "sync/reconcile", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
