@@ -968,6 +968,10 @@ export function buildProgram(): Command {
     .command('write <itemId>')
     .description('Replace a note body with Markdown from --file or stdin.')
     .option('--file <path>', 'read the Markdown from this file instead of stdin')
+    .addHelpText(
+      'after',
+      '\nExamples:\n  nixctl note write <itemId> --file body.md\n  cat body.md | nixctl note write <itemId>',
+    )
     .action((itemId: string, options: { file?: string }, command: Command) =>
       act(command, (profile, output) => writeNote(profile, itemId, { file: options.file }, output)),
     );
@@ -1939,6 +1943,10 @@ export function buildProgram(): Command {
 
       return parsed;
     })
+    .addHelpText(
+      'after',
+      '\nExamples:\n  nixctl search "weekly review"\n  nixctl search "weekly review" --limit 10',
+    )
     .action((query: string, options: { limit?: number }, command: Command) =>
       act(command, (profile, output) =>
         runSearch(profile, query, { limit: options.limit }, output),
@@ -1951,6 +1959,10 @@ export function buildProgram(): Command {
     .option('--format <format>', 'an active worker format (md aliases markdown)', 'nix')
     .option('--scope <scope>', 'item | subtree', 'item')
     .option('-o, --out <file>', 'write the export here instead of stdout')
+    .addHelpText(
+      'after',
+      '\nExamples:\n  nixctl export <itemId> --format md --scope subtree -o notes.md\n  nixctl export <itemId> --format nix -o item.nix',
+    )
     .action(
       (
         itemId: string,
