@@ -22,6 +22,8 @@ export interface BeginExportInput {
   readonly idempotencyKey: string;
   /** Adds each note's comment threads to the export (Markdown, PDF, DOCX and .nix). */
   readonly includeComments?: boolean;
+  /** Paper size for PDF exports; the server defaults to A4. */
+  readonly pageSize?: 'a4' | 'letter';
 }
 
 export const formats = (): QueryEndpoint<ExportFormatCatalog> =>

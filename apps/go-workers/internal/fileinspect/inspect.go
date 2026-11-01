@@ -60,7 +60,7 @@ func InspectHeader(header []byte, totalBytes int64) Metadata {
 		metadata.MediaType = "application/pdf"
 		metadata.Preview = totalBytes >= 0 && totalBytes <= previewBytes
 	case len(header) >= 4 && bytes.Equal(header[:4], []byte{'P', 'K', 3, 4}):
-		metadata.MediaType = "application/zip"
+		metadata.MediaType = zipMediaType(header)
 	case looksLikeSVG(header):
 		metadata.MediaType = "image/svg+xml"
 	case looksLikeText(header):
@@ -386,6 +386,25 @@ func looksLikeText(header []byte) bool {
 		}
 	}
 	return true
+}
+
+// zipMediaType names an OOXML package from the local file headers inside the header window: its
+// first entry is [Content_Types].xml (the name sits at offset 30), followed by word/, xl/ or ppt/ parts.
+// The central directory is at the end of the file, so a package whose parts start past the window
+// falls back to application/zip.
+func zipMediaType(header []byte) string {
+	if len(header) >= 49 && string(header[30:49]) == "[Content_Types].xml" {
+		for prefix, mediaType := range map[string]string{
+			"word/": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			"xl/":   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"ppt/":  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		} {
+			if bytes.Contains(header[49:], []byte(prefix)) {
+				return mediaType
+			}
+		}
+	}
+	return "application/zip"
 }
 
 func HeaderLimit() int { return maxHeaderBytes }

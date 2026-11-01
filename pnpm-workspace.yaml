@@ -14,3 +14,9 @@ onlyBuiltDependencies:
   - esbuild
   - '@parcel/watcher'
   - lefthook
+
+# Transitive advisories (excalidraw/mermaid pin old patch levels); same major only.
+overrides:
+  'nanoid@<3.3.18': '^3.3.18'
+  'lodash-es@<4.18.0': '^4.18.0'
+  'source-map-js@<1.2.2': '^1.2.2'

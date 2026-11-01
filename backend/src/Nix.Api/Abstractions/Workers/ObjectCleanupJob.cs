@@ -36,17 +36,7 @@ public static class ObjectCleanupJobs
         {
             throw new ArgumentException("Object cleanup targets are invalid.", nameof(objectKeys));
         }
-        var payload = JsonSerializer.Serialize(
-            new ObjectCleanupJobPayload(ownerKind, ownerId, notBefore, keys),
-            ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload);
-        return jobs.CreateAsync(
-            tenantId,
-            actorId,
-            workspaceId,
-            Kind,
-            $"object.cleanup:{ownerKind}:{ownerId:D}",
-            payload,
-            cancellationToken);
+        return CreateAsync(jobs, tenantId, actorId, workspaceId, ownerKind, ownerId, notBefore, keys, string.Empty, cancellationToken);
     }
 
     /// <summary>Queues large cleanup sets as deterministic, bounded worker jobs.</summary>
@@ -84,21 +74,35 @@ public static class ObjectCleanupJobs
             var batchNumber = offset / MaximumKeysPerJob;
             var batchHash = Convert.ToHexStringLower(
                 System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(string.Join('\n', batch))))[..16];
-            var payload = JsonSerializer.Serialize(
-                new ObjectCleanupJobPayload(ownerKind, ownerId, notBefore, batch),
-                ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload);
-            records.Add(await jobs.CreateAsync(
-                tenantId,
-                actorId,
-                workspaceId,
-                Kind,
-                $"object.cleanup:{ownerKind}:{ownerId:D}:batch:{batchNumber:D4}:{batchHash}",
-                payload,
-                cancellationToken).ConfigureAwait(false));
+            records.Add(await CreateAsync(
+                jobs, tenantId, actorId, workspaceId, ownerKind, ownerId, notBefore, batch,
+                $":batch:{batchNumber:D4}:{batchHash}", cancellationToken).ConfigureAwait(false));
         }
 
         return records;
     }
+
+    private static ValueTask<WorkerJobRecord> CreateAsync(
+        IWorkerJobStore jobs,
+        TenantId tenantId,
+        PrincipalId actorId,
+        WorkspaceId workspaceId,
+        string ownerKind,
+        Guid ownerId,
+        DateTimeOffset notBefore,
+        string[] keys,
+        string batchSuffix,
+        CancellationToken cancellationToken) =>
+        jobs.CreateAsync(
+            tenantId,
+            actorId,
+            workspaceId,
+            Kind,
+            $"object.cleanup:{ownerKind}:{ownerId:D}{batchSuffix}",
+            JsonSerializer.Serialize(
+                new ObjectCleanupJobPayload(ownerKind, ownerId, notBefore, keys),
+                ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload),
+            cancellationToken);
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

@@ -1,7 +1,7 @@
 import { Button, Checkbox, Dialog, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { CHILD_LIMIT, type ChildChoice } from './use-item-site';
+import type { ChildPage } from './use-item-site';
 
 /**
  * Which items inside the site are left out. Leaving an item out leaves out everything inside it.
@@ -21,16 +21,17 @@ export function SiteExclusionsPicker({
   readonly rootItemId: string;
   readonly rootTitle: string;
   readonly excluded: readonly string[];
-  readonly listChildren: (parentId: string) => Promise<readonly ChildChoice[]>;
+  readonly listChildren: (parentId: string) => Promise<ChildPage>;
   readonly onSave: (excludedItemIds: readonly string[]) => Promise<string | null>;
   readonly onClose: () => void;
 }): ReactNode {
   const [trail, setTrail] = useState<readonly { id: string; title: string }[]>([
     { id: rootItemId, title: rootTitle },
   ]);
-  const [children, setChildren] = useState<readonly ChildChoice[] | null>(null);
+  const [children, setChildren] = useState<ChildPage | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(excluded));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,22 @@ export function SiteExclusionsPicker({
       live = false;
     };
   }, [attempt, listChildren, open, parentId]);
+
+  function loadMore(): void {
+    if (!children?.loadMore) return;
+    const more = children.loadMore;
+    setLoadingMore(true);
+    more()
+      .then((page) => {
+        setChildren({ items: [...children.items, ...page.items], loadMore: page.loadMore });
+      })
+      .catch(() => {
+        setLoadError('These items could not be loaded.');
+      })
+      .finally(() => {
+        setLoadingMore(false);
+      });
+  }
 
   function toggle(id: string, on: boolean): void {
     const next = new Set(chosen);
@@ -142,19 +159,14 @@ export function SiteExclusionsPicker({
           <Text variant="note" tone="muted" role="status">
             Loading…
           </Text>
-        ) : children.length === 0 ? (
+        ) : children.items.length === 0 ? (
           <Text variant="note" tone="muted" role="status">
             Nothing inside this item.
           </Text>
         ) : (
           <>
-            {children.length >= CHILD_LIMIT ? (
-              <Text variant="note" tone="muted">
-                {`Showing the first ${String(CHILD_LIMIT)} items at this level.`}
-              </Text>
-            ) : null}
             <ul className="flex flex-col gap-1" aria-label="Items">
-              {children.map((child) => {
+              {children.items.map((child) => {
                 const title = child.title === '' ? 'Untitled' : child.title;
                 return (
                   <li key={child.id} className="flex items-center justify-between gap-2">
@@ -180,6 +192,11 @@ export function SiteExclusionsPicker({
                 );
               })}
             </ul>
+            {children.loadMore === null ? null : (
+              <Button variant="secondary" disabled={loadingMore} onClick={loadMore}>
+                {loadingMore ? 'Loading items' : 'Load more items'}
+              </Button>
+            )}
           </>
         )}
         {error === null ? null : (

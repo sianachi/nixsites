@@ -8,7 +8,6 @@ import {
   Menu,
   Text,
   cn,
-  disabledState,
   focusRing,
   type MenuEntry,
 } from '@nix/ui';
@@ -16,57 +15,32 @@ import { files as fileResources, isNixApiError, items as coreItems } from '@nix/
 import { collectDropped, uploadEntries } from './drop-upload';
 import {
   ChevronDown,
-  ChevronRight,
   Columns2,
-  ExternalLink,
   FilePlus,
-  FileText,
-  FolderLock,
-  FolderPlus,
-  FolderUp,
   Grid3x3,
   LayoutTemplate,
-  MoreHorizontal,
   Shapes,
-  Shield,
-  ShieldOff,
-  Trash2,
   Upload,
-  User,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
 import { useBookmarksStore } from '@nix/web-collections/items/use-bookmarks';
-import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';
+import { type OpenBesideRefusal } from '../tabs/use-open-item';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
 import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
-import { useAutomateEntry } from '@nix/web-collections/items/automate-entry';
-import { useMuteRemindersEntry } from '@nix/web-settings/settings/notifications/mute-reminders-entry';
-import {
-  bookmarkEntry,
-  copyLinkEntry,
-  treeChildrenEntry,
-} from '@nix/web-collections/items/item-menu-entries';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';
 import { HiddenItemsPanel } from './hidden-items-panel';
-import { siblingMoveTarget } from './sibling-move-target';
+import { TreeRow } from './tree-row';
+import { handleRowMoveKey } from './tree-row-keys';
+import { useRowDragDrop } from './use-row-drag-drop';
+import { useRowMenuItems } from './use-row-menu-items';
 import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import {
   ItemSelectionContext,
@@ -83,9 +57,6 @@ import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-wor
 import { useItemLandmarks } from './use-item-landmarks';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
 import type { ItemLandmarks } from '@nix/web-foundation/lib/item-landmarks';
-
-/** Whether this is an Apple platform, for the one gesture whose modifier differs. */
-const APPLE = isApplePlatform();
 
 const NO_ROWS: readonly string[] = [];
 const noRows = (): void => undefined;
@@ -681,108 +652,11 @@ function uploadErrorText(error: unknown): string {
   return error instanceof Error ? error.message : 'The file could not be uploaded.';
 }
 
-/**
- * Where on a row a drop would land.
- *
- * The row's middle band means inside; its top and bottom edges mean before and after, as siblings.
- * This distinction used to come free from the item's type - onto a folder meant inside, onto a note
- * meant beside - and with one kind of item there is nothing left to read it from but the pointer.
- *
- * The middle is deliberately the larger share. Dropping something *into* the thing under the
- * pointer is the common intent and the one that should be easy to hit; reordering is the
- * deliberate act, and its targets sit where a miss lands you inside rather than somewhere
- * surprising.
- */
-type DropZone = 'before' | 'inside' | 'after';
-
-const EDGE_BAND = 0.25;
-
-/**
- * How far a row is pushed in for its depth, enumerated as classes.
- *
- * The tree used to compute `paddingLeft` and set it through `style`. Inline styles are banned
- * repository-wide (`app.css` says so, and the rule is why there is one stylesheet), and a CSS
- * custom property assigned through `style` is still an inline style - it moves the value, not the
- * attribute. So the depths are written out.
- *
- * The steps are the drawing's 6px base and 12px per level, rounded onto the spacing scale: a 2-unit
- * base and 3.5 units per level. `--spacing` is 3.4px, so `ROW_INDENT` runs 0.8px wide at the root
- * and closes to exactly the drawn value by its last step.
- *
- * `CHILD_NOTICE_INDENT` is that ladder one level down plus the row's own gutter - the expand chevron
- * (`size-5`) and the gap beside it, 6 units together - so "Loading…" and "Empty" line up with the
- * titles of the children they stand in for rather than with their chevrons. It runs 1.1px wide at
- * the root and 0.4px at its last step: the gutter was written as a round 26px and the chevron and
- * gap it stands for actually measure 20.4px, so these notices end up a hair better aligned than
- * they were drawn. That is the only entry in this file that moves by more than a pixel.
- *
- * **Bounded, deliberately.** Depth is unbounded in principle and the sidebar's width is not - it
- * starts at 264px and can be dragged down to 200 - so the indent cannot be unbounded in practice:
- * nine levels already spend 102px of the width, and a tenth would be taken from the title. Past the bound the indent stops growing and deeper rows share the last
- * step. Depth is still carried where it is load-bearing - `role="treeitem"`, `aria-expanded`, and
- * each level's own `role="group"` - so what a tenth level loses is the picture of its depth, not
- * the fact of it, and assistive technology is told the same thing either way.
- *
- * **The two ladders have to stop at the same place**, which is why this one is a step shorter.
- * `CHILD_NOTICE_INDENT[i]` stands for a row at depth `i + 1`, so it runs out one level sooner: with
- * a ninth entry, a notice under a depth-8 node sat 11.9px further in than the children that then
- * replaced it, and the placeholder visibly jumped as they loaded.
- *
- * Both of those are relationships between the two ladders rather than facts about either, so they
- * are asserted in `tree-indent.test.ts` rather than only described here - which is also why all
- * three names below are exported.
- */
-export const ROW_INDENT = [
-  'pl-2',
-  'pl-5.5',
-  'pl-9',
-  'pl-12.5',
-  'pl-16',
-  'pl-19.5',
-  'pl-23',
-  'pl-26.5',
-  'pl-30',
-] as const;
-
-export const CHILD_NOTICE_INDENT = [
-  'pl-11.5',
-  'pl-15',
-  'pl-18.5',
-  'pl-22',
-  'pl-25.5',
-  'pl-29',
-  'pl-32.5',
-  'pl-36',
-] as const;
-
-/** The step for a depth, clamped to the deepest one the sidebar has room to draw. */
-export function indentAt(scale: readonly [string, ...string[]], depth: number): string {
-  return scale[Math.min(Math.max(depth, 0), scale.length - 1)] ?? scale[0];
-}
-
-export function dropZoneAt(offsetY: number, height: number): DropZone {
-  if (height <= 0) {
-    return 'inside';
-  }
-
-  const position = offsetY / height;
-
-  if (position < EDGE_BAND) {
-    return 'before';
-  }
-
-  return position > 1 - EDGE_BAND ? 'after' : 'inside';
-}
+export { ROW_INDENT, CHILD_NOTICE_INDENT, indentAt, dropZoneAt } from './tree-geometry';
+import { CHILD_NOTICE_INDENT, indentAt } from './tree-geometry';
 
 function TreeNode(props: TreeNodeProps): ReactNode {
   const openButtonRef = useRef<HTMLButtonElement>(null);
-  // A selector rather than the whole store, so a row re-renders when its own answer moves and not
-  // when somebody keeps an unrelated item three folders away.
-  const keptIds = useBookmarksStore((state) => state.keptIds);
-  const { workspaceId } = useWorkspace();
-  const automateEntry = useAutomateEntry(workspaceId);
-  const muteRemindersEntry = useMuteRemindersEntry();
-
   const {
     item,
     depth,
@@ -813,104 +687,16 @@ function TreeNode(props: TreeNodeProps): ReactNode {
   // control out from under the pointer that just opened it.
   const expandable = !childrenHidden && (item.hasChildren || expanded);
 
-  const [zone, setZone] = useState<DropZone | null>(null);
-  const dropping = zone !== null && dragged !== item.id;
-
   const siblings = tree.childrenOf(item.parentId);
   const index = siblings.findIndex((sibling) => sibling.id === item.id);
-  const previous = index > 0 ? siblings[index - 1] : undefined;
-  const next = index >= 0 ? siblings[index + 1] : undefined;
-
-  function onDragStart(event: DragEvent<HTMLDivElement>): void {
-    setDragged(item.id);
-    event.dataTransfer.effectAllowed = 'move';
-    // Set, though nothing reads it: without data attached, Firefox refuses to start the drag.
-    event.dataTransfer.setData('text/plain', item.id);
-  }
-
-  function onDrop(event: DragEvent<HTMLDivElement>): void {
-    event.preventDefault();
-
-    const landing = zone;
-    setZone(null);
-
-    if (event.dataTransfer.types.includes('Files')) {
-      event.stopPropagation(); // handled here, not as an empty-space drop on the sidebar
-      onDropFiles(
-        collectDropped(event.dataTransfer),
-        landing === 'inside' ? item.id : item.parentId,
-      );
-      return;
-    }
-
-    if (dragged === null || dragged === item.id || landing === null) {
-      return;
-    }
-
-    // The server refuses an item dropped into its own subtree, so the one gesture that could break
-    // the tree is the one it will not perform.
-    void (landing === 'inside'
-      ? tree.move(dragged, item.id, null)
-      : tree.move(dragged, item.parentId, landing === 'after' ? item.id : (previous?.id ?? null)));
-
-    setDragged(null);
-  }
-
-  /**
-   * The same three moves, from the keyboard.
-   *
-   * A drop zone that exists only for a pointer is not a move affordance, it is a move affordance
-   * for some people. These are the outliner bindings - the ones anybody who has used a list of
-   * nested things already has in their fingers - and they map onto exactly the three landings a
-   * drag can produce.
-   */
-  function onKeyDown(event: ReactKeyboardEvent<HTMLElement>): void {
-    if (!event.altKey) {
-      return;
-    }
-
-    // The keyboard half of a modifier-click. A gesture that only a pointer can make is a feature
-    // for only some people - the same objection that gave the moves below their alt-arrows - and
-    // Alt is already the modifier this row means business with.
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (canOpenBeside) {
-        onOpenBeside(item.id);
-      } else if (besideRefusal !== null) {
-        // A pointer user gets a disabled control whose name explains itself; without this a
-        // keyboard user gets silence, which reads as a broken key rather than a full screen.
-        announce(OPEN_BESIDE_REFUSAL_COPY[besideRefusal]);
-      }
-      return;
-    }
-
-    if (event.key === 'ArrowUp' && previous !== undefined) {
-      event.preventDefault();
-      // Before the sibling above, which is after the one above that.
-      void tree.move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'up'));
-      return;
-    }
-
-    if (event.key === 'ArrowDown' && next !== undefined) {
-      event.preventDefault();
-      void tree.move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'down'));
-      return;
-    }
-
-    if (event.key === 'ArrowRight' && previous !== undefined) {
-      event.preventDefault();
-      // Inside the sibling above, which is the only unambiguous "indent": the item below cannot
-      // take it without reordering them both.
-      void tree.move(item.id, previous.id, null);
-      return;
-    }
-
-    if (event.key === 'ArrowLeft' && item.parentId !== null) {
-      event.preventDefault();
-      const parent = tree.find(item.parentId);
-      void tree.move(item.id, parent?.parentId ?? null, item.parentId);
-    }
-  }
+  const { zone, dropping, dragProps } = useRowDragDrop({
+    item,
+    tree,
+    previousId: index > 0 ? (siblings[index - 1]?.id ?? null) : null,
+    dragged,
+    setDragged,
+    onDropFiles,
+  });
 
   const title = item.title || 'Untitled';
 
@@ -927,13 +713,22 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     });
   }
 
-  /**
-   * The row's actions, gathered where the right-click lands. Every one of them already exists as a
-   * control or gesture on the row - this is the place a desktop user looks for them first, not a
-   * second implementation. Built when the menu opens, so the bookmark entry names the current state.
-   */
-  const deleteProtected = item.noDelete === true;
-  const managed = item.managedBy !== undefined && item.managedBy !== null;
+  const contextItems = useRowMenuItems({
+    item,
+    title,
+    tree,
+    siblings,
+    canOpenBeside,
+    besideRefusal,
+    onSelect,
+    onOpenPinned,
+    onOpenBeside,
+    onDeleteItem,
+    onChooseIcon: props.onChooseIcon,
+    openButtonRef,
+    moveToRoot,
+  });
+
   const rowSelection = useOptionalItemSelection();
   const inSelection = rowSelection?.selected.has(item.id) === true;
 
@@ -952,140 +747,6 @@ function TreeNode(props: TreeNodeProps): ReactNode {
       onOpenBeside(item.id);
     },
   );
-
-  function contextItems(): MenuEntry[] {
-    return [
-      {
-        kind: 'action',
-        label: 'Open',
-        icon: FileText,
-        onSelect: () => {
-          onSelect(item.id);
-        },
-      },
-      ...(rowSelection === null
-        ? []
-        : [
-            {
-              kind: 'action' as const,
-              label: inSelection ? 'Deselect' : 'Select',
-              shortcut: APPLE ? '⌘ Click' : 'Ctrl+Click',
-              onSelect: () => {
-                rowSelection.toggle(
-                  item.id,
-                  siblings.map((sibling) => sibling.id),
-                );
-              },
-            },
-          ]),
-      {
-        kind: 'action',
-        label: 'Open in a new tab',
-        icon: ExternalLink,
-        onSelect: () => {
-          onOpenPinned(item.id);
-        },
-      },
-      ...(besideRefusal === 'narrow'
-        ? []
-        : [
-            {
-              kind: 'action' as const,
-              label: 'Open beside',
-              icon: Columns2,
-              shortcut: APPLE ? '⌥ Click' : 'Alt+Click',
-              disabled: !canOpenBeside,
-              onSelect: () => {
-                onOpenBeside(item.id);
-              },
-            },
-          ]),
-      { kind: 'separator' },
-      ...(visibility.enabled
-        ? [
-            {
-              kind: 'action' as const,
-              label: 'Hide for me',
-              onSelect: () => {
-                visibility.hide(item.id, title);
-              },
-            },
-          ]
-        : []),
-      treeChildrenEntry(treeChildren, item.id, title),
-      bookmarkEntry(item.id),
-      ...(props.onChooseIcon === undefined
-        ? []
-        : [
-            {
-              kind: 'action' as const,
-              label: 'Choose icon…',
-              icon: Shapes,
-              onSelect: () => {
-                props.onChooseIcon?.(item, openButtonRef.current);
-              },
-            },
-          ]),
-      copyLinkEntry(workspaceId, item.id, title),
-      ...(automateEntry === null ? [] : [automateEntry(item.id)]),
-      ...(muteRemindersEntry === null ? [] : [muteRemindersEntry(item.id, title)]),
-      ...(item.parentId === null
-        ? []
-        : [
-            {
-              kind: 'action' as const,
-              label: 'Move to workspace root',
-              icon: FolderUp,
-              onSelect: () => {
-                moveToRoot();
-              },
-            },
-          ]),
-      { kind: 'separator' },
-      {
-        kind: 'action',
-        // A managed item's protection belongs to its linked calendar, so the entry stays, to say
-        // why Delete is unavailable, but cannot be switched off from here.
-        label: deleteProtected ? 'Allow deletion' : 'Protect from deletion',
-        icon: deleteProtected ? ShieldOff : Shield,
-        disabled: managed,
-        onSelect: () => {
-          void tree.setProtection(item.id, { noDelete: !deleteProtected });
-        },
-      },
-      {
-        kind: 'action',
-        label: item.noChildren === true ? 'Allow new children' : 'Stop new children',
-        icon: item.noChildren === true ? FolderPlus : FolderLock,
-        onSelect: () => {
-          void tree.setProtection(item.id, { noChildren: item.noChildren !== true });
-        },
-      },
-      {
-        kind: 'action',
-        // Off means one editor at a time; the workspace's own switch can still keep it off.
-        label: item.collaboration === false ? 'Allow editing together' : 'Edit one at a time',
-        icon: item.collaboration === false ? Users : User,
-        onSelect: () => {
-          void tree.setProtection(item.id, { collaboration: item.collaboration === false });
-        },
-      },
-      {
-        kind: 'action',
-        label: managed
-          ? 'Delete (unlink the calendar in settings)'
-          : deleteProtected
-            ? 'Delete (protected)'
-            : 'Delete',
-        icon: Trash2,
-        destructive: true,
-        disabled: deleteProtected,
-        onSelect: () => {
-          onDeleteItem(item);
-        },
-      },
-    ];
-  }
 
   return (
     <li
@@ -1108,236 +769,44 @@ function TreeNode(props: TreeNodeProps): ReactNode {
         }}
       >
         {(contextTarget) => (
-          <div
-            {...contextTarget}
-            draggable
-            onDragStart={onDragStart}
-            onDragEnd={() => {
-              setDragged(null);
-              setZone(null);
+          <TreeRow
+            contextTarget={contextTarget}
+            dragProps={dragProps}
+            item={item}
+            depth={depth}
+            landmark={props.landmarks[item.id]}
+            selected={selected}
+            inSelection={inSelection}
+            zone={zone}
+            dropping={dropping}
+            expandable={expandable}
+            expanded={expanded}
+            onToggleExpanded={() => {
+              setExpanded(!expanded);
+              if (!expanded && !tree.isExpanded(item.id)) void tree.toggle(item.id);
             }}
-            onDragOver={(event) => {
-              // A text or link drag is not ours to take; an OS file drag is.
-              if (dragged === null && !event.dataTransfer.types.includes('Files')) return;
-              event.preventDefault();
-              const box = event.currentTarget.getBoundingClientRect();
-              setZone(dropZoneAt(event.clientY - box.top, box.height));
+            gestures={gestures}
+            onKeyDown={(event) => {
+              gestures.onKeyDown(event);
+              handleRowMoveKey(event, {
+                item,
+                tree,
+                siblings,
+                index,
+                canOpenBeside,
+                besideRefusal,
+                onOpenBeside,
+              });
             }}
-            onDragLeave={() => {
-              setZone(null);
-            }}
-            onDrop={onDrop}
-            className={[
-              'group relative flex items-center gap-1 rounded-md pr-1',
-              indentAt(ROW_INDENT, depth),
-              selected ? 'bg-accent/14' : inSelection ? 'bg-accent/10' : 'hover:bg-accent/8',
-              dropping && zone === 'inside' ? 'outline-2 -outline-offset-2 outline-accent' : '',
-            ].join(' ')}
-          >
-            {/* A line where the item would land, rather than an outline round the row it would land
-            beside. An outline says "into this"; a line between two rows says "between them", which
-            is the thing being chosen. */}
-            {dropping && zone !== 'inside' ? (
-              <span
-                aria-hidden="true"
-                className={[
-                  'pointer-events-none absolute inset-x-0 h-0.5 bg-accent',
-                  zone === 'before' ? 'top-0' : 'bottom-0',
-                ].join(' ')}
-              />
-            ) : null}
-
-            {/* `max-sm:size-(--control-sm)` on both the button and its placeholder, narrow-scoped:
-            below `sm` this is a touch target and 20px (`size-5`) is under WCAG 2.5.8's 24px floor,
-            but the two have to grow together or a row without an expand control would sit at a
-            different gutter width than one with it.
-
-            `pointer-coarse:size-(--control-sm)` rides alongside it: `group-hover:*` only applies
-            under `@media(hover:hover)` (Tailwind v4's `pointer-coarse:` variant maps to
-            `@media(pointer:coarse)`), so a touch-capable device *above* `sm` - an iPad in portrait,
-            say - would otherwise get neither the hover reveal nor the `max-sm:` override, leaving
-            it unreachable rather than merely small. */}
-            {expandable ? (
-              <button
-                type="button"
-                data-context-menu-ignore
-                aria-label={expanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
-                onClick={() => {
-                  setExpanded(!expanded);
-                  if (!expanded && !tree.isExpanded(item.id)) void tree.toggle(item.id);
-                }}
-                className="flex size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm) items-center justify-center text-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-              >
-                <Icon icon={expanded ? ChevronDown : ChevronRight} size="sm" />
-              </button>
-            ) : (
-              <span
-                aria-hidden="true"
-                className="size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm)"
-              />
-            )}
-
-            <button
-              ref={openButtonRef}
-              type="button"
-              onClick={gestures.onClick}
-              onDoubleClick={() => {
-                onOpenPinned(item.id);
-              }}
-              // On the row's own control rather than on the wrapper: this is the element that takes
-              // focus, so it is the one whose keys mean anything, and a div carrying key handlers is a
-              // control that only looks like one.
-              onKeyDown={(event) => {
-                gestures.onKeyDown(event);
-                onKeyDown(event);
-              }}
-              onKeyUp={gestures.onKeyUp}
-              className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-            >
-              <ItemLandmarkIcon landmark={props.landmarks[item.id]} />
-              <Text as="span" variant="bodySmall" truncate>
-                {item.title || 'Untitled'}
-              </Text>
-              {deleteProtected ? (
-                <>
-                  <Icon icon={Shield} size="sm" className="shrink-0 text-muted" />
-                  <span className="sr-only">
-                    {managed ? 'Part of a linked calendar' : 'Protected from deletion'}
-                  </span>
-                </>
-              ) : null}
-              {item.noChildren === true ? (
-                <>
-                  <Icon icon={FolderLock} size="sm" className="shrink-0 text-muted" />
-                  <span className="sr-only">Does not accept new children</span>
-                </>
-              ) : null}
-            </button>
-
-            {/* Beside Delete, in the row's own established grammar: revealed on hover, always
-            reachable by keyboard - and, below `sm`, always visible and at the 28px control size
-            rather than 20px, because touch has no hover to reveal a hidden control with, and a
-            control under WCAG 2.5.8's 24px floor is a thumb's width from the row next to it.
-            The modifier-click and Alt+Enter above are accelerators for this control rather than
-            the whole feature - a gesture only a pointer can make is a feature for only some
-            people, and a `title` tooltip is worse than nothing here, because it is read aloud
-            after every row while never reaching a touch or keyboard user at all.
-
-            Not rendered at all when the refusal is `'narrow'`: that reason is a fact about this
-            viewport, not a transient state of the pane arrangement, and it is true of every row in
-            the tree at once. A disabled, ever-present control whose label is a refusal nobody can
-            ever act around is worse than no control - on a phone a screen reader would hear it on
-            every single row. `'limit'` is the opposite: a temporary state of how many panes happen
-            to be open, so it stays visible and disabled, with the explanation, exactly as before. */}
-            {besideRefusal === 'narrow' ? null : (
-              <button
-                type="button"
-                disabled={!canOpenBeside}
-                data-context-menu-ignore
-                aria-label={
-                  besideRefusal === null
-                    ? `Open ${item.title || 'Untitled'} beside`
-                    : `Cannot open ${item.title || 'Untitled'} beside. ${OPEN_BESIDE_REFUSAL_COPY[besideRefusal]}`
-                }
-                onClick={() => {
-                  onOpenBeside(item.id);
-                }}
-                // `opacity-0`, not `invisible`. `visibility: hidden` takes an element out of the tab
-                // order entirely, so `focus-visible:visible` can never fire - nothing can focus it in
-                // order to un-hide it. The control was pointer-only, which is the objection it exists to
-                // answer. Opacity hides it and keeps it reachable.
-                //
-                // `pointer-events-none` rides along with that same `opacity-0` regardless of viewport
-                // width: an element can be hit-tested while fully transparent, so without this a thumb
-                // or pointer landing near the row's edge could trigger a control nothing on screen shows
-                // it landed on. The three states that raise the opacity back to 100 - hover, focus-visible,
-                // group-hover - restore pointer events with it; `max-sm:` does the same unconditionally,
-                // since below `sm` this is never hidden in the first place.
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${disabledState} ${focusRing}`}
-              >
-                <Icon icon={Columns2} size="sm" />
-              </button>
-            )}
-
-            {/* Revealed on hover and on focus like its neighbours, and always visible once the item is
-            kept - a star that vanished when the pointer left would mean a reader could not tell
-            what they had bookmarked without hovering every row in turn. `BookmarkButton` owns the
-            pressed state and the toggle; the classes here are the row's, because only the row knows
-            what its controls look like. */}
-            <BookmarkButton
-              compact
-              itemId={item.id}
-              title={item.title}
-              className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-lg) ${keptIds.has(item.id) ? 'opacity-100 pointer-events-auto' : 'sm:pointer-coarse:hidden'} ${focusRing}`}
-            />
-
-            {/* A direct escape from nesting. Dragging beside a root or pressing Alt+Left once per
-            ancestor still works, but neither is a reasonable requirement for the common outcome
-            "put this in the workspace". Appended after the current last root so moving does not
-            unexpectedly reorder the roots already there. */}
-            {item.parentId === null ? null : (
-              <button
-                type="button"
-                data-context-menu-ignore
-                aria-label={`Move ${item.title || 'Untitled'} to the workspace root`}
-                onClick={() => {
-                  moveToRoot();
-                }}
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
-              >
-                <Icon icon={FolderUp} size="sm" />
-              </button>
-            )}
-
-            {/* No control at all on a protected row: a destructive button that can only refuse is
-            worse than its absence, and the shield beside the title says why it is missing. */}
-            {deleteProtected ? null : (
-              <button
-                type="button"
-                data-context-menu-ignore
-                aria-label={`Delete ${item.title}`}
-                onClick={() => {
-                  // Immediate, on purpose - see `requestDelete` on `app-shell.tsx` for why a toast
-                  // with Undo replaced the `globalThis.confirm()` this control used to sit behind. The
-                  // control is revealed on hover and sits a few pixels from the one that opens the
-                  // item, which is exactly the situation Undo (rather than a slower "are you sure") is
-                  // meant to answer.
-                  onDeleteItem(item);
-                }}
-                // `opacity-0` for the same reason the control above it uses one: `visibility: hidden`
-                // takes an element out of the tab order, so this was keyboard-unreachable - and of the
-                // two controls in this row it is the destructive one. `pointer-events-none` and the
-                // narrow-scoped sizing and always-visible state follow the same reasoning as that
-                // control's own comment, as does the `pointer-coarse:` trio beside it: `group-hover:*`
-                // needs `@media(hover:hover)`, so a touch-capable device above `sm` gets neither that nor
-                // the `max-sm:` override without it.
-                //
-                // `pointer-coarse:ml-2` widens the gap in front of this control only: on touch, a thumb
-                // landing between "move to root" and the bookmark star and this destructive action has
-                // less margin for error than a mouse pointer does, and the row's own `gap-1` is otherwise
-                // the same narrow spacing on every control in it.
-                className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
-              >
-                <Icon icon={Trash2} size="sm" />
-              </button>
-            )}
-
-            {/* On a touch tablet the four 28px row buttons fold into this one 44px menu, the way the
-            phone browser does; a kept item's star stays beside it as the bookmark indicator. */}
-            <Menu label={`Actions for ${item.title || 'Untitled'}`} items={contextItems()}>
-              {(trigger) => (
-                <button
-                  {...trigger}
-                  type="button"
-                  data-context-menu-ignore
-                  aria-label={`Actions for ${item.title || 'Untitled'}`}
-                  className={`hidden sm:pointer-coarse:flex pointer-coarse:size-(--control-lg) items-center justify-center text-muted hover:text-foreground ${focusRing}`}
-                >
-                  <Icon icon={MoreHorizontal} size="sm" />
-                </button>
-              )}
-            </Menu>
-          </div>
+            openButtonRef={openButtonRef}
+            canOpenBeside={canOpenBeside}
+            besideRefusal={besideRefusal}
+            onOpenBeside={onOpenBeside}
+            onOpenPinned={onOpenPinned}
+            onDeleteItem={onDeleteItem}
+            moveToRoot={moveToRoot}
+            contextItems={contextItems}
+          />
         )}
       </ContextMenu>
 

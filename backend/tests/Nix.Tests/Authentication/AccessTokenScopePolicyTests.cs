@@ -87,7 +87,6 @@ public sealed class AccessTokenScopePolicyTests
         ["GetBacklinks"] = Requirement.Read,
         ["GetPassages"] = Requirement.Read,
         ["SearchPassages"] = Requirement.Read,
-        ["GetItemPermissions"] = Requirement.Read,
         ["RunItemQuery"] = Requirement.Read,
 
         // Reads sent as POSTs because rules do not fit a URL; they change nothing, so a write-only
@@ -228,11 +227,9 @@ public sealed class AccessTokenScopePolicyTests
         // policy's deliberate one-sided failure mode.
         ["PreflightTemplateApplication"] = Requirement.Write,
 
-        // Admin: what changes or exposes who can see what - permission entries, the public-link
+        // Admin: what changes or exposes who can see what - the public-link
         // surface whichever method reaches it (its GET reads back a live anonymous-write URL), and
         // a move, which re-parents an item into another audience through inheritance.
-        ["UpsertAclEntry"] = Requirement.Admin,
-        ["DeleteAclEntry"] = Requirement.Admin,
         ["GetPublicFormStatus"] = Requirement.Admin,
         ["PublishPublicForm"] = Requirement.Admin,
         ["RevokePublicForm"] = Requirement.Admin,
@@ -493,17 +490,6 @@ public sealed class AccessTokenScopePolicyTests
         Assert.False(Satisfies(["READ"], Requirement.Read));
         Assert.False(Satisfies(["everything"], Requirement.Read));
         Assert.False(Satisfies([], Requirement.Read));
-    }
-
-    [Fact]
-    public void Permission_writes_need_admin_even_for_a_write_scoped_token()
-    {
-        var requirement = Classify(
-            "PUT",
-            "/api/v1/items/00000000-0000-0000-0000-000000000001/permissions/entries");
-
-        Assert.Equal(Requirement.Admin, requirement);
-        Assert.False(Satisfies([AccessTokenScopes.Read, AccessTokenScopes.Write], requirement));
     }
 
     private static bool IsHttpMethod(string name) => name is

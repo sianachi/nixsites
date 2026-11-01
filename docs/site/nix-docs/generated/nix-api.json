@@ -2281,16 +2281,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       },
@@ -2362,16 +2352,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       }
@@ -2408,16 +2388,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2476,16 +2446,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       },
@@ -2523,16 +2483,6 @@
           },
           "409": {
             "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2684,16 +2634,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       }
@@ -2803,16 +2743,6 @@
           },
           "409": {
             "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5341,197 +5271,6 @@
           },
           "422": {
             "description": "Unprocessable Entity",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/items/{itemId}/permissions": {
-      "get": {
-        "tags": [
-          "Permissions"
-        ],
-        "summary": "Who can do what with this item",
-        "description": "Returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing. The effective role and 'canShare' are server decisions; a client must render from them and must never derive its own answer from the entries.",
-        "operationId": "GetItemPermissions",
-        "parameters": [
-          {
-            "name": "itemId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ItemPermissionsResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/items/{itemId}/permissions/entries": {
-      "put": {
-        "tags": [
-          "Permissions"
-        ],
-        "summary": "Grant or refuse a role on this item",
-        "description": "Creates or replaces the entry for the given subject and effect. Fails with 'permissions.cannot_share' when the caller may see the item but may not administer its sharing.",
-        "operationId": "UpsertAclEntry",
-        "parameters": [
-          {
-            "name": "itemId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertAclEntryRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AclEntryResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/items/{itemId}/permissions/entries/{aclEntryId}": {
-      "delete": {
-        "tags": [
-          "Permissions"
-        ],
-        "summary": "Remove an entry from this item",
-        "description": "Removes an entry attached to this item. An inherited entry cannot be removed here - it belongs to the ancestor it is attached to - and attempting it fails with 'permissions.entry_not_found'.",
-        "operationId": "DeleteAclEntry",
-        "parameters": [
-          {
-            "name": "itemId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "aclEntryId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13476,56 +13215,6 @@
           }
         }
       },
-      "AclEntryResponse": {
-        "required": [
-          "id",
-          "itemId",
-          "subjectType",
-          "subjectId",
-          "subjectDisplayName",
-          "role",
-          "effect",
-          "breaksInheritance",
-          "inheritedFromItemId"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "itemId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "subjectType": {
-            "type": "string"
-          },
-          "subjectId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "subjectDisplayName": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string"
-          },
-          "effect": {
-            "type": "string"
-          },
-          "breaksInheritance": {
-            "type": "boolean"
-          },
-          "inheritedFromItemId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          }
-        }
-      },
       "AddCommentRequest": {
         "required": [
           "body",
@@ -14199,6 +13888,12 @@
           "includeComments": {
             "type": "boolean",
             "default": false
+          },
+          "pageSize": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19441,37 +19136,6 @@
               "null",
               "string"
             ]
-          }
-        }
-      },
-      "ItemPermissionsResponse": {
-        "required": [
-          "itemId",
-          "entries",
-          "effectiveRole",
-          "canShare",
-          "breaksInheritance"
-        ],
-        "type": "object",
-        "properties": {
-          "itemId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "entries": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AclEntryResponse"
-            }
-          },
-          "effectiveRole": {
-            "type": "string"
-          },
-          "canShare": {
-            "type": "boolean"
-          },
-          "breaksInheritance": {
-            "type": "boolean"
           }
         }
       },
@@ -25068,34 +24732,6 @@
           }
         }
       },
-      "UpsertAclEntryRequest": {
-        "required": [
-          "subjectType",
-          "subjectId",
-          "role",
-          "effect",
-          "breaksInheritance"
-        ],
-        "type": "object",
-        "properties": {
-          "subjectType": {
-            "type": "string"
-          },
-          "subjectId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "type": "string"
-          },
-          "effect": {
-            "type": "string"
-          },
-          "breaksInheritance": {
-            "type": "boolean"
-          }
-        }
-      },
       "ViewAggregateContract": {
         "required": [
           "property",
@@ -26515,9 +26151,6 @@
     },
     {
       "name": "Operations"
-    },
-    {
-      "name": "Permissions"
     },
     {
       "name": "Roles"

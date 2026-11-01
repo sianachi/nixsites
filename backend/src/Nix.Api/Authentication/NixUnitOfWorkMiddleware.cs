@@ -630,7 +630,8 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 "Access token out of scope",
                 $"Principal '{principalId}' is authenticated, but personal access token "
                 + $"'{accessTokenId}' does not reach {context.Request.Method} "
-                + $"{context.Request.Path}: it requires {AccessTokenScopePolicy.Describe(requirement)}.")
+                + $"{context.Request.Path}: it requires {AccessTokenScopePolicy.Describe(requirement)}."
+                + ScopeRemedy(requirement))
                 .ConfigureAwait(false);
             return false;
         }
@@ -694,6 +695,15 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 ? header[prefix.Length..].Trim()
                 : null;
     }
+
+    // Names the way out: the scope is on the token, not on the user, so a new token (or a
+    // signed-in session) is the fix, not a tenant-admin role.
+    private static string ScopeRemedy(AccessTokenScopePolicy.Requirement requirement) =>
+        requirement == AccessTokenScopePolicy.Requirement.Admin
+            ? " Create a new personal access token with the admin scope in Settings > Access tokens, or make the change from a signed-in session."
+            : requirement == AccessTokenScopePolicy.Requirement.Write
+                ? " Create a new personal access token with the write scope in Settings > Access tokens."
+                : string.Empty;
 
     private static async Task WriteProblemAsync(
         HttpContext context,

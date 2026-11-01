@@ -116,9 +116,15 @@ public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
         var write = await _client.SendAsync(create, Cancellation);
 
         Assert.Equal(HttpStatusCode.Forbidden, write.StatusCode);
+        var body = await write.Content.ReadAsStringAsync(Cancellation);
+        using var problem = JsonDocument.Parse(body);
         Assert.Equal(
             AuthenticationRefusalCodes.InsufficientScope,
-            await ProblemCodeAsync(write));
+            problem.RootElement.GetProperty("code").GetString());
+        Assert.Contains(
+            "write scope in Settings > Access tokens",
+            problem.RootElement.GetProperty("detail").GetString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]

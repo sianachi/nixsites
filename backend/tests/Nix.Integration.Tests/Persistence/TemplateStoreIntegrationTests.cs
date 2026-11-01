@@ -1788,6 +1788,35 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_expired_edit_draft_is_swept_and_a_new_draft_can_begin()
+    {
+        var templateId = await ImportAndFinalizeAsync("draft-expiry");
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var store = work.Resolve<TemplateStore>();
+            var draft = await store.BeginDraftAsync(templateId, "draft-expiry-first", Cancellation);
+            Assert.True(draft.IsSuccess);
+            Assert.NotNull((await work.DbContext.WorkspaceTemplates.SingleAsync(
+                template => template.Id == templateId,
+                Cancellation)).PendingRootItemId);
+
+            await work.DbContext.TemplateOperations
+                .Where(operation => operation.Id == draft.Value.OperationId)
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(operation => operation.ExpiresAt, DateTimeOffset.UnixEpoch),
+                    Cancellation);
+            var swept = await store.SweepExpiredAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), Cancellation);
+            Assert.True(swept.IsSuccess);
+
+            Assert.Null((await work.DbContext.WorkspaceTemplates.AsNoTracking().SingleAsync(
+                template => template.Id == templateId,
+                Cancellation)).PendingRootItemId);
+            Assert.True((await store.BeginDraftAsync(templateId, "draft-expiry-second", Cancellation)).IsSuccess);
+        }
+    }
+
+    [Fact]
     public async Task Template_history_does_not_block_purging_captured_or_applied_items()
     {
         var templateId = await ImportAndFinalizeAsync("purge-history");

@@ -13,11 +13,6 @@ namespace Nix.Features.Workspaces;
 /// <summary>
 /// Route registration for the workspaces feature.
 /// </summary>
-/// <remarks>
-/// Contract only: the shapes and the failure codes are real and stable, the bodies are not built.
-/// See <see cref="ContractStub"/> for why that is a deliberate delivery step rather than an
-/// unfinished one.
-/// </remarks>
 internal static class WorkspaceEndpoints
 {
     /// <summary>Stable code for "no such workspace, or the caller cannot see it".</summary>

@@ -1,6 +1,8 @@
 package fileinspect
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/binary"
 	"hash/crc32"
 	"testing"
@@ -151,6 +153,35 @@ func TestMP4IsAVideoUnlessItIsAudioOrAnotherContainer(t *testing.T) {
 	} {
 		if got := InspectHeader(box(brand), 1024).MediaType; got != want {
 			t.Fatalf("brand %q = %q, want %q", brand, got, want)
+		}
+	}
+}
+
+func TestZipContainersAreNamedByTheirOOXMLParts(t *testing.T) {
+	build := func(names ...string) []byte {
+		var buffer bytes.Buffer
+		writer := zip.NewWriter(&buffer)
+		for _, name := range names {
+			entry, _ := writer.Create(name)
+			entry.Write([]byte("x"))
+		}
+		writer.Close()
+		return buffer.Bytes()
+	}
+	const ooxml = "application/vnd.openxmlformats-officedocument."
+	for name, test := range map[string]struct {
+		names []string
+		want  string
+	}{
+		"docx":      {[]string{"[Content_Types].xml", "_rels/.rels", "word/document.xml"}, ooxml + "wordprocessingml.document"},
+		"xlsx":      {[]string{"[Content_Types].xml", "xl/workbook.xml"}, ooxml + "spreadsheetml.sheet"},
+		"pptx":      {[]string{"[Content_Types].xml", "ppt/presentation.xml"}, ooxml + "presentationml.presentation"},
+		"plain zip": {[]string{"a.txt", "b/c.txt"}, "application/zip"},
+		"no parts":  {[]string{"[Content_Types].xml"}, "application/zip"},
+	} {
+		data := build(test.names...)
+		if got := InspectHeader(data, int64(len(data))).MediaType; got != test.want {
+			t.Errorf("%s = %q, want %q", name, got, test.want)
 		}
 	}
 }

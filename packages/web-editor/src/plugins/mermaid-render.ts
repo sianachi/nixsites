@@ -70,6 +70,23 @@ export function subscribeToMermaidTheme(onChange: () => void): () => void {
 
 let pending = Promise.resolve();
 
+// Mermaid has no render budget of its own: cap input size and edges, and give up after a while.
+const MAX_TEXT_SIZE = 50_000;
+const MAX_EDGES = 500;
+export const RENDER_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(work: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('Mermaid took too long to render this diagram.'));
+    }, RENDER_TIMEOUT_MS);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
 /**
  * Renders a diagram to an SVG string. `capture` draws it for publishing instead of for this
  * screen: Mermaid's neutral theme and a system font stack, independent of the viewer's theme, so
@@ -98,14 +115,16 @@ export function renderMermaid(source: string, id: string, capture = false): Prom
         'maxTextSize',
         'maxEdges',
       ],
-      theme: capture ? 'neutral' : 'base',
+      maxTextSize: MAX_TEXT_SIZE,
+      maxEdges: MAX_EDGES,
+      theme: capture ? 'neutral' : themeVariables.darkMode ? 'dark' : 'base',
       // Mermaid copies every key it is given, so an undefined one erases the theme's own colour
       // (`stroke:undefined` left captured connectors invisible).
       themeVariables: Object.fromEntries(
         Object.entries(themeVariables).filter(([, value]) => value !== undefined),
       ),
     });
-    const { svg } = await mermaid.render(id, source);
+    const { svg } = await withTimeout(mermaid.render(id, source));
     if (themeVariables.darkMode && themeVariables.lineColor !== undefined) {
       // Several Mermaid families hardcode black connectors instead of using their theme roles.
       const diagram = new DOMParser().parseFromString(svg, 'image/svg+xml');

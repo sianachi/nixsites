@@ -181,6 +181,21 @@ describe('export format discovery', () => {
 });
 
 describe('the durable export job', () => {
+  it('offers a page size for PDF only and sends the chosen one', async () => {
+    const request = vi
+      .spyOn(archiveRequests, 'requestArchive')
+      .mockResolvedValue({ ok: false, error: 'stop', cancelled: false });
+    open();
+
+    const format = await screen.findByRole('combobox', { name: 'Format' });
+    expect(screen.queryByRole('combobox', { name: 'Page size' })).not.toBeInTheDocument();
+    await userEvent.selectOptions(format, 'pdf');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Page size' }), 'letter');
+    await userEvent.click(screen.getByRole('button', { name: /^export/i }));
+
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 'letter' }));
+  });
+
   it('offers the scope choice only when the item has children', async () => {
     open({ hasChildren: false });
 

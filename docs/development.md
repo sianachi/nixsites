@@ -13,6 +13,11 @@ pnpm test
 pnpm build
 ```
 
+Apps read workspace packages (`@nix/markdown`, `@nix/api-client`, ...) from their built
+`dist`. After changing anything in `packages/`, run `pnpm run bootstrap` (or
+`pnpm --filter "./packages/**" build`). A stale `dist` shows up as type errors or failing
+tests in `apps/` that do not touch your change.
+
 One package: `pnpm --filter @nix/web test` (also `@nix/ui`, `@nix/api-client`,
 `@nix/design-tokens`, `@nix/editor-schema`, `@nix/collab`).
 

@@ -10,6 +10,37 @@ follows semantic versioning (`0.x` pre-1.0).
 - A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
+- PDF exports can be set to Letter instead of A4 from the export dialog.
+
+### Changed
+
+- Settings > Site approvals shows the requester's name where the approver can read the
+  requester's workspace members, and the short id otherwise.
+- Deleting several selected items runs up to four deletes at a time instead of one after another.
+- A Drive view opens with its saved sort, and Kind, Size and Modified can be saved as its sort.
+- Markdown mode highlights Markdown syntax as you type.
+- Mermaid diagrams follow dark mode, and a diagram that takes over ten seconds, or is larger than
+  50,000 characters or 500 edges, shows an error instead of rendering.
+- Uploaded DOCX, XLSX and PPTX files are recognised as such instead of as ZIP archives.
+- A refused call that lacks a token scope now says which scope it needs and how to get one.
+
+### Removed
+
+- `GET /api/v1/items/{itemId}/permissions`, `PUT …/permissions/entries` and
+  `DELETE …/permissions/entries/{aclEntryId}`. They were never built and always answered 501. The
+  item routes no longer declare a 501 response either.
+
+### Fixed
+
+- `nixctl search --limit` rejects a value that is not a positive integer instead of sending it.
+- Creating or deleting a site in the item's site pane relabels the item menu straight away.
+- The site pane's page pickers load more children on request instead of stopping at 500.
+- Nightly backup sizes are recorded in exact bytes instead of rounded-up KiB.
+
+### Security
+
+- Vulnerable transitive copies of `nanoid` 3, `lodash-es` and `source-map-js` are overridden to
+  fixed patch releases.
 
 ## 0.5.1 - 2026-11-01
 

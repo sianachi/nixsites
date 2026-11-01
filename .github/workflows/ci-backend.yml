@@ -73,11 +73,7 @@ jobs:
         working-directory: apps/go-workers
         run: go vet ./...
 
-      - name: Test
-        working-directory: apps/go-workers
-        run: go test ./...
-
-      - name: Race test
+      - name: Test (race detector)
         working-directory: apps/go-workers
         run: go test -race ./...
 

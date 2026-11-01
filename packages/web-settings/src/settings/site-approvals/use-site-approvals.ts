@@ -1,4 +1,9 @@
-import { isCanceledError, sites, type SiteApprovalEntry } from '@nix/api-client';
+import {
+  isCanceledError,
+  sites,
+  workspaces as coreWorkspaces,
+  type SiteApprovalEntry,
+} from '@nix/api-client';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -87,4 +92,42 @@ export function useSiteApprovals(): SiteApprovalsState {
   );
 
   return { status, approvals, error, busySiteId, reload, decide };
+}
+
+/**
+ * Display names for the people who asked, keyed by principal id. Read from each waiting site's
+ * workspace member list; a workspace the approver cannot read just leaves its people unnamed, and
+ * the caller falls back to the short id.
+ */
+export function useRequesterNames(
+  approvals: readonly SiteApprovalEntry[],
+): ReadonlyMap<string, string> {
+  const client = useApiClient();
+  const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
+  const workspaceKey = [...new Set(approvals.map((entry) => entry.workspaceId))].sort().join(',');
+
+  useEffect(() => {
+    if (workspaceKey === '') return;
+    const controller = new AbortController();
+    void (async () => {
+      const found = new Map<string, string>();
+      for (const workspaceId of workspaceKey.split(',')) {
+        try {
+          for await (const member of client.paginate(coreWorkspaces.listMembers(workspaceId), {
+            signal: controller.signal,
+          })) {
+            found.set(member.subjectId, member.subjectDisplayName);
+          }
+        } catch {
+          // Names are a convenience; an unreadable workspace keeps the short id.
+        }
+      }
+      if (!controller.signal.aborted) setNames(found);
+    })();
+    return () => {
+      controller.abort();
+    };
+  }, [client, workspaceKey]);
+
+  return names;
 }

@@ -96,4 +96,24 @@ describe('executeBulkDelete and describeBulkDelete', () => {
     );
     expect(describeBulkDelete({ deleted: chosen, failed: [] })).toBe('Deleted 3 items');
   });
+
+  it('runs at most four deletes at once and keeps selection order in the report', async () => {
+    let active = 0;
+    let peak = 0;
+    const remove = vi.fn(async (id: string) => {
+      active++;
+      peak = Math.max(peak, active);
+      // Earlier ids finish last, so completion order differs from selection order.
+      await new Promise((resolve) => setTimeout(resolve, id === 'i0' ? 20 : 1));
+      active--;
+      return { refusal: id === 'i1' ? 'The item is locked.' : null };
+    });
+    const many = Array.from({ length: 10 }, (_, n) => node(`i${String(n)}`, null));
+    const outcome = await executeBulkDelete({ remove }, many);
+    expect(peak).toBe(4);
+    expect(outcome.deleted.map((item) => item.id)).toEqual(
+      many.map((m) => m.id).filter((id) => id !== 'i1'),
+    );
+    expect(outcome.failed.map((entry) => entry.item.id)).toEqual(['i1']);
+  });
 });

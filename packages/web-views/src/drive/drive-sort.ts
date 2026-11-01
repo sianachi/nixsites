@@ -1,6 +1,7 @@
 import type { Item } from '@nix/web-collections/core/container-model';
 import { fileKindLabel } from '@nix/web-collections/items/file-facts';
 import { driveBodyKindLabel } from '@nix/web-collections/core/view-axis';
+import type { View } from '@nix/web-collections/core/container-model';
 import type { DriveFileInfo } from './use-drive-file-info';
 
 export type SortKey = 'name' | 'kind' | 'size' | 'modified';
@@ -22,6 +23,14 @@ export function kindOf(item: Item, info: DriveFileInfo | undefined): string {
   if (info?.status === 'ready')
     return fileKindLabel(info.record.current.fileName, info.record.current.mediaType);
   return 'File';
+}
+
+const SORT_KEYS: readonly SortKey[] = ['name', 'kind', 'size', 'modified'];
+
+/** The sort stored on the view record; the editor's "title" is the drive's name column. */
+export function savedSort(view: Pick<View, 'sortBy' | 'sortDescending'>): SortState {
+  const key = view.sortBy === 'title' ? 'name' : SORT_KEYS.find((k) => k === view.sortBy);
+  return { key: key ?? 'name', direction: view.sortDescending ? 'descending' : 'ascending' };
 }
 
 export function compareRows(

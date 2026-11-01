@@ -41,12 +41,13 @@ func Write(format string, records []stream.Record, output io.Writer, limits stre
 
 // WriteStream converts records without retaining the workspace body set in memory.
 func WriteStream(format string, next RecordSource, output io.Writer, limits stream.Limits) error {
-	return WriteStreamWithReport(format, next, output, limits, nil)
+	return WriteStreamWithReport(format, next, output, limits, nil, "")
 }
 
 // WriteStreamWithReport converts records. The report remains available to internal callers for
-// job diagnostics, but is not embedded in user downloads.
-func WriteStreamWithReport(format string, next RecordSource, output io.Writer, limits stream.Limits, report ReportSource) error {
+// job diagnostics, but is not embedded in user downloads. pageSize ("a4" or "letter"; empty is
+// a4) applies to PDF only.
+func WriteStreamWithReport(format string, next RecordSource, output io.Writer, limits stream.Limits, report ReportSource, pageSize string) error {
 	if next == nil || output == nil || limits.MaxBytes <= 0 || limits.MaxLine <= 0 || limits.MaxRecords <= 0 {
 		return errors.New("export writer configuration is invalid")
 	}
@@ -58,7 +59,7 @@ func WriteStreamWithReport(format string, next RecordSource, output io.Writer, l
 	case "docx":
 		return writeDOCX(output, next, limits, report)
 	case "pdf":
-		return writePDF(output, next, limits, report)
+		return writePDF(output, next, limits, report, pageSize)
 	default:
 		return fmt.Errorf("unsupported streaming export format: %s", format)
 	}

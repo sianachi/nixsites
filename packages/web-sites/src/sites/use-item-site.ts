@@ -47,6 +47,12 @@ export interface ChildChoice {
   readonly hasChildren: boolean;
 }
 
+/** One page of a level's children; `loadMore` is null when that was the last page. */
+export interface ChildPage {
+  readonly items: readonly ChildChoice[];
+  readonly loadMore: (() => Promise<ChildPage>) | null;
+}
+
 /** Every action resolves to a refusal message, or null when Core accepted it. */
 export interface ItemSiteActions {
   readonly retry: () => void;
@@ -59,7 +65,7 @@ export interface ItemSiteActions {
   readonly remove: () => Promise<string | null>;
   readonly listPages: () => Promise<readonly SitePage[]>;
   readonly setPath: (itemId: string, path: string) => Promise<string | null>;
-  readonly listChildren: (parentId: string) => Promise<readonly ChildChoice[]>;
+  readonly listChildren: (parentId: string) => Promise<ChildPage>;
   readonly listProperties: (collectionId: string) => Promise<readonly PropertyChoice[]>;
 }
 
@@ -74,8 +80,7 @@ const FIRST_POLL_MS = 250;
 const MAX_POLL_MS = 2_000;
 /** How long a rollback is watched before the pane stops saying it is under way. */
 const ROLLBACK_WATCH_MS = 60_000;
-/** The most children one picker level offers; `listChildren` stops there. */
-export const CHILD_LIMIT = 500;
+const CHILD_PAGE = 100;
 
 function settling(site: Site): boolean {
   const status = site.latestBuild?.status;
@@ -255,17 +260,22 @@ export function useItemSite(
   }, [client, siteId]);
 
   const listChildren = useCallback(
-    async (parentId: string): Promise<readonly ChildChoice[]> => {
-      const children: ChildChoice[] = [];
-      for await (const child of client.paginate(
-        // shortcut: at most CHILD_LIMIT children per level are offered, and the picker says so;
-        // page the picker if sites grow past it.
-        coreItems.listItems(workspaceId, { parentId, pageSize: 100 }),
-        { maxPages: CHILD_LIMIT / 100 },
-      )) {
-        children.push({ id: child.id, title: child.title, hasChildren: child.hasChildren });
-      }
-      return children;
+    async (parentId: string): Promise<ChildPage> => {
+      const walk = client.paginate(
+        coreItems.listItems(workspaceId, { parentId, pageSize: CHILD_PAGE }),
+      );
+      // `step` stays one item ahead, which tells whether another page exists without a count call.
+      let step = await walk.next();
+      const next = async (): Promise<ChildPage> => {
+        const items: ChildChoice[] = [];
+        while (step.done !== true && items.length < CHILD_PAGE) {
+          const { id, title, hasChildren } = step.value;
+          items.push({ id, title, hasChildren });
+          step = await walk.next();
+        }
+        return { items, loadMore: step.done === true ? null : next };
+      };
+      return next();
     },
     [client, workspaceId],
   );
@@ -349,13 +359,21 @@ export function useItemSite(
 
 /**
  * Whether an item is a site's root: true, false, or null while unknown or unreadable. The item menu
- * words its Site entry from it.
- * shortcut: a cache-backed read, so a site made in the pane relabels the menu on the next visit;
- * share the pane's state if the stale label is reported.
+ * words its Site entry from it. Re-reads when the pane creates or deletes a site (their commands
+ * invalidate this item's site key).
  */
 export function useItemHasSite(itemId: string, enabled = true): boolean | null {
   const client = useApiClient();
   const [answer, setAnswer] = useState<{ itemId: string; hasSite: boolean } | null>(null);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    return client.cache.subscribeInvalidation((prefix) => {
+      if (prefix.length === 0 || (prefix[0] === 'items' && (prefix[1] ?? itemId) === itemId)) {
+        setRevision((value) => value + 1);
+      }
+    });
+  }, [client, enabled, itemId]);
   useEffect(() => {
     // A deployment without sites answers 503 to every site route; there is nothing to ask.
     if (!enabled) return;
@@ -371,6 +389,6 @@ export function useItemHasSite(itemId: string, enabled = true): boolean | null {
     return () => {
       controller.abort();
     };
-  }, [client, enabled, itemId]);
+  }, [client, enabled, itemId, revision]);
   return answer?.itemId === itemId ? answer.hasSite : null;
 }

@@ -31,7 +31,6 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Me](#me)
 - [Notifications](#notifications)
 - [Operations](#operations)
-- [Permissions](#permissions)
 - [Pets](#pets)
 - [Plugins](#plugins)
 - [Query](#query)
@@ -2296,7 +2295,7 @@ Parameters:
 
 - `itemId` in path (required, string (uuid))
 
-Responses: `200`, `404`, `501`.
+Responses: `200`, `404`.
 
 ### PATCH /api/v1/items/{itemId}
 
@@ -2320,7 +2319,7 @@ Parameters:
 
 Request body: `UpdateItemRequest`.
 
-Responses: `200`, `404`, `501`.
+Responses: `200`, `404`.
 
 ### DELETE /api/v1/items/{itemId}
 
@@ -2342,7 +2341,7 @@ Parameters:
 
 - `itemId` in path (required, string (uuid))
 
-Responses: `204`, `404`, `409`, `501`.
+Responses: `204`, `404`, `409`.
 
 ### GET /api/v1/items/{itemId}/body
 
@@ -2436,7 +2435,7 @@ Parameters:
 
 Request body: `MoveItemRequest`.
 
-Responses: `200`, `404`, `409`, `423`, `501`.
+Responses: `200`, `404`, `409`, `423`.
 
 ### GET /api/v1/items/{itemId}/move-workspaces
 
@@ -2524,7 +2523,7 @@ Parameters:
 
 - `itemId` in path (required, string (uuid))
 
-Responses: `200`, `404`, `409`, `501`.
+Responses: `200`, `404`, `409`.
 
 ### GET /api/v1/workspaces/{workspaceId}/items
 
@@ -2550,7 +2549,7 @@ Parameters:
 - `cursor` in query (optional, string)
 - `limit` in query (optional, integer | string)
 
-Responses: `200`, `404`, `423`, `501`.
+Responses: `200`, `404`, `423`.
 
 ### POST /api/v1/workspaces/{workspaceId}/items
 
@@ -2574,7 +2573,7 @@ Parameters:
 
 Request body: `CreateItemRequest`.
 
-Responses: `201`, `400`, `404`, `409`, `501`.
+Responses: `201`, `400`, `404`, `409`.
 
 ### GET /api/v1/workspaces/{workspaceId}/items/trash
 
@@ -2844,79 +2843,6 @@ Parameters:
 - `operationId` in path (required, string (uuid))
 
 Responses: `204`, `404`.
-
-## Permissions
-
-<a id="permissions"></a>
-
-### GET /api/v1/items/{itemId}/permissions
-
-<a id="getitempermissions"></a>
-
-Who can do what with this item
-
-Operation id: `GetItemPermissions`.
-
-**Can.** Read the resource named in the summary.
-
-**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
-
-**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
-
-Returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing. The effective role and 'canShare' are server decisions; a client must render from them and must never derive its own answer from the entries.
-
-Parameters:
-
-- `itemId` in path (required, string (uuid))
-
-Responses: `200`, `404`, `501`.
-
-### PUT /api/v1/items/{itemId}/permissions/entries
-
-<a id="upsertaclentry"></a>
-
-Grant or refuse a role on this item
-
-Operation id: `UpsertAclEntry`.
-
-**Can.** Write what the summary names.
-
-**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
-
-**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.
-
-Creates or replaces the entry for the given subject and effect. Fails with 'permissions.cannot_share' when the caller may see the item but may not administer its sharing.
-
-Parameters:
-
-- `itemId` in path (required, string (uuid))
-
-Request body: `UpsertAclEntryRequest`.
-
-Responses: `200`, `403`, `404`, `501`.
-
-### DELETE /api/v1/items/{itemId}/permissions/entries/{aclEntryId}
-
-<a id="deleteaclentry"></a>
-
-Remove an entry from this item
-
-Operation id: `DeleteAclEntry`.
-
-**Can.** Delete or revoke what the summary names.
-
-**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
-
-**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.
-
-Removes an entry attached to this item. An inherited entry cannot be removed here - it belongs to the ancestor it is attached to - and attempting it fails with 'permissions.entry_not_found'.
-
-Parameters:
-
-- `itemId` in path (required, string (uuid))
-- `aclEntryId` in path (required, string (uuid))
-
-Responses: `204`, `403`, `404`, `501`.
 
 ## Pets
 

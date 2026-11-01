@@ -45,6 +45,8 @@ type Payload struct {
 	// IncludeComments is acted on by Core when it builds the source URL; the worker only has to
 	// accept it, since the payload is decoded strictly.
 	IncludeComments bool `json:"includeComments"`
+	// PageSize ("a4" or "letter") applies to PDF only; Core validates it.
+	PageSize string `json:"pageSize"`
 }
 
 type Result struct {
@@ -160,7 +162,8 @@ func (handler *Handler) Handle(ctx context.Context, job workerapi.Job) (any, err
 					appendUnique(&messages, message)
 				}
 				return append(messages, omissionMessages(input.Manifest)...)
-			})
+			},
+			payload.PageSize)
 	}
 	closeSourceErr := download.Body.Close()
 	closeErr := file.Close()

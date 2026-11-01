@@ -27,7 +27,7 @@ import { isDriveContainerCandidate } from './drive-icons';
 import { DriveDownloadAction } from './drive-download-action';
 import { DriveGrid } from './drive-grid';
 import { resolveLayout } from './drive-layout';
-import { compareRows, type SortKey, type SortState } from './drive-sort';
+import { compareRows, savedSort, type SortKey, type SortState } from './drive-sort';
 import { DriveTable } from './drive-table';
 import { useDriveFileInfo } from './use-drive-file-info';
 import { useDriveTransfers } from './use-drive-transfers';
@@ -50,13 +50,9 @@ export function DriveView(props: ViewRendererProps): ReactNode {
 
   const layout = resolveLayout(view.layout);
 
-  // Kept in component state, deliberately: the drive's other choices (columns, cover, grouping)
-  // all persist to the view record through `structured-view-configuration.tsx`'s generic field
-  // handling, but a sort typed here is a way of looking at this session's screenful rather than a
-  // property of the view somebody else opens later. Persisting it is real future work - it would
-  // want the same `sortBy`/`sortDescending` fields every other kind already stores - and is out of
-  // scope for landing the kind itself.
-  const [sort, setSort] = useState<SortState>({ key: 'name', direction: 'ascending' });
+  // The saved sort (the editor's "Sort by") is where a session starts; header clicks then only
+  // change this session's order, as they do in the other views.
+  const [sort, setSort] = useState<SortState>(() => savedSort(view));
 
   const [status, setStatus] = useState<string | null>(null);
   const [dropTargetRoot, setDropTargetRoot] = useState(false);

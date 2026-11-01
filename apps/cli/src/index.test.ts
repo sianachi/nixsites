@@ -153,3 +153,25 @@ describe('automations create flag collection', () => {
     }
   });
 });
+
+describe('search --limit', () => {
+  it.each(['abc', '0', '-3'])('rejects --limit %s before any request', async (limit) => {
+    const program = buildProgram();
+    overrideExitRecursively(program);
+
+    await expect(
+      program.parseAsync(['search', 'x', '--limit', limit], { from: 'user' }),
+    ).rejects.toThrow(/--limit must be a positive integer\./);
+  });
+});
+
+describe('command help examples', () => {
+  it('shows an Examples block on export --help', () => {
+    const exportCommand = buildProgram().commands.find((c) => c.name() === 'export');
+    expect(exportCommand?.helpInformation()).not.toContain('Examples:');
+    let text = '';
+    exportCommand?.configureOutput({ writeOut: (str) => (text += str) });
+    exportCommand?.outputHelp();
+    expect(text).toContain('Examples:');
+  });
+});

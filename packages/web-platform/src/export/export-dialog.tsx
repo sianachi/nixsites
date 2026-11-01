@@ -58,6 +58,7 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
   const [formatAttempt, setFormatAttempt] = useState(0);
   const [scope, setScope] = useState<ArchiveScope>(hasChildren ? 'subtree' : 'item');
   const [includeComments, setIncludeComments] = useState(false);
+  const [pageSize, setPageSize] = useState<'a4' | 'letter'>('a4');
   const [progress, setProgress] = useState<Progress>({ phase: 'idle' });
   const active = useRef<ActiveExport | null>(null);
 
@@ -143,6 +144,7 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
       scope,
       format: selectedFormat.format,
       includeComments,
+      ...(selectedFormat.format === 'pdf' ? { pageSize } : {}),
       signal: request.controller.signal,
       onStarted: (state) => {
         request.exportId = state.id;
@@ -336,6 +338,23 @@ export function ExportDialog({ open, itemId, hasChildren, onClose }: ExportDialo
                   setProgress({ phase: 'idle' });
                 }}
               />
+            ) : null}
+            {selectedFormat.format === 'pdf' ? (
+              <Field label="Page size">
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(event.target.value === 'letter' ? 'letter' : 'a4');
+                      setProgress({ phase: 'idle' });
+                    }}
+                  >
+                    <option value="a4">A4</option>
+                    <option value="letter">Letter</option>
+                  </Select>
+                )}
+              </Field>
             ) : null}
             <Checkbox
               label="Include comments"

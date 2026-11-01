@@ -1283,66 +1283,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/items/{itemId}/permissions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Who can do what with this item
-     * @description Returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing. The effective role and 'canShare' are server decisions; a client must render from them and must never derive its own answer from the entries.
-     */
-    get: operations['GetItemPermissions'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/permissions/entries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Grant or refuse a role on this item
-     * @description Creates or replaces the entry for the given subject and effect. Fails with 'permissions.cannot_share' when the caller may see the item but may not administer its sharing.
-     */
-    put: operations['UpsertAclEntry'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/permissions/entries/{aclEntryId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Remove an entry from this item
-     * @description Removes an entry attached to this item. An inherited entry cannot be removed here - it belongs to the ancestor it is attached to - and attempting it fails with 'permissions.entry_not_found'.
-     */
-    delete: operations['DeleteAclEntry'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/tenant/roles': {
     parameters: {
       query?: never;
@@ -3376,21 +3316,6 @@ export interface components {
       /** Format: date-time */
       lastUsedAt: null | string;
     };
-    AclEntryResponse: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      itemId: string;
-      subjectType: string;
-      /** Format: uuid */
-      subjectId: string;
-      subjectDisplayName: string;
-      role: string;
-      effect: string;
-      breaksInheritance: boolean;
-      /** Format: uuid */
-      inheritedFromItemId: null | string;
-    };
     AddCommentRequest: {
       body: string;
       mentionIds: null | string[];
@@ -3550,6 +3475,7 @@ export interface components {
       idempotencyKey: string;
       /** @default false */
       includeComments: boolean;
+      pageSize?: null | string;
     };
     BeginFileUploadRequest: {
       /** Format: uuid */
@@ -4814,14 +4740,6 @@ export interface components {
     ItemMoveWorkspacePage: {
       items: components['schemas']['ItemMoveWorkspace'][];
       nextCursor: null | string;
-    };
-    ItemPermissionsResponse: {
-      /** Format: uuid */
-      itemId: string;
-      entries: components['schemas']['AclEntryResponse'][];
-      effectiveRole: string;
-      canShare: boolean;
-      breaksInheritance: boolean;
     };
     ItemResponse: {
       /** Format: uuid */
@@ -6153,14 +6071,6 @@ export interface components {
       debounceSeconds: null | number | string;
       excludedItemIds: null | string[];
       datedCollections: null | components['schemas']['SiteDatedCollectionDto'][];
-    };
-    UpsertAclEntryRequest: {
-      subjectType: string;
-      /** Format: uuid */
-      subjectId: string;
-      role: string;
-      effect: string;
-      breaksInheritance: boolean;
     };
     ViewAggregateContract: {
       property: string;
@@ -8070,15 +7980,6 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
     };
   };
   CreateItem: {
@@ -8132,15 +8033,6 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
     };
   };
   GetItem: {
@@ -8165,15 +8057,6 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
         headers: {
           [name: string]: unknown;
         };
@@ -8219,15 +8102,6 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
     };
   };
   UpdateItem: {
@@ -8256,15 +8130,6 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
         headers: {
           [name: string]: unknown;
         };
@@ -8368,15 +8233,6 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
     };
   };
   SetItemProtection: {
@@ -8454,15 +8310,6 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
         headers: {
           [name: string]: unknown;
         };
@@ -10431,147 +10278,6 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetItemPermissions: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ItemPermissionsResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UpsertAclEntry: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpsertAclEntryRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AclEntryResponse'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeleteAclEntry: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-        aclEntryId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Implemented */
-      501: {
         headers: {
           [name: string]: unknown;
         };

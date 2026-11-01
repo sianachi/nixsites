@@ -7,10 +7,11 @@ import type { TreeItem, WorkspaceTree } from './use-workspace-tree';
  * Deleting a parent already deletes everything under it, so the plan deletes top-level selected
  * items only (the same dropping `planBulkMove` does). Items Core would refuse are taken out up
  * front and named, instead of being discovered one failed request at a time. The deletes then run
- * one at a time through the tree's own `remove`, the same path a single delete takes; there is no
- * batch endpoint.
+ * through the tree's own `remove`, the same path a single delete takes, a few at a time (they are
+ * independent once nested picks are dropped); there is no batch endpoint.
  *
- * shortcut: sequential deletes; add a batch endpoint if deleting more than ~50 items gets slow.
+ * shortcut: one request per item at bounded concurrency; add a batch endpoint if deleting more
+ * than a few hundred items gets slow.
  */
 
 export interface BlockedDelete {
@@ -120,18 +121,30 @@ export interface BulkDeleteOutcome {
   readonly failed: readonly { readonly item: TreeItem; readonly reason: string }[];
 }
 
-/** Deletes each item, taking every refusal seriously. */
+const DELETE_CONCURRENCY = 4;
+
+/** Deletes each item, a few at a time, taking every refusal seriously. */
 export async function executeBulkDelete(
   tree: Pick<WorkspaceTree, 'remove'>,
   items: readonly TreeItem[],
 ): Promise<BulkDeleteOutcome> {
+  // Results land by index so the report keeps selection order whatever order requests finish in.
+  const refusals: (string | null)[] = [];
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      refusals[index] = (await tree.remove(items[index]?.id ?? '')).refusal;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(DELETE_CONCURRENCY, items.length) }, worker));
   const deleted: TreeItem[] = [];
   const failed: { item: TreeItem; reason: string }[] = [];
-  for (const item of items) {
-    const { refusal } = await tree.remove(item.id);
+  items.forEach((item, index) => {
+    const refusal = refusals[index] ?? null;
     if (refusal === null) deleted.push(item);
     else failed.push({ item, reason: refusal });
-  }
+  });
   return { deleted, failed };
 }
 

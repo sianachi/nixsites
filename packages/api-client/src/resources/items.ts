@@ -5,10 +5,7 @@
  * is executed — deduplicated, cached, cancelled — and a caller writes `client.query(items.byId(id))`
  * without ever seeing a path. That is what keeps URL construction out of components.
  *
- * Paths are written against the committed contract at `backend/openapi/nix-api.json`. Every
- * operation below currently answers 501 with `api.not_implemented`: the shapes are real and stable,
- * the behaviour arrives with the goal that implements them. Build against MSW until then — a 501 is
- * deliberately impossible to mistake for a working endpoint.
+ * Paths are written against the committed contract at `backend/openapi/nix-api.json`.
  */
 
 import {

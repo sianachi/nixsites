@@ -201,6 +201,7 @@ function PersonPicker({
   readonly disabled: boolean;
   readonly onAdd: (id: string) => Promise<void>;
 }): ReactElement {
+  // shortcut: lists only the current workspace's principals, so a tenant member outside it cannot be added; add a tenant-wide principal search (#165).
   const directory = useWorkspaceAssignablePrincipals();
   const [chosen, setChosen] = useState('');
   const candidates = directory.principals.filter(

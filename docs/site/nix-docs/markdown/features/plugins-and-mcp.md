@@ -28,7 +28,7 @@ Add it to an MCP client's configuration like this:
 }
 ```
 
-Use a personal access token with only the scopes the agent needs. A `read` token cannot change anything; automations and other administrative changes need `admin`.
+Use a personal access token with only the scopes the agent needs. A `read` token cannot change anything; automations and other administrative changes need `admin`; a refused call says so, and the fix is a new token with that scope in Settings > Access tokens (or the change made from a signed-in session).
 
 The server offers tools for:
 
