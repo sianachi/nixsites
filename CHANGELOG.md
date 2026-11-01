@@ -11,6 +11,28 @@ follows semantic versioning (`0.x` pre-1.0).
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
 
+### Changed
+
+- Settings > Site approvals shows the requester's name where the approver can read the
+  requester's workspace members, and the short id otherwise.
+- Deleting several selected items runs up to four deletes at a time instead of one after another.
+
+### Removed
+
+- `GET /api/v1/items/{itemId}/permissions`, `PUT …/permissions/entries` and
+  `DELETE …/permissions/entries/{aclEntryId}`. They were never built and always answered 501. The
+  item routes no longer declare a 501 response either.
+
+### Fixed
+
+- `nixctl search --limit` rejects a value that is not a positive integer instead of sending it.
+- Creating or deleting a site in the item's site pane relabels the item menu straight away.
+
+### Security
+
+- Vulnerable transitive copies of `nanoid` 3, `lodash-es` and `source-map-js` are overridden to
+  fixed patch releases.
+
 ## 0.5.1 - 2026-11-01
 
 ### Added
