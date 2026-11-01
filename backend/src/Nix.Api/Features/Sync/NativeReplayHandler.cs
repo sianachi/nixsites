@@ -55,16 +55,15 @@ public sealed class NativeReplayHandler(
             }
             var saved = JsonSerializer.Deserialize(previous.Response, NativeReplayJsonContext.Default.NativeReplayResponse)
                 ?? throw new InvalidOperationException("A native replay receipt has no response.");
-            if (saved.Item is { } savedItem)
+            // Receipts keep no item data; rebuild it from current state under the usual access check.
+            if (saved.Status == "conflict" || saved.Status == "applied" && request.Kind != "archive")
             {
                 var current = await CurrentAsync(command.WorkspaceId, saved.ItemId, cancellationToken).ConfigureAwait(false);
-                if (current is null || current.Locked != savedItem.Locked
-                    || current.CanPersistBody != savedItem.CanPersistBody || current.BodyDocId != savedItem.BodyDocId
-                    || current.MetadataExpiresAt != savedItem.MetadataExpiresAt
-                    || !await locks.MayReadBodyAsync(ItemId.From(saved.ItemId), cancellationToken).ConfigureAwait(false))
+                if (current is null || current.Locked || !await locks.MayReadBodyAsync(ItemId.From(saved.ItemId), cancellationToken).ConfigureAwait(false))
                 {
                     return Result.Success(Refused(request));
                 }
+                saved = saved with { Item = current, Revision = current.Revision };
             }
             return Result.Success(saved);
         }
@@ -143,7 +142,7 @@ public sealed class NativeReplayHandler(
         NativeReplayResponse response, CancellationToken cancellationToken)
     {
         await receipts.SaveAsync(command.Request.OperationId, command.WorkspaceId, fingerprint,
-            JsonSerializer.Serialize(response, NativeReplayJsonContext.Default.NativeReplayResponse), cancellationToken).ConfigureAwait(false);
+            JsonSerializer.Serialize(response with { Item = null }, NativeReplayJsonContext.Default.NativeReplayResponse), cancellationToken).ConfigureAwait(false);
         return Result.Success(response);
     }
 

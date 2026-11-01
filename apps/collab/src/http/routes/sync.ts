@@ -23,6 +23,9 @@ interface SyncBody {
   }[];
 }
 
+/** Rate-window slot for a principal's whole /documents/sync traffic, one count per document. */
+const SYNC_RATE_KEY = 'documents-sync';
+
 const uuid = {
   type: 'string',
   pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
@@ -89,8 +92,19 @@ export function registerSyncRoutes(app: FastifyInstance, deps: RouteDependencies
 
       const results: DocumentSyncResult[] = [];
       let responseBytes = Buffer.byteLength('{"documents":[]}');
+      let caller: string | null = null;
+      const limited = (itemId: string): DocumentSyncResult => ({
+        itemId,
+        status: 'rejected',
+        code: 'rate_limited',
+      });
       for (const requested of documents) {
         const itemId = requested.itemId.toLowerCase();
+        // Each document costs a fresh Core authorization, so count it before spending one.
+        if (caller !== null && deps.rateWindow.exceeded(caller, SYNC_RATE_KEY)) {
+          results.push(limited(itemId));
+          continue;
+        }
         const authorization = await deps.sessions.authenticate(token, itemId, true);
         if (!authorization.ok) {
           if (authorization.reason === 'unauthenticated') {
@@ -105,6 +119,13 @@ export function registerSyncRoutes(app: FastifyInstance, deps: RouteDependencies
         }
 
         const { tenantId, principalId, workspaceId, canWrite, bodyKind } = authorization.value;
+        if (caller === null) {
+          caller = principalId;
+          if (deps.rateWindow.exceeded(caller, SYNC_RATE_KEY)) {
+            results.push(limited(itemId));
+            continue;
+          }
+        }
         const pending = requested.updates ?? [];
         if (pending.length > 0 && !canWrite) {
           results.push({ itemId, status: 'rejected', code: 'read_only' });

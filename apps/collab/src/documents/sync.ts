@@ -5,7 +5,7 @@ import { lockedAmong } from '../db/locks.ts';
 import type { ScopedQuery } from '../db/tenant-scope.ts';
 import { strategyFor } from './body-kinds.ts';
 import { LIMITS } from './limits.ts';
-import { applyUpdate, loadDocument, openDocument } from './service.ts';
+import { applyUpdate, loadDocument, openDocument, writeSnapshotNow } from './service.ts';
 
 export const SYNC_LIMITS = {
   documents: 20,
@@ -115,7 +115,7 @@ export async function syncDocument(
       updateBytes: update.update,
       actorId: input.principalId,
       clientId: update.clientId,
-      snapshotEvery: 1,
+      snapshotEvery: 0,
       strategy: strategyFor(input.bodyKind),
     });
     if (!applied.ok) {
@@ -129,6 +129,17 @@ export async function syncDocument(
   }
 
   const state = await loadDocument(sql, tenantId, doc);
+  // One snapshot for the whole batch of updates, not one per update.
+  if (document.updates.length > 0) {
+    await writeSnapshotNow(sql, {
+      tenantId,
+      docId: doc.doc_id,
+      itemId: document.itemId,
+      seq: BigInt(doc.head_seq),
+      state,
+      strategy: strategyFor(input.bodyKind),
+    });
+  }
   let result: DocumentSyncSuccess;
   try {
     const update = Y.encodeStateAsUpdate(state, document.stateVector);

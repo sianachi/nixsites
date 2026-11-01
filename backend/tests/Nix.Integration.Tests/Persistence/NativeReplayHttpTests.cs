@@ -78,7 +78,12 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
         using var retry = await SendAsync(HttpMethod.Post, ReplayPath, bearer, request);
         Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
-        Assert.Equal(originalJson, await retry.Content.ReadAsStringAsync(Cancellation));
+        // Receipts keep no item data, so the retry carries the item's current state (the rename above bumped it).
+        var replayed = await ReadAsync(retry);
+        Assert.Equal("applied", replayed["status"]!.GetValue<string>());
+        Assert.Equal(serverId, replayed["itemId"]!.GetValue<Guid>());
+        Assert.Equal((await SnapshotAsync(serverId)).Revision, replayed["revision"]!.GetValue<string>());
+        Assert.Equal("Changed after acknowledgement", replayed["item"]!["title"]!.GetValue<string>());
         Assert.Equal("Changed after acknowledgement", (await ItemAsync(serverId, bearer))["title"]!.GetValue<string>());
 
         await using var connection = await fixture.OpenMigratorConnectionAsync();

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { Authorizer, ItemAuthorization } from '../../auth/authorize.ts';
 import type { ContentDocRow, SnapshotRow, UpdateRow } from '../../db/documents.ts';
 import { withTenantScope } from '../../db/tenant-scope.ts';
+import { LIMITS, RateWindow } from '../../documents/limits.ts';
 import { FRAGMENT_NAME } from '../../documents/service.ts';
 import {
   type DocumentSyncRefusal,
@@ -161,7 +162,11 @@ function database(initial: Y.Doc) {
 }
 
 function setup(
-  options: { authorize?: Authorizer['authorize']; db?: ReturnType<typeof database> } = {},
+  options: {
+    authorize?: Authorizer['authorize'];
+    db?: ReturnType<typeof database>;
+    rateWindow?: RateWindow;
+  } = {},
 ) {
   const db = options.db ?? database(note('Server text'));
   let refreshed = 0;
@@ -180,6 +185,7 @@ function setup(
       listComments: () => Promise.resolve(null),
     },
     internalSecret: 'test-internal-secret',
+    ...(options.rateWindow === undefined ? {} : { rateWindow: options.rateWindow }),
     hub: {
       join: () => Promise.reject(new Error('Unexpected socket join.')),
       handleMessage: () => undefined,
@@ -259,6 +265,39 @@ describe('native batch document synchronization', () => {
     expect(test.db.committed.updates).toHaveLength(1);
     expect(test.db.committed.text).toContain('Offline text');
     expect(test.refreshed).toBe(1);
+  });
+
+  it('writes one snapshot per document however many updates it carries', async () => {
+    const test = setup();
+    const updates = ['one', 'two', 'three'].map((clientId) => ({
+      clientId,
+      update: base64(Y.encodeStateAsUpdate(note(clientId))),
+    }));
+    expect(firstResult(await test.post([request(updates)])).status).toBe('ok');
+    expect(test.db.committed.updates).toHaveLength(3);
+    // The fixture's checkpoint plus exactly one for the batch.
+    expect(test.db.committed.snapshots).toHaveLength(2);
+  });
+
+  it('limits a principal to a bounded number of authorized documents per window', async () => {
+    let now = 0;
+    const rateWindow = new RateWindow(() => now);
+    let authorizations = 0;
+    const test = setup({
+      rateWindow,
+      authorize: () => {
+        authorizations += 1;
+        return Promise.resolve(GRANTED);
+      },
+    });
+    for (let index = 0; index < LIMITS.updatesPerWindow; index += 1) {
+      rateWindow.exceeded(GRANTED.principalId, 'documents-sync');
+    }
+    const limited = firstResult(await test.post([request()]));
+    expect(limited).toMatchObject({ status: 'rejected', code: 'rate_limited' });
+    now = LIMITS.windowMs;
+    expect(firstResult(await test.post([request()])).status).toBe('ok');
+    expect(authorizations).toBe(2);
   });
 
   it('replays the entire retained checkpoint tail beyond one update page', async () => {

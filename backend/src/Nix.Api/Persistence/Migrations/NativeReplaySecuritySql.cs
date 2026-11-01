@@ -1,6 +1,6 @@
 namespace Nix.Persistence.Migrations;
 
-/// <summary>Durable principal-scoped replay receipts survive item deletion and purge.</summary>
+/// <summary>Durable principal-scoped replay receipts survive item deletion and purge, so they hold ids, status and revision only, never item data.</summary>
 public static class NativeReplaySecuritySql
 {
     /// <summary>Adds bounded receipts and the tenant-and-principal RLS boundary.</summary>

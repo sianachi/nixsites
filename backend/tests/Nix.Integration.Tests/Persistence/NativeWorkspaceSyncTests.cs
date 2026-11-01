@@ -477,6 +477,38 @@ public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOu
     }
 
     [Fact]
+    public async Task An_unlock_grant_publishes_no_marker_and_only_its_credential_sees_the_descendants_after_a_fresh_snapshot()
+    {
+        var child = await CreateAsync("Unlock child", Root);
+        await SeedLockAsync(Root);
+        var before = await SnapshotAsync(credential: Credential);
+        Assert.DoesNotContain(before.Items, item => item.Id == child.Value);
+        var boundary = Sequence(before.Boundary);
+
+        await ExecuteAsync(
+            """
+            INSERT INTO item_unlock (item_id, credential_id, tenant_id, principal_id, expires_at)
+            VALUES (@root, @credential, @tenant, @principal, now() + interval '15 minutes');
+            """,
+            new NpgsqlParameter("root", Root.Value), new NpgsqlParameter("credential", Credential),
+            new NpgsqlParameter("tenant", M0SchemaSeed.Alpha.TenantId),
+            new NpgsqlParameter("principal", M0SchemaSeed.Alpha.PrincipalId));
+
+        // Another credential's feed is untouched by the grant, so it neither resyncs nor learns of the unlock.
+        var other = await ChangesAsync(boundary, credential: Guid.NewGuid());
+        Assert.False(other.Resync);
+        Assert.Empty(other.Items);
+        Assert.Equal(boundary, Sequence(other.Cursor));
+        Assert.DoesNotContain(
+            (await SnapshotAsync(credential: Guid.NewGuid())).Items, item => item.Id == child.Value);
+
+        // The granted credential converges by taking a fresh snapshot after its own unlock.
+        var granted = await SnapshotAsync(credential: Credential);
+        var visible = Assert.Single(granted.Items, item => item.Id == child.Value);
+        Assert.NotNull(visible.MetadataExpiresAt);
+    }
+
+    [Fact]
     public async Task A_permission_marker_requests_a_new_snapshot_without_item_data()
     {
         var boundary = Sequence((await SnapshotAsync()).Boundary);

@@ -4,7 +4,9 @@ namespace Nix.Persistence.Migrations;
 internal static class NativeWorkspaceSyncSecuritySql
 {
     private static readonly string[] ItemTables = ["item", "content_doc", "file_body", "file_version"];
-    private static readonly string[] ScopeTables = ["workspace", "workspace_member", "acl_entry", "item_lock", "item_unlock"];
+    private static readonly string[] ScopeTables = ["workspace", "workspace_member", "acl_entry", "item_lock"];
+    // item_unlock is deliberately untriggered: grants belong to one credential, which learns of its own grant itself
+    // and seals by metadataExpiresAt, so a grant must not force every member to resync or reveal that someone unlocked.
     private static readonly string[] TenantTables = ["tenant_role", "group_membership"];
 
     internal static void Apply(Action<string> emit)
@@ -214,7 +216,7 @@ internal static class NativeWorkspaceSyncSecuritySql
         {
             var scope = ItemTables.Contains(table, StringComparer.Ordinal) ? "item" : "scope";
             // Lock tables identify only an item; resolve the workspace inside their specialized trigger.
-            if (table is "item_lock" or "item_unlock")
+            if (table is "item_lock")
             {
                 continue;
             }
@@ -235,8 +237,6 @@ internal static class NativeWorkspaceSyncSecuritySql
             $$;
             REVOKE ALL ON FUNCTION native_sync_lock_changed() FROM PUBLIC, nix_app, nix_collab;
             CREATE TRIGGER native_sync_item_lock AFTER INSERT OR UPDATE OR DELETE ON item_lock
-                FOR EACH ROW EXECUTE FUNCTION native_sync_lock_changed();
-            CREATE TRIGGER native_sync_item_unlock AFTER INSERT OR UPDATE OR DELETE ON item_unlock
                 FOR EACH ROW EXECUTE FUNCTION native_sync_lock_changed();
             """);
         foreach (var table in TenantTables)
