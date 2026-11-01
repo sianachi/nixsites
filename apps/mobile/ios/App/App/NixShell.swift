@@ -43,7 +43,9 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         guard let url, let scheme = url.scheme?.lowercased(), let host = url.host?.lowercased(), !host.isEmpty,
               url.user == nil, url.password == nil,
               scheme == "https" || (scheme == "http" && host == "localhost") else { return nil }
-        return url.port.map { "\(scheme)://\(host):\($0)" } ?? "\(scheme)://\(host)"
+        // Default ports are dropped, as browsers and NixStoreHandler.origin(of:) do, so both agree.
+        let port = url.port.flatMap { ($0 == 443 && scheme == "https") || ($0 == 80 && scheme == "http") ? nil : $0 }
+        return port.map { "\(scheme)://\(host):\($0)" } ?? "\(scheme)://\(host)"
     }
 
     private var servers: [[String: String]] { Self.savedServers }
