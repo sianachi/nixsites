@@ -349,13 +349,21 @@ export function useItemSite(
 
 /**
  * Whether an item is a site's root: true, false, or null while unknown or unreadable. The item menu
- * words its Site entry from it.
- * shortcut: a cache-backed read, so a site made in the pane relabels the menu on the next visit;
- * share the pane's state if the stale label is reported.
+ * words its Site entry from it. Re-reads when the pane creates or deletes a site (their commands
+ * invalidate this item's site key).
  */
 export function useItemHasSite(itemId: string, enabled = true): boolean | null {
   const client = useApiClient();
   const [answer, setAnswer] = useState<{ itemId: string; hasSite: boolean } | null>(null);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    return client.cache.subscribeInvalidation((prefix) => {
+      if (prefix.length === 0 || (prefix[0] === 'items' && (prefix[1] ?? itemId) === itemId)) {
+        setRevision((value) => value + 1);
+      }
+    });
+  }, [client, enabled, itemId]);
   useEffect(() => {
     // A deployment without sites answers 503 to every site route; there is nothing to ask.
     if (!enabled) return;
@@ -371,6 +379,6 @@ export function useItemHasSite(itemId: string, enabled = true): boolean | null {
     return () => {
       controller.abort();
     };
-  }, [client, enabled, itemId]);
+  }, [client, enabled, itemId, revision]);
   return answer?.itemId === itemId ? answer.hasSite : null;
 }
