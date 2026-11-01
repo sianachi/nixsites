@@ -114,14 +114,6 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - PUT /api/v1/items/{itemId}/lock
 
-### `permissions.cannot_share`
-
-- PUT /api/v1/items/{itemId}/permissions/entries
-
-### `permissions.entry_not_found`
-
-- DELETE /api/v1/items/{itemId}/permissions/entries/{aclEntryId}
-
 ### `pets.inline_busy`
 
 - POST /api/v1/me/pets/inline
@@ -256,7 +248,6 @@ These are part of the wire contract. A description may already name some of them
 - `request.rate_limited`: The client address, or a public form link, is over a limit. Retry-After is whole seconds.
 - `request.body_too_large`: The request body is over the route limit. Status 413.
 - `api.unexpected_error`: A failure with no feature code, including an unknown route. Clients should not branch on it beyond unexpected.
-- `api.not_implemented`: Declared on some routes as status 501. Item routes that still list it are implemented; the declared response remains in the document.
 - `auth.unauthenticated`: No usable credentials, or a personal access token that does not authenticate.
 - `auth.token_revoked`: The personal access token was revoked.
 - `auth.token_expired`: The personal access token is past the expiry chosen when it was minted.

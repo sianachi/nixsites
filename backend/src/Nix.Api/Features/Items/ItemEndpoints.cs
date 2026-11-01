@@ -14,12 +14,6 @@ namespace Nix.Features.Items;
 /// The failure codes below are the stable part of the contract and are what the frontend switches
 /// on, so they are named here rather than invented at each call site.
 /// </para>
-/// <para>
-/// Every route in this group is implemented. The <c>501</c> response each one still declares is
-/// left in place deliberately: it is published in <c>backend/openapi/nix-api.json</c>, and removing
-/// a declared response is a contract change that belongs in a goal that announces it rather than a
-/// side effect of implementing the handlers.
-/// </para>
 /// </remarks>
 internal static class ItemEndpoints
 {
@@ -117,8 +111,7 @@ internal static class ItemEndpoints
                 + "it is unlocked.")
             .Produces<CursorPage<ItemResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status423Locked)
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .ProducesProblem(StatusCodes.Status423Locked);
 
         workspaceItems.MapPost("/", CreateItemEndpoint.Handle)
             .WithName("CreateItem")
@@ -133,7 +126,6 @@ internal static class ItemEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         var items = endpoints.MapGroup("/api/v1/items")
@@ -146,8 +138,7 @@ internal static class ItemEndpoints
                 "Returns the item, or a problem with code 'items.not_found'. An item the caller "
                 + "may not read is reported as not found rather than as forbidden.")
             .Produces<ItemResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         items.MapPatch("/{itemId:guid}", RenameItemEndpoint.Handle)
             .WithName("UpdateItem")
@@ -155,7 +146,6 @@ internal static class ItemEndpoints
             .WithDescription("Changes the item's own fields. Moving and deleting are separate operations.")
             .Produces<ItemResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         items.MapGet("/{itemId:guid}/move-workspaces", ListItemMoveWorkspacesEndpoint.Handle)
@@ -178,7 +168,6 @@ internal static class ItemEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status423Locked)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         items.MapDelete("/{itemId:guid}", DeleteItemEndpoint.Handle)
@@ -193,7 +182,6 @@ internal static class ItemEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         items.MapPut("/{itemId:guid}/protection", SetItemProtectionEndpoint.Handle)
@@ -217,7 +205,6 @@ internal static class ItemEndpoints
             .Produces<ItemResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         items.MapDelete("/{itemId:guid}/purge", PurgeItemEndpoint.Handle)

@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#permissions">Permissions</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1333,7 +1333,7 @@
 <p>Returns the item, or a problem with code 'items.not_found'. An item the caller may not read is reported as not found rather than as forbidden.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>501</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
 <article id="updateitem" data-search="patch /api/v1/items/{itemid} updateitem rename an item changes the item's own fields. moving and deleting are separate operations. items">
 <h3><span class="verb">PATCH</span> <code>/api/v1/items/{itemId}</code></h3>
@@ -1345,7 +1345,7 @@
 <p>Changes the item's own fields. Moving and deleting are separate operations.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>UpdateItemRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>404</code>, <code>501</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
 <article id="deleteitem" data-search="delete /api/v1/items/{itemid} deleteitem soft-delete an item marks the item deleted. the subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. purging is a separate, retention-driven operation. fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion. items">
 <h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}</code></h3>
@@ -1357,7 +1357,7 @@
 <p>Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 
-<p>Responses: <code>204</code>, <code>404</code>, <code>409</code>, <code>501</code>.</p>
+<p>Responses: <code>204</code>, <code>404</code>, <code>409</code>.</p>
 </article>
 <article id="getitembody" data-search="get /api/v1/items/{itemid}/body getitembody read a note body as markdown returns the item's prose body as markdown, plus the losses markdown could not carry. an item nobody has edited yet is an empty string, not an error. exchange a personal access token at post /public/v1/auth/token and send that session as a bearer token; reading needs the read scope. fails with 'items.not_found' (404) when the item is not visible, 'items.locked' (423) when its body is locked, 'items.body_not_prose' (422) for a canvas or spreadsheet, and 'items.body_unavailable' (503) when the body service cannot answer. items">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/body</code></h3>
@@ -1405,7 +1405,7 @@
 <p>Reparents the item and maintains the closure table. Fails with 'items.move_would_create_cycle' when the destination is the item itself or one of its own descendants, and with 'items.parent_not_found' when the destination is not visible. Fails with 'items.locked' (423) when a lock the caller has not opened covers the item or the destination.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>MoveItemRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>423</code>, <code>501</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>423</code>.</p>
 </article>
 <article id="listitemmoveworkspaces" data-search="get /api/v1/items/{itemid}/move-workspaces listitemmoveworkspaces writable destination workspaces for an item  items">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/move-workspaces</code></h3>
@@ -1453,7 +1453,7 @@
 <p>Returns the item to the active state. Fails with 'items.lifecycle_conflict' when the item has already been purged, which is not recoverable.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>501</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>.</p>
 </article>
 <article id="listitems" data-search="get /api/v1/workspaces/{workspaceid}/items listitems children of an item, or the workspace root returns the items directly under 'parentid', or the workspace's roots when it is omitted, in sibling order. items the caller cannot read are omitted entirely - a query result is how you enumerate what exists, so redacted placeholders would disclose their existence. soft-deleted items are excluded unless 'includedeleted' is set. fails with 'items.locked' (423) when a lock the caller has not opened covers 'parentid' - a locked item's children are withheld until it is unlocked. items">
 <h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/items</code></h3>
@@ -1465,7 +1465,7 @@
 <p>Returns the items directly under 'parentId', or the workspace's roots when it is omitted, in sibling order. Items the caller cannot read are omitted entirely - a query result is how you enumerate what exists, so redacted placeholders would disclose their existence. Soft-deleted items are excluded unless 'includeDeleted' is set. Fails with 'items.locked' (423) when a lock the caller has not opened covers 'parentId' - a locked item's children are withheld until it is unlocked.</p>
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>parentId</code> in query (optional, string (uuid))</li><li><code>includeDeleted</code> in query (optional, boolean)</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>423</code>, <code>501</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>423</code>.</p>
 </article>
 <article id="createitem" data-search="post /api/v1/workspaces/{workspaceid}/items createitem create an item creates an item under 'parentid', or at the workspace root when it is null. fails with 'items.parent_not_found' when the parent does not exist or is not visible to the caller, and with 'items.children_protected' (409) when the parent refuses new children. an optional uuid 'idempotencykey' safely retries the same creation; reusing it with different input returns 'items.idempotency_conflict' (409). items">
 <h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/items</code></h3>
@@ -1477,7 +1477,7 @@
 <p>Creates an item under 'parentId', or at the workspace root when it is null. Fails with 'items.parent_not_found' when the parent does not exist or is not visible to the caller, and with 'items.children_protected' (409) when the parent refuses new children. An optional UUID 'idempotencyKey' safely retries the same creation; reusing it with different input returns 'items.idempotency_conflict' (409).</p>
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>CreateItemRequest</code>.</p>
-<p>Responses: <code>201</code>, <code>400</code>, <code>404</code>, <code>409</code>, <code>501</code>.</p>
+<p>Responses: <code>201</code>, <code>400</code>, <code>404</code>, <code>409</code>.</p>
 </article>
 <article id="listtrash" data-search="get /api/v1/workspaces/{workspaceid}/items/trash listtrash recoverable items in the workspace trash returns directly deleted items the caller may read, newest first. descendants hidden by a deleted ancestor are not independently trashed. items">
 <h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/items/trash</code></h3>
@@ -1658,42 +1658,6 @@
 <ul><li><code>operationId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>204</code>, <code>404</code>.</p>
-</article></section>
-<section id="permissions"><h2>Permissions</h2><article id="getitempermissions" data-search="get /api/v1/items/{itemid}/permissions getitempermissions who can do what with this item returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing. the effective role and 'canshare' are server decisions; a client must render from them and must never derive its own answer from the entries. permissions">
-<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/permissions</code></h3>
-<p>Who can do what with this item</p>
-<p class="id">Operation id: <code>GetItemPermissions</code></p>
-<p><strong>Can.</strong> Read the resource named in the summary.</p>
-<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
-<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
-<p>Returns the entries that apply to the item - its own and those inherited from its ancestors - together with the calling principal's effective role and whether they may change the sharing. The effective role and 'canShare' are server decisions; a client must render from them and must never derive its own answer from the entries.</p>
-<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
-
-<p>Responses: <code>200</code>, <code>404</code>, <code>501</code>.</p>
-</article>
-<article id="upsertaclentry" data-search="put /api/v1/items/{itemid}/permissions/entries upsertaclentry grant or refuse a role on this item creates or replaces the entry for the given subject and effect. fails with 'permissions.cannot_share' when the caller may see the item but may not administer its sharing. permissions">
-<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/permissions/entries</code></h3>
-<p>Grant or refuse a role on this item</p>
-<p class="id">Operation id: <code>UpsertAclEntry</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-<p>Creates or replaces the entry for the given subject and effect. Fails with 'permissions.cannot_share' when the caller may see the item but may not administer its sharing.</p>
-<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>UpsertAclEntryRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>501</code>.</p>
-</article>
-<article id="deleteaclentry" data-search="delete /api/v1/items/{itemid}/permissions/entries/{aclentryid} deleteaclentry remove an entry from this item removes an entry attached to this item. an inherited entry cannot be removed here - it belongs to the ancestor it is attached to - and attempting it fails with 'permissions.entry_not_found'. permissions">
-<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/permissions/entries/{aclEntryId}</code></h3>
-<p>Remove an entry from this item</p>
-<p class="id">Operation id: <code>DeleteAclEntry</code></p>
-<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
-<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-<p>Removes an entry attached to this item. An inherited entry cannot be removed here - it belongs to the ancestor it is attached to - and attempting it fails with 'permissions.entry_not_found'.</p>
-<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>aclEntryId</code> in path (required, string (uuid))</li></ul>
-
-<p>Responses: <code>204</code>, <code>403</code>, <code>404</code>, <code>501</code>.</p>
 </article></section>
 <section id="pets"><h2>Pets</h2><article id="getpetconnection" data-search="get /api/v1/me/pets/connection getpetconnection   pets">
 <h3><span class="verb">GET</span> <code>/api/v1/me/pets/connection</code></h3>

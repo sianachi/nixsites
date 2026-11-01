@@ -42,10 +42,6 @@ const EXTRA_CODES = [
     'A failure with no feature code, including an unknown route. Clients should not branch on it beyond unexpected.',
   ],
   [
-    'api.not_implemented',
-    'Declared on some routes as status 501. Item routes that still list it are implemented; the declared response remains in the document.',
-  ],
-  [
     'auth.unauthenticated',
     'No usable credentials, or a personal access token that does not authenticate.',
   ],
