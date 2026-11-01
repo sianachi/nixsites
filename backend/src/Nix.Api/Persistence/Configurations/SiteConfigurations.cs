@@ -17,7 +17,7 @@ internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
         builder.ToTable(NixTables.Site, table => table.HasCheckConstraint(
             "ck_site_bounded",
             "slug ~ '^[a-z0-9](-?[a-z0-9]){1,39}$'"
-                + " AND layout IN ('docs', 'blog')"
+                + " AND layout IN ('docs', 'blog', 'custom')"
                 + " AND republish_mode IN ('manual', 'auto', 'on_release')"
                 + " AND status IN ('draft', 'published', 'unpublished')"
                 + " AND debounce_seconds BETWEEN 60 AND 3600"

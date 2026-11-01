@@ -7,7 +7,7 @@ const countSchema = z
   .transform(Number);
 const instantSchema = z.iso.datetime({ offset: true });
 
-const siteLayoutSchema = z.enum(['docs', 'blog']);
+const siteLayoutSchema = z.enum(['docs', 'blog', 'custom']);
 const siteStatusSchema = z.enum(['draft', 'published', 'unpublished']);
 const siteRepublishModeSchema = z.enum(['manual', 'auto', 'on_release']);
 const siteBuildStatusSchema = z.enum([
@@ -39,6 +39,8 @@ const siteSettingsSchema = z.object({
   headingMark: z.enum(['square', 'diamond', 'none']).default('square'),
   typeface: z.enum(['rounded', 'serif', 'legible']).default('rounded'),
   spacing: z.enum(['compact', 'comfortable', 'airy']).default('comfortable'),
+  // The page whose files are the custom layout's theme; the other layouts ignore it.
+  themeItemId: z.string().nullable().default(null),
 });
 
 const siteDatedCollectionSchema = z.object({

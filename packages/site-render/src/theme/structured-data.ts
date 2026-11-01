@@ -86,7 +86,7 @@ export function structuredData(model: SiteModel, page: StructuredPage): Json {
 
   if (page.path === '/') {
     const author = settings.author?.trim() ?? '';
-    const withPerson = layout === 'blog' && author.length > 0;
+    const withPerson = layout !== 'docs' && author.length > 0;
     graph.push({
       '@type': 'WebSite',
       '@id': `${canonicalOrigin}/#website`,

@@ -131,6 +131,7 @@ interface SettingsDraft {
   readonly typeface: Look['typeface'];
   readonly spacing: Look['spacing'];
   readonly layout: SiteLayout;
+  readonly themeItemId: string;
   readonly navigation: string;
   readonly footerText: string;
   readonly builtWithNix: boolean;
@@ -149,6 +150,7 @@ function draftOf(site: Site): SettingsDraft {
     typeface: site.settings.typeface,
     spacing: site.settings.spacing,
     layout: site.layout,
+    themeItemId: site.settings.themeItemId ?? '',
     navigation: formatNavigation(site.settings.navigation),
     footerText: site.settings.footerText,
     builtWithNix: site.settings.builtWithNix,
@@ -217,6 +219,7 @@ export function SiteSettingsForm({
             headingMark: draft.headingMark,
             typeface: draft.typeface,
             spacing: draft.spacing,
+            themeItemId: draft.themeItemId.trim().length > 0 ? draft.themeItemId.trim() : null,
             navigation: parseNavigation(draft.navigation),
             footerText: draft.footerText,
             builtWithNix: draft.builtWithNix,
@@ -290,14 +293,33 @@ export function SiteSettingsForm({
               value={draft.layout}
               onChange={(event) => {
                 const value = event.currentTarget.value;
-                if (value === 'docs' || value === 'blog') edit({ layout: value });
+                if (value === 'docs' || value === 'blog' || value === 'custom')
+                  edit({ layout: value });
               }}
             >
               <option value="docs">Docs: pages with a sidebar</option>
               <option value="blog">Blog: dated posts first</option>
+              <option value="custom">Custom: your own templates</option>
             </Select>
           )}
         </Field>
+        {draft.layout === 'custom' ? (
+          <Field
+            label="Theme page"
+            required
+            hint="The id of a page inside this site whose attached files (Liquid templates, CSS, JS, images) are the theme."
+          >
+            {(control) => (
+              <Input
+                {...control}
+                value={draft.themeItemId}
+                onChange={(event) => {
+                  edit({ themeItemId: event.currentTarget.value });
+                }}
+              />
+            )}
+          </Field>
+        ) : null}
         <Field label="Accent colour">
           {(control) => (
             <Input
@@ -474,7 +496,11 @@ export function SiteSettingsForm({
           <Button
             type="submit"
             variant="secondary"
-            disabled={save.saving || draft.name.trim() === ''}
+            disabled={
+              save.saving ||
+              draft.name.trim() === '' ||
+              (draft.layout === 'custom' && draft.themeItemId.trim() === '')
+            }
           >
             {save.saving ? 'Saving…' : 'Save settings'}
           </Button>

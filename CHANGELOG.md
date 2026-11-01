@@ -3,6 +3,14 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## Unreleased
+
+### Added
+
+- A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
+  files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
+  in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
+
 ## 0.5.1 - 2026-11-01
 
 ### Added

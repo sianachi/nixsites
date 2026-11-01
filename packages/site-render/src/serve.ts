@@ -12,6 +12,10 @@ import { extname, join, resolve, sep } from 'node:path';
 export const SITE_CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
+/** A custom-layout build's pages: its own script runs, in an opaque origin (`apps/sites`). */
+export const SANDBOX_CSP =
+  "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 /**
  * A captured diagram's own policy: its inline `<style>` may apply, and nothing may run or load,
  * even when the picture is opened directly rather than through an <img>.
@@ -103,33 +107,48 @@ export function createPreviewServer(dir: string): Server {
   const redirects = (
     existsSync(redirectsFile) ? JSON.parse(readFileSync(redirectsFile, 'utf8')) : {}
   ) as Record<string, string>;
-
+  const indexFile = join(root, '_nix', 'build.json');
+  const sandboxed =
+    existsSync(indexFile) &&
+    (JSON.parse(readFileSync(indexFile, 'utf8')) as { sandboxed?: unknown }).sandboxed === true;
   return createServer((request, response) => {
+    // WebKit matches no 'self' for a fetch from the sandbox's opaque origin; name the host too.
+    const host = /^[a-z0-9.-]+(:\d{1,5})?$/i.exec(request.headers.host ?? '')?.[0] ?? 'localhost';
+    const base: Record<string, string> = sandboxed
+      ? {
+          ...HEADERS,
+          'Content-Security-Policy': SANDBOX_CSP.replace(
+            "connect-src 'self'",
+            `connect-src 'self' http://${host} https://${host}`,
+          ),
+          'Access-Control-Allow-Origin': '*',
+        }
+      : HEADERS;
     void (async () => {
       const head = request.method === 'HEAD';
       if (request.method !== 'GET' && !head) {
-        response.writeHead(405, { ...HEADERS, Allow: 'GET, HEAD' }).end();
+        response.writeHead(405, { ...base, Allow: 'GET, HEAD' }).end();
         return;
       }
       const path = normalizePath(request.url ?? '/');
       if (path === null) {
-        response.writeHead(400, HEADERS).end();
+        response.writeHead(400, base).end();
         return;
       }
       const redirect = redirects[path] ?? redirects[`${path}/`];
       if (redirect !== undefined) {
-        response.writeHead(308, { ...HEADERS, Location: redirect }).end();
+        response.writeHead(308, { ...base, Location: redirect }).end();
         return;
       }
 
       let file = resolve(root, `.${path}`);
       if (file !== root && !file.startsWith(root + sep)) {
-        response.writeHead(400, HEADERS).end();
+        response.writeHead(400, base).end();
         return;
       }
       if (existsSync(file) && statSync(file).isDirectory()) {
         if (!path.endsWith('/')) {
-          response.writeHead(308, { ...HEADERS, Location: `${path}/` }).end();
+          response.writeHead(308, { ...base, Location: `${path}/` }).end();
           return;
         }
         file = join(file, 'index.html');
@@ -139,14 +158,14 @@ export function createPreviewServer(dir: string): Server {
       if (!existsSync(file) || !statSync(file).isFile() || type === undefined) {
         const page = join(root, '404.html');
         const body = existsSync(page) ? await readFile(page) : Buffer.from('Not found');
-        response.writeHead(404, { ...HEADERS, 'Content-Type': 'text/html; charset=utf-8' });
+        response.writeHead(404, { ...base, 'Content-Type': 'text/html; charset=utf-8' });
         response.end(head ? undefined : body);
         return;
       }
       const immutable = path.startsWith('/_nix/assets/') || path.startsWith('/_nix/theme/');
       const body = await readFile(file);
       response.writeHead(200, {
-        ...HEADERS,
+        ...base,
         ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': SVG_CSP } : {}),
         ...download,
         'Content-Type': type,
@@ -160,7 +179,7 @@ export function createPreviewServer(dir: string): Server {
       response.end(head ? undefined : body);
     })().catch(() => {
       if (!response.headersSent) {
-        response.writeHead(500, HEADERS);
+        response.writeHead(500, base);
       }
       response.end();
     });

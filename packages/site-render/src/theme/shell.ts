@@ -101,7 +101,7 @@ export function renderShell(model: SiteModel, page: ShellPage): string {
   const article = page.kind === 'article' && own !== null;
   const noindex = page.notFound === true || settings.noindex || (own !== null && isNoindex(own));
 
-  const meta = [
+  const tags = [
     `<meta charset="utf-8">`,
     `<meta name="viewport" content="width=device-width, initial-scale=1">`,
     `<title>${escapeHtml(fullTitle)}</title>`,
@@ -133,8 +133,12 @@ export function renderShell(model: SiteModel, page: ShellPage): string {
       ? entryTags(own).map((tag) => `<meta property="article:tag" content="${escapeHtml(tag)}">`)
       : []),
     `<meta name="twitter:card" content="${image === null ? 'summary' : 'summary_large_image'}">`,
+  ];
+  const builtIn = [
     `<link rel="stylesheet" href="${model.theme.css}">`,
     `<script src="${model.theme.js}"></script>`,
+  ];
+  const tail = [
     feedLinks(model),
     page.notFound === true
       ? ''
@@ -147,9 +151,12 @@ export function renderShell(model: SiteModel, page: ShellPage): string {
             image,
           }),
         ),
-  ]
-    .filter((line) => line.length > 0)
-    .join('\n');
+  ];
+  const join = (lines: readonly string[]): string =>
+    lines.filter((line) => line.length > 0).join('\n');
+  const meta = join([...tags, ...builtIn, model.theme.tags, ...tail]);
+  // Without the built-in stylesheet and script, for a custom layout that styles everything itself.
+  const seo = join([...tags, model.theme.tags, ...tail]);
 
   const search =
     page.search === true
@@ -171,7 +178,7 @@ export function renderShell(model: SiteModel, page: ShellPage): string {
     }</ul>`,
   ].join('');
 
-  return `<!doctype html>
+  const document = (body: string): string => `<!doctype html>
 <html lang="${escapeHtml(settings.language)}">
 <head>
 ${meta}
@@ -180,12 +187,15 @@ ${meta}
 <a class="nix-skip" href="#content">Skip to content</a>
 <header class="nix-top"><div class="nix-top-inner"><a class="nix-brand" href="/"><span class="nix-mark" aria-hidden="true"><i></i></span>${escapeHtml(name)}</a>${navigation(model, page.current)}<div class="nix-tools">${search}<button class="nix-theme" type="button" data-nix-theme hidden aria-label="Switch theme"><span aria-hidden="true"></span></button></div></div></header>
 <main id="content" class="nix-main" tabindex="-1">
-${page.body}
+${body}
 </main>
 <footer class="nix-foot"><div class="nix-foot-inner">${footer}</div></footer>
 </body>
 </html>
 `;
+  return model.custom === null
+    ? document(page.body)
+    : model.custom.render(page, { seo, head: meta }, document);
 }
 
 /** Ancestors as a breadcrumb, root first, ending at the page's parent. */

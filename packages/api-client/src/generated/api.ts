@@ -5751,6 +5751,8 @@ export interface components {
       typeface: string;
       /** @default comfortable */
       spacing: string;
+      /** Format: uuid */
+      themeItemId?: null | string;
     };
     StructuredItemResponse: {
       item: components['schemas']['ItemResponse'];

@@ -277,6 +277,27 @@ describe('the site commands over a stubbed Core', () => {
     );
   });
 
+  it('sets the custom layout with its theme page, and clears the theme with an empty value', async () => {
+    const { env, done } = await withProfile();
+    let body: unknown;
+    server.use(
+      http.get(`${API}/api/v1/sites/${SITE}`, () => HttpResponse.json(site())),
+      http.patch(`${API}/api/v1/sites/${SITE}`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(site());
+      }),
+    );
+
+    await captureJson((json) =>
+      updateSite('default', SITE, { layout: 'custom', theme: ' theme-1 ' }, json, { env }),
+    );
+    expect(body).toMatchObject({ layout: 'custom', settings: { themeItemId: 'theme-1' } });
+
+    await captureJson((json) => updateSite('default', SITE, { theme: '' }, json, { env }));
+    expect(body).toMatchObject({ settings: { themeItemId: null } });
+    await done();
+  });
+
   it('rejects a navigation link without a label or a site path', () => {
     expect(parseNavLink('A=b=/x/')).toEqual({ label: 'A=b', path: '/x/' });
     expect(() => parseNavLink('/blog/')).toThrow(/--nav/);

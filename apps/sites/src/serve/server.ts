@@ -17,6 +17,22 @@ import type { ObjectReader, StoredObject } from './store.ts';
 export const SITE_CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
+/**
+ * A custom-layout site's pages run the site's own script, so they are served in a sandbox without
+ * `allow-same-origin`: the document gets an opaque origin, which reaches no cookie, storage or
+ * same-site credential of the app on the shared domain. Its files answer CORS for that origin.
+ */
+export const SANDBOX_CSP =
+  "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+/** WebKit matches no `'self'` for a fetch from an opaque origin, so the site's host is named too. */
+export function sandboxCsp(host: string): string {
+  return SANDBOX_CSP.replace(
+    "connect-src 'self'",
+    `connect-src 'self' http://${host} https://${host}`,
+  );
+}
+
 /** A captured diagram's policy: its inline `<style>` applies; nothing runs or loads. */
 export const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
 
@@ -73,6 +89,13 @@ interface HostManifest {
   readonly assetsPrefix: string;
   /** For a redirect alias: the canonical origin a visitor is sent to with a 308. */
   readonly redirectTo: string | null;
+}
+
+interface BuildIndex {
+  /** The asset and download paths the build publishes. */
+  readonly assets: ReadonlySet<string>;
+  /** Set for a custom-layout build: its pages run the site's own script. */
+  readonly sandboxed: boolean;
 }
 
 interface Cached<T> {
@@ -251,7 +274,7 @@ export function createSiteServer(options: SiteServerOptions): Server {
    * so a superseded build's files are still in the store; only this list says a file is published.
    * An unreadable index lists nothing, so a missing file is never served by mistake.
    */
-  const assetTable = ttlCache<ReadonlySet<string>>(async (buildPrefix) => {
+  const assetTable = ttlCache<BuildIndex>(async (buildPrefix) => {
     const json = await readJson(`${buildPrefix}_nix/build.json`, 16 << 20);
     const paths = new Set<string>();
     const files = (json as { files?: unknown } | null)?.files;
@@ -260,10 +283,14 @@ export function createSiteServer(options: SiteServerOptions): Server {
         if (file.kind === 'asset' && typeof file.path === 'string') paths.add(file.path);
       }
     }
-    return paths;
+    return {
+      assets: paths,
+      sandboxed: (json as { sandboxed?: unknown } | null)?.sandboxed === true,
+    };
   });
-  const liveAssets = async (buildPrefix: string): Promise<ReadonlySet<string>> =>
-    (await assetTable(buildPrefix)) ?? new Set();
+  // An unreadable index is treated as sandboxed: the stricter answer when it cannot be told.
+  const buildIndex = async (buildPrefix: string): Promise<BuildIndex> =>
+    (await assetTable(buildPrefix)) ?? { assets: new Set(), sandboxed: true };
 
   function send(
     response: ServerResponse,
@@ -342,6 +369,16 @@ export function createSiteServer(options: SiteServerOptions): Server {
     }
 
     const head = method === 'HEAD';
+    const index = await buildIndex(manifest.buildPrefix);
+    const sandbox: Record<string, string> = index.sandboxed
+      ? {
+          // The Host as asked, port included; its name was checked above.
+          'content-security-policy': sandboxCsp(
+            `${host}${/:\d{1,5}$/.exec(request.headers.host ?? '')?.[0] ?? ''}`,
+          ),
+          'access-control-allow-origin': '*',
+        }
+      : {};
     const notFound = async (): Promise<void> => {
       const page = await options.reader.open(
         `${manifest.buildPrefix}404.html`,
@@ -350,7 +387,7 @@ export function createSiteServer(options: SiteServerOptions): Server {
       send(
         response,
         404,
-        { 'content-type': 'text/html; charset=utf-8', 'cache-control': REVALIDATE },
+        { 'content-type': 'text/html; charset=utf-8', 'cache-control': REVALIDATE, ...sandbox },
         page,
       );
     };
@@ -368,7 +405,7 @@ export function createSiteServer(options: SiteServerOptions): Server {
     if (path.startsWith('/_nix/files/')) {
       const [, digest, name, ext] = DOWNLOAD.exec(path) ?? [];
       if (digest === undefined || name === undefined || ext === undefined) return notFound();
-      if (!(await liveAssets(manifest.buildPrefix)).has(path.slice(1))) return notFound();
+      if (!index.assets.has(path.slice(1))) return notFound();
       key = `${manifest.assetsPrefix}${digest}.${ext}`;
       cacheControl = DOWNLOAD_CACHE;
       // The name is limited to letters, digits, `-` and `_` by the pattern, so quoting is enough.
@@ -380,7 +417,7 @@ export function createSiteServer(options: SiteServerOptions): Server {
     } else if (path.startsWith('/_nix/assets/')) {
       const name = path.slice('/_nix/assets/'.length);
       if (!ASSET_NAME.test(name)) return notFound();
-      if (!(await liveAssets(manifest.buildPrefix)).has(path.slice(1))) return notFound();
+      if (!index.assets.has(path.slice(1))) return notFound();
       key = manifest.assetsPrefix + name;
       cacheControl = IMMUTABLE;
     } else {
@@ -419,6 +456,9 @@ export function createSiteServer(options: SiteServerOptions): Server {
       response,
       object.status,
       {
+        // The sandbox's opaque origin fetches fonts, data and modules with CORS; the policy only
+        // matters on a page, and an SVG or PDF keeps its own stricter one below.
+        ...sandbox,
         ...(object.contentRange === null ? {} : { 'content-range': object.contentRange }),
         ...(download['content-type'] === undefined ? {} : { 'accept-ranges': 'bytes' }),
         'content-type': type,

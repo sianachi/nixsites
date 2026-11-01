@@ -82,6 +82,25 @@ describe('the site settings form', () => {
     );
   });
 
+  it('asks for the theme page when the layout is custom and saves it', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(() => Promise.resolve(null));
+    render(<SiteSettingsForm site={site()} onSave={onSave} />);
+
+    expect(screen.queryByRole('textbox', { name: /theme page/i })).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: /layout/i }), 'custom');
+    expect(screen.getByRole('button', { name: /save settings/i })).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: /theme page/i }), ' theme-1 ');
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layout: 'custom',
+        settings: expect.objectContaining({ themeItemId: 'theme-1' }) as unknown,
+      }),
+    );
+  });
+
   it('checks navigation lines', () => {
     expect(navigationProblem('Home /\n\nGuide /guide/')).toBeNull();
     expect(navigationProblem('Home /\nAbout')).toBe(

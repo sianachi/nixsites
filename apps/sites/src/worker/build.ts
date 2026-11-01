@@ -101,6 +101,8 @@ interface FetchedFile {
   readonly image: StrippedImage | null;
   readonly download: PublishedDownload | null;
   readonly skipped: LossEntry | null;
+  /** The file's own name, which a custom layout's theme files are known by. */
+  readonly name?: string | null | undefined;
 }
 
 /** One file as a page first uses it: Core's read capability, the bytes, and the published form. */
@@ -109,6 +111,7 @@ async function fetchFile(
   execution: Execution,
   reference: FileReference,
   signal: AbortSignal,
+  themePage = false,
 ): Promise<FetchedFile> {
   const none = { image: null, download: null, skipped: null };
   const file = await deps.core.file(execution, reference.fileItemId, reference.pageItemId, signal);
@@ -125,8 +128,9 @@ async function fetchFile(
         }
       : none;
   }
-  // A linked picture is not a download, and the block or reference does not show pictures.
-  if (reference.kind === 'link' && downloadType(file.mediaType) === null) return none;
+  // A linked picture is not a download, and the block or reference does not show pictures; the
+  // custom layout's theme page is the exception, since its templates place its pictures.
+  if (reference.kind === 'link' && downloadType(file.mediaType) === null && !themePage) return none;
   const isDownload = downloadType(file.mediaType) !== null;
   const bytes = await deps.objects.download(
     file.url,
@@ -147,9 +151,10 @@ async function fetchFile(
     return isDownload
       ? {
           ...none,
+          name: file.fileName,
           download: prepareDownload(bytes, file.mediaType, file.fileName ?? 'download'),
         }
-      : { ...none, image: stripImageMetadata(bytes, file.mediaType) };
+      : { ...none, name: file.fileName, image: stripImageMetadata(bytes, file.mediaType) };
   } catch (error) {
     if (!(error instanceof UnsupportedImage) && !(error instanceof UnsupportedDownload)) {
       throw error;
@@ -232,11 +237,19 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
     signal,
     async (reference) => ({
       reference,
-      ...(await fetchFile(deps, execution, reference, signal)),
+      ...(await fetchFile(
+        deps,
+        execution,
+        reference,
+        signal,
+        reference.pageItemId === manifest.settings.themeItemId,
+      )),
     }),
   );
   const copies = new Map<string, unknown>();
-  for (const { reference, image, download, skipped: skip } of fetched) {
+  const fileNames = new Map<string, string>();
+  for (const { reference, image, download, skipped: skip, name } of fetched) {
+    if (name != null) fileNames.set(reference.fileItemId, name);
     if (skip !== null) skipped.push(skip);
     if (image !== null) assets.set(reference.fileItemId, image);
     if (download !== null) downloads.set(reference.fileItemId, download);
@@ -253,7 +266,16 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
   // 4. Render, in memory.
   // Each page's link-preview card; the rasteriser loads once per process.
   const previews = await loadPreviewRasterizer();
-  const rendered = renderSite({ manifest, pages, bodies, assets, downloads, previews });
+  let rendered;
+  try {
+    rendered = renderSite({ manifest, pages, bodies, assets, downloads, previews, fileNames });
+  } catch (error) {
+    // A custom layout's theme page missing, or one of its templates failing.
+    if (error instanceof Error && error.name === 'SiteManifestError') {
+      throw new JobError('site_render_failed', error.message);
+    }
+    throw error;
+  }
   const files = rendered.files;
   const totalBytes = files.reduce((sum, file) => sum + file.bytes.length, 0);
   if (totalBytes > MAX_RENDERED_BYTES) {

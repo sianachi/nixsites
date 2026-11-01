@@ -23,4 +23,4 @@ export { escapeHtml } from './html/escape.js';
 export { tokenize } from './search.js';
 export { renderSite, type RenderedFile } from './render.js';
 export { loadPreviewRasterizer } from './theme/preview-image.js';
-export { PDF_CSP, SITE_CSP, SVG_CSP, normalizePath } from './serve.js';
+export { PDF_CSP, SANDBOX_CSP, SITE_CSP, SVG_CSP, normalizePath } from './serve.js';

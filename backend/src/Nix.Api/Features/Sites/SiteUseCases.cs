@@ -108,7 +108,7 @@ public sealed class CreateSiteHandler(
         if (!SiteRules.IsSlug(request.Slug) || !SiteRules.IsLayout(request.Layout) || request.RootItemId == Guid.Empty)
         {
             return Result.Failure<SiteResponse>(SiteErrors.Invalid(
-                "A site needs a root item, a slug of 2 to 40 lowercase letters, digits and single hyphens, and a docs or blog layout."));
+                "A site needs a root item, a slug of 2 to 40 lowercase letters, digits and single hyphens, and a docs, blog or custom layout."));
         }
 
         var root = await tree.FindAsync(ItemId.From(request.RootItemId), cancellationToken).ConfigureAwait(false);
@@ -159,6 +159,12 @@ public sealed class CreateSiteHandler(
             }
 
             settings = checkedSettings.Value;
+        }
+
+        var themeRefusal = await views.CheckThemeAsync(request.Layout, settings.ThemeItemId, request.RootItemId, cancellationToken).ConfigureAwait(false);
+        if (themeRefusal is not null)
+        {
+            return Result.Failure<SiteResponse>(themeRefusal.Value);
         }
 
         if ((await locks.GetStateAsync(root.Id, cancellationToken).ConfigureAwait(false)).Locked)
@@ -246,7 +252,7 @@ public sealed class UpdateSiteHandler(
                 && (debounce < SiteRules.MinimumDebounceSeconds || debounce > SiteRules.MaximumDebounceSeconds)))
         {
             return Result.Failure<SiteResponse>(SiteErrors.Invalid(
-                "The layout must be docs or blog, the mode manual, auto or on_release, and the debounce 60 to 3600 seconds."));
+                "The layout must be docs, blog or custom, the mode manual, auto or on_release, and the debounce 60 to 3600 seconds."));
         }
 
         SiteSettingsDto? settings = null;
@@ -259,6 +265,16 @@ public sealed class UpdateSiteHandler(
             }
 
             settings = checkedSettings.Value;
+        }
+
+        var themeRefusal = await views.CheckThemeAsync(
+            request.Layout ?? site.Layout,
+            settings is null ? SiteViews.ReadSettings(site).ThemeItemId : settings.ThemeItemId,
+            site.RootItemId.Value,
+            cancellationToken).ConfigureAwait(false);
+        if (themeRefusal is not null)
+        {
+            return Result.Failure<SiteResponse>(themeRefusal.Value);
         }
 
         var excluded = request.ExcludedItemIds?.Select(ItemId.From).Distinct().ToArray();

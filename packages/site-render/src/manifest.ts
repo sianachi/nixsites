@@ -30,7 +30,7 @@ const manifestSchema = z.object({
   buildId: z.string().min(1),
   workspaceId: z.string().min(1),
   rootItemId: z.string().min(1),
-  layout: z.enum(['docs', 'blog']),
+  layout: z.enum(['docs', 'blog', 'custom']),
   settings: z.object({
     name: z.string().min(1).max(200),
     description: z.string().max(1000),
@@ -52,6 +52,8 @@ const manifestSchema = z.object({
     typeface: z.enum(['rounded', 'serif', 'legible']).default('rounded'),
     /** The vertical rhythm: space between blocks, sections and rows. */
     spacing: z.enum(['compact', 'comfortable', 'airy']).default('comfortable'),
+    /** For the custom layout: the page whose attached files are the theme; never published. */
+    themeItemId: z.string().min(1).nullish(),
   }),
   canonicalOrigin: z.string().regex(/^https?:\/\/[^/\s]+$/),
   builtAt: z.iso.datetime({ offset: true }),

@@ -354,6 +354,64 @@ public sealed class SiteHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
         Assert.Equal(["0"], await QueryAsync($"SELECT count(*)::text FROM site WHERE id = '{draft}'"));
     }
 
+    [Fact]
+    public async Task The_custom_layout_needs_a_theme_page_under_the_site_root()
+    {
+        var outside = await _scenario.CreateItemAsync("Outside theme", Root);
+        var second = await _scenario.CreateItemAsync("Themed root", Root, "folder");
+        var theme = await _scenario.CreateItemAsync("Theme", second);
+        var siteId = await CreateSiteAsync(second, "themed");
+
+        static object Settings(Guid? themeItemId) => new
+        {
+            name = "Themed",
+            description = string.Empty,
+            accent = "#2f5fd0",
+            navigation = Array.Empty<object>(),
+            footerText = string.Empty,
+            builtWithNix = true,
+            language = "en",
+            themeItemId,
+        };
+
+        using (var missing = await _host.SendAsync(
+            HttpMethod.Patch, $"/api/v1/sites/{siteId}", _manager, new { layout = "custom" }))
+        {
+            Assert.Equal((HttpStatusCode)422, missing.StatusCode);
+        }
+
+        using (var elsewhere = await _host.SendAsync(
+            HttpMethod.Patch, $"/api/v1/sites/{siteId}", _manager, new { layout = "custom", settings = Settings(outside.Value) }))
+        {
+            Assert.Equal((HttpStatusCode)422, elsewhere.StatusCode);
+            Assert.Equal("sites.item_outside_site", await SiteHttpHost.ProblemCodeAsync(elsewhere));
+        }
+
+        // The theme page is never published, so the home page cannot be it.
+        using (var root = await _host.SendAsync(
+            HttpMethod.Patch, $"/api/v1/sites/{siteId}", _manager, new { layout = "custom", settings = Settings(second.Value) }))
+        {
+            Assert.Equal((HttpStatusCode)422, root.StatusCode);
+            Assert.Equal("sites.item_outside_site", await SiteHttpHost.ProblemCodeAsync(root));
+        }
+
+        using (var chosen = await _host.SendAsync(
+            HttpMethod.Patch, $"/api/v1/sites/{siteId}", _manager, new { layout = "custom", settings = Settings(theme.Value) }))
+        {
+            Assert.Equal(HttpStatusCode.OK, chosen.StatusCode);
+            using var site = await SiteHttpHost.JsonAsync(chosen);
+            Assert.Equal("custom", site.RootElement.GetProperty("layout").GetString());
+            Assert.Equal(theme.Value, site.RootElement.GetProperty("settings").GetProperty("themeItemId").GetGuid());
+        }
+
+        // Dropping the theme while the layout stays custom is refused the same way.
+        using (var dropped = await _host.SendAsync(
+            HttpMethod.Patch, $"/api/v1/sites/{siteId}", _manager, new { settings = Settings(null) }))
+        {
+            Assert.Equal((HttpStatusCode)422, dropped.StatusCode);
+        }
+    }
+
     private static object HostsBody(string hostname) => new { hostnames = new List<string> { hostname } };
 
     private static IEnumerable<(HttpMethod Method, string Path, object? Body)> Mutations(Guid siteId)

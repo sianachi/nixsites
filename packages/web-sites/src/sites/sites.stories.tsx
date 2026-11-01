@@ -69,6 +69,7 @@ const draft: Site = {
     headingMark: 'square',
     typeface: 'rounded',
     spacing: 'comfortable',
+    themeItemId: null,
   },
   republishMode: 'manual',
   debounceSeconds: 300,

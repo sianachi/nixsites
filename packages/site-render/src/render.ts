@@ -16,11 +16,13 @@ import {
   type SiteBuildManifest,
   type SitePage,
 } from './manifest.js';
+import { collectFileReferences } from './references.js';
 import { buildSearchIndex } from './search.js';
 import type { SiteModel, SiteNode } from './site-model.js';
 import { renderRobots, renderSitemap } from './sitemap.js';
 import { CLIENT_JS } from './theme/client.js';
 import { themeCss, themeFonts, type Typeface } from './theme/css.js';
+import { THEME_FILE_NAME, createCustomRenderer, themeTags } from './theme/custom.js';
 import { renderBlogPages } from './theme/layout-blog.js';
 import { renderDocsPages } from './theme/layout-docs.js';
 import { renderShell } from './theme/shell.js';
@@ -64,6 +66,8 @@ export interface RenderSiteInput {
    * carry no `og:image`; passed in rather than loaded here so rendering stays synchronous.
    */
   readonly previews?: PreviewRasterizer;
+  /** Each fetched file's own name, by file item; the custom layout finds its theme files by it. */
+  readonly fileNames?: ReadonlyMap<string, string>;
 }
 
 export interface RenderedFile {
@@ -154,10 +158,34 @@ function buildTree(
   return { nodes, byItem };
 }
 
+/** The theme page and everything under it: the custom layout's source, never published itself. */
+function themeSubtree(manifest: SiteBuildManifest, pages: readonly SitePage[]): Set<string> {
+  const themeId = manifest.layout === 'custom' ? manifest.settings.themeItemId : null;
+  if (themeId == null) {
+    if (manifest.layout === 'custom') {
+      throw new SiteManifestError('The custom layout needs a theme page.');
+    }
+    return new Set();
+  }
+  if (themeId === manifest.rootItemId || !pages.some((page) => page.itemId === themeId)) {
+    throw new SiteManifestError('The theme page must be a page inside the site, not its root.');
+  }
+  const inside = new Set([themeId]);
+  // Pre-order, so a parent is always seen before its children.
+  for (const page of pages) {
+    if (page.parentItemId !== null && inside.has(page.parentItemId)) inside.add(page.itemId);
+  }
+  return inside;
+}
+
 export function renderSite(input: RenderSiteInput): RenderedSite {
   const { manifest } = input;
   const report = createLossReport();
-  const { nodes, byItem } = buildTree(manifest, publishedPages(input.pages));
+  const themePages = themeSubtree(manifest, input.pages);
+  const { nodes, byItem } = buildTree(
+    manifest,
+    publishedPages(input.pages).filter((page) => !themePages.has(page.itemId)),
+  );
   const root = byItem.get(manifest.rootItemId);
   if (root === undefined) {
     throw new SiteManifestError('The root item is not among the pages.');
@@ -206,6 +234,35 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
   const diagram = (fileItemId: string, sourceSha256: string): ProseAsset | null =>
     input.assets.get(fileItemId)?.sourceSha256 === sourceSha256 ? asset(fileItemId) : null;
 
+  // The custom layout's files: templates by name, stylesheets and scripts published beside the
+  // built-in theme, images as ordinary assets. Only the theme page's own attachments count.
+  const templates: Record<string, string> = {};
+  const ownFiles = new Map<string, Uint8Array>();
+  const themeImages = new Map<string, string>();
+  const decoder = new TextDecoder();
+  const themeId = manifest.settings.themeItemId;
+  const themePage = input.pages.find((page) => page.itemId === themeId);
+  if (manifest.layout === 'custom' && themePage !== undefined) {
+    for (const { fileItemId } of collectFileReferences([themePage], input.bodies)) {
+      const name = input.fileNames?.get(fileItemId) ?? '';
+      const text = downloads.get(fileItemId);
+      if (!THEME_FILE_NAME.test(name)) {
+        report
+          .for(themePage.itemId)
+          .note(
+            'body-not-rendered',
+            `A theme file has a name a site cannot publish (${name.slice(0, 80)}).`,
+          );
+      } else if (input.assets.has(fileItemId)) {
+        themeImages.set(name, fileItemId);
+      } else if (text !== undefined && name.endsWith('.liquid')) {
+        templates[name.slice(0, -'.liquid'.length)] = decoder.decode(text.bytes);
+      } else if (text !== undefined && (name.endsWith('.css') || name.endsWith('.js'))) {
+        ownFiles.set(name, text.bytes);
+      }
+    }
+  }
+
   // Theme files, addressed by their content so a changed theme never meets a cached old one.
   const css = themeCss(manifest.settings);
   const themeHash = sha256(
@@ -213,9 +270,17 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
       css,
       CLIENT_JS,
       ...fonts(manifest.settings.typeface).map((font) => `${font.file}:${sha256(font.bytes)}`),
+      ...[...ownFiles].map(([name, bytes]) => `${name}:${sha256(bytes)}`),
     ].join('\n'),
   ).slice(0, 16);
   const themeDir = `_nix/theme/${themeHash}/`;
+  const themeUrls = new Map<string, string>();
+  for (const name of ownFiles.keys()) themeUrls.set(name, `/${themeDir}own/${name}`);
+  const ownTags = themeTags(themeUrls);
+  for (const [name, fileItemId] of themeImages) {
+    const image = asset(fileItemId);
+    if (image !== null) themeUrls.set(name, image.url);
+  }
 
   // Link-preview cards, content-addressed like any image, so an unchanged page uploads nothing.
   const previewFiles = new Map<string, Uint8Array>();
@@ -259,11 +324,15 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
     root,
     nodes,
     byItem,
-    theme: { css: `/${themeDir}site.css`, js: `/${themeDir}site.js` },
+    theme: { css: `/${themeDir}site.css`, js: `/${themeDir}site.js`, tags: ownTags },
     asset,
     download,
     preview,
+    custom: null,
   };
+  if (manifest.layout === 'custom') {
+    model.custom = createCustomRenderer(model, { templates, urls: themeUrls });
+  }
 
   const context = {
     pathOf: (itemId: string) => byItem.get(itemId)?.page.path ?? null,
@@ -372,6 +441,13 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
 
   add(`${themeDir}site.css`, 'text/css; charset=utf-8', css);
   add(`${themeDir}site.js`, 'text/javascript; charset=utf-8', CLIENT_JS);
+  for (const [name, bytes] of ownFiles) {
+    add(
+      `${themeDir}own/${name}`,
+      name.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8',
+      bytes,
+    );
+  }
   for (const font of fonts(manifest.settings.typeface)) {
     add(`${themeDir}fonts/${font.file}`, 'font/woff2', font.bytes);
   }
@@ -413,7 +489,13 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
   add(
     '_nix/build.json',
     'application/json',
-    JSON.stringify({ buildId: manifest.buildId, builtAt: manifest.builtAt, files: index }),
+    JSON.stringify({
+      buildId: manifest.buildId,
+      builtAt: manifest.builtAt,
+      // A custom layout runs its own script, so its pages are served in a CSP sandbox.
+      ...(manifest.layout === 'custom' ? { sandboxed: true } : {}),
+      files: index,
+    }),
   );
   files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 

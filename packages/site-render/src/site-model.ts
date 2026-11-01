@@ -1,5 +1,6 @@
 import type { DatedCollection, SiteBuildManifest, SitePage } from './manifest.js';
 import type { ProseAsset, ProseDownload, RenderedProse } from './html/prose.js';
+import type { CustomRenderer } from './theme/custom.js';
 
 /**
  * The site as the theme sees it: the page tree, each page's rendered body, and the dated
@@ -25,8 +26,13 @@ export interface SiteModel {
   /** Every page in manifest (pre-)order. */
   readonly nodes: readonly SiteNode[];
   readonly byItem: ReadonlyMap<string, SiteNode>;
-  /** Paths of the theme's stylesheet and script, content-addressed. */
-  readonly theme: { readonly css: string; readonly js: string };
+  /**
+   * Paths of the theme's stylesheet and script, content-addressed, and for the custom layout the
+   * head tags of its own stylesheets and scripts.
+   */
+  readonly theme: { readonly css: string; readonly js: string; readonly tags: string };
+  /** Set for the custom layout: draws every page from the site's own templates. */
+  custom: CustomRenderer | null;
   readonly asset: (fileItemId: string) => ProseAsset | null;
   readonly download: (fileItemId: string) => ProseDownload | null;
   /** The generated link-preview image for a page, or null when none is drawn. */

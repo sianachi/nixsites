@@ -2383,7 +2383,8 @@ export function buildProgram(): Command {
     .option('--typeface <face>', 'rounded (Nunito Sans), serif (Literata) or legible (Atkinson)')
     .option('--heading-mark <mark>', 'square, diamond or none')
     .option('--spacing <spacing>', 'compact, comfortable or airy')
-    .option('--layout <layout>', 'docs or blog')
+    .option('--theme <itemId>', 'the page whose files are the custom layout\'s theme; "" clears it')
+    .option('--layout <layout>', 'docs, blog or custom (custom needs --theme)')
     .option(
       '--mode <mode>',
       'manual, auto or on_release; auto publishes every saved edit on its own and needs --yes',

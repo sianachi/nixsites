@@ -16,6 +16,9 @@ public static partial class SiteRules
     /// <summary>The blog and portfolio layout.</summary>
     public const string BlogLayout = "blog";
 
+    /// <summary>The layout rendered from a theme page's own templates, styles and scripts.</summary>
+    public const string CustomLayout = "custom";
+
     /// <summary>Rebuild only when a manager publishes.</summary>
     public const string ManualMode = "manual";
 
@@ -142,7 +145,16 @@ public static partial class SiteRules
     private static readonly HashSet<string> OwnerSlugs = new(StringComparer.Ordinal) { "nix", "osinachi" };
 
     /// <summary>Whether <paramref name="layout"/> names a theme layout.</summary>
-    public static bool IsLayout(string? layout) => layout is DocsLayout or BlogLayout;
+    public static bool IsLayout(string? layout) => layout is DocsLayout or BlogLayout or CustomLayout;
+
+    /// <summary>Checks that a custom layout names a theme page; returns the refusal, or null when the pair is acceptable.</summary>
+    /// <param name="layout">The layout the site will have.</param>
+    /// <param name="themeItemId">The theme page the settings name, if any.</param>
+    /// <returns>A sentence naming what is wrong, or null.</returns>
+    public static string? ThemeRefusal(string layout, Guid? themeItemId) =>
+        layout == CustomLayout && themeItemId is null
+            ? "The custom layout needs a theme page. Choose the page that holds the templates, styles and scripts."
+            : null;
 
     /// <summary>Whether <paramref name="mode"/> names a republish mode.</summary>
     public static bool IsRepublishMode(string? mode) => mode is ManualMode or AutoMode or OnReleaseMode;
@@ -279,6 +291,7 @@ public sealed record SiteNavLink(string Label, string Path);
 /// <param name="HeadingMark">The shape before headings and cards: <c>square</c>, <c>diamond</c> or <c>none</c>.</param>
 /// <param name="Typeface">The type family: <c>rounded</c>, <c>serif</c> or <c>legible</c>.</param>
 /// <param name="Spacing">The vertical rhythm: <c>compact</c>, <c>comfortable</c> or <c>airy</c>.</param>
+/// <param name="ThemeItemId">The page under the site root whose files are the custom layout's theme; null for none.</param>
 public sealed record SiteSettings(
     string Name,
     string Description,
@@ -291,7 +304,8 @@ public sealed record SiteSettings(
     string? Author = null,
     string HeadingMark = "square",
     string Typeface = "rounded",
-    string Spacing = "comfortable")
+    string Spacing = "comfortable",
+    Guid? ThemeItemId = null)
 {
     private static readonly string[] HeadingMarks = ["square", "diamond", "none"];
     private static readonly string[] Typefaces = ["rounded", "serif", "legible"];
@@ -353,6 +367,11 @@ public sealed record SiteSettings(
         if (!Spacings.Contains(Spacing))
         {
             return "The spacing must be compact, comfortable or airy.";
+        }
+
+        if (ThemeItemId == Guid.Empty)
+        {
+            return "The theme page must be an item.";
         }
 
         if (Navigation is null || Navigation.Count > 20)

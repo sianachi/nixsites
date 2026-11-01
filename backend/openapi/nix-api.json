@@ -23262,6 +23262,13 @@
           "spacing": {
             "type": "string",
             "default": "comfortable"
+          },
+          "themeItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

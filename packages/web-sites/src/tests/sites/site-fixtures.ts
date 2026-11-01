@@ -43,6 +43,7 @@ export function site(overrides: Partial<Site> = {}): Site {
       headingMark: 'square',
       typeface: 'rounded',
       spacing: 'comfortable',
+      themeItemId: null,
     },
     republishMode: 'manual',
     debounceSeconds: 300,

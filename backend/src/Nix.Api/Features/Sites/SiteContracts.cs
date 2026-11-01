@@ -21,6 +21,7 @@ public sealed record SiteNavLinkDto(string Label, string Path);
 /// <param name="HeadingMark">The shape before headings and cards: <c>square</c>, <c>diamond</c> or <c>none</c>. Absent means square.</param>
 /// <param name="Typeface">The type family: <c>rounded</c>, <c>serif</c> or <c>legible</c>. Absent means rounded.</param>
 /// <param name="Spacing">The vertical rhythm: <c>compact</c>, <c>comfortable</c> or <c>airy</c>. Absent means comfortable.</param>
+/// <param name="ThemeItemId">The page under the site root whose files are the custom layout's theme; null for none. Ignored by the docs and blog layouts.</param>
 public sealed record SiteSettingsDto(
     string Name,
     string Description,
@@ -33,7 +34,8 @@ public sealed record SiteSettingsDto(
     string? Author = null,
     string HeadingMark = "square",
     string Typeface = "rounded",
-    string Spacing = "comfortable");
+    string Spacing = "comfortable",
+    Guid? ThemeItemId = null);
 
 /// <summary>A collection whose children are dated posts, with the properties the blog layout reads.</summary>
 /// <param name="ItemId">The collection item.</param>

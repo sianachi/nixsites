@@ -89,6 +89,21 @@ public sealed class SiteSettingsTests
     }
 
     [Fact]
+    public void A_custom_layout_needs_a_theme_page_and_other_layouts_ignore_it()
+    {
+        var theme = Guid.NewGuid();
+        Assert.True(SiteRules.IsLayout("custom"));
+        Assert.NotNull(SiteRules.ThemeRefusal("custom", null));
+        Assert.Null(SiteRules.ThemeRefusal("custom", theme));
+        Assert.Null(SiteRules.ThemeRefusal("docs", null));
+        Assert.Null(SiteRules.ThemeRefusal("blog", theme));
+
+        var kept = SiteViews.CheckSettings(new SiteSettingsDto("Docs", "d", "#2f5fd0", [], "f", true, "en", ThemeItemId: theme));
+        Assert.Equal(theme, kept.Value.ThemeItemId);
+        Assert.True(SiteViews.CheckSettings(new SiteSettingsDto("Docs", "d", "#2f5fd0", [], "f", true, "en", ThemeItemId: Guid.Empty)).IsFailure);
+    }
+
+    [Fact]
     public void Settings_are_normalized_by_the_checker_the_endpoints_use()
     {
         var checkedSettings = SiteViews.CheckSettings(new SiteSettingsDto(

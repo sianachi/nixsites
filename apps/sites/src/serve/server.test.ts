@@ -4,7 +4,16 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { readServeConfig } from './config.ts';
-import { PDF_CSP, SVG_CSP, createSiteServer, hostnameOf, normalizePath } from './server.ts';
+import {
+  PDF_CSP,
+  SANDBOX_CSP,
+  SITE_CSP,
+  SVG_CSP,
+  createSiteServer,
+  hostnameOf,
+  normalizePath,
+  sandboxCsp,
+} from './server.ts';
 import type { ObjectReader } from './store.ts';
 
 const SITE = '11111111-1111-4111-8111-111111111111';
@@ -188,6 +197,32 @@ describe('hostnameOf', () => {
 });
 
 describe('the sites server', () => {
+  it('sandboxes a custom-layout build and answers CORS for its opaque origin', async () => {
+    const index = JSON.parse(published[`${BUILD_PREFIX}_nix/build.json`] ?? '{}') as object;
+    const port = await start({
+      ...published,
+      [`${BUILD_PREFIX}_nix/build.json`]: JSON.stringify({ ...index, sandboxed: true }),
+    });
+    for (const path of ['/', '/missing/']) {
+      const page = await get(port, path, 'docs.sites.test');
+      expect(page.headers['content-security-policy']).toBe(sandboxCsp('docs.sites.test'));
+      expect(page.headers['set-cookie']).toBeUndefined();
+    }
+    const css = await get(port, '/_nix/theme/abc/site.css', 'docs.sites.test');
+    expect(css.headers['access-control-allow-origin']).toBe('*');
+    // A picture or a document keeps its own, stricter policy.
+    const svg = await get(port, `/_nix/assets/${SHA}.svg`, 'docs.sites.test');
+    expect(svg.headers['content-security-policy']).toBe(SVG_CSP);
+    expect(SANDBOX_CSP).not.toContain('allow-same-origin');
+  });
+
+  it('leaves a built-in build unsandboxed', async () => {
+    const port = await start(published);
+    const page = await get(port, '/', 'docs.sites.test');
+    expect(page.headers['content-security-policy']).toBe(SITE_CSP);
+    expect(page.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
   it('serves a page with the site headers and no cookie', async () => {
     const port = await start(published);
     const answer = await get(port, '/', 'docs.sites.test');

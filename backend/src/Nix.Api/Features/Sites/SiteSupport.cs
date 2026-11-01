@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nix.Abstractions;
 using Nix.Domain.Audit;
 using Nix.Domain.Identity;
+using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Sites;
 using Nix.Errors;
@@ -401,6 +402,22 @@ public sealed class SiteViews(ISiteStore sites, IPermissionResolver permissions,
             build.ActivatedAt);
     }
 
+    /// <summary>Refuses a custom layout without a theme page, or whose theme page lies outside the site root.</summary>
+    public async ValueTask<NixError?> CheckThemeAsync(string layout, Guid? themeItemId, Guid rootItemId, CancellationToken cancellationToken)
+    {
+        if (SiteRules.ThemeRefusal(layout, themeItemId) is { } refusal)
+        {
+            return SiteErrors.Invalid(refusal);
+        }
+
+        // The theme page is never published, so the root (the home page) cannot be it.
+        return layout == SiteRules.CustomLayout
+            && (themeItemId == rootItemId
+                || !await sites.AreInSubtreeAsync(ItemId.From(rootItemId), [ItemId.From(themeItemId!.Value)], cancellationToken).ConfigureAwait(false))
+            ? new NixError(SiteErrors.ItemOutsideSiteCode, "The theme page must be a page under the site's root, not the root itself.")
+            : null;
+    }
+
     /// <summary>Reads the stored settings document.</summary>
     public static SiteSettingsDto ReadSettings(Site site)
     {
@@ -429,7 +446,8 @@ public sealed class SiteViews(ISiteStore sites, IPermissionResolver permissions,
             string.IsNullOrWhiteSpace(dto.Author) ? null : dto.Author.Trim(),
             dto.HeadingMark ?? "square",
             dto.Typeface ?? "rounded",
-            dto.Spacing ?? "comfortable");
+            dto.Spacing ?? "comfortable",
+            dto.ThemeItemId);
         return settings.Validate() is { } refusal
             ? Result.Failure<SiteSettingsDto>(SiteErrors.Invalid(refusal))
             : Result.Success(new SiteSettingsDto(
@@ -444,6 +462,7 @@ public sealed class SiteViews(ISiteStore sites, IPermissionResolver permissions,
                 settings.Author,
                 settings.HeadingMark,
                 settings.Typeface,
-                settings.Spacing));
+                settings.Spacing,
+                settings.ThemeItemId));
     }
 }

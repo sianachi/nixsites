@@ -39,7 +39,7 @@ public sealed class SiteManifestTests
             ["formatVersion", "siteId", "buildId", "workspaceId", "rootItemId", "layout", "settings", "canonicalOrigin", "builtAt", "pageCount", "datedCollections", "redirects"],
             root.EnumerateObject().Select(property => property.Name).ToArray());
         Assert.Equal(
-            ["name", "description", "accent", "navigation", "footerText", "builtWithNix", "language", "noindex", "author", "headingMark", "typeface", "spacing"],
+            ["name", "description", "accent", "navigation", "footerText", "builtWithNix", "language", "noindex", "author", "headingMark", "typeface", "spacing", "themeItemId"],
             root.GetProperty("settings").EnumerateObject().Select(property => property.Name).ToArray());
         Assert.Equal(
             ["itemId", "dateProperty", "tagsProperty", "coverProperty", "summaryProperty"],

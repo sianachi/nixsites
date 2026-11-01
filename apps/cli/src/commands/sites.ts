@@ -19,7 +19,7 @@ import { randomUUID } from 'node:crypto';
 import { resolveSession, type SessionDeps } from './shared.ts';
 import { printResult, type OutputOptions } from '../output.ts';
 
-const LAYOUTS: readonly SiteLayout[] = ['docs', 'blog'];
+const LAYOUTS: readonly SiteLayout[] = ['docs', 'blog', 'custom'];
 const MODES: readonly SiteRepublishMode[] = ['manual', 'auto', 'on_release'];
 
 function confirm(confirmed: boolean, what: string): void {
@@ -39,7 +39,7 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], flag: str
 
 function layoutOf(value: string): SiteLayout {
   const layout = LAYOUTS.find((candidate) => candidate === value);
-  if (layout === undefined) throw new Error("Layout must be 'docs' or 'blog'.");
+  if (layout === undefined) throw new Error("Layout must be 'docs', 'blog' or 'custom'.");
   return layout;
 }
 
@@ -122,6 +122,8 @@ export interface UpdateSiteOptions {
   readonly typeface?: string | undefined;
   readonly headingMark?: string | undefined;
   readonly spacing?: string | undefined;
+  /** The theme page's item id for the custom layout; "" clears it. */
+  readonly theme?: string | undefined;
   readonly layout?: string | undefined;
   readonly mode?: string | undefined;
   readonly debounce?: string | undefined;
@@ -178,6 +180,7 @@ export async function updateSite(
     options.builtWithNix !== undefined ||
     options.noindex !== undefined ||
     options.author !== undefined ||
+    options.theme !== undefined ||
     Object.keys(look).length > 0;
   const touchesDated = options.dated !== undefined || options.undated !== undefined;
   // Settings and dated collections are replaced whole, so a partial change starts from what Core
@@ -202,6 +205,9 @@ export async function updateSite(
             ...(options.author === undefined
               ? {}
               : { author: options.author.trim().length > 0 ? options.author.trim() : null }),
+            ...(options.theme === undefined
+              ? {}
+              : { themeItemId: options.theme.trim().length > 0 ? options.theme.trim() : null }),
             ...look,
           },
         }),
