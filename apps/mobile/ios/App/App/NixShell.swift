@@ -5,6 +5,8 @@ import WebKit
 class ShellViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NixShellPlugin())
+        bridge?.webView?.configuration.userContentController
+            .addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
     }
 
     /// WebKit runs service workers (the web app's offline shell) only for app-bound domains, and
@@ -44,9 +46,14 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         return url.port.map { "\(scheme)://\(host):\($0)" } ?? "\(scheme)://\(host)"
     }
 
-    private var servers: [[String: String]] {
-        UserDefaults.standard.array(forKey: Self.key) as? [[String: String]] ?? []
+    private var servers: [[String: String]] { Self.savedServers }
+
+    private static var savedServers: [[String: String]] {
+        UserDefaults.standard.array(forKey: key) as? [[String: String]] ?? []
     }
+
+    /// The servers' own origins (not their sign-in origins): the only ones whose pages get a store.
+    static var savedOrigins: Set<String> { Set(savedServers.compactMap { $0["origin"] }) }
 
     override public func shouldOverrideLoad(_ navigationAction: WKNavigationAction) -> NSNumber? {
         guard navigationAction.targetFrame?.isMainFrame == true,
@@ -73,7 +80,11 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
                 saved["loginOrigin"] = Self.origin(URL(string: entry["loginOrigin"] as? String ?? ""))
                 return saved
             }
+            let dropped = Self.savedOrigins.subtracting(entries.compactMap { $0["origin"] })
             UserDefaults.standard.set(entries, forKey: Self.key)
+            for origin in dropped {
+                Task { try? await NixStoreHandler.stores.wipe(origin: origin) }
+            }
             call.resolve(["servers": entries])
         }
     }
