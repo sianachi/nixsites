@@ -89,9 +89,8 @@ log 'taking the local backup'
 bash "$here/backup.sh" --nightly
 dir=$(comm -13 <(printf '%s\n' "$before") <(nightly_dirs))
 [[ -n $dir && $dir != *$'\n'* ]] || die 'could not identify the new nightly backup directory'
-# shortcut: disk usage in KiB, not an exact byte count (portable du); upgrade if exact sizes matter.
-kb=$(du -sk "$dir" 2>/dev/null | cut -f1) || kb= # sizing never fails the nightly
-bytes=$(( ${kb:-0} * 1024 ))
+# exact bytes: find -exec wc -c is portable across GNU and BSD; sizing never fails the nightly
+bytes=$(find "$dir" -type f -exec wc -c {} + 2>/dev/null | awk '$2 != "total" { n += $1 } END { print n + 0 }') || bytes=0
 record local succeeded "$local_started" '' "$bytes" ''
 
 step='off-host push'
