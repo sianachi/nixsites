@@ -265,7 +265,10 @@ describe('fetchFileContent offline', () => {
   const clientFor = (url: string) =>
     createNixClient({
       baseUrl: TEST_BASE_URL,
-      tokens: createInMemoryTokenStore('t'),
+      tokens: createInMemoryTokenStore({
+        initialAccessToken: 't',
+        refresh: () => Promise.resolve('t'),
+      }),
       fetch: () => Promise.resolve(Response.json(capability(url))),
     });
 

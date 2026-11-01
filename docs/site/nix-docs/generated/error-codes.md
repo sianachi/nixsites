@@ -358,6 +358,10 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `sites.too_many_pages`
 - `sites.unpublish_first`
 - `structure.setup_collision`
+- `sync.idempotency_conflict`
+- `sync.invalid_replay`
+- `sync.refused`
+- `sync.revision_conflict`
 - `templates.source_locked`
 - `views.version_conflict`
 - `workspaces.arrangement_conflict`

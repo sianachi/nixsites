@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1527,6 +1527,18 @@
 <p>Request body: <code>PatchUiSettingsRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>422</code>.</p>
 </article></section>
+<section id="nativesync"><h2>NativeSync</h2><article id="replaynativeoperation" data-search="post /api/v1/workspaces/{workspaceid}/sync/replay replaynativeoperation   nativesync">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/sync/replay</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ReplayNativeOperation</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>NativeReplayRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>400</code>, <code>409</code>.</p>
+</article></section>
 <section id="notifications"><h2>Notifications</h2><article id="listnotifications" data-search="get /api/v1/me/notifications listnotifications   notifications">
 <h3><span class="verb">GET</span> <code>/api/v1/me/notifications</code></h3>
 <p></p>
@@ -2426,6 +2438,42 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>CreateStructuredItemRequest</code>.</p>
 <p>Responses: <code>201</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
+</article></section>
+<section id="sync"><h2>Sync</h2><article id="getworkspacesyncchanges" data-search="get /api/v1/workspaces/{workspaceid}/sync/changes getworkspacesyncchanges read current authorized metadata for committed change markers  sync">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/sync/changes</code></h3>
+<p>Read current authorized metadata for committed change markers</p>
+<p class="id">Operation id: <code>GetWorkspaceSyncChanges</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>after</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
+</article>
+<article id="reconcileworkspacesync" data-search="post /api/v1/workspaces/{workspaceid}/sync/reconcile reconcileworkspacesync recheck device-held identifiers without revealing unknown inaccessible identifiers  sync">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/sync/reconcile</code></h3>
+<p>Recheck device-held identifiers without revealing unknown inaccessible identifiers</p>
+<p class="id">Operation id: <code>ReconcileWorkspaceSync</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>ReconcileWorkspaceSyncRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>422</code>.</p>
+</article>
+<article id="getworkspacesyncsnapshot" data-search="get /api/v1/workspaces/{workspaceid}/sync/snapshot getworkspacesyncsnapshot enumerate all authorized metadata with a committed feed boundary  sync">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/sync/snapshot</code></h3>
+<p>Enumerate all authorized metadata with a committed feed boundary</p>
+<p class="id">Operation id: <code>GetWorkspaceSyncSnapshot</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>boundary</code> in query (optional, string)</li><li><code>cursor</code> in query (optional, string (uuid))</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
 </article></section>
 <section id="template-imports"><h2>Template imports</h2><article id="begintemplateimport" data-search="post /api/v1/template-imports begintemplateimport   template imports">
 <h3><span class="verb">POST</span> <code>/api/v1/template-imports</code></h3>

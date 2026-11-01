@@ -29,6 +29,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Item locks](#item-locks)
 - [Items](#items)
 - [Me](#me)
+- [NativeSync](#nativesync)
 - [Notifications](#notifications)
 - [Operations](#operations)
 - [Pets](#pets)
@@ -39,6 +40,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Search](#search)
 - [Sites](#sites)
 - [Structure](#structure)
+- [Sync](#sync)
 - [Template imports](#template-imports)
 - [Templates](#templates)
 - [Workspaces](#workspaces)
@@ -2655,6 +2657,30 @@ Request body: `PatchUiSettingsRequest`.
 
 Responses: `200`, `422`.
 
+## NativeSync
+
+<a id="nativesync"></a>
+
+### POST /api/v1/workspaces/{workspaceId}/sync/replay
+
+<a id="replaynativeoperation"></a>
+
+Operation id: `ReplayNativeOperation`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `NativeReplayRequest`.
+
+Responses: `200`, `400`, `409`.
+
 ## Notifications
 
 <a id="notifications"></a>
@@ -4241,6 +4267,77 @@ Parameters:
 Request body: `CreateStructuredItemRequest`.
 
 Responses: `201`, `404`, `409`, `422`.
+
+## Sync
+
+<a id="sync"></a>
+
+### GET /api/v1/workspaces/{workspaceId}/sync/changes
+
+<a id="getworkspacesyncchanges"></a>
+
+Read current authorized metadata for committed change markers
+
+Operation id: `GetWorkspaceSyncChanges`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `after` in query (optional, string)
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`, `422`.
+
+### POST /api/v1/workspaces/{workspaceId}/sync/reconcile
+
+<a id="reconcileworkspacesync"></a>
+
+Recheck device-held identifiers without revealing unknown inaccessible identifiers
+
+Operation id: `ReconcileWorkspaceSync`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `ReconcileWorkspaceSyncRequest`.
+
+Responses: `200`, `422`.
+
+### GET /api/v1/workspaces/{workspaceId}/sync/snapshot
+
+<a id="getworkspacesyncsnapshot"></a>
+
+Enumerate all authorized metadata with a committed feed boundary
+
+Operation id: `GetWorkspaceSyncSnapshot`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `boundary` in query (optional, string)
+- `cursor` in query (optional, string (uuid))
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`, `422`.
 
 ## Template imports
 
