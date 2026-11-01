@@ -61,11 +61,9 @@ public sealed class RestoreItemHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        var item = visible
-            ?? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var (visible, item) = await ItemLifecycleLookup.FindWritableAsync(tree, permissions, itemId, cancellationToken)
+            .ConfigureAwait(false);
+        if (item is null)
         {
             return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }

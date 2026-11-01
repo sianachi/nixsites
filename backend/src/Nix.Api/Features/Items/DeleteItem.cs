@@ -76,11 +76,9 @@ public sealed class DeleteItemHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        var item = visible
-            ?? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var (visible, item) = await ItemLifecycleLookup.FindWritableAsync(tree, permissions, itemId, cancellationToken)
+            .ConfigureAwait(false);
+        if (item is null)
         {
             return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
@@ -182,5 +180,28 @@ internal static class DeleteItemEndpoint
         return result.Match<Results<NoContent, ProblemHttpResult>>(
             _ => TypedResults.NoContent(),
             error => TypedResults.Problem(ItemEndpoints.Problem(httpContext, error)));
+    }
+}
+
+/// <summary>The lookup both lifecycle handlers start from.</summary>
+internal static class ItemLifecycleLookup
+{
+    /// <summary>
+    /// Finds the item as the caller may see it: the visible row, else the stored one. The item is
+    /// null when it is missing or the caller cannot write its workspace, so the two look the same.
+    /// </summary>
+    internal static async ValueTask<(Item? Visible, Item? Item)> FindWritableAsync(
+        IItemTree tree,
+        IPermissionResolver permissions,
+        ItemId itemId,
+        CancellationToken cancellationToken)
+    {
+        var visible = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = visible
+            ?? await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
+        return item is null
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            ? (visible, null)
+            : (visible, item);
     }
 }
