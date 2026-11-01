@@ -75,6 +75,30 @@ describe('Mermaid previews', () => {
     await screen.findByRole('img');
   });
 
+  it('bounds the work, follows the colour scheme and gives up on a hung render', async () => {
+    const root = document.documentElement;
+    root.style.colorScheme = 'dark';
+    render(<MermaidViewer fileName="dark.mmd" source="flowchart LR\nA --> B" />);
+    await screen.findByRole('img');
+    expect(mermaid.initialize).toHaveBeenLastCalledWith(
+      expect.objectContaining({ theme: 'dark', maxTextSize: 50_000, maxEdges: 500 }),
+    );
+    root.style.colorScheme = 'light';
+    await waitFor(() => {
+      expect(mermaid.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ theme: 'base' }),
+      );
+    });
+    vi.useFakeTimers();
+    mermaid.render.mockImplementationOnce(() => new Promise(() => undefined));
+    const { renderMermaid, RENDER_TIMEOUT_MS } = await import('../../plugins/mermaid-render');
+    const result = renderMermaid('flowchart LR\nA --> B', 'hung');
+    const settled = expect(result).rejects.toThrow('took too long');
+    await vi.advanceTimersByTimeAsync(RENDER_TIMEOUT_MS);
+    await settled;
+    vi.useRealTimers();
+  });
+
   it('renders with strict security and token-backed typography, and zooms the fitted diagram', async () => {
     document.documentElement.style.setProperty('--font-body', 'Nunito Sans, sans-serif');
     render(<MermaidViewer fileName="architecture.mmd" source="flowchart LR\nWeb --> Core" />);
