@@ -42,9 +42,9 @@ Run the same line again with `--version vX.Y.Z`. The env file is kept, migration
 
 | Flag | Meaning |
 | --- | --- |
-| --version \<tag or sha> | The release to install or upgrade to (default: the latest release) |
-| --dir \<path> | The state directory (default \~/nix) |
-| --kubernetes | Install into the current kubectl context (namespace nix) instead of Docker |
+| \--version \<tag or sha> | The release to install or upgrade to (default: the latest release) |
+| \--dir \<path> | The state directory (default \~/nix) |
+| \--kubernetes | Install into the current kubectl context (namespace nix) instead of Docker |
 
 ## Kubernetes
 

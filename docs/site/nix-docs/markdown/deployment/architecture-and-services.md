@@ -39,7 +39,7 @@ When the variable is unset, a worker runs `import,export,plugin-events`. Listing
 
 **Browser sign-in goes through Core.** Core runs the OpenID Connect authorisation code flow with PKCE as a backend-for-frontend. Provider tokens stay on the server. The browser holds an opaque, HttpOnly session cookie and receives short-lived access tokens that Core signs itself with a P-256 key. Those tokens carry identity, never roles: permission is decided by Core on every request. `nixctl` and personal access tokens use a token exchange at `/public/v1/auth/token`.
 
-**Services call each other over** `/internal`. Collaboration, the workers and the sites worker call Core's internal routes with a shared secret in a request header. A missing or wrong secret is answered with `404`, not `401`, so the routes do not advertise themselves, and they are left out of the public API description. Routes that act for a person also need that person's forwarded token; worker routes take their workspace from the job they are running.
+**Services call each other over **`/internal`. Collaboration, the workers and the sites worker call Core's internal routes with a shared secret in a request header. A missing or wrong secret is answered with `404`, not `401`, so the routes do not advertise themselves, and they are left out of the public API description. Routes that act for a person also need that person's forwarded token; worker routes take their workspace from the job they are running.
 
 **Jobs travel through RabbitMQ, but PostgreSQL is the record.** Core writes each job to a durable outbox in the same transaction as the change that caused it, then publishes it. Workers lease and complete jobs through Core. If the broker is lost, nothing durable is lost with it.
 

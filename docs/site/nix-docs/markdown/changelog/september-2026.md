@@ -58,8 +58,6 @@
 - tags: pets; locks; finance; habits; reminders; automations; files; deploy
 - title: September 2026
 
-
-
 ## Fields
 
 ### Date
