@@ -59,7 +59,7 @@ services:
       NIX_PG_APP_PASSWORD: ${NIX_PG_APP_PASSWORD:-nix-dev-app}
       NIX_PG_MIGRATOR_PASSWORD: ${NIX_PG_MIGRATOR_PASSWORD:-nix-dev-migrator}
     ports:
-      - "${NIX_PG_PORT:-5433}:5432"
+      - "127.0.0.1:${NIX_PG_PORT:-5433}:5432"
     volumes:
       - nix-pg-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -109,7 +109,7 @@ services:
       ROOT_ACCESS_KEY: ${VERSITY_ROOT_ACCESS_KEY:-nix-dev-access}
       ROOT_SECRET_KEY: ${VERSITY_ROOT_SECRET_KEY:-nix-dev-secret-key}
     ports:
-      - "${VERSITY_PORT:-7070}:7070"
+      - "127.0.0.1:${VERSITY_PORT:-7070}:7070"
     volumes:
       - versity-data:/data
     healthcheck:
@@ -188,7 +188,7 @@ services:
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2030-01-01T00:00:00Z"
       ZITADEL_FIRSTINSTANCE_PATPATH: /machinekey/pat.txt
     ports:
-      - "${ZITADEL_PORT:-8300}:8080"
+      - "127.0.0.1:${ZITADEL_PORT:-8300}:8080"
     volumes:
       - zitadel-machinekey:/machinekey
     depends_on:
