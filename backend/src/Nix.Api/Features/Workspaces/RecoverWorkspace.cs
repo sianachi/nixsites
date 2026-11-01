@@ -19,10 +19,9 @@ public sealed class RecoverWorkspaceHandler(
         RecoverWorkspace command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (!await permissions.CanReadWorkspaceAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false))
-        {
-            return Result.Failure<WorkspaceSnapshot>(WorkspaceErrors.NotFound());
-        }
+        // Recovery is tenant administration, so it does not ask for workspace access: an
+        // administrator is rarely a member of the deactivated person's workspace it hands over.
+        // The recovery statement itself is scoped to the tenant and to a deactivated owner.
         if (!await permissions.IsTenantAdministratorAsync(cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<WorkspaceSnapshot>(WorkspaceAdministrationErrors.RecoveryForbidden());

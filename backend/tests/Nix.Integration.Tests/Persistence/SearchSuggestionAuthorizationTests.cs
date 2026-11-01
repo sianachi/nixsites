@@ -290,8 +290,20 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
     [Fact]
     public async Task Mentions_are_matched_only_in_the_named_workspace()
     {
-        // The administrator can read the closed workspace, but the passage is being written in the
-        // open one, and a suggestion to link across workspaces is not one this lookup makes.
+        // The caller can read the closed workspace as a member of it, but the passage is being
+        // written in the open one, and a suggestion to link across workspaces is not one this
+        // lookup makes.
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, transaction: null, $"""
+                INSERT INTO workspace_member
+                    (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
+                VALUES ({Literal(PrivateWorkspace)}, 'principal', {Literal(M0SchemaSeed.Alpha.PrincipalId)},
+                        {Literal(M0SchemaSeed.Alpha.TenantId)}, 'viewer', {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+                """);
+        }
+
         var inOpen = await MentionsAsync(
             "We discussed the confidential ledger at length.",
             context: TestTenants.AlphaContext);

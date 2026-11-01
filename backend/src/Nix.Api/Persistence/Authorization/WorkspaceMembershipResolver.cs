@@ -9,8 +9,8 @@ using NpgsqlTypes;
 namespace Nix.Persistence.Authorization;
 
 /// <summary>
-/// Resolves permissions from workspace membership: a member by name, a member through a group, or a
-/// tenant administrator.
+/// Resolves permissions from workspace membership: a member by name or a member through a group.
+/// Tenant administrators get no workspace access from that role.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -97,59 +97,29 @@ public sealed class WorkspaceMembershipResolver(
 
         var context = Session;
 
-        // The administrator check first, because it decides which statement to run rather than
-        // adding to its result: an administrator reaches every workspace in the tenant, so the
-        // membership arms would only ever return a subset of what is already granted.
+        // A tenant administrator gets exactly their own memberships, like anyone else: administering
+        // the tenant (administrators, site approvals, recovery) never needs a workspace's content.
         //
-        // One branch producing both halves. Written as two - a statement chosen, then the
-        // parameters recovered by comparing that statement's text against the constant - it was a
-        // decision taken once and reconstructed once, which is one place too many for the two to
-        // disagree.
-        var administrator = await IsTenantAdministratorAsync(cancellationToken).ConfigureAwait(false);
-
-        var (statement, parameters) = administrator
-            ? (AuthorizationSql.WorkspacesInTenant, new[] { Uuid("tenant_id", context.TenantId.Value) })
-            : (AuthorizationSql.WorkspacesReadableByPrincipal,
-               new[]
-               {
-                   Uuid("tenant_id", context.TenantId.Value),
-                   Uuid("principal_id", context.PrincipalId.Value),
-               });
-
+        // The same rule the point check applies, applied to the list: a grant whose role this
+        // build cannot parse grants nothing. This list feeds the permission predicate of every
+        // bulk read, so a list wider than the point check would let a filter disclose rows the
+        // gate refuses - the wrong fail direction for a database written by a newer build.
         var workspaces = new List<WorkspaceId>();
+        var seen = new HashSet<WorkspaceId>();
+        var grantRows = sql.QueryAsync<WorkspaceGrant, WorkspaceGrantMapper>(
+            AuthorizationSql.WorkspacesReadableByPrincipal,
+            default,
+            [
+                Uuid("tenant_id", context.TenantId.Value),
+                Uuid("principal_id", context.PrincipalId.Value),
+            ],
+            cancellationToken);
 
-        if (administrator)
+        await foreach (var grant in grantRows.ConfigureAwait(false))
         {
-            var adminRows = sql.QueryAsync<WorkspaceId, WorkspaceIdMapper>(
-                statement,
-                default,
-                parameters,
-                cancellationToken);
-
-            await foreach (var workspaceId in adminRows.ConfigureAwait(false))
+            if (WorkspaceRoles.TryParse(grant.Role, out _) && seen.Add(grant.WorkspaceId))
             {
-                workspaces.Add(workspaceId);
-            }
-        }
-        else
-        {
-            // The same rule the point check applies, applied to the list: a grant whose role this
-            // build cannot parse grants nothing. This list feeds the permission predicate of every
-            // bulk read, so a list wider than the point check would let a filter disclose rows the
-            // gate refuses - the wrong fail direction for a database written by a newer build.
-            var seen = new HashSet<WorkspaceId>();
-            var grantRows = sql.QueryAsync<WorkspaceGrant, WorkspaceGrantMapper>(
-                statement,
-                default,
-                parameters,
-                cancellationToken);
-
-            await foreach (var grant in grantRows.ConfigureAwait(false))
-            {
-                if (WorkspaceRoles.TryParse(grant.Role, out _) && seen.Add(grant.WorkspaceId))
-                {
-                    workspaces.Add(grant.WorkspaceId);
-                }
+                workspaces.Add(grant.WorkspaceId);
             }
         }
 
@@ -187,9 +157,8 @@ public sealed class WorkspaceMembershipResolver(
     /// they hold none.
     /// </summary>
     /// <remarks>
-    /// A tenant administrator is treated as an owner of every workspace in the tenant, which is what
-    /// the role is for: an administrator who could be locked out of a workspace could not administer
-    /// the tenant. It is resolved second so that an ordinary member costs one query rather than two.
+    /// Being a tenant administrator adds nothing here: administrators manage the tenant, and read or
+    /// change a workspace only as a member of it.
     /// </remarks>
     private async ValueTask<WorkspaceRole?> RoleInAsync(
         WorkspaceId workspaceId,
@@ -224,30 +193,8 @@ public sealed class WorkspaceMembershipResolver(
             }
         }
 
-        if (strongest != WorkspaceRole.Owner
-            && await IsTenantAdministratorAsync(cancellationToken).ConfigureAwait(false)
-            && (strongest is not null
-                || await WorkspaceExistsInTenantAsync(workspaceId, cancellationToken).ConfigureAwait(false)))
-        {
-            strongest = WorkspaceRole.Owner;
-        }
-
         _roles[workspaceId] = strongest;
         return strongest;
-    }
-
-    private async ValueTask<bool> WorkspaceExistsInTenantAsync(
-        WorkspaceId workspaceId,
-        CancellationToken cancellationToken)
-    {
-        var context = Session;
-        return await sql.ScalarOrDefaultAsync<bool>(
-            AuthorizationSql.WorkspaceExistsInTenant,
-            [
-                Uuid("tenant_id", context.TenantId.Value),
-                Uuid("workspace_id", workspaceId.Value),
-            ],
-            cancellationToken).ConfigureAwait(false);
     }
 
     private static NpgsqlParameter Uuid(string name, Guid value) =>
@@ -265,18 +212,6 @@ public sealed class WorkspaceMembershipResolver(
         {
             ArgumentNullException.ThrowIfNull(reader);
             return new WorkspaceGrant(WorkspaceId.From(reader.GetGuid(0)), reader.GetString(1));
-        }
-    }
-
-    /// <summary>Reads the single <c>workspace_id</c> column.</summary>
-    /// <remarks>A struct, so the query loop devirtualises and allocates nothing per row.</remarks>
-    private readonly struct WorkspaceIdMapper : INixRowMapper<WorkspaceId>
-    {
-        /// <inheritdoc />
-        public WorkspaceId Map(NpgsqlDataReader reader)
-        {
-            ArgumentNullException.ThrowIfNull(reader);
-            return WorkspaceId.From(reader.GetGuid(0));
         }
     }
 

@@ -245,7 +245,7 @@ public sealed class SiteHostingHttpTests(NixPostgresFixture fixture) : IAsyncLif
         var operatorToken = await host.TokenAsync(SiteScenario.ViewerContext);
         var siteId = await CreateSiteAsync(host, manager, Root, "demoted");
         await RequestAsync(host, manager, siteId);
-        await Sql($"DELETE FROM tenant_role WHERE tenant_id = '{TestTenants.Alpha}' AND subject_id = '{TestTenants.AlphaPrincipal}'");
+        await Sql($"UPDATE workspace_member SET role = 'editor' WHERE tenant_id = '{TestTenants.Alpha}' AND workspace_id = '{TestTenants.AlphaWorkspace}' AND subject_id = '{TestTenants.AlphaPrincipal}'");
 
         using var approved = await host.SendAsync(HttpMethod.Post, $"/api/v1/sites/{siteId}/approval/approve", operatorToken);
 

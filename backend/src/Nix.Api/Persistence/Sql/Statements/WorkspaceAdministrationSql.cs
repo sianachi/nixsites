@@ -9,17 +9,7 @@ public static class WorkspaceAdministrationSql
     /// </summary>
     public const string List = """
         WITH caller AS (
-            SELECT p.kind = 'user' AND p.status = 'active' AS active_human,
-                   EXISTS (
-                       SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = @tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id
-                                 AND gm.group_id = tr.subject_id
-                                 AND gm.principal_id = @principal_id)))
-                   ) AS tenant_admin
+            SELECT p.kind = 'user' AND p.status = 'active' AS active_human
             FROM principal p
             WHERE p.tenant_id = @tenant_id AND p.principal_id = @principal_id
         ), candidates AS MATERIALIZED (
@@ -29,7 +19,7 @@ public static class WorkspaceAdministrationSql
             FROM workspace w
             CROSS JOIN caller c
             WHERE w.tenant_id = @tenant_id
-              AND (c.tenant_admin OR EXISTS (
+              AND (EXISTS (
                   SELECT 1 FROM workspace_member wm
                   WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
                     AND (wm.subject_type = 'principal' AND wm.subject_id = @principal_id
@@ -70,8 +60,8 @@ public static class WorkspaceAdministrationSql
         )
         SELECT r.workspace_id, r.name, r.version_retention_days, r.storage_quota_bytes,
                r.created_at, r.personal_owner_principal_id,
-               (c.tenant_admin OR r.role_rank = 3) AS can_rename,
-               (c.tenant_admin OR r.role_rank = 3) AS can_manage_members,
+               r.role_rank = 3 AS can_rename,
+               r.role_rank = 3 AS can_manage_members,
                (pending.invitation_id IS NULL
                  AND r.direct_member AND r.personal_owner_principal_id IS DISTINCT FROM @principal_id
                  AND NOT (r.direct_owner AND r.personal_owner_principal_id IS NULL AND
@@ -85,7 +75,7 @@ public static class WorkspaceAdministrationSql
                        AND owner_principal.kind = 'user' AND owner_principal.status = 'active') = 1)
                ) AS can_leave,
                (r.lifecycle_state = 'active'
-                 AND (c.tenant_admin OR r.role_rank >= 2)
+                 AND r.role_rank >= 2
                  AND (r.personal_owner_principal_id IS NULL OR r.personal_owner_principal_id = @principal_id)
                  AND COALESCE(
                        CASE WHEN jsonb_typeof(r.daily_notes -> 'enabled') = 'boolean'
@@ -107,7 +97,12 @@ public static class WorkspaceAdministrationSql
         ORDER BY r.created_at DESC, r.workspace_id DESC
         """;
 
-    /// <summary>Detail is the same permission-filtered relation as list, narrowed by identifier.</summary>
+    /// <summary>
+    /// Detail is the same permission-filtered relation as list, narrowed by identifier, with one
+    /// difference: a tenant administrator also reads the metadata row (name, settings, state) of a
+    /// workspace they are not a member of, so recovery can confirm what it changed. Capabilities
+    /// come from the caller's own role only, and nothing here reaches the workspace's content.
+    /// </summary>
     public const string Detail = """
         WITH caller AS (
             SELECT EXISTS (
@@ -135,7 +130,7 @@ public static class WorkspaceAdministrationSql
         )
         SELECT w.workspace_id, w.name, w.version_retention_days, w.storage_quota_bytes,
                w.created_at, w.personal_owner_principal_id,
-               (c.tenant_admin OR h.role_rank = 3), (c.tenant_admin OR h.role_rank = 3),
+               h.role_rank = 3, h.role_rank = 3,
                (pending.invitation_id IS NULL
                  AND h.direct_member AND w.personal_owner_principal_id IS DISTINCT FROM @principal_id
                  AND NOT (h.direct_owner AND w.personal_owner_principal_id IS NULL AND
@@ -146,7 +141,7 @@ public static class WorkspaceAdministrationSql
                        AND owners.subject_type = 'principal' AND owners.role = 'owner'
                        AND p.kind = 'user' AND p.status = 'active') = 1)),
                (w.lifecycle_state = 'active'
-                 AND (c.tenant_admin OR h.role_rank >= 2)
+                 AND h.role_rank >= 2
                  AND (w.personal_owner_principal_id IS NULL OR w.personal_owner_principal_id = @principal_id)
                  AND COALESCE(
                        CASE WHEN jsonb_typeof(w.daily_notes -> 'enabled') = 'boolean'
@@ -191,7 +186,7 @@ public static class WorkspaceAdministrationSql
         SELECT EXISTS (SELECT 1 FROM created)
         """;
 
-    /// <summary>Renames only when the caller is an owner or tenant administrator.</summary>
+    /// <summary>Renames only when the caller is an owner.</summary>
     public const string Rename = """
         UPDATE workspace w SET name = @name
         WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
@@ -202,18 +197,11 @@ public static class WorkspaceAdministrationSql
                            OR (wm.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
         RETURNING workspace_id
         """;
 
-    /// <summary>Sets the sharing switches named, only for an owner or tenant administrator.</summary>
+    /// <summary>Sets the sharing switches named, only for an owner.</summary>
     public const string SetSharing = """
         UPDATE workspace w
         SET membership_locked = COALESCE(@membership_locked, w.membership_locked),
@@ -226,18 +214,11 @@ public static class WorkspaceAdministrationSql
                            OR (wm.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
         RETURNING workspace_id
         """;
 
-    /// <summary>Archives a workspace only for an owner or tenant administrator.</summary>
+    /// <summary>Archives a workspace only for an owner.</summary>
     public const string Archive = """
         UPDATE workspace w
         SET lifecycle_state = 'archived', archived_at = @now
@@ -250,18 +231,11 @@ public static class WorkspaceAdministrationSql
                           OR (wm.subject_type = 'group' AND EXISTS (
                               SELECT 1 FROM group_membership gm
                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                AND gm.principal_id = @principal_id))))
-               OR EXISTS (SELECT 1 FROM tenant_role tr
-                          WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                            AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                              OR (tr.subject_type = 'group' AND EXISTS (
-                                  SELECT 1 FROM group_membership gm
-                                  WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                    AND gm.principal_id = @principal_id)))))
+                                AND gm.principal_id = @principal_id)))))
         RETURNING w.workspace_id
         """;
 
-    /// <summary>Restores an archived workspace only for an owner or tenant administrator.</summary>
+    /// <summary>Restores an archived workspace only for an owner.</summary>
     public const string Restore = """
         UPDATE workspace w
         SET lifecycle_state = 'active', archived_at = NULL
@@ -274,14 +248,7 @@ public static class WorkspaceAdministrationSql
                           OR (wm.subject_type = 'group' AND EXISTS (
                               SELECT 1 FROM group_membership gm
                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                AND gm.principal_id = @principal_id))))
-               OR EXISTS (SELECT 1 FROM tenant_role tr
-                          WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                            AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                              OR (tr.subject_type = 'group' AND EXISTS (
-                                  SELECT 1 FROM group_membership gm
-                                  WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                    AND gm.principal_id = @principal_id)))))
+                                AND gm.principal_id = @principal_id)))))
         RETURNING w.workspace_id
         """;
 
@@ -298,14 +265,7 @@ public static class WorkspaceAdministrationSql
                           OR (wm.subject_type = 'group' AND EXISTS (
                               SELECT 1 FROM group_membership gm
                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                AND gm.principal_id = @principal_id))))
-               OR EXISTS (SELECT 1 FROM tenant_role tr
-                          WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                            AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                              OR (tr.subject_type = 'group' AND EXISTS (
-                                  SELECT 1 FROM group_membership gm
-                                  WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                    AND gm.principal_id = @principal_id)))))
+                                AND gm.principal_id = @principal_id)))))
         RETURNING w.workspace_id
         """;
 
@@ -323,14 +283,7 @@ public static class WorkspaceAdministrationSql
                               OR (wm.subject_type = 'group' AND EXISTS (
                                   SELECT 1 FROM group_membership gm
                                   WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                    AND gm.principal_id = @principal_id))))
-                   OR EXISTS (SELECT 1 FROM tenant_role tr
-                              WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                                AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                                  OR (tr.subject_type = 'group' AND EXISTS (
-                                      SELECT 1 FROM group_membership gm
-                                      WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                        AND gm.principal_id = @principal_id)))))
+                                    AND gm.principal_id = @principal_id)))))
         )
         SELECT version.object_key
         FROM file_version version CROSS JOIN authorized
@@ -393,14 +346,7 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                     OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = w.tenant_id
-                                  AND tr.role = 'admin'
-                                  AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                                    OR (tr.subject_type = 'group' AND EXISTS (
-                                        SELECT 1 FROM group_membership gm
-                                        WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                          AND gm.principal_id = @principal_id)))) AS can_manage
+                                     AND gm.principal_id = @principal_id)))) AS can_manage
             FROM workspace w
             WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
               AND (EXISTS (SELECT 1 FROM workspace_member caller
@@ -409,13 +355,6 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = w.tenant_id
-                             AND tr.role = 'admin'
-                             AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                               OR (tr.subject_type = 'group' AND EXISTS (
-                                   SELECT 1 FROM group_membership gm
-                                   WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                      AND gm.principal_id = @principal_id)))))
         ), owner_state AS MATERIALIZED (
             SELECT count(*) AS active_human_owner_count
@@ -497,13 +436,6 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                OR EXISTS (SELECT 1 FROM tenant_role tr
-                           WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                             AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                               OR (tr.subject_type = 'group' AND EXISTS (
-                                   SELECT 1 FROM group_membership gm
-                                   WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                      AND gm.principal_id = @principal_id)))))
         )
         SELECT candidate.principal_id, candidate.display_name, candidate.email,
@@ -542,7 +474,7 @@ public static class WorkspaceAdministrationSql
         LIMIT @limit
         """;
 
-    /// <summary>Lists invitation history for workspace owners and tenant administrators.</summary>
+    /// <summary>Lists invitation history for workspace owners.</summary>
     public const string Invitations = """
         SELECT i.invitation_id, i.email_normalized, i.target_principal_id,
                i.role, i.status, i.invited_by_principal_id,
@@ -556,20 +488,13 @@ public static class WorkspaceAdministrationSql
                            OR (caller.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = i.tenant_id
-                         AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
           AND (@after_invited_at IS NULL OR (i.invited_at, i.invitation_id) < (@after_invited_at, @after_id))
         ORDER BY i.invited_at DESC, i.invitation_id DESC
         LIMIT @limit
         """;
 
-    /// <summary>Reads one invitation through the same owner-or-administrator authorization.</summary>
+    /// <summary>Reads one invitation through the same owner authorization.</summary>
     public const string InvitationById = """
         SELECT i.invitation_id, i.email_normalized, i.target_principal_id,
                i.role, i.status, i.invited_by_principal_id,
@@ -584,13 +509,6 @@ public static class WorkspaceAdministrationSql
                            OR (caller.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = i.tenant_id
-                         AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
         """;
 
@@ -610,13 +528,6 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = w.tenant_id
-                             AND tr.role = 'admin'
-                             AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                               OR (tr.subject_type = 'group' AND EXISTS (
-                                   SELECT 1 FROM group_membership gm
-                                   WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                      AND gm.principal_id = @principal_id)))))
             FOR UPDATE
         ), target AS MATERIALIZED (
@@ -683,13 +594,6 @@ public static class WorkspaceAdministrationSql
                            OR (caller.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = invitation.tenant_id
-                         AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
             FOR UPDATE
         )
@@ -765,13 +669,6 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = w.tenant_id
-                             AND tr.role = 'admin'
-                             AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                               OR (tr.subject_type = 'group' AND EXISTS (
-                                   SELECT 1 FROM group_membership gm
-                                   WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                      AND gm.principal_id = @principal_id)))))
             FOR UPDATE
         )
@@ -812,13 +709,6 @@ public static class WorkspaceAdministrationSql
                                OR (caller.subject_type = 'group' AND EXISTS (
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
-                                     AND gm.principal_id = @principal_id))))
-                OR EXISTS (SELECT 1 FROM tenant_role tr WHERE tr.tenant_id = w.tenant_id
-                             AND tr.role = 'admin'
-                             AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                               OR (tr.subject_type = 'group' AND EXISTS (
-                                   SELECT 1 FROM group_membership gm
-                                   WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                      AND gm.principal_id = @principal_id)))))
             FOR UPDATE
         )
@@ -885,21 +775,14 @@ public static class WorkspaceAdministrationSql
 
     /// <summary>
     /// Reads a workspace's stored daily-note settings for a caller who can see the workspace: a
-    /// tenant administrator or any direct or group member. No row means not found, so a workspace
-    /// the caller cannot read is indistinguishable from one that does not exist.
+    /// direct or group member. No row means not found, so a workspace the caller cannot read is
+    /// indistinguishable from one that does not exist.
     /// </summary>
     public const string ReadDailyNoteSettings = """
         SELECT w.daily_notes::text, w.personal_owner_principal_id IS NOT NULL
         FROM workspace w
         WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
-          AND (EXISTS (SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM workspace_member wm
+          AND (EXISTS (SELECT 1 FROM workspace_member wm
                        WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
                          AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)
                            OR (wm.subject_type = 'group' AND EXISTS (
@@ -909,8 +792,8 @@ public static class WorkspaceAdministrationSql
         """;
 
     /// <summary>
-    /// Replaces a workspace's daily-note settings. It uses the rename rule - a workspace owner or a
-    /// tenant administrator - and also always admits the personal owner, so the check is made in the
+    /// Replaces a workspace's daily-note settings. It uses the rename rule - a workspace owner - and
+    /// also always admits the personal owner, so the check is made in the
     /// statement and no client claim enters it.
     /// </summary>
     public const string SaveDailyNoteSettings = """
@@ -924,13 +807,6 @@ public static class WorkspaceAdministrationSql
                            OR (wm.subject_type = 'group' AND EXISTS (
                                SELECT 1 FROM group_membership gm
                                WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                                  AND gm.principal_id = @principal_id)))))
         RETURNING workspace_id
         """;
@@ -938,19 +814,12 @@ public static class WorkspaceAdministrationSql
     /// <summary>
     /// The condition, over a <c>workspace w</c> row, that the caller may create daily notes in it.
     /// It mirrors the permission resolver's write rule - an active workspace in which the caller is
-    /// a tenant administrator or holds the owner or editor role, directly or through a group - and
+    /// holds the owner or editor role, directly or through a group - and
     /// then keeps a personal workspace private to its owner, as daily notes always were.
     /// </summary>
     private const string DailyNoteWriter = """
         w.lifecycle_state = 'active'
-          AND (EXISTS (SELECT 1 FROM tenant_role tr
-                       WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                         AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                           OR (tr.subject_type = 'group' AND EXISTS (
-                               SELECT 1 FROM group_membership gm
-                               WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
-                                 AND gm.principal_id = @principal_id))))
-            OR EXISTS (SELECT 1 FROM workspace_member wm
+          AND (EXISTS (SELECT 1 FROM workspace_member wm
                        WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
                          AND wm.role IN ('owner', 'editor')
                          AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)

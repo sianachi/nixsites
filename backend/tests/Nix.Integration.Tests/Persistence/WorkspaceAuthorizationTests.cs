@@ -3,6 +3,7 @@ using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
+using Nix.Features.Internal;
 using Nix.Features.Items;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
@@ -166,21 +167,27 @@ public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_tenant_administrator_reaches_a_workspace_they_were_never_added_to()
+    public async Task A_tenant_administrator_cannot_reach_a_workspace_they_were_never_added_to()
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(ContextFor(Administrator), Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            Assert.True(await work.Resolve<IPermissionResolver>().IsTenantAdministratorAsync(Cancellation));
+            var permissions = work.Resolve<IPermissionResolver>();
+            Assert.True(await permissions.IsTenantAdministratorAsync(Cancellation));
+            Assert.DoesNotContain(AlphaWorkspace, await permissions.ReadableWorkspacesAsync(Cancellation));
 
             var dispatcher = work.Resolve<NixDispatcher>();
             var read = await dispatcher.QueryAsync<GetItem, Result<Item>>(new GetItem(AlphaItem), Cancellation);
-            Assert.True(read.IsSuccess);
+            Assert.True(read.IsFailure);
+
+            var body = await dispatcher.QueryAsync<GetItemAuthorization, Result<ItemAuthorization>>(
+                new GetItemAuthorization(AlphaItem), Cancellation);
+            Assert.True(body.IsFailure);
 
             var created = await dispatcher.SendAsync<CreateItem, Item>(
                 new CreateItem(AlphaWorkspace, "note", "Administered", null, null),
                 Cancellation);
-            Assert.True(created.IsSuccess);
+            Assert.True(created.IsFailure);
         }
     }
 
@@ -193,7 +200,7 @@ public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
         await using (work.ConfigureAwait(false))
         {
             var permissions = work.Resolve<IPermissionResolver>();
-            Assert.True(await permissions.CanManageWorkspaceAsync(AlphaWorkspace, Cancellation));
+            Assert.False(await permissions.CanManageWorkspaceAsync(AlphaWorkspace, Cancellation));
             Assert.False(await permissions.CanReadWorkspaceAsync(
                 WorkspaceId.From(Guid.NewGuid()),
                 Cancellation));

@@ -29,14 +29,6 @@ public sealed partial class WorkspaceAdministrationStore
                       OR (m.subject_type = 'group' AND EXISTS (
                           SELECT 1 FROM group_membership gm
                           WHERE gm.tenant_id = m.tenant_id AND gm.group_id = m.subject_id
-                            AND gm.principal_id = @principal_id))))
-                OR EXISTS (
-                  SELECT 1 FROM tenant_role tr
-                  WHERE tr.tenant_id = w.tenant_id AND tr.role = 'admin'
-                    AND ((tr.subject_type = 'principal' AND tr.subject_id = @principal_id)
-                      OR (tr.subject_type = 'group' AND EXISTS (
-                          SELECT 1 FROM group_membership gm
-                          WHERE gm.tenant_id = tr.tenant_id AND gm.group_id = tr.subject_id
                             AND gm.principal_id = @principal_id)))))
             ORDER BY w.created_at DESC, w.workspace_id DESC
             LIMIT @limit

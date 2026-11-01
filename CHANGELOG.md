@@ -3,6 +3,16 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## Unreleased
+
+### Security
+
+- **Breaking:** tenant administrators no longer see or open workspaces they are not a member of.
+  Being an administrator now means managing the tenant: administrators, site approvals and handing
+  a departed person's personal workspace to a new owner. To work in a workspace, an administrator
+  is invited to it like anyone else. Rename, sharing, member, invitation, archive, restore and
+  daily-note settings follow the same rule.
+
 ## 0.5.0 - 2026-10-30
 
 ### Added
