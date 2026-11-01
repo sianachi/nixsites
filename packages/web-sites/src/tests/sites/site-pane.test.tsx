@@ -64,7 +64,7 @@ const actions: ItemSiteActions = {
   remove: accept,
   setPath: accept,
   listPages: () => Promise.resolve([]),
-  listChildren: () => Promise.resolve([]),
+  listChildren: () => Promise.resolve({ items: [], loadMore: null }),
   listProperties: () => Promise.resolve([]),
 };
 

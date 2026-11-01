@@ -9,7 +9,7 @@ import type {
 import { Button, Checkbox, Dialog, Field, Input, Select, Text, Textarea } from '@nix/ui';
 import { useEffect, useId, useState, type SyntheticEvent, type ReactNode } from 'react';
 
-import { CHILD_LIMIT, type ChildChoice, type PropertyChoice } from './use-item-site';
+import type { ChildPage, PropertyChoice } from './use-item-site';
 
 type Save = (input: UpdateSiteInput) => Promise<string | null>;
 
@@ -547,10 +547,10 @@ export function SiteDatedCollections({
 }: {
   readonly site: Site;
   readonly onSave: Save;
-  readonly listChildren: (parentId: string) => Promise<readonly ChildChoice[]>;
+  readonly listChildren: (parentId: string) => Promise<ChildPage>;
   readonly listProperties: (collectionId: string) => Promise<readonly PropertyChoice[]>;
 }): ReactNode {
-  const [choices, setChoices] = useState<readonly ChildChoice[] | null>(null);
+  const [choices, setChoices] = useState<ChildPage | null>(null);
   const [choicesError, setChoicesError] = useState<string | null>(null);
   const [choicesAttempt, setChoicesAttempt] = useState(0);
   const [draft, setDraft] = useState<SiteDatedCollection | null>(null);
@@ -615,7 +615,7 @@ export function SiteDatedCollections({
 
   const titleOf = (id: string): string => {
     if (id === rootId) return 'The whole site';
-    const title = choices?.find((choice) => choice.id === id)?.title;
+    const title = choices?.items.find((choice) => choice.id === id)?.title;
     return title === undefined ? 'A collection' : title === '' ? 'Untitled' : title;
   };
   const labelOf = (id: string, key: string): string =>
@@ -738,13 +738,7 @@ export function SiteDatedCollections({
               </Button>
             </div>
           )}
-          <Field
-            label="Collection"
-            required
-            {...(choices !== null && choices.length >= CHILD_LIMIT
-              ? { hint: `Showing the first ${String(CHILD_LIMIT)} items inside the site.` }
-              : {})}
-          >
+          <Field label="Collection" required>
             {(control) => (
               <Select
                 {...control}
@@ -758,7 +752,7 @@ export function SiteDatedCollections({
               >
                 <option value="">{choices === null ? 'Loading…' : 'Choose a collection'}</option>
                 <option value={rootId}>The whole site</option>
-                {(choices ?? []).map((choice) => (
+                {(choices?.items ?? []).map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.title === '' ? 'Untitled' : choice.title}
                   </option>
@@ -766,6 +760,24 @@ export function SiteDatedCollections({
               </Select>
             )}
           </Field>
+          {choices?.loadMore == null ? null : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const page = choices;
+                page.loadMore?.().then(
+                  (more) => {
+                    setChoices({ items: [...page.items, ...more.items], loadMore: more.loadMore });
+                  },
+                  () => {
+                    setChoicesError('The items inside this site could not be loaded.');
+                  },
+                );
+              }}
+            >
+              Load more items
+            </Button>
+          )}
           {draft.itemId === '' ? null : propertiesError !== null ? (
             <div role="alert" className="flex flex-col items-start gap-2">
               <Text variant="note">{propertiesError}</Text>

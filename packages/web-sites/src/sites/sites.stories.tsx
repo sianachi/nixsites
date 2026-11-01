@@ -30,9 +30,10 @@ const actions: ItemSiteActions = {
       { itemId: 'd1111111-1111-4111-8111-111111111111', path: '/', pinned: false, title: 'Garden' },
     ]),
   listChildren: () =>
-    Promise.resolve([
-      { id: 'd2222222-2222-4222-8222-222222222222', title: 'Beds', hasChildren: true },
-    ]),
+    Promise.resolve({
+      items: [{ id: 'd2222222-2222-4222-8222-222222222222', title: 'Beds', hasChildren: true }],
+      loadMore: null,
+    }),
   listProperties: () => Promise.resolve([{ key: 'date', label: 'Date', type: 'date' }]),
 };
 

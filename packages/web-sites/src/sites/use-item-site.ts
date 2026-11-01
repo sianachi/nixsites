@@ -47,6 +47,12 @@ export interface ChildChoice {
   readonly hasChildren: boolean;
 }
 
+/** One page of a level's children; `loadMore` is null when that was the last page. */
+export interface ChildPage {
+  readonly items: readonly ChildChoice[];
+  readonly loadMore: (() => Promise<ChildPage>) | null;
+}
+
 /** Every action resolves to a refusal message, or null when Core accepted it. */
 export interface ItemSiteActions {
   readonly retry: () => void;
@@ -59,7 +65,7 @@ export interface ItemSiteActions {
   readonly remove: () => Promise<string | null>;
   readonly listPages: () => Promise<readonly SitePage[]>;
   readonly setPath: (itemId: string, path: string) => Promise<string | null>;
-  readonly listChildren: (parentId: string) => Promise<readonly ChildChoice[]>;
+  readonly listChildren: (parentId: string) => Promise<ChildPage>;
   readonly listProperties: (collectionId: string) => Promise<readonly PropertyChoice[]>;
 }
 
@@ -74,8 +80,7 @@ const FIRST_POLL_MS = 250;
 const MAX_POLL_MS = 2_000;
 /** How long a rollback is watched before the pane stops saying it is under way. */
 const ROLLBACK_WATCH_MS = 60_000;
-/** The most children one picker level offers; `listChildren` stops there. */
-export const CHILD_LIMIT = 500;
+const CHILD_PAGE = 100;
 
 function settling(site: Site): boolean {
   const status = site.latestBuild?.status;
@@ -255,17 +260,22 @@ export function useItemSite(
   }, [client, siteId]);
 
   const listChildren = useCallback(
-    async (parentId: string): Promise<readonly ChildChoice[]> => {
-      const children: ChildChoice[] = [];
-      for await (const child of client.paginate(
-        // shortcut: at most CHILD_LIMIT children per level are offered, and the picker says so;
-        // page the picker if sites grow past it.
-        coreItems.listItems(workspaceId, { parentId, pageSize: 100 }),
-        { maxPages: CHILD_LIMIT / 100 },
-      )) {
-        children.push({ id: child.id, title: child.title, hasChildren: child.hasChildren });
-      }
-      return children;
+    async (parentId: string): Promise<ChildPage> => {
+      const walk = client.paginate(
+        coreItems.listItems(workspaceId, { parentId, pageSize: CHILD_PAGE }),
+      );
+      // `step` stays one item ahead, which tells whether another page exists without a count call.
+      let step = await walk.next();
+      const next = async (): Promise<ChildPage> => {
+        const items: ChildChoice[] = [];
+        while (step.done !== true && items.length < CHILD_PAGE) {
+          const { id, title, hasChildren } = step.value;
+          items.push({ id, title, hasChildren });
+          step = await walk.next();
+        }
+        return { items, loadMore: step.done === true ? null : next };
+      };
+      return next();
     },
     [client, workspaceId],
   );

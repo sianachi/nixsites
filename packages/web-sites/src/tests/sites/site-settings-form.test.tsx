@@ -128,7 +128,10 @@ describe('dated collections', () => {
         })}
         onSave={() => Promise.resolve(null)}
         listChildren={() =>
-          Promise.resolve([{ id: collection, title: 'Posts', hasChildren: true }])
+          Promise.resolve({
+            items: [{ id: collection, title: 'Posts', hasChildren: true }],
+            loadMore: null,
+          })
         }
         listProperties={() =>
           Promise.resolve([{ key: 'published_on', label: 'Published', type: 'date' }])
@@ -150,7 +153,7 @@ describe('dated collections', () => {
       <SiteDatedCollections
         site={site()}
         onSave={() => Promise.resolve(null)}
-        listChildren={() => Promise.resolve([])}
+        listChildren={() => Promise.resolve({ items: [], loadMore: null })}
         listProperties={listProperties}
       />,
     );
