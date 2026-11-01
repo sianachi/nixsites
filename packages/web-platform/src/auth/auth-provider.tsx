@@ -30,6 +30,12 @@ import { z } from 'zod';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { canBootOffline } from '../offline/boot';
 import {
+  clearLogoutPending,
+  completePendingLogout,
+  isLogoutPending as markedPending,
+  markLogoutPending,
+} from '../offline/logout-pending';
+import {
   BACK_ONLINE_EVENT,
   discardNativeMirror,
   getNativeMirror,
@@ -315,13 +321,18 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
     let settled = false;
     signInStarted();
 
-    void fetch('/auth/session', {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
+    // A sign-out made offline is finished with the server before any session is believed.
+    void completePendingLogout()
+      .then((done) => {
+        if (!done) throw new TypeError('The earlier sign-out has not reached the server.');
+        return fetch('/auth/session', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+      })
       // Classified here, at the one call that can fail for want of a network, rather than by
       // error type below: a TypeError from a bug later in this chain is a failure to report, not
       // an outage to wait out.
@@ -547,8 +558,18 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
 
         signInStarted();
         const returnTo = `${globalThis.location.pathname}${globalThis.location.search}${globalThis.location.hash}`;
-        globalThis.location.assign(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
-        return Promise.resolve();
+        const go = (): void => {
+          globalThis.location.assign(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+        };
+        // Only the shell ever owes a logout: finished first, so it cannot end the new session.
+        if (!markedPending()) {
+          go();
+          return Promise.resolve();
+        }
+        return completePendingLogout().then((done) => {
+          if (done) go();
+          else signInFailed('Nix could not reach the server to finish signing out. Try again.');
+        });
       },
 
       signOut: async () => {
@@ -559,6 +580,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         invalidateSessionRequests();
         accessTokenRef.current = null;
         // Admission to the offline copy closes first; the wipe finishes before the session ends.
+        // If the server cannot be told now, the marker makes the next launch tell it first.
+        const logoutOwed = markLogoutPending();
         const mirrorWiping = discardNativeMirror();
         const localClearing =
           typeof indexedDB === 'undefined'
@@ -585,12 +608,16 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         const draftsCleared = await localClearing;
         const mirrorWiped = await mirrorWiping;
         try {
-          await fetch('/auth/logout', {
+          const response = await fetch('/auth/logout', {
             method: 'POST',
             credentials: 'include',
             cache: 'no-store',
             headers: { Accept: 'application/json' },
           });
+          if (response.status < 500) clearLogoutPending();
+        } catch (error) {
+          // Offline in the shell: signed out here, and the server is told at the next launch.
+          if (!logoutOwed) throw error;
         } finally {
           accessTokenRef.current = null;
           refreshRef.current = null;
