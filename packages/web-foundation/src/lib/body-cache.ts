@@ -753,6 +753,17 @@ export const indexedBodyCache: BodyCacheStore = {
   seal: sealBodyCache,
 };
 
+let injected: BodyCacheStore | undefined;
+
+export function currentBodyCache(): BodyCacheStore | undefined {
+  return injected;
+}
+
+/** The iOS shell reads bodies through its offline mirror; every other place keeps IndexedDB. */
+export function injectBodyCache(store: BodyCacheStore | undefined): void {
+  injected = store;
+}
+
 /**
  * The scope of one document body - who is reading it, where, and which body - shared by this
  * cache and the draft journal, so both stores agree on what "this person's copy" means.

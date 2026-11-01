@@ -1311,6 +1311,12 @@ importers:
       '@nix/api-client':
         specifier: workspace:*
         version: link:../api-client
+      '@nix/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
+      '@nix/sync-sqlite':
+        specifier: workspace:*
+        version: link:../sync-sqlite
       '@nix/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1320,6 +1326,9 @@ importers:
       react-router:
         specifier: ^7.18.5
         version: 7.18.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      yjs:
+        specifier: ^13.6.31
+        version: 13.6.31
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -1375,9 +1384,6 @@ importers:
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(lightningcss@1.32.0)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))
-      yjs:
-        specifier: ^13.6.31
-        version: 13.6.31
 
   packages/web-settings:
     dependencies:

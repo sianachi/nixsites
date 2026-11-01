@@ -7,6 +7,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- The iOS app keeps a full offline copy of every workspace you can reach: the tree, properties,
+  note bodies and files. It opens and reads everything with no connection, shows a small "Offline"
+  notice, and removes the copy when you sign out. Settings > About shows how much space it takes.
+  Changes to structure need a connection for now; note edits still queue.
 - A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.

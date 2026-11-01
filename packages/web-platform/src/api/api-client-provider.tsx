@@ -5,8 +5,14 @@ import { useAuth } from '../auth/auth-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { bodyCacheAccountEpoch } from '@nix/web-foundation/lib/body-cache';
 import { connectCacheInvalidationChannel } from './cache-invalidation-channel';
+import { BACK_ONLINE_EVENT } from '../offline/native-mirror';
+import { isBootOffline } from '../offline/offline-state';
+import { getShellFetch } from '../offline/shell-fetch';
 
 const ApiClientContext = createContext<NixClient | null>(null);
+
+/** Stands in for a bearer token while offline; it is never sent anywhere. */
+const OFFLINE_TOKEN = 'offline';
 
 export function useApiClient(): NixClient {
   const client = use(ApiClientContext);
@@ -35,8 +41,12 @@ export function ApiClientProvider({ children }: { readonly children: ReactNode }
     () =>
       createNixClient({
         baseUrl: globalThis.location.origin,
+        // The iOS shell only: answers from the synced copy when Core cannot be reached.
+        fetch: getShellFetch(),
         tokens: {
           getAccessToken: async () => {
+            // Opened offline: the shell's fetch never reaches Core, so no token is asked for.
+            if (isBootOffline()) return OFFLINE_TOKEN;
             const token = await getAccessToken();
             if (
               subject !== undefined &&
@@ -48,6 +58,7 @@ export function ApiClientProvider({ children }: { readonly children: ReactNode }
           // Core renews only its own short-lived bearer token from the HttpOnly browser session;
           // provider tokens never enter this client or JavaScript at all.
           refreshAccessToken: async () => {
+            if (isBootOffline()) return OFFLINE_TOKEN;
             const profile = useSessionStore.getState().profile;
             const epoch = subject === undefined ? null : bodyCacheAccountEpoch(subject);
             const token = await getAccessToken(true);
@@ -75,6 +86,17 @@ export function ApiClientProvider({ children }: { readonly children: ReactNode }
       }),
     [getAccessToken, handleSessionRefusal, subject],
   );
+
+  // Back from an offline launch: what was read from the synced copy is stale until re-read.
+  useEffect(() => {
+    const refresh = (): void => {
+      client.cache.invalidatePrefix([]);
+    };
+    window.addEventListener(BACK_ONLINE_EVENT, refresh);
+    return () => {
+      window.removeEventListener(BACK_ONLINE_EVENT, refresh);
+    };
+  }, [client]);
 
   useEffect(() => {
     if (subject === undefined) return;

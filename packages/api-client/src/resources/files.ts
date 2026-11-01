@@ -172,7 +172,18 @@ export async function fetchFileContent(
     forceRefresh: true,
   });
   const url = new URL(capability.url);
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+  // The iOS shell answers offline with a blob of the file it downloaded, made by this page.
+  const pageOrigin = (globalThis as { location?: { origin?: string } }).location?.origin;
+  const ownBlob =
+    url.protocol === 'blob:' &&
+    pageOrigin !== undefined &&
+    capability.url.startsWith(`blob:${pageOrigin}/`);
+  if (
+    !ownBlob &&
+    url.protocol !== 'https:' &&
+    url.hostname !== 'localhost' &&
+    url.hostname !== '127.0.0.1'
+  ) {
     throw new TypeError('Download capabilities must use HTTPS outside local development.');
   }
   if (url.username !== '' || url.password !== '') {

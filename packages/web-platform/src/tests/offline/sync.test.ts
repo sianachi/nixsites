@@ -1,0 +1,96 @@
+import type { MirrorItem } from '@nix/sync-core/mirror';
+import type { SqliteMirrorStore } from '@nix/sync-sqlite';
+import { describe, expect, it, vi } from 'vitest';
+
+import { createSyncScheduler, downloadable, syncFiles, type SyncDeps } from '../../offline/sync';
+
+const fileItem = (id: string, versionId: string, over: Partial<MirrorItem> = {}) =>
+  ({
+    id,
+    lifecycleState: 'active',
+    locked: false,
+    file: { versionId, fileName: 'f', mediaType: 'text/plain', byteLength: 3, sha256: 'h' },
+    ...over,
+  }) as unknown as MirrorItem;
+
+function setup(items: MirrorItem[], index: Record<string, string>) {
+  const stored = { ...index };
+  const mirror = {
+    fileIndex: vi.fn(() => Promise.resolve({ ...stored })),
+    setFileIndex: vi.fn((next: Record<string, string>) => {
+      for (const key of Object.keys(stored)) Reflect.deleteProperty(stored, key);
+      Object.assign(stored, next);
+      return Promise.resolve();
+    }),
+    fileDownload: vi.fn(() => Promise.resolve(3)),
+    fileDelete: vi.fn(() => Promise.resolve()),
+  };
+  const capability = vi.fn((itemId: string, versionId: string) =>
+    Promise.resolve({
+      url: `https://files.example/${itemId}/${versionId}`,
+      byteLength: 3,
+      sha256: 'h',
+    }),
+  );
+  const deps = {
+    mirror,
+    store: { listItems: () => Promise.resolve(items) } as unknown as SqliteMirrorStore,
+    capability,
+  } as unknown as SyncDeps;
+  return { deps, mirror, capability, stored };
+}
+
+describe('file sync', () => {
+  it('downloads unstored versions and drops files that left the mirror', async () => {
+    const { deps, mirror, stored } = setup(
+      [fileItem('a', 'v2'), fileItem('b', 'v1'), fileItem('locked', 'v1', { locked: true })],
+      { a: 'v1', gone: 'v9', b: 'v1' },
+    );
+    await syncFiles(deps, ['ws']);
+    expect(mirror.fileDelete).toHaveBeenCalledWith('a', 'v1');
+    expect(mirror.fileDelete).toHaveBeenCalledWith('gone', 'v9');
+    expect(mirror.fileDownload).toHaveBeenCalledTimes(1);
+    expect(mirror.fileDownload).toHaveBeenCalledWith('a', 'v2', 'https://files.example/a/v2');
+    expect(stored).toEqual({ a: 'v2', b: 'v1' });
+  });
+
+  it('skips a version that changed under it and removes a short download', async () => {
+    const changed = setup([fileItem('a', 'v1')], {});
+    changed.capability.mockResolvedValueOnce({
+      url: 'https://f.example/x',
+      byteLength: 3,
+      sha256: 'other',
+    });
+    await syncFiles(changed.deps, ['ws']);
+    expect(changed.mirror.fileDownload).not.toHaveBeenCalled();
+
+    const short = setup([fileItem('a', 'v1')], {});
+    short.mirror.fileDownload.mockResolvedValueOnce(2);
+    await syncFiles(short.deps, ['ws']);
+    expect(short.mirror.fileDelete).toHaveBeenCalledWith('a', 'v1');
+    expect(short.stored).toEqual({});
+  });
+
+  it('only fetches from plain https or local urls', () => {
+    expect(downloadable('https://files.example/x')).toBe(true);
+    expect(downloadable('http://localhost:9000/x')).toBe(true);
+    expect(downloadable('http://files.example/x')).toBe(false);
+    expect(downloadable('https://u:p@files.example/x')).toBe(false);
+  });
+});
+
+describe('sync scheduler', () => {
+  it('runs one pass at a time', async () => {
+    let release: () => void = () => undefined;
+    const run = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+    const scheduler = createSyncScheduler(run);
+    const first = scheduler.trigger();
+    const second = scheduler.trigger();
+    expect(run).toHaveBeenCalledTimes(1);
+    release();
+    await Promise.all([first, second]);
+    run.mockResolvedValueOnce(undefined);
+    await scheduler.trigger();
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+});

@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { OfflineBanner } from '@nix/web-platform/offline/offline-banner';
 import { inNativeShell } from '@nix/web-platform/pwa/install-nix';
 import { useSessionStore, type Unreachable } from '@nix/web-foundation/lib/session-store';
 import { useWebConfig } from '@nix/web-foundation/lib/web-config';
@@ -32,7 +33,12 @@ export function RequireSession(): ReactNode {
   const { pathname } = useLocation();
 
   if (status === 'authenticated') {
-    return <Outlet />;
+    return (
+      <>
+        <OfflineBanner />
+        <Outlet />
+      </>
+    );
   }
 
   // Before the restoring screen, and also while a retry is in flight: the unreachable screen

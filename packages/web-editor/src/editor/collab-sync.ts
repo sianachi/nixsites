@@ -4,6 +4,7 @@ import {
   bodyCacheSealed,
   bodyCacheScopeCurrent,
   bodyCacheScopeEpoch,
+  currentBodyCache,
   indexedBodyCache,
   onBodyForgetting,
   type BodyCacheStore,
@@ -222,9 +223,12 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
   const cache: BodyCacheStore | null =
     cacheScope === undefined
       ? null
-      : (options.bodyCache ?? (typeof indexedDB === 'undefined' ? null : indexedBodyCache));
+      : (options.bodyCache ??
+        currentBodyCache() ??
+        (typeof indexedDB === 'undefined' ? null : indexedBodyCache));
   const sharedScope = options.draftScope ?? cacheScope;
-  const sharedCache = cache === indexedBodyCache || options.bodyCache === undefined;
+  // The shell's injected cache still sits under the account fences, which live in localStorage.
+  const sharedCache = options.bodyCache === undefined || options.bodyCache === indexedBodyCache;
   const initialCacheFence =
     sharedCache && sharedScope !== undefined ? bodyCacheFenceVersion(sharedScope) : null;
   const initialAccountEpoch =

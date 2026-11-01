@@ -6,6 +6,7 @@ import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
 import { useWebConfig } from '@nix/web-foundation/lib/web-config';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { OfflineCopyUsage } from '@nix/web-platform/offline/offline-copy-usage';
 import { SettingsSection } from '../shared/settings-section';
 
 /** A readable name for a service as Core reports it; workers carry their roles after a colon. */
@@ -123,6 +124,7 @@ export function AboutSection(): ReactElement {
           Services appear once they have called Core since it last started.
         </Text>
       ) : null}
+      <OfflineCopyUsage />
     </SettingsSection>
   );
 }

@@ -1,5 +1,5 @@
 import { HttpResponse, http } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createInMemoryTokenStore } from '../auth.js';
 import { createNixClient } from '../client.js';
@@ -10,6 +10,7 @@ import {
   completeUpload,
   completeUploadAndWait,
   downloadFile,
+  fetchFileContent,
   fileByItem,
   uploadById,
 } from './files.js';
@@ -242,5 +243,39 @@ describe('the files resource', () => {
     expect(client.cache.peek(['file-uploads', ITEM])?.data).toMatchObject({ status: 'completed' });
     expect(metadataReads).toBe(2);
     expect(statusReads).toBe(2);
+  });
+});
+
+describe('fetchFileContent offline', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const capability = (url: string) => ({
+    url,
+    expiresAt: '2026-08-31T19:15:00+00:00',
+    fileName: 'a.txt',
+    mediaType: 'text/plain',
+    byteLength: 3,
+    sha256: 'a'.repeat(64),
+    inline: true,
+    unscanned: false,
+    noSniff: true,
+  });
+  const clientFor = (url: string) =>
+    createNixClient({
+      baseUrl: TEST_BASE_URL,
+      tokens: createInMemoryTokenStore('t'),
+      fetch: () => Promise.resolve(Response.json(capability(url))),
+    });
+
+  it('reads a blob made by this page, and only that page', async () => {
+    vi.stubGlobal('location', { origin: 'https://nix.example' });
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('abc')));
+    const read = await fetchFileContent(clientFor('blob:https://nix.example/1'), ITEM);
+    expect(read.blob.size).toBe(3);
+    await expect(fetchFileContent(clientFor('blob:https://evil.example/1'), ITEM)).rejects.toThrow(
+      /HTTPS/,
+    );
   });
 });

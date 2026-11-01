@@ -28,6 +28,14 @@ import {
 import { z } from 'zod';
 
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { canBootOffline } from '../offline/boot';
+import {
+  BACK_ONLINE_EVENT,
+  discardNativeMirror,
+  getNativeMirror,
+  nativeBootSession,
+} from '../offline/native-mirror';
+import { isBootOffline, setOfflineState, useOfflineState } from '../offline/offline-state';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
 import { useSessionStore, type SessionProfile } from '@nix/web-foundation/lib/session-store';
 
@@ -151,6 +159,9 @@ function networkCause(): 'offline' | 'server' {
   return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'server';
 }
 
+const OFFLINE_COPY_NOT_REMOVED =
+  'Signed out. The offline copy on this device could not be removed. Reinstall or clear the app’s data before sharing this device.';
+
 /** How long to wait before each automatic retry while Core is unreachable. */
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000] as const;
 
@@ -255,9 +266,37 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       invalidateSessionRequests();
       accessTokenRef.current = null;
       void sealAccountBodies(subject).catch(() => undefined);
+      // iOS shell: admission to the offline copy closes before the session does, then it is wiped.
+      const wiping = discardNativeMirror();
+      setOfflineState({ bootOffline: false, networkDown: false });
       signedOut(reason);
+      void wiping.then((wiped) => {
+        if (!wiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
+      });
     },
-    [invalidateSessionRequests, signedOut],
+    [invalidateSessionRequests, signInFailed, signedOut],
+  );
+
+  // The shell found no network at launch: open on the synced copy when this device has the
+  // profile it last signed in with; otherwise show the unreachable screen as everywhere else.
+  const unreachableAtLaunch = useCallback(
+    async (cause: 'offline' | 'server', isAborted: () => boolean): Promise<void> => {
+      if (getNativeMirror() === null) {
+        sessionUnreachable(cause, null);
+        return;
+      }
+      const stored = await nativeBootSession();
+      if (isAborted()) return;
+      if (!canBootOffline('unreachable', stored) || stored === null) {
+        sessionUnreachable(cause, null);
+        return;
+      }
+      await openBodyCache(stored.profile.subject, { reauthorized: true }).catch(() => undefined);
+      if (isAborted()) return;
+      setOfflineState({ bootOffline: true });
+      signInSucceeded(stored.profile);
+    },
+    [sessionUnreachable, signInSucceeded],
   );
 
   useEffect(() => {
@@ -346,7 +385,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         settled = true;
         accessTokenRef.current = null;
         if (error instanceof CoreUnreachable) {
-          sessionUnreachable(error.reason, null);
+          void unreachableAtLaunch(error.reason, isAborted);
           return;
         }
         signInFailed(error instanceof Error ? error.message : 'Session could not be restored.');
@@ -367,6 +406,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
     signInStarted,
     signInSucceeded,
     signedOut,
+    unreachableAtLaunch,
   ]);
 
   // While Core is unreachable: try again the moment the device reports a network, and on a
@@ -383,6 +423,67 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       window.removeEventListener('online', sessionRetryRequested);
     };
   }, [restoreAttempt, sessionRetryRequested, status]);
+
+  // Opened on the synced copy: when the network returns, re-check the real session. A live
+  // session for the same person goes back online; anything else closes the session and the copy.
+  const { bootOffline } = useOfflineState();
+  useEffect(() => {
+    if (!bootOffline) return;
+    let checking = false;
+    const recheck = async (): Promise<void> => {
+      const subject = useSessionStore.getState().profile?.subject;
+      if (checking || subject === undefined) return;
+      checking = true;
+      try {
+        const response = await fetch('/auth/session', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        }).catch(() => null);
+        // No answer, or one that settles nothing (a gateway error): still offline.
+        if (
+          response === null ||
+          (!response.ok && response.status !== 401 && response.status !== 403)
+        )
+          return;
+        const session = response.ok
+          ? browserSessionSchema.safeParse(await readJson(response).catch(() => null))
+          : null;
+        if (
+          session?.success !== true ||
+          !session.data.authenticated ||
+          session.data.profile === null ||
+          session.data.accessToken === null ||
+          session.data.expiresAt === null
+        ) {
+          closeSession(subject, 'Your session expired. Sign in again to continue.');
+          return;
+        }
+        if (session.data.profile.subject !== subject) {
+          closeSession(subject, 'The account changed. Sign in again to continue.');
+          return;
+        }
+        accessTokenRef.current = {
+          value: session.data.accessToken,
+          expiresAt: Date.parse(session.data.expiresAt),
+        };
+        setOfflineState({ bootOffline: false });
+        window.dispatchEvent(new Event(BACK_ONLINE_EVENT));
+      } finally {
+        checking = false;
+      }
+    };
+    const check = (): void => {
+      void recheck();
+    };
+    const timer = setInterval(check, 15_000);
+    window.addEventListener('online', check);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('online', check);
+    };
+  }, [bootOffline, closeSession]);
 
   useEffect(() => {
     const clearSession = (event: Event): void => {
@@ -422,6 +523,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         void clearBodyCache(subject, epoch).catch(() => undefined);
       void clearRetiredRecordings().catch(() => undefined);
       clearRetiredOfflineNotes();
+      void discardNativeMirror();
+      setOfflineState({ bootOffline: false, networkDown: false });
     };
     window.addEventListener('nix:signed-out-elsewhere', clearSession);
     return () => {
@@ -455,6 +558,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         const pushToken = accessTokenRef.current?.value ?? null;
         invalidateSessionRequests();
         accessTokenRef.current = null;
+        // Admission to the offline copy closes first; the wipe finishes before the session ends.
+        const mirrorWiping = discardNativeMirror();
         const localClearing =
           typeof indexedDB === 'undefined'
             ? Promise.resolve(true)
@@ -478,6 +583,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         await forgetThumbnails();
         await unsubscribePushBeforeSignOut(pushToken);
         const draftsCleared = await localClearing;
+        const mirrorWiped = await mirrorWiping;
         try {
           await fetch('/auth/logout', {
             method: 'POST',
@@ -490,7 +596,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           refreshRef.current = null;
           signedOut();
           signingOutRef.current = false;
-          if (!draftsCleared)
+          setOfflineState({ bootOffline: false, networkDown: false });
+          if (!mirrorWiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
+          else if (!draftsCleared)
             signInFailed(
               'Signed out. Local drafts, saved pages and recordings could not be cleared. Clear this site’s storage before sharing this device.',
             );
@@ -504,6 +612,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       getAccessToken: async (forceRefresh = false) => {
         if (signingOutRef.current || useSessionStore.getState().status !== 'authenticated')
           return null;
+        if (isBootOffline()) return null;
         const generation = sessionGeneration.current;
         const profile = useSessionStore.getState().profile;
         const subject = profile?.subject;
@@ -518,6 +627,11 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         const renewalUnreachable = (cause: 'offline' | 'server'): void => {
           if (!hasCurrentSession() || useSessionStore.getState().profile !== profile) return;
           accessTokenRef.current = null;
+          // iOS shell with a synced copy: keep working from it rather than stop at a screen.
+          if (getNativeMirror()?.current() != null) {
+            setOfflineState({ bootOffline: true });
+            return;
+          }
           sessionUnreachable(cause, profile);
         };
         const current = accessTokenRef.current;

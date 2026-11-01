@@ -5,6 +5,7 @@ import { Route, Routes } from 'react-router';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { AutomationsPage } from './automations/automations-page';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
+import { NativeSync } from '@nix/web-platform/offline/native-sync';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
 import { DailyNotePage } from './daily-notes/daily-note-page';
 import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
@@ -103,6 +104,7 @@ export function App(): ReactElement {
       <AppErrorBoundary>
         <AuthProvider>
           <ApiClientProvider>
+            <NativeSync />
             <AppRoutes />
           </ApiClientProvider>
         </AuthProvider>
