@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-templates",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "description": "Templates: the template library, import, studio, draft and initialization editors",

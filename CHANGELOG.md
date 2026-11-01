@@ -3,7 +3,7 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
-## Unreleased
+## 0.5.1 - 2026-11-01
 
 ### Added
 
