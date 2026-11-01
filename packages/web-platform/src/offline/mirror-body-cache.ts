@@ -63,3 +63,29 @@ export function createMirrorBodyCache(
     ...(fallback.seal === undefined ? {} : { seal: fallback.seal.bind(fallback) }),
   };
 }
+
+/**
+ * Queues a note edit made while the collaboration socket was not live, so the next sync pass
+ * sends it. A note created offline is still under its temporary id here; the mirror carries the
+ * pending update over to the server's id when the create replays. Locked bodies are never queued.
+ */
+export function createMirrorPendingSink(
+  store: () => Pick<SqliteMirrorStore, 'readBody' | 'enqueueBodyUpdate' | 'resolveItemId'> | null,
+  subject: () => string | undefined,
+): (scope: string, update: Uint8Array) => Promise<boolean> {
+  return async (scope, update) => {
+    const parsed = scopeSchema.safeParse(JSON.parse(scope));
+    const mirror = store();
+    if (!parsed.success || mirror === null) return false;
+    const [who, workspaceId, itemId, kind] = parsed.data;
+    if (kind !== 'note' || who !== subject()) return false;
+    const resolved = await mirror.resolveItemId(workspaceId, itemId);
+    const body = await mirror.readBody(workspaceId, resolved);
+    if (body === null || body.item.locked) return false;
+    await mirror.enqueueBodyUpdate(workspaceId, resolved, {
+      clientId: crypto.randomUUID(),
+      update,
+    });
+    return true;
+  };
+}

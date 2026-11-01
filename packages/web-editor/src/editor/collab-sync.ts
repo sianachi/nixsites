@@ -5,6 +5,7 @@ import {
   bodyCacheScopeCurrent,
   bodyCacheScopeEpoch,
   currentBodyCache,
+  currentPendingBodySink,
   indexedBodyCache,
   onBodyForgetting,
   type BodyCacheStore,
@@ -558,6 +559,10 @@ export function startCollabSync(options: CollabSyncOptions): CollabSync {
 
     if (socket === null || !ready || socket.readyState !== 1 || mode === 'read') {
       unsynced = true;
+      // The shell also queues it for its own sync pass; the draft journal still replays it if
+      // this note is reopened, which Yjs applies idempotently.
+      if (cacheScope !== undefined && mode !== 'read')
+        void currentPendingBodySink()?.(cacheScope, update).catch(() => undefined);
       report();
       return;
     }

@@ -13,6 +13,7 @@ import {
   type SyncState,
 } from '../../editor/collab-sync';
 import {
+  injectPendingBodySink,
   bodyCacheAdmits,
   bodyCacheAccountEpoch,
   clearBodyCache,
@@ -644,6 +645,48 @@ describe('the local body copy', () => {
 
     expect(run.doc.getText('body').toJSON()).toBe('');
     expect(cache.discarded).toEqual([SCOPE]);
+    run.sync.destroy();
+  });
+});
+
+describe('the shell pending sink', () => {
+  afterEach(() => {
+    injectPendingBodySink(undefined);
+  });
+
+  it('receives each local edit made while the socket is not live, and none once it is', async () => {
+    const sink = vi.fn(() => Promise.resolve(true));
+    injectPendingBodySink(sink);
+    const run = start(memoryCache());
+    await flush();
+
+    run.doc.getText('body').insert(0, 'offline');
+    expect(sink).toHaveBeenCalledOnce();
+    expect(sink).toHaveBeenCalledWith(SCOPE, expect.any(Uint8Array));
+
+    const socket = run.latest();
+    socket.open();
+    socket.ready();
+    socket.receiveStep2(new Y.Doc());
+    await flush();
+    run.doc.getText('body').insert(0, 'online ');
+    expect(sink).toHaveBeenCalledOnce();
+    run.sync.destroy();
+  });
+
+  it('survives a refusing sink, and a replayed update leaves the text unchanged', async () => {
+    injectPendingBodySink(() => Promise.reject(new Error('mirror closed')));
+    const run = start(memoryCache());
+    await flush();
+    run.doc.getText('body').insert(0, 'kept');
+    await flush();
+    expect(run.doc.getText('body').toJSON()).toBe('kept');
+
+    const update = Y.encodeStateAsUpdate(run.doc);
+    const copy = new Y.Doc();
+    Y.applyUpdate(copy, update);
+    Y.applyUpdate(copy, update);
+    expect(copy.getText('body').toJSON()).toBe('kept');
     run.sync.destroy();
   });
 });

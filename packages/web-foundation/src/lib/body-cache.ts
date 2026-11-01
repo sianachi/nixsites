@@ -765,6 +765,23 @@ export function injectBodyCache(store: BodyCacheStore | undefined): void {
 }
 
 /**
+ * Where the shell queues local note edits made while the collaboration socket is not live, so its
+ * sync pass can send them without the note being reopened. Null outside the shell. Returns
+ * whether the edit was queued.
+ */
+export type PendingBodySink = (scope: string, update: Uint8Array) => Promise<boolean>;
+
+let pendingSink: PendingBodySink | undefined;
+
+export function currentPendingBodySink(): PendingBodySink | undefined {
+  return pendingSink;
+}
+
+export function injectPendingBodySink(sink: PendingBodySink | undefined): void {
+  pendingSink = sink;
+}
+
+/**
  * The scope of one document body - who is reading it, where, and which body - shared by this
  * cache and the draft journal, so both stores agree on what "this person's copy" means.
  */

@@ -117,6 +117,13 @@ async function purgeItem(
   );
 }
 
+/**
+ * SQL that hides a local-only item whose create the server refused: its conflict keeps the
+ * recovery data, but the item must stop showing in the tree.
+ */
+const notGhost = (alias: string): string =>
+  `(${alias}.local=0 OR NOT EXISTS (SELECT 1 FROM mirror_conflict WHERE mirror_conflict.item_id=${alias}.id))`;
+
 async function purgeBody(tx: SqliteTransaction, itemId: string): Promise<void> {
   await tx.execute('DELETE FROM mirror_body WHERE item_id=?', [itemId]);
   await tx.execute('DELETE FROM mirror_pending WHERE item_id=?', [itemId]);
@@ -900,6 +907,38 @@ export class SqliteMirrorStore implements MirrorStore {
           await tx.execute('DELETE FROM mirror_outbox WHERE operation_id=?', [
             operation.operationId,
           ]);
+          if (operation.kind === 'create' || operation.kind === 'daily-note') {
+            // The item never reached the server, so its typed text has nowhere to sync: keep it
+            // as recovery data and drop the pending updates. The item itself is hidden (see
+            // `notGhost`) and removed when the conflicts are dismissed.
+            const pending = pendingRows.parse(
+              await tx.execute(
+                'SELECT client_id,update_blob FROM mirror_pending WHERE item_id=? ORDER BY seq',
+                [operation.itemId],
+              ),
+            );
+            if (pending.length > 0) {
+              const conflictId = `body:${operation.itemId}`;
+              await tx.execute(
+                "INSERT INTO mirror_conflict(id,workspace_id,item_id,kind,code,operation_json,created_at) VALUES(?,?,?,'body',?,NULL,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code",
+                [
+                  conflictId,
+                  workspaceId,
+                  operation.itemId,
+                  response.code ?? response.status,
+                  new Date().toISOString(),
+                ],
+              );
+              await tx.execute(
+                'INSERT INTO mirror_conflict_recovery(conflict_id,update_blob) VALUES(?,?) ON CONFLICT(conflict_id) DO UPDATE SET update_blob=excluded.update_blob',
+                [
+                  conflictId,
+                  Y.mergeUpdates(pending.map((entry) => new Uint8Array(entry.update_blob))),
+                ],
+              );
+              await tx.execute('DELETE FROM mirror_pending WHERE item_id=?', [operation.itemId]);
+            }
+          }
           const current = await rawItem(tx, workspaceId, operation.itemId);
           if (current)
             await tx.execute('UPDATE mirror_search SET title=? WHERE item_id=?', [
@@ -995,7 +1034,7 @@ export class SqliteMirrorStore implements MirrorStore {
       const items = itemRows
         .parse(
           await tx.execute(
-            'SELECT snapshot FROM mirror_item WHERE workspace_id=? ORDER BY title,id',
+            `SELECT snapshot FROM mirror_item WHERE workspace_id=? AND ${notGhost('mirror_item')} ORDER BY title,id`,
             [workspaceId],
           ),
         )
@@ -1012,7 +1051,7 @@ export class SqliteMirrorStore implements MirrorStore {
       const items = itemRows
         .parse(
           await tx.execute(
-            'SELECT item.snapshot FROM mirror_search JOIN mirror_item item ON item.id=mirror_search.item_id WHERE item.workspace_id=? AND mirror_search MATCH ? ORDER BY rank LIMIT 200',
+            `SELECT item.snapshot FROM mirror_search JOIN mirror_item item ON item.id=mirror_search.item_id WHERE item.workspace_id=? AND mirror_search MATCH ? AND ${notGhost('item')} ORDER BY rank LIMIT 200`,
             [workspaceId, phrase],
           ),
         )
@@ -1217,10 +1256,22 @@ export class SqliteMirrorStore implements MirrorStore {
           'DELETE FROM mirror_conflict_recovery WHERE conflict_id IN (SELECT id FROM mirror_conflict WHERE workspace_id=? AND id=?)',
           [workspaceId, conflictId],
         );
+        const itemId = textRows.parse(
+          await tx.execute(
+            'SELECT item_id AS value FROM mirror_conflict WHERE workspace_id=? AND id=?',
+            [workspaceId, conflictId],
+          ),
+        )[0]?.value;
         await tx.execute('DELETE FROM mirror_conflict WHERE workspace_id=? AND id=?', [
           workspaceId,
           conflictId,
         ]);
+        // A refused create leaves a hidden local item; with its last conflict seen it can go.
+        if (itemId !== undefined)
+          await tx.execute(
+            'DELETE FROM mirror_item WHERE id=? AND workspace_id=? AND local=1 AND NOT EXISTS (SELECT 1 FROM mirror_conflict WHERE item_id=?) AND NOT EXISTS (SELECT 1 FROM mirror_outbox WHERE item_id=?)',
+            [itemId, workspaceId, itemId, itemId],
+          );
       },
       true,
     );

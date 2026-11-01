@@ -1,12 +1,16 @@
 import { files, principal, workspaces } from '@nix/api-client';
 import { createFetchMirrorApi } from '@nix/sync-core/fetch-api';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { injectBodyCache, indexedBodyCache } from '@nix/web-foundation/lib/body-cache';
+import {
+  injectBodyCache,
+  injectPendingBodySink,
+  indexedBodyCache,
+} from '@nix/web-foundation/lib/body-cache';
 import { useEffect, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { useAuth } from '../auth/auth-provider';
-import { createMirrorBodyCache } from './mirror-body-cache';
+import { createMirrorBodyCache, createMirrorPendingSink } from './mirror-body-cache';
 import { REMEMBERED, rememberKey } from './mirror-fetch';
 import { discardNativeMirror, getNativeMirror } from './native-mirror';
 import {
@@ -68,6 +72,12 @@ export function NativeSync(): ReactNode {
         () => useSessionStore.getState().profile?.subject,
       );
       injectBodyCache(body);
+      injectPendingBodySink(
+        createMirrorPendingSink(
+          () => mirror.current(),
+          () => useSessionStore.getState().profile?.subject,
+        ),
+      );
 
       const origin = globalThis.location.origin;
       const api = createFetchMirrorApi({
@@ -127,6 +137,7 @@ export function NativeSync(): ReactNode {
       controller.abort();
       stop();
       injectBodyCache(undefined);
+      injectPendingBodySink(undefined);
     };
   }, [bootOffline, client, getAccessToken, mirror, profile, status]);
 

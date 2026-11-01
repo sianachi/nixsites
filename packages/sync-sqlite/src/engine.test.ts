@@ -597,6 +597,54 @@ describe('resumable sync engine with real SQLite', () => {
     }
   });
 
+  it('hides a refused create, keeps its typed text for recovery, and removes it on dismissal', async () => {
+    const { store, api } = await setup(new FakeApi([]));
+    const localId = id(20);
+    await store.enqueue(workspaceId, {
+      operationId: id(100),
+      itemId: localId,
+      kind: 'create',
+      payload: { type: 'note', title: 'Ghost', parentId: null },
+    });
+    const local = new Y.Doc();
+    try {
+      local.getText('note').insert(0, 'Words to keep');
+      await store.enqueueBodyUpdate(workspaceId, localId, {
+        clientId: 'ghost-edit',
+        update: Y.encodeStateAsUpdate(local),
+      });
+    } finally {
+      local.destroy();
+    }
+    api.replay = (input) =>
+      Promise.resolve({
+        operationId: input.operation.operationId,
+        status: 'refused',
+        itemId: input.operation.itemId,
+        revision: null,
+        item: null,
+        code: 'forbidden',
+      } satisfies NativeReplayResult);
+    await sync(store, api);
+
+    expect((await store.listItems(workspaceId)).map((entry) => entry.id)).toEqual([]);
+    expect(await store.searchItems(workspaceId, 'Ghost')).toEqual([]);
+    expect((await requireBody(store, localId)).pending).toEqual([]);
+    const conflicts = await store.listConflicts(workspaceId);
+    expect(conflicts.map((entry) => entry.kind).sort()).toEqual(['body', 'metadata']);
+    const bodyConflict = conflicts.find((entry) => entry.kind === 'body');
+    const recovery = await store.readConflictRecovery(workspaceId, bodyConflict?.id ?? '');
+    const restored = new Y.Doc();
+    try {
+      Y.applyUpdate(restored, recovery ?? new Uint8Array());
+      expect(restored.getText('note').toJSON()).toBe('Words to keep');
+    } finally {
+      restored.destroy();
+    }
+    for (const conflict of conflicts) await store.dismissConflict(workspaceId, conflict.id);
+    expect(await store.readBody(workspaceId, localId)).toBeNull();
+  });
+
   it('replays FIFO edits with the revision returned by the previous operation', async () => {
     const parent = item({ id: id(11), title: 'Destination', canPersistBody: false });
     const { store, api } = await setup(new FakeApi([item(), parent]));
