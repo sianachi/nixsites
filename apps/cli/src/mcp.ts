@@ -1776,7 +1776,7 @@ export async function createWorkspaceMcpServer(
   server.registerTool(
     'create_automation',
     {
-      description: `Create an automation rule. Writes need the admin access scope. ${RULE_GRAMMAR}`,
+      description: `Create an automation rule. Writes need the admin access scope (create a token with it in Settings > Access tokens). ${RULE_GRAMMAR}`,
       inputSchema: {
         workspaceId: identifier,
         name: z.string().trim().min(1).max(200),
@@ -1804,7 +1804,7 @@ export async function createWorkspaceMcpServer(
     'update_automation',
     {
       description:
-        'Change an automation rule: given members replace the stored ones. Saves behind expectedRevision, else the current revision. Writes need the admin access scope.',
+        'Change an automation rule: given members replace the stored ones. Saves behind expectedRevision, else the current revision. Writes need the admin access scope (create a token with it in Settings > Access tokens).',
       inputSchema: {
         ruleId: identifier,
         expectedRevision: z.number().int().min(0).optional(),
@@ -1832,7 +1832,7 @@ export async function createWorkspaceMcpServer(
     'set_automation_enabled',
     {
       description:
-        'Switch an automation rule on or off. Enabling clears an automatic disable. Writes need the admin access scope.',
+        'Switch an automation rule on or off. Enabling clears an automatic disable. Writes need the admin access scope (create a token with it in Settings > Access tokens).',
       inputSchema: { ruleId: identifier, enabled: z.boolean() },
     },
     ({ ruleId, enabled }) =>
@@ -1843,7 +1843,7 @@ export async function createWorkspaceMcpServer(
     'delete_automation',
     {
       description:
-        'Delete an automation rule and its run log. Requires explicit confirmation and the admin access scope.',
+        'Delete an automation rule and its run log. Requires explicit confirmation and the admin access scope (create a token with it in Settings > Access tokens).',
       inputSchema: { ruleId: identifier, confirm: z.boolean() },
     },
     ({ ruleId, confirm }) =>
@@ -1868,7 +1868,7 @@ export async function createWorkspaceMcpServer(
     'run_automation',
     {
       description:
-        'Run an automation rule now, as you, optionally on a triggering item. Writes need the admin access scope.',
+        'Run an automation rule now, as you, optionally on a triggering item. Writes need the admin access scope (create a token with it in Settings > Access tokens).',
       inputSchema: { ruleId: identifier, itemId: identifier.optional() },
     },
     ({ ruleId, itemId }) =>
@@ -1879,7 +1879,7 @@ export async function createWorkspaceMcpServer(
     'test_automation',
     {
       description:
-        'Dry-run an automation rule: whether it would run now and previews of its actions. Writes nothing, but needs the admin access scope.',
+        'Dry-run an automation rule: whether it would run now and previews of its actions. Writes nothing, but needs the admin access scope (create a token with it in Settings > Access tokens).',
       inputSchema: { ruleId: identifier, itemId: identifier.optional() },
     },
     ({ ruleId, itemId }) =>
