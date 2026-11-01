@@ -31,8 +31,12 @@ const signedIn = (): Response =>
     expiresAt: '2099-01-01T00:00:00+00:00',
   });
 
-function fakeMirror(session: typeof stored | null) {
-  const wipe = vi.fn(() => Promise.resolve(true));
+function fakeMirror(initial: typeof stored | null, wiped = true) {
+  let session = initial;
+  const wipe = vi.fn(() => {
+    if (wiped) session = null;
+    return Promise.resolve(wiped);
+  });
   const mirror = {
     wipe,
     current: () => ({}),
@@ -104,6 +108,90 @@ describe('the shell without a network', () => {
     await screen.findByText('failed');
     expect(getOfflineState().bootOffline).toBe(false);
     expect(useSessionStore.getState().profile).toBeNull();
+  });
+});
+
+describe('an online launch that the server refuses', () => {
+  const anonymous = (): Response =>
+    json({
+      authenticated: false,
+      configured: true,
+      profile: null,
+      accessToken: null,
+      expiresAt: null,
+    });
+
+  it.each([401, 403])(
+    'wipes the copy on a %i, and the next offline launch does not open it',
+    async (status) => {
+      const wipe = fakeMirror(stored);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({}, status)));
+      mount();
+      await screen.findByText('failed');
+      expect(wipe).toHaveBeenCalledTimes(1);
+      cleanup();
+      useSessionStore.setState({ status: 'unknown', profile: null, error: null });
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Load failed')));
+      mount();
+      await screen.findByText('unreachable');
+      expect(getOfflineState().bootOffline).toBe(false);
+    },
+  );
+
+  it('wipes the copy when the session is anonymous', async () => {
+    const wipe = fakeMirror(stored);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(anonymous()));
+    mount();
+    await screen.findByText('anonymous');
+    expect(wipe).toHaveBeenCalledTimes(1);
+    cleanup();
+    useSessionStore.setState({ status: 'unknown', profile: null, error: null });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Load failed')));
+    mount();
+    await screen.findByText('unreachable');
+  });
+
+  it('reports a copy that could not be removed', async () => {
+    fakeMirror(stored, false);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(anonymous()));
+    mount();
+    await screen.findByText('failed');
+    expect(useSessionStore.getState().error).toMatch(/offline copy/i);
+  });
+});
+
+describe('an owed logout the server refuses', () => {
+  it('keeps the marker and does not sign in on a 403', async () => {
+    fakeMirror(null);
+    localStorage.setItem(MARKER, '1');
+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 403 }));
+    vi.stubGlobal('fetch', fetch);
+    mount();
+    await screen.findByText('unreachable');
+    expect(urls(fetch)).toEqual(['/auth/logout']);
+    expect(localStorage.getItem(MARKER)).toBe('1');
+  });
+});
+
+describe('the recheck after an offline launch', () => {
+  it('treats a 2xx that is not JSON (a captive portal) as still offline', async () => {
+    fakeMirror(stored);
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Load failed'))
+      .mockResolvedValue(
+        new Response('<html>log in</html>', { headers: { 'content-type': 'text/html' } }),
+      );
+    vi.stubGlobal('fetch', fetch);
+    mount();
+    await screen.findByText('authenticated');
+    window.dispatchEvent(new Event('online'));
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(getOfflineState().bootOffline).toBe(true);
+    expect(screen.getByText('authenticated')).toBeTruthy();
   });
 });
 

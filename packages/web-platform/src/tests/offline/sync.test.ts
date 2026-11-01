@@ -22,7 +22,9 @@ function setup(items: MirrorItem[], index: Record<string, string>) {
       Object.assign(stored, next);
       return Promise.resolve();
     }),
-    fileDownload: vi.fn(() => Promise.resolve(3)),
+    fileDownload: vi.fn(() =>
+      Promise.resolve<{ bytes: number; sha256: string } | null>({ bytes: 3, sha256: 'h' }),
+    ),
     fileDelete: vi.fn(() => Promise.resolve()),
   };
   const capability = vi.fn((itemId: string, versionId: string) =>
@@ -65,10 +67,23 @@ describe('file sync', () => {
     expect(changed.mirror.fileDownload).not.toHaveBeenCalled();
 
     const short = setup([fileItem('a', 'v1')], {});
-    short.mirror.fileDownload.mockResolvedValueOnce(2);
+    short.mirror.fileDownload.mockResolvedValueOnce({ bytes: 2, sha256: 'h' });
     await syncFiles(short.deps, ['ws']);
     expect(short.mirror.fileDelete).toHaveBeenCalledWith('a', 'v1');
     expect(short.stored).toEqual({});
+  });
+
+  it('removes a download whose digest is not the one Core named, and skips a refused one', async () => {
+    const forged = setup([fileItem('a', 'v1')], {});
+    forged.mirror.fileDownload.mockResolvedValueOnce({ bytes: 3, sha256: 'evil' });
+    await syncFiles(forged.deps, ['ws']);
+    expect(forged.mirror.fileDelete).toHaveBeenCalledWith('a', 'v1');
+    expect(forged.stored).toEqual({});
+
+    const refused = setup([fileItem('a', 'v1')], {});
+    refused.mirror.fileDownload.mockResolvedValueOnce(null);
+    await syncFiles(refused.deps, ['ws']);
+    expect(refused.stored).toEqual({});
   });
 
   it('only fetches from plain https or local urls', () => {

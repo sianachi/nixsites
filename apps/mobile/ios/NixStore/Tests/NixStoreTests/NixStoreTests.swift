@@ -176,6 +176,8 @@ final class NixStoreTests: XCTestCase {
         })
         let r = try await call(stores, ["op": "fileDownload", "key": "k", "url": "https://cdn.example/obj?sig=1"])
         XCTAssertEqual(r["bytes"] as? Int64, 5)
+        // SHA-256 of "hello".
+        XCTAssertEqual(r["sha256"] as? String, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         XCTAssertNil(StubProtocol.seen?.value(forHTTPHeaderField: "Authorization"))
         XCTAssertNil(StubProtocol.seen?.value(forHTTPHeaderField: "Cookie"))
         let got = try await call(stores, ["op": "fileGet", "key": "k"])

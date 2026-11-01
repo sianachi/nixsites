@@ -49,3 +49,50 @@ describe('wiping the offline copy', () => {
     expect(post).toHaveBeenCalledWith({ op: 'wipe' });
   });
 });
+
+describe('file downloads around a sign-out', () => {
+  const account = { tenantId: 't', principalId: 'p' };
+  function downloading() {
+    const { mirror, post } = setup([true]);
+    (mirror as unknown as { account: unknown }).account = account;
+    let finish: () => void = () => undefined;
+    post.mockImplementation(((request: { op: string }) =>
+      request.op === 'fileDownload'
+        ? new Promise((resolve) => {
+            finish = () => {
+              resolve({ bytes: 3, sha256: 'h' });
+            };
+          })
+        : Promise.resolve({})) as never);
+    return {
+      mirror,
+      post,
+      finish: () => {
+        finish();
+      },
+    };
+  }
+
+  it('keeps a download that finished while admitted', async () => {
+    const { mirror, finish } = downloading();
+    const result = mirror.fileDownload('i', 'v', 'https://f.example/x');
+    finish();
+    expect(await result).toEqual({ bytes: 3, sha256: 'h' });
+  });
+
+  it('deletes a file that landed after the wipe began', async () => {
+    const { mirror, post, finish } = downloading();
+    const result = mirror.fileDownload('i', 'v', 'https://f.example/x');
+    void mirror.wipe();
+    finish();
+    expect(await result).toBeNull();
+    expect(post).toHaveBeenCalledWith({ op: 'fileDelete', key: 'i:v' });
+  });
+
+  it('does not start a download once admission is closed', async () => {
+    const { mirror, post } = downloading();
+    void mirror.wipe();
+    expect(await mirror.fileDownload('i', 'v', 'https://f.example/x')).toBeNull();
+    expect(post).not.toHaveBeenCalledWith(expect.objectContaining({ op: 'fileDownload' }));
+  });
+});

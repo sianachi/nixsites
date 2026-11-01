@@ -175,8 +175,30 @@ export class NativeMirror {
     await this.current()?.setSetting(FILES_KEY, JSON.stringify(index));
   }
 
-  fileDownload(itemId: string, versionId: string, url: string): Promise<number> {
-    return fileDownload(fileKey(itemId, versionId), url, this.deps.post);
+  /**
+   * Null when admission closed or the account changed before or during the download: a file that
+   * landed after a sign-out is deleted, never kept.
+   */
+  async fileDownload(
+    itemId: string,
+    versionId: string,
+    url: string,
+  ): Promise<{ bytes: number; sha256: string } | null> {
+    const account = this.account;
+    if (!this.admitted || account === null) return null;
+    try {
+      const stored = await fileDownload(fileKey(itemId, versionId), url, this.deps.post);
+      if (this.holds(account)) return stored;
+    } catch (error) {
+      if (this.holds(account)) throw error;
+    }
+    await this.fileDelete(itemId, versionId).catch(() => undefined);
+    return null;
+  }
+
+  /** Re-read after an await: admission and the account can change while a download runs. */
+  private holds(account: MirrorAccount): boolean {
+    return this.admitted && this.account === account;
   }
 
   fileGet(itemId: string, versionId: string): Promise<Uint8Array | null> {

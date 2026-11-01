@@ -346,7 +346,11 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           throw new CoreUnreachable('server');
         }
         if (!response.ok) {
-          throw new Error('Core could not restore the browser session.');
+          // A definitive refusal: admission to the offline copy closes and it is wiped first.
+          const wiped = await discardNativeMirror();
+          throw new Error(
+            wiped ? 'Core could not restore the browser session.' : OFFLINE_COPY_NOT_REMOVED,
+          );
         }
 
         return browserSessionSchema.parse(await readJson(response));
@@ -386,7 +390,10 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         }
 
         accessTokenRef.current = null;
+        const wiped = await discardNativeMirror();
+        if (isAborted()) return;
         signedOut();
+        if (!wiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
       })
       .catch((error: unknown) => {
         if (isAborted()) {
@@ -458,9 +465,16 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           (!response.ok && response.status !== 401 && response.status !== 403)
         )
           return;
-        const session = response.ok
-          ? browserSessionSchema.safeParse(await readJson(response).catch(() => null))
-          : null;
+        let session: ReturnType<typeof browserSessionSchema.safeParse> | null = null;
+        if (response.ok) {
+          // A 2xx that is not JSON is a captive portal or proxy page, not an answer from Core.
+          const body = await readJson(response).then(
+            (value) => ({ value }),
+            () => null,
+          );
+          if (body === null) return;
+          session = browserSessionSchema.safeParse(body.value);
+        }
         if (
           session?.success !== true ||
           !session.data.authenticated ||
@@ -614,7 +628,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
             cache: 'no-store',
             headers: { Accept: 'application/json' },
           });
-          if (response.status < 500) clearLogoutPending();
+          if (response.ok) clearLogoutPending();
         } catch (error) {
           // Offline in the shell: signed out here, and the server is told at the next launch.
           if (!logoutOwed) throw error;

@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { ApiClientProvider, useApiClient } from '../../api/api-client-provider';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { setOfflineState } from '../../offline/offline-state';
 import { json } from '@nix/web-foundation/testing/json-response';
 
 const auth = vi.hoisted(() => ({
@@ -160,6 +161,22 @@ describe('API client browser session admission', () => {
     expect(authorization).toEqual(['Bearer expired-token', 'Bearer refreshed-token']);
     expect(auth.getAccessToken).toHaveBeenCalledWith(true);
     expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+  });
+
+  it('never closes the session over a 401 earned with the offline placeholder token', async () => {
+    setOfflineState({ bootOffline: true });
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+          Promise.resolve(json({ title: 'No', status: 401, code: 'auth.unauthenticated' }, 401)),
+        ),
+      );
+      await expect(renderClient().execute(command)).rejects.toMatchObject({ status: 401 });
+      expect(auth.handleSessionRefusal).not.toHaveBeenCalled();
+    } finally {
+      setOfflineState({ bootOffline: false });
+    }
   });
 
   it('refuses a refreshed token from another account before retrying the old request', async () => {

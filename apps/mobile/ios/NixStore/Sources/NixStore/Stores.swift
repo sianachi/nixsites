@@ -56,7 +56,8 @@ public actor Stores {
             try await s.batch(statements); return [:]
         case "fileDownload":
             guard let url = URL(string: try string("url")) else { throw StoreError.invalid("Bad url.") }
-            return ["bytes": try await s.fileDownload(key: try string("key"), url: url)]
+            let stored = try await s.fileDownload(key: try string("key"), url: url)
+            return ["bytes": stored.bytes, "sha256": stored.sha256]
         case "fileGet":
             return ["data": try await s.fileGet(try string("key"))?.base64EncodedString() as Any? ?? NSNull()]
         case "fileDelete":

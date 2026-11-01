@@ -45,8 +45,8 @@ export function clearLogoutPending(): void {
 
 /**
  * Ends the server session if a sign-out is still owed. True when nothing is owed or the logout
- * went through (any answer below 500); false when the server could not be reached, in which case
- * no session may be treated as signed in yet.
+ * went through (a 2xx; any other answer, such as a refused Origin, keeps the marker); false when
+ * the logout did not complete, in which case no session may be treated as signed in yet.
  */
 export async function completePendingLogout(): Promise<boolean> {
   if (!isLogoutPending()) return true;
@@ -57,7 +57,7 @@ export async function completePendingLogout(): Promise<boolean> {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
     });
-    if (response.status >= 500) return false;
+    if (!response.ok) return false;
   } catch {
     return false;
   }

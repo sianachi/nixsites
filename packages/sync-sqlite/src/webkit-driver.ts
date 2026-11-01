@@ -128,13 +128,14 @@ export async function fileDownload(
   key: string,
   url: string,
   post: NixStorePost = windowNixStorePost(),
-): Promise<number> {
-  const { bytes } = reply<{ bytes?: number }>(
+): Promise<{ bytes: number; sha256: string }> {
+  const { bytes, sha256 } = reply<{ bytes?: number; sha256?: string }>(
     await post({ op: 'fileDownload', key, url }),
     'fileDownload',
   );
-  if (typeof bytes !== 'number') throw new Error('nixStore fileDownload: reply has no byte count');
-  return bytes;
+  if (typeof bytes !== 'number' || typeof sha256 !== 'string')
+    throw new Error('nixStore fileDownload: reply has no byte count or digest');
+  return { bytes, sha256 };
 }
 
 export async function fileGet(

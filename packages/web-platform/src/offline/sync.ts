@@ -66,8 +66,13 @@ export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[])
     try {
       const capability = await deps.capability(itemId, file.versionId);
       if (capability.sha256 !== file.sha256 || !downloadable(capability.url)) return;
-      const bytes = await deps.mirror.fileDownload(itemId, file.versionId, capability.url);
-      if (bytes !== file.byteLength) {
+      const stored = await deps.mirror.fileDownload(itemId, file.versionId, capability.url);
+      if (stored === null) return;
+      // The bytes on disk must be the bytes Core named, not just as many of them.
+      if (
+        stored.bytes !== file.byteLength ||
+        stored.sha256.toLowerCase() !== file.sha256.toLowerCase()
+      ) {
         await deps.mirror.fileDelete(itemId, file.versionId);
         return;
       }

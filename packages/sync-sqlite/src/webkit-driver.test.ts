@@ -55,7 +55,7 @@ function fakeNative() {
           for (const row of s.params) db.prepare(s.sql).run(...(row.map(dec) as never[]));
         return Promise.resolve({});
       case 'fileDownload':
-        return Promise.resolve({ bytes: 42 });
+        return Promise.resolve({ bytes: 42, sha256: 'ab12' });
       case 'fileGet':
         return Promise.resolve({ data: request.key === 'hit' ? 'AQID' : null });
       case 'usage':
@@ -144,7 +144,7 @@ describe('webkit nixStore driver', () => {
 
   it('exposes typed file helpers', async () => {
     const { post } = fakeNative();
-    expect(await fileDownload('k', 'https://x/y', post)).toBe(42);
+    expect(await fileDownload('k', 'https://x/y', post)).toEqual({ bytes: 42, sha256: 'ab12' });
     expect(await fileGet('hit', post)).toEqual(new Uint8Array([1, 2, 3]));
     expect(await fileGet('miss', post)).toBeNull();
     expect(await usage(post)).toEqual({ databaseBytes: 1, fileBytes: 2 });

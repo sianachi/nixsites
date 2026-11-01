@@ -249,8 +249,9 @@ public actor Store {
     }
 
     /// GET an object-store capability URL. Ephemeral session: no cookies, no credentials, and no
-    /// Core token is ever attached. Redirects off https are refused.
-    public func fileDownload(key: String, url: URL) async throws -> Int64 {
+    /// Core token is ever attached. Redirects off https are refused. Returns the stored size and the
+    /// hex SHA-256 of the stored file, read back in chunks so the page can verify the bytes.
+    public func fileDownload(key: String, url: URL) async throws -> (bytes: Int64, sha256: String) {
         guard url.scheme?.lowercased() == "https", url.host != nil else { throw StoreError.invalid("Downloads must use https.") }
         let configuration = downloadConfiguration()
         configuration.httpCookieStorage = nil
@@ -272,7 +273,16 @@ public actor Store {
         try? FileManager.default.removeItem(at: dest)
         try FileManager.default.moveItem(at: temp, to: dest)
         Self.protect(dest)
-        return (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? Int64) ?? 0
+        let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? Int64) ?? 0
+        return (size, try Self.fileSha256Hex(dest))
+    }
+
+    private static func fileSha256Hex(_ url: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: 1 << 20), !chunk.isEmpty { hasher.update(data: chunk) }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: usage and wipe

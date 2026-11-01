@@ -235,6 +235,70 @@ describe('mirror fetch router', () => {
     expect(missing.status).toBe(404);
   });
 
+  it('follows the download rule: html is an attachment, only a preview of a safe type is inline', async () => {
+    const inline = (mediaType: string) =>
+      item(FILE, {
+        type: 'file',
+        file: { versionId: VERSION, fileName: 'a', mediaType, byteLength: 3, sha256: 'x' },
+      });
+    const blobTypes: string[] = [];
+    const ask = async (mediaType: string, query: string) => {
+      const store = fakeStore();
+      const real = store.readItems;
+      store.readItems = (ids) =>
+        ids.includes(FILE) ? Promise.resolve([inline(mediaType)]) : real(ids);
+      const run = createMirrorFetch({
+        inner: vi.fn(),
+        store: () => store,
+        readFile: () => Promise.resolve(new Uint8Array([1, 2, 3])),
+        isBootOffline: () => true,
+        onReachability: () => undefined,
+        createBlobUrl: (_bytes, type) => {
+          blobTypes.push(type);
+          return 'blob:x';
+        },
+      });
+      return (await (
+        await run(`${location.origin}/api/v1/items/${FILE}/file/download${query}`)
+      ).json()) as {
+        mediaType: string;
+        inline: boolean;
+        unscanned: boolean;
+      };
+    };
+    const html = await ask('text/html', '?preview=true');
+    expect(html).toMatchObject({
+      mediaType: 'application/octet-stream',
+      inline: false,
+      unscanned: true,
+    });
+    expect(await ask('image/png', '')).toMatchObject({
+      mediaType: 'application/octet-stream',
+      inline: false,
+    });
+    expect(await ask('image/png', '?preview=true')).toMatchObject({
+      mediaType: 'image/png',
+      inline: true,
+      unscanned: true,
+    });
+    expect(await ask('image/svg+xml', '?preview=true')).toMatchObject({ inline: false });
+    expect(blobTypes).toEqual([
+      'application/octet-stream',
+      'application/octet-stream',
+      'image/png',
+      'application/octet-stream',
+    ]);
+  });
+
+  it('answers every other same-origin request locally while opened offline, never calling inner', async () => {
+    const { get, inner } = setup({ bootOffline: true });
+    const collab = await get('/collab/documents/abc/bundles');
+    expect(collab.status).toBe(503);
+    expect(((await collab.json()) as { code: string }).code).toBe('offline.unavailable');
+    await get('/api/v1/pets');
+    expect(inner).not.toHaveBeenCalled();
+  });
+
   it('says plainly when something is not available offline or is a write', async () => {
     const { get } = setup({ bootOffline: true });
     const unknown = await get('/api/v1/pets');
@@ -307,6 +371,24 @@ describe('mirror fetch router', () => {
       expect(((await second.json()) as { id: string }).id).toBe(created.id);
       expect(outbox).toHaveLength(1);
       expect(outbox[0]).toMatchObject({ kind: 'create', operationId: key, itemId: created.id });
+    });
+
+    it('keeps the same idempotency key when the answer to an online create is lost', async () => {
+      const outbox: OutboxOperation[] = [];
+      const sent: string[] = [];
+      const inner = vi.fn((_input: unknown, init?: RequestInit) => {
+        sent.push(typeof init?.body === 'string' ? init.body : '');
+        return Promise.reject(new TypeError('Load failed'));
+      });
+      const { get } = setup({
+        store: fakeStore({}, { outbox }),
+        inner: inner as unknown as typeof fetch,
+      });
+      const { path, init } = post(`/api/v1/workspaces/${WS}/items`, { type: 'note', title: 'N' });
+      expect((await get(path, init)).status).toBe(201);
+      const key = (JSON.parse(sent[0] ?? '{}') as { idempotencyKey?: string }).idempotencyKey;
+      expect(key).toMatch(/^[0-9a-f-]{36}$/);
+      expect(outbox[0]).toMatchObject({ kind: 'create', operationId: key });
     });
 
     it('queues trash as archive and property edits as changes', async () => {

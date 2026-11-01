@@ -53,6 +53,11 @@ export const WORKSPACES_SETTING = 'offline.workspaces';
 export const rememberKey = (path: string): string => `offline.cache:${path}`;
 const MAX_REMEMBERED_BYTES = 256 * 1024;
 
+/** Core's inline rule: only these are ever served as themselves (never html, svg or script types). */
+const INLINE_TYPES =
+  /^(image\/(png|jpeg|gif|webp|avif|heic|heif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|aac|wav|ogg|flac|webm)|application\/pdf)$/;
+const isInlineType = (mediaType: string): boolean => INLINE_TYPES.test(mediaType);
+
 const GATEWAY_DOWN = new Set([502, 503, 504, 530]);
 
 function problem(status: number, code: string, detail: string): Response {
@@ -121,6 +126,31 @@ const definitions = (schema: Json | null): Json[] =>
       aggregate: entry.aggregate ?? null,
       source: entry.source ?? null,
     }));
+
+/**
+ * A create sent online carries an idempotency key, so when the answer is lost after Core committed
+ * the replay queued from the same request reuses it and Core de-duplicates.
+ */
+function withCreateKey(
+  method: string,
+  url: URL,
+  init: RequestInit | undefined,
+): RequestInit | undefined {
+  if (
+    method !== 'POST' ||
+    typeof init?.body !== 'string' ||
+    !/^\/api\/v1\/workspaces\/[^/]+\/items$/.test(url.pathname)
+  )
+    return init;
+  try {
+    const body: unknown = JSON.parse(init.body);
+    return isRecord(body) && body.idempotencyKey === undefined
+      ? { ...init, body: JSON.stringify({ ...body, idempotencyKey: crypto.randomUUID() }) }
+      : init;
+  } catch {
+    return init;
+  }
+}
 
 export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
   const indexes = new Map<string, Promise<WorkspaceIndex>>();
@@ -336,7 +366,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         mediaType: stored.mediaType,
         byteLength: stored.byteLength,
         sha256: stored.sha256,
-        previewable: /^(image|audio|video)\/|^application\/pdf$/.test(stored.mediaType),
+        previewable: isInlineType(stored.mediaType),
         pixelWidth: null,
         pixelHeight: null,
         createdAt: item.createdAt,
@@ -358,7 +388,10 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       return problem(404, 'file.not_found', 'This file version is not in the synced copy.');
     // Only the full file is stored. An image stands in for its thumbnail; anything else has none,
     // which is Core's own answer for a file without one.
-    if (part === 'file/thumbnail' && !file.mediaType.startsWith('image/'))
+    if (
+      part === 'file/thumbnail' &&
+      !(file.mediaType.startsWith('image/') && isInlineType(file.mediaType))
+    )
       return problem(404, 'file.not_found', 'This file has no thumbnail in the synced copy.');
     const bytes = await deps.readFile(item.id, file.versionId);
     if (bytes === null)
@@ -367,9 +400,15 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         'offline.unavailable',
         'This file has not been downloaded to this device yet.',
       );
+    // Core's download rule: the stored type and inline only for a preview of a previewable type;
+    // anything else is an attachment, so an uploaded html file never becomes a document here.
+    const inline =
+      part === 'file/thumbnail' ||
+      (query.get('preview') === 'true' && isInlineType(file.mediaType));
+    const servedType = inline ? file.mediaType : 'application/octet-stream';
     const blobUrl =
-      deps.createBlobUrl?.(bytes, file.mediaType) ??
-      URL.createObjectURL(new Blob([bytes.slice().buffer], { type: file.mediaType }));
+      deps.createBlobUrl?.(bytes, servedType) ??
+      URL.createObjectURL(new Blob([bytes.slice().buffer], { type: servedType }));
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     // shortcut: the thumbnail's size is not known without decoding the image, and the app reads
     // only its bytes; give real dimensions if a screen ever lays out by them.
@@ -379,11 +418,11 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       url: blobUrl,
       expiresAt,
       fileName: file.fileName,
-      mediaType: file.mediaType,
+      mediaType: servedType,
       byteLength: file.byteLength,
       sha256: file.sha256,
-      inline: true,
-      unscanned: false,
+      inline,
+      unscanned: true,
       noSniff: true,
     });
   }
@@ -519,16 +558,21 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       .catch(() => undefined);
   }
 
-  return async (input, init) => {
+  return async (input, sentInit) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
       globalThis.location.origin,
     );
     const method = (
-      init?.method ?? (input instanceof Request ? input.method : 'GET')
+      sentInit?.method ?? (input instanceof Request ? input.method : 'GET')
     ).toUpperCase();
-    if (url.origin !== globalThis.location.origin || !url.pathname.startsWith('/api/v1/'))
-      return deps.inner(input, init);
+    const init = withCreateKey(method, url, sentInit);
+    if (url.origin !== globalThis.location.origin) return deps.inner(input, init);
+    if (!url.pathname.startsWith('/api/v1/'))
+      // Opened on the synced copy the session is a placeholder: nothing else may reach the network.
+      return deps.isBootOffline()
+        ? problem(503, 'offline.unavailable', 'This is not available offline.')
+        : deps.inner(input, init);
 
     let unreachable: Response | null = null;
     if (!deps.isBootOffline()) {

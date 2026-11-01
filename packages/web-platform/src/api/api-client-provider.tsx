@@ -76,8 +76,10 @@ export function ApiClientProvider({ children }: { readonly children: ReactNode }
         },
         telemetry: {
           onRequestError: (event) => {
+            // Offline the placeholder token is in use: no refusal it earns says anything.
             if (
               subject !== undefined &&
+              !isBootOffline() &&
               (event.status === 401 || event.code === 'auth.principal_inactive')
             )
               handleSessionRefusal(subject);
