@@ -433,6 +433,16 @@ public sealed class ReplaceViewSetupHandler(
 
 internal static class StructuredItemSetupEndpoints
 {
+    private static readonly NixError PublishFailed =
+        PropertyErrors.InvalidViews("The interactive form could not be published.");
+
+    private static ContainerViewsResponse ToViewsResponse(ContainerViewSet set) => new(
+        [.. set.Views.Select(ViewMapping.ToResponse)],
+        set.Unrenderable,
+        set.Default,
+        set.HideDocument,
+        set.Version);
+
     internal static async Task<Results<Created<StructuredItemResponse>, ProblemHttpResult>> Create(
         Guid workspaceId,
         CreateStructuredItemRequest request,
@@ -487,9 +497,7 @@ internal static class StructuredItemSetupEndpoints
             clock).ConfigureAwait(false);
         if (request.PublishInteractiveFormViewId is not null && publicForm is null)
         {
-            return TypedResults.Problem(StructureEndpoints.Problem(
-                httpContext,
-                PropertyErrors.InvalidViews("The interactive form could not be published.")));
+            return TypedResults.Problem(StructureEndpoints.Problem(httpContext, PublishFailed));
         }
 
         var persistedViews = await dispatcher.QueryAsync<GetContainerViews, Result<ContainerViewSet>>(
@@ -502,12 +510,7 @@ internal static class StructuredItemSetupEndpoints
         var response = new StructuredItemResponse(
             ItemMapping.ToResponse(item, false),
             PropertyMapping.ToResponse(schema, schema),
-            new ContainerViewsResponse(
-                [.. persistedViews.Value.Views.Select(ViewMapping.ToResponse)],
-                persistedViews.Value.Unrenderable,
-                persistedViews.Value.Default,
-                persistedViews.Value.HideDocument,
-                persistedViews.Value.Version),
+            ToViewsResponse(persistedViews.Value),
             publicForm);
         return TypedResults.Created($"/api/v1/items/{item.Id}", response);
     }
@@ -652,20 +655,13 @@ internal static class StructuredItemSetupEndpoints
             clock).ConfigureAwait(false);
         if (publishInteractiveFormViewId is not null && publicForm is null)
         {
-            return TypedResults.Problem(StructureEndpoints.Problem(
-                httpContext,
-                PropertyErrors.InvalidViews("The interactive form could not be published.")));
+            return TypedResults.Problem(StructureEndpoints.Problem(httpContext, PublishFailed));
         }
 
         return TypedResults.Ok(new StructuredItemResponse(
             ItemMapping.ToResponse(item, false),
             PropertyMapping.ToResponse(effective.Value.Effective, effective.Value.Declared),
-            new ContainerViewsResponse(
-                [.. stored.Value.Views.Select(ViewMapping.ToResponse)],
-                stored.Value.Unrenderable,
-                stored.Value.Default,
-                stored.Value.HideDocument,
-                stored.Value.Version),
+            ToViewsResponse(stored.Value),
             publicForm));
     }
 
