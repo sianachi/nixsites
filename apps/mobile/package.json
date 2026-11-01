@@ -1,0 +1,20 @@
+{
+  "name": "@nix/mobile",
+  "version": "0.5.1",
+  "private": true,
+  "description": "Capacitor shell for iOS: a bundled server picker that opens a Nix server's own web app",
+  "scripts": {
+    "sync": "cap sync ios && node scripts/app-bound-domains.mjs",
+    "open": "cap open ios",
+    "test": "node --test server-url.test.mjs app-bound-domains.test.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/keyboard": "8.0.6",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

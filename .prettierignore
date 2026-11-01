@@ -13,3 +13,5 @@ pnpm-lock.yaml
 packages/site-render/src/__golden__/
 # Written by apps/web openui-prompt.test.ts as a file snapshot; regenerate with vitest -u, never reformat.
 packages/structure-spec/evals/openui-library.json
+# Written by Xcode and the Capacitor CLI (`cap add`, `cap sync`), never reformat.
+apps/mobile/ios/

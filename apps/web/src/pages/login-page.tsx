@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { useLayoutEffect, type ReactNode } from 'react';
 
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { inNativeShell, switchServer } from '@nix/web-platform/pwa/install-nix';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 export interface LoginPageProps {
@@ -76,6 +77,11 @@ export function LoginPage({ onSignIn, error = null }: LoginPageProps): ReactNode
             >
               {zen ? 'Exit Zen' : 'Enter Zen'}
             </Button>
+            {inNativeShell ? (
+              <Button variant="ghost" onClick={switchServer} className="self-start">
+                Switch server
+              </Button>
+            ) : null}
           </section>
         </div>
       </div>

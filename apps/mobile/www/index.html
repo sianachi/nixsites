@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Nix</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px/1.4 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        background: Canvas;
+        color: CanvasText;
+        padding: calc(env(safe-area-inset-top) + 32px) 16px calc(env(safe-area-inset-bottom) + 16px);
+      }
+      main {
+        max-width: 420px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 24px;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 24px;
+      }
+      li {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      button,
+      input {
+        font: inherit;
+        min-height: 44px;
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, CanvasText 25%, transparent);
+        background: transparent;
+        color: inherit;
+        padding: 0 12px;
+      }
+      li .open {
+        flex: 1;
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      form {
+        display: flex;
+        gap: 8px;
+      }
+      input {
+        flex: 1;
+        min-width: 0;
+      }
+      #status {
+        min-height: 1.4em;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Nix</h1>
+      <ul id="servers" aria-label="Servers"></ul>
+      <form id="add">
+        <label for="address" hidden>Server address</label>
+        <input
+          id="address"
+          type="url"
+          inputmode="url"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Server address"
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+      <p id="status" role="status"></p>
+      <p id="mode"></p>
+    </main>
+    <script type="module">
+      import { serverOrigin } from './server-url.mjs';
+
+      const status = document.getElementById('status');
+      const say = (text) => {
+        status.textContent = text;
+      };
+      const call = (plugin, method, options) =>
+        window.Capacitor.nativePromise(plugin, method, options);
+      // Native HTTP: the picker runs at capacitor://localhost, so a fetch to the server is cross-origin.
+      const get = (url) => call('CapacitorHttp', 'request', { url, method: 'GET' });
+
+      let servers = [];
+      let bound = [];
+
+      async function save(next) {
+        servers = (await call('NixShell', 'setServers', { servers: next })).servers;
+        render();
+      }
+
+      async function open(server) {
+        await save([server, ...servers.filter((s) => s.origin !== server.origin)]);
+        say(`Opening ${new URL(server.origin).host}…`);
+        location.assign(`${server.origin}/`);
+      }
+
+      function render() {
+        const list = document.getElementById('servers');
+        list.replaceChildren(
+          ...servers.map((server) => {
+            const item = document.createElement('li');
+            const openButton = document.createElement('button');
+            openButton.className = 'open';
+            openButton.textContent = new URL(server.origin).host;
+            openButton.onclick = () => void open(server).catch((error) => say(String(error)));
+            const remove = document.createElement('button');
+            remove.textContent = '✕';
+            remove.setAttribute('aria-label', `Remove ${openButton.textContent}`);
+            remove.onclick = () =>
+              void save(servers.filter((s) => s !== server)).catch((error) => say(String(error)));
+            item.append(openButton, remove);
+            return item;
+          }),
+        );
+      }
+
+      document.getElementById('add').onsubmit = async (event) => {
+        event.preventDefault();
+        const origin = serverOrigin(document.getElementById('address').value);
+        if (origin === null) return say('Enter an https address, such as nix.example.com.');
+        say('Checking…');
+        try {
+          const session = await get(`${origin}/auth/session`);
+          if (session.status !== 200 || typeof session.data?.configured !== 'boolean')
+            return say(`${new URL(origin).host} is not a Nix server.`);
+          // Sign-in leaves the server for its identity provider, which must load in the app too.
+          // shortcut: keeps only the redirect chain's last origin; record each hop if a provider
+          // ever splits authorize and login across hosts.
+          let loginOrigin;
+          if (session.data.configured) {
+            const login = serverOrigin((await get(`${origin}/auth/login?returnTo=%2F`)).url ?? '');
+            if (login !== null && login !== origin) loginOrigin = login;
+          }
+          // A bound build's WebView refuses every other domain, sign-in's included.
+          const unbound =
+            bound.length === 0
+              ? []
+              : [origin, loginOrigin]
+                  .filter((o) => o !== undefined)
+                  .map((o) => new URL(o).hostname)
+                  .filter((host) => !bound.includes(host));
+          if (unbound.length > 0)
+            return say(
+              `This build opens only its app-bound domains. Add ${unbound.join(', ')} to apps/mobile/app-bound-domains.txt, run pnpm --filter @nix/mobile sync, and rebuild.`,
+            );
+          await open({ origin, loginOrigin });
+        } catch (error) {
+          say(`Could not reach ${new URL(origin).host}: ${error?.message ?? error}`);
+        }
+      };
+
+      try {
+        ({ servers, boundDomains: bound } = await call('NixShell', 'getServers'));
+        if (bound.length === 0)
+          document.getElementById('mode').textContent =
+            'Online only: this build lists no app-bound domains, so servers cannot open offline.';
+        // Open the last server once per launch; after that (Switch server, or a page that failed
+        // to load, which Capacitor sends back here) the picker stays.
+        if (servers.length > 0 && sessionStorage.getItem('opened') === null) {
+          sessionStorage.setItem('opened', '1');
+          location.replace(`${servers[0].origin}/`);
+        } else {
+          render();
+          if (servers.length > 0) say('Pick a server, or check it is reachable.');
+        }
+      } catch (error) {
+        say(`The app shell is not available: ${error?.message ?? error}`);
+      }
+    </script>
+  </body>
+</html>

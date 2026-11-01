@@ -1,10 +1,10 @@
 import { Icon, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
-import { ChevronDown, Download, KeyRound, LogOut, Settings, User } from 'lucide-react';
+import { ChevronDown, Download, KeyRound, LogOut, Server, Settings, User } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
-import { useInstallNix } from '@nix/web-platform/pwa/install-nix';
+import { inNativeShell, switchServer, useInstallNix } from '@nix/web-platform/pwa/install-nix';
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
@@ -84,6 +84,16 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
             label: 'Install Nix',
             icon: Download,
             onSelect: install.install,
+          } satisfies MenuEntry,
+        ]
+      : []),
+    ...(inNativeShell
+      ? [
+          {
+            kind: 'action',
+            label: 'Switch server',
+            icon: Server,
+            onSelect: switchServer,
           } satisfies MenuEntry,
         ]
       : []),

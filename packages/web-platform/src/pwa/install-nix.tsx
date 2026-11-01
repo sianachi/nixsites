@@ -5,6 +5,45 @@ interface InstallPrompt extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
+/** Capacitor's bridge, which the iOS shell (apps/mobile) injects into the server pages it opens. */
+const shell = (
+  globalThis as {
+    Capacitor?: {
+      isNativePlatform?: () => boolean;
+      nativePromise?: (plugin: string, method: string, options?: object) => Promise<unknown>;
+    };
+  }
+).Capacitor;
+/** Whether this page runs inside the iOS shell rather than a browser. */
+export const inNativeShell = shell?.isNativePlatform?.() === true;
+function native(plugin: string, method: string, options?: object): void {
+  // An older shell build may lack the plugin; nothing on the page depends on the answer.
+  void shell?.nativePromise?.(plugin, method, options).catch(() => undefined);
+}
+/** Back to the shell's server picker. */
+export function switchServer(): void {
+  native('NixShell', 'showPicker');
+}
+if (inNativeShell && typeof document !== 'undefined') {
+  // The previous / next / done bar above the keyboard is browser chrome a native app does not show.
+  native('Keyboard', 'setAccessoryBarVisible', { isVisible: false });
+  // Status bar text follows the app's own theme (data-theme, or the system when unset), which can
+  // differ from the system's. Capacitor's DARK style is light text, for a dark ground.
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const syncStatusBar = (): void => {
+    const ground =
+      document.documentElement.getAttribute('data-theme') ??
+      (systemDark.matches ? 'dark' : 'light');
+    native('StatusBar', 'setStyle', { style: ground === 'dark' ? 'DARK' : 'LIGHT' });
+  };
+  syncStatusBar();
+  systemDark.addEventListener('change', syncStatusBar);
+  new MutationObserver(syncStatusBar).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
 let installPrompt: InstallPrompt | null = null;
 const installListeners = new Set<() => void>();
 // Capture before the session and workspace requests complete.
@@ -36,6 +75,7 @@ export function useInstallNix(): {
   const [help, setHelp] = useState(false);
   const [installed, setInstalled] = useState(
     () =>
+      inNativeShell ||
       window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in navigator && navigator.standalone === true),
   );

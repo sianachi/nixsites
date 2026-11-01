@@ -11,6 +11,10 @@ follows semantic versioning (`0.x` pre-1.0).
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.
 - PDF exports can be set to Letter instead of A4 from the export dialog.
+- An iOS app (`apps/mobile`, built with Capacitor and Xcode): pick a Nix server, and the app opens
+  that server's web app with its own sign-in. Inside the app the profile menu and sign-in screen
+  offer Switch server, the keyboard's form bar is hidden and the status bar follows the theme.
+  Listing servers as app-bound domains lets the app start offline.
 
 ### Changed
 

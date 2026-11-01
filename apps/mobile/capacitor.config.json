@@ -1,0 +1,16 @@
+{
+  "appId": "app.nix.shell",
+  "appName": "Nix",
+  "webDir": "www",
+  "server": {
+    "errorPath": "index.html"
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native"
+    },
+    "StatusBar": {
+      "overlaysWebView": true
+    }
+  }
+}

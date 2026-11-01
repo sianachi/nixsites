@@ -1,0 +1,2 @@
+# Names the servers a build is for; see scripts/app-bound-domains.mjs.
+app-bound-domains.txt

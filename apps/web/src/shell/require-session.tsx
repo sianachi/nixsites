@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { inNativeShell } from '@nix/web-platform/pwa/install-nix';
 import { useSessionStore, type Unreachable } from '@nix/web-foundation/lib/session-store';
 import { useWebConfig } from '@nix/web-foundation/lib/web-config';
 import { LandingPage } from '../pages/landing-page';
@@ -63,7 +64,8 @@ export function RequireSession(): ReactNode {
 
   // The public front door, where an install turns it on: only at the bare root, so a deep link
   // still lands on sign-in and then where it was going, and never over a reason sign-in must show.
-  if (landing && status === 'anonymous' && error === null && pathname === '/') {
+  // Never in the iOS shell: the app is already installed, and sign-in carries its Switch server.
+  if (landing && !inNativeShell && status === 'anonymous' && error === null && pathname === '/') {
     return (
       <LandingPage
         onSignIn={() => {
