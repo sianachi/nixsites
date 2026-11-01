@@ -11,7 +11,7 @@ import { useOfflineState } from './offline-state';
 export function OfflineBanner(): ReactNode {
   const { bootOffline, networkDown } = useOfflineState();
   return (
-    <div className="fixed top-[max(0.5rem,env(safe-area-inset-top))] left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-1">
+    <div className="fixed top-[max(var(--spacing)*2,env(safe-area-inset-top))] left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-1">
       {bootOffline || networkDown ? (
         <aside
           role="status"
