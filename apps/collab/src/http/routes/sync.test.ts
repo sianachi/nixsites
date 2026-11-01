@@ -294,7 +294,7 @@ describe('native batch document synchronization', () => {
       rateWindow.exceeded(GRANTED.principalId, 'documents-sync');
     }
     const limited = firstResult(await test.post([request()]));
-    expect(limited).toMatchObject({ status: 'rejected', code: 'rate_limited' });
+    expect(limited).toMatchObject({ status: 'unavailable', code: 'rate_limited' });
     now = LIMITS.windowMs;
     expect(firstResult(await test.post([request()])).status).toBe('ok');
     expect(authorizations).toBe(2);

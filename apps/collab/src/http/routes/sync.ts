@@ -93,9 +93,10 @@ export function registerSyncRoutes(app: FastifyInstance, deps: RouteDependencies
       const results: DocumentSyncResult[] = [];
       let responseBytes = Buffer.byteLength('{"documents":[]}');
       let caller: string | null = null;
+      // Unavailable, not rejected: the client retries it on a later pass instead of filing a conflict.
       const limited = (itemId: string): DocumentSyncResult => ({
         itemId,
-        status: 'rejected',
+        status: 'unavailable',
         code: 'rate_limited',
       });
       for (const requested of documents) {
@@ -157,7 +158,7 @@ export function registerSyncRoutes(app: FastifyInstance, deps: RouteDependencies
           continue;
         }
         if (updates.some(() => deps.rateWindow.exceeded(principalId, itemId))) {
-          results.push({ itemId, status: 'rejected', code: 'rate_limited' });
+          results.push(limited(itemId));
           continue;
         }
 
