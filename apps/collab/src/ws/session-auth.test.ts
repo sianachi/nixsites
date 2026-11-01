@@ -86,6 +86,16 @@ describe('session authentication', () => {
     expect(calls.authorized).toBe(1);
   });
 
+  it('asks Core again when the caller wants a fresh answer, whatever the cache holds', async () => {
+    const { tokens, authorizer, calls } = counting();
+    const sessions = createSessionAuthenticator({ tokens, authorizer, cacheTtlMs: 30_000 });
+
+    await sessions.authenticate('token', ITEM);
+    await sessions.authenticate('token', ITEM, true);
+
+    expect(calls.authorized).toBe(2);
+  });
+
   it('asks again once the cache entry has aged out', async () => {
     let at = 1_000;
     const { tokens, authorizer, calls } = counting();

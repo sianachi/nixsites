@@ -42,8 +42,11 @@ export type SessionResult =
     };
 
 export interface SessionAuthenticator {
-  /** Authenticates the token and authorizes it against the item, through the cache. */
-  authenticate(token: string, itemId: string): Promise<SessionResult>;
+  /**
+   * Authenticates the token and authorizes it against the item, through the cache. `fresh` skips
+   * the cached answer so a lock or access change lands on the next call (it still refills the cache).
+   */
+  authenticate(token: string, itemId: string, fresh?: boolean): Promise<SessionResult>;
 
   /** Rechecks the synchronous operation fence immediately before a document room is joined. */
   isCurrent(itemId: string, authorization: SessionAuthorization): boolean;
@@ -134,7 +137,7 @@ export function createSessionAuthenticator(options: {
   }
 
   return {
-    async authenticate(token: string, itemId: string): Promise<SessionResult> {
+    async authenticate(token: string, itemId: string, fresh = false): Promise<SessionResult> {
       const template = templateIdentity(itemId);
       const draft = draftIdentity(itemId);
       const operationId = draft?.operationId.toLowerCase();
@@ -143,7 +146,7 @@ export function createSessionAuthenticator(options: {
       }
       const key = `${itemId}\n${token}`;
       const cached = cache.get(key);
-      if (cached !== undefined && cached.expiresAt > now()) {
+      if (!fresh && cached !== undefined && cached.expiresAt > now()) {
         return { ok: true, value: cached.value };
       }
       cache.delete(key);

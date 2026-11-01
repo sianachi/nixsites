@@ -15,7 +15,8 @@ follows semantic versioning (`0.x` pre-1.0).
   workspace, a change feed that resumes from a cursor, and a reconcile call that tells a device
   which of the copies it holds are gone, without revealing anything it never had. Locked notes
   stay out of the feed, and a replay call applies queued creates, renames, moves, trashes and
-  property edits with the same permission checks as an online edit.
+  property edits with the same permission checks as an online edit. Note bodies sync in batches
+  through the collaboration service, which checks each note's access and lock afresh.
 - An iOS app (`apps/mobile`, built with Capacitor and Xcode): pick a Nix server, and the app opens
   that server's web app with its own sign-in. Inside the app the profile menu and sign-in screen
   offer Switch server, the keyboard's form bar is hidden and the status bar follows the theme.

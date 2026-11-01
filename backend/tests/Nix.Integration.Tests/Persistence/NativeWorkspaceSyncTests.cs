@@ -303,6 +303,38 @@ public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOu
     }
 
     [Fact]
+    public async Task A_body_write_by_the_collaboration_role_publishes_a_body_marker_without_a_metadata_revision()
+    {
+        var before = await SnapshotAsync();
+        var revision = before.Items.Single(item => item.Id == Root.Value).Revision;
+
+        await using (var connection = await fixture.OpenSuperuserConnectionAsync())
+        {
+            await using var transaction = await connection.BeginTransactionAsync(Cancellation);
+            foreach (var statement in new[]
+            {
+                "SET LOCAL ROLE nix_collab",
+                $"SELECT set_config('nix.tenant_id', '{M0SchemaSeed.Alpha.TenantId}', true)",
+                $"UPDATE content_doc SET head_seq = head_seq + 1 WHERE item_id = '{Root.Value}'",
+            })
+            {
+#pragma warning disable CA2100 // Static text with test-owned identifiers.
+                await using var command = new NpgsqlCommand(statement, connection, transaction);
+#pragma warning restore CA2100
+                await command.ExecuteNonQueryAsync(Cancellation);
+            }
+            await transaction.CommitAsync(Cancellation);
+        }
+
+        var page = await ChangesAsync(Sequence(before.Boundary));
+        Assert.False(page.Resync);
+        var changed = Assert.Single(page.Items);
+        Assert.Equal(Root.Value, changed.Id);
+        Assert.Equal(revision, changed.Revision);
+        Assert.NotEqual(before.Items.Single(item => item.Id == Root.Value).BodyHeadSeq, changed.BodyHeadSeq);
+    }
+
+    [Fact]
     public async Task A_foreign_or_absent_workspace_answers_the_same_way()
     {
         await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
