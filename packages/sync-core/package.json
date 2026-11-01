@@ -1,0 +1,47 @@
+{
+  "name": "@nix/sync-core",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "description": "Workspace mirror sync engine: snapshot and feed passes, durable replay and Yjs body synchronization without platform imports",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./mirror": {
+      "types": "./src/mirror.ts",
+      "default": "./src/mirror.ts"
+    },
+    "./live": {
+      "types": "./src/live.ts",
+      "default": "./src/live.ts"
+    },
+    "./fetch-api": {
+      "types": "./src/fetch-api.ts",
+      "default": "./src/fetch-api.ts"
+    },
+    "./base64": {
+      "types": "./src/base64.ts",
+      "default": "./src/base64.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lib0": "^0.2.117",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.31",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.7"
+  }
+}

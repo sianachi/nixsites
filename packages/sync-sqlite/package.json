@@ -1,0 +1,41 @@
+{
+  "name": "@nix/sync-sqlite",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "description": "Account-scoped SQLite mirror and durable outbox over a pluggable driver, including the iOS shell's WebKit nixStore driver",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./driver": {
+      "types": "./src/driver.ts",
+      "default": "./src/driver.ts"
+    },
+    "./mirror": {
+      "types": "./src/mirror.ts",
+      "default": "./src/mirror.ts"
+    },
+    "./webkit-driver": {
+      "types": "./src/webkit-driver.ts",
+      "default": "./src/webkit-driver.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/sync-core": "workspace:*",
+    "yjs": "^13.6.31",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.7"
+  }
+}
