@@ -98,6 +98,12 @@
   --color-accent-pressed: var(--color-accent-700);
   --color-accent-text: var(--color-accent-700);
 
+  /* Phone surface roles. Resolve to today's values everywhere; only the phone block at the end of
+     this file moves them. surface-raised is a grouped card sitting on a sheet (--color-surface);
+     chrome-floating is the translucent, blurred fill of floating bars (pair with backdrop-blur). */
+  --color-surface-raised: var(--color-surface);
+  --color-chrome-floating: var(--color-surface);
+
   /* Quiet copy. A role rather than a ramp step at the call site, because the
      step that reads as quiet-but-legible against paper is nearly invisible
      against ink - the neutral ramp is not symmetric, so the dark ground
@@ -254,6 +260,8 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 14px;
+  /* A grouped card: today's standard frame, rounder on a phone. */
+  --radius-card: var(--radius-md);
 
   /* ══ Elevation ════════════════════════════════════════════════════════
      Two layers each: a tight contact shadow that says the edge is lifted, and
@@ -448,4 +456,62 @@
   --color-accent-fill: var(--color-accent-700);
   --color-accent-fill-hover: var(--color-accent-800);
   --color-accent-fill-pressed: var(--color-accent-900);
+}
+
+/* ══ Phone surface (below 640px) ═══════════════════════════════════════
+   Obsidian-like layout and surfaces on a phone; 640px and up resolves to the values above, so
+   nothing here may be declared outside this media query. Only existing properties are
+   overridden, plus the roles --color-surface-raised, --color-chrome-floating and --radius-card.
+   The ramps, the steel accent and Nunito Sans stay.
+
+   Light: a white page, a light-grey sheet (--color-surface) and white cards on it
+   (--color-surface-raised). Dark: a near-black page, then sheet and card greys one step apart.
+   Body reads at 17px (--text-md) and the default control is the 44px touch target. */
+@media (max-width: 639px) {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #f2f2f3;
+    --color-surface-raised: #ffffff;
+    --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
+    --text-base: 14px;
+    --text-md: 17px;
+    --text-lg: 19px;
+    --control-md: 44px;
+    --radius-card: 12px;
+    --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 8%, transparent);
+    --shadow-md: 0 2px 8px color-mix(in srgb, #2b2b2d 10%, transparent);
+    --shadow-lg: 0 6px 24px color-mix(in srgb, #2b2b2d 14%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #000000;
+      --color-surface: #1c1c1e;
+      --color-surface-raised: #2c2c2e;
+      --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
+      --shadow-sm: 0 1px 2px color-mix(in srgb, #000000 40%, transparent);
+      --shadow-md: 0 2px 8px color-mix(in srgb, #000000 44%, transparent);
+      --shadow-lg: 0 6px 24px color-mix(in srgb, #000000 52%, transparent);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --color-bg: #000000;
+    --color-surface: #1c1c1e;
+    --color-surface-raised: #2c2c2e;
+    --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
+    --shadow-sm: 0 1px 2px color-mix(in srgb, #000000 40%, transparent);
+    --shadow-md: 0 2px 8px color-mix(in srgb, #000000 44%, transparent);
+    --shadow-lg: 0 6px 24px color-mix(in srgb, #000000 52%, transparent);
+  }
+
+  :root[data-theme='light'] {
+    --color-bg: #ffffff;
+    --color-surface: #f2f2f3;
+    --color-surface-raised: #ffffff;
+    --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
+    --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 8%, transparent);
+    --shadow-md: 0 2px 8px color-mix(in srgb, #2b2b2d 10%, transparent);
+    --shadow-lg: 0 6px 24px color-mix(in srgb, #2b2b2d 14%, transparent);
+  }
 }

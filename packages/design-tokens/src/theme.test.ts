@@ -464,3 +464,69 @@ describe('the danger role', () => {
     expect(themeCss).toMatch(/\[data-theme='light'\]\s*\{[^}]*--color-danger: #a8413a/);
   });
 });
+
+describe('the phone surface', () => {
+  const phoneLight = parseCustomProperties(grounds.phone.light);
+  const phoneDark = parseCustomProperties(grounds.phone.dark);
+  const hex = (map: Map<string, string>, name: string): string => {
+    const value = map.get(name);
+    if (value === undefined || !/^#[0-9a-f]{6}$/.test(value)) {
+      throw new Error(`phone sheet does not state --${name} as a hex literal`);
+    }
+    return value;
+  };
+
+  it('keeps every phone override inside the max-width media query', () => {
+    // splitByGround cuts the phone block out of the desktop grounds, so a desktop value that
+    // reads as a phone value means something was declared outside the query.
+    expect(getProperty('control-md')).toBe('36px');
+    expect(getProperty('text-md')).toBe('15px');
+    expect(getProperty('color-bg')).toBe('#f2f2f3');
+    expect(getDarkProperty('color-bg')).toBe('#17181a');
+  });
+
+  it('resolves the new roles to the existing surface on desktop', () => {
+    expect(getProperty('color-surface-raised')).toBe('var(--color-surface)');
+    expect(getProperty('color-chrome-floating')).toBe('var(--color-surface)');
+    expect(getProperty('radius-card')).toBe('var(--radius-md)');
+  });
+
+  it('reads at 17px with 44px rows and 12px cards', () => {
+    expect(phoneLight.get('text-md')).toBe('17px');
+    expect(phoneLight.get('control-md')).toBe('44px');
+    expect(phoneLight.get('radius-card')).toBe('12px');
+  });
+
+  it('puts a white page in light and a near-black page in dark', () => {
+    expect(phoneLight.get('color-bg')).toBe('#ffffff');
+    expect(phoneDark.get('color-bg')).toBe('#000000');
+  });
+
+  it('declares the dark phone values in both dark scopes', () => {
+    expect(themeCss).toMatch(/@media \(max-width: 639px\)[\s\S]*data-theme='dark'/);
+    expect(grounds.phone.dark).toContain('--color-surface-raised');
+  });
+
+  const inks = {
+    light: ['#1d1f20', '#5d5d60', '#416180', '#a8413a'],
+    dark: ['#e8e9ea', '#b7b7ba', '#b5d9fd', '#e88a80'],
+  } as const;
+
+  for (const [name, map] of [
+    ['light', phoneLight],
+    ['dark', phoneDark],
+  ] as const) {
+    it.each(['color-bg', 'color-surface', 'color-surface-raised'])(
+      `keeps text, muted, accent text and danger at 4.5:1 on %s in ${name}`,
+      (role) => {
+        for (const ink of inks[name]) {
+          expect(contrast(ink, hex(map, role))).toBeGreaterThanOrEqual(4.5);
+        }
+      },
+    );
+
+    it(`tells the ${name} sheet from the card on it`, () => {
+      expect(hex(map, 'color-surface')).not.toBe(hex(map, 'color-surface-raised'));
+    });
+  }
+});

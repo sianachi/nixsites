@@ -10,7 +10,7 @@ export function SettingsSection(props: {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex max-w-2xl min-w-0 flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 max-sm:px-3">
         <Text id={headingId} variant="h3" as="h2">
           {props.title}
         </Text>
@@ -20,7 +20,10 @@ export function SettingsSection(props: {
           </Text>
         )}
       </div>
-      {props.children}
+      {/* Phone: the rows become one grouped, rounded card; sm and up is unchanged. */}
+      <div className="flex flex-col gap-4 max-sm:rounded-card max-sm:bg-surface max-sm:p-3">
+        {props.children}
+      </div>
     </section>
   );
 }

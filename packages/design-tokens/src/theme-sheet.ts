@@ -53,9 +53,23 @@ function blockAt(css: string, from: number): { start: number; end: number } {
  * comparing two roles would compare their dark values and pass, meaning nothing. It surfaced when
  * the two grounds started declaring shadows of different *shapes* rather than different colours.
  */
-export function splitByGround(css: string): { light: string; dark: string } {
+export function splitByGround(css: string): {
+  light: string;
+  dark: string;
+  phone: { light: string; dark: string };
+} {
   // Strip comments first so commented-out declarations never count.
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  let withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // The phone overrides restate the same roles, so they are cut out first or they would win the
+  // map of whichever ground they sit in. They split into grounds the same way.
+  const phoneStart = withoutComments.indexOf('@media (max-width: 639px)');
+  let phone = { light: '', dark: '' };
+  if (phoneStart !== -1) {
+    const block = blockAt(withoutComments, phoneStart);
+    phone = splitByGround(withoutComments.slice(block.start + 1, block.end - 1));
+    withoutComments = withoutComments.slice(0, phoneStart) + withoutComments.slice(block.end);
+  }
 
   const mediaStart = withoutComments.indexOf('@media (prefers-color-scheme: dark)');
   const attributeStart = withoutComments.search(/:root\[data-theme=['"]dark['"]\]/);
@@ -77,7 +91,7 @@ export function splitByGround(css: string): { light: string; dark: string } {
     light = light.slice(0, start) + light.slice(block.end);
   }
 
-  return { light, dark };
+  return { light, dark, phone: { light: phone.light, dark: phone.dark } };
 }
 
 /** Every custom property declared in one ground, by name (without the leading dashes). */

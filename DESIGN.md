@@ -170,6 +170,15 @@ Flat at rest. Frames are hairlines, not shadows. Shadows appear only on floating
 
 Three radii: `rounded-sm` 4px (tags), `rounded-md` 8px (cards, buttons, fields, the standard frame), `rounded-lg` 14px (dialogs). The frame is always `rounded-md border border-divider` with no fill (the Blueprint frame). The old square corners and "+" registration marks are retired (ADR-0011).
 
+## Phone surface
+
+Below 640px (`max-width: 639px`) the sheet overrides existing properties in one block at the end of `theme.css`; 640px and up resolves to the values above, so desktop does not change. The ramps, the steel accent and Nunito Sans stay. The layout follows Obsidian's phone app (surfaces and density only, none of its identity).
+
+- **Ground.** Light: white page (`--color-bg`), light-grey sheet (`--color-surface`), white cards on it. Dark: near-black page (`#000`), sheet `#1c1c1e`, cards `#2c2c2e`.
+- **New roles**, equal to existing values on desktop: `--color-surface-raised` (a grouped card on a sheet; `bg-surface-raised`), `--color-chrome-floating` (the translucent fill of floating bars; pair with `backdrop-blur`) and `--radius-card` (12px on a phone, `--radius-md` on desktop; `rounded-card`).
+- **Density.** Body (`--text-md`) 17px, `--text-base` 14px, `--text-lg` 19px; the default control (`--control-md`) is 44px.
+- **Shadows** are single-layer and quieter, still true black on the dark ground.
+
 ## Components
 
 Library: `packages/ui` (controls, primitives, patterns). Every component has a story and axe coverage and takes its states from one shared `interaction` module.
