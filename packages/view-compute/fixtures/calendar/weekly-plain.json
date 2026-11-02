@@ -1,0 +1,103 @@
+{
+  "name": "weekly without weekdays steps seven days from the anchor",
+  "now": "2026-03-01T09:00:00Z",
+  "items": [
+    {
+      "key": "cal",
+      "parent": null,
+      "type": "page",
+      "title": "Tasks",
+      "schema": {
+        "properties": [
+          {
+            "key": "due_date",
+            "label": "due_date",
+            "type": "due_date",
+            "options": [],
+            "required": false
+          }
+        ]
+      },
+      "views": {
+        "views": [
+          {
+            "id": "cal",
+            "name": "Calendar",
+            "kind": "calendar",
+            "dateProperty": "due_date"
+          }
+        ]
+      }
+    },
+    {
+      "key": "t",
+      "parent": "cal",
+      "type": "page",
+      "title": "t",
+      "properties": {
+        "due_date": "2026-03-04"
+      },
+      "recurrence": {
+        "freq": "weekly",
+        "interval": 1
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace}/calendar?from=2026-03-10&to=2026-03-31"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "workspaceId": "{workspace}",
+      "from": "2026-03-10",
+      "to": "2026-03-31",
+      "entries": [
+        {
+          "itemId": "{t}",
+          "title": "t",
+          "containerId": "{cal}",
+          "containerTitle": "Tasks",
+          "dateProperty": "due_date",
+          "value": "2026-03-11",
+          "kind": "date",
+          "generated": true,
+          "completed": false,
+          "endProperty": null,
+          "endValue": null
+        },
+        {
+          "itemId": "{t}",
+          "title": "t",
+          "containerId": "{cal}",
+          "containerTitle": "Tasks",
+          "dateProperty": "due_date",
+          "value": "2026-03-18",
+          "kind": "date",
+          "generated": true,
+          "completed": false,
+          "endProperty": null,
+          "endValue": null
+        },
+        {
+          "itemId": "{t}",
+          "title": "t",
+          "containerId": "{cal}",
+          "containerTitle": "Tasks",
+          "dateProperty": "due_date",
+          "value": "2026-03-25",
+          "kind": "date",
+          "generated": true,
+          "completed": false,
+          "endProperty": null,
+          "endValue": null
+        }
+      ],
+      "unplaceable": [],
+      "entryLimit": 2000,
+      "entriesTruncated": false,
+      "seriesTruncated": false
+    }
+  }
+}

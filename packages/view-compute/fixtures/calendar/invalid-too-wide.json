@@ -1,0 +1,42 @@
+{
+  "name": "a window wider than 400 days",
+  "now": "2026-03-01T09:00:00Z",
+  "items": [
+    {
+      "key": "cal",
+      "parent": null,
+      "type": "page",
+      "title": "Tasks",
+      "schema": {
+        "properties": [
+          {
+            "key": "due_date",
+            "label": "due_date",
+            "type": "due_date",
+            "options": [],
+            "required": false
+          }
+        ]
+      },
+      "views": {
+        "views": [
+          {
+            "id": "cal",
+            "name": "Calendar",
+            "kind": "calendar",
+            "dateProperty": "due_date"
+          }
+        ]
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace}/calendar?from=2026-01-01&to=2027-02-05"
+  },
+  "expected": {
+    "status": 400,
+    "code": "calendar.invalid_window",
+    "detail": "The window covers 401 days, and the most one read may cover is 400."
+  }
+}

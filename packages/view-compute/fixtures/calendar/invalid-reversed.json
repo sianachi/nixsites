@@ -1,0 +1,42 @@
+{
+  "name": "a window that ends before it begins",
+  "now": "2026-03-01T09:00:00Z",
+  "items": [
+    {
+      "key": "cal",
+      "parent": null,
+      "type": "page",
+      "title": "Tasks",
+      "schema": {
+        "properties": [
+          {
+            "key": "due_date",
+            "label": "due_date",
+            "type": "due_date",
+            "options": [],
+            "required": false
+          }
+        ]
+      },
+      "views": {
+        "views": [
+          {
+            "id": "cal",
+            "name": "Calendar",
+            "kind": "calendar",
+            "dateProperty": "due_date"
+          }
+        ]
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace}/calendar?from=2026-03-10&to=2026-03-01"
+  },
+  "expected": {
+    "status": 400,
+    "code": "calendar.invalid_window",
+    "detail": "The window ends (2026-03-01) before it begins (2026-03-10)."
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "a window date that is not zero-padded",
+  "now": "2026-03-01T09:00:00Z",
+  "items": [
+    {
+      "key": "cal",
+      "parent": null,
+      "type": "page",
+      "title": "Tasks",
+      "schema": {
+        "properties": [
+          {
+            "key": "due_date",
+            "label": "due_date",
+            "type": "due_date",
+            "options": [],
+            "required": false
+          }
+        ]
+      },
+      "views": {
+        "views": [
+          {
+            "id": "cal",
+            "name": "Calendar",
+            "kind": "calendar",
+            "dateProperty": "due_date"
+          }
+        ]
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace}/calendar?from=2026-3-1&to=2026-03-31"
+  },
+  "expected": {
+    "status": 400,
+    "code": "calendar.invalid_window",
+    "detail": "'2026-3-1' is not a date. Windows are given as yyyy-MM-dd."
+  }
+}
