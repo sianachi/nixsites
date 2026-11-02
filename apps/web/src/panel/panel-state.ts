@@ -36,3 +36,6 @@ export function storePanelOpen(storage: Storage | undefined, open: boolean): voi
     // Nothing to do and nothing worth failing over.
   }
 }
+
+/** The event the open note's page answers by toggling its details panel (the panel state lives there). */
+export const TOGGLE_ITEM_PANEL_EVENT = 'nix:toggle-item-panel';

@@ -1,4 +1,4 @@
-import { Icon, cn, focusRing } from '@nix/ui';
+import { Icon, Text, cn, focusRing } from '@nix/ui';
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -77,9 +77,13 @@ export function PhoneNavbar({
           className={button}
           onClick={onTabs}
         >
-          <span className="flex size-6 items-center justify-center rounded-md border-2 border-current text-xs font-semibold">
+          <Text
+            as="span"
+            variant="caption"
+            className="flex size-6 items-center justify-center rounded-md border-2 border-current"
+          >
             {tabCount}
-          </span>
+          </Text>
         </button>
         <PhoneMenu {...menu} />
       </div>

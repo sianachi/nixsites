@@ -4,10 +4,8 @@ import type { ReactNode, RefObject } from 'react';
 
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 
+import { TOGGLE_ITEM_PANEL_EVENT } from '../../panel/panel-state';
 import { ProfileMenu } from '../profile-menu';
-
-/** The event the open note's page answers by toggling its details panel (the panel state lives there). */
-export const TOGGLE_ITEM_PANEL_EVENT = 'nix:toggle-item-panel';
 
 export interface PhoneTopRowProps {
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;

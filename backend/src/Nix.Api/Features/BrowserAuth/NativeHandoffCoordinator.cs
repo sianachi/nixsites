@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.DataProtection;
+using Nix.Abstractions;
 using Nix.Authentication;
 using Nix.Domain.Identity;
 
