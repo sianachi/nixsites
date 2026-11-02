@@ -1,0 +1,198 @@
+{
+  "name": "chart: column-split-stacked",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "status",
+            "measure": "sum",
+            "measureProperty": "hours",
+            "chart": {
+              "kind": "column",
+              "splitBy": "owner",
+              "stacked": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "status": "done",
+        "owner": "ada",
+        "hours": 2
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "status": "done",
+        "owner": "bob",
+        "hours": 1
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "status": "done",
+        "owner": "ada",
+        "hours": 1
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "status": "todo",
+        "owner": "ada"
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "status": "todo"
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "owner": "bob",
+        "hours": 5
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "status",
+      "measure": "sum",
+      "measureProperty": "hours",
+      "buckets": [
+        {
+          "value": "done",
+          "children": 3,
+          "total": 4,
+          "cells": [
+            {
+              "children": 2,
+              "total": 3
+            },
+            {
+              "children": 1,
+              "total": 1
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "todo",
+          "children": 2,
+          "total": null,
+          "cells": [
+            {
+              "children": 1,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": null,
+          "children": 1,
+          "total": 5,
+          "cells": [
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": 5
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        }
+      ],
+      "children": 6,
+      "distinctValues": 3,
+      "truncated": false,
+      "chartKind": "column",
+      "period": null,
+      "splitBy": "owner",
+      "from": null,
+      "to": null,
+      "series": [
+        {
+          "value": "ada",
+          "other": false,
+          "children": 3,
+          "total": 3
+        },
+        {
+          "value": "bob",
+          "other": false,
+          "children": 2,
+          "total": 6
+        },
+        {
+          "value": null,
+          "other": false,
+          "children": 1,
+          "total": null
+        }
+      ],
+      "otherSeries": 0,
+      "unplaced": 0,
+      "outsideWindow": 0,
+      "stacked": true,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

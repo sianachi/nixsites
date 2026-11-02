@@ -1,0 +1,31 @@
+{
+  "name": "chart: refused-unknown-view",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "status"
+          }
+        ]
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=nope"
+  },
+  "expected": {
+    "status": 404,
+    "code": "chart.view_not_found",
+    "detail": "Item {root} has no chart view 'nope'."
+  }
+}

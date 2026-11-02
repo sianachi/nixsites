@@ -1,0 +1,299 @@
+{
+  "name": "chart: pie-series-folded-into-other",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "status",
+            "chart": {
+              "kind": "pie",
+              "splitBy": "tag"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "status": "done",
+        "tag": "t1"
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "status": "done",
+        "tag": "t1"
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "status": "done",
+        "tag": "t1"
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "status": "done",
+        "tag": "t2"
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "status": "done",
+        "tag": "t2"
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "status": "todo",
+        "tag": "t3"
+      }
+    },
+    {
+      "key": "k7",
+      "parent": "root",
+      "type": "note",
+      "title": "k7",
+      "properties": {
+        "status": "todo",
+        "tag": "t3"
+      }
+    },
+    {
+      "key": "k8",
+      "parent": "root",
+      "type": "note",
+      "title": "k8",
+      "properties": {
+        "status": "todo",
+        "tag": "t4"
+      }
+    },
+    {
+      "key": "k9",
+      "parent": "root",
+      "type": "note",
+      "title": "k9",
+      "properties": {
+        "status": "todo",
+        "tag": "t5"
+      }
+    },
+    {
+      "key": "k10",
+      "parent": "root",
+      "type": "note",
+      "title": "k10",
+      "properties": {
+        "status": "todo",
+        "tag": "t6"
+      }
+    },
+    {
+      "key": "k11",
+      "parent": "root",
+      "type": "note",
+      "title": "k11",
+      "properties": {
+        "status": "todo",
+        "tag": "t7"
+      }
+    },
+    {
+      "key": "k12",
+      "parent": "root",
+      "type": "note",
+      "title": "k12",
+      "properties": {
+        "status": "todo",
+        "tag": "t8"
+      }
+    },
+    {
+      "key": "k13",
+      "parent": "root",
+      "type": "note",
+      "title": "k13",
+      "properties": {
+        "status": "todo"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "status",
+      "measure": "count",
+      "measureProperty": null,
+      "buckets": [
+        {
+          "value": "todo",
+          "children": 8,
+          "total": null,
+          "cells": [
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 2,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            },
+            {
+              "children": 3,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "done",
+          "children": 5,
+          "total": null,
+          "cells": [
+            {
+              "children": 3,
+              "total": null
+            },
+            {
+              "children": 2,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        }
+      ],
+      "children": 13,
+      "distinctValues": 2,
+      "truncated": false,
+      "chartKind": "pie",
+      "period": null,
+      "splitBy": "tag",
+      "from": null,
+      "to": null,
+      "series": [
+        {
+          "value": "t1",
+          "other": false,
+          "children": 3,
+          "total": null
+        },
+        {
+          "value": "t2",
+          "other": false,
+          "children": 2,
+          "total": null
+        },
+        {
+          "value": "t3",
+          "other": false,
+          "children": 2,
+          "total": null
+        },
+        {
+          "value": "t4",
+          "other": false,
+          "children": 1,
+          "total": null
+        },
+        {
+          "value": "t5",
+          "other": false,
+          "children": 1,
+          "total": null
+        },
+        {
+          "value": "t6",
+          "other": false,
+          "children": 1,
+          "total": null
+        },
+        {
+          "value": null,
+          "other": true,
+          "children": 3,
+          "total": null
+        }
+      ],
+      "otherSeries": 3,
+      "unplaced": 0,
+      "outsideWindow": 0,
+      "stacked": false,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

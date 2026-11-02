@@ -1,0 +1,2337 @@
+{
+  "name": "chart: year-grid-default-window",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "done_on",
+            "chart": {
+              "kind": "year",
+              "period": "day"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "done_on": "2026-06-15"
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "done_on": "2026-06-15"
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "done_on": "2026-06-01"
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "done_on": "2025-06-16"
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "done_on": "2025-06-09"
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "done_on": "2024-01-01"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "done_on",
+      "measure": "count",
+      "measureProperty": null,
+      "buckets": [
+        {
+          "value": "2025-06-16",
+          "children": 1,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-06-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-07-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-08-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-09-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-10-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-11-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2025-12-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-01-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-02-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-03-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-04-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-15",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-22",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-23",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-24",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-25",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-26",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-27",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-28",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-29",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-30",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-31",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-01",
+          "children": 1,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-02",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-03",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-04",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-05",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-06",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-07",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-08",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-09",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-10",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-12",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-13",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-14",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-15",
+          "children": 2,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-16",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-17",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-19",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-20",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-21",
+          "children": 0,
+          "total": null,
+          "cells": []
+        }
+      ],
+      "children": 4,
+      "distinctValues": 371,
+      "truncated": false,
+      "chartKind": "year",
+      "period": "day",
+      "splitBy": null,
+      "from": "2025-06-16",
+      "to": "2026-06-21",
+      "series": [],
+      "otherSeries": 0,
+      "unplaced": 0,
+      "outsideWindow": 2,
+      "stacked": false,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

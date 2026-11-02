@@ -1,0 +1,55 @@
+{
+  "name": "chart: empty-container",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "status",
+            "chart": {
+              "kind": "pie"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "status",
+      "measure": "count",
+      "measureProperty": null,
+      "buckets": [],
+      "children": 0,
+      "distinctValues": 0,
+      "truncated": false,
+      "chartKind": "pie",
+      "period": null,
+      "splitBy": null,
+      "from": null,
+      "to": null,
+      "series": [],
+      "otherSeries": 0,
+      "unplaced": 0,
+      "outsideWindow": 0,
+      "stacked": false,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

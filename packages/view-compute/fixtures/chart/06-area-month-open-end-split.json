@@ -1,0 +1,218 @@
+{
+  "name": "chart: area-month-open-end-split",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "done_on",
+            "chart": {
+              "kind": "area",
+              "period": "month",
+              "from": "2026-01-15",
+              "splitBy": "kind",
+              "stacked": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "done_on": "2026-01-20",
+        "kind": "run"
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "done_on": "2026-01-21",
+        "kind": "swim"
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "done_on": "2026-03-02",
+        "kind": "run"
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "done_on": "2026-03-30",
+        "kind": "run"
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "done_on": "2026-05-01",
+        "kind": "swim"
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "done_on": "2026-01-02",
+        "kind": "run"
+      }
+    },
+    {
+      "key": "k7",
+      "parent": "root",
+      "type": "note",
+      "title": "k7",
+      "properties": {
+        "done_on": "2099-01-01",
+        "kind": "run"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "done_on",
+      "measure": "count",
+      "measureProperty": null,
+      "buckets": [
+        {
+          "value": "2026-01-01",
+          "children": 3,
+          "total": null,
+          "cells": [
+            {
+              "children": 2,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "2026-02-01",
+          "children": 0,
+          "total": null,
+          "cells": [
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "2026-03-01",
+          "children": 2,
+          "total": null,
+          "cells": [
+            {
+              "children": 2,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "2026-04-01",
+          "children": 0,
+          "total": null,
+          "cells": [
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 0,
+              "total": null
+            }
+          ]
+        },
+        {
+          "value": "2026-05-01",
+          "children": 1,
+          "total": null,
+          "cells": [
+            {
+              "children": 0,
+              "total": null
+            },
+            {
+              "children": 1,
+              "total": null
+            }
+          ]
+        }
+      ],
+      "children": 6,
+      "distinctValues": 5,
+      "truncated": false,
+      "chartKind": "area",
+      "period": "month",
+      "splitBy": "kind",
+      "from": "2026-01-01",
+      "to": "2026-05-31",
+      "series": [
+        {
+          "value": "run",
+          "other": false,
+          "children": 4,
+          "total": null
+        },
+        {
+          "value": "swim",
+          "other": false,
+          "children": 2,
+          "total": null
+        }
+      ],
+      "otherSeries": 0,
+      "unplaced": 0,
+      "outsideWindow": 1,
+      "stacked": true,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

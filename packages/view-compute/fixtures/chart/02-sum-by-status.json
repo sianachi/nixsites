@@ -1,0 +1,141 @@
+{
+  "name": "chart: sum-by-status",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "status",
+            "measure": "sum",
+            "measureProperty": "hours",
+            "chart": {
+              "kind": "column"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "status": "done",
+        "hours": 1.5
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "status": "done",
+        "hours": 2.25
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "status": "done",
+        "hours": "7"
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "status": "todo",
+        "hours": 4
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "status": "wip",
+        "hours": "soon"
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "hours": 3
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "status",
+      "measure": "sum",
+      "measureProperty": "hours",
+      "buckets": [
+        {
+          "value": "done",
+          "children": 3,
+          "total": 3.75,
+          "cells": []
+        },
+        {
+          "value": "todo",
+          "children": 1,
+          "total": 4,
+          "cells": []
+        },
+        {
+          "value": "wip",
+          "children": 1,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": null,
+          "children": 1,
+          "total": 3,
+          "cells": []
+        }
+      ],
+      "children": 6,
+      "distinctValues": 4,
+      "truncated": false,
+      "chartKind": "column",
+      "period": null,
+      "splitBy": null,
+      "from": null,
+      "to": null,
+      "series": [],
+      "otherSeries": 0,
+      "unplaced": 0,
+      "outsideWindow": 0,
+      "stacked": false,
+      "cumulative": false,
+      "rollingAverage": false
+    }
+  }
+}

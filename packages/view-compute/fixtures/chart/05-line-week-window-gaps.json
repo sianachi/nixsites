@@ -1,0 +1,187 @@
+{
+  "name": "chart: line-week-window-gaps",
+  "now": "2026-06-15T12:00:00Z",
+  "items": [
+    {
+      "key": "root",
+      "parent": null,
+      "type": "note",
+      "title": "Work",
+      "views": {
+        "views": [
+          {
+            "id": "c1",
+            "name": "Chart",
+            "kind": "chart",
+            "groupBy": "done_on",
+            "measure": "sum",
+            "measureProperty": "km",
+            "chart": {
+              "kind": "line",
+              "period": "week",
+              "from": "2026-05-04",
+              "to": "2026-06-14",
+              "cumulative": true,
+              "rollingAverage": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "k1",
+      "parent": "root",
+      "type": "note",
+      "title": "k1",
+      "properties": {
+        "done_on": "2026-05-05",
+        "km": 5
+      }
+    },
+    {
+      "key": "k2",
+      "parent": "root",
+      "type": "note",
+      "title": "k2",
+      "properties": {
+        "done_on": "2026-05-07",
+        "km": 2.5
+      }
+    },
+    {
+      "key": "k3",
+      "parent": "root",
+      "type": "note",
+      "title": "k3",
+      "properties": {
+        "done_on": "2026-05-26T08:30:00",
+        "km": 10
+      }
+    },
+    {
+      "key": "k4",
+      "parent": "root",
+      "type": "note",
+      "title": "k4",
+      "properties": {
+        "done_on": "2026-06-14",
+        "km": 1
+      }
+    },
+    {
+      "key": "k5",
+      "parent": "root",
+      "type": "note",
+      "title": "k5",
+      "properties": {
+        "done_on": "2026-04-30",
+        "km": 9
+      }
+    },
+    {
+      "key": "k6",
+      "parent": "root",
+      "type": "note",
+      "title": "k6",
+      "properties": {
+        "done_on": "2026-06-20",
+        "km": 9
+      }
+    },
+    {
+      "key": "k7",
+      "parent": "root",
+      "type": "note",
+      "title": "k7",
+      "properties": {
+        "done_on": "2026-13-01",
+        "km": 3
+      }
+    },
+    {
+      "key": "k8",
+      "parent": "root",
+      "type": "note",
+      "title": "k8",
+      "properties": {
+        "km": 4
+      }
+    },
+    {
+      "key": "k9",
+      "parent": "root",
+      "type": "note",
+      "title": "k9",
+      "properties": {
+        "done_on": "yesterday"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{root}/chart?view=c1"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "itemId": "{root}",
+      "viewId": "c1",
+      "groupBy": "done_on",
+      "measure": "sum",
+      "measureProperty": "km",
+      "buckets": [
+        {
+          "value": "2026-05-04",
+          "children": 2,
+          "total": 7.5,
+          "cells": []
+        },
+        {
+          "value": "2026-05-11",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-18",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-05-25",
+          "children": 1,
+          "total": 10,
+          "cells": []
+        },
+        {
+          "value": "2026-06-01",
+          "children": 0,
+          "total": null,
+          "cells": []
+        },
+        {
+          "value": "2026-06-08",
+          "children": 1,
+          "total": 1,
+          "cells": []
+        }
+      ],
+      "children": 4,
+      "distinctValues": 6,
+      "truncated": false,
+      "chartKind": "line",
+      "period": "week",
+      "splitBy": null,
+      "from": "2026-05-04",
+      "to": "2026-06-14",
+      "series": [],
+      "otherSeries": 0,
+      "unplaced": 3,
+      "outsideWindow": 2,
+      "stacked": false,
+      "cumulative": true,
+      "rollingAverage": true
+    }
+  }
+}
