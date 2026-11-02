@@ -18,6 +18,7 @@ using Nix.Domain.Templates;
 using Nix.Domain.Views;
 using Nix.Features.Admin;
 using Nix.Features.Bookmarks;
+using Nix.Features.BrowserAuth;
 using Nix.Features.Calendar;
 using Nix.Features.Canvas;
 using Nix.Features.Charts;
@@ -237,6 +238,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IIdentityDirectory, IdentityDirectory>();
         services.AddScoped<IBrowserSessions, BrowserSessionStore>();
         services.AddScoped<ICliLoginSessions, CliLoginSessionStore>();
+        services.AddScoped<INativeHandoffs, NativeHandoffStore>();
         services.AddScoped<PersonalWorkspaceProvisioner>();
         services.AddScoped<IPersonalWorkspaceProvisioner>(provider => provider.GetRequiredService<PersonalWorkspaceProvisioner>());
         services.AddScoped<IPrincipalDirectory, PrincipalDirectory>();

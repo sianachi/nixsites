@@ -6,6 +6,7 @@ namespace Nix.Features.BrowserAuth;
 [JsonSerializable(typeof(BrowserSessionResponse))]
 [JsonSerializable(typeof(BrowserProfileResponse))]
 [JsonSerializable(typeof(BrowserTokenResponse))]
+[JsonSerializable(typeof(NativeRedeemRequest))]
 [JsonSerializable(typeof(CliLoginStartRequest))]
 [JsonSerializable(typeof(CliLoginStartResponse))]
 [JsonSerializable(typeof(CliLoginPollRequest))]

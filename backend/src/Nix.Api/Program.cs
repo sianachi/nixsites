@@ -413,6 +413,7 @@ if (persistenceConfigured)
     builder.Services.AddScoped<NixTokenValidator>();
     builder.Services.AddScoped<BrowserAuthCoordinator>();
     builder.Services.AddScoped<CliLoginCoordinator>();
+    builder.Services.AddScoped<NativeHandoffCoordinator>();
 }
 
 builder.Services.AddOpenApi(options =>

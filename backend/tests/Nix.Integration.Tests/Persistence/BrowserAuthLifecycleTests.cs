@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -163,6 +164,179 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
         staleRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var stale = await _client.SendAsync(staleRequest, Cancellation);
         Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
+    }
+
+    [Fact]
+    public async Task Native_login_hands_off_a_one_time_code_and_redeem_sets_the_session_once()
+    {
+        var verifier = NewVerifier();
+        var callback = await NativeCallbackAsync(Challenge(verifier));
+        Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+        var location = callback.Headers.Location?.OriginalString ?? "";
+        Assert.StartsWith("app.nix.shell://auth?code=", location, StringComparison.Ordinal);
+        var code = location["app.nix.shell://auth?code=".Length..];
+        Assert.Matches("^[A-Za-z0-9_-]{43}$", code);
+        Assert.False(callback.Headers.TryGetValues("Set-Cookie", out var cookies)
+            && cookies.Any(value => value.StartsWith("__Host-nix_session=", StringComparison.Ordinal)));
+        Assert.False(await IsSignedInAsync());
+
+        Assert.Equal(0L, await CountAsync($"SELECT count(*) FROM native_login_handoff WHERE payload LIKE '%nixsession_%' OR code_hash = '{code}'"));
+        Assert.Equal(1L, await CountAsync("SELECT count(*) FROM native_login_handoff"));
+
+        var redeemed = await RedeemAsync(code, verifier);
+        Assert.Equal(HttpStatusCode.NoContent, redeemed.StatusCode);
+        Assert.Contains("no-store", redeemed.Headers.CacheControl?.ToString(), StringComparison.Ordinal);
+        Assert.Contains(redeemed.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("__Host-nix_session=", StringComparison.Ordinal)
+            && value.Contains("secure", StringComparison.OrdinalIgnoreCase)
+            && value.Contains("httponly", StringComparison.OrdinalIgnoreCase)
+            && value.Contains("samesite=lax", StringComparison.OrdinalIgnoreCase));
+        Assert.True(await IsSignedInAsync());
+
+        await AssertRefusedAsync(await RedeemAsync(code, verifier));
+    }
+
+    [Fact]
+    public async Task A_wrong_verifier_is_refused_and_burns_the_code()
+    {
+        var verifier = NewVerifier();
+        var code = await NativeCodeAsync(Challenge(verifier));
+
+        await AssertRefusedAsync(await RedeemAsync(code, NewVerifier()));
+        await AssertRefusedAsync(await RedeemAsync(code, verifier));
+        Assert.False(await IsSignedInAsync());
+    }
+
+    [Fact]
+    public async Task An_expired_code_is_refused()
+    {
+        var verifier = NewVerifier();
+        var code = await NativeCodeAsync(Challenge(verifier));
+        await SqlAsync("UPDATE native_login_handoff SET expires_at = now() - interval '1 second'");
+
+        await AssertRefusedAsync(await RedeemAsync(code, verifier));
+        Assert.False(await IsSignedInAsync());
+    }
+
+    [Fact]
+    public async Task Concurrent_redeems_succeed_exactly_once()
+    {
+        var verifier = NewVerifier();
+        var code = await NativeCodeAsync(Challenge(verifier));
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 12).Select(_ => RedeemAsync(code, verifier)));
+
+        Assert.Single(results, response => response.StatusCode == HttpStatusCode.NoContent);
+        Assert.Equal(11, results.Count(response => response.StatusCode == HttpStatusCode.BadRequest));
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+")]
+    [InlineData("")]
+    public async Task A_malformed_native_challenge_is_refused_like_other_bad_login_input(string challenge)
+    {
+        ArgumentNullException.ThrowIfNull(challenge);
+        var response = await _client.GetAsync(
+            new Uri($"/auth/login?native={Uri.EscapeDataString(challenge)}&returnTo=%2F", UriKind.Relative), Cancellation);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+    }
+
+    [Theory]
+    [InlineData("https://other.example.test")]
+    [InlineData("")]
+    public async Task Redeem_requires_the_exact_configured_origin(string origin)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        var verifier = NewVerifier();
+        var code = await NativeCodeAsync(Challenge(verifier));
+
+        var refused = await RedeemAsync(code, verifier, origin);
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await RedeemAsync(code, verifier)).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("{}")]
+    [InlineData("""{"code":1,"verifier":2}""")]
+    public async Task Malformed_redeem_bodies_get_the_same_refusal(string body)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/native/redeem")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.TryAddWithoutValidation("Origin", PublicOrigin);
+        await AssertRefusedAsync(await _client.SendAsync(request, Cancellation));
+    }
+
+    private static string NewVerifier() => Base64UrlTextEncoder.Encode(RandomNumberGenerator.GetBytes(48));
+
+    private static string Challenge(string verifier) =>
+        Base64UrlTextEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
+
+    private async Task<HttpResponseMessage> NativeCallbackAsync(string challenge)
+    {
+        var login = await _client.GetAsync(
+            new Uri($"/auth/login?native={challenge}&returnTo=%2F", UriKind.Relative), Cancellation);
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        var query = QueryHelpers.ParseQuery(login.Headers.Location!.Query);
+        _provider.Nonce = query["nonce"].ToString();
+        return await _client.GetAsync(
+            new Uri($"/auth/callback?code=provider-code&state={Uri.EscapeDataString(query["state"].ToString())}", UriKind.Relative),
+            Cancellation);
+    }
+
+    private async Task<string> NativeCodeAsync(string challenge)
+    {
+        var callback = await NativeCallbackAsync(challenge);
+        return callback.Headers.Location!.OriginalString["app.nix.shell://auth?code=".Length..];
+    }
+
+    private async Task<HttpResponseMessage> RedeemAsync(string code, string verifier, string origin = PublicOrigin)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/native/redeem")
+        {
+            Content = JsonContent.Create(new { code, verifier }),
+        };
+        request.Headers.TryAddWithoutValidation("Origin", origin);
+        return await _client.SendAsync(request, Cancellation);
+    }
+
+    private static async Task AssertRefusedAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        Assert.Equal("invalid_handoff", body.RootElement.GetProperty("code").GetString());
+    }
+
+    private async Task<bool> IsSignedInAsync()
+    {
+        var response = await _client.GetAsync(new Uri("/auth/session", UriKind.Relative), Cancellation);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        return body.RootElement.GetProperty("authenticated").GetBoolean();
+    }
+
+    private async Task SqlAsync(string sql)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, null, sql);
+        }
+    }
+
+    private async Task<long> CountAsync(string sql)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            return await RawSql.CountAsync(connection, null, sql);
+        }
     }
 
     [Fact]

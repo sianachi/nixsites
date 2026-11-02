@@ -80,7 +80,8 @@ public sealed class BrowserAuthCoordinator(
     /// <summary>Creates a protected PKCE transaction and the provider redirect.</summary>
     public async ValueTask<BrowserLoginStart> BeginAsync(
         string? requestedReturnTo,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? nativeChallenge = null)
     {
         AssertConfigured();
         var metadata = await _metadata.GetAsync(cancellationToken).ConfigureAwait(false);
@@ -90,13 +91,20 @@ public sealed class BrowserAuthCoordinator(
         var challenge = Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
         var returnTo = SafeReturnTo(requestedReturnTo);
         var issued = _clock.GetUtcNow();
-        var payload = string.Join(
-            '\n',
+        var parts = new List<string>
+        {
             state,
             nonce,
             verifier,
             issued.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
-            Convert.ToBase64String(Encoding.UTF8.GetBytes(returnTo)));
+            Convert.ToBase64String(Encoding.UTF8.GetBytes(returnTo)),
+        };
+        if (nativeChallenge is not null)
+        {
+            parts.Add(nativeChallenge);
+        }
+
+        var payload = string.Join('\n', parts);
 
         var query = QueryString.Create(
         [
@@ -211,7 +219,8 @@ public sealed class BrowserAuthCoordinator(
                 secret.Token,
                 session.ExpiresAt,
                 login.ReturnTo,
-                completed.Value.Principal);
+                completed.Value.Principal,
+                login.NativeChallenge);
         }
     }
 
@@ -298,7 +307,7 @@ public sealed class BrowserAuthCoordinator(
         try
         {
             var parts = _stateProtector.Unprotect(protectedState).Split('\n');
-            if (parts.Length != 5
+            if (parts.Length is not (5 or 6)
                 || !FixedEquals(parts[0], returnedState)
                 || !long.TryParse(parts[3], NumberStyles.None, CultureInfo.InvariantCulture, out var issuedSeconds))
             {
@@ -313,7 +322,7 @@ public sealed class BrowserAuthCoordinator(
             }
 
             var returnTo = Encoding.UTF8.GetString(Convert.FromBase64String(parts[4]));
-            return new BrowserLoginState(parts[1], parts[2], SafeReturnTo(returnTo));
+            return new BrowserLoginState(parts[1], parts[2], SafeReturnTo(returnTo), parts.Length == 6 ? parts[5] : null);
         }
         catch (Exception exception) when (exception is CryptographicException or FormatException)
         {
@@ -369,7 +378,7 @@ public sealed class BrowserAuthCoordinator(
 
     private sealed record OidcTokenPair(string AccessToken, string IdToken);
 
-    private sealed record BrowserLoginState(string Nonce, string Verifier, string ReturnTo);
+    private sealed record BrowserLoginState(string Nonce, string Verifier, string ReturnTo, string? NativeChallenge);
 }
 
 /// <summary>The provider redirect and protected login transaction.</summary>
@@ -380,7 +389,8 @@ public sealed record BrowserLoginCompletion(
     string CookieToken,
     DateTimeOffset ExpiresAt,
     string ReturnTo,
-    AuthenticatedPrincipal Principal);
+    AuthenticatedPrincipal Principal,
+    string? NativeChallenge = null);
 
 /// <summary>Closed, non-sensitive browser authentication failure categories.</summary>
 public enum BrowserAuthFailure

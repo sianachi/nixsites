@@ -7,6 +7,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- A sign-in handoff for native apps: `/auth/login?native=<challenge>` finishes in the system sign-in
+  sheet and returns a one-time code (valid for 60 seconds) to the app, which redeems it with its
+  verifier at `/auth/native/redeem` to receive the session cookie. This lets passkeys work in the
+  iOS app. The browser sign-in is unchanged.
 - The iOS app keeps a full offline copy of every workspace you can reach: the tree, properties,
   note bodies and files. It opens and reads everything with no connection, shows a small "Offline"
   notice, and removes the copy when you sign out. Settings > About shows how much space it takes.

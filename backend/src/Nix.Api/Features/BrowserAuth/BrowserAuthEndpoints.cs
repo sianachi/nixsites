@@ -1,10 +1,12 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
 using Nix.Authentication;
 using Nix.Domain.Identity;
 using Nix.Errors;
+using Nix.Http;
 
 namespace Nix.Features.BrowserAuth;
 
@@ -23,12 +25,14 @@ internal static class BrowserAuthEndpoints
         auth.MapGet("/callback", CompleteLogin);
         auth.MapGet("/session", GetSession);
         auth.MapPost("/token", RefreshToken);
+        auth.MapPost("/native/redeem", RedeemNative).WithRequestBodyLimit(2048).RequireRateLimiting(RateLimitRefusal.TokenExchangePolicyName);
         auth.MapPost("/logout", Logout);
         return endpoints;
     }
 
     private static async Task<Results<RedirectHttpResult, ProblemHttpResult>> BeginLogin(
         string? returnTo,
+        string? native,
         HttpContext httpContext,
         [FromServices] BrowserAuthCoordinator coordinator)
     {
@@ -36,9 +40,14 @@ internal static class BrowserAuthEndpoints
         ArgumentNullException.ThrowIfNull(coordinator);
         SetNoStore(httpContext);
 
+        if (native is not null && !NativeHandoffCoordinator.IsChallenge(native))
+        {
+            return Problem(httpContext, BrowserAuthFailure.InvalidState);
+        }
+
         try
         {
-            var start = await coordinator.BeginAsync(returnTo, httpContext.RequestAborted).ConfigureAwait(false);
+            var start = await coordinator.BeginAsync(returnTo, httpContext.RequestAborted, native).ConfigureAwait(false);
             httpContext.Response.Cookies.Append(
                 coordinator.LoginCookieName,
                 start.ProtectedState,
@@ -64,10 +73,12 @@ internal static class BrowserAuthEndpoints
         string? state,
         string? error,
         HttpContext httpContext,
-        [FromServices] BrowserAuthCoordinator coordinator)
+        [FromServices] BrowserAuthCoordinator coordinator,
+        [FromServices] NativeHandoffCoordinator handoffs)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(coordinator);
+        ArgumentNullException.ThrowIfNull(handoffs);
         SetNoStore(httpContext);
 
         var protectedState = httpContext.Request.Cookies[coordinator.LoginCookieName];
@@ -89,6 +100,16 @@ internal static class BrowserAuthEndpoints
                 state,
                 protectedState,
                 httpContext.RequestAborted).ConfigureAwait(false);
+            if (completed.NativeChallenge is not null)
+            {
+                // The system sheet never receives the session: only a one-time code the app redeems with its verifier.
+                var handoff = await handoffs.CreateAsync(completed, completed.NativeChallenge, httpContext.RequestAborted)
+                    .ConfigureAwait(false);
+                return handoff is null
+                    ? Problem(httpContext, BrowserAuthFailure.ProvisioningFailed)
+                    : TypedResults.Redirect(NativeHandoffCoordinator.RedirectBase + "?code=" + handoff);
+            }
+
             httpContext.Response.Cookies.Append(
                 coordinator.SessionCookieName,
                 completed.CookieToken,
@@ -161,6 +182,50 @@ internal static class BrowserAuthEndpoints
 
         var expiresAt = tokens.Clock.GetUtcNow() + tokens.Lifetime;
         return TypedResults.Ok(new BrowserTokenResponse(coordinator.MintAccessToken(session), expiresAt));
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> RedeemNative(
+        HttpContext httpContext,
+        [FromServices] BrowserAuthCoordinator coordinator,
+        [FromServices] NativeHandoffCoordinator handoffs)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(coordinator);
+        ArgumentNullException.ThrowIfNull(handoffs);
+        SetNoStore(httpContext);
+
+        if (!HasSameOrigin(httpContext, coordinator))
+        {
+            return CsrfProblem(httpContext);
+        }
+
+        NativeRedeemRequest? request;
+        try
+        {
+            request = await httpContext.Request.ReadFromJsonAsync<NativeRedeemRequest>(httpContext.RequestAborted).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or BadHttpRequestException)
+        {
+            request = null;
+        }
+
+        // Every refusal is the same answer, so a caller cannot tell an unknown, used or expired code from a bad verifier.
+        var session = await handoffs.RedeemAsync(request?.Code, request?.Verifier, httpContext.RequestAborted).ConfigureAwait(false);
+        if (session is not { } redeemed)
+        {
+            return TypedResults.Problem(ApiProblem.Create(
+                httpContext,
+                StatusCodes.Status400BadRequest,
+                "invalid_handoff",
+                "Sign-in handoff refused",
+                "The sign-in handoff is invalid or has expired."));
+        }
+
+        httpContext.Response.Cookies.Append(
+            coordinator.SessionCookieName,
+            redeemed.CookieToken,
+            Cookie(coordinator, "/", redeemed.ExpiresAt));
+        return TypedResults.NoContent();
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Logout(
