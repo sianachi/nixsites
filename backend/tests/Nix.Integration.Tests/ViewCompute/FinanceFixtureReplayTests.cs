@@ -112,7 +112,7 @@ public sealed class FinanceFixtureReplayTests : IAsyncLifetime
         YearMonth? month = null, from = null, to = null;
         var monthsOk = rest switch
         {
-        ["accounts"] or ["dashboard"] or ["transactions"] => Month(query["month"], out month),
+            (["accounts"] or ["dashboard"] or ["transactions"]) => Month(query["month"], out month),
             ["budget"] => Month(query["from"], out from) && Month(query["to"], out to),
             ["months", var named] => YearMonth.TryParse(named, out var parsedMonth) && (month = parsedMonth) is not null,
             _ => true,

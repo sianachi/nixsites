@@ -35,7 +35,7 @@ export function PhoneNavbar({
     // design-token-exempt: device safe-area inset keeps the pill above the home indicator.
     <nav
       aria-label="Mobile navigation"
-      className="px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1"
+      className="px-3 pb-[max(env(safe-area-inset-bottom),var(--spacing)*2)] pt-1"
     >
       <div className="flex items-center justify-between rounded-full border border-divider bg-background/75 px-2 shadow-lg backdrop-blur-md">
         <button

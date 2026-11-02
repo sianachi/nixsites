@@ -37,7 +37,7 @@ export function PhoneTopRow({
     // design-token-exempt: device safe-area inset keeps the row below the status bar.
     <header
       aria-label="Workspace controls"
-      className="flex items-center justify-between px-3 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]"
+      className="flex items-center justify-between px-3 pb-1 pt-[max(env(safe-area-inset-top),var(--spacing)*2)]"
     >
       <button
         ref={sidebarToggleRef}

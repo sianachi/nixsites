@@ -4,10 +4,10 @@ using System.Text.Json.Nodes;
 using System.Web;
 using Nix.Domain.Calendar;
 using Nix.Domain.Items;
-using Nix.Features.Recurrence;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Features.Calendar;
+using Nix.Features.Recurrence;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
 
