@@ -91,7 +91,8 @@ describe('Zen on workspace pages', () => {
     const user = userEvent.setup();
     stubViewport(240);
     renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/calendar`);
-    await user.click(await screen.findByRole('button', { name: 'Enter Zen mode' }));
+    await user.click(await screen.findByRole('button', { name: /^Menu/ }));
+    await user.click(screen.getByRole('menuitem', { name: 'Enter Zen mode' }));
 
     expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Exit Zen mode' }));

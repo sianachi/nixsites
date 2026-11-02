@@ -1,7 +1,7 @@
 import { Icon, cn, focusRing } from '@nix/ui';
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { PhoneMenu, type PhoneMenuProps } from './phone-menu';
 
@@ -28,6 +28,9 @@ export function PhoneNavbar({
   ...menu
 }: PhoneNavbarProps): ReactNode {
   const navigate = useNavigate();
+  // The entry the app was opened on has React Router's 'default' key; going back from it would
+  // leave the app (to a sign-in redirect or the server picker), so Back is off there.
+  const atStart = useLocation().key === 'default';
   return (
     // design-token-exempt: device safe-area inset keeps the pill above the home indicator.
     <nav
@@ -39,6 +42,7 @@ export function PhoneNavbar({
           type="button"
           aria-label="Back"
           className={button}
+          disabled={atStart}
           onClick={() => {
             void navigate(-1);
           }}

@@ -46,6 +46,7 @@ import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
 import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
 import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
+import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import { useTemplates } from '@nix/web-templates/templates/use-templates';
 import { TemplateLibraryProvider } from '@nix/web-templates/templates/template-library-context';
@@ -178,6 +179,7 @@ export function AppShell(): ReactNode {
   const toggleBookmark = useBookmarksStore((state) => state.toggle);
   const selectedIsKept = useIsKept(selectedId);
   const sidebar = useSidebar(narrow);
+  useEdgeSwipeOpen('left', narrow && !sidebar.visible, sidebar.toggle);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   // The companion page owns a phone screen: chrome would otherwise squeeze the message list to a

@@ -46,7 +46,7 @@ it('chooses and retains a personal landmark from mobile item actions', async () 
   stubCoreApi({ items: [root] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await user.click(screen.getByRole('button', { name: 'Explorer' }));
+  await user.click(screen.getByRole('button', { name: 'Show the Explorer' }));
   await user.click(screen.getByRole('button', { name: 'Actions for Project' }));
   await user.click(screen.getByRole('menuitem', { name: 'Choose icon…' }));
   const dialog = screen.getByRole('dialog', { name: 'Icon for Project' });
@@ -74,9 +74,9 @@ it('opens list items as pages, and the parent button returns to the parent', asy
   );
   expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Plan');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  // No Back button on a phone: history could lead out to the sign-in redirect. The parent's own
-  // button is the way up, and it never leaves the workspace.
-  expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+  // Back only walks the app's own history (it is off on the first page, so it never leads out to
+  // the sign-in redirect); the parent's own button is the way up.
+  expect(screen.getByRole('button', { name: 'Back' })).toBeEnabled();
   await userEvent.click(screen.getByRole('button', { name: 'Project' }));
   expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Project');
 });
@@ -118,7 +118,8 @@ it('provides one-level browsing, without the desktop tree and its actions', asyn
   });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await userEvent.click(screen.getByRole('button', { name: 'Explorer' }));
+  expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Show the Explorer' }));
   await userEvent.click(screen.getByRole('button', { name: 'Browse children of Project' }));
   expect(await screen.findByRole('button', { name: 'Plan' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Tree and actions' })).not.toBeInTheDocument();
@@ -130,7 +131,7 @@ it('keeps Hide behind item actions and provides an explicit close control', asyn
   stubCoreApi({ items: [root, child] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
-  await user.click(screen.getByRole('button', { name: 'Explorer' }));
+  await user.click(screen.getByRole('button', { name: 'Show the Explorer' }));
   const browser = screen.getByRole('complementary', { name: 'Explorer' });
   expect(within(browser).queryByRole('button', { name: /Hide/ })).not.toBeInTheDocument();
   await user.click(within(browser).getByRole('button', { name: 'Actions for Project' }));
@@ -197,7 +198,7 @@ it('moves an item through a destination sheet without dragging', async () => {
       screen.queryByRole('dialog', { name: 'Move item: choose a position' }),
     ).not.toBeInTheDocument();
   });
-  await userEvent.click(screen.getByRole('button', { name: 'Explorer' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Show the Explorer' }));
   expect(await screen.findByRole('button', { name: 'Plan' })).toBeInTheDocument();
 });
 
