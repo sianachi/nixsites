@@ -218,3 +218,15 @@ describe('query semantics', () => {
     expect(itemQueryResultsSchema.safeParse(answer.body).success).toBe(true);
   });
 });
+
+describe('smart lists over every readable workspace', () => {
+  it('ask Core when a readable workspace is missing from the synced copy', async () => {
+    const fixture = JSON.parse(
+      readFileSync(join(folder, '02-smart-list-saved-sort.json'), 'utf8'),
+    ) as Fixture;
+    const source = contextSource(fixture, {
+      workspaceIds: () => Promise.resolve([fixtureId('workspace'), fixtureId('resealed')]),
+    });
+    expect(await computeView(source, fixtureRequest(fixture))).toBeNull();
+  });
+});

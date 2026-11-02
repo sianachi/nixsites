@@ -31,9 +31,9 @@ function fold(fn: string, tally: Tally): number | null {
     case 'avg':
       return values.length === 0 ? null : round6(values.reduce((a, b) => a + b, 0) / values.length);
     case 'min':
-      return values.length === 0 ? null : round6(Math.min(...values));
+      return values.length === 0 ? null : round6(values.reduce((a, b) => Math.min(a, b)));
     default:
-      return values.length === 0 ? null : round6(Math.max(...values));
+      return values.length === 0 ? null : round6(values.reduce((a, b) => Math.max(a, b)));
   }
 }
 

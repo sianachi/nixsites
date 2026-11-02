@@ -184,9 +184,22 @@ export function compareStamps(a: Stamp, b: Stamp): number {
 }
 
 /** The first instant of a calendar day in an IANA zone (NodaTime's `AtStartOfDay`), in ms. */
+const startOfDayCache = new Map<string, number>();
+
+/** Rules compare every row against the same few days, so each (day, zone) is worked out once. */
 export function startOfDayIn(day: number, zone: string | null): number {
+  if (zone === null || zone === 'UTC') return day * 86_400_000;
+  const key = `${String(day)}|${zone}`;
+  const cached = startOfDayCache.get(key);
+  if (cached !== undefined) return cached;
+  if (startOfDayCache.size > 1024) startOfDayCache.clear();
+  const found = computeStartOfDay(day, zone);
+  startOfDayCache.set(key, found);
+  return found;
+}
+
+function computeStartOfDay(day: number, zone: string): number {
   const midnight = day * 86_400_000;
-  if (zone === null || zone === 'UTC') return midnight;
   let format: Intl.DateTimeFormat;
   try {
     format = new Intl.DateTimeFormat('en-CA', {

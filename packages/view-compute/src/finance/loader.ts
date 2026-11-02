@@ -66,6 +66,8 @@ export async function loadFinance(source: ViewSource, rootId: string): Promise<L
   const root = await source.item(rootId);
   if (root?.lifecycleState !== 'active')
     return fail('items.not_found', 'No such finance root is visible and accessible.');
+  // A locked root withholds its settings and containers; Core names the lock, so ask Core.
+  if (root.locked) return { failure: null };
   const bag = bagOf(root);
   const settings = readSettings(bag);
   if (settings === null)
@@ -98,7 +100,6 @@ export async function loadFinance(source: ViewSource, rootId: string): Promise<L
     // A locked container withholds its figures; Core says which lock, so ask Core.
     if (container.locked) return { failure: null };
   }
-  if (root.locked) return { failure: null };
 
   const childrenOf = (container: string, ceiling: number, what: string): MirrorItem[] | Loaded => {
     const children = everything.filter((item) => item.parentId === container);

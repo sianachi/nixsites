@@ -66,7 +66,7 @@ function byValue(a: string | null, b: string | null): number {
 }
 
 interface Counted {
-  readonly count: number;
+  count: number;
   readonly measures: (number | null)[];
 }
 
@@ -75,8 +75,11 @@ function tally(
 ): Map<string | null, Counted> {
   const groups = new Map<string | null, Counted>();
   for (const { key, measure } of rows) {
-    const group = groups.get(key) ?? { count: 0, measures: [] };
-    groups.set(key, { count: group.count + 1, measures: [...group.measures, measure] });
+    // In place: copying the array per row is quadratic on a large list.
+    let group = groups.get(key);
+    if (group === undefined) groups.set(key, (group = { count: 0, measures: [] }));
+    group.count += 1;
+    group.measures.push(measure);
   }
   return groups;
 }

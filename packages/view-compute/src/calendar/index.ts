@@ -90,9 +90,12 @@ export const computeCalendar: ViewCompute = async (source, request, match) => {
   if (items.length === 0) return null;
 
   const children = new Map<string, MirrorItem[]>();
-  for (const item of items)
-    if (item.parentId !== null)
-      children.set(item.parentId, [...(children.get(item.parentId) ?? []), item]);
+  for (const item of items) {
+    if (item.parentId === null) continue;
+    const siblings = children.get(item.parentId);
+    if (siblings === undefined) children.set(item.parentId, [item]);
+    else siblings.push(item);
+  }
 
   // A lock's withheld metadata (views, recurrence) cannot be told from "none"; never guess.
   if (items.some((item) => item.locked && children.has(item.id))) return null;

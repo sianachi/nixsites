@@ -151,9 +151,14 @@ async function runItemQuery(
 
   if (source.workspaceIds === undefined)
     throw new Unanswerable('the readable workspaces are not known');
-  const all = (
-    await Promise.all((await source.workspaceIds()).map((id) => source.workspaceItems(id)))
-  ).flat();
+  const perWorkspace = await Promise.all(
+    (await source.workspaceIds()).map((id) => source.workspaceItems(id)),
+  );
+  // An empty workspace is one being resealed or not yet synced: leaving it out would be a quiet
+  // wrong answer, so ask Core.
+  if (perWorkspace.some((items) => items.length === 0))
+    throw new Unanswerable('a readable workspace is not in the synced copy');
+  const all = perWorkspace.flat();
   const { rows, byId } = candidates(all, source.now());
   const sorted = sortRows(match(rows, byId, spec), spec);
   return ok({
