@@ -109,7 +109,7 @@ internal static class BrowserAuthEndpoints
                 var handoff = await handoffs.CreateAsync(completed, completed.NativeChallenge, httpContext.RequestAborted)
                     .ConfigureAwait(false);
                 return handoff is null
-                    ? Problem(httpContext, BrowserAuthFailure.ProvisioningFailed)
+                    ? Problem(httpContext, BrowserAuthFailure.HandoffBusy)
                     : TypedResults.Redirect(NativeHandoffCoordinator.RedirectBase + "?code=" + handoff);
             }
 
@@ -345,6 +345,11 @@ internal static class BrowserAuthEndpoints
                 "auth.provisioning_unavailable",
                 "Sign-in could not be completed",
                 "The local account and workspace could not be prepared. Try again."),
+            BrowserAuthFailure.HandoffBusy => (
+                StatusCodes.Status429TooManyRequests,
+                "auth.handoff_busy",
+                "Too many app sign-ins are waiting",
+                "Finish or close an earlier sign-in in the app, or wait a minute, then try again."),
             BrowserAuthFailure.TokenExchangeFailed or BrowserAuthFailure.InvalidProviderResponse => (
                 StatusCodes.Status502BadGateway,
                 "auth.provider_unavailable",

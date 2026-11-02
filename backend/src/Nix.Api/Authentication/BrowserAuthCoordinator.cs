@@ -411,6 +411,7 @@ public enum BrowserAuthFailure
     JitDisabled,
     PrincipalInactive,
     ProvisioningFailed,
+    HandoffBusy,
 }
 
 /// <summary>A safe expected browser authentication refusal.</summary>

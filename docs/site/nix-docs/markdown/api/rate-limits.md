@@ -19,7 +19,7 @@ Writes cover mutating `/api/v1` routes. Suggestions and queries are separate so 
 
 **Failed authentication.** 10 failed attempts from one address, then that address is refused for the rest of a window of 5 minutes (`Nix:RateLimits:FailedAuthenticationLimit` and `Nix:RateLimits:FailedAuthenticationWindowSeconds`). The exchange counts a bad token here, and so does a bad bearer token on `/api/v1`. This window is also in memory, per process.
 
-**Browser sign-in.** Starting (`/auth/login`) and completing (`/auth/callback`) a sign-in share 30 per minute per address, fixed in the server.
+**Browser sign-in.** Starting (`/auth/login`) and completing (`/auth/callback`) a sign-in share `Nix:RateLimits:BrowserLoginsPerMinute` (default 30) per minute per address.
 
 **CLI browser login.** Starting a login is 6 per minute per address. Polling a login is 120 per minute per address. Those two numbers are fixed in the server, not read from `Nix:RateLimits`.
 

@@ -216,7 +216,7 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
         }
 
         var refused = await NativeCallbackAsync(Challenge(NewVerifier()));
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, refused.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
         Assert.Equal(3L, await CountAsync("SELECT count(*) FROM native_login_handoff"));
 
         await SqlAsync("UPDATE native_login_handoff SET expires_at = now() - interval '1 second'");

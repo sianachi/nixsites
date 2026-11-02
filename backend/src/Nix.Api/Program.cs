@@ -215,6 +215,9 @@ var publicFormSubmissionsPerMinute = builder.Configuration.GetValue(
 var tokenExchangesPerMinute = builder.Configuration.GetValue(
     "Nix:RateLimits:TokenExchangesPerMinute",
     30);
+var browserLoginsPerMinute = builder.Configuration.GetValue(
+    "Nix:RateLimits:BrowserLoginsPerMinute",
+    30);
 var lockPasswordAttemptsPerMinute = builder.Configuration.GetValue(
     "Nix:RateLimits:LockPasswordAttemptsPerMinute",
     20);
@@ -277,12 +280,12 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
             }));
 
-    // Interactive sign-in: a person starts and finishes a login a few times at most. Fixed in the
-    // server, 30 per minute per address across /auth/login and /auth/callback.
+    // Interactive sign-in: a person starts and finishes a login a few times at most. Per address,
+    // across /auth/login and /auth/callback; configurable for sites where many people share one.
     options.AddPolicy<IPAddress>(BrowserAuthEndpoints.LoginPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(ClientKey.For(httpContext), _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 30,
+            PermitLimit = browserLoginsPerMinute,
             Window = writesWindow,
             QueueLimit = 0,
         }));
