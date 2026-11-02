@@ -10,6 +10,7 @@ import {
   MessageSquare,
   PanelRightClose,
   Save,
+  Share2,
   Upload,
 } from 'lucide-react';
 import type { NavigateFunction } from 'react-router';
@@ -19,6 +20,8 @@ import type { useHiddenItems } from '@nix/web-collections/items/use-hidden-items
 import type { useItemLock } from '../../locks/use-item-lock';
 import type { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { ItemDialogName } from './item-dialogs';
+import { itemLink } from '@nix/web-foundation/lib/item-link';
+import { isNativeShell, shareLink } from '@nix/web-foundation/native/native-shell';
 import { clockTime } from './lock-copy';
 
 export interface ItemActionArgs {
@@ -91,6 +94,22 @@ export function itemActionEntries({
               );
             },
           },
+          // The iOS app's share sheet; browsers keep Copy link.
+          ...(isNativeShell()
+            ? [
+                {
+                  key: 'share',
+                  label: 'Share…',
+                  icon: Share2,
+                  onSelect: () => {
+                    void shareLink({
+                      title,
+                      url: itemLink(globalThis.location.origin, workspace.workspaceId, itemId),
+                    });
+                  },
+                },
+              ]
+            : []),
         ]
       : []),
     ...(visibility.enabled
