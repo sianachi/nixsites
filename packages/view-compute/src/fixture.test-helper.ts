@@ -72,13 +72,20 @@ export function idsToKeys(value: unknown, keys: readonly string[]): unknown {
 export function fixtureItems(fixture: Fixture): MirrorItem[] {
   const workspaceId = fixtureId(WORKSPACE);
   const keys = fixture.items.map((item) => item.key);
+  // Core spaces siblings 1000 apart (1000, 2000, ...) per parent; positions in answers show it.
+  const rank = new Map<string | null, number>();
+  const seqOf = (parent: string | null): number => {
+    const next = (rank.get(parent) ?? 0) + 1;
+    rank.set(parent, next);
+    return next * 1000;
+  };
   return fixture.items.map((item, index) => ({
     id: fixtureId(item.key),
     workspaceId,
     parentId: item.parent === null ? null : fixtureId(item.parent),
     type: item.type,
     title: item.title,
-    seq: index + 1,
+    seq: seqOf(item.parent),
     revision: String(index + 1),
     lifecycleState: 'active',
     properties: JSON.parse(keysToIds(JSON.stringify(item.properties ?? {}), keys)) as Record<
