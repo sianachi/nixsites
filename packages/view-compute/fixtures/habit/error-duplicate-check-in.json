@@ -43,7 +43,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit"
+  },
   "expected": {
     "status": 409,
     "code": "habits.invalid_history",

@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "a0",
       "parent": "accounts",
@@ -2638,7 +2653,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{money}/finance" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{money}/finance"
+  },
   "expected": {
     "status": 409,
     "code": "finance.limit",

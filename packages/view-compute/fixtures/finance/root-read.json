@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "bank",
       "parent": "accounts",
@@ -90,7 +105,9 @@
       "properties": {
         "title": "Salary",
         "$fin_kind": "line",
-        "$fin_overrides": { "2026-03": 2100 },
+        "$fin_overrides": {
+          "2026-03": 2100
+        },
         "$fin_scheduled": false,
         "$fin_archived": false,
         "$fin_section": "Work",
@@ -282,7 +299,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{money}/finance" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{money}/finance"
+  },
   "expected": {
     "status": 200,
     "body": {
@@ -370,7 +390,7 @@
           "dueDay": null,
           "loanAccount": null,
           "archived": false,
-          "position": 9
+          "position": 1000
         },
         {
           "id": "{rent}",
@@ -384,7 +404,7 @@
           "dueDay": 28,
           "loanAccount": null,
           "archived": false,
-          "position": 10
+          "position": 2000
         },
         {
           "id": "{food}",
@@ -398,7 +418,7 @@
           "dueDay": null,
           "loanAccount": null,
           "archived": false,
-          "position": 11
+          "position": 3000
         },
         {
           "id": "{shop}",
@@ -412,7 +432,7 @@
           "dueDay": null,
           "loanAccount": null,
           "archived": false,
-          "position": 12
+          "position": 4000
         },
         {
           "id": "{carpay}",
@@ -426,7 +446,7 @@
           "dueDay": 3,
           "loanAccount": "{loan}",
           "archived": false,
-          "position": 13
+          "position": 5000
         }
       ],
       "closedMonths": [],

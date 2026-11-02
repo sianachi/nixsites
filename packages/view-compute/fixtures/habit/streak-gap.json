@@ -91,7 +91,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit"
+  },
   "expected": {
     "status": 200,
     "body": {
@@ -432,7 +435,7 @@
         "bestStreak": 3,
         "planned": 7,
         "completed": 6,
-        "completionRate": 0.8571428571428571,
+        "completionRate": 0.8571428571428571428571428571,
         "quantity": 0
       },
       "months": [

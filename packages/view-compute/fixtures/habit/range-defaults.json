@@ -31,7 +31,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit?to=2026-03-25" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit?to=2026-03-25"
+  },
   "expected": {
     "status": 200,
     "body": {
@@ -342,7 +345,7 @@
         "bestStreak": 1,
         "planned": 6,
         "completed": 1,
-        "completionRate": 0.16666666666666666,
+        "completionRate": 0.1666666666666666666666666667,
         "quantity": 0
       },
       "months": [

@@ -7,10 +7,15 @@
       "parent": null,
       "type": "page",
       "title": "Plain",
-      "properties": { "title": "Plain" }
+      "properties": {
+        "title": "Plain"
+      }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit"
+  },
   "expected": {
     "status": 409,
     "code": "habits.not_configured",

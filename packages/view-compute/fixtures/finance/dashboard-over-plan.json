@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "bank",
       "parent": "accounts",
@@ -90,7 +105,9 @@
       "properties": {
         "title": "Salary",
         "$fin_kind": "line",
-        "$fin_overrides": { "2026-03": 2100 },
+        "$fin_overrides": {
+          "2026-03": 2100
+        },
         "$fin_scheduled": false,
         "$fin_archived": false,
         "$fin_section": "Work",
@@ -282,7 +299,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{money}/finance/dashboard?month=2026-01" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{money}/finance/dashboard?month=2026-01"
+  },
   "expected": {
     "status": 200,
     "body": {
@@ -342,7 +362,7 @@
         {
           "accountId": "{loan}",
           "name": "Car loan",
-          "balance": 710,
+          "balance": 710.0,
           "clearedIn": "2026-04",
           "totalInterest": 22.48
         }
@@ -400,8 +420,8 @@
         "bufferMet": true
       },
       "horizonNet": 5500,
-      "monthEndDebt": 860,
-      "monthEndAfterDebt": 640
+      "monthEndDebt": 860.0,
+      "monthEndAfterDebt": 640.0
     }
   }
 }

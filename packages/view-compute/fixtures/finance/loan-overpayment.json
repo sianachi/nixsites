@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "bank",
       "parent": "accounts",
@@ -90,7 +105,9 @@
       "properties": {
         "title": "Salary",
         "$fin_kind": "line",
-        "$fin_overrides": { "2026-03": 2100 },
+        "$fin_overrides": {
+          "2026-03": 2100
+        },
         "$fin_scheduled": false,
         "$fin_archived": false,
         "$fin_section": "Work",
@@ -322,15 +339,15 @@
           "number": 1,
           "month": "2026-01",
           "opening": 1000,
-          "interest": 10,
+          "interest": 10.0,
           "payment": 400,
-          "principal": 390,
-          "closing": 610
+          "principal": 390.0,
+          "closing": 610.0
         },
         {
           "number": 2,
           "month": "2026-02",
-          "opening": 610,
+          "opening": 610.0,
           "interest": 6.1,
           "payment": 400,
           "principal": 393.9,
@@ -343,7 +360,7 @@
           "interest": 2.16,
           "payment": 218.26,
           "principal": 216.1,
-          "closing": 0
+          "closing": 0.0
         }
       ]
     }

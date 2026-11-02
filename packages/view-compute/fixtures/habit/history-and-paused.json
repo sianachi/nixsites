@@ -31,7 +31,12 @@
           }
         ],
         "$habit_status": "paused",
-        "$habit_status_versions": [{ "effectiveFrom": "2026-03-08", "status": "paused" }]
+        "$habit_status_versions": [
+          {
+            "effectiveFrom": "2026-03-08",
+            "status": "paused"
+          }
+        ]
       }
     },
     {
@@ -59,7 +64,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit"
+  },
   "expected": {
     "status": 200,
     "body": {

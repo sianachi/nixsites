@@ -19,7 +19,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit"
+  },
   "expected": {
     "status": 422,
     "code": "habits.invalid_settings",

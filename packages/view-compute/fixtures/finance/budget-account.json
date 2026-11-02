@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "bank",
       "parent": "accounts",
@@ -90,7 +105,9 @@
       "properties": {
         "title": "Salary",
         "$fin_kind": "line",
-        "$fin_overrides": { "2026-03": 2100 },
+        "$fin_overrides": {
+          "2026-03": 2100
+        },
         "$fin_scheduled": false,
         "$fin_archived": false,
         "$fin_section": "Work",
@@ -309,7 +326,7 @@
                 "dueDay": null,
                 "loanAccount": null,
                 "archived": false,
-                "position": 12
+                "position": 4000
               },
               "cells": [
                 {

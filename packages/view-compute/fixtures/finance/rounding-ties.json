@@ -21,9 +21,24 @@
         "$fin_closed_months": []
       }
     },
-    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
-    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
-    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "accounts",
+      "parent": "money",
+      "type": "note",
+      "title": "Accounts"
+    },
+    {
+      "key": "lines",
+      "parent": "money",
+      "type": "note",
+      "title": "Budget lines"
+    },
+    {
+      "key": "txs",
+      "parent": "money",
+      "type": "note",
+      "title": "Transactions"
+    },
     {
       "key": "bank",
       "parent": "accounts",
@@ -85,7 +100,10 @@
       }
     }
   ],
-  "request": { "method": "GET", "path": "/api/v1/items/{money}/finance/accounts?month=2026-01" },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{money}/finance/accounts?month=2026-01"
+  },
   "expected": {
     "status": 200,
     "body": {
@@ -135,7 +153,7 @@
             "spend": 0.05,
             "paymentOut": 0,
             "closing": 0.05,
-            "utilisation": 0,
+            "utilisation": 0.0,
             "limit": 1000,
             "settlesFrom": "{bank}"
           },
