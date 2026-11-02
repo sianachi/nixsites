@@ -1,7 +1,10 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
+import { computeView, type ViewAnswer, type ViewRequest } from '@nix/view-compute';
+
 import { planWrite, type PlannedWrite } from './mirror-writes';
+import { planViewWrite } from './view-writes';
 
 /**
  * Core, answered from the iOS shell's synced copy. The API client's `fetch` goes through
@@ -232,9 +235,29 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     return found;
   }
 
+  /** Core's computed reads (queries, charts, calendar, habits, finance), recalculated offline. */
+  async function computed(store: MirrorReader, request: ViewRequest): Promise<Response | null> {
+    const answered: ViewAnswer | null = await computeView(
+      {
+        item: async (id) => (await store.readItems([id]))[0],
+        workspaceItems: async (workspaceId) =>
+          [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
+        now: () => new Date(),
+      },
+      request,
+    );
+    if (answered === null) return null;
+    return 'body' in answered
+      ? json(answered.body)
+      : problem(answered.status, answered.code, answered.detail);
+  }
+
   async function answer(store: MirrorReader, url: URL): Promise<Response | null> {
     const path = url.pathname;
     const query = url.searchParams;
+
+    const viewAnswer = await computed(store, { method: 'GET', url, body: null });
+    if (viewAnswer !== null) return viewAnswer;
 
     if (REMEMBERED.has(path)) {
       const kept = await store.getSetting(rememberKey(path));
@@ -621,7 +644,13 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       } catch {
         /* An unreadable body is not a write we can queue. */
       }
-      const plan = planWrite(method, url.pathname, body);
+      if (method === 'POST') {
+        const read = await computed(store, { method: 'POST', url, body }).catch(() => null);
+        if (read !== null) return read;
+      }
+      const plan =
+        planWrite(method, url.pathname, body) ??
+        (await planViewWrite(store, method, url.pathname, body).catch(() => null));
       return plan === null
         ? problem(
             503,

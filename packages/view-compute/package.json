@@ -1,0 +1,28 @@
+{
+  "name": "@nix/view-compute",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "description": "Core's computed view reads (query, chart, calendar, habit, finance) recalculated over the synced copy, for the iOS app offline",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/sync-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.7"
+  }
+}

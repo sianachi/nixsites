@@ -863,6 +863,22 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))
 
+  packages/view-compute:
+    dependencies:
+      '@nix/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(lightningcss@1.32.0)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))
+
   packages/view-render:
     dependencies:
       '@nix/export':
@@ -1320,6 +1336,9 @@ importers:
       '@nix/ui':
         specifier: workspace:*
         version: link:../ui
+      '@nix/view-compute':
+        specifier: workspace:*
+        version: link:../view-compute
       '@nix/web-foundation':
         specifier: workspace:*
         version: link:../web-foundation
