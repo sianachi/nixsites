@@ -1,0 +1,2647 @@
+{
+  "name": "finance: more than 200 accounts is refused",
+  "now": "2026-02-20T12:00:00Z",
+  "items": [
+    {
+      "key": "money",
+      "parent": null,
+      "type": "page",
+      "title": "Money",
+      "properties": {
+        "title": "Money",
+        "$fin_currency": "GBP",
+        "$fin_start_month": "2026-01",
+        "$fin_horizon_months": 12,
+        "$fin_opening_cash": 1000,
+        "$fin_emergency_months": 2,
+        "$fin_timezone": "Europe/London",
+        "$fin_accounts_id": "{accounts}",
+        "$fin_lines_id": "{lines}",
+        "$fin_transactions_id": "{txs}",
+        "$fin_closed_months": []
+      }
+    },
+    { "key": "accounts", "parent": "money", "type": "note", "title": "Accounts" },
+    { "key": "lines", "parent": "money", "type": "note", "title": "Budget lines" },
+    { "key": "txs", "parent": "money", "type": "note", "title": "Transactions" },
+    {
+      "key": "a0",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 0",
+      "properties": {
+        "title": "Account 0",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a1",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 1",
+      "properties": {
+        "title": "Account 1",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a2",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 2",
+      "properties": {
+        "title": "Account 2",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a3",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 3",
+      "properties": {
+        "title": "Account 3",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a4",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 4",
+      "properties": {
+        "title": "Account 4",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a5",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 5",
+      "properties": {
+        "title": "Account 5",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a6",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 6",
+      "properties": {
+        "title": "Account 6",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a7",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 7",
+      "properties": {
+        "title": "Account 7",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a8",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 8",
+      "properties": {
+        "title": "Account 8",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a9",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 9",
+      "properties": {
+        "title": "Account 9",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a10",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 10",
+      "properties": {
+        "title": "Account 10",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a11",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 11",
+      "properties": {
+        "title": "Account 11",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a12",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 12",
+      "properties": {
+        "title": "Account 12",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a13",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 13",
+      "properties": {
+        "title": "Account 13",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a14",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 14",
+      "properties": {
+        "title": "Account 14",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a15",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 15",
+      "properties": {
+        "title": "Account 15",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a16",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 16",
+      "properties": {
+        "title": "Account 16",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a17",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 17",
+      "properties": {
+        "title": "Account 17",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a18",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 18",
+      "properties": {
+        "title": "Account 18",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a19",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 19",
+      "properties": {
+        "title": "Account 19",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a20",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 20",
+      "properties": {
+        "title": "Account 20",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a21",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 21",
+      "properties": {
+        "title": "Account 21",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a22",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 22",
+      "properties": {
+        "title": "Account 22",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a23",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 23",
+      "properties": {
+        "title": "Account 23",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a24",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 24",
+      "properties": {
+        "title": "Account 24",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a25",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 25",
+      "properties": {
+        "title": "Account 25",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a26",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 26",
+      "properties": {
+        "title": "Account 26",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a27",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 27",
+      "properties": {
+        "title": "Account 27",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a28",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 28",
+      "properties": {
+        "title": "Account 28",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a29",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 29",
+      "properties": {
+        "title": "Account 29",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a30",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 30",
+      "properties": {
+        "title": "Account 30",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a31",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 31",
+      "properties": {
+        "title": "Account 31",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a32",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 32",
+      "properties": {
+        "title": "Account 32",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a33",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 33",
+      "properties": {
+        "title": "Account 33",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a34",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 34",
+      "properties": {
+        "title": "Account 34",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a35",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 35",
+      "properties": {
+        "title": "Account 35",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a36",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 36",
+      "properties": {
+        "title": "Account 36",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a37",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 37",
+      "properties": {
+        "title": "Account 37",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a38",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 38",
+      "properties": {
+        "title": "Account 38",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a39",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 39",
+      "properties": {
+        "title": "Account 39",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a40",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 40",
+      "properties": {
+        "title": "Account 40",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a41",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 41",
+      "properties": {
+        "title": "Account 41",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a42",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 42",
+      "properties": {
+        "title": "Account 42",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a43",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 43",
+      "properties": {
+        "title": "Account 43",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a44",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 44",
+      "properties": {
+        "title": "Account 44",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a45",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 45",
+      "properties": {
+        "title": "Account 45",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a46",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 46",
+      "properties": {
+        "title": "Account 46",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a47",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 47",
+      "properties": {
+        "title": "Account 47",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a48",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 48",
+      "properties": {
+        "title": "Account 48",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a49",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 49",
+      "properties": {
+        "title": "Account 49",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a50",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 50",
+      "properties": {
+        "title": "Account 50",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a51",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 51",
+      "properties": {
+        "title": "Account 51",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a52",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 52",
+      "properties": {
+        "title": "Account 52",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a53",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 53",
+      "properties": {
+        "title": "Account 53",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a54",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 54",
+      "properties": {
+        "title": "Account 54",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a55",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 55",
+      "properties": {
+        "title": "Account 55",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a56",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 56",
+      "properties": {
+        "title": "Account 56",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a57",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 57",
+      "properties": {
+        "title": "Account 57",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a58",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 58",
+      "properties": {
+        "title": "Account 58",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a59",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 59",
+      "properties": {
+        "title": "Account 59",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a60",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 60",
+      "properties": {
+        "title": "Account 60",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a61",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 61",
+      "properties": {
+        "title": "Account 61",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a62",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 62",
+      "properties": {
+        "title": "Account 62",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a63",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 63",
+      "properties": {
+        "title": "Account 63",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a64",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 64",
+      "properties": {
+        "title": "Account 64",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a65",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 65",
+      "properties": {
+        "title": "Account 65",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a66",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 66",
+      "properties": {
+        "title": "Account 66",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a67",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 67",
+      "properties": {
+        "title": "Account 67",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a68",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 68",
+      "properties": {
+        "title": "Account 68",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a69",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 69",
+      "properties": {
+        "title": "Account 69",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a70",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 70",
+      "properties": {
+        "title": "Account 70",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a71",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 71",
+      "properties": {
+        "title": "Account 71",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a72",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 72",
+      "properties": {
+        "title": "Account 72",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a73",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 73",
+      "properties": {
+        "title": "Account 73",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a74",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 74",
+      "properties": {
+        "title": "Account 74",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a75",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 75",
+      "properties": {
+        "title": "Account 75",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a76",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 76",
+      "properties": {
+        "title": "Account 76",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a77",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 77",
+      "properties": {
+        "title": "Account 77",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a78",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 78",
+      "properties": {
+        "title": "Account 78",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a79",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 79",
+      "properties": {
+        "title": "Account 79",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a80",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 80",
+      "properties": {
+        "title": "Account 80",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a81",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 81",
+      "properties": {
+        "title": "Account 81",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a82",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 82",
+      "properties": {
+        "title": "Account 82",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a83",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 83",
+      "properties": {
+        "title": "Account 83",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a84",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 84",
+      "properties": {
+        "title": "Account 84",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a85",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 85",
+      "properties": {
+        "title": "Account 85",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a86",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 86",
+      "properties": {
+        "title": "Account 86",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a87",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 87",
+      "properties": {
+        "title": "Account 87",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a88",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 88",
+      "properties": {
+        "title": "Account 88",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a89",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 89",
+      "properties": {
+        "title": "Account 89",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a90",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 90",
+      "properties": {
+        "title": "Account 90",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a91",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 91",
+      "properties": {
+        "title": "Account 91",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a92",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 92",
+      "properties": {
+        "title": "Account 92",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a93",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 93",
+      "properties": {
+        "title": "Account 93",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a94",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 94",
+      "properties": {
+        "title": "Account 94",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a95",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 95",
+      "properties": {
+        "title": "Account 95",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a96",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 96",
+      "properties": {
+        "title": "Account 96",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a97",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 97",
+      "properties": {
+        "title": "Account 97",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a98",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 98",
+      "properties": {
+        "title": "Account 98",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a99",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 99",
+      "properties": {
+        "title": "Account 99",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a100",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 100",
+      "properties": {
+        "title": "Account 100",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a101",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 101",
+      "properties": {
+        "title": "Account 101",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a102",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 102",
+      "properties": {
+        "title": "Account 102",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a103",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 103",
+      "properties": {
+        "title": "Account 103",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a104",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 104",
+      "properties": {
+        "title": "Account 104",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a105",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 105",
+      "properties": {
+        "title": "Account 105",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a106",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 106",
+      "properties": {
+        "title": "Account 106",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a107",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 107",
+      "properties": {
+        "title": "Account 107",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a108",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 108",
+      "properties": {
+        "title": "Account 108",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a109",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 109",
+      "properties": {
+        "title": "Account 109",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a110",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 110",
+      "properties": {
+        "title": "Account 110",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a111",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 111",
+      "properties": {
+        "title": "Account 111",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a112",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 112",
+      "properties": {
+        "title": "Account 112",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a113",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 113",
+      "properties": {
+        "title": "Account 113",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a114",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 114",
+      "properties": {
+        "title": "Account 114",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a115",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 115",
+      "properties": {
+        "title": "Account 115",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a116",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 116",
+      "properties": {
+        "title": "Account 116",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a117",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 117",
+      "properties": {
+        "title": "Account 117",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a118",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 118",
+      "properties": {
+        "title": "Account 118",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a119",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 119",
+      "properties": {
+        "title": "Account 119",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a120",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 120",
+      "properties": {
+        "title": "Account 120",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a121",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 121",
+      "properties": {
+        "title": "Account 121",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a122",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 122",
+      "properties": {
+        "title": "Account 122",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a123",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 123",
+      "properties": {
+        "title": "Account 123",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a124",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 124",
+      "properties": {
+        "title": "Account 124",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a125",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 125",
+      "properties": {
+        "title": "Account 125",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a126",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 126",
+      "properties": {
+        "title": "Account 126",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a127",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 127",
+      "properties": {
+        "title": "Account 127",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a128",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 128",
+      "properties": {
+        "title": "Account 128",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a129",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 129",
+      "properties": {
+        "title": "Account 129",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a130",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 130",
+      "properties": {
+        "title": "Account 130",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a131",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 131",
+      "properties": {
+        "title": "Account 131",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a132",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 132",
+      "properties": {
+        "title": "Account 132",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a133",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 133",
+      "properties": {
+        "title": "Account 133",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a134",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 134",
+      "properties": {
+        "title": "Account 134",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a135",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 135",
+      "properties": {
+        "title": "Account 135",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a136",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 136",
+      "properties": {
+        "title": "Account 136",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a137",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 137",
+      "properties": {
+        "title": "Account 137",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a138",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 138",
+      "properties": {
+        "title": "Account 138",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a139",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 139",
+      "properties": {
+        "title": "Account 139",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a140",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 140",
+      "properties": {
+        "title": "Account 140",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a141",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 141",
+      "properties": {
+        "title": "Account 141",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a142",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 142",
+      "properties": {
+        "title": "Account 142",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a143",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 143",
+      "properties": {
+        "title": "Account 143",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a144",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 144",
+      "properties": {
+        "title": "Account 144",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a145",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 145",
+      "properties": {
+        "title": "Account 145",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a146",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 146",
+      "properties": {
+        "title": "Account 146",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a147",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 147",
+      "properties": {
+        "title": "Account 147",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a148",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 148",
+      "properties": {
+        "title": "Account 148",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a149",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 149",
+      "properties": {
+        "title": "Account 149",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a150",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 150",
+      "properties": {
+        "title": "Account 150",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a151",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 151",
+      "properties": {
+        "title": "Account 151",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a152",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 152",
+      "properties": {
+        "title": "Account 152",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a153",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 153",
+      "properties": {
+        "title": "Account 153",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a154",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 154",
+      "properties": {
+        "title": "Account 154",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a155",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 155",
+      "properties": {
+        "title": "Account 155",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a156",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 156",
+      "properties": {
+        "title": "Account 156",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a157",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 157",
+      "properties": {
+        "title": "Account 157",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a158",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 158",
+      "properties": {
+        "title": "Account 158",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a159",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 159",
+      "properties": {
+        "title": "Account 159",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a160",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 160",
+      "properties": {
+        "title": "Account 160",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a161",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 161",
+      "properties": {
+        "title": "Account 161",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a162",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 162",
+      "properties": {
+        "title": "Account 162",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a163",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 163",
+      "properties": {
+        "title": "Account 163",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a164",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 164",
+      "properties": {
+        "title": "Account 164",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a165",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 165",
+      "properties": {
+        "title": "Account 165",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a166",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 166",
+      "properties": {
+        "title": "Account 166",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a167",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 167",
+      "properties": {
+        "title": "Account 167",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a168",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 168",
+      "properties": {
+        "title": "Account 168",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a169",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 169",
+      "properties": {
+        "title": "Account 169",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a170",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 170",
+      "properties": {
+        "title": "Account 170",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a171",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 171",
+      "properties": {
+        "title": "Account 171",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a172",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 172",
+      "properties": {
+        "title": "Account 172",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a173",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 173",
+      "properties": {
+        "title": "Account 173",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a174",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 174",
+      "properties": {
+        "title": "Account 174",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a175",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 175",
+      "properties": {
+        "title": "Account 175",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a176",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 176",
+      "properties": {
+        "title": "Account 176",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a177",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 177",
+      "properties": {
+        "title": "Account 177",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a178",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 178",
+      "properties": {
+        "title": "Account 178",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a179",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 179",
+      "properties": {
+        "title": "Account 179",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a180",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 180",
+      "properties": {
+        "title": "Account 180",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a181",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 181",
+      "properties": {
+        "title": "Account 181",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a182",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 182",
+      "properties": {
+        "title": "Account 182",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a183",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 183",
+      "properties": {
+        "title": "Account 183",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a184",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 184",
+      "properties": {
+        "title": "Account 184",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a185",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 185",
+      "properties": {
+        "title": "Account 185",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a186",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 186",
+      "properties": {
+        "title": "Account 186",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a187",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 187",
+      "properties": {
+        "title": "Account 187",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a188",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 188",
+      "properties": {
+        "title": "Account 188",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a189",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 189",
+      "properties": {
+        "title": "Account 189",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a190",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 190",
+      "properties": {
+        "title": "Account 190",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a191",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 191",
+      "properties": {
+        "title": "Account 191",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a192",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 192",
+      "properties": {
+        "title": "Account 192",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a193",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 193",
+      "properties": {
+        "title": "Account 193",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a194",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 194",
+      "properties": {
+        "title": "Account 194",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a195",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 195",
+      "properties": {
+        "title": "Account 195",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a196",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 196",
+      "properties": {
+        "title": "Account 196",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a197",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 197",
+      "properties": {
+        "title": "Account 197",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a198",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 198",
+      "properties": {
+        "title": "Account 198",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a199",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 199",
+      "properties": {
+        "title": "Account 199",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    },
+    {
+      "key": "a200",
+      "parent": "accounts",
+      "type": "note",
+      "title": "Account 200",
+      "properties": {
+        "title": "Account 200",
+        "$fin_kind": "account",
+        "$fin_archived": false,
+        "$fin_account_type": "current",
+        "$fin_opening_balance": 0
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{money}/finance" },
+  "expected": {
+    "status": 409,
+    "code": "finance.limit",
+    "detail": "This version supports at most 200 accounts per finance root. Its figures cannot be calculated safely."
+  }
+}

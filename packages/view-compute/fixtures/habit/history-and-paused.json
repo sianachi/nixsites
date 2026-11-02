@@ -1,0 +1,399 @@
+{
+  "name": "habit: settings and status history change what a past day expected",
+  "now": "2026-03-10T10:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Read",
+      "properties": {
+        "title": "Read",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-01",
+        "$habit_target": 10,
+        "$habit_unit": "pages",
+        "$habit_reminder_time": null,
+        "$habit_effective_from": "2026-03-05",
+        "$habit_versions": [
+          {
+            "effectiveFrom": "2026-03-01",
+            "settings": {
+              "$habit_frequency": "daily",
+              "$habit_weekdays": [],
+              "$habit_timezone": "UTC",
+              "$habit_start_date": "2026-03-01",
+              "$habit_target": 5,
+              "$habit_unit": "pages"
+            }
+          }
+        ],
+        "$habit_status": "paused",
+        "$habit_status_versions": [{ "effectiveFrom": "2026-03-08", "status": "paused" }]
+      }
+    },
+    {
+      "key": "c1",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-02",
+      "properties": {
+        "title": "Check-in · 2026-03-02",
+        "$habit_check_in_date": "2026-03-02",
+        "$habit_check_in_completed": false,
+        "$habit_check_in_quantity": 5
+      }
+    },
+    {
+      "key": "c2",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-06",
+      "properties": {
+        "title": "Check-in · 2026-03-06",
+        "$habit_check_in_date": "2026-03-06",
+        "$habit_check_in_completed": false,
+        "$habit_check_in_quantity": 4
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "expected": {
+    "status": 200,
+    "body": {
+      "habitId": "{habit}",
+      "frequency": "daily",
+      "weekdays": [],
+      "timezone": "UTC",
+      "startDate": "2026-03-01",
+      "target": 10,
+      "unit": "pages",
+      "checkIns": [
+        {
+          "id": "{c1}",
+          "occurredOn": "2026-03-02",
+          "completed": false,
+          "quantity": 5
+        },
+        {
+          "id": "{c2}",
+          "occurredOn": "2026-03-06",
+          "completed": false,
+          "quantity": 4
+        }
+      ],
+      "weeks": [
+        {
+          "weekStart": "2026-02-09",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-02-16",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-02-23",
+          "planned": 1,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-02",
+          "planned": 6,
+          "completed": 0,
+          "quantity": 9
+        },
+        {
+          "weekStart": "2026-03-09",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        }
+      ],
+      "status": "paused",
+      "occurrences": [
+        {
+          "date": "2026-02-11",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-12",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-13",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-14",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-15",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-16",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-17",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-18",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-19",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-20",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-21",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-22",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-23",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-24",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-25",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-26",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-27",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-28",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-01",
+          "scheduled": true,
+          "state": "missed",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-02",
+          "scheduled": true,
+          "state": "partial",
+          "target": 5,
+          "unit": "pages",
+          "quantity": 5,
+          "completed": false
+        },
+        {
+          "date": "2026-03-03",
+          "scheduled": true,
+          "state": "missed",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-04",
+          "scheduled": true,
+          "state": "missed",
+          "target": 5,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-05",
+          "scheduled": true,
+          "state": "missed",
+          "target": 10,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-06",
+          "scheduled": true,
+          "state": "partial",
+          "target": 10,
+          "unit": "pages",
+          "quantity": 4,
+          "completed": false
+        },
+        {
+          "date": "2026-03-07",
+          "scheduled": true,
+          "state": "missed",
+          "target": 10,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-08",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 10,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-09",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 10,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-10",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 10,
+          "unit": "pages",
+          "quantity": null,
+          "completed": false
+        }
+      ],
+      "progress": {
+        "currentStreak": 0,
+        "bestStreak": 0,
+        "planned": 7,
+        "completed": 0,
+        "completionRate": 0,
+        "quantity": 9
+      },
+      "months": [
+        {
+          "month": "2026-02",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "month": "2026-03",
+          "planned": 7,
+          "completed": 0,
+          "quantity": 9
+        }
+      ],
+      "reminderTime": null
+    }
+  }
+}

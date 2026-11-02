@@ -1,0 +1,19 @@
+{
+  "name": "finance: an item with no settings is refused",
+  "now": "2026-02-20T12:00:00Z",
+  "items": [
+    {
+      "key": "plain",
+      "parent": null,
+      "type": "page",
+      "title": "Plain",
+      "properties": { "title": "Plain" }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{plain}/finance/cashflow" },
+  "expected": {
+    "status": 409,
+    "code": "finance.not_configured",
+    "detail": "This item has no valid finance settings. Set them up first."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "habit: a range over 366 days is refused",
+  "now": "2026-03-05T09:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Water",
+      "properties": {
+        "title": "Water",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-01",
+        "$habit_target": 8,
+        "$habit_unit": "glasses",
+        "$habit_reminder_time": null
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit?from=2025-01-01&to=2026-03-01"
+  },
+  "expected": {
+    "status": 422,
+    "code": "habits.invalid_range",
+    "detail": "Choose an ordered date range of no more than 366 days."
+  }
+}

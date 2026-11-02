@@ -1,0 +1,52 @@
+{
+  "name": "habit: two check-ins for one day make the history invalid",
+  "now": "2026-03-05T09:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Water",
+      "properties": {
+        "title": "Water",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-01",
+        "$habit_target": 8,
+        "$habit_unit": "glasses",
+        "$habit_reminder_time": null
+      }
+    },
+    {
+      "key": "c1",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-02",
+      "properties": {
+        "title": "Check-in · 2026-03-02",
+        "$habit_check_in_date": "2026-03-02",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": null
+      }
+    },
+    {
+      "key": "c2",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-02",
+      "properties": {
+        "title": "Check-in · 2026-03-02",
+        "$habit_check_in_date": "2026-03-02",
+        "$habit_check_in_completed": false,
+        "$habit_check_in_quantity": 1
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "expected": {
+    "status": 409,
+    "code": "habits.invalid_history",
+    "detail": "A check-in is malformed or duplicated. Review the habit's child items before using its totals."
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "name": "habit: a zone behind UTC is still on the previous day",
+  "now": "2026-03-05T03:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Water",
+      "properties": {
+        "title": "Water",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "America/Los_Angeles",
+        "$habit_start_date": "2026-03-02",
+        "$habit_target": 1,
+        "$habit_unit": "time",
+        "$habit_reminder_time": null
+      }
+    },
+    {
+      "key": "c1",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-03",
+      "properties": {
+        "title": "Check-in · 2026-03-03",
+        "$habit_check_in_date": "2026-03-03",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": null
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "expected": {
+    "status": 200,
+    "body": {
+      "habitId": "{habit}",
+      "frequency": "daily",
+      "weekdays": [],
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-03-02",
+      "target": 1,
+      "unit": "time",
+      "checkIns": [
+        {
+          "id": "{c1}",
+          "occurredOn": "2026-03-03",
+          "completed": true,
+          "quantity": null
+        }
+      ],
+      "weeks": [
+        {
+          "weekStart": "2026-02-02",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-02-09",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-02-16",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-02-23",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-02",
+          "planned": 3,
+          "completed": 1,
+          "quantity": 0
+        }
+      ],
+      "status": "active",
+      "occurrences": [
+        {
+          "date": "2026-02-05",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-06",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-07",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-08",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-09",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-10",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-11",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-12",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-13",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-14",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-15",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-16",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-17",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-18",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-19",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-20",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-21",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-22",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-23",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-24",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-25",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-26",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-27",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-28",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-01",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-02",
+          "scheduled": true,
+          "state": "missed",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-03",
+          "scheduled": true,
+          "state": "completed",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": true
+        },
+        {
+          "date": "2026-03-04",
+          "scheduled": true,
+          "state": "scheduled",
+          "target": 1,
+          "unit": "time",
+          "quantity": null,
+          "completed": false
+        }
+      ],
+      "progress": {
+        "currentStreak": 1,
+        "bestStreak": 1,
+        "planned": 2,
+        "completed": 1,
+        "completionRate": 0.5,
+        "quantity": 0
+      },
+      "months": [
+        {
+          "month": "2026-02",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "month": "2026-03",
+          "planned": 3,
+          "completed": 1,
+          "quantity": 0
+        }
+      ],
+      "reminderTime": null
+    }
+  }
+}

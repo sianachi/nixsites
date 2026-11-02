@@ -1,0 +1,28 @@
+{
+  "name": "habit: malformed settings are refused as invalid",
+  "now": "2026-03-05T09:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Water",
+      "properties": {
+        "title": "Water",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-01",
+        "$habit_target": 0,
+        "$habit_unit": "glasses",
+        "$habit_reminder_time": null
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit" },
+  "expected": {
+    "status": 422,
+    "code": "habits.invalid_settings",
+    "detail": "This item has no valid habit settings."
+  }
+}

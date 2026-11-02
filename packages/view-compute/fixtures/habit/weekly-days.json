@@ -1,0 +1,278 @@
+{
+  "name": "habit: selected weekdays across two weeks with an explicit range",
+  "now": "2026-03-12T20:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Run",
+      "properties": {
+        "title": "Run",
+        "$habit_frequency": "weekly",
+        "$habit_weekdays": [1, 3, 5],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-01",
+        "$habit_target": 1,
+        "$habit_unit": "run",
+        "$habit_reminder_time": null
+      }
+    },
+    {
+      "key": "c1",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-02",
+      "properties": {
+        "title": "Check-in · 2026-03-02",
+        "$habit_check_in_date": "2026-03-02",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": null
+      }
+    },
+    {
+      "key": "c2",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-04",
+      "properties": {
+        "title": "Check-in · 2026-03-04",
+        "$habit_check_in_date": "2026-03-04",
+        "$habit_check_in_completed": false,
+        "$habit_check_in_quantity": null
+      }
+    },
+    {
+      "key": "c3",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-09",
+      "properties": {
+        "title": "Check-in · 2026-03-09",
+        "$habit_check_in_date": "2026-03-09",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": 1
+      }
+    },
+    {
+      "key": "c4",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-11",
+      "properties": {
+        "title": "Check-in · 2026-03-11",
+        "$habit_check_in_date": "2026-03-11",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": null
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/items/{habit}/habit?from=2026-03-01&to=2026-03-14"
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "habitId": "{habit}",
+      "frequency": "weekly",
+      "weekdays": [1, 3, 5],
+      "timezone": "UTC",
+      "startDate": "2026-03-01",
+      "target": 1,
+      "unit": "run",
+      "checkIns": [
+        {
+          "id": "{c1}",
+          "occurredOn": "2026-03-02",
+          "completed": true,
+          "quantity": null
+        },
+        {
+          "id": "{c2}",
+          "occurredOn": "2026-03-04",
+          "completed": false,
+          "quantity": null
+        },
+        {
+          "id": "{c3}",
+          "occurredOn": "2026-03-09",
+          "completed": true,
+          "quantity": 1
+        },
+        {
+          "id": "{c4}",
+          "occurredOn": "2026-03-11",
+          "completed": true,
+          "quantity": null
+        }
+      ],
+      "weeks": [
+        {
+          "weekStart": "2026-02-23",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-02",
+          "planned": 3,
+          "completed": 1,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-09",
+          "planned": 3,
+          "completed": 2,
+          "quantity": 1
+        }
+      ],
+      "status": "active",
+      "occurrences": [
+        {
+          "date": "2026-03-01",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-02",
+          "scheduled": true,
+          "state": "completed",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": true
+        },
+        {
+          "date": "2026-03-03",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-04",
+          "scheduled": true,
+          "state": "missed",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-05",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-06",
+          "scheduled": true,
+          "state": "missed",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-07",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-08",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-09",
+          "scheduled": true,
+          "state": "completed",
+          "target": 1,
+          "unit": "run",
+          "quantity": 1,
+          "completed": true
+        },
+        {
+          "date": "2026-03-10",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-11",
+          "scheduled": true,
+          "state": "completed",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": true
+        },
+        {
+          "date": "2026-03-12",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-13",
+          "scheduled": true,
+          "state": "scheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-14",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 1,
+          "unit": "run",
+          "quantity": null,
+          "completed": false
+        }
+      ],
+      "progress": {
+        "currentStreak": 2,
+        "bestStreak": 2,
+        "planned": 5,
+        "completed": 3,
+        "completionRate": 0.6,
+        "quantity": 1
+      },
+      "months": [
+        {
+          "month": "2026-03",
+          "planned": 6,
+          "completed": 3,
+          "quantity": 1
+        }
+      ],
+      "reminderTime": null
+    }
+  }
+}

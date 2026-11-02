@@ -1,0 +1,365 @@
+{
+  "name": "habit: a to date alone starts 27 days before it",
+  "now": "2026-04-01T00:00:00Z",
+  "items": [
+    {
+      "key": "habit",
+      "parent": null,
+      "type": "page",
+      "title": "Water",
+      "properties": {
+        "title": "Water",
+        "$habit_frequency": "daily",
+        "$habit_weekdays": [],
+        "$habit_timezone": "UTC",
+        "$habit_start_date": "2026-03-20",
+        "$habit_target": 8,
+        "$habit_unit": "glasses",
+        "$habit_reminder_time": null
+      }
+    },
+    {
+      "key": "c1",
+      "parent": "habit",
+      "type": "note",
+      "title": "Check-in · 2026-03-21",
+      "properties": {
+        "title": "Check-in · 2026-03-21",
+        "$habit_check_in_date": "2026-03-21",
+        "$habit_check_in_completed": true,
+        "$habit_check_in_quantity": null
+      }
+    }
+  ],
+  "request": { "method": "GET", "path": "/api/v1/items/{habit}/habit?to=2026-03-25" },
+  "expected": {
+    "status": 200,
+    "body": {
+      "habitId": "{habit}",
+      "frequency": "daily",
+      "weekdays": [],
+      "timezone": "UTC",
+      "startDate": "2026-03-20",
+      "target": 8,
+      "unit": "glasses",
+      "checkIns": [
+        {
+          "id": "{c1}",
+          "occurredOn": "2026-03-21",
+          "completed": true,
+          "quantity": null
+        }
+      ],
+      "weeks": [
+        {
+          "weekStart": "2026-02-23",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-02",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-09",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-16",
+          "planned": 3,
+          "completed": 1,
+          "quantity": 0
+        },
+        {
+          "weekStart": "2026-03-23",
+          "planned": 3,
+          "completed": 0,
+          "quantity": 0
+        }
+      ],
+      "status": "active",
+      "occurrences": [
+        {
+          "date": "2026-02-26",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-27",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-02-28",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-01",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-02",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-03",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-04",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-05",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-06",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-07",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-08",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-09",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-10",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-11",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-12",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-13",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-14",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-15",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-16",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-17",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-18",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-19",
+          "scheduled": false,
+          "state": "unscheduled",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-20",
+          "scheduled": true,
+          "state": "missed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-21",
+          "scheduled": true,
+          "state": "completed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": true
+        },
+        {
+          "date": "2026-03-22",
+          "scheduled": true,
+          "state": "missed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-23",
+          "scheduled": true,
+          "state": "missed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-24",
+          "scheduled": true,
+          "state": "missed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        },
+        {
+          "date": "2026-03-25",
+          "scheduled": true,
+          "state": "missed",
+          "target": 8,
+          "unit": "glasses",
+          "quantity": null,
+          "completed": false
+        }
+      ],
+      "progress": {
+        "currentStreak": 0,
+        "bestStreak": 1,
+        "planned": 6,
+        "completed": 1,
+        "completionRate": 0.16666666666666666,
+        "quantity": 0
+      },
+      "months": [
+        {
+          "month": "2026-02",
+          "planned": 0,
+          "completed": 0,
+          "quantity": 0
+        },
+        {
+          "month": "2026-03",
+          "planned": 6,
+          "completed": 1,
+          "quantity": 0
+        }
+      ],
+      "reminderTime": null
+    }
+  }
+}
