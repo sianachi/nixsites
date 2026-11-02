@@ -71,6 +71,7 @@ export function idsToKeys(value: unknown, keys: readonly string[]): unknown {
 
 export function fixtureItems(fixture: Fixture): MirrorItem[] {
   const workspaceId = fixtureId(WORKSPACE);
+  const keys = fixture.items.map((item) => item.key);
   return fixture.items.map((item, index) => ({
     id: fixtureId(item.key),
     workspaceId,
@@ -80,7 +81,10 @@ export function fixtureItems(fixture: Fixture): MirrorItem[] {
     seq: index + 1,
     revision: String(index + 1),
     lifecycleState: 'active',
-    properties: item.properties ?? {},
+    properties: JSON.parse(keysToIds(JSON.stringify(item.properties ?? {}), keys)) as Record<
+      string,
+      unknown
+    >,
     computedProperties: null,
     schema: item.schema ?? null,
     views: item.views ?? null,
