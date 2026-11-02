@@ -24,7 +24,14 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
 {
     private readonly ServiceProvider _services;
 
-    private NixPersistenceHost(ServiceProvider services) => _services = services;
+    private NixPersistenceHost(ServiceProvider services, PinnableTimeProvider clock)
+    {
+        _services = services;
+        Clock = clock;
+    }
+
+    /// <summary>The host's clock: the system's until a test pins it (see <see cref="PinnableTimeProvider"/>).</summary>
+    public PinnableTimeProvider Clock { get; }
 
     /// <summary>
     /// Builds a host over <paramref name="connectionString"/>.
@@ -43,6 +50,8 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
         // so AddNixPersistence keeps it instead of its empty stand-in.
         configuration ??= new ConfigurationBuilder().Build();
         services.AddSingleton(configuration);
+        var clock = new PinnableTimeProvider();
+        services.AddSingleton<TimeProvider>(clock);
         services.AddNixPersistence(connectionString);
         services.AddNixObjectStorage(configuration);
 
@@ -61,7 +70,7 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
                 (_, builder) => builder.AddInterceptors(testInterceptor));
         }
 
-        return new NixPersistenceHost(services.BuildServiceProvider(validateScopes: true));
+        return new NixPersistenceHost(services.BuildServiceProvider(validateScopes: true), clock);
     }
 
     /// <summary>
