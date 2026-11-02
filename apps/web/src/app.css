@@ -54,3 +54,48 @@
 @import '@fontsource/nunito-sans/400.css';
 @import '@fontsource/nunito-sans/600.css';
 @import '@fontsource/nunito-sans/700.css';
+
+/*
+ * Phone feel for the native shell and installed PWA. Chrome (navigation, buttons, toolbars, tree
+ * rows) is not selectable and has no long-press callout; text the person writes or reads is left
+ * alone, so the editor, inputs and contenteditable are explicitly excluded.
+ */
+@media (max-width: 639px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+  a,
+  button,
+  summary,
+  select,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='treeitem'] {
+    touch-action: manipulation;
+  }
+  nav,
+  nav *,
+  button,
+  [role='button'],
+  [role='toolbar'],
+  [role='toolbar'] *,
+  [role='tab'],
+  [role='menuitem'],
+  [role='treeitem'] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+  .ProseMirror,
+  .ProseMirror *,
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-touch-callout: default;
+    user-select: text;
+  }
+}

@@ -5,6 +5,7 @@ import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import type { HabitTracker } from '@nix/api-client';
+import { tap } from '@nix/web-foundation/native/native-shell';
 import { spokenDayName, todayInTimezone, weekdayFor } from './habit-days';
 
 export function HabitRow({
@@ -224,6 +225,7 @@ export function HabitRow({
             Number(quantity) < 0 ||
             Number(quantity) > 1_000_000);
         const act = async (undo: boolean): Promise<void> => {
+          tap(undo ? 'light' : 'medium');
           setOptimistic((current) => ({
             ...current,
             [day]: !undo && (!measured || Number(quantity) >= target),

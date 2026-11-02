@@ -5,11 +5,25 @@ import WebKit
 class ShellViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NixShellPlugin())
+        configureWebView()
         let controller = bridge?.webView?.configuration.userContentController
         controller?.addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
         if let localURL = bridge?.config.localURL {
             controller?.addScriptMessageHandler(NixPickerHandler(localURL: localURL), contentWorld: .page, name: NixPickerHandler.name)
         }
+    }
+
+    /// Native feel: no link previews and no white flash in dark mode. The edge swipe stays with the
+    /// page, which opens its drawers from the screen edges; back and forward are on its navbar.
+    /// The form accessory bar is already hidden: @capacitor/keyboard sets it hidden at load, by
+    /// swizzling the WebKit content view class, so it holds across navigations.
+    private func configureWebView() {
+        guard let webView = bridge?.webView else { return }
+        webView.allowsLinkPreview = false
+        webView.isOpaque = false
+        webView.backgroundColor = .systemBackground
+        webView.scrollView.backgroundColor = .systemBackground
+        webView.underPageBackgroundColor = .systemBackground
     }
 
     /// WebKit runs service workers (the web app's offline shell) only for app-bound domains, and

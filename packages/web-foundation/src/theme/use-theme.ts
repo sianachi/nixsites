@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { browserStorage } from '../lib/browser-storage';
+import { syncStatusBar } from '../native/native-shell';
 import {
   applyGround,
   readStoredPreference,
@@ -78,6 +79,7 @@ export function useTheme(): Theme {
 
   useEffect(() => {
     applyGround(document.documentElement, preference, ground);
+    syncStatusBar(ground);
   }, [ground, preference]);
 
   const setPreference = useCallback((next: ThemePreference): void => {

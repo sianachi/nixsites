@@ -1,6 +1,7 @@
 import { Text, cn } from '@nix/ui';
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
+import { tap } from '@nix/web-foundation/native/native-shell';
 import { CreateItemControl } from '../core/create-item-control';
 import { useVirtualWindow } from '@nix/web-collections/core/use-virtual-window';
 import { boardCard, type BoardCardListProps } from './board-card';
@@ -78,6 +79,7 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
       .find((candidate) => candidate.id === dragged);
 
     if (item !== undefined) {
+      tap('medium');
       onMove(item, column.value);
     }
   }
