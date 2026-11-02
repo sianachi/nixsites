@@ -42,6 +42,7 @@ import {
   nativeBootSession,
 } from '../offline/native-mirror';
 import { isBootOffline, setOfflineState, useOfflineState } from '../offline/offline-state';
+import { canSignInNatively, nativeSignIn } from './native-sign-in';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
 import { useSessionStore, type SessionProfile } from '@nix/web-foundation/lib/session-store';
 
@@ -573,7 +574,22 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         signInStarted();
         const returnTo = `${globalThis.location.pathname}${globalThis.location.search}${globalThis.location.hash}`;
         const go = (): void => {
-          globalThis.location.assign(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+          if (!canSignInNatively()) {
+            globalThis.location.assign(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+            return;
+          }
+          // The cookie is set, so a full load of returnTo restores the session as /auth/callback's redirect does.
+          nativeSignIn(returnTo).then(
+            (result) => {
+              if (result === 'signed-in') globalThis.location.assign(returnTo);
+              else signedOut();
+            },
+            (error: unknown) => {
+              signInFailed(
+                error instanceof Error ? error.message : 'Sign-in could not be completed.',
+              );
+            },
+          );
         };
         // Only the shell ever owes a logout: finished first, so it cannot end the new session.
         if (!markedPending()) {
