@@ -647,7 +647,7 @@ export function AppShell(): ReactNode {
             <div hidden={keyboardVisible}>
               {phone ? (
                 <PhoneTopRow
-                  {...phoneMenu}
+                  principal={principal}
                   sidebarToggleRef={sidebarToggleRef}
                   sidebarVisible={sidebar.visible}
                   hasItem={selectedId !== null}

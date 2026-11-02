@@ -45,7 +45,8 @@ it('names the setup steps and lets the keyboard toggle preview without losing th
   expect(screen.getByRole('button', { name: 'Create Board' })).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Hide preview' }));
 
-  await user.click(screen.getByRole('button', { name: 'Enter Zen mode' }));
+  await user.click(screen.getByRole('button', { name: /^Menu/ }));
+  await user.click(screen.getByRole('menuitem', { name: 'Enter Zen mode' }));
   expect(screen.getByRole('region', { name: 'Guided setup' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Exit Zen mode' })).toBeInTheDocument();

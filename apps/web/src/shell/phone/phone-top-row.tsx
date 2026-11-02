@@ -1,18 +1,22 @@
 import { Icon, cn, focusRing } from '@nix/ui';
-import { Ellipsis, PanelLeft, PanelRight } from 'lucide-react';
+import { PanelLeft, PanelRight } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
-import { PhoneMenu, type PhoneMenuProps } from './phone-menu';
+import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
+
+import { ProfileMenu } from '../profile-menu';
 
 /** The event the open note's page answers by toggling its details panel (the panel state lives there). */
 export const TOGGLE_ITEM_PANEL_EVENT = 'nix:toggle-item-panel';
 
-export interface PhoneTopRowProps extends Omit<PhoneMenuProps, 'icon' | 'label' | 'className'> {
+export interface PhoneTopRowProps {
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly sidebarVisible: boolean;
   /** Whether an item is open, so there are details to show. */
   readonly hasItem: boolean;
   readonly onToggleSidebar: () => void;
+  /** The signed-in person: their menu (account, workspaces, sign out) sits where "..." was. */
+  readonly principal: CurrentPrincipalState;
 }
 
 const surface = 'border border-divider bg-background/75 shadow-md backdrop-blur-md';
@@ -21,13 +25,13 @@ const round = cn(
   focusRing,
 );
 
-/** Obsidian's floating top row, in place of the header: the drawer on the left, details and "..." on the right. */
+/** Obsidian's floating top row, in place of the header: the drawer on the left, details and the profile menu on the right. */
 export function PhoneTopRow({
   sidebarToggleRef,
   sidebarVisible,
   hasItem,
   onToggleSidebar,
-  ...menu
+  principal,
 }: PhoneTopRowProps): ReactNode {
   return (
     // design-token-exempt: device safe-area inset keeps the row below the status bar.
@@ -56,7 +60,7 @@ export function PhoneTopRow({
             <Icon icon={PanelRight} size="sm" />
           </button>
         ) : null}
-        <PhoneMenu {...menu} icon={Ellipsis} label="More" />
+        <ProfileMenu principal={principal} />
       </div>
     </header>
   );

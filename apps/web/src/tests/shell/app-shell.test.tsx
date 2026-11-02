@@ -88,7 +88,9 @@ describe('the shell', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: /show the explorer/i });
-    expect(screen.getByRole('button', { name: 'More' })).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: /^test person(?!'s workspace)/i }),
+    ).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
     const pill = screen.getByRole('navigation', { name: 'Mobile navigation' });
     for (const name of ['Back', 'Forward', 'Find', 'New note', /^Open tabs/, 'Menu']) {
