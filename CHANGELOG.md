@@ -11,6 +11,17 @@ follows semantic versioning (`0.x` pre-1.0).
   sheet and returns a one-time code (valid for 60 seconds) to the app, which redeems it with its
   verifier at `/auth/native/redeem` to receive the session cookie. This lets passkeys work in the
   iOS app. The browser sign-in is unchanged.
+- On phones, the app takes an Obsidian-like shape: a floating top row (Explorer, details, your
+  profile menu) and a floating bottom bar (back, forward, find, new note, open tabs, menu); the
+  Explorer and an item's details slide in from the screen edges; open tabs show as cards; search
+  docks above the keyboard; menus and settings open as grouped sheets. Calendar, Inbox, your pet,
+  Settings, Import and Zen mode are in the bottom bar's menu. Wider screens are unchanged.
+- In the iOS app, smart lists, charts, the Calendar page, habit trackers and finance pages work
+  offline: they are recalculated from the offline copy, so property edits made offline show in
+  them straight away. A view the app cannot recalculate exactly says it needs a connection.
+  Habit check-ins and finance entries still need a connection.
+- The iOS app: haptic feedback on habit check-ins and board drops, Share in an item's menu, no
+  link previews on long press and no white flash in dark mode.
 - The iOS app keeps a full offline copy of every workspace you can reach: the tree, properties,
   note bodies and files. It opens and reads everything with no connection, shows a small "Offline"
   notice, and removes the copy when you sign out. Settings > About shows how much space it takes.
@@ -36,6 +47,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Browser sign-in (`/auth/login` and `/auth/callback`) is limited per address,
+  `Nix:RateLimits:BrowserLoginsPerMinute` (default 30 a minute).
 - Settings > Site approvals shows the requester's name where the approver can read the
   requester's workspace members, and the short id otherwise.
 - Deleting several selected items runs up to four deletes at a time instead of one after another.
