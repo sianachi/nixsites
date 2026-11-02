@@ -42,7 +42,7 @@ export function MobileWorkspaceBrowser({
     tree.status === 'loading' || (parentId !== null && tree.isLoadingChildren(parentId));
   return (
     <aside aria-label="Explorer" className="flex min-h-0 min-w-0 w-full flex-col bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-divider px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-1">
         {parentId !== null ? (
           <Button
             variant="ghost"
@@ -60,19 +60,8 @@ export function MobileWorkspaceBrowser({
             Explorer
           </Text>
         )}
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <HiddenItemsPanel onOpen={onOpen} />
-          <Button
-            variant="subtle"
-            className="min-h-(--control-lg) min-w-(--control-lg) px-2"
-            aria-label="Close Explorer"
-            onClick={onClose}
-          >
-            <Icon icon={X} size="sm" />
-          </Button>
-        </div>
       </div>
-      <div className="shrink-0 border-b border-divider px-3 py-2">{destinations}</div>
+      <div className="shrink-0 px-3 py-2">{destinations}</div>
       {parent ? (
         <Button
           variant="ghost"
@@ -107,7 +96,7 @@ export function MobileWorkspaceBrowser({
       ) : null}
       <PaneViewport
         scrollKey={`mobile-workspace:${parentId ?? 'root'}`}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2"
       >
         {visible.map((item) => {
           const actions: MenuEntry[] = [
@@ -161,7 +150,7 @@ export function MobileWorkspaceBrowser({
                     }}
                   >
                     <ItemLandmarkIcon landmark={landmarks.landmarks[item.id]} />
-                    <Text as="span" variant="bodySmall" className="min-w-0 truncate">
+                    <Text as="span" variant="body" className="min-w-0 truncate">
                       {item.title || 'Untitled'}
                     </Text>
                   </Button>
@@ -216,6 +205,28 @@ export function MobileWorkspaceBrowser({
           </Text>
         ) : null}
       </PaneViewport>
+      <div className="flex shrink-0 items-center justify-center gap-1 px-3 pt-1 pb-[max(env(safe-area-inset-bottom),var(--spacing))]">
+        <Button
+          variant="subtle"
+          className="min-h-(--control-lg) min-w-(--control-lg) px-2"
+          aria-label="Up one level"
+          disabled={parentId === null}
+          onClick={() => {
+            onParent(parent?.parentId ?? null);
+          }}
+        >
+          <Icon icon={ArrowLeft} size="sm" />
+        </Button>
+        <HiddenItemsPanel onOpen={onOpen} />
+        <Button
+          variant="subtle"
+          className="min-h-(--control-lg) min-w-(--control-lg) px-2"
+          aria-label="Close Explorer"
+          onClick={onClose}
+        >
+          <Icon icon={X} size="sm" />
+        </Button>
+      </div>
       {iconItem?.scope !== landmarks.scope ? null : (
         <ItemLandmarkDialog
           key={`${landmarks.scope ?? ''}:${iconItem.id}`}

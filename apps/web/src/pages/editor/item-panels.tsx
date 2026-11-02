@@ -1,6 +1,10 @@
 import { Dialog } from '@nix/ui';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
+import { SidebarDrawer } from '@nix/web-foundation/layout/sidebar-drawer';
+import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
+import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
+import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
 import { DocumentHistory } from '../../history/document-history';
 import { historyPanelWidth } from '@nix/web-foundation/layout/regions';
 import { ItemPanel, type Pane } from '../../panel/item-panel';
@@ -33,9 +37,25 @@ export function ItemPanels({
   historyOpen,
   onCloseHistory,
 }: ItemPanelsProps): ReactNode {
+  const phone = !useMediaQuery('(min-width: 640px)');
+  // Swipe in from the right edge opens the panel; closing is the drawer's own drag, scrim or Escape.
+  useEdgeSwipeOpen('right', phone && !panelOpen, togglePanel);
+  // Always mounted, like the shell's own: a hook that mounts with the drawer would race its own cleanup.
+  useBackDismiss(phone && panelOpen, togglePanel);
   return (
     <>
-      {panelOpen ? (
+      {panelOpen && phone ? (
+        <PhonePanelDrawer onClose={togglePanel}>
+          <ItemPanel
+            container={container}
+            details={details}
+            onClose={togglePanel}
+            drawer
+            pane={panelPane}
+            onPaneChange={setPanelPane}
+          />
+        </PhonePanelDrawer>
+      ) : panelOpen ? (
         overlayDetails ? (
           <Dialog
             open
@@ -98,5 +118,26 @@ export function ItemPanels({
         )
       ) : null}
     </>
+  );
+}
+
+function PhonePanelDrawer({
+  onClose,
+  children,
+}: {
+  readonly onClose: () => void;
+  readonly children: ReactNode;
+}): ReactNode {
+  // The drawer is not a native dialog, so hand focus back to what opened it ourselves.
+  useEffect(() => {
+    const opener = document.activeElement;
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
+  return (
+    <SidebarDrawer side="right" fixed onClose={onClose}>
+      {children}
+    </SidebarDrawer>
   );
 }

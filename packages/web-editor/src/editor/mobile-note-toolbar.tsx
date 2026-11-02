@@ -1,4 +1,5 @@
-import { Button, Dialog } from '@nix/ui';
+import { Button, Dialog, Icon } from '@nix/ui';
+import { ChevronDown, MoreHorizontal } from 'lucide-react';
 import { flushSync } from 'react-dom';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
@@ -97,7 +98,7 @@ export function MobileNoteToolbar({
     // design-token-exempt: insets follow the runtime visual viewport and the device safe area.
     <div
       ref={dockRef}
-      className="absolute left-[calc(var(--spacing)*3+var(--viewport-inset-left,0%))] right-[calc(var(--spacing)*3+var(--viewport-inset-right,0%))] bottom-[max(calc(var(--keyboard-inset,0%)+var(--spacing)*3),env(safe-area-inset-bottom))] z-20 min-w-0 rounded-md border border-divider bg-background p-1 shadow-md"
+      className="absolute left-[calc(var(--spacing)*3+var(--viewport-inset-left,0%))] right-[calc(var(--spacing)*3+var(--viewport-inset-right,0%))] bottom-[max(calc(var(--keyboard-inset,0%)+var(--spacing)*3),env(safe-area-inset-bottom))] z-20 min-w-0 rounded-2xl bg-surface p-1 shadow-lg"
     >
       {collapsed ? (
         <Button
@@ -136,23 +137,25 @@ export function MobileNoteToolbar({
             {actions || details ? (
               <Button
                 variant="subtle"
-                className="shrink-0"
+                className="shrink-0 px-2"
+                aria-label="Item"
                 onClick={() => {
                   setActionsOpen(true);
                 }}
               >
-                Item
+                <Icon icon={MoreHorizontal} size="sm" />
               </Button>
             ) : null}
             {editor ? (
               <Button
                 variant="ghost"
-                className="shrink-0"
+                className="shrink-0 px-2"
+                aria-label="Done"
                 onClick={() => {
                   editor.commands.blur();
                 }}
               >
-                Done
+                <Icon icon={ChevronDown} size="sm" />
               </Button>
             ) : null}
           </div>

@@ -214,8 +214,10 @@ it("keeps a note's details and item actions in its writing dock, not under the t
   expect(details).toHaveAttribute('aria-expanded', 'false');
   await userEvent.click(details);
   expect(screen.queryByRole('dialog', { name: 'Item actions' })).not.toBeInTheDocument();
-  const dialog = screen.getByRole('dialog', { name: 'Item details' });
-  await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+  // On a phone the details are a right-hand drawer, not a dialog.
+  expect(screen.getByRole('complementary', { name: 'Item settings' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Close the panel' }));
+  expect(screen.queryByRole('complementary', { name: 'Item settings' })).not.toBeInTheDocument();
   expect(item).toHaveFocus();
 });
 

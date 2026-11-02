@@ -237,6 +237,7 @@ function tabStops(root: HTMLElement): HTMLElement[] {
 const itemClass = cn(
   'flex min-h-(--control-md) w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-foreground',
   'any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:text-base',
+  'max-sm:min-h-(--control-lg) max-sm:gap-3 max-sm:px-4 max-sm:text-base',
   inkWashStates,
   focusRingInset,
   disabledState,
@@ -511,6 +512,121 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
     }
   };
 
+  const groups: (
+    | { readonly separator: true }
+    | {
+        readonly separator?: false;
+        readonly entries: { entry: MenuEntry; index: number }[];
+      }
+  )[] = [];
+  items.forEach((entry, index) => {
+    if (entry.kind === 'separator') {
+      groups.push({ separator: true });
+      return;
+    }
+    const last = groups[groups.length - 1];
+    if (last && !last.separator) last.entries.push({ entry, index });
+    else groups.push({ entries: [{ entry, index }] });
+  });
+
+  const renderEntry = (entry: MenuEntry, index: number): ReactNode => {
+    if (entry.kind === 'separator') return null;
+    if (entry.kind === 'content') {
+      const node =
+        typeof entry.content === 'function'
+          ? entry.content({
+              close: () => {
+                onClose(false);
+              },
+            })
+          : entry.content;
+      return <Fragment key={entry.key ?? `content-${String(index)}`}>{node}</Fragment>;
+    }
+
+    const tone = entry.destructive === true ? 'font-semibold text-danger' : undefined;
+    const tabIndex = role === 'dialog' || index === activeIndex ? 0 : -1;
+    const key = entry.key ?? entry.label;
+
+    if (entry.kind === 'link' && entry.external === true) {
+      return (
+        <a
+          key={key}
+          href={entry.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          role={role === 'menu' ? 'menuitem' : undefined}
+          tabIndex={tabIndex}
+          className={cn(itemClass, tone)}
+          onClick={() => {
+            select(entry);
+          }}
+          data-menu-item-index={index}
+        >
+          {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
+          <span className="min-w-0 flex-1 break-words">
+            {entry.label} <span className="sr-only">(opens in a new tab)</span>
+          </span>
+          <span className="ml-auto text-muted">
+            <Icon icon={ArrowUpRight} size="sm" />
+          </span>
+        </a>
+      );
+    }
+
+    if (entry.kind === 'link') {
+      return (
+        <Fragment key={key}>
+          {renderLink({
+            href: entry.href,
+            role: role === 'menu' ? 'menuitem' : undefined,
+            tabIndex,
+            className: cn(itemClass, tone),
+            onClick: () => {
+              select(entry);
+            },
+            children: (
+              <>
+                {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
+                <span className="min-w-0 flex-1 break-words">{entry.label}</span>
+              </>
+            ),
+            'data-menu-item-index': index,
+          })}
+        </Fragment>
+      );
+    }
+
+    return (
+      <button
+        key={key}
+        type="button"
+        role={role === 'menu' ? (entry.role ?? 'menuitem') : undefined}
+        aria-checked={role === 'menu' && entry.role ? entry.checked === true : undefined}
+        tabIndex={tabIndex}
+        disabled={entry.disabled}
+        data-menu-item-index={index}
+        className={cn(itemClass, tone)}
+        onClick={() => {
+          select(entry);
+        }}
+      >
+        {entry.role ? (
+          // Reserved even when unchecked, so labels stay aligned; the state is aria-checked.
+          <span aria-hidden className={entry.checked === true ? undefined : 'invisible'}>
+            <Icon icon={Check} size="sm" />
+          </span>
+        ) : null}
+        {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
+        <span className="min-w-0 flex-1 break-words">{entry.label}</span>
+        {entry.shortcut ? (
+          <kbd aria-hidden="true" className="font-body text-xs text-muted">
+            {entry.shortcut}
+          </kbd>
+        ) : null}
+      </button>
+    );
+  };
+
   const panelClass = cn(
     blueprintFrame,
     'fixed inset-auto z-50 m-0 flex flex-col overflow-y-auto bg-background px-0 py-1 font-body text-foreground shadow-md',
@@ -521,6 +637,10 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
     // Below `sm` the panel drops the anchored position entirely and becomes a bottom sheet: full
     // width, safe-area padding, same device concession as `Dialog.tsx`'s `presentation="standard"`.
     'max-sm:rounded-b-none max-sm:pb-[max(var(--spacing)*1,env(safe-area-inset-bottom))]',
+    // Phone sheet in Obsidian's shape: a drag handle, then groups as rounded cards (see the group
+    // wrappers below, which are `contents` and so invisible from `sm` up).
+    'max-sm:rounded-t-2xl max-sm:bg-surface max-sm:px-3 max-sm:pt-2 max-sm:shadow-lg',
+    "max-sm:before:mx-auto max-sm:before:mb-2 max-sm:before:block max-sm:before:h-1 max-sm:before:w-9 max-sm:before:shrink-0 max-sm:before:rounded-full max-sm:before:bg-foreground/20 max-sm:before:content-['']",
     className,
   );
 
@@ -543,112 +663,26 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
         if (!isEditableTarget(event.target)) event.preventDefault();
       }}
     >
-      {items.map((entry, index) => {
-        if (entry.kind === 'separator') {
-          return (
-            <div
-              key={`separator-${String(index)}`}
-              role="separator"
-              className="my-1 border-t border-divider"
-            />
-          );
-        }
-
-        if (entry.kind === 'content') {
-          const node =
-            typeof entry.content === 'function'
-              ? entry.content({
-                  close: () => {
-                    onClose(false);
-                  },
-                })
-              : entry.content;
-          return <Fragment key={entry.key ?? `content-${String(index)}`}>{node}</Fragment>;
-        }
-
-        const tone = entry.destructive === true ? 'font-semibold text-danger' : undefined;
-        const tabIndex = role === 'dialog' || index === activeIndex ? 0 : -1;
-        const key = entry.key ?? entry.label;
-
-        if (entry.kind === 'link' && entry.external === true) {
-          return (
-            <a
-              key={key}
-              href={entry.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              role={role === 'menu' ? 'menuitem' : undefined}
-              tabIndex={tabIndex}
-              className={cn(itemClass, tone)}
-              onClick={() => {
-                select(entry);
-              }}
-              data-menu-item-index={index}
-            >
-              {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
-              <span className="min-w-0 flex-1 break-words">
-                {entry.label} <span className="sr-only">(opens in a new tab)</span>
-              </span>
-              <span className="ml-auto text-muted">
-                <Icon icon={ArrowUpRight} size="sm" />
-              </span>
-            </a>
-          );
-        }
-
-        if (entry.kind === 'link') {
-          return (
-            <Fragment key={key}>
-              {renderLink({
-                href: entry.href,
-                role: role === 'menu' ? 'menuitem' : undefined,
-                tabIndex,
-                className: cn(itemClass, tone),
-                onClick: () => {
-                  select(entry);
-                },
-                children: (
-                  <>
-                    {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
-                    <span className="min-w-0 flex-1 break-words">{entry.label}</span>
-                  </>
-                ),
-                'data-menu-item-index': index,
-              })}
-            </Fragment>
-          );
-        }
-
-        return (
-          <button
-            key={key}
-            type="button"
-            role={role === 'menu' ? (entry.role ?? 'menuitem') : undefined}
-            aria-checked={role === 'menu' && entry.role ? entry.checked === true : undefined}
-            tabIndex={tabIndex}
-            disabled={entry.disabled}
-            data-menu-item-index={index}
-            className={cn(itemClass, tone)}
-            onClick={() => {
-              select(entry);
-            }}
+      {/* Phone only: the menu's name as the sheet's title line. */}
+      <div aria-hidden="true" className="truncate px-2 pb-2 text-sm text-muted sm:hidden">
+        {label}
+      </div>
+      {groups.map((group, groupIndex) =>
+        group.separator ? (
+          <div
+            key={`separator-${String(groupIndex)}`}
+            role="separator"
+            className="my-1 border-t border-divider max-sm:hidden"
+          />
+        ) : (
+          <div
+            key={`group-${String(groupIndex)}`}
+            className="contents max-sm:mb-2 max-sm:block max-sm:overflow-hidden max-sm:rounded-xl max-sm:bg-background"
           >
-            {entry.role ? (
-              // Reserved even when unchecked, so labels stay aligned; the state is aria-checked.
-              <span aria-hidden className={entry.checked === true ? undefined : 'invisible'}>
-                <Icon icon={Check} size="sm" />
-              </span>
-            ) : null}
-            {entry.icon ? <Icon icon={entry.icon} size="sm" /> : null}
-            <span className="min-w-0 flex-1 break-words">{entry.label}</span>
-            {entry.shortcut ? (
-              <kbd aria-hidden="true" className="font-body text-xs text-muted">
-                {entry.shortcut}
-              </kbd>
-            ) : null}
-          </button>
-        );
-      })}
+            {group.entries.map(({ entry, index }) => renderEntry(entry, index))}
+          </div>
+        ),
+      )}
     </div>
   );
 }

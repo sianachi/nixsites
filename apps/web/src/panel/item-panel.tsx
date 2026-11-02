@@ -1,5 +1,14 @@
 import { Button, Icon, Segmented, Text, cn, focusRing } from '@nix/ui';
-import { PanelRightClose } from 'lucide-react';
+import {
+  Columns3,
+  Globe,
+  Info,
+  Link2,
+  MessageSquare,
+  PanelRightClose,
+  SlidersHorizontal,
+  type LucideIcon,
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
@@ -56,7 +65,19 @@ export interface ItemPanelProps {
   /** The pane to show, when the caller steers it (the Site menu entry does). */
   readonly pane?: Pane;
   readonly onPaneChange?: (pane: Pane) => void;
+
+  /** Phone right drawer: the pane switcher is an icon pill at the bottom, and there is no close row. */
+  readonly drawer?: boolean;
 }
+
+const PANE_ICONS: Record<Pane, LucideIcon> = {
+  details: Info,
+  fields: SlidersHorizontal,
+  views: Columns3,
+  links: Link2,
+  comments: MessageSquare,
+  site: Globe,
+};
 
 export function ItemPanel({
   container,
@@ -65,6 +86,7 @@ export function ItemPanel({
   overlay = false,
   pane: steeredPane,
   onPaneChange,
+  drawer = false,
 }: ItemPanelProps): ReactNode {
   const sitesEnabled = useSitesVisible();
   const openComments = useItemComments(details.item?.id ?? null).threads.filter(
@@ -81,6 +103,15 @@ export function ItemPanel({
       ? 'details'
       : requestedPane;
   const setPane = onPaneChange ?? setOwnPane;
+  const options = PANES.filter(
+    (option) =>
+      (sitesEnabled || option.value !== 'site') &&
+      (commentsAvailable || option.value !== 'comments'),
+  ).map((option) =>
+    option.value === 'comments' && openComments > 0
+      ? { ...option, label: `Comments (${String(openComments)})` }
+      : option,
+  );
 
   return (
     // The panel clips and the pane content inside it scrolls, rather than the panel itself
@@ -94,37 +125,33 @@ export function ItemPanel({
         'flex shrink-0 flex-col overflow-hidden bg-surface',
         settingsPanelWidth,
         overlay && 'min-h-0 w-full flex-1 shrink',
+        drawer &&
+          'min-h-0 w-full flex-1 shrink pt-[max(env(safe-area-inset-top),calc(var(--spacing)*3))]',
       )}
     >
-      <div className="flex shrink-0 items-center gap-2 px-3 py-3">
-        <Segmented
-          label="What to configure"
-          options={PANES.filter(
-            (option) =>
-              (sitesEnabled || option.value !== 'site') &&
-              (commentsAvailable || option.value !== 'comments'),
-          ).map((option) =>
-            option.value === 'comments' && openComments > 0
-              ? { ...option, label: `Comments (${String(openComments)})` }
-              : option,
-          )}
-          value={pane}
-          onChange={setPane}
-          className="min-w-0 flex-1"
-        />
+      {drawer ? null : (
+        <div className="flex shrink-0 items-center gap-2 px-3 py-3">
+          <Segmented
+            label="What to configure"
+            options={options}
+            value={pane}
+            onChange={setPane}
+            className="min-w-0 flex-1"
+          />
 
-        {/* In a dialog the dialog's own close is the one way out; a second would be a duplicate. */}
-        {overlay ? null : (
-          <button
-            type="button"
-            aria-label="Hide the settings panel"
-            onClick={onClose}
-            className={`flex size-7 max-xl:min-h-11 max-xl:min-w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
-          >
-            <Icon icon={PanelRightClose} size="sm" />
-          </button>
-        )}
-      </div>
+          {/* In a dialog the dialog's own close is the one way out; a second would be a duplicate. */}
+          {overlay ? null : (
+            <button
+              type="button"
+              aria-label="Hide the settings panel"
+              onClick={onClose}
+              className={`flex size-7 max-xl:min-h-11 max-xl:min-w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
+            >
+              <Icon icon={PanelRightClose} size="sm" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
         {pane === 'details' ? (
@@ -148,6 +175,32 @@ export function ItemPanel({
           <ViewEditor container={container} open onClose={onClose} inline />
         )}
       </div>
+
+      {drawer ? (
+        <div
+          role="group"
+          aria-label="What to configure"
+          className="mx-auto mb-[max(env(safe-area-inset-bottom),var(--spacing))] flex shrink-0 items-center gap-1 rounded-full bg-foreground/7 p-1"
+        >
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-label={option.label}
+              aria-pressed={pane === option.value}
+              onClick={() => {
+                setPane(option.value);
+              }}
+              className={cn(
+                `flex size-11 items-center justify-center rounded-full text-muted ${focusRing}`,
+                pane === option.value && 'bg-accent-fill text-background',
+              )}
+            >
+              <Icon icon={PANE_ICONS[option.value]} size="sm" />
+            </button>
+          ))}
+        </div>
+      ) : null}
     </aside>
   );
 }
