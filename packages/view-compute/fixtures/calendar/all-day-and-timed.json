@@ -12,7 +12,7 @@
           {
             "key": "due_date",
             "label": "due_date",
-            "type": "due_date",
+            "type": "datetime",
             "options": [],
             "required": false
           }

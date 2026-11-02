@@ -1,7 +1,10 @@
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Web;
 using Nix.Domain.Calendar;
+using Nix.Domain.Items;
+using Nix.Features.Recurrence;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Features.Calendar;
@@ -15,11 +18,11 @@ namespace Nix.Integration.Tests.ViewCompute;
 /// so the offline TypeScript port (<c>packages/view-compute/src/calendar</c>) cannot drift from it.
 /// </summary>
 /// <remarks>
-/// The fixtures avoid two things Core's order does not pin down: ties between stored entries on one
+/// Record expected answers with <c>NIX_FIXTURE_RECORD=1</c>. The fixtures avoid two things Core's order does not pin down: ties between stored entries on one
 /// value (broken by item id, which Core mints) and ties between series in different containers
 /// (broken by sibling order, which is per parent).
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class CalendarFixtureReplayTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;
@@ -28,47 +31,61 @@ public sealed class CalendarFixtureReplayTests : IAsyncLifetime
 
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
-    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
+    public static TheoryData<string> Names()
+    {
+        var data = new TheoryData<string>();
+        foreach (var fixture in ViewComputeFixtures.Load("calendar"))
+        {
+            data.Add(fixture.Name);
+        }
+
+        return data;
+    }
+
+    public async ValueTask InitializeAsync() => await ViewComputeFixtures.PrepareAsync(_fixture);
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    [Fact]
-    public async Task Every_calendar_fixture_matches_what_core_answers()
+    [Theory]
+    [MemberData(nameof(Names))]
+    public async Task Core_answers_the_fixture(string name)
     {
-        var fixtures = ViewComputeFixtures.Load("calendar");
-        Assert.NotEmpty(fixtures);
+        var fixture = ViewComputeFixtures.Load("calendar").Single(candidate => candidate.Name == name);
 
-        foreach (var fixture in fixtures)
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
         {
-            await _fixture.ResetAsync();
-            await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var ids = await ViewComputeFixtures.SeedAsync(
+                dispatcher, WorkspaceId.From(TestTenants.AlphaWorkspace), fixture, Cancellation, _fixture.Application.Clock);
 
-            FixtureIds ids;
-            var seeding = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-            await using (seeding.ConfigureAwait(false))
+            // The rule request carries no completion state, so a fixture's "complete" days go through Core's own command.
+            foreach (var node in fixture.Items)
             {
-                ids = await ViewComputeFixtures.SeedAsync(
-                    seeding.Resolve<NixDispatcher>(), WorkspaceId.From(TestTenants.AlphaWorkspace), fixture, Cancellation);
-                await seeding.CommitAsync(Cancellation);
+                if (node!["complete"] is not JsonArray days)
+                {
+                    continue;
+                }
+
+                foreach (var day in days)
+                {
+                    var done = await dispatcher.SendAsync<CompleteRecurrenceOccurrence, Item>(
+                        new CompleteRecurrenceOccurrence(
+                            ids.ByKey[node["key"]!.GetValue<string>()],
+                            DateOnly.ParseExact(day!.GetValue<string>(), "yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                        Cancellation);
+                    Assert.True(done.IsSuccess, done.IsFailure ? done.Error.Message : null);
+                }
             }
 
             var path = ViewComputeFixtures.ToIds(fixture.Request["path"]!.GetValue<string>(), ids);
             var query = HttpUtility.ParseQueryString(path[(path.IndexOf('?', StringComparison.Ordinal) + 1)..]);
 
-            Result<WorkspaceCalendarResults> result;
-            var reading = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-            await using (reading.ConfigureAwait(false))
-            {
-                result = await reading.Resolve<NixDispatcher>()
-                    .QueryAsync<GetWorkspaceCalendar, Result<WorkspaceCalendarResults>>(
-                        new GetWorkspaceCalendar(ids.Workspace, query["from"]!, query["to"]!),
-                        Cancellation);
-            }
+            var result = await dispatcher.QueryAsync<GetWorkspaceCalendar, Result<WorkspaceCalendarResults>>(
+                new GetWorkspaceCalendar(ids.Workspace, query["from"]!, query["to"]!),
+                Cancellation);
 
-            var answer = ViewComputeFixtures.ToKeys(Answer(result, ids, query), ids);
-            Assert.True(
-                JsonNode.DeepEquals(fixture.Expected, answer),
-                $"{fixture.Name}: expected {fixture.Expected.ToJsonString()} but Core answered {answer?.ToJsonString()}");
+            ViewComputeFixtures.Verify(fixture, ViewComputeFixtures.ToKeys(Answer(result, ids, query), ids));
         }
     }
 

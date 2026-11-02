@@ -20,7 +20,12 @@
       },
       "views": {
         "views": [
-          { "id": "cal", "name": "Calendar", "kind": "calendar", "dateProperty": "due_date" }
+          {
+            "id": "cal",
+            "name": "Calendar",
+            "kind": "calendar",
+            "dateProperty": "due_date"
+          }
         ]
       }
     },
@@ -29,48 +34,78 @@
       "parent": "cal",
       "type": "page",
       "title": "daily0",
-      "properties": { "due_date": "2026-01-01" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-01"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     },
     {
       "key": "daily1",
       "parent": "cal",
       "type": "page",
       "title": "daily1",
-      "properties": { "due_date": "2026-01-02" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-02"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     },
     {
       "key": "daily2",
       "parent": "cal",
       "type": "page",
       "title": "daily2",
-      "properties": { "due_date": "2026-01-03" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-03"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     },
     {
       "key": "daily3",
       "parent": "cal",
       "type": "page",
       "title": "daily3",
-      "properties": { "due_date": "2026-01-04" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-04"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     },
     {
       "key": "daily4",
       "parent": "cal",
       "type": "page",
       "title": "daily4",
-      "properties": { "due_date": "2026-01-05" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-05"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     },
     {
       "key": "daily5",
       "parent": "cal",
       "type": "page",
       "title": "daily5",
-      "properties": { "due_date": "2026-01-06" },
-      "recurrence": { "freq": "daily", "interval": 1 }
+      "properties": {
+        "due_date": "2026-01-06"
+      },
+      "recurrence": {
+        "freq": "daily",
+        "interval": 1
+      }
     }
   ],
   "request": {
