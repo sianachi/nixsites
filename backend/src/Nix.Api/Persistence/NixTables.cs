@@ -41,6 +41,12 @@ public static class NixTables
     /// <summary>Anonymous, single-use browser approval challenges, accessed only by exact secret hashes.</summary>
     public const string CliLoginPairing = "cli_login_pairing";
 
+    /// <summary>
+    /// One-time handoff codes for the iOS app's system-sheet sign-in, hashed, reachable only through
+    /// exact security-definer create and consume functions.
+    /// </summary>
+    public const string NativeLoginHandoff = "native_login_handoff";
+
     /// <summary>CLI-to-browser revocation links, accessed only inside session capability functions.</summary>
     public const string CliSessionLink = "cli_session_link";
 
@@ -363,7 +369,7 @@ public static class NixTables
     /// browser. Exact security-definer functions derive identity from a standing source session;
     /// they never accept a caller-supplied tenant or principal. Both tables force RLS with no policies.
     /// </remarks>
-    public static ImmutableArray<string> CapabilityOnly { get; } = [CliLoginPairing, CliSessionLink, BackupRuns];
+    public static ImmutableArray<string> CapabilityOnly { get; } = [CliLoginPairing, CliSessionLink, BackupRuns, NativeLoginHandoff];
 
     /// <summary>
     /// Read and write, sorted the way <c>information_schema.table_privileges</c> reports them.
@@ -414,6 +420,7 @@ public static class NixTables
             [IdentityProvider] = FullDml,
             [BrowserSession] = ["INSERT", "SELECT", "UPDATE"],
             [CliLoginPairing] = [],
+            [NativeLoginHandoff] = [],
             [CliSessionLink] = [],
             [BackupRuns] = [],
             [Principal] = FullDml,
