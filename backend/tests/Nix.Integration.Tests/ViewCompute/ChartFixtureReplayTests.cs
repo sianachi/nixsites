@@ -25,37 +25,45 @@ public sealed class ChartFixtureReplayTests : IAsyncLifetime
 
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
-    public async ValueTask InitializeAsync()
+    // "chart/ctx" fixtures draw a time axis, which needs the caller's day; the TypeScript side supplies
+    // the zone (UTC, as the seeded caller has none) in its own test.
+    public static TheoryData<string, string> Names()
     {
-        await _fixture.ResetAsync();
-        await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
+        var data = new TheoryData<string, string>();
+        foreach (var slice in new[] { "chart", "chart/ctx" })
+        {
+            foreach (var fixture in ViewComputeFixtures.Load(slice))
+            {
+                data.Add(slice, fixture.Name);
+            }
+        }
+
+        return data;
     }
+
+    public async ValueTask InitializeAsync() => await ViewComputeFixtures.PrepareAsync(_fixture);
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    [Fact]
-    public async Task Every_chart_fixture_matches_what_core_answers()
+    [Theory]
+    [MemberData(nameof(Names))]
+    public async Task Core_answers_the_fixture(string slice, string name)
     {
-        var fixtures = ViewComputeFixtures.Load("chart");
-        Assert.NotEmpty(fixtures);
+        var fixture = ViewComputeFixtures.Load(slice).Single(candidate => candidate.Name == name);
 
-        foreach (var fixture in fixtures)
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
         {
-            var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-            await using (work.ConfigureAwait(false))
-            {
-                var workspace = WorkspaceId.From(TestTenants.AlphaWorkspace);
-                var ids = await ViewComputeFixtures.SeedAsync(
-                    work.Resolve<NixDispatcher>(), workspace, fixture, Cancellation);
+            var ids = await ViewComputeFixtures.SeedAsync(
+                work.Resolve<NixDispatcher>(),
+                WorkspaceId.From(TestTenants.AlphaWorkspace),
+                fixture,
+                Cancellation,
+                _fixture.Application.Clock);
 
-                var path = ViewComputeFixtures.ToIds(fixture.Request["path"]!.GetValue<string>(), ids);
-                var answer = await AnswerAsync(work, path, fixture.Now);
-                var actual = ViewComputeFixtures.ToKeys(answer, ids);
-
-                Assert.True(
-                    JsonNode.DeepEquals(fixture.Expected, actual),
-                    $"{fixture.Name}: Core answered {actual?.ToJsonString()} but the fixture expects {fixture.Expected.ToJsonString()}");
-            }
+            var path = ViewComputeFixtures.ToIds(fixture.Request["path"]!.GetValue<string>(), ids);
+            var answer = await AnswerAsync(work, path, fixture.Now);
+            ViewComputeFixtures.Verify(fixture, ViewComputeFixtures.ToKeys(answer, ids));
         }
     }
 

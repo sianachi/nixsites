@@ -134,6 +134,23 @@ function window(options: Options, axis: Period, kind: string, today: number) {
   return { first: options.from, last: today, endAtData: true };
 }
 
+/** The calendar day of an instant in an IANA zone; null or an unknown zone is UTC, as in Core. */
+function dayIn(instant: Date, zone: string | null): number {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zone ?? 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(instant);
+  } catch {
+    return dayIn(instant, null);
+  }
+  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return dates.dayNumber(part('year'), part('month'), part('day'));
+}
+
 const iso = (day: number | null): string | null => (day === null ? null : dates.format(day));
 
 export const computeChart: ViewCompute = async (source, request, match) => {
@@ -181,8 +198,9 @@ export const computeChart: ViewCompute = async (source, request, match) => {
     if (options.period !== null) {
       const axis: Period = kind === 'year' ? 'day' : options.period;
       period = axis;
-      const now = source.now();
-      const today = dates.dayNumber(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate());
+      // Core's "today" is the reader's own day; an unknown zone cannot be answered offline.
+      if (source.timeZone === undefined) return null;
+      const today = dayIn(source.now(), source.timeZone);
       const { first, last, endAtData } = window(options, axis, kind, today);
       const cells = bucketByDay(
         rows,
