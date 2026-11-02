@@ -14,6 +14,7 @@ export function getShellFetch(): typeof fetch | undefined {
         : createMirrorFetch({
             inner: (input, init) => globalThis.fetch(input, init),
             store: () => mirror.current(),
+            principalId: () => mirror.principalId(),
             readFile: (itemId, versionId) => mirror.fileGet(itemId, versionId),
             isBootOffline: () => getOfflineState().bootOffline,
             onReachability: (up) => {

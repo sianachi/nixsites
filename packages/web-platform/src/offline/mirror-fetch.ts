@@ -31,6 +31,8 @@ export interface MirrorFetchDeps {
   readonly inner: typeof fetch;
   /** The admitted mirror, or null when there is none (or admission is closed). */
   readonly store: () => MirrorReader | null;
+  /** The principal the mirror belongs to, for computed reads that name the caller (`me`). */
+  readonly principalId?: () => string | null;
   readonly readFile: (itemId: string, versionId: string) => Promise<Uint8Array | null>;
   readonly isBootOffline: () => boolean;
   /** Told whether the last call to Core got an answer, for the offline indicator. */
@@ -235,6 +237,22 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     return found;
   }
 
+  /** `{ [key]: value }`, or nothing when the value is unknown (optional fields stay absent). */
+  const withDefined = <K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> =>
+    value === undefined ? {} : ({ [key]: value } as Record<K, V>);
+
+  /** The caller's zone from the last preferences Core sent; undefined when never cached. */
+  async function cachedTimeZone(store: MirrorReader): Promise<string | null | undefined> {
+    const kept = await store.getSetting(rememberKey('/api/v1/me/preferences'));
+    if (kept === null) return undefined;
+    try {
+      const zone = (JSON.parse(kept) as { timeZone?: unknown }).timeZone;
+      return typeof zone === 'string' && zone !== '' ? zone : null;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Core's computed reads (queries, charts, calendar, habits, finance), recalculated offline. */
   async function computed(store: MirrorReader, request: ViewRequest): Promise<Response | null> {
     const answered: ViewAnswer | null = await computeView(
@@ -243,6 +261,9 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         workspaceItems: async (workspaceId) =>
           [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
         now: () => new Date(),
+        ...withDefined('principalId', deps.principalId?.() ?? undefined),
+        ...withDefined('timeZone', await cachedTimeZone(store)),
+        workspaceIds: async () => (await store.readWorkspaceList()).map((entry) => entry.id),
       },
       request,
     );

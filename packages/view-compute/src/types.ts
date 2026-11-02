@@ -8,6 +8,12 @@ export interface ViewSource {
   readonly workspaceItems: (workspaceId: string) => Promise<readonly MirrorItem[]>;
   /** Now, as Core's clock would read it; fixtures pin it. */
   readonly now: () => Date;
+  /** The acting principal's id; undefined when unknown (reads that need it return null). */
+  readonly principalId?: string;
+  /** The caller's preferred IANA zone; null when they set none (UTC); undefined when unknown. */
+  readonly timeZone?: string | null;
+  /** Every workspace the caller may read. */
+  readonly workspaceIds?: () => Promise<readonly string[]>;
 }
 
 export interface ViewRequest {

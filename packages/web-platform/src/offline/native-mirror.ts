@@ -64,6 +64,11 @@ export class NativeMirror {
   constructor(private readonly deps: NativeMirrorDeps) {}
 
   /** The open mirror, or null while admission is closed. */
+  /** The principal the open mirror belongs to, or null. */
+  principalId(): string | null {
+    return this.account?.principalId ?? null;
+  }
+
   current(): SqliteMirrorStore | null {
     return this.admitted ? this.store : null;
   }
