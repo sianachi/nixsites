@@ -1,0 +1,148 @@
+{
+  "name": "no match answers an empty, untruncated list",
+  "now": "2026-03-10T12:00:00Z",
+  "items": [
+    {
+      "key": "proj",
+      "parent": null,
+      "type": "page",
+      "title": "Project",
+      "properties": {
+        "title": "Project"
+      }
+    },
+    {
+      "key": "home",
+      "parent": null,
+      "type": "folder",
+      "title": "Home",
+      "properties": {
+        "title": "Home"
+      }
+    },
+    {
+      "key": "t1",
+      "parent": "proj",
+      "type": "task",
+      "title": "Write spec",
+      "properties": {
+        "title": "Write spec",
+        "status": "open",
+        "priority": 3,
+        "due_date": "2026-03-09",
+        "tags": ["a", "b"],
+        "assignee": "1b1b1b1b-1111-4111-8111-1b1b1b1b1b1b",
+        "note": "Alpha_One 100%"
+      },
+      "createdAt": "2026-03-01T09:00:00Z"
+    },
+    {
+      "key": "t2",
+      "parent": "proj",
+      "type": "task",
+      "title": "Review code",
+      "properties": {
+        "title": "Review code",
+        "status": "open",
+        "priority": 10,
+        "due_date": "2026-03-10",
+        "tags": ["b"]
+      },
+      "createdAt": "2026-03-02T09:00:00Z"
+    },
+    {
+      "key": "t3",
+      "parent": "proj",
+      "type": "task",
+      "title": "Ship Release",
+      "properties": {
+        "title": "Ship Release",
+        "status": "done",
+        "completion": true,
+        "priority": 7,
+        "due_date": "2026-03-12",
+        "note": "alpha beta"
+      },
+      "createdAt": "2026-03-03T09:00:00Z"
+    },
+    {
+      "key": "t4",
+      "parent": "proj",
+      "type": "task",
+      "title": "Plan trip",
+      "properties": {
+        "title": "Plan trip",
+        "status": "open",
+        "priority": "high",
+        "due_date": "2026-03-20",
+        "note": "Alpha-Beta"
+      },
+      "createdAt": "2026-03-04T09:00:00Z"
+    },
+    {
+      "key": "t5",
+      "parent": "home",
+      "type": "task",
+      "title": "buy milk",
+      "properties": {
+        "title": "buy milk",
+        "note": "",
+        "tags": []
+      },
+      "createdAt": "2026-03-05T09:00:00Z"
+    },
+    {
+      "key": "t6",
+      "parent": "home",
+      "type": "task",
+      "title": "Water plants",
+      "properties": {
+        "title": "Water plants",
+        "status": "open",
+        "completion": false,
+        "due_date": "2026-03-01",
+        "priority": 2.5
+      },
+      "createdAt": "2026-03-06T09:00:00Z"
+    },
+    {
+      "key": "t7",
+      "parent": "home",
+      "type": "task",
+      "title": "Zebra",
+      "properties": {
+        "title": "Zebra",
+        "status": "Open",
+        "priority": -4,
+        "due_date": "2026-02-27",
+        "assignee": "someone-else"
+      },
+      "createdAt": "2026-03-07T09:00:00Z"
+    }
+  ],
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace}/query",
+    "body": {
+      "filters": [
+        {
+          "property": "status",
+          "operator": "equals",
+          "value": "nothing"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "status": 200,
+    "body": {
+      "workspaceId": "{workspace}",
+      "today": null,
+      "results": [],
+      "limit": 100,
+      "truncated": false,
+      "groupBy": null,
+      "groups": []
+    }
+  }
+}

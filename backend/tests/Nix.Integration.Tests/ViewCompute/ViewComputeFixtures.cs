@@ -53,6 +53,30 @@ internal static partial class ViewComputeFixtures
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>
+    /// Resets the database, seeds both tenants and removes Alpha's seeded item, so the workspace
+    /// holds exactly the fixture's items. Call it from <c>InitializeAsync</c>.
+    /// </summary>
+    /// <param name="fixture">The database fixture.</param>
+    public static async Task PrepareAsync(NixPostgresFixture fixture)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        await fixture.ResetAsync();
+        await M0SchemaSeed.SeedBothTenantsAsync(fixture);
+        var connection = await fixture.OpenSuperuserConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            // Foreign keys off for this session only: the seed's dependents are orphaned, which no
+            // view read looks at, and the item itself is gone from every list.
+            await RawSql.ExecuteAsync(connection, transaction: null, "SET session_replication_role = replica");
+            await RawSql.ExecuteAsync(
+                connection,
+                transaction: null,
+                $"DELETE FROM item WHERE tenant_id = '{TestTenants.Alpha}'");
+        }
+    }
+
     /// <summary>Every fixture of one slice, sorted by file name.</summary>
     public static IReadOnlyList<ViewComputeFixture> Load(string slice)
     {
@@ -107,7 +131,10 @@ internal static partial class ViewComputeFixtures
                 clock?.Pin(createdAt);
 
                 ItemId? parent = item["parent"] is { } parentKey ? ids[parentKey.GetValue<string>()] : null;
-                var properties = item["properties"]?.AsObject().DeepClone().AsObject();
+                // {key} / {workspace} inside properties name items created earlier in the fixture.
+                var properties = item["properties"] is { } bag
+                    ? JsonNode.Parse(ToIds(bag.ToJsonString(), new FixtureIds(workspace, ids)))!.AsObject()
+                    : null;
                 var create = new CreateItem(
                     workspace,
                     item["type"]!.GetValue<string>(),

@@ -26,12 +26,19 @@ public sealed class QueryFixtureReplayTests : IAsyncLifetime
 
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
-    public static TheoryData<string> Names()
+    // "query" fixtures run against the plain mirror source; "query/ctx" ones also need the caller's
+    // principal, zone and readable workspaces, which the TypeScript side supplies in its own test.
+    private static readonly string[] Slices = ["query", "query/ctx"];
+
+    public static TheoryData<string, string> Names()
     {
-        var data = new TheoryData<string>();
-        foreach (var fixture in ViewComputeFixtures.Load("query"))
+        var data = new TheoryData<string, string>();
+        foreach (var slice in Slices)
         {
-            data.Add(fixture.Name);
+            foreach (var fixture in ViewComputeFixtures.Load(slice))
+            {
+                data.Add(slice, fixture.Name);
+            }
         }
 
         return data;
@@ -39,17 +46,16 @@ public sealed class QueryFixtureReplayTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        await _fixture.ResetAsync();
-        await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
+        await ViewComputeFixtures.PrepareAsync(_fixture);
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Theory]
     [MemberData(nameof(Names))]
-    public async Task Core_answers_the_fixture(string name)
+    public async Task Core_answers_the_fixture(string slice, string name)
     {
-        var fixture = ViewComputeFixtures.Load("query").Single(candidate => candidate.Name == name);
+        var fixture = ViewComputeFixtures.Load(slice).Single(candidate => candidate.Name == name);
 
         var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         await using (work.ConfigureAwait(false))
