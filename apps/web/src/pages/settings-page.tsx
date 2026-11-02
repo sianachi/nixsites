@@ -245,6 +245,14 @@ export function SettingsPage(): ReactElement {
           </div>
         );
       })}
+      {narrow &&
+      !sections.some((section) =>
+        section.label.toLowerCase().includes(query.trim().toLowerCase()),
+      ) ? (
+        <Text as="p" tone="muted" role="status" className="px-3">
+          No settings match “{query.trim()}”.
+        </Text>
+      ) : null}
     </div>
   );
 
