@@ -1,6 +1,25 @@
-import { Icon, Nav, Text } from '@nix/ui';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef, type ReactElement } from 'react';
+import { Icon, Input, Nav, Text } from '@nix/ui';
+import {
+  Bell,
+  Building2,
+  Calendar,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Code,
+  HardDrive,
+  Info,
+  KeyRound,
+  PawPrint,
+  PenLine,
+  Plug,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 
@@ -72,6 +91,24 @@ const settingsSections: readonly { id: SettingsTab; label: string; group: Group;
   { id: 'backups', label: 'Backups', group: 'Administration', gate: (c) => c.operator },
 ];
 
+// Phone rows carry an icon, as the grouped settings list does.
+const sectionIcons: Record<SettingsTab, LucideIcon> = {
+  preferences: SlidersHorizontal,
+  editor: PenLine,
+  'daily-notes': CalendarDays,
+  notifications: Bell,
+  integrations: Calendar,
+  pets: PawPrint,
+  about: Info,
+  workspace: Building2,
+  'access-tokens': KeyRound,
+  mcp: Plug,
+  api: Code,
+  'site-approvals': ShieldCheck,
+  administrators: Users,
+  backups: HardDrive,
+};
+
 function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
   switch (props.id) {
     case 'workspace':
@@ -121,6 +158,7 @@ export function SettingsPage(): ReactElement {
   // Wide always shows a section; the phone shows the list until one is chosen.
   const activeTab = narrow ? offered : (offered ?? DEFAULT_SETTINGS_TAB);
 
+  const [query, setQuery] = useState('');
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const nav = useRef<HTMLDivElement>(null);
@@ -149,31 +187,61 @@ export function SettingsPage(): ReactElement {
   const navigation = (
     <div
       ref={nav}
-      className={`flex flex-col gap-4 ${narrow ? 'p-3' : 'sticky top-0 w-48 shrink-0 self-start'}`}
+      className={`flex flex-col gap-4 ${narrow ? 'px-3 pb-6' : 'sticky top-0 w-48 shrink-0 self-start'}`}
     >
       {GROUPS.map((group) => {
-        const items = sections.filter((section) => section.group === group.name);
+        const items = sections.filter(
+          (section) =>
+            section.group === group.name &&
+            (!narrow || section.label.toLowerCase().includes(query.trim().toLowerCase())),
+        );
         return items.length === 0 ? null : (
           <div key={group.name} className="flex flex-col gap-1">
-            <Text as="span" variant="caption" tone="muted" aria-hidden="true">
+            <Text
+              as="span"
+              variant="caption"
+              tone="muted"
+              aria-hidden="true"
+              className={narrow ? 'px-3' : ''}
+            >
               {group.name}
             </Text>
-            <Nav
-              label={group.label}
-              items={items.map((section) => ({ href: hrefFor(section.id), label: section.label }))}
-              {...(activeTab === null ? {} : { currentHref: hrefFor(activeTab) })}
-              renderLink={({ href, children, ...rest }) => (
-                <Link
-                  to={href}
-                  replace={!narrow}
-                  state={narrow ? { drilled: true } : undefined}
-                  {...rest}
-                >
-                  {children}
-                  {narrow ? <Icon icon={ChevronRight} size="sm" className="ml-auto" /> : null}
-                </Link>
-              )}
-            />
+            <div
+              className={
+                narrow
+                  ? 'overflow-hidden rounded-card [&_a]:flex [&_a]:min-h-11 [&_a]:items-center [&_a]:gap-3 [&_a]:bg-surface-raised [&_a]:px-3'
+                  : ''
+              }
+            >
+              <Nav
+                label={group.label}
+                items={items.map((section) => ({
+                  href: hrefFor(section.id),
+                  label: section.label,
+                }))}
+                {...(activeTab === null ? {} : { currentHref: hrefFor(activeTab) })}
+                renderLink={({ href, children, ...rest }) => (
+                  <Link
+                    to={href}
+                    replace={!narrow}
+                    state={narrow ? { drilled: true } : undefined}
+                    {...rest}
+                  >
+                    {narrow ? (
+                      <Icon
+                        icon={
+                          sectionIcons[items.find((s) => hrefFor(s.id) === href)?.id ?? 'about']
+                        }
+                        size="sm"
+                        className="text-muted"
+                      />
+                    ) : null}
+                    {children}
+                    {narrow ? <Icon icon={ChevronRight} size="sm" className="ml-auto" /> : null}
+                  </Link>
+                )}
+              />
+            </div>
           </div>
         );
       })}
@@ -181,12 +249,38 @@ export function SettingsPage(): ReactElement {
   );
 
   return (
-    <div ref={scroller} className={`${paneScroller} flex flex-col`}>
-      <header className="border-b border-divider px-3 py-3 sm:px-6 sm:py-4">
+    <div ref={scroller} className={`${paneScroller} flex flex-col ${narrow ? 'bg-surface' : ''}`}>
+      <header
+        className={`px-3 py-3 sm:px-6 sm:py-4 ${narrow ? 'relative flex items-center justify-center' : 'border-b border-divider'}`}
+      >
         <Text variant="h2" as="h1" className={narrow && activeTab !== null ? 'sr-only' : ''}>
           Settings
         </Text>
+        {narrow ? (
+          <Link
+            to="/"
+            aria-label="Close settings"
+            className="absolute right-3 flex size-9 items-center justify-center rounded-full bg-surface-raised"
+          >
+            <Icon icon={X} size="sm" />
+          </Link>
+        ) : null}
       </header>
+
+      {narrow && activeTab === null ? (
+        <div className="px-3 pb-3">
+          <Input
+            type="search"
+            aria-label="Search settings"
+            placeholder="Search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
+            className="w-full rounded-card bg-surface-raised"
+          />
+        </div>
+      ) : null}
 
       {narrow && activeTab !== null ? (
         <Link

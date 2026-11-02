@@ -21,7 +21,7 @@ export function SettingsSection(props: {
         )}
       </div>
       {/* Phone: the rows become one grouped, rounded card; sm and up is unchanged. */}
-      <div className="flex flex-col gap-4 max-sm:rounded-card max-sm:bg-surface max-sm:p-3">
+      <div className="flex flex-col gap-4 max-sm:rounded-card max-sm:bg-surface-raised max-sm:p-3">
         {props.children}
       </div>
     </section>
