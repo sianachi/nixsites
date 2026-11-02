@@ -106,17 +106,24 @@ public sealed class BrowserAuthCoordinator(
 
         var payload = string.Join('\n', parts);
 
-        var query = QueryString.Create(
-        [
-            new KeyValuePair<string, string?>("client_id", _options.ClientId),
-            new KeyValuePair<string, string?>("redirect_uri", _options.CallbackUri.AbsoluteUri),
-            new KeyValuePair<string, string?>("response_type", "code"),
-            new KeyValuePair<string, string?>("scope", "openid profile email"),
-            new KeyValuePair<string, string?>("state", state),
-            new KeyValuePair<string, string?>("nonce", nonce),
-            new KeyValuePair<string, string?>("code_challenge", challenge),
-            new KeyValuePair<string, string?>("code_challenge_method", "S256"),
-        ]);
+        var fields = new List<KeyValuePair<string, string?>>
+        {
+            new("client_id", _options.ClientId),
+            new("redirect_uri", _options.CallbackUri.AbsoluteUri),
+            new("response_type", "code"),
+            new("scope", "openid profile email"),
+            new("state", state),
+            new("nonce", nonce),
+            new("code_challenge", challenge),
+            new("code_challenge_method", "S256"),
+        };
+        if (nativeChallenge is not null)
+        {
+            // RFC 8252 section 8.6: never ride the shared browser's IdP session from a native-app flow.
+            fields.Add(new("prompt", "login"));
+        }
+
+        var query = QueryString.Create(fields);
 
         return new BrowserLoginStart(
             new Uri(metadata.AuthorizationEndpoint.AbsoluteUri + query, UriKind.Absolute),

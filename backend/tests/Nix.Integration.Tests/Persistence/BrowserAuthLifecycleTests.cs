@@ -197,6 +197,45 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_native_authorize_request_forces_a_fresh_login_and_the_normal_one_does_not()
+    {
+        var native = await _client.GetAsync(
+            new Uri($"/auth/login?native={Challenge(NewVerifier())}&returnTo=%2F", UriKind.Relative), Cancellation);
+        Assert.Equal("login", QueryHelpers.ParseQuery(native.Headers.Location!.Query)["prompt"].ToString());
+
+        var normal = await _client.GetAsync(new Uri("/auth/login?returnTo=%2F", UriKind.Relative), Cancellation);
+        Assert.False(QueryHelpers.ParseQuery(normal.Headers.Location!.Query).ContainsKey("prompt"));
+    }
+
+    [Fact]
+    public async Task One_account_holds_at_most_three_live_handoffs_and_expired_ones_free_the_quota()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.StartsWith("app.nix.shell://auth?code=", (await NativeCallbackAsync(Challenge(NewVerifier()))).Headers.Location!.OriginalString, StringComparison.Ordinal);
+        }
+
+        var refused = await NativeCallbackAsync(Challenge(NewVerifier()));
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, refused.StatusCode);
+        Assert.Equal(3L, await CountAsync("SELECT count(*) FROM native_login_handoff"));
+
+        await SqlAsync("UPDATE native_login_handoff SET expires_at = now() - interval '1 second'");
+        Assert.Equal(HttpStatusCode.Redirect, (await NativeCallbackAsync(Challenge(NewVerifier()))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Redeeming_purges_other_expired_handoffs()
+    {
+        await NativeCodeAsync(Challenge(NewVerifier()));
+        var verifier = NewVerifier();
+        var code = await NativeCodeAsync(Challenge(verifier));
+        await SqlAsync("UPDATE native_login_handoff SET expires_at = now() - interval '1 second' WHERE code_hash <> '" + BrowserSessionSecret.Hash(code) + "'");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await RedeemAsync(code, verifier)).StatusCode);
+        Assert.Equal(0L, await CountAsync("SELECT count(*) FROM native_login_handoff"));
+    }
+
+    [Fact]
     public async Task A_wrong_verifier_is_refused_and_burns_the_code()
     {
         var verifier = NewVerifier();

@@ -2,8 +2,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
+using Nix.Abstractions;
 using Nix.Authentication;
 using Nix.Domain.Identity;
+using Nix.Domain.Tenancy;
 using Nix.Features.BrowserAuth;
 
 namespace Nix.Tests.Authentication;
@@ -91,7 +93,7 @@ public sealed class NativeHandoffCoordinatorTests
         Base64UrlTextEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
 
     private static BrowserLoginCompletion Completion() =>
-        new("nixsession_secret", Start.AddHours(8), "/", null!);
+        new("nixsession_secret", Start.AddHours(8), "/", new AuthenticatedPrincipal(PrincipalId.Create(), TenantId.Create(), PrincipalStatus.Active, "Test"));
 
     private static (NativeHandoffCoordinator Coordinator, StoreFake Store, ClockFake Clock) Create()
     {
@@ -113,7 +115,7 @@ public sealed class NativeHandoffCoordinatorTests
 
         public int Consumed { get; private set; }
 
-        public ValueTask<bool> CreateAsync(string codeHash, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken)
+        public ValueTask<bool> CreateAsync(string codeHash, Guid principalId, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken)
         {
             Rows[codeHash] = new NativeHandoffRecord(challenge, payload, expiresAt);
             return ValueTask.FromResult(true);

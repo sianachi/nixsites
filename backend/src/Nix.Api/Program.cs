@@ -277,6 +277,16 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
             }));
 
+    // Interactive sign-in: a person starts and finishes a login a few times at most. Fixed in the
+    // server, 30 per minute per address across /auth/login and /auth/callback.
+    options.AddPolicy<IPAddress>(BrowserAuthEndpoints.LoginPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientKey.For(httpContext), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = writesWindow,
+            QueueLimit = 0,
+        }));
+
     options.AddPolicy<IPAddress>(CliLoginEndpoints.StartPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(ClientKey.For(httpContext), _ => new FixedWindowRateLimiterOptions
         {

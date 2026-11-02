@@ -2,6 +2,7 @@
   "appId": "app.nix.shell",
   "appName": "Nix",
   "webDir": "www",
+  "loggingBehavior": "none",
   "server": {
     "errorPath": "index.html"
   },

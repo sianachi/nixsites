@@ -6,8 +6,8 @@ namespace Nix.Features.BrowserAuth;
 /// <summary>Durable, single-use native sign-in handoffs; only hashes and protected payloads are stored.</summary>
 public interface INativeHandoffs
 {
-    /// <summary>Stores a handoff; false when the bounded table is full.</summary>
-    public ValueTask<bool> CreateAsync(string codeHash, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken);
+    /// <summary>Stores a handoff; false when the bounded table or the principal's live quota is full.</summary>
+    public ValueTask<bool> CreateAsync(string codeHash, Guid principalId, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken);
 
     /// <summary>Atomically removes and returns a handoff, whether or not it has expired; null when unknown or used.</summary>
     public ValueTask<NativeHandoffRecord?> ConsumeAsync(string codeHash, CancellationToken cancellationToken);
@@ -20,15 +20,16 @@ public sealed record NativeHandoffRecord(string Challenge, string Payload, DateT
 public sealed class NativeHandoffStore(NpgsqlDataSource dataSource) : INativeHandoffs
 {
     /// <inheritdoc />
-    public async ValueTask<bool> CreateAsync(string codeHash, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken)
+    public async ValueTask<bool> CreateAsync(string codeHash, Guid principalId, string challenge, string payload, DateTimeOffset expiresAt, CancellationToken cancellationToken)
     {
         var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using (connection.ConfigureAwait(false))
         {
-            var command = new NpgsqlCommand("SELECT nix_create_native_handoff(@hash, @challenge, @payload, @expires)", connection);
+            var command = new NpgsqlCommand("SELECT nix_create_native_handoff(@hash, @principal, @challenge, @payload, @expires)", connection);
             await using (command.ConfigureAwait(false))
             {
                 command.Parameters.Add(new NpgsqlParameter("hash", NpgsqlDbType.Text) { Value = codeHash });
+                command.Parameters.Add(new NpgsqlParameter("principal", NpgsqlDbType.Uuid) { Value = principalId });
                 command.Parameters.Add(new NpgsqlParameter("challenge", NpgsqlDbType.Text) { Value = challenge });
                 command.Parameters.Add(new NpgsqlParameter("payload", NpgsqlDbType.Text) { Value = payload });
                 command.Parameters.Add(new NpgsqlParameter("expires", NpgsqlDbType.TimestampTz) { Value = expiresAt.UtcDateTime });

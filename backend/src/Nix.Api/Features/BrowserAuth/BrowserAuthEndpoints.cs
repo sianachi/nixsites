@@ -13,6 +13,9 @@ namespace Nix.Features.BrowserAuth;
 /// <summary>Same-origin browser authentication backed by an opaque Core session cookie.</summary>
 internal static class BrowserAuthEndpoints
 {
+    /// <summary>Per-address limiter on starting and completing an interactive sign-in.</summary>
+    internal const string LoginPolicy = "browser-login";
+
     private const string LoginCookiePath = "/";
 
     /// <summary>Registers the interactive login, session, token and logout routes.</summary>
@@ -21,8 +24,8 @@ internal static class BrowserAuthEndpoints
         ArgumentNullException.ThrowIfNull(endpoints);
 
         var auth = endpoints.MapGroup("/auth").WithTags("BrowserAuth");
-        auth.MapGet("/login", BeginLogin);
-        auth.MapGet("/callback", CompleteLogin);
+        auth.MapGet("/login", BeginLogin).RequireRateLimiting(LoginPolicy);
+        auth.MapGet("/callback", CompleteLogin).RequireRateLimiting(LoginPolicy);
         auth.MapGet("/session", GetSession);
         auth.MapPost("/token", RefreshToken);
         auth.MapPost("/native/redeem", RedeemNative).WithRequestBodyLimit(2048).RequireRateLimiting(RateLimitRefusal.TokenExchangePolicyName);

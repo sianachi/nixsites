@@ -10,6 +10,9 @@ class ShellViewController: CAPBridgeViewController {
         configureWebView()
         let controller = bridge?.webView?.configuration.userContentController
         controller?.addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
+        if let webView = bridge?.webView {
+            controller?.addScriptMessageHandler(NixSignInHandler(webView: webView), contentWorld: .page, name: NixSignInHandler.name)
+        }
         if let localURL = bridge?.config.localURL {
             controller?.addScriptMessageHandler(NixPickerHandler(localURL: localURL), contentWorld: .page, name: NixPickerHandler.name)
         }
@@ -48,8 +51,7 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NixShellPlugin"
     public let jsName = "NixShell"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "showPicker", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "signIn", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "showPicker", returnType: CAPPluginReturnPromise)
     ]
 
     static let key = "nix.servers"
@@ -86,19 +88,9 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
     //
     // Passkeys do not work in the WebView for an arbitrary server domain, so sign-in runs in the
     // system's web authentication session and the page redeems a one-time code for its cookie.
-    // The verifier stays in this process until it is handed back to the calling page; neither it
-    // nor the code is logged.
+    // The flow itself lives in NixSignInHandler; these are its pure helpers.
 
     static let callbackScheme = "app.nix.shell"
-    private var authSession: ASWebAuthenticationSession?
-    private let authAnchor = AuthAnchor()
-
-    /// The origin to sign in to, only when it is a saved server and is the page asking.
-    static func signInOrigin(_ requested: String?, saved: Set<String>, page: URL?) -> String? {
-        guard let origin = origin(URL(string: requested ?? "")), saved.contains(origin),
-              origin == Self.origin(page) else { return nil }
-        return origin
-    }
 
     /// A same-origin path; anything else (absolute, protocol-relative, backslashes, control characters) becomes "/".
     static func safeReturnTo(_ path: String?) -> String {
@@ -136,43 +128,6 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         return code
     }
 
-    @objc func signIn(_ call: CAPPluginCall) {
-        DispatchQueue.main.async { [self] in
-            guard let bridge, let webView = bridge.webView else { return call.reject("No bridge.") }
-            guard let origin = Self.signInOrigin(call.getString("origin"), saved: Self.savedOrigins, page: webView.url),
-                  authSession == nil, let pair = Self.newVerifier(),
-                  let url = Self.loginURL(origin: origin, challenge: pair.challenge,
-                                          returnTo: Self.safeReturnTo(call.getString("returnTo")))
-            else { return call.reject("Sign-in is not available from this page.") }
-            authAnchor.window = webView.window
-            let finish: (URL?, Error?) -> Void = { [weak self] callback, error in
-                DispatchQueue.main.async {
-                    self?.authSession = nil
-                    if let code = Self.handoffCode(callback) {
-                        call.resolve(["code": code, "verifier": pair.verifier])
-                    } else if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
-                        call.reject("Sign-in was cancelled.", "cancelled")
-                    } else {
-                        call.reject("Sign-in could not be completed.")
-                    }
-                }
-            }
-            let session: ASWebAuthenticationSession
-            if #available(iOS 17.4, *) {
-                session = ASWebAuthenticationSession(url: url, callback: .customScheme(Self.callbackScheme), completionHandler: finish)
-            } else {
-                session = ASWebAuthenticationSession(url: url, callbackURLScheme: Self.callbackScheme, completionHandler: finish)
-            }
-            session.prefersEphemeralWebBrowserSession = false
-            session.presentationContextProvider = authAnchor
-            authSession = session
-            if !session.start() {
-                authSession = nil
-                call.reject("Sign-in could not be started.")
-            }
-        }
-    }
-
     @objc func showPicker(_ call: CAPPluginCall) {
         DispatchQueue.main.async { [self] in
             guard let bridge else { return call.reject("No bridge.") }
@@ -182,10 +137,68 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-/// Where the system sign-in sheet presents: the WebView's window.
-private final class AuthAnchor: NSObject, ASWebAuthenticationPresentationContextProviding {
-    weak var window: UIWindow?
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor { window ?? ASPresentationAnchor() }
+/// Sign-in from the page, as a message handler with a reply so the check uses the sending frame:
+/// the Capacitor bridge accepts calls from any frame and `webView.url` reports a pending navigation.
+/// Only the main frame of a saved server may ask; the origin comes from WebKit, never from the body.
+/// The reply is `{code, verifier}` or an error string (`cancelled` when the person closes the sheet).
+/// Neither the code nor the verifier is logged.
+final class NixSignInHandler: NSObject, WKScriptMessageHandlerWithReply, ASWebAuthenticationPresentationContextProviding {
+    static let name = "nixSignIn"
+    private weak var webView: WKWebView?
+    private var authSession: ASWebAuthenticationSession?
+
+    init(webView: WKWebView) { self.webView = webView }
+
+    /// The sending frame's origin as `NixShellPlugin.origin` writes it (port 0 means the default).
+    static func frameOrigin(_ origin: WKSecurityOrigin) -> String? {
+        let port = origin.port == 0 ? "" : ":\(origin.port)"
+        return NixShellPlugin.origin(URL(string: "\(origin.protocol)://\(origin.host)\(port)"))
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.frameInfo.isMainFrame,
+              let origin = Self.frameOrigin(message.frameInfo.securityOrigin),
+              NixShellPlugin.savedOrigins.contains(origin),
+              authSession == nil, let pair = NixShellPlugin.newVerifier(),
+              let url = NixShellPlugin.loginURL(
+                origin: origin, challenge: pair.challenge,
+                returnTo: NixShellPlugin.safeReturnTo((message.body as? [String: Any])?["returnTo"] as? String))
+        else { return replyHandler(nil, "Sign-in is not available from this page.") }
+        let finish: (URL?, Error?) -> Void = { [weak self] callback, error in
+            DispatchQueue.main.async {
+                self?.authSession = nil
+                if let code = NixShellPlugin.handoffCode(callback) {
+                    replyHandler(["code": code, "verifier": pair.verifier], nil)
+                } else if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
+                    replyHandler(nil, "cancelled")
+                } else {
+                    replyHandler(nil, "Sign-in could not be completed.")
+                }
+            }
+        }
+        let session: ASWebAuthenticationSession
+        if #available(iOS 17.4, *) {
+            session = ASWebAuthenticationSession(url: url, callback: .customScheme(NixShellPlugin.callbackScheme), completionHandler: finish)
+        } else {
+            session = ASWebAuthenticationSession(url: url, callbackURLScheme: NixShellPlugin.callbackScheme, completionHandler: finish)
+        }
+        // A separate cookie jar: a native flow must not ride the browser's identity-provider session
+        // (RFC 8252 section 8.6). Passkeys live in the keychain, so they still work.
+        session.prefersEphemeralWebBrowserSession = true
+        session.presentationContextProvider = self
+        authSession = session
+        if !session.start() {
+            authSession = nil
+            replyHandler(nil, "Sign-in could not be started.")
+        }
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        if let window = webView?.window { return window }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.flatMap(\.windows).first(where: \.isKeyWindow) ?? scenes.first.map { ASPresentationAnchor(windowScene: $0) } ?? ASPresentationAnchor()
+    }
 }
 
 /// The picker's channel for reading and changing the saved servers. A message handler, not a plugin

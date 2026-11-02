@@ -42,7 +42,7 @@ import {
   nativeBootSession,
 } from '../offline/native-mirror';
 import { isBootOffline, setOfflineState, useOfflineState } from '../offline/offline-state';
-import { canSignInNatively, nativeSignIn } from './native-sign-in';
+import { canSignInNatively, nativeSignIn, sameOriginPath } from './native-sign-in';
 import { getServiceWorkerRegistration } from '../pwa/register-service-worker';
 import { useSessionStore, type SessionProfile } from '@nix/web-foundation/lib/session-store';
 
@@ -581,7 +581,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           // The cookie is set, so a full load of returnTo restores the session as /auth/callback's redirect does.
           nativeSignIn(returnTo).then(
             (result) => {
-              if (result === 'signed-in') globalThis.location.assign(returnTo);
+              if (result === 'signed-in') globalThis.location.assign(sameOriginPath(returnTo));
               else signedOut();
             },
             (error: unknown) => {

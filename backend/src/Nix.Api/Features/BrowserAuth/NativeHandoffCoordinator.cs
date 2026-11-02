@@ -24,7 +24,7 @@ public sealed class NativeHandoffCoordinator(INativeHandoffs handoffs, IDataProt
     /// <summary>A PKCE-style verifier: 43 to 128 base64url characters.</summary>
     public static bool IsVerifier(string? value) => IsBase64Url(value, 43, 128);
 
-    /// <summary>Stores the finished session behind a fresh one-time code; null when capacity is full.</summary>
+    /// <summary>Stores the finished session behind a fresh one-time code; null when the table or this account's live quota is full.</summary>
     public async ValueTask<string?> CreateAsync(BrowserLoginCompletion completion, string challenge, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(completion);
@@ -36,7 +36,7 @@ public sealed class NativeHandoffCoordinator(INativeHandoffs handoffs, IDataProt
         var code = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
         var payload = _protector.Protect(
             completion.CookieToken + "\n" + completion.ExpiresAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
-        return await handoffs.CreateAsync(BrowserSessionSecret.Hash(code), challenge, payload, clock.GetUtcNow() + Lifetime, cancellationToken)
+        return await handoffs.CreateAsync(BrowserSessionSecret.Hash(code), completion.Principal.Id.Value, challenge, payload, clock.GetUtcNow() + Lifetime, cancellationToken)
             .ConfigureAwait(false)
             ? code
             : null;

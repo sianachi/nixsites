@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { canSignInNatively, nativeSignIn } from '../../auth/native-sign-in';
+import { canSignInNatively, nativeSignIn, sameOriginPath } from '../../auth/native-sign-in';
 
-const setShell = (nativePromise?: (...args: unknown[]) => Promise<unknown>): void => {
-  (globalThis as { Capacitor?: unknown }).Capacitor = {
-    isNativePlatform: () => true,
-    nativePromise,
-  };
+const setShell = (postMessage?: (...args: unknown[]) => Promise<unknown>): void => {
+  (globalThis as { webkit?: unknown }).webkit = { messageHandlers: { nixSignIn: { postMessage } } };
 };
 
 afterEach(() => {
-  delete (globalThis as { Capacitor?: unknown }).Capacitor;
+  delete (globalThis as { webkit?: unknown }).webkit;
   vi.unstubAllGlobals();
 });
 
@@ -21,7 +18,7 @@ describe('native sign-in', () => {
     expect(canSignInNatively()).toBe(true);
   });
 
-  it('passes the origin and path to the shell, then redeems the code', async () => {
+  it('passes only the path to the shell, then redeems the code', async () => {
     const nativePromise = vi.fn().mockResolvedValue({ code: 'c', verifier: 'v' });
     setShell(nativePromise);
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
@@ -29,10 +26,7 @@ describe('native sign-in', () => {
 
     await expect(nativeSignIn('/a?b=1')).resolves.toBe('signed-in');
 
-    expect(nativePromise).toHaveBeenCalledWith('NixShell', 'signIn', {
-      origin: globalThis.location.origin,
-      returnTo: '/a?b=1',
-    });
+    expect(nativePromise).toHaveBeenCalledWith({ returnTo: '/a?b=1' });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/auth/native/redeem');
     expect(init).toMatchObject({ method: 'POST', credentials: 'same-origin' });
@@ -40,7 +34,7 @@ describe('native sign-in', () => {
   });
 
   it('stays quiet when the person cancels', async () => {
-    setShell(vi.fn().mockRejectedValue({ code: 'cancelled', message: 'x' }));
+    setShell(vi.fn().mockRejectedValue('cancelled'));
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     await expect(nativeSignIn('/')).resolves.toBe('cancelled');
@@ -48,7 +42,7 @@ describe('native sign-in', () => {
   });
 
   it('fails when the shell errors, answers badly, or the redeem is refused', async () => {
-    setShell(vi.fn().mockRejectedValue(new Error('boom')));
+    setShell(vi.fn().mockRejectedValue('boom'));
     await expect(nativeSignIn('/')).rejects.toThrow('boom');
 
     setShell(vi.fn().mockResolvedValue({ code: 'c' }));
@@ -57,5 +51,12 @@ describe('native sign-in', () => {
     setShell(vi.fn().mockResolvedValue({ code: 'c', verifier: 'v' }));
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 400 })));
     await expect(nativeSignIn('/')).rejects.toThrow('Try again');
+  });
+
+  it('keeps a return path on this origin and sends anything else to the root', () => {
+    expect(sameOriginPath('/a?b=1#c')).toBe('/a?b=1#c');
+    expect(sameOriginPath('//evil.example/')).toBe('/');
+    expect(sameOriginPath('/\\evil.example')).toBe('/');
+    expect(sameOriginPath('https://evil.example/')).toBe('/');
   });
 });
