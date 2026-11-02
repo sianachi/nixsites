@@ -175,11 +175,13 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
   }
 
   const panel = (
-    <div className="flex min-h-0 min-w-0 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-col max-sm:flex-1">
+      {/* On a phone the input docks at the bottom, above the keyboard, with the results above it;
+          `order-last` moves it without changing the reading order. */}
       <div
         className={[
-          '-pt-2 pb-2 flex min-w-0 items-center gap-3 px-3 sm:px-5',
-          options.length === 0 ? '' : 'border-b border-divider',
+          '-pt-2 pb-2 flex min-w-0 items-center gap-3 px-3 sm:px-5 max-sm:order-last max-sm:rounded-lg max-sm:bg-surface max-sm:pb-0',
+          options.length === 0 ? '' : 'border-b border-divider max-sm:border-b-0',
         ].join(' ')}
       >
         <Icon icon={Search} size="md" />
@@ -226,7 +228,7 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
                       ? 'Matching items are hidden. Manage them in Workspace options.'
                       : `Nothing matches “${needle}”.`
         }
-        className="min-h-0 max-h-[calc(100dvh-7rem)] overflow-y-auto"
+        className="min-h-0 max-h-[calc(100dvh-7rem)] overflow-y-auto max-sm:max-h-none max-sm:flex-1"
       />
 
       {/*

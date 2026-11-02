@@ -50,6 +50,11 @@ import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipe
 import { useTemplates } from '@nix/web-templates/templates/use-templates';
 import { TemplateLibraryProvider } from '@nix/web-templates/templates/template-library-context';
 import { ShellHeader } from './shell-header';
+import { PhoneNavbar } from './phone/phone-navbar';
+import { PhoneTopRow } from './phone/phone-top-row';
+import { TabSwitcher } from './phone/tab-switcher';
+import { usePhone } from './phone/use-phone';
+import { usePhoneTabs } from './phone/use-phone-tabs';
 import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';
@@ -199,11 +204,15 @@ export function AppShell(): ReactNode {
   }, [launchState, location.pathname, location.search, navigate]);
   const [workspaceImportOpen, setWorkspaceImportOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const phone = usePhone();
+  const [tabsOpen, setTabsOpen] = useState(false);
+  const phoneTabs = usePhoneTabs(selectedId);
   const notificationsInbox = useNotificationsInbox();
   const petEntry = usePetNavEntry();
   useBackDismiss(
-    narrow && (sidebar.visible || searchOpen || workspaceImportOpen || inboxOpen),
+    narrow && (sidebar.visible || searchOpen || workspaceImportOpen || inboxOpen || tabsOpen),
     () => {
+      setTabsOpen(false);
       setWorkspaceImportOpen(false);
       setSearchOpen(false);
       setInboxOpen(false);
@@ -481,6 +490,21 @@ export function AppShell(): ReactNode {
   // never survives past the layout it was measured for.
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
   const navRendered = narrow && !keyboardVisible && !zen;
+  // What the phone's bottom bar and top row share: the destinations that have no room of their own.
+  const phoneMenu = {
+    workspaceId,
+    unreadNotifications: notificationsInbox.unread,
+    pet: petEntry && {
+      label: petEntry.label,
+      attention: petEntry.attention && petAttentionText(petEntry.attention),
+    },
+    onOpenInbox: () => {
+      setInboxOpen(true);
+    },
+    onImport: () => {
+      setWorkspaceImportOpen(true);
+    },
+  };
   useEffect(() => {
     const node = bottomChromeRef.current;
     if (!navRendered || !node) {
@@ -619,20 +643,30 @@ export function AppShell(): ReactNode {
         <div className={`flex flex-1 flex-col ${paneClip}`}>
           {zen ? null : (
             <div hidden={keyboardVisible}>
-              <ShellHeader
-                sidebarVisible={sidebar.visible}
-                sidebarToggleRef={sidebarToggleRef}
-                workspaceId={workspaceId}
-                principal={principal}
-                unreadNotifications={notificationsInbox.unread}
-                onToggleSidebar={sidebar.toggle}
-                onOpenSearch={() => {
-                  setSearchOpen(true);
-                }}
-                onOpenInbox={() => {
-                  setInboxOpen(true);
-                }}
-              />
+              {phone ? (
+                <PhoneTopRow
+                  {...phoneMenu}
+                  sidebarToggleRef={sidebarToggleRef}
+                  sidebarVisible={sidebar.visible}
+                  hasItem={selectedId !== null}
+                  onToggleSidebar={sidebar.toggle}
+                />
+              ) : (
+                <ShellHeader
+                  sidebarVisible={sidebar.visible}
+                  sidebarToggleRef={sidebarToggleRef}
+                  workspaceId={workspaceId}
+                  principal={principal}
+                  unreadNotifications={notificationsInbox.unread}
+                  onToggleSidebar={sidebar.toggle}
+                  onOpenSearch={() => {
+                    setSearchOpen(true);
+                  }}
+                  onOpenInbox={() => {
+                    setInboxOpen(true);
+                  }}
+                />
+              )}
             </div>
           )}
           <WorkspaceInvitationNotice />
@@ -758,7 +792,23 @@ export function AppShell(): ReactNode {
             keyboard is up, when the room is better spent on the text being typed. */}
         {keyboardVisible || zen ? null : <MiniPlayer onOpen={openPinned} />}
         {zen ? null : <PwaControls />}
-        {navRendered ? (
+        {navRendered && phone ? (
+          <PhoneNavbar
+            {...phoneMenu}
+            creating={tree.isCreating}
+            tabCount={phoneTabs.length}
+            onSearch={() => {
+              setSearchOpen(true);
+            }}
+            onCreate={() => {
+              if (sidebar.visible) sidebar.toggle();
+              setCaptureOpen(true);
+            }}
+            onTabs={() => {
+              setTabsOpen(true);
+            }}
+          />
+        ) : navRendered ? (
           <MobileNavigation
             workspaceId={workspaceId}
             treeOpen={sidebar.visible}
@@ -784,6 +834,20 @@ export function AppShell(): ReactNode {
           />
         ) : null}
       </div>
+
+      {phone && tabsOpen ? (
+        <TabSwitcher
+          tabs={phoneTabs}
+          activeId={selectedId}
+          tree={tree}
+          onNew={() => {
+            setCaptureOpen(true);
+          }}
+          onClose={() => {
+            setTabsOpen(false);
+          }}
+        />
+      ) : null}
 
       <MobileNoteCapture
         key={`capture:${workspaceId}`}

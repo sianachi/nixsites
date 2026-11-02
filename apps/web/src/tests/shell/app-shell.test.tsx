@@ -82,15 +82,18 @@ describe('the shell', () => {
     expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
   });
 
-  it('keeps the workspace and search controls shrinkable on a narrow screen', async () => {
+  it('swaps the header for the floating top row and bottom pill on a phone', async () => {
     stubViewport(false);
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
     await screen.findByRole('button', { name: /show the explorer/i });
-    expect(screen.getByRole('banner')).toHaveClass('min-w-0', 'px-2');
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toHaveClass('min-w-0');
-    expect(screen.getByRole('button', { name: 'Search' })).toHaveClass('shrink-0', 'px-2');
+    expect(screen.getByRole('button', { name: 'More' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    const pill = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    for (const name of ['Back', 'Forward', 'Find', 'New note', /^Open tabs/, 'Menu']) {
+      expect(within(pill).getByRole('button', { name })).toBeVisible();
+    }
   });
 
   it('opens search over whatever is on screen, from a control that is always there', async () => {
