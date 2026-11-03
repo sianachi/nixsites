@@ -55,7 +55,7 @@ export const PRINT_PALETTE: PrintPalette = {
   accentFill: '#416180',
 
   /** The ground a card, a callout or a table header sits on. `--color-surface`. */
-  surface: '#f2f2f3',
+  surface: '#f6f7f9',
 
   /** A hairline between regions. `--color-divider` resolved over paper. */
   divider: '#d4d4d7',

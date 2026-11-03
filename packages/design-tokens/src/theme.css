@@ -48,7 +48,7 @@
 
   /* ══ Color — base roles ═══════════════════════════════════════════════ */
   --color-bg: #ffffff;
-  --color-surface: #f2f2f3;
+  --color-surface: #f6f7f9;
   --color-text: #1d1f20;
   --color-accent: #5980a6;
   --color-accent-2: #728fab;
@@ -349,10 +349,10 @@
        field renders as white-on-white and a scrollbar as a bright bar down a dark page. */
     color-scheme: dark;
 
-    --color-bg: #000000;
-    --color-surface: #1c1c1e;
-    --color-surface-raised: #2c2c2e;
-    --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
+    --color-bg: #17181a;
+    --color-surface: #1f2123;
+    --color-surface-raised: #2a2c2e;
+    --color-chrome-floating: color-mix(in srgb, #1f2123 72%, transparent);
     --color-text: #e8e9ea;
     --color-divider: color-mix(in srgb, #e8e9ea 18%, transparent);
 
@@ -384,8 +384,8 @@
        contrast to spend on edges, so the shadow has to carry more of the
        work of saying which surface is in front. */
     --shadow-sm:
-      0 1px 1px color-mix(in srgb, #000000 36%, transparent),
-      0 1px 3px color-mix(in srgb, #000000 28%, transparent);
+      0 1px 1px color-mix(in srgb, #000000 40%, transparent),
+      0 2px 4px color-mix(in srgb, #000000 28%, transparent);
     --shadow-md:
       0 2px 4px color-mix(in srgb, #000000 44%, transparent),
       0 6px 16px color-mix(in srgb, #000000 36%, transparent);
@@ -402,10 +402,10 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #000000;
-  --color-surface: #1c1c1e;
-  --color-surface-raised: #2c2c2e;
-  --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
+  --color-bg: #17181a;
+  --color-surface: #1f2123;
+  --color-surface-raised: #2a2c2e;
+  --color-chrome-floating: color-mix(in srgb, #1f2123 72%, transparent);
   --color-text: #e8e9ea;
   --color-divider: color-mix(in srgb, #e8e9ea 18%, transparent);
 
@@ -430,8 +430,8 @@
   /* True black and much more of it - see the note in the media query above
      for why the paper shadows cannot simply be reused at a higher alpha. */
   --shadow-sm:
-    0 1px 1px color-mix(in srgb, #000000 36%, transparent),
-    0 1px 3px color-mix(in srgb, #000000 28%, transparent);
+    0 1px 1px color-mix(in srgb, #000000 40%, transparent),
+    0 2px 4px color-mix(in srgb, #000000 28%, transparent);
   --shadow-md:
     0 2px 4px color-mix(in srgb, #000000 44%, transparent),
     0 6px 16px color-mix(in srgb, #000000 36%, transparent);
@@ -444,7 +444,7 @@
   color-scheme: light;
 
   --color-bg: #ffffff;
-  --color-surface: #f2f2f3;
+  --color-surface: #f6f7f9;
   --color-surface-raised: #ffffff;
   --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
   --color-text: #1d1f20;

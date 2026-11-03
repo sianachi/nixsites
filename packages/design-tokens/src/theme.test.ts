@@ -85,7 +85,7 @@ describe('color ramps', () => {
 describe('base color roles', () => {
   it('carries the sheet base roles verbatim', () => {
     expect(getProperty('color-bg')).toBe('#ffffff');
-    expect(getProperty('color-surface')).toBe('#f2f2f3');
+    expect(getProperty('color-surface')).toBe('#f6f7f9');
     expect(getProperty('color-text')).toBe('#1d1f20');
     expect(getProperty('color-accent')).toBe('#5980a6');
     expect(getProperty('color-accent-2')).toBe('#728fab');
@@ -489,13 +489,13 @@ describe('the surface, at every width', () => {
     expect(phone.get('control-md')).toBe('44px');
   });
 
-  it('puts a white page over a light-grey sheet in light, and a near-black page in dark', () => {
+  it('puts a white page over a light-grey sheet in light, and a charcoal page in dark', () => {
     expect(getProperty('color-bg')).toBe('#ffffff');
-    expect(getProperty('color-surface')).toBe('#f2f2f3');
+    expect(getProperty('color-surface')).toBe('#f6f7f9');
     expect(getProperty('color-surface-raised')).toBe('#ffffff');
-    expect(getDarkProperty('color-bg')).toBe('#000000');
-    expect(getDarkProperty('color-surface')).toBe('#1c1c1e');
-    expect(getDarkProperty('color-surface-raised')).toBe('#2c2c2e');
+    expect(getDarkProperty('color-bg')).toBe('#17181a');
+    expect(getDarkProperty('color-surface')).toBe('#1f2123');
+    expect(getDarkProperty('color-surface-raised')).toBe('#2a2c2e');
   });
 
   it('rounds a card to 12px', () => {
@@ -503,7 +503,7 @@ describe('the surface, at every width', () => {
   });
 
   it('declares the dark surfaces in both dark scopes', () => {
-    expect(themeCss).toMatch(/:root\[data-theme='dark'\]\s*\{[^}]*--color-surface-raised: #2c2c2e/);
+    expect(themeCss).toMatch(/:root\[data-theme='dark'\]\s*\{[^}]*--color-surface-raised: #2a2c2e/);
     expect(themeCss).toMatch(
       /:root\[data-theme='light'\]\s*\{[^}]*--color-surface-raised: #ffffff/,
     );

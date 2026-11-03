@@ -166,7 +166,8 @@ export function SidebarDivider({ width, onPreview, onCommit }: SidebarDividerPro
         // The same hairline-in-a-band the pane divider draws: the visible rule is the divider
         // colour, the band either side is hit area, and the pseudo-element widens the target to
         // WCAG 2.2's 24px without widening what the eye sees.
-        'group relative shrink-0 touch-none',
+        // The Explorer's colour, so the page visibly starts where the tabs do.
+        'group relative shrink-0 touch-none bg-surface',
         'w-2 cursor-col-resize before:absolute before:inset-y-0 before:-inset-x-2',
         focusRing,
       ].join(' ')}
@@ -175,7 +176,8 @@ export function SidebarDivider({ width, onPreview, onCommit }: SidebarDividerPro
         aria-hidden="true"
         className={[
           'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2',
-          'bg-divider transition-colors',
+          // No resting line, so the Explorer blends into the page; it shows on hover and focus.
+          'bg-transparent transition-colors',
           'group-hover:bg-accent group-focus-visible:bg-accent',
         ].join(' ')}
       />
