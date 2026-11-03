@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_KEYBOARD_MODE,
   KEYBOARD_MODE_STORAGE_KEY,
+  keyboardModesAllowed,
   loadKeyboardMode,
   readKeyboardMode,
   storeKeyboardMode,
@@ -88,5 +89,26 @@ describe('changing the live preference', () => {
       mode: 'emacs',
       persistence: 'session-only',
     });
+  });
+});
+
+describe('where Vim and Emacs apply', () => {
+  const stub = (coarse: boolean, wide: boolean): void => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(pointer: coarse)' ? coarse : wide,
+    }));
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('only on the desktop layout: a mouse and a window 640px or wider', () => {
+    stub(false, true);
+    expect(keyboardModesAllowed()).toBe(true);
+    stub(true, true);
+    expect(keyboardModesAllowed()).toBe(false);
+    stub(false, false);
+    expect(keyboardModesAllowed()).toBe(false);
   });
 });

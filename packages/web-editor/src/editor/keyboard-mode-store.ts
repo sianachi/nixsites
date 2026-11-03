@@ -8,6 +8,15 @@ export const KeyboardModeSchema = z.enum(['standard', 'vim', 'emacs']);
 export type KeyboardMode = z.infer<typeof KeyboardModeSchema>;
 
 export const DEFAULT_KEYBOARD_MODE: KeyboardMode = 'standard';
+
+/**
+ * Vim and Emacs are for the desktop layout with a mouse and keyboard: a phone or tablet (a
+ * touch screen, or a window under 640px) always edits as standard, whatever is saved.
+ */
+export function keyboardModesAllowed(): boolean {
+  if (typeof matchMedia !== 'function') return true;
+  return !matchMedia('(pointer: coarse)').matches && matchMedia('(min-width: 640px)').matches;
+}
 export const KEYBOARD_MODE_STORAGE_KEY = 'nix.editor-keyboard-mode';
 
 export interface LoadedKeyboardMode {

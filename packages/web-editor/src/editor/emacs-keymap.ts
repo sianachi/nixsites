@@ -5,7 +5,7 @@ import { Transform, type Mapping } from '@tiptap/pm/transform';
 import type { EditorView } from '@tiptap/pm/view';
 import { redo, undo, ySyncPluginKey } from 'y-prosemirror';
 
-import { useKeyboardModeStore } from './keyboard-mode-store';
+import { keyboardModesAllowed, useKeyboardModeStore } from './keyboard-mode-store';
 import {
   hasModifier,
   joinWithNext,
@@ -1377,6 +1377,7 @@ function emacsPlugin(): Plugin<EmacsState> {
         keydown(view, event) {
           if (
             useKeyboardModeStore.getState().mode !== 'emacs' ||
+            !keyboardModesAllowed() ||
             !view.editable ||
             event.isComposing ||
             view.composing ||
@@ -1470,7 +1471,8 @@ export const EmacsKeymap = Extension.create({
   },
 
   addKeyboardShortcuts() {
-    const active = (): boolean => useKeyboardModeStore.getState().mode === 'emacs';
+    const active = (): boolean =>
+      useKeyboardModeStore.getState().mode === 'emacs' && keyboardModesAllowed();
     /** A command that takes the numeric argument and that Ctrl+X Z can repeat. */
     const run =
       (action: Action, repeatable = true) =>

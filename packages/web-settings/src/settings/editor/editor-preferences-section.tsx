@@ -19,6 +19,7 @@ import {
   useChoiceOrderPreference,
   useViewSuggestionPreference,
 } from '@nix/web-foundation/lib/suggestion-preferences';
+import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
 
 const modeHint = {
   standard: 'The editor and platform shortcuts shown throughout Nix',
@@ -53,6 +54,7 @@ export function EditorPreferencesSection(): ReactElement {
   const choiceSaved = useChoiceOrderPreference((state) => state.saved);
   const setChoiceSetting = useChoiceOrderPreference((state) => state.setSetting);
   const mode = useKeyboardModeStore((state) => state.mode);
+  const desktop = useLayoutKind() === 'desktop';
   const persistence = useKeyboardModeStore((state) => state.persistence);
   const keyboardModeSelected = useKeyboardModeStore((state) => state.keyboardModeSelected);
 
@@ -81,16 +83,21 @@ export function EditorPreferencesSection(): ReactElement {
           : ''}
       </Text>
 
-      <Field label="Keyboard mode" hint={modeHint[mode]} className="max-w-lg">
-        {(control) => (
-          <Select {...control} value={mode} onChange={onModeChange}>
-            <option value="standard">Standard</option>
-            <option value="vim">Vim basics</option>
-            <option value="emacs">Emacs basics</option>
-          </Select>
-        )}
-      </Field>
-      {mode === 'standard' ? null : <More about="keyboard mode">{modeGuidance[mode]}</More>}
+      {/* Vim and Emacs are desktop-only; a phone or tablet always edits as standard. */}
+      {desktop ? (
+        <>
+          <Field label="Keyboard mode" hint={modeHint[mode]} className="max-w-lg">
+            {(control) => (
+              <Select {...control} value={mode} onChange={onModeChange}>
+                <option value="standard">Standard</option>
+                <option value="vim">Vim basics</option>
+                <option value="emacs">Emacs basics</option>
+              </Select>
+            )}
+          </Field>
+          {mode === 'standard' ? null : <More about="keyboard mode">{modeGuidance[mode]}</More>}
+        </>
+      ) : null}
       <Text variant="h5" as="h3">
         Writing aids
       </Text>

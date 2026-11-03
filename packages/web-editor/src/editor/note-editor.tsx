@@ -68,6 +68,7 @@ import { useMentionPreference } from './mention-preference';
 import { setMentionContext, UnlinkedMentions } from './unlinked-mentions';
 import { MoveBlock } from './move-block';
 import { useKeyboardModeStore } from './keyboard-mode-store';
+import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
 import { documentScope } from '@nix/web-foundation/lib/body-cache';
 import { FRAGMENT_NAME, startCollabSync, type CollabSync, type SyncState } from './collab-sync';
 import { PresenceList } from './presence-list';
@@ -519,7 +520,9 @@ export function NoteEditor({
   const insertionRef = useRef<number | null>(null);
   const [retryFiles, setRetryFiles] = useState<readonly File[]>([]);
   const [addressRequest, setAddressRequest] = useState<EditorAddressKind | null>(null);
-  const keyboardMode = useKeyboardModeStore((state) => state.mode);
+  const storedKeyboardMode = useKeyboardModeStore((state) => state.mode);
+  // Vim and Emacs only on the desktop layout; phones and tablets always edit as standard.
+  const keyboardMode = useLayoutKind() === 'desktop' ? storedKeyboardMode : 'standard';
   const writingMode = useWritingModePreference((state) => state.mode);
   const textWidth = useTextWidthPreference((state) => state.width);
   const vimDescriptionId = useId();
