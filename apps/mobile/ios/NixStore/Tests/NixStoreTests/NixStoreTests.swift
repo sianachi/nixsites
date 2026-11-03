@@ -215,6 +215,20 @@ final class NixStoreTests: XCTestCase {
         XCTAssertEqual((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [], [])
     }
 
+    func testFullTextIndexRunsItsOwnStatementsPastThePageGate() async throws {
+        // The mirror's schema sets FTS5 secure-delete; stepping it runs FTS5's internal SQL.
+        let stores = Stores(baseDir: dir)
+        _ = try await call(stores, ["op": "execute", "sql": "CREATE VIRTUAL TABLE s USING fts5(t)"])
+        _ = try await call(stores, ["op": "execute", "sql": "INSERT INTO s(s,rank) VALUES('secure-delete',1)"])
+        _ = try await call(stores, ["op": "execute", "sql": "INSERT INTO s(t) VALUES('hello')"])
+        let rows = try await call(stores, ["op": "execute", "sql": "SELECT t FROM s WHERE s MATCH 'hello'"])
+        XCTAssertEqual((rows["rows"] as? [[String: Any]])?.count, 1)
+        do {
+            _ = try await call(stores, ["op": "execute", "sql": "PRAGMA data_version"])
+            XCTFail("the page itself still may not run other pragmas")
+        } catch {}
+    }
+
     func testUnknownOpAndBadParams() async throws {
         let stores = Stores(baseDir: dir)
         do { _ = try await call(stores, ["op": "nope"]); XCTFail() } catch {}

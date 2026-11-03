@@ -92,13 +92,15 @@ public actor Store {
         while !tail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             var stmt: OpaquePointer?
             var rest: UnsafePointer<CChar>?
+            // Only preparing is the page's SQL: what SQLite runs while stepping (FTS5's own statements,
+            // which read PRAGMA data_version) is SQLite's, and the gate must not refuse it.
             pageGate.active = true
-            defer { pageGate.active = false }
             let rc = tail.withCString { c -> Int32 in
                 let r = sqlite3_prepare_v2(handle, c, -1, &stmt, &rest)
                 if let rest { tail = String(cString: rest) } else { tail = "" }
                 return r
             }
+            pageGate.active = false
             guard rc == SQLITE_OK else { throw StoreError.sqlite(String(cString: sqlite3_errmsg(handle))) }
             guard let stmt else { continue }
             defer { sqlite3_finalize(stmt) }

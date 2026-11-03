@@ -155,7 +155,14 @@ export function NativeSync(): ReactNode {
         unsubscribe();
         stopScheduler();
       };
-    })().catch(() => undefined);
+    })().catch((error: unknown) => {
+      // Without an open copy nothing syncs and the app cannot start offline: say so.
+      if (controller.signal.aborted) return;
+      console.error('Offline copy could not be opened', error);
+      setOfflineState({
+        syncProblem: 'The offline copy could not be opened, so Nix will not work offline.',
+      });
+    });
 
     return () => {
       controller.abort();

@@ -101,6 +101,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- The iOS app's offline copy could never be created, so the app had nothing to open offline and
+  showed "Nix is offline". The on-device store refused the search index's own setup. It now opens,
+  syncs, and a copy that cannot be opened is reported instead of failing silently.
 - `nixctl search --limit` rejects a value that is not a positive integer instead of sending it.
 - Creating or deleting a site in the item's site pane relabels the item menu straight away.
 - The site pane's page pickers load more children on request instead of stopping at 500.
