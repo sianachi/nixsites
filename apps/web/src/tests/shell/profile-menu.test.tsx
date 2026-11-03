@@ -47,6 +47,8 @@ vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
     listWarning: null,
     reload: () => undefined,
   }),
+  // Hidden items read it; with no workspace they offer no entry.
+  useOptionalWorkspace: () => null,
 }));
 
 const principal: CurrentPrincipalState = {

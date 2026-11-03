@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarDays,
   FolderInput,
+  Layers,
   Maximize2,
   Menu as MenuIcon,
   PawPrint,
@@ -26,7 +27,7 @@ export interface PhoneMenuProps {
   readonly className?: string;
 }
 
-/** Calendar, Inbox, Pet, Settings, Import and Zen: what the phone's bottom bar has no room for. */
+/** Calendar, Inbox, Pet, Workspaces, Settings, Import and Zen: what the phone's bottom bar has no room for. */
 export function PhoneMenu({
   workspaceId,
   unreadNotifications,
@@ -58,6 +59,7 @@ export function PhoneMenu({
           },
         ]
       : []),
+    { label: 'Workspaces', icon: Layers, onSelect: go('/workspaces') },
     { label: 'Settings', icon: Settings, onSelect: go('/settings') },
     { label: 'Import', icon: FolderInput, onSelect: onImport },
     { label: 'Enter Zen mode', icon: Maximize2, onSelect: toggleZenMode },

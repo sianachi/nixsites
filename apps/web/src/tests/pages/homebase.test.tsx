@@ -86,4 +86,13 @@ describe('Homebase', () => {
     expect(isoWeek(new Date(2027, 0, 1))).toBe(53);
     expect(isoWeek(new Date(2026, 0, 1))).toBe(1);
   });
+
+  it('opens the workspace list from the button at the top right', async () => {
+    stubCoreApi();
+    renderAt(<App />, HOME);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Workspaces' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
+  });
 });

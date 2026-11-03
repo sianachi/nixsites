@@ -8,6 +8,7 @@ import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { hiddenItemsKey, writeHiddenItems } from '@nix/web-foundation/lib/view-hidden-items';
+import { openProfileMenu } from '../workspaces/workspace-menu';
 
 const NOTE = item({ id: '1e1e1e1e-1111-4111-8111-1e1e1e1e1e1e', title: 'Meeting notes' });
 
@@ -34,8 +35,8 @@ describe('hiding saved notes for yourself', () => {
     await user.click(screen.getByRole('button', { name: 'Item actions' }));
     expect(screen.getByRole('menuitem', { name: 'Show for me' })).toBeVisible();
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Workspace options' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Hidden items (1)' }));
+    await openProfileMenu(user);
+    await user.click(screen.getByRole('button', { name: 'Hidden items (1)' }));
     const manager = await screen.findByRole('region', { name: 'Hidden items' });
     await user.click(
       await within(manager).findByRole('button', { name: 'Show Meeting notes again' }),

@@ -10,6 +10,7 @@ import type { CurrentPrincipalState } from '@nix/web-platform/session/use-curren
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { usePendingSignOut } from './use-pending-sign-out';
+import { useHiddenItemsEntry } from '../items/hidden-items-panel';
 
 /**
  * The profile menu, top right: who you are, and the things that belong to you rather than to the
@@ -37,6 +38,7 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
   const { workspaceId } = useWorkspace();
   const install = useInstallNix();
   const workspaceMenu = useWorkspaceMenuEntries();
+  const hiddenItems = useHiddenItemsEntry();
 
   const name = principal.principal?.displayName ?? 'Loading…';
 
@@ -66,6 +68,7 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
     },
     { kind: 'separator' },
     ...workspaceMenu.entries,
+    ...(hiddenItems.entry === null ? [] : [hiddenItems.entry]),
     { kind: 'separator' },
     { kind: 'content', content: <ThemeChoice /> },
     // Kept here as well as on the nav rail. The rail makes workspace administration findable from
@@ -140,7 +143,7 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
                   ].join(' ')
             }
           >
-            <Icon icon={User} size="sm" />
+            <Icon icon={User} size={compactTrigger ? 'md' : 'sm'} />
             <span className={compactTrigger ? 'sr-only' : 'max-w-[16ch] truncate max-lg:sr-only'}>
               {name}
             </span>
@@ -158,6 +161,7 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
       {pendingSignOut.dialog}
       {install.dialog}
       {workspaceMenu.dialogs}
+      {hiddenItems.dialog}
     </>
   );
 }

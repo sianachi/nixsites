@@ -1,4 +1,4 @@
-import { Blueprint, Icon, Text, cn, focusRing } from '@nix/ui';
+import { Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import {
   CalendarClock,
   CalendarDays,
@@ -236,9 +236,19 @@ export function Homebase({
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-10 px-4 py-8 sm:px-8 sm:py-14">
       <header className="flex min-w-0 flex-col gap-2">
-        <Text variant="kicker" tone="muted" truncate>
-          {workspace.name}
-        </Text>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <Text variant="kicker" tone="muted" truncate>
+            {workspace.name}
+          </Text>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void navigate(`${home}/workspaces`);
+            }}
+          >
+            Workspaces
+          </Button>
+        </div>
         <Text as="h1" variant="h1" className="min-w-0">
           {greeting(now.getHours())}
         </Text>
