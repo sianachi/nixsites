@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@nix/sync-core": "workspace:*",
-    "yjs": "^13.6.31",
+    "yjs": "^13.6.33",
     "zod": "^4.6.7"
   },
   "devDependencies": {
