@@ -118,7 +118,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
             but the two have to grow together or a row without an expand control would sit at a
             different gutter width than one with it.
 
-            `pointer-coarse:size-(--control-sm)` rides alongside it: `group-hover:*` only applies
+            `pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)!` rides alongside it: `group-hover:*` only applies
             under `@media(hover:hover)` (Tailwind v4's `pointer-coarse:` variant maps to
             `@media(pointer:coarse)`), so a touch-capable device *above* `sm` - an iPad in portrait,
             say - would otherwise get neither the hover reveal nor the `max-sm:` override, leaving
@@ -129,14 +129,14 @@ export function TreeRow(props: TreeRowProps): ReactNode {
           data-context-menu-ignore
           aria-label={expanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
           onClick={onToggleExpanded}
-          className="flex size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm) items-center justify-center text-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          className="flex size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)! items-center justify-center text-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
         >
           <Icon icon={expanded ? ChevronDown : ChevronRight} size="sm" />
         </button>
       ) : (
         <span
           aria-hidden="true"
-          className="size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm)"
+          className="size-5 max-sm:size-(--control-sm) pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)!"
         />
       )}
 
@@ -213,7 +213,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
           // it landed on. The three states that raise the opacity back to 100 - hover, focus-visible,
           // group-hover - restore pointer events with it; `max-sm:` does the same unconditionally,
           // since below `sm` this is never hidden in the first place.
-          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${disabledState} ${focusRing}`}
+          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)! sm:pointer-coarse:hidden ${disabledState} ${focusRing}`}
         >
           <Icon icon={Columns2} size="sm" />
         </button>
@@ -243,7 +243,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
           onClick={() => {
             moveToRoot();
           }}
-          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
+          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)! sm:pointer-coarse:hidden ${focusRing}`}
         >
           <Icon icon={FolderUp} size="sm" />
         </button>
@@ -276,7 +276,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
           // landing between "move to root" and the bookmark star and this destructive action has
           // less margin for error than a mouse pointer does, and the row's own `gap-1` is otherwise
           // the same narrow spacing on every control in it.
-          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) sm:pointer-coarse:hidden ${focusRing}`}
+          className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)! sm:pointer-coarse:hidden ${focusRing}`}
         >
           <Icon icon={Trash2} size="sm" />
         </button>

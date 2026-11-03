@@ -94,12 +94,39 @@ export function useMediaQuery(query: string): boolean {
   );
 }
 
+/** The four arrangements the shell can take. Tablets are touch screens only. */
+export type LayoutKind = 'phone' | 'tablet-portrait' | 'tablet-landscape' | 'desktop';
+
+/**
+ * The one layout decision. A touch screen narrower than 640px is a phone; 1024px or wider and
+ * landscape is a landscape tablet; every other touch screen is a portrait tablet. A mouse keeps the
+ * old rule: phone under 640px, desktop otherwise. A keyboard or trackpad never changes the answer.
+ */
+export function layoutKind(input: {
+  readonly touch: boolean;
+  readonly wide: boolean;
+  readonly fixedSidebar: boolean;
+  readonly portrait: boolean;
+}): LayoutKind {
+  if (!input.wide) return 'phone';
+  if (!input.touch) return 'desktop';
+  return input.fixedSidebar && !input.portrait ? 'tablet-landscape' : 'tablet-portrait';
+}
+
+/** The current layout, re-evaluated live on resize and rotation (each query is a matchMedia list). */
+export function useLayoutKind(): LayoutKind {
+  return layoutKind({
+    touch: useCoarsePointer(),
+    wide: useMediaQuery(WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT),
+    fixedSidebar: useMediaQuery(WIDE_ENOUGH_FOR_A_FIXED_SIDEBAR),
+    portrait: useMediaQuery('(orientation: portrait)'),
+  });
+}
+
 /** Keep touch devices in the compact arrangement through phone landscape and small tablets. */
 export function useNarrowViewport(): boolean {
-  const nonPhoneWidth = useMediaQuery(WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT);
-  const fixedSidebarWidth = useMediaQuery(WIDE_ENOUGH_FOR_A_FIXED_SIDEBAR);
-  const coarsePointer = useCoarsePointer();
-  return !nonPhoneWidth || (!fixedSidebarWidth && coarsePointer);
+  const kind = useLayoutKind();
+  return kind === 'phone' || kind === 'tablet-portrait';
 }
 
 /**
@@ -120,12 +147,16 @@ export function useRoomForAnotherPane(): boolean {
 
 /** Compact navigation leaves the document full width on portrait tablets. */
 export function useDrawerNavigation(): boolean {
-  return !useMediaQuery(WIDE_ENOUGH_FOR_A_FIXED_SIDEBAR);
+  const fixedSidebarWidth = useMediaQuery(WIDE_ENOUGH_FOR_A_FIXED_SIDEBAR);
+  const compact = useNarrowViewport();
+  return !fixedSidebarWidth || compact;
 }
 
 /** Keep settings from squeezing the document on tablets. */
 export function useOverlayDetails(): boolean {
-  return !useMediaQuery(WIDE_ENOUGH_FOR_INLINE_DETAILS);
+  const inlineWidth = useMediaQuery(WIDE_ENOUGH_FOR_INLINE_DETAILS);
+  const landscapeTablet = useLayoutKind() === 'tablet-landscape';
+  return !inlineWidth || landscapeTablet;
 }
 
 /**

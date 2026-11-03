@@ -162,5 +162,6 @@ export const WIDE_ENOUGH_FOR_INLINE_DETAILS = '(min-width: 1280px)';
 /** Companion views need the same document width as independent panes. */
 export const WIDE_ENOUGH_FOR_COMPANION_BESIDE = WIDE_ENOUGH_FOR_INLINE_DETAILS;
 
-/** A note's title, tools and body use the available pane width at the body type step. */
-export const noteColumn = 'w-full font-body text-md';
+/** A note's title, tools and body use the available pane width at the body type step; a touch tablet keeps a readable line. */
+export const noteColumn =
+  'w-full font-body text-md in-data-[layout=touch]:mx-auto in-data-[layout=touch]:max-w-[44rem]';

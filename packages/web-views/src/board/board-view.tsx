@@ -1,4 +1,4 @@
-import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
 import { Field, Select, Icon, Text, cn } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -65,7 +65,8 @@ export function BoardView(props: BoardViewProps): ReactNode {
   // The one piece of genuinely view-local state on this screen: which card the pointer is
   // currently holding. It describes a gesture in progress, not the document, so it is right here
   // and not in the URL or in a store.
-  const narrow = useNarrowViewport();
+  // Only a phone gets the one-column picker; a portrait tablet has room for columns side by side.
+  const narrow = useLayoutKind() === 'phone';
   const [mobileColumn, setMobileColumn] = useState<string | null>(null);
   const [dragged, setDragged] = useState<string | null>(null);
 

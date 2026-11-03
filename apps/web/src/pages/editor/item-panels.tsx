@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { SidebarDrawer } from '@nix/web-foundation/layout/sidebar-drawer';
 import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
-import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
+import { useLayoutKind, useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { DocumentHistory } from '../../history/document-history';
 import { historyPanelWidth } from '@nix/web-foundation/layout/regions';
 import { ItemPanel, type Pane } from '../../panel/item-panel';
@@ -37,7 +37,9 @@ export function ItemPanels({
   historyOpen,
   onCloseHistory,
 }: ItemPanelsProps): ReactNode {
-  const phone = !useMediaQuery('(min-width: 640px)');
+  // A landscape tablet's details slide over the page like the phone's drawer, not a centred dialog.
+  const slideOver = useLayoutKind() === 'tablet-landscape';
+  const phone = useNarrowViewport() || slideOver;
   // Swipe in from the right edge opens the panel; closing is the drawer's own drag, scrim or Escape.
   useEdgeSwipeOpen('right', phone && !panelOpen, togglePanel);
   // Always mounted, like the shell's own: a hook that mounts with the drawer would race its own cleanup.

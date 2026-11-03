@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { paneClip, paneColumn } from '@nix/web-foundation/layout/regions';
-import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useLayoutKind, useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { paneElementId } from '@nix/web-platform/panes/pane-params';
 import type { PaneState } from '@nix/web-platform/panes/pane-state';
@@ -70,6 +70,7 @@ export function PaneContents({
   const { openPreview, openPinned, openBeside } = useOpenItem();
   const tabPinned = useTabStore((state) => state.tabPinned);
   const narrow = useNarrowViewport();
+  const layout = useLayoutKind();
   const orientation = useTabOrientationStore((state) => state.orientation);
   const item = tree.find(pane.itemId);
   const zen = useZenActive();
@@ -98,7 +99,7 @@ export function PaneContents({
         {/* Mounted here rather than inside `OpenItem`, and above the not-found branch below: an
             item resolving, forbidden, or failed must not take the rest of the strip down with it,
             or a person could not click back to a tab that is perfectly fine. */}
-        {!narrow && !zen ? (
+        {(!narrow || layout === 'tablet-portrait') && !zen ? (
           <DocumentTabStrip
             paneIndex={pane.index}
             tree={tree}

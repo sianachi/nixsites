@@ -60,7 +60,7 @@
  * rows) is not selectable and has no long-press callout; text the person writes or reads is left
  * alone, so the editor, inputs and contenteditable are explicitly excluded.
  */
-@media (max-width: 639px) {
+@media (max-width: 639px), (pointer: coarse) {
   * {
     -webkit-tap-highlight-color: transparent;
   }

@@ -39,7 +39,7 @@ describe('pointer facts, asked apart from width', () => {
 
   it('keeps a landscape phone compact without changing a mouse layout of the same width', () => {
     const atWidth = (width: number, coarse: boolean) => {
-      stubViewport(width);
+      stubViewport(width, { portrait: false });
       const widthMedia = globalThis.matchMedia;
       globalThis.matchMedia = (query) => {
         if (!query.includes('pointer')) return widthMedia(query);

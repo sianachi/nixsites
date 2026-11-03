@@ -1,7 +1,6 @@
-import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
-import { WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT } from '@nix/web-foundation/layout/regions';
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 
-/** Below `sm`: the Obsidian-style phone chrome. Tablets and desktop keep today's shell. */
+/** The Obsidian-style phone chrome: phones, and portrait tablets (which add a tab strip). Desktop and landscape tablets keep the wide shell. */
 export function usePhone(): boolean {
-  return !useMediaQuery(WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT);
+  return useNarrowViewport();
 }

@@ -17,20 +17,25 @@
  * wants a coarse pointer stubs `matchMedia` itself for that one query, the way
  * `tabs-flows.test.tsx` and `graph-page.test.tsx` do.
  */
-export function stubViewport(wide: boolean | number): void {
+export function stubViewport(
+  wide: boolean | number,
+  options: { readonly touch?: boolean; readonly portrait?: boolean } = {},
+): void {
   if (typeof globalThis.window === 'undefined') {
     return;
   }
 
   globalThis.matchMedia = (query: string): MediaQueryList =>
     ({
-      matches: query.includes('pointer')
-        ? query.includes('fine')
-        : query.includes('hover')
-          ? true
-          : typeof wide === 'boolean'
-            ? wide
-            : wide >= Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? 0),
+      matches: query.includes('orientation')
+        ? query.includes('portrait') === (options.portrait ?? true)
+        : query.includes('pointer')
+          ? query.includes(options.touch === true ? 'coarse' : 'fine')
+          : query.includes('hover')
+            ? true
+            : typeof wide === 'boolean'
+              ? wide
+              : wide >= Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? 0),
       media: query,
       onchange: null,
       addEventListener: () => undefined,

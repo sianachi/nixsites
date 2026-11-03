@@ -78,3 +78,15 @@ it('adapts from portrait through landscape to desktop without treating a tablet 
   rerender();
   expect(result.current).toEqual({ phone: true, drawer: true, overlay: true, split: false });
 });
+
+it.each([
+  [820, true, 'touch'],
+  [1180, false, 'touch'],
+  [390, true, undefined],
+  [800, true, undefined],
+])('sets data-layout for a %ipx touch screen (portrait %s)', async (width, portrait, expected) => {
+  stubViewport(width, { touch: width !== 800, portrait });
+  renderAt(<App />, `/?item=${note.id}`);
+  await screen.findByRole('textbox', { name: 'Note title' });
+  expect(document.documentElement.dataset.layout).toBe(expected);
+});

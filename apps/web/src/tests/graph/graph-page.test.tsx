@@ -631,7 +631,10 @@ describe('touching a node on a coarse pointer', () => {
     // own default answers `true` - keeps answering `true`, so a touch graph is still a wide one.
     globalThis.matchMedia = (query: string): MediaQueryList =>
       ({
-        matches: query === '(pointer: coarse)' || !query.includes('pointer'),
+        // A wide landscape touch window, so the desktop shell stays (orientation: portrait is off).
+        matches:
+          query === '(pointer: coarse)' ||
+          (!query.includes('pointer') && !query.includes('orientation')),
         media: query,
         onchange: null,
         addEventListener: () => undefined,
