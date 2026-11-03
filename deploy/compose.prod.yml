@@ -2,7 +2,7 @@ name: nix
 
 services:
   nix-versitygw:
-    image: versity/versitygw:v1.7.0@sha256:c4cbd9d9cb8dedbb055ac788dbd02635651b9b1cebac95b095b3217231aa87ad
+    image: versity/versitygw:v1.10.0@sha256:89cad13cc981986ee284cbafea4613f9533ce6fd5f37a2c96c4c4fb8adb3a316
     restart: unless-stopped
     command: ["--health", "/health", "posix", "/data"]
     environment:
@@ -20,7 +20,7 @@ services:
       - no-new-privileges:true
 
   nix-storage-init:
-    image: amazon/aws-cli:2.36.31@sha256:f0dcd994da5c36ab09becf4259bba4c45ed4ecfd03d51c701912f4d8425b2d49
+    image: amazon/aws-cli:2.39.3@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
     profiles: [maintenance]
     restart: "no"
     environment:
@@ -61,7 +61,7 @@ services:
           - postgres
 
   rabbitmq:
-    image: rabbitmq:4.1-management-alpine@sha256:410a1c8844e9c9227f72735d95a391fca4559ca8b61cce9dad707ce5e2229a3a
+    image: rabbitmq:4.4-management-alpine@sha256:b768d2e09a809b48458d6c3c32fc2894643a6bfafd76264c120373eff0ee6532
     restart: unless-stopped
     user: "100:101"
     # This listener is plaintext by design and is reachable only on the private Compose network.
@@ -94,7 +94,7 @@ services:
       - no-new-privileges:true
 
   nix-api-init:
-    image: busybox:1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
     restart: "no"
     command: ["sh", "-c", "chown -R 1654:1654 /var/lib/nix/data-protection"]
     volumes:

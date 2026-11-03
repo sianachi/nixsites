@@ -58,7 +58,7 @@ services:
   # The machinekey volume is created root-owned; Zitadel runs as uid 1000 and must write the
   # bootstrap PAT there on first start.
   zitadel-init:
-    image: busybox:1.37
+    image: busybox:1.38
     restart: "no"
     command: ["sh", "-c", "chown -R 1000:1000 /machinekey"]
     volumes:
@@ -73,7 +73,7 @@ services:
   # PAT install.sh uses once to register the Nix application. No healthcheck: the image is
   # distroless; install.sh waits on OIDC discovery instead.
   zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.16.1
+    image: ghcr.io/zitadel/zitadel:v4.20.0
     restart: unless-stopped
     command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "${NIX_ZITADEL_TLS_MODE:?set NIX_ZITADEL_TLS_MODE}"]
     environment:
