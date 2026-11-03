@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Web app editor: the note and canvas editors, their toolbars and menus, and the file viewer plugins",
   "exports": {
+    "./editor/note-stats": {
+      "types": "./src/editor/note-stats.tsx",
+      "default": "./src/editor/note-stats.tsx"
+    },
     "./editor/bubble-menu": {
       "types": "./src/editor/bubble-menu.tsx",
       "default": "./src/editor/bubble-menu.tsx"

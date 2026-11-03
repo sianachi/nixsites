@@ -41,6 +41,8 @@ import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { ItemBlockView, PageBreakView, NoteSourcesProvider } from './note-block-views';
+import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
+import { publishActiveSyncState, registerActiveEditor } from './active-editor';
 import { ItemInsertDialog, type ItemInsertKind } from './item-insert-dialog';
 import { Button } from '@nix/ui';
 import { ColumnControls } from './column-controls';
@@ -473,6 +475,7 @@ export function NoteEditor({
   parentId,
 }: NoteEditorProps): ReactNode {
   const narrow = useDrawerNavigation();
+  const statusBar = useStatusBarPreference((state) => state.enabled);
   const { getAccessToken } = useAuth();
   const client = useApiClient();
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -832,6 +835,11 @@ export function NoteEditor({
             keys: activeEmacs.keys,
           }
         : null;
+
+  useEffect(() => registerActiveEditor(editor), [editor]);
+  useEffect(() => {
+    publishActiveSyncState(syncState);
+  }, [syncState]);
 
   useEffect(() => {
     setEditorWritingMode(editor, writingMode);
@@ -1433,7 +1441,9 @@ export function NoteEditor({
               <MentionBubble editor={editor} />
               {readOnly || stale ? null : <TableMenu editor={editor} />}
             </PaneViewport>
-            {hideToolbar || narrow || bodyUnavailable ? null : <NoteStatsFooter editor={editor} />}
+            {hideToolbar || narrow || bodyUnavailable ? null : (
+              <NoteStatsFooter editor={editor} showWords={!statusBar} />
+            )}
 
             {itemRequest !== null && workspaceId !== undefined ? (
               <ItemInsertDialog

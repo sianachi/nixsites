@@ -42,13 +42,20 @@ export function readNoteStats(doc: ProseMirrorNode): NoteStats {
   return { words, minutes: Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)), outline };
 }
 
-export function NoteStatsFooter({
-  editor,
-  className = 'px-5 py-1 sm:px-8',
-}: {
-  readonly editor: Editor;
-  readonly className?: string;
-}): ReactNode {
+/** Moves the caret to the `index`th heading and scrolls it into view. */
+export function jumpToHeading(editor: Editor, index: number, fallbackPos: number): void {
+  // Looked up in the live doc: a list can be up to the debounce stale.
+  const pos = readNoteStats(editor.state.doc).outline[index]?.pos ?? fallbackPos;
+  editor
+    .chain()
+    .focus()
+    .setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
+    .scrollIntoView()
+    .run();
+}
+
+/** The note's stats, re-read a moment after each edit. */
+export function useNoteStats(editor: Editor): NoteStats {
   const [stats, setStats] = useState(() => readNoteStats(editor.state.doc));
 
   useEffect(() => {
@@ -65,12 +72,28 @@ export function NoteStatsFooter({
       editor.off('update', update);
     };
   }, [editor]);
+  return stats;
+}
+
+export function NoteStatsFooter({
+  editor,
+  className = 'px-5 py-1 sm:px-8',
+  showWords = true,
+}: {
+  readonly editor: Editor;
+  readonly className?: string;
+  /** False while the status bar already shows the word count. */
+  readonly showWords?: boolean;
+}): ReactNode {
+  const stats = useNoteStats(editor);
 
   return (
     <div className={`flex shrink-0 items-center gap-3 ${className}`}>
-      <Text variant="caption" tone="muted">
-        {stats.words} {stats.words === 1 ? 'word' : 'words'} · {stats.minutes} min read
-      </Text>
+      {showWords ? (
+        <Text variant="caption" tone="muted">
+          {stats.words} {stats.words === 1 ? 'word' : 'words'} · {stats.minutes} min read
+        </Text>
+      ) : null}
       <Popover
         label="Outline"
         trigger={(trigger) => (
@@ -93,14 +116,7 @@ export function NoteStatsFooter({
                     className="w-full justify-start"
                     onClick={() => {
                       close();
-                      // Looked up in the live doc: the list can be up to the debounce stale.
-                      const pos = readNoteStats(editor.state.doc).outline[index]?.pos ?? entry.pos;
-                      editor
-                        .chain()
-                        .focus()
-                        .setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
-                        .scrollIntoView()
-                        .run();
+                      jumpToHeading(editor, index, entry.pos);
                     }}
                   >
                     {entry.text || 'Untitled heading'}
