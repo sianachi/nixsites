@@ -248,6 +248,9 @@ importers:
       '@nix/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@nix/view-compute':
+        specifier: workspace:*
+        version: link:../../packages/view-compute
       '@nix/view-render':
         specifier: workspace:*
         version: link:../../packages/view-render

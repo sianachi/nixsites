@@ -1,3 +1,5 @@
+import { computeView, type ViewSource } from '@nix/view-compute';
+
 import { createDemoAi } from './demo-ai';
 import { seededUpdate } from './demo-collab';
 import { createDemoHabits, type DemoHabit } from './demo-habits';
@@ -10,6 +12,7 @@ export const DEMO_PROFILE = {
 };
 
 const CREATED = '2026-10-01T09:00:00+00:00';
+const DEMO_PRINCIPAL = '0199a000-0000-7000-8000-0000000000aa';
 
 type Json = Record<string, unknown>;
 
@@ -127,38 +130,38 @@ function sampleItems(): DemoItem[] {
     ...HABIT_LIST.map((habit, index) =>
       item(HABITS, HABIT_TITLES[index] ?? 'Habit', index + 1, {}, habit.id),
     ),
-    task('Press kit', 1, { priority: 'Low', start: day(4), due: day(12), status: 'To do' }),
+    task('Press kit', 1, { priority: 'Low', start: day(4), due_date: day(12), status: 'To do' }),
     task('Email announcement', 2, {
       priority: 'Medium',
       start: day(8),
-      due: day(15),
+      due_date: day(15),
       status: 'To do',
     }),
     item(
       PRODUCT_LAUNCH,
       'Beta tester outreach',
       3,
-      { priority: 'High', start: day(2), due: day(9), status: 'In progress' },
+      { priority: 'High', start: day(2), due_date: day(9), status: 'In progress' },
       BETA_OUTREACH,
     ),
     item(
       PRODUCT_LAUNCH,
       'Landing page design',
       4,
-      { priority: 'High', start: day(-6), due: day(-1), status: 'In progress' },
+      { priority: 'High', start: day(-6), due_date: day(-1), status: 'In progress' },
       LANDING_PAGE,
     ),
     task('Pricing page', 5, {
       priority: 'Medium',
       start: day(-4),
-      due: day(0),
+      due_date: day(0),
       status: 'In progress',
     }),
     item(
       PRODUCT_LAUNCH,
       'Launch video',
       6,
-      { priority: 'High', start: day(1), due: day(10), status: 'In progress' },
+      { priority: 'High', start: day(1), due_date: day(10), status: 'In progress' },
       LAUNCH_VIDEO,
     ),
     item(LAUNCH_VIDEO, 'Script', 1),
@@ -167,14 +170,14 @@ function sampleItems(): DemoItem[] {
     task('Brand guidelines', 7, {
       priority: 'High',
       start: day(-13),
-      due: day(-9),
+      due_date: day(-9),
       status: 'Done',
       done: true,
     }),
     task('Website copy', 8, {
       priority: 'Medium',
       start: day(-11),
-      due: day(-6),
+      due_date: day(-6),
       status: 'Done',
       done: true,
     }),
@@ -232,21 +235,21 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
     properties: [
       select('priority', 'Priority', ['Low', 'Medium', 'High']),
       date('start', 'Start'),
-      date('due', 'Due'),
+      date('due_date', 'Due'),
       select('status', 'Status', ['To do', 'In progress', 'Done']),
       { key: 'done', label: 'Done', type: 'checkbox', options: [], required: false },
     ],
     views: [
-      view('board', 'board', { groupBy: 'status', columns: ['priority', 'due'] }),
-      view('list', 'list', { columns: ['status', 'priority', 'due'] }),
-      view('calendar', 'calendar', { dateProperty: 'due' }),
-      view('timeline', 'timeline', { dateProperty: 'start', endDateProperty: 'due' }),
+      view('board', 'board', { groupBy: 'status', columns: ['priority', 'due_date'] }),
+      view('list', 'list', { columns: ['status', 'priority', 'due_date'] }),
+      view('calendar', 'calendar', { dateProperty: 'due_date' }),
+      view('timeline', 'timeline', { dateProperty: 'start', endDateProperty: 'due_date' }),
       view('sheet', 'sheet'),
-      view('checklist', 'checklist', { columns: ['due'] }),
+      view('checklist', 'checklist', { columns: ['due_date'] }),
       view('gallery', 'gallery', { columns: ['status', 'priority'] }),
       view('chart', 'chart', { groupBy: 'status', chart: { kind: 'column' } }),
       view('outline', 'outline'),
-      view('form', 'form', { columns: ['priority', 'due', 'status'] }),
+      view('form', 'form', { columns: ['priority', 'due_date', 'status'] }),
     ],
   },
   [CHAT]: { properties: [], views: [view('chat', 'chat')] },
@@ -286,7 +289,12 @@ interface DemoRequest {
   readonly body: unknown;
 }
 
-type Handler = (request: DemoRequest, match: RegExpMatchArray) => Response | null;
+type Handler = (
+  request: DemoRequest,
+  match: RegExpMatchArray,
+) => Response | Promise<Response | null> | null;
+
+type MirrorItem = NonNullable<Awaited<ReturnType<ViewSource['item']>>>;
 
 /**
  * Core for the server-free demo: answers the API client's requests from a sample workspace held
@@ -334,6 +342,50 @@ export function createDemoFetch(): typeof fetch {
       views: [] as Json[],
       default: '',
     };
+  // The sample items as the offline view engine reads them.
+  const toMirror = (entry: DemoItem): MirrorItem => {
+    const shaped = structure.get(entry.id);
+    return {
+      id: entry.id,
+      workspaceId: DEMO_WORKSPACE,
+      parentId: entry.parentId,
+      type: entry.type,
+      title: entry.title,
+      seq: entry.seq,
+      revision: '1',
+      lifecycleState: 'active',
+      // Core keeps the title among the properties too, which is where query results read it.
+      properties: { ...entry.properties, title: entry.title },
+      computedProperties: null,
+      schema: shaped === undefined ? null : { properties: shaped.properties },
+      views: shaped === undefined ? null : { views: shaped.views, default: shaped.default },
+      recurrence: null,
+      noDelete: false,
+      noChildren: false,
+      managedBy: null,
+      createdAt: CREATED,
+      updatedAt: entry.updatedAt,
+      canWrite: true,
+      locked: false,
+      canPersistBody: true,
+      metadataExpiresAt: null,
+      bodyDocId: null,
+      bodyHeadSeq: null,
+      file: null,
+    };
+  };
+  const viewSource = (): ViewSource => ({
+    item: (id) => {
+      const entry = itemAt(id);
+      return Promise.resolve(entry === undefined || trashed.has(id) ? undefined : toMirror(entry));
+    },
+    workspaceItems: () => Promise.resolve([...live()].sort((a, b) => a.seq - b.seq).map(toMirror)),
+    now: () => new Date(),
+    // Relative dates ("Next 7 days"), "assigned to me" and the readable workspaces.
+    principalId: DEMO_PRINCIPAL,
+    workspaceIds: () => Promise.resolve([DEMO_WORKSPACE]),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
   const viewsOf = (id: string | undefined): Json => {
     const { views, default: defaultView } = structureOf(id);
     return {
@@ -379,7 +431,7 @@ export function createDemoFetch(): typeof fetch {
       /^\/api\/v1\/me$/,
       () =>
         json({
-          id: '0199a000-0000-7000-8000-0000000000aa',
+          id: DEMO_PRINCIPAL,
           tenantId: '0199a000-0000-7000-8000-0000000000bb',
           displayName: DEMO_PROFILE.name,
           email: DEMO_PROFILE.email,
@@ -512,14 +564,14 @@ export function createDemoFetch(): typeof fetch {
           from: query.get('from') ?? '',
           to: query.get('to') ?? '',
           entries: live()
-            .filter((entry) => typeof entry.properties.due === 'string')
+            .filter((entry) => typeof entry.properties.due_date === 'string')
             .map((entry) => ({
               itemId: entry.id,
               title: entry.title,
               containerId: entry.parentId,
               containerTitle: itemAt(entry.parentId ?? undefined)?.title ?? null,
-              dateProperty: 'due',
-              value: entry.properties.due,
+              dateProperty: 'due_date',
+              value: entry.properties.due_date,
               kind: 'date',
               generated: false,
               completed: entry.properties.done === true,
@@ -770,26 +822,19 @@ export function createDemoFetch(): typeof fetch {
     [
       'GET',
       /^\/api\/v1\/items\/([^/]+)\/query$/,
-      ({ query }, [, id]) =>
-        json({
-          itemId: id,
-          viewId: query.get('view') ?? '',
-          today: query.get('today') ?? day(0),
-          // shortcut: returns every item without applying the view's filters, until the demo grows a filter engine.
-          results: live()
-            .filter((entry) => entry.parentId !== null && entry.parentId !== id)
-            .map((entry) => ({
-              id: entry.id,
-              workspaceId: DEMO_WORKSPACE,
-              containerId: entry.parentId,
-              containerTitle: itemAt(entry.parentId ?? undefined)?.title ?? null,
-              title: entry.title,
-              type: entry.type,
-              properties: entry.properties,
-            })),
-          limit: 500,
-          truncated: false,
-        }),
+      // The same engine the iOS app uses offline, over the sample items: filters and sorts apply.
+      async ({ path, query }) => {
+        const answer = await computeView(viewSource(), {
+          method: 'GET',
+          url: new URL(`${path}?${query.toString()}`, 'https://demo.invalid'),
+          body: null,
+        });
+        return answer === null
+          ? problem(501, 'demo.unsupported', 'Not in the demo')
+          : 'body' in answer
+            ? json(answer.body)
+            : problem(answer.status, answer.code, answer.detail);
+      },
     ],
     ['GET', /^\/api\/v1\/me\/canvas-library$/, () => json({ items: [] })],
     [
@@ -838,7 +883,7 @@ export function createDemoFetch(): typeof fetch {
     ],
   ];
 
-  return (input, init) => {
+  return async (input, init) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
       'https://demo.invalid',
@@ -851,11 +896,11 @@ export function createDemoFetch(): typeof fetch {
       if (routeMethod !== method) continue;
       const match = url.pathname.match(pattern);
       if (match === null) continue;
-      const response = handler(request, match);
-      if (response !== null) return Promise.resolve(response);
+      const response = await handler(request, match);
+      if (response !== null) return response;
     }
     console.warn('[demo] unhandled', method, url.pathname + url.search);
-    return Promise.resolve(problem(501, 'demo.unsupported', 'Not in the demo'));
+    return problem(501, 'demo.unsupported', 'Not in the demo');
   };
 }
 

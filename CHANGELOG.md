@@ -54,8 +54,11 @@ follows semantic versioning (`0.x` pre-1.0).
   boards with their columns side by side; held sideways it uses the desktop layout with
   touch-sized controls and the details sliding in over the page. A narrow Split View window gets
   the phone layout.
-- A status bar along the bottom on desktop and iPad held sideways shows backlinks, word or item
+- A status bar under the page on desktop and iPad held sideways shows backlinks, word or item
   count and whether the note is synced. Turn it off in Settings > General > Appearance.
+- A Workspaces page lists every workspace with search, pins, groups and New workspace, from the
+  left strip and from Homebase. Hidden items are in the profile menu.
+- Settings > General > Appearance can hide the left strip of destinations.
 - The details sidebar has an Outline tab listing the note's headings (click one to jump to it),
   and Backlinks shows the last list it fetched, with a note, when there is no connection.
 - The tab bar's "+" opens a search box: pick a note to open it in a new tab, or create a new
@@ -65,11 +68,17 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - Signing in keeps you signed in for 30 days instead of 8 hours, in the browser and the apps.
   `Nix:BrowserAuth:SessionHours` can shorten it (at most 720 hours).
-- Your workspaces are listed in the profile menu, with All workspaces and New workspace, instead
-  of a workspace button at the top. The Explorer shows the current workspace's name.
-- On desktop, tabs sit in the top row beside back and forward; Search, notifications and your
-  profile are on the left strip; Zen mode is in a note's "…" menu. Every screen width uses the
-  phone's colours (published sites and print too), and preview tabs are no longer in italics.
+- Your workspaces are listed in the profile menu and in the workspace switcher at the top, with
+  All workspaces and New workspace.
+- On desktop, tabs sit in the top row beside back, forward and the workspace switcher, starting
+  where the page starts, with "+" after the last tab; Zen mode is in a note's "…" menu. Light mode
+  uses the phone's colours at every width (published sites and print too) and dark mode keeps its
+  greys; preview tabs are no longer in italics.
+- The Explorer offers Chat, Upload files, New view and New note as icons; New view holds every
+  other kind (canvas, sheet, each view type and your templates) in one dialog.
+- Vim and Emacs keyboard modes apply only on the desktop layout; phones and tablets always edit
+  as standard, and the setting is not shown there.
+- In the demo, smart lists apply their filters.
 - Ctrl- or Cmd-click on an item in the Explorer no longer adds it to the selection; Shift-click
   and Space still do.
 - Browser sign-in (`/auth/login` and `/auth/callback`) is limited per address,
