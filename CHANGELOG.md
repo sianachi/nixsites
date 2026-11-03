@@ -30,6 +30,10 @@ follows semantic versioning (`0.x` pre-1.0).
   changes replay when the connection returns, and a change the server refuses is listed with a way
   to dismiss it (a refused new note also keeps its text for copying). Other changes still need a
   connection.
+- The iOS app keeps syncing for a short while after you leave it, so a sync that has started
+  finishes, and file downloads carry on while the app is in the background. When syncing fails
+  (not when you are simply offline) the app says what could not be synced, with a Retry button,
+  and sends a notification if it is not on screen.
 - A custom site layout: the site is rendered from your own Liquid templates, CSS and JS stored as
   files on a theme page in the workspace, and served in a sandbox. Choose it, and the theme page,
   in the site settings or with `nixctl site update --layout custom --theme <itemId>`.

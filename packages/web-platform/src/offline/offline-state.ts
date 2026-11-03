@@ -12,6 +12,8 @@ export interface OfflineState {
   readonly lastSyncedAt: number | null;
   /** Bumped when something on this device needs a sync pass now (an unlock). */
   readonly resyncRequestedAt: number | null;
+  /** What the last sync that reached the server could not do; null when it did everything. */
+  readonly syncProblem: string | null;
 }
 
 let state: OfflineState = {
@@ -19,6 +21,7 @@ let state: OfflineState = {
   networkDown: false,
   lastSyncedAt: null,
   resyncRequestedAt: null,
+  syncProblem: null,
 };
 const listeners = new Set<() => void>();
 
@@ -32,7 +35,8 @@ export function setOfflineState(patch: Partial<OfflineState>): void {
     next.bootOffline === state.bootOffline &&
     next.networkDown === state.networkDown &&
     next.lastSyncedAt === state.lastSyncedAt &&
-    next.resyncRequestedAt === state.resyncRequestedAt
+    next.resyncRequestedAt === state.resyncRequestedAt &&
+    next.syncProblem === state.syncProblem
   )
     return;
   state = next;

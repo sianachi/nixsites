@@ -5,20 +5,22 @@ import Foundation
 public actor Stores {
     public let baseDir: URL
     private let idleTimeout: TimeInterval
-    private let downloadConfiguration: () -> URLSessionConfiguration
+    /// Shared by every store; the app hands it the completion for background download events.
+    public nonisolated let downloads: Downloads
     private var stores: [String: Store] = [:]
 
     public init(baseDir: URL? = nil, idleTimeout: TimeInterval = 30,
-                downloadConfiguration: @escaping () -> URLSessionConfiguration = { .ephemeral }) {
-        self.baseDir = baseDir ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                downloadConfiguration: URLSessionConfiguration = .ephemeral) {
+        let baseDir = baseDir ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("nix-store", isDirectory: true)
+        self.baseDir = baseDir
         self.idleTimeout = idleTimeout
-        self.downloadConfiguration = downloadConfiguration
+        downloads = Downloads(baseDir: baseDir, configuration: downloadConfiguration)
     }
 
     func store(_ origin: String) -> Store {
         if let s = stores[origin] { return s }
-        let s = Store(origin: origin, baseDir: baseDir, idleTimeout: idleTimeout, downloadConfiguration: downloadConfiguration)
+        let s = Store(origin: origin, baseDir: baseDir, idleTimeout: idleTimeout, downloads: downloads)
         stores[origin] = s
         return s
     }

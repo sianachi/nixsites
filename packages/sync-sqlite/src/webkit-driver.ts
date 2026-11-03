@@ -23,7 +23,9 @@ type Request =
   | { op: 'fileGet'; key: string }
   | { op: 'fileDelete'; key: string }
   | { op: 'usage' }
-  | { op: 'wipe' };
+  | { op: 'wipe' }
+  | { op: 'keepAwake'; running: boolean }
+  | { op: 'notify'; title?: string; body?: string };
 
 /** Sends one request and resolves with the native reply; a native error string rejects. */
 export type NixStorePost = (request: Request) => Promise<unknown>;

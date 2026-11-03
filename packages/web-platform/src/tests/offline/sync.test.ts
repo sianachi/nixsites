@@ -2,7 +2,17 @@ import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createSyncScheduler, downloadable, syncFiles, type SyncDeps } from '../../offline/sync';
+import {
+  createSyncScheduler,
+  describeSyncProblem,
+  downloadable,
+  runFullSync,
+  syncFiles,
+  type SyncDeps,
+} from '../../offline/sync';
+
+const runSyncPass = vi.hoisted(() => vi.fn());
+vi.mock('@nix/sync-core', () => ({ runSyncPass }));
 
 const fileItem = (id: string, versionId: string, over: Partial<MirrorItem> = {}) =>
   ({
@@ -86,6 +96,19 @@ describe('file sync', () => {
     expect(refused.stored).toEqual({});
   });
 
+  it('counts the files it could not store, but not a version that changed under it', async () => {
+    const failing = setup([fileItem('a', 'v1'), fileItem('b', 'v1'), fileItem('c', 'v1')], {});
+    failing.mirror.fileDownload
+      .mockRejectedValueOnce(new Error('Download failed.'))
+      .mockResolvedValueOnce({ bytes: 3, sha256: 'evil' });
+    expect(await syncFiles(failing.deps, ['ws'])).toBe(2);
+    expect(failing.stored).toEqual({ c: 'v1' });
+
+    const changed = setup([fileItem('a', 'v1')], {});
+    changed.capability.mockResolvedValueOnce({ url: 'https://f/a', byteLength: 3, sha256: 'new' });
+    expect(await syncFiles(changed.deps, ['ws'])).toBe(0);
+  });
+
   it('only fetches from plain https or local urls', () => {
     expect(downloadable('https://files.example/x')).toBe(true);
     expect(downloadable('http://localhost:9000/x')).toBe(true);
@@ -107,5 +130,40 @@ describe('sync scheduler', () => {
     run.mockResolvedValueOnce(undefined);
     await scheduler.trigger();
     expect(run).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('full sync report', () => {
+  it('names failed workspaces, and marks a pass that got no answer as unreachable', async () => {
+    const { deps } = setup([], {});
+    const store = {
+      listItems: () => Promise.resolve([]),
+      replaceWorkspaceList: vi.fn(() => Promise.resolve()),
+      setSetting: vi.fn(() => Promise.resolve()),
+    };
+    const workspaces = ['Home', 'Work', 'Away'].map((name) => ({
+      id: name,
+      name,
+      lifecycleState: 'active',
+    }));
+    runSyncPass
+      .mockResolvedValueOnce({ status: 'complete', replayedOperations: 0, conflicts: 0 })
+      .mockRejectedValueOnce(new Error('Snapshot response does not advance'))
+      .mockRejectedValueOnce(new TypeError('Load failed'));
+    const report = await runFullSync({
+      ...deps,
+      store: store as unknown as SqliteMirrorStore,
+      listWorkspaces: () => Promise.resolve(workspaces),
+    });
+    expect(report).toEqual({ failedWorkspaces: ['Work'], failedFiles: 0, unreachable: true });
+  });
+
+  it('says nothing when everything synced', () => {
+    expect(describeSyncProblem({ failedWorkspaces: [], failedFiles: 0, unreachable: false })).toBe(
+      null,
+    );
+    expect(
+      describeSyncProblem({ failedWorkspaces: ['Work'], failedFiles: 2, unreachable: false }),
+    ).toBe('Work could not be synced; 2 files could not be downloaded.');
   });
 });

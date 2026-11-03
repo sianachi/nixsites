@@ -12,7 +12,7 @@ import { useApiClient } from '../api/api-client-provider';
 import { useAuth } from '../auth/auth-provider';
 import { createMirrorBodyCache, createMirrorPendingSink } from './mirror-body-cache';
 import { REMEMBERED, rememberKey } from './mirror-fetch';
-import { discardNativeMirror, getNativeMirror } from './native-mirror';
+import { discardNativeMirror, getNativeMirror, type NativeMirror } from './native-mirror';
 import {
   getOfflineState,
   setOfflineState,
@@ -20,7 +20,7 @@ import {
   useOfflineState,
 } from './offline-state';
 import { getShellFetch } from './shell-fetch';
-import { createSyncScheduler, runFullSync } from './sync';
+import { createSyncScheduler, describeSyncProblem, runFullSync, type SyncReport } from './sync';
 
 /**
  * Keeps the iOS shell's offline copy current. Renders nothing, and does nothing at all outside the
@@ -40,6 +40,20 @@ async function warmRemembered(getToken: () => Promise<string | null>): Promise<v
       }).catch(() => undefined),
     ),
   );
+}
+
+/**
+ * Shows what the sync could not do, with a notification when it starts failing (iOS shows it only
+ * while the app is off screen), and clears it once a pass does everything. A pass that got no
+ * answer from the network says nothing either way.
+ */
+function reportSyncProblem(mirror: NativeMirror, report: SyncReport): void {
+  if (report.unreachable || !navigator.onLine) return;
+  const problem = describeSyncProblem(report);
+  const before = getOfflineState().syncProblem;
+  setOfflineState({ syncProblem: problem });
+  if (problem !== null && before === null)
+    void mirror.notify({ title: 'Nix could not sync', body: `${problem} Open Nix to try again.` });
 }
 
 export function NativeSync(): ReactNode {
@@ -64,6 +78,8 @@ export function NativeSync(): ReactNode {
           profile: { subject: profile.subject, name: profile.name, email: profile.email },
         });
         await store.setSetting(rememberKey('/api/v1/me'), JSON.stringify(me));
+        // iOS asks once, here at sign-in, so a later failure can be said while the app is closed.
+        void mirror.notify();
       }
       if (store === null || controller.signal.aborted) return;
       const body = createMirrorBodyCache(
@@ -93,30 +109,36 @@ export function NativeSync(): ReactNode {
       const ownerId = crypto.randomUUID();
       const scheduler = createSyncScheduler(async () => {
         if (bootOffline || !navigator.onLine) return;
-        const outcome = await runFullSync({
-          mirror,
-          store,
-          api,
-          ownerId,
-          signal: controller.signal,
-          listWorkspaces: async () => {
-            const all = [];
-            for await (const workspace of client.paginate(workspaces.listWorkspaces()))
-              all.push(workspace);
-            return all;
-          },
-          // Queued changes were replayed: item ids and lists the screens hold may have changed.
-          onReplayed: () => {
-            client.invalidate(['items']);
-            client.invalidate(['workspaces']);
-          },
-          capability: (itemId, versionId) =>
-            client.query(files.downloadFile(itemId, versionId), { forceRefresh: true }),
-        });
-        if (outcome === 'revoked') await discardNativeMirror();
-        else {
-          setOfflineState({ lastSyncedAt: Date.now() });
-          await warmRemembered(() => getAccessToken());
+        await mirror.keepAwake(true);
+        try {
+          const outcome = await runFullSync({
+            mirror,
+            store,
+            api,
+            ownerId,
+            signal: controller.signal,
+            listWorkspaces: async () => {
+              const all = [];
+              for await (const workspace of client.paginate(workspaces.listWorkspaces()))
+                all.push(workspace);
+              return all;
+            },
+            // Queued changes were replayed: item ids and lists the screens hold may have changed.
+            onReplayed: () => {
+              client.invalidate(['items']);
+              client.invalidate(['workspaces']);
+            },
+            capability: (itemId, versionId) =>
+              client.query(files.downloadFile(itemId, versionId), { forceRefresh: true }),
+          });
+          if (outcome === 'revoked') await discardNativeMirror();
+          else {
+            setOfflineState({ lastSyncedAt: Date.now() });
+            reportSyncProblem(mirror, outcome);
+            await warmRemembered(() => getAccessToken());
+          }
+        } finally {
+          await mirror.keepAwake(false);
         }
       });
       const stopScheduler = scheduler.start();

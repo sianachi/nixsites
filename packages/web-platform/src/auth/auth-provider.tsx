@@ -275,7 +275,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       void sealAccountBodies(subject).catch(() => undefined);
       // iOS shell: admission to the offline copy closes before the session does, then it is wiped.
       const wiping = discardNativeMirror();
-      setOfflineState({ bootOffline: false, networkDown: false });
+      setOfflineState({ bootOffline: false, networkDown: false, syncProblem: null });
       signedOut(reason);
       void wiping.then((wiped) => {
         if (!wiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
@@ -550,7 +550,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
       void clearRetiredRecordings().catch(() => undefined);
       clearRetiredOfflineNotes();
       void discardNativeMirror();
-      setOfflineState({ bootOffline: false, networkDown: false });
+      setOfflineState({ bootOffline: false, networkDown: false, syncProblem: null });
     };
     window.addEventListener('nix:signed-out-elsewhere', clearSession);
     return () => {
@@ -653,7 +653,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           refreshRef.current = null;
           signedOut();
           signingOutRef.current = false;
-          setOfflineState({ bootOffline: false, networkDown: false });
+          setOfflineState({ bootOffline: false, networkDown: false, syncProblem: null });
           if (!mirrorWiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
           else if (!draftsCleared)
             signInFailed(

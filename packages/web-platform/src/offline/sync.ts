@@ -28,7 +28,16 @@ export interface SyncDeps {
   readonly onReplayed?: () => void;
 }
 
-export type SyncOutcome = 'done' | 'revoked';
+/** What a full sync could not do, for the person to hear about. */
+export interface SyncReport {
+  /** Names of workspaces whose pass failed. */
+  readonly failedWorkspaces: readonly string[];
+  readonly failedFiles: number;
+  /** A pass got no answer from the network: the failures say nothing about the sync itself. */
+  readonly unreachable: boolean;
+}
+
+export type SyncOutcome = 'revoked' | SyncReport;
 
 /** Downloads are native and credential-free, so a capability must be a plain https (or local) URL. */
 export function downloadable(url: string): boolean {
@@ -46,7 +55,8 @@ export function downloadable(url: string): boolean {
   }
 }
 
-export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[]): Promise<void> {
+/** Resolves with how many files could not be stored this time; each is retried on the next pass. */
+export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[]): Promise<number> {
   const wanted = new Map<string, { versionId: string; byteLength: number; sha256: string }>();
   for (const workspaceId of workspaceIds)
     for (const item of await deps.store.listItems(workspaceId))
@@ -62,10 +72,16 @@ export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[])
   await deps.mirror.setFileIndex(index);
 
   const todo = [...wanted].filter(([itemId, file]) => index[itemId] !== file.versionId);
+  let failed = 0;
   const fetchOne = async ([itemId, file]: (typeof todo)[number]): Promise<void> => {
     try {
       const capability = await deps.capability(itemId, file.versionId);
-      if (capability.sha256 !== file.sha256 || !downloadable(capability.url)) return;
+      // A version that changed since the mirror saw it is the next pass's to fetch.
+      if (capability.sha256 !== file.sha256) return;
+      if (!downloadable(capability.url)) {
+        failed++;
+        return;
+      }
       const stored = await deps.mirror.fileDownload(itemId, file.versionId, capability.url);
       if (stored === null) return;
       // The bytes on disk must be the bytes Core named, not just as many of them.
@@ -74,12 +90,14 @@ export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[])
         stored.sha256.toLowerCase() !== file.sha256.toLowerCase()
       ) {
         await deps.mirror.fileDelete(itemId, file.versionId);
+        failed++;
         return;
       }
       index[itemId] = file.versionId;
       await deps.mirror.setFileIndex(index);
     } catch {
       // This file is retried on the next pass; one failure never stops the rest.
+      failed++;
     }
   };
   let next = 0;
@@ -90,6 +108,7 @@ export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[])
     }
   };
   await Promise.all(Array.from({ length: deps.concurrency ?? 2 }, worker));
+  return failed;
 }
 
 export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
@@ -100,15 +119,22 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
     workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name })),
   );
   await deps.store.setSetting(WORKSPACES_SETTING, JSON.stringify(workspaces));
+  const failedWorkspaces: string[] = [];
+  let unreachable = false;
   for (const workspace of workspaces) {
-    if (deps.signal?.aborted === true) return 'done';
+    if (deps.signal?.aborted === true) return { failedWorkspaces, failedFiles: 0, unreachable };
     // One workspace failing (a lost connection, a bad page) must not hold up the others.
     const result = await runSyncPass({
       workspaceId: workspace.id,
       ownerId: deps.ownerId,
       store: deps.store,
       api: deps.api,
-    }).catch(() => null);
+    }).catch((error: unknown) => {
+      // fetch rejects with a TypeError when no answer came back at all.
+      if (error instanceof TypeError) unreachable = true;
+      else failedWorkspaces.push(workspace.name);
+      return null;
+    });
     if (result?.status === 'revoked' && result.scope === 'account') return 'revoked';
     if (
       result !== null &&
@@ -117,11 +143,25 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
     )
       deps.onReplayed?.();
   }
-  await syncFiles(
+  const failedFiles = await syncFiles(
     deps,
     workspaces.map((workspace) => workspace.id),
   );
-  return 'done';
+  return { failedWorkspaces, failedFiles, unreachable };
+}
+
+/** One line for the person, or null when the report has nothing to say. */
+export function describeSyncProblem(report: SyncReport): string | null {
+  const parts: string[] = [];
+  if (report.failedWorkspaces.length > 0)
+    parts.push(`${report.failedWorkspaces.join(', ')} could not be synced`);
+  if (report.failedFiles > 0)
+    parts.push(
+      report.failedFiles === 1
+        ? '1 file could not be downloaded'
+        : `${String(report.failedFiles)} files could not be downloaded`,
+    );
+  return parts.length === 0 ? null : `${parts.join('; ')}.`;
 }
 
 /**

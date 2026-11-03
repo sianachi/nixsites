@@ -35,7 +35,7 @@ public actor Store {
     let dbURL: URL
     let filesURL: URL
     private let idleTimeout: TimeInterval
-    private let downloadConfiguration: () -> URLSessionConfiguration
+    private let downloads: Downloads
     private var db: OpaquePointer?
     private let pageGate = PageGate()
 
@@ -43,13 +43,12 @@ public actor Store {
     private var txGeneration = 0
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
-    public init(origin: String, baseDir: URL, idleTimeout: TimeInterval = 30,
-                downloadConfiguration: @escaping () -> URLSessionConfiguration = { .ephemeral }) {
+    init(origin: String, baseDir: URL, idleTimeout: TimeInterval = 30, downloads: Downloads? = nil) {
         let id = sha256Hex(origin)
         dbURL = baseDir.appendingPathComponent("\(id).sqlite")
         filesURL = baseDir.appendingPathComponent("\(id)-files", isDirectory: true)
         self.idleTimeout = idleTimeout
-        self.downloadConfiguration = downloadConfiguration
+        self.downloads = downloads ?? Downloads(baseDir: baseDir, configuration: .ephemeral)
     }
 
     // MARK: database
@@ -248,31 +247,14 @@ public actor Store {
         try? FileManager.default.removeItem(at: fileURL(key))
     }
 
-    /// GET an object-store capability URL. Ephemeral session: no cookies, no credentials, and no
+    /// GET an object-store capability URL through `Downloads`: no cookies, no credentials, and no
     /// Core token is ever attached. Redirects off https are refused. Returns the stored size and the
     /// hex SHA-256 of the stored file, read back in chunks so the page can verify the bytes.
     public func fileDownload(key: String, url: URL) async throws -> (bytes: Int64, sha256: String) {
         guard url.scheme?.lowercased() == "https", url.host != nil else { throw StoreError.invalid("Downloads must use https.") }
-        let configuration = downloadConfiguration()
-        configuration.httpCookieStorage = nil
-        configuration.httpShouldSetCookies = false
-        configuration.urlCredentialStorage = nil
-        configuration.urlCache = nil
-        let session = URLSession(configuration: configuration)
-        defer { session.finishTasksAndInvalidate() }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.httpShouldHandleCookies = false
-        let (temp, response) = try await session.download(for: request, delegate: HTTPSOnlyRedirects())
-        defer { try? FileManager.default.removeItem(at: temp) }
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw StoreError.io("Download failed.")
-        }
         try Self.prepareDirectory(filesURL)
         let dest = fileURL(key)
-        try? FileManager.default.removeItem(at: dest)
-        try FileManager.default.moveItem(at: temp, to: dest)
-        Self.protect(dest)
+        try await downloads.download(url, to: "\(filesURL.lastPathComponent)/\(dest.lastPathComponent)")
         let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? Int64) ?? 0
         return (size, try Self.fileSha256Hex(dest))
     }
@@ -296,8 +278,9 @@ public actor Store {
     }
 
     /// Closes the database and deletes it and the files. Throws if anything remains, so the caller
-    /// can keep admission closed.
-    public func wipe() throws {
+    /// can keep admission closed. Downloads into this store stop first, so none lands afterwards.
+    public func wipe() async throws {
+        await downloads.cancel(under: "\(filesURL.lastPathComponent)/")
         if activeTx != nil, let db { try? run("ROLLBACK", on: db) }
         if let db { sqlite3_close(db); self.db = nil }
         releaseGate()
@@ -325,12 +308,5 @@ public actor Store {
         #if os(iOS)
         try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: url.path)
         #endif
-    }
-}
-
-private final class HTTPSOnlyRedirects: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest) async -> URLRequest? {
-        request.url?.scheme?.lowercased() == "https" ? request : nil
     }
 }

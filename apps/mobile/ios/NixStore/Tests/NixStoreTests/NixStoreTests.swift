@@ -169,11 +169,7 @@ final class NixStoreTests: XCTestCase {
 
     func testDownloadStreamsToFileWithoutCredentials() async throws {
         StubProtocol.seen = nil
-        let stores = Stores(baseDir: dir, downloadConfiguration: {
-            let c = URLSessionConfiguration.ephemeral
-            c.protocolClasses = [StubProtocol.self]
-            return c
-        })
+        let stores = stubbedStores()
         let r = try await call(stores, ["op": "fileDownload", "key": "k", "url": "https://cdn.example/obj?sig=1"])
         XCTAssertEqual(r["bytes"] as? Int64, 5)
         // SHA-256 of "hello".
@@ -182,6 +178,41 @@ final class NixStoreTests: XCTestCase {
         XCTAssertNil(StubProtocol.seen?.value(forHTTPHeaderField: "Cookie"))
         let got = try await call(stores, ["op": "fileGet", "key": "k"])
         XCTAssertEqual(Data(base64Encoded: got["data"] as! String), Data("hello".utf8))
+    }
+
+    func stubbedStores() -> Stores {
+        StubProtocol.count = 0
+        StubProtocol.status = 200
+        let c = URLSessionConfiguration.ephemeral
+        c.protocolClasses = [StubProtocol.self]
+        return Stores(baseDir: dir, downloadConfiguration: c)
+    }
+
+    func testDownloadJoinsARunningOneAndReusesAFinishedFile() async throws {
+        let stores = stubbedStores()
+        let request: [String: Any] = ["op": "fileDownload", "key": "k", "url": "https://cdn.example/obj"]
+        async let first = call(stores, request)
+        async let second = call(stores, request)
+        let both = try await [first, second]
+        XCTAssertEqual(both.map { $0["bytes"] as? Int64 }, [5, 5])
+        // A file that finished while nobody waited (the app was suspended) is returned, not fetched again.
+        _ = try await call(stores, request)
+        XCTAssertEqual(StubProtocol.count, 1)
+    }
+
+    func testFailedDownloadStoresNothingAndWipeStopsDownloads() async throws {
+        let stores = stubbedStores()
+        StubProtocol.status = 403
+        do {
+            _ = try await call(stores, ["op": "fileDownload", "key": "k", "url": "https://cdn.example/obj"])
+            XCTFail("a refused download was stored")
+        } catch {}
+        let got = try await call(stores, ["op": "fileGet", "key": "k"])
+        XCTAssertTrue(got["data"] is NSNull)
+        StubProtocol.status = 200
+        _ = try await call(stores, ["op": "fileDownload", "key": "k", "url": "https://cdn.example/obj"])
+        _ = try await call(stores, ["op": "wipe"])
+        XCTAssertEqual((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [], [])
     }
 
     func testUnknownOpAndBadParams() async throws {
@@ -196,11 +227,14 @@ extension String { func tap(_ f: (String) async throws -> Void) async throws -> 
 
 final class StubProtocol: URLProtocol {
     nonisolated(unsafe) static var seen: URLRequest?
+    nonisolated(unsafe) static var count = 0
+    nonisolated(unsafe) static var status = 200
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         Self.seen = request
-        let r = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        Self.count += 1
+        let r = HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: r, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data("hello".utf8))
         client?.urlProtocolDidFinishLoading(self)

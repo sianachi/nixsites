@@ -219,6 +219,17 @@ export class NativeMirror {
   usage(): Promise<{ databaseBytes: number; fileBytes: number }> {
     return usage(this.deps.post);
   }
+
+  /** While true, the shell keeps the app running for the short time iOS allows once it leaves the screen. */
+  async keepAwake(running: boolean): Promise<void> {
+    // An older shell build does not know the op; the pass runs as before.
+    await this.deps.post({ op: 'keepAwake', running }).catch(() => undefined);
+  }
+
+  /** A notification while the app is off screen; with no message it only asks for permission. */
+  async notify(message?: { title: string; body: string }): Promise<void> {
+    await this.deps.post({ op: 'notify', ...message }).catch(() => undefined);
+  }
 }
 
 export const fileKey = (itemId: string, versionId: string): string => `${itemId}:${versionId}`;
