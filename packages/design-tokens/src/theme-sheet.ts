@@ -71,6 +71,13 @@ export function splitByGround(css: string): {
     withoutComments = withoutComments.slice(0, phoneStart) + withoutComments.slice(block.end);
   }
 
+  // The touch layout's sizes are a third scope, not a ground: cut out so they never read as light.
+  const touchStart = withoutComments.indexOf(":root[data-layout='touch']");
+  if (touchStart !== -1) {
+    const block = blockAt(withoutComments, touchStart);
+    withoutComments = withoutComments.slice(0, touchStart) + withoutComments.slice(block.end);
+  }
+
   const mediaStart = withoutComments.indexOf('@media (prefers-color-scheme: dark)');
   const attributeStart = withoutComments.search(/:root\[data-theme=['"]dark['"]\]/);
 

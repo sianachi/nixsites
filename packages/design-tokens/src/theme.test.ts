@@ -84,8 +84,8 @@ describe('color ramps', () => {
 
 describe('base color roles', () => {
   it('carries the sheet base roles verbatim', () => {
-    expect(getProperty('color-bg')).toBe('#f2f2f3');
-    expect(getProperty('color-surface')).toBe('#e9e9ea');
+    expect(getProperty('color-bg')).toBe('#ffffff');
+    expect(getProperty('color-surface')).toBe('#f2f2f3');
     expect(getProperty('color-text')).toBe('#1d1f20');
     expect(getProperty('color-accent')).toBe('#5980a6');
     expect(getProperty('color-accent-2')).toBe('#728fab');
@@ -465,46 +465,48 @@ describe('the danger role', () => {
   });
 });
 
-describe('the phone surface', () => {
-  const phoneLight = parseCustomProperties(grounds.phone.light);
-  const phoneDark = parseCustomProperties(grounds.phone.dark);
-  const hex = (map: Map<string, string>, name: string): string => {
+describe('the surface, at every width', () => {
+  const phone = parseCustomProperties(grounds.phone.light);
+  const hex = (map: ReadonlyMap<string, string>, name: string): string => {
     const value = map.get(name);
     if (value === undefined || !/^#[0-9a-f]{6}$/.test(value)) {
-      throw new Error(`phone sheet does not state --${name} as a hex literal`);
+      throw new Error(`the sheet does not state --${name} as a hex literal`);
     }
     return value;
   };
 
-  it('keeps every phone override inside the max-width media query', () => {
-    // splitByGround cuts the phone block out of the desktop grounds, so a desktop value that
-    // reads as a phone value means something was declared outside the query.
+  it('keeps only sizes inside the phone media query, and scales them from one attribute too', () => {
+    // Colour, radius and elevation are the desktop look as well; a phone block that restated them
+    // would let the two drift apart.
+    expect([...phone.keys()].sort()).toEqual(['control-md', 'text-base', 'text-lg', 'text-md']);
     expect(getProperty('control-md')).toBe('36px');
     expect(getProperty('text-md')).toBe('15px');
-    expect(getProperty('color-bg')).toBe('#f2f2f3');
-    expect(getDarkProperty('color-bg')).toBe('#17181a');
+    expect(themeCss).toMatch(/:root\[data-layout='touch'\]\s*\{[^}]*--control-md: 44px/);
   });
 
-  it('resolves the new roles to the existing surface on desktop', () => {
-    expect(getProperty('color-surface-raised')).toBe('var(--color-surface)');
-    expect(getProperty('color-chrome-floating')).toBe('var(--color-surface)');
-    expect(getProperty('radius-card')).toBe('var(--radius-md)');
+  it('reads at 17px with 44px rows on a phone', () => {
+    expect(phone.get('text-md')).toBe('17px');
+    expect(phone.get('control-md')).toBe('44px');
   });
 
-  it('reads at 17px with 44px rows and 12px cards', () => {
-    expect(phoneLight.get('text-md')).toBe('17px');
-    expect(phoneLight.get('control-md')).toBe('44px');
-    expect(phoneLight.get('radius-card')).toBe('12px');
+  it('puts a white page over a light-grey sheet in light, and a near-black page in dark', () => {
+    expect(getProperty('color-bg')).toBe('#ffffff');
+    expect(getProperty('color-surface')).toBe('#f2f2f3');
+    expect(getProperty('color-surface-raised')).toBe('#ffffff');
+    expect(getDarkProperty('color-bg')).toBe('#000000');
+    expect(getDarkProperty('color-surface')).toBe('#1c1c1e');
+    expect(getDarkProperty('color-surface-raised')).toBe('#2c2c2e');
   });
 
-  it('puts a white page in light and a near-black page in dark', () => {
-    expect(phoneLight.get('color-bg')).toBe('#ffffff');
-    expect(phoneDark.get('color-bg')).toBe('#000000');
+  it('rounds a card to 12px', () => {
+    expect(getProperty('radius-card')).toBe('12px');
   });
 
-  it('declares the dark phone values in both dark scopes', () => {
-    expect(themeCss).toMatch(/@media \(max-width: 639px\)[\s\S]*data-theme='dark'/);
-    expect(grounds.phone.dark).toContain('--color-surface-raised');
+  it('declares the dark surfaces in both dark scopes', () => {
+    expect(themeCss).toMatch(/:root\[data-theme='dark'\]\s*\{[^}]*--color-surface-raised: #2c2c2e/);
+    expect(themeCss).toMatch(
+      /:root\[data-theme='light'\]\s*\{[^}]*--color-surface-raised: #ffffff/,
+    );
   });
 
   const inks = {
@@ -512,21 +514,23 @@ describe('the phone surface', () => {
     dark: ['#e8e9ea', '#b7b7ba', '#b5d9fd', '#e88a80'],
   } as const;
 
-  for (const [name, map] of [
-    ['light', phoneLight],
-    ['dark', phoneDark],
+  for (const [name, read] of [
+    ['light', getProperty],
+    ['dark', getDarkProperty],
   ] as const) {
     it.each(['color-bg', 'color-surface', 'color-surface-raised'])(
       `keeps text, muted, accent text and danger at 4.5:1 on %s in ${name}`,
       (role) => {
         for (const ink of inks[name]) {
-          expect(contrast(ink, hex(map, role))).toBeGreaterThanOrEqual(4.5);
+          expect(contrast(ink, read(role))).toBeGreaterThanOrEqual(4.5);
         }
       },
     );
 
     it(`tells the ${name} sheet from the card on it`, () => {
-      expect(hex(map, 'color-surface')).not.toBe(hex(map, 'color-surface-raised'));
+      expect(hex(new Map([['s', read('color-surface')]]), 's')).not.toBe(
+        read('color-surface-raised'),
+      );
     });
   }
 });

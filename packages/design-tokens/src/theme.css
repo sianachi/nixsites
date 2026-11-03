@@ -47,8 +47,8 @@
   --shadow-*: initial;
 
   /* ══ Color — base roles ═══════════════════════════════════════════════ */
-  --color-bg: #f2f2f3;
-  --color-surface: #e9e9ea;
+  --color-bg: #ffffff;
+  --color-surface: #f2f2f3;
   --color-text: #1d1f20;
   --color-accent: #5980a6;
   --color-accent-2: #728fab;
@@ -98,11 +98,11 @@
   --color-accent-pressed: var(--color-accent-700);
   --color-accent-text: var(--color-accent-700);
 
-  /* Phone surface roles. Resolve to today's values everywhere; only the phone block at the end of
-     this file moves them. surface-raised is a grouped card sitting on a sheet (--color-surface);
+  /* Surface roles, at every width: the page is --color-bg, chrome (rail, explorer, title row)
+     is the sheet --color-surface, and surface-raised is a grouped card sitting on a sheet.
      chrome-floating is the translucent, blurred fill of floating bars (pair with backdrop-blur). */
-  --color-surface-raised: var(--color-surface);
-  --color-chrome-floating: var(--color-surface);
+  --color-surface-raised: #ffffff;
+  --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
 
   /* Quiet copy. A role rather than a ramp step at the call site, because the
      step that reads as quiet-but-legible against paper is nearly invisible
@@ -260,8 +260,8 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 14px;
-  /* A grouped card: today's standard frame, rounder on a phone. */
-  --radius-card: var(--radius-md);
+  /* A grouped card. */
+  --radius-card: 12px;
 
   /* ══ Elevation ════════════════════════════════════════════════════════
      Two layers each: a tight contact shadow that says the edge is lifted, and
@@ -272,14 +272,14 @@
      grey rectangle. The dark ground overrides all three - see the note
      there. */
   --shadow-sm:
-    0 1px 1px color-mix(in srgb, #2b2b2d 10%, transparent),
-    0 2px 4px color-mix(in srgb, #2b2b2d 8%, transparent);
+    0 1px 1px color-mix(in srgb, #2b2b2d 6%, transparent),
+    0 1px 3px color-mix(in srgb, #2b2b2d 6%, transparent);
   --shadow-md:
-    0 2px 4px color-mix(in srgb, #2b2b2d 10%, transparent),
-    0 6px 16px color-mix(in srgb, #2b2b2d 12%, transparent);
+    0 1px 3px color-mix(in srgb, #2b2b2d 8%, transparent),
+    0 4px 12px color-mix(in srgb, #2b2b2d 8%, transparent);
   --shadow-lg:
-    0 4px 8px color-mix(in srgb, #2b2b2d 12%, transparent),
-    0 16px 40px color-mix(in srgb, #2b2b2d 20%, transparent);
+    0 3px 6px color-mix(in srgb, #2b2b2d 10%, transparent),
+    0 12px 32px color-mix(in srgb, #2b2b2d 14%, transparent);
 }
 
 /* ══ Source tokens with no Tailwind v4 @theme namespace ═════════════════
@@ -292,6 +292,9 @@
      --font-weight-heading: that would generate a font-weight utility named
      font-heading, colliding with the font-family utility of the same name. */
   --font-heading-weight: 700;
+
+  /* The icon strip's button. A touch layout scales it to the 44px target (see data-layout below). */
+  --rail-control: 32px;
 
   /* The sheet's named spacing steps, verbatim, for var() consumers. The
      @theme --spacing base above yields the identical scale as utilities. */
@@ -346,8 +349,10 @@
        field renders as white-on-white and a scrollbar as a bright bar down a dark page. */
     color-scheme: dark;
 
-    --color-bg: #17181a;
-    --color-surface: #1f2123;
+    --color-bg: #000000;
+    --color-surface: #1c1c1e;
+    --color-surface-raised: #2c2c2e;
+    --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
     --color-text: #e8e9ea;
     --color-divider: color-mix(in srgb, #e8e9ea 18%, transparent);
 
@@ -379,8 +384,8 @@
        contrast to spend on edges, so the shadow has to carry more of the
        work of saying which surface is in front. */
     --shadow-sm:
-      0 1px 1px color-mix(in srgb, #000000 40%, transparent),
-      0 2px 4px color-mix(in srgb, #000000 28%, transparent);
+      0 1px 1px color-mix(in srgb, #000000 36%, transparent),
+      0 1px 3px color-mix(in srgb, #000000 28%, transparent);
     --shadow-md:
       0 2px 4px color-mix(in srgb, #000000 44%, transparent),
       0 6px 16px color-mix(in srgb, #000000 36%, transparent);
@@ -397,8 +402,10 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #17181a;
-  --color-surface: #1f2123;
+  --color-bg: #000000;
+  --color-surface: #1c1c1e;
+  --color-surface-raised: #2c2c2e;
+  --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
   --color-text: #e8e9ea;
   --color-divider: color-mix(in srgb, #e8e9ea 18%, transparent);
 
@@ -423,8 +430,8 @@
   /* True black and much more of it - see the note in the media query above
      for why the paper shadows cannot simply be reused at a higher alpha. */
   --shadow-sm:
-    0 1px 1px color-mix(in srgb, #000000 40%, transparent),
-    0 2px 4px color-mix(in srgb, #000000 28%, transparent);
+    0 1px 1px color-mix(in srgb, #000000 36%, transparent),
+    0 1px 3px color-mix(in srgb, #000000 28%, transparent);
   --shadow-md:
     0 2px 4px color-mix(in srgb, #000000 44%, transparent),
     0 6px 16px color-mix(in srgb, #000000 36%, transparent);
@@ -436,8 +443,10 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --color-bg: #f2f2f3;
-  --color-surface: #e9e9ea;
+  --color-bg: #ffffff;
+  --color-surface: #f2f2f3;
+  --color-surface-raised: #ffffff;
+  --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
   --color-text: #1d1f20;
   --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
 
@@ -458,60 +467,27 @@
   --color-accent-fill-pressed: var(--color-accent-900);
 }
 
-/* ══ Phone surface (below 640px) ═══════════════════════════════════════
-   Obsidian-like layout and surfaces on a phone; 640px and up resolves to the values above, so
-   nothing here may be declared outside this media query. Only existing properties are
-   overridden, plus the roles --color-surface-raised, --color-chrome-floating and --radius-card.
-   The ramps, the steel accent and Nunito Sans stay.
-
-   Light: a white page, a light-grey sheet (--color-surface) and white cards on it
-   (--color-surface-raised). Dark: a near-black page, then sheet and card greys one step apart.
-   Body reads at 17px (--text-md) and the default control is the 44px touch target. */
+/* ══ Phone sizes (below 640px) ════════════════════════════════════════
+   The colours, surfaces, radius and elevation above are the Obsidian-like look at every width.
+   Only the sizes scale up on a phone: body reads at 17px (--text-md) and the default control is the
+   44px touch target. Declared as variables so a touch layout wider than a phone can reuse them with
+   one root attribute (see the data-layout block below); 640px and up resolves to the values above.
+   The ramps, the steel accent and Nunito Sans stay. */
 @media (max-width: 639px) {
   :root {
-    --color-bg: #ffffff;
-    --color-surface: #f2f2f3;
-    --color-surface-raised: #ffffff;
-    --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
     --text-base: 14px;
     --text-md: 17px;
     --text-lg: 19px;
     --control-md: 44px;
-    --radius-card: 12px;
-    --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 8%, transparent);
-    --shadow-md: 0 2px 8px color-mix(in srgb, #2b2b2d 10%, transparent);
-    --shadow-lg: 0 6px 24px color-mix(in srgb, #2b2b2d 14%, transparent);
   }
+}
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-bg: #000000;
-      --color-surface: #1c1c1e;
-      --color-surface-raised: #2c2c2e;
-      --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
-      --shadow-sm: 0 1px 2px color-mix(in srgb, #000000 40%, transparent);
-      --shadow-md: 0 2px 8px color-mix(in srgb, #000000 44%, transparent);
-      --shadow-lg: 0 6px 24px color-mix(in srgb, #000000 52%, transparent);
-    }
-  }
-
-  :root[data-theme='dark'] {
-    --color-bg: #000000;
-    --color-surface: #1c1c1e;
-    --color-surface-raised: #2c2c2e;
-    --color-chrome-floating: color-mix(in srgb, #1c1c1e 72%, transparent);
-    --shadow-sm: 0 1px 2px color-mix(in srgb, #000000 40%, transparent);
-    --shadow-md: 0 2px 8px color-mix(in srgb, #000000 44%, transparent);
-    --shadow-lg: 0 6px 24px color-mix(in srgb, #000000 52%, transparent);
-  }
-
-  :root[data-theme='light'] {
-    --color-bg: #ffffff;
-    --color-surface: #f2f2f3;
-    --color-surface-raised: #ffffff;
-    --color-chrome-floating: color-mix(in srgb, #ffffff 78%, transparent);
-    --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 8%, transparent);
-    --shadow-md: 0 2px 8px color-mix(in srgb, #2b2b2d 10%, transparent);
-    --shadow-lg: 0 6px 24px color-mix(in srgb, #2b2b2d 14%, transparent);
-  }
+/* The same sizes for a touch layout at a wide width (iPad landscape): a single root attribute,
+   set by the layout detection, scales the whole arrangement without touching components. */
+:root[data-layout='touch'] {
+  --text-base: 14px;
+  --text-md: 17px;
+  --text-lg: 19px;
+  --control-md: 44px;
+  --rail-control: 44px;
 }

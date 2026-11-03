@@ -31,9 +31,9 @@ import { chromeSurface, focusRing, inkWashStates } from '../primitives/interacti
  * gets the same action from the tab element they are already on, announced through
  * `aria-keyshortcuts` on each closable tab.
  *
- * `pinned` is the only thing this component knows about preview tabs - it renders one italic and
- * nothing more. Which tab is a preview, when one is replaced, and when it is promoted to pinned
- * are all decisions the caller makes; this component only draws the result.
+ * `pinned` is the only thing this component knows about preview tabs - it draws none differently
+ * (the strip is upright, as Obsidian's is) and nothing more. Which tab is a preview, when one is
+ * replaced, and when it is promoted to pinned are all decisions the caller makes; this component only draws the result.
  *
  * **Orientation changes which arrow keys move focus, not just which way the strip lays out.**
  * The WAI-ARIA tablist pattern binds Left/Right to a horizontal strip and Up/Down to a vertical
@@ -45,7 +45,7 @@ import { chromeSurface, focusRing, inkWashStates } from '../primitives/interacti
 export interface TabItem {
   readonly id: string;
   readonly label: string;
-  /** Preview tabs render italic; omit or set true for a pinned, permanent tab. */
+  /** Whether this tab is permanent; kept for callers that tell preview tabs apart. */
   readonly pinned?: boolean;
   /** Whether a close control is offered for this tab. Defaults to true. */
   readonly closable?: boolean;
@@ -94,7 +94,7 @@ const tablistVariants = cva(cn('flex min-w-0 items-stretch', chromeSurface), {
       // that sizes the strip with `flex-1` (`document-tab-strip.tsx`) makes it a flex item too,
       // and a flex item's default `min-width: auto` refuses to shrink below its content's width -
       // which is exactly the content this scrolls, so the scrollbar never had a reason to appear.
-      horizontal: 'flex-row overflow-x-auto border-b border-divider',
+      horizontal: 'flex-row items-end gap-0.5 overflow-x-auto bg-surface',
       // A fixed width, unlike the horizontal strip's shrink-to-content: a rail's whole point is
       // that a title truncates rather than sets how wide the pane's content gets to be.
       vertical: 'w-40 shrink-0 flex-col overflow-y-auto border-r border-divider',
@@ -115,15 +115,20 @@ const tabVariants = cva(
         // divide, so without one a single long title claims however much space it wants and pushes
         // every tab after it - and the strip's own scroll and close controls - off the visible
         // strip. Narrower still under `sm`, where the whole strip is narrower than one uncapped tab.
-        horizontal:
-          '-mb-px max-w-48 border-b-2 px-3 py-1.5 any-pointer-coarse:py-0 max-sm:max-w-32',
+        horizontal: 'max-w-48 rounded-t-md px-3 py-1.5 any-pointer-coarse:py-0 max-sm:max-w-32',
         vertical: '-mr-px border-r-2 px-3 py-1.5 any-pointer-coarse:py-0',
       },
       active: {
-        true: 'border-accent-text text-foreground',
-        false: cn('border-transparent text-muted hover:text-foreground', inkWashStates),
+        true: 'text-foreground',
+        false: cn('text-muted hover:text-foreground', inkWashStates),
       },
     },
+    compoundVariants: [
+      // Obsidian-style: the strip is the sheet and the open tab is the page, raised onto it.
+      { orientation: 'horizontal', active: true, className: 'bg-background shadow-sm' },
+      { orientation: 'vertical', active: true, className: 'border-accent-text' },
+      { orientation: 'vertical', active: false, className: 'border-transparent' },
+    ],
     defaultVariants: { orientation: 'horizontal', active: false },
   },
 );
@@ -242,7 +247,7 @@ export function Tabs(props: TabsProps): ReactNode {
               drag !== undefined && 'cursor-grab',
             )}
           >
-            <span className={cn('truncate', item.pinned !== true && 'italic')}>{item.label}</span>
+            <span className="truncate">{item.label}</span>
 
             {/* `closable` already folds in "the caller accepts a close" - TS narrows `onClose` through the alias. */}
             {closable ? (

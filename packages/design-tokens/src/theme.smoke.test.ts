@@ -97,7 +97,7 @@ describe('Tailwind v4 compiles the theme', () => {
   });
 
   it('resolves the semantic role utilities through the base roles', () => {
-    expect(output).toContain('--color-bg: #f2f2f3;');
+    expect(output).toContain('--color-bg: #ffffff;');
     expect(output).toContain('--color-background: var(--color-bg);');
     expect(output).toContain('.bg-background');
     expect(output).toContain('--color-accent-hover: var(--color-accent-600);');
@@ -138,7 +138,7 @@ describe('Tailwind v4 compiles the theme', () => {
 
     // Two layers: the contact shadow and the ambient one. Asserted on the wider of the two,
     // because a single-layer shadow would still satisfy a check for the tighter one.
-    expect(output).toContain('0 16px 40px var(--tw-shadow-color, color-mix(in srgb, #2b2b2d 20%');
+    expect(output).toContain('0 12px 32px var(--tw-shadow-color, color-mix(in srgb, #2b2b2d 14%');
   });
 
   it('does not resurrect the default Tailwind palette', () => {

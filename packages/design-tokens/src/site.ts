@@ -51,7 +51,7 @@ export interface SitePalette {
 export const SITE_PALETTE: SitePalette = {
   light: {
     ground: '#f5f5f8',
-    surface: '#e9e9ea',
+    surface: '#f2f2f3',
     text: '#1d1f20',
     muted: '#5d5d60',
     border: '#d4d4d7',
@@ -71,16 +71,16 @@ export const SITE_PALETTE: SitePalette = {
     series: ['#5087bd', '#a16428', '#2a6d62', '#72437c', '#374d21', '#383838', '#5d5d60'],
   },
   dark: {
-    ground: '#17181a',
-    surface: '#1f2123',
+    ground: '#000000',
+    surface: '#1c1c1e',
     text: '#e8e9ea',
     muted: '#b7b7ba',
     border: '#424244',
     link: '#b5d9fd',
-    code: '#1f2123',
+    code: '#1c1c1e',
     mark: '#2c455d',
     accent: '#b5d9fd',
-    onAccent: '#17181a',
+    onAccent: '#000000',
     syntax: {
       keyword: '#96b7d7',
       string: '#97d7cd',
