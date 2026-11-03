@@ -40,6 +40,7 @@ public static class UiSettingsValidation
         ["dailyNotes.openTodayOnStart"] = null,
         ["sites.publishingEnabled"] = null,
         ["graph.openMode"] = ["page", "dialog", "beside", "tab"],
+        ["shell.statusBar"] = null,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     // The shape of a setting name such as "editor.pageGuides"; a null patch value may delete any name of this shape.

@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react';
 
+import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
 import { PreferenceToggle } from '../shared/preference-toggle';
@@ -9,18 +10,31 @@ export function PreferencesSection(): ReactElement {
   const sites = useCapabilities().sites;
   const publishing = usePublishingPreference((state) => state.enabled);
   const setPublishing = usePublishingPreference((state) => state.setEnabled);
+  const statusBar = useStatusBarPreference((state) => state.enabled);
+  const setStatusBar = useStatusBarPreference((state) => state.setEnabled);
 
   return (
-    <SettingsSection title="General">
-      {sites ? (
+    <>
+      <SettingsSection title="Appearance">
         <PreferenceToggle
-          label="Show publishing on pages"
-          checked={publishing}
-          onChange={setPublishing}
-          description="Adds Publish as a site to the page menu and the item panel"
+          label="Show status bar"
+          checked={statusBar}
+          onChange={setStatusBar}
+          description="Backlinks, word or item count and sync state, along the bottom on a wide screen"
           unsaved={null}
         />
+      </SettingsSection>
+      {sites ? (
+        <SettingsSection title="General">
+          <PreferenceToggle
+            label="Show publishing on pages"
+            checked={publishing}
+            onChange={setPublishing}
+            description="Adds Publish as a site to the page menu and the item panel"
+            unsaved={null}
+          />
+        </SettingsSection>
       ) : null}
-    </SettingsSection>
+    </>
   );
 }

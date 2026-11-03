@@ -22,7 +22,7 @@ public sealed class UiSettingsTests
             {"editor.keyboardMode":"vim","editor.textWidth":"full","editor.pageGuides":false,
              "editor.phraseSuggestions":true,"editor.unlinkedMentionUnderline":true,
              "editor.viewSuggestions":"off","editor.choiceOrder":"on","dailyNotes.openTodayOnStart":true,
-             "sites.publishingEnabled":false,"graph.openMode":"beside"}
+             "sites.publishingEnabled":false,"graph.openMode":"beside","shell.statusBar":false}
             """)));
         Assert.Null(UiSettingsValidation.Check(Patch("""{"editor.keyboardMode":null,"editor.pageGuides":null,"graph.openMode":null}""")));
         Assert.Null(UiSettingsValidation.Check(Patch("{}")));

@@ -65,7 +65,7 @@ describe('reaching the settings screen', () => {
   });
 
   it('lists the sections in group order without the gated ones for an ordinary account', async () => {
-    // No sites on this install, so General has nothing to show and is left out.
+    // General (appearance) is always there; its publishing switch needs sites on the install.
     renderAt(<App />, '/settings');
 
     await screen.findByRole('navigation', { name: 'Your settings' });
@@ -83,6 +83,7 @@ describe('reaching the settings screen', () => {
           .map((link) => link.textContent),
       ),
     ).toEqual([
+      'General',
       'Editor',
       'Daily notes',
       'Notifications',

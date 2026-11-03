@@ -287,7 +287,7 @@ describe('companion on a phone', () => {
     );
     expect(await screen.findByRole('img', { name: 'Cat' })).toHaveClass('size-24');
     const companion = screen.getByRole('complementary', { name: 'Cat companion' });
-    expect(companion.className).toContain('lg:bottom-4');
+    expect(companion.className).toContain('lg:bottom-[calc(var(--status-bar-height,0px)+1rem)]'); // design-token-exempt: asserts the component's exempt class
     expect(companion.className).not.toContain('sm:bottom-4');
   });
 

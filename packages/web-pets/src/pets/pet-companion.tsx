@@ -30,10 +30,12 @@ import { Conversation } from './conversation/conversation';
  * above whichever control reaches further into the viewport. */
 function mobileBottomClearance(): number {
   return Math.max(
-    ...['--mobile-nav-height', '--mobile-note-toolbar-clearance'].map((property) => {
-      const parsed = Number.parseFloat(document.documentElement.style.getPropertyValue(property));
-      return Number.isFinite(parsed) ? parsed : 0;
-    }),
+    ...['--mobile-nav-height', '--mobile-note-toolbar-clearance', '--status-bar-height'].map(
+      (property) => {
+        const parsed = Number.parseFloat(document.documentElement.style.getPropertyValue(property));
+        return Number.isFinite(parsed) ? parsed : 0;
+      },
+    ),
   );
 }
 
@@ -297,11 +299,13 @@ function Companion({
   // (`useNarrowViewport`, 640px) that `narrow` itself tracks.
   const narrowOffset =
     'bottom-[max(var(--mobile-nav-height,calc(3.5rem+env(safe-area-inset-bottom))),var(--mobile-note-toolbar-clearance,0%))]'; // design-token-exempt: navigation and writing toolbar clearance are measured at runtime.
+  // Above the status bar when it is showing, where it has always been when it is not.
+  const wideOffset = 'lg:bottom-[calc(var(--status-bar-height,0px)+1rem)]'; // design-token-exempt: the status bar's height is measured at runtime.
   return (
     <aside
       ref={aside}
       aria-label={`${pet.name} companion`}
-      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats ? 'flex' : 'hidden'} ${position ? '' : `${narrowOffset} lg:bottom-4 ${placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
+      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats ? 'flex' : 'hidden'} ${position ? '' : `${narrowOffset} ${wideOffset} ${placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
       style={
         position
           ? open && panelPosition && !narrow
