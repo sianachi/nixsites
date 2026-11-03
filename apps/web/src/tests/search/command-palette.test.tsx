@@ -135,3 +135,47 @@ it('restores the invoking control after dismissal and clears the command filter 
   await user.click(search);
   await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue(''));
 });
+
+describe('open in a new tab mode', () => {
+  function NewTabHarness(props: {
+    readonly onSelectItem: (id: string) => void;
+    readonly onCreateNote: (title: string) => void;
+  }): ReactNode {
+    return (
+      <AuthProvider>
+        <ApiClientProvider>
+          <CommandPalette
+            open
+            commands={[]}
+            onSelectItem={props.onSelectItem}
+            onCreateNote={props.onCreateNote}
+            onClose={() => undefined}
+          />
+        </ApiClientProvider>
+      </AuthProvider>
+    );
+  }
+
+  it('opens a result through onSelectItem', async () => {
+    stubCoreApi({ items: [NOTE] });
+    const user = userEvent.setup();
+    const onSelectItem = vi.fn();
+    render(<NewTabHarness onSelectItem={onSelectItem} onCreateNote={vi.fn()} />);
+    await user.type(await screen.findByRole('combobox'), 'acquisition');
+    await user.click(await screen.findByRole('option', { name: 'Acquisition memo' }));
+    expect(onSelectItem).toHaveBeenCalledWith(NOTE.id);
+  });
+
+  it('ends with a Create note row that creates a note titled with the query', async () => {
+    stubCoreApi({ items: [NOTE] });
+    const user = userEvent.setup();
+    const onCreateNote = vi.fn();
+    render(<NewTabHarness onSelectItem={vi.fn()} onCreateNote={onCreateNote} />);
+    await user.type(await screen.findByRole('combobox'), 'acquisition');
+    await screen.findByRole('option', { name: 'Acquisition memo' });
+    const create = screen.getByRole('option', { name: 'Create note “acquisition”' });
+    expect(screen.getAllByRole('option').at(-1)).toBe(create);
+    await user.click(create);
+    expect(onCreateNote).toHaveBeenCalledWith('acquisition');
+  });
+});

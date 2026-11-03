@@ -1,7 +1,7 @@
 import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
 import { Dialog, Icon, Input, Listbox, Text, useListbox, type ListboxOption } from '@nix/ui';
 import { search, type SearchHit } from '@nix/api-client';
-import { FileText, Search } from 'lucide-react';
+import { FilePlus, FileText, Search } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -59,10 +59,16 @@ export interface CommandPaletteProps {
   readonly commands: readonly PaletteCommand[];
   readonly onSelectItem: (itemId: string) => void;
   readonly onClose: () => void;
+  /**
+   * "Open in a new tab" mode, from a tab strip's "+": no commands, picking a result opens it
+   * through `onSelectItem` (the shell passes the pinned open), and the last row creates a note
+   * titled with the query. Nothing exists until a row is chosen, so Escape leaves no empty tab.
+   */
+  readonly onCreateNote?: (title: string) => void;
 }
 
 export function CommandPalette(props: CommandPaletteProps): ReactNode {
-  const { open, commands, onSelectItem, onClose, preserveQuery = false } = props;
+  const { open, commands, onSelectItem, onClose, onCreateNote, preserveQuery = false } = props;
   const client = useApiClient();
   const isHidden = useHiddenItemPredicate();
   const narrow = useDrawerNavigation();
@@ -82,7 +88,7 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
     onClose();
   }, [onClose, preserveQuery]);
 
-  const commandOnly = query.trimStart().startsWith('>');
+  const commandOnly = onCreateNote === undefined && query.trimStart().startsWith('>');
   const needle = (commandOnly ? query.trimStart().slice(1) : query).trim();
 
   useEffect(() => {
@@ -154,6 +160,9 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
       icon: FileText,
       group: 'Items',
     })),
+    ...(onCreateNote !== undefined && needle !== ''
+      ? [{ id: 'create', label: `Create note “${needle}”`, icon: FilePlus, group: 'New' }]
+      : []),
   ];
 
   const listbox = useListbox(options, (_option, index) => {
@@ -166,6 +175,9 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
     const hit = hits[index - matched.length];
     if (hit !== undefined) {
       onSelectItem(hit.id);
+      close();
+    } else if (onCreateNote !== undefined) {
+      onCreateNote(needle);
       close();
     }
   });
@@ -197,7 +209,9 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
           aria-activedescendant={listbox.activeOptionId}
           aria-label="Search items or run a command"
           aria-describedby={instructionsId}
-          placeholder="Search or run a command"
+          placeholder={
+            onCreateNote === undefined ? 'Search or run a command' : 'Open or create in a new tab'
+          }
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -277,7 +291,7 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
   return (
     <Dialog
       open
-      title="Search and commands"
+      title={onCreateNote === undefined ? 'Search and commands' : 'Open in a new tab'}
       closeLabel="Close search"
       onClose={close}
       initialFocus={inputRef}

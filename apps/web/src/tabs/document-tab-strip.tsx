@@ -9,11 +9,19 @@ import {
   type MenuEntry,
   type TabItem,
 } from '@nix/ui';
-import { PanelLeft, PanelTop, Pin, X } from 'lucide-react';
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { PanelLeft, PanelTop, Pin, Plus, X } from 'lucide-react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router';
 
-import { useMediaQuery } from '@nix/web-foundation/layout/viewport';
+import { useLayoutKind, useMediaQuery } from '@nix/web-foundation/layout/viewport';
 import { copyLinkEntry } from '@nix/web-collections/items/item-menu-entries';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { CHAT_PARAM, paneParam } from '@nix/web-platform/panes/pane-params';
@@ -36,6 +44,8 @@ import {
 } from '@nix/web-foundation/lib/tab-store';
 import { useDocumentTabs } from './use-document-tabs';
 import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
+import { OPEN_NEW_TAB_PICKER_EVENT, OPEN_TAB_SWITCHER_EVENT } from './new-tab-picker';
+import { TITLE_ROW_TABS_ID } from './title-row-slot';
 import { useOpenItem } from './use-open-item';
 
 /**
@@ -114,13 +124,27 @@ export function DocumentTabStrip({
   }, [activeChat, activeId, chatRecorded, tabPinned, paneIndex]);
   const tabClosed = useTabStore((state) => state.tabClosed);
   const workspace = useOptionalWorkspace();
-  const orientation = useTabOrientationStore((state) => state.orientation);
+  // A portrait tablet has the phone shell: its strip is always across the top and ends in the
+  // tab-count button that opens the switcher grid.
+  const portraitTablet = useLayoutKind() === 'tablet-portrait';
+  const storedOrientation = useTabOrientationStore((state) => state.orientation);
+  const orientation = portraitTablet ? 'horizontal' : storedOrientation;
   const orientationToggled = useTabOrientationStore((state) => state.orientationToggled);
   const finePointer = useMediaQuery('(pointer: fine)');
   // The payload object is the drag session token. A cancelled drag may leave this local value
   // behind after its source unmounts, but a later drag creates a different object, so stale
   // highlighting cannot revive before that later pointer actually enters this strip.
   const [dropTarget, setDropTarget] = useState<TabTransferPayload | null>(null);
+  // The first pane's horizontal strip is drawn in the title row, where the shell leaves a slot for
+  // it; every other strip stays at the top of its own pane. Without a slot (a strip rendered on its
+  // own) it stays in place too.
+  const [titleRow, setTitleRow] = useState(() => document.getElementById(TITLE_ROW_TABS_ID));
+  useLayoutEffect(() => {
+    // The shell commits the slot after the first render; read it once it exists.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTitleRow(document.getElementById(TITLE_ROW_TABS_ID));
+  }, []);
+  const inTitleRow = paneIndex === 0 && orientation === 'horizontal' && titleRow !== null;
 
   const items: TabItem[] = tabs.map((tab) => {
     const scope = chatScopeOfTab(tab.itemId);
@@ -301,7 +325,7 @@ export function DocumentTabStrip({
     ];
   }
 
-  return (
+  const strip = (
     <div
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
@@ -313,7 +337,8 @@ export function DocumentTabStrip({
       onDrop={onDrop}
       className={cn(
         'relative flex min-w-0',
-        orientation === 'vertical' ? 'flex-col' : 'flex-row items-center',
+        orientation === 'vertical' ? 'flex-col' : 'flex-row items-end bg-surface',
+        inTitleRow && 'flex-1',
         dropTarget === draggedTab &&
           canReceive &&
           'bg-accent/10 outline-2 -outline-offset-2 outline-accent',
@@ -358,61 +383,94 @@ export function DocumentTabStrip({
         className="min-w-0 flex-1"
       />
 
-      <div
-        className={cn(
-          'flex shrink-0',
-          orientation === 'vertical' ? 'flex-col items-stretch' : 'flex-row items-center',
-        )}
-      >
-        {destinations.length > 0 && activeChat === undefined ? (
-          <Select
-            value=""
-            aria-label={`Move active tab, ${activeTitle}, to another pane`}
-            onChange={(event) => {
-              const destination = Number(event.currentTarget.value);
-              if (Number.isInteger(destination)) {
-                onMoveTab(
-                  { version: 1, itemId: activeItemId, sourcePane: paneIndex },
-                  destination,
-                  activeTitle,
-                );
-              }
-            }}
-            className="h-(--control-sm) w-40 max-w-full px-2 text-xs focus-visible:-outline-offset-2"
-          >
-            <option value="" disabled>
-              Move active tab…
-            </option>
-            {destinations.map((pane) => {
-              const title = tree.find(pane.itemId)?.title;
-              return (
-                <option key={pane.index} value={pane.index}>
-                  Pane {String(pane.index + 1)}:{' '}
-                  {title !== undefined && title.length > 0 ? title : 'Untitled'}
-                </option>
-              );
-            })}
-          </Select>
-        ) : null}
-
-        {/* Beside the strip it changes, not in a settings screen this product does not have one
-            of. The icon names the *destination* layout, the same convention the sidebar's own
-            collapse control uses. */}
+      {portraitTablet ? (
         <button
           type="button"
-          aria-label={
-            orientation === 'vertical' ? 'Show tabs across the top' : 'Show tabs on the side'
-          }
-          onClick={orientationToggled}
+          aria-label={`Open tabs, ${String(tabs.filter((tab) => !isChatTabId(tab.itemId)).length)} open`}
+          onClick={() => window.dispatchEvent(new Event(OPEN_TAB_SWITCHER_EVENT))}
           className={cn(
-            'flex shrink-0 items-center justify-center p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
+            'flex size-(--control-lg) shrink-0 items-center justify-center self-center',
             focusRing,
-            inkWashStates,
           )}
         >
-          <Icon icon={orientation === 'vertical' ? PanelTop : PanelLeft} size="sm" />
+          <Text
+            as="span"
+            variant="caption"
+            className="flex size-6 items-center justify-center rounded-md border-2 border-current"
+          >
+            {tabs.filter((tab) => !isChatTabId(tab.itemId)).length}
+          </Text>
         </button>
-      </div>
+      ) : (
+        <div
+          className={cn(
+            'flex shrink-0',
+            orientation === 'vertical' ? 'flex-col items-stretch' : 'flex-row items-center',
+          )}
+        >
+          <button
+            type="button"
+            aria-label="New tab"
+            onClick={() => window.dispatchEvent(new Event(OPEN_NEW_TAB_PICKER_EVENT))}
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
+              focusRing,
+              inkWashStates,
+            )}
+          >
+            <Icon icon={Plus} size="sm" />
+          </button>
+
+          {destinations.length > 0 && activeChat === undefined ? (
+            <Select
+              value=""
+              aria-label={`Move active tab, ${activeTitle}, to another pane`}
+              onChange={(event) => {
+                const destination = Number(event.currentTarget.value);
+                if (Number.isInteger(destination)) {
+                  onMoveTab(
+                    { version: 1, itemId: activeItemId, sourcePane: paneIndex },
+                    destination,
+                    activeTitle,
+                  );
+                }
+              }}
+              className="h-(--control-sm) w-40 max-w-full px-2 text-xs focus-visible:-outline-offset-2"
+            >
+              <option value="" disabled>
+                Move active tab…
+              </option>
+              {destinations.map((pane) => {
+                const title = tree.find(pane.itemId)?.title;
+                return (
+                  <option key={pane.index} value={pane.index}>
+                    Pane {String(pane.index + 1)}:{' '}
+                    {title !== undefined && title.length > 0 ? title : 'Untitled'}
+                  </option>
+                );
+              })}
+            </Select>
+          ) : null}
+
+          {/* Beside the strip it changes, not in a settings screen this product does not have one
+            of. The icon names the *destination* layout, the same convention the sidebar's own
+            collapse control uses. */}
+          <button
+            type="button"
+            aria-label={
+              orientation === 'vertical' ? 'Show tabs across the top' : 'Show tabs on the side'
+            }
+            onClick={orientationToggled}
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
+              focusRing,
+              inkWashStates,
+            )}
+          >
+            <Icon icon={orientation === 'vertical' ? PanelTop : PanelLeft} size="sm" />
+          </button>
+        </div>
+      )}
 
       {dropTarget === draggedTab && canReceive ? (
         <Text
@@ -425,4 +483,5 @@ export function DocumentTabStrip({
       ) : null}
     </div>
   );
+  return inTitleRow ? createPortal(strip, titleRow) : strip;
 }

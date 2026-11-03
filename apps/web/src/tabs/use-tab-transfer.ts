@@ -1,3 +1,4 @@
+import { TITLE_ROW_TABS_ID } from './title-row-slot';
 import { useSearchParams } from 'react-router';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
@@ -22,9 +23,14 @@ export interface TabTransferControl {
 
 function focusMovedTab(pane: number): void {
   requestAnimationFrame(() => {
-    document
-      .getElementById(paneElementId(pane))
-      ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    // The first pane's strip is drawn in the title row, outside its pane.
+    const roots = [document.getElementById(paneElementId(pane))];
+    if (pane === 0) roots.push(document.getElementById(TITLE_ROW_TABS_ID));
+    roots
+      .flatMap(
+        (root) => root?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? [],
+      )
+      .at(0)
       ?.focus();
   });
 }

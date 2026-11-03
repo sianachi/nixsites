@@ -22,6 +22,11 @@ const ALPHA = item({ id: '0a0a0a0a-0000-4000-8000-00000000000a', title: 'Alpha' 
 const BRAVO = item({ id: '0b0b0b0b-0000-4000-8000-00000000000b', title: 'Bravo' });
 const CHARLIE = item({ id: '0c0c0c0c-0000-4000-8000-00000000000c', title: 'Charlie' });
 
+/** The title row, which holds the first pane's tab strip. */
+function titleRow(): HTMLElement {
+  return screen.getByRole('banner', { name: 'Workspace controls' });
+}
+
 function tabDataTransfer(): DataTransfer {
   const values = new Map<string, string>();
   return {
@@ -84,6 +89,44 @@ describe('previewing a document', () => {
       'true',
     );
     expect(screen.queryByRole('tab', { name: 'Bravo' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the New tab button', () => {
+  it('opens the picker, and a chosen note opens in a new tab beside the current one', async () => {
+    stubCoreApi({ items: [ALPHA, BRAVO, CHARLIE] });
+    const user = userEvent.setup();
+    renderAt(<App />, `/?item=${ALPHA.id}`);
+
+    await user.click(await screen.findByRole('button', { name: 'New tab' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Open in a new tab' });
+    const combobox = within(dialog).getByRole('combobox');
+    // Typed only once the palette has taken focus, and given room to search: both stall under load.
+    await waitFor(() => {
+      expect(combobox).toHaveFocus();
+    });
+    await user.type(combobox, 'Bravo');
+    await user.click(
+      await within(dialog).findByRole('option', { name: 'Bravo' }, { timeout: 5000 }),
+    );
+
+    expect(await screen.findByRole('tab', { name: 'Bravo' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'Alpha' })).toBeInTheDocument();
+  });
+
+  it('leaves no new tab behind when the picker is dismissed', async () => {
+    stubCoreApi({ items: [ALPHA, BRAVO] });
+    const user = userEvent.setup();
+    renderAt(<App />, `/?item=${ALPHA.id}`);
+
+    await user.click(await screen.findByRole('button', { name: 'New tab' }));
+    await screen.findByRole('dialog', { name: 'Open in a new tab' });
+    await user.click(screen.getByRole('button', { name: 'Close search' }));
+    expect(screen.queryByRole('dialog', { name: 'Open in a new tab' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(1);
   });
 });
 
@@ -266,11 +309,11 @@ describe('a document already open elsewhere', () => {
       expect(screen.getAllByRole('article')).toHaveLength(2);
     });
 
-    const firstPane = screen.getByRole('article', { name: /Pane 1 of 2/ });
+    screen.getByRole('article', { name: /Pane 1 of 2/ });
     const secondPane = await screen.findByRole('article', { name: /Pane 2 of 2: Charlie/ });
 
     // The first pane is untouched.
-    expect(within(firstPane).getByRole('tab', { name: 'Alpha' })).toHaveAttribute(
+    expect(within(titleRow()).getByRole('tab', { name: 'Alpha' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -381,10 +424,10 @@ describe('moving a tab between panes', () => {
     });
     renderAt(<App />, `/?item=${ALPHA.id}&item2=${BRAVO.id}`);
 
-    const firstPane = await screen.findByRole('article', { name: /Pane 1 of 2/ });
+    await screen.findByRole('article', { name: /Pane 1 of 2/ });
     const secondPane = screen.getByRole('article', { name: /Pane 2 of 2/ });
     const dataTransfer = tabDataTransfer();
-    const charlie = await within(firstPane).findByRole('tab', { name: 'Charlie' });
+    const charlie = await within(titleRow()).findByRole('tab', { name: 'Charlie' });
     fireEvent.dragStart(charlie, { dataTransfer });
     const target = within(secondPane).getByRole('tablist', { name: 'Open documents' });
     fireEvent.dragEnter(target, { dataTransfer });
@@ -396,7 +439,7 @@ describe('moving a tab between panes', () => {
     fireEvent.drop(target, { dataTransfer });
 
     const movedPane = await screen.findByRole('article', { name: /Pane 2 of 2: Charlie/ });
-    expect(within(firstPane).getByRole('tab', { name: 'Alpha' })).toHaveAttribute(
+    expect(within(titleRow()).getByRole('tab', { name: 'Alpha' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -424,10 +467,10 @@ describe('moving a tab between panes', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/?item=${ALPHA.id}&item2=${BRAVO.id}`);
 
-    const firstPane = await screen.findByRole('article', { name: /Pane 1 of 2/ });
-    await within(firstPane).findByRole('tab', { name: 'Alpha' });
+    await screen.findByRole('article', { name: /Pane 1 of 2/ });
+    await within(titleRow()).findByRole('tab', { name: 'Alpha' });
     await user.selectOptions(
-      within(firstPane).getByRole('combobox', {
+      within(titleRow()).getByRole('combobox', {
         name: 'Move active tab, Alpha, to another pane',
       }),
       '1',
@@ -436,7 +479,8 @@ describe('moving a tab between panes', () => {
     await waitFor(() => {
       expect(screen.getAllByRole('article')).toHaveLength(1);
     });
-    const onlyPane = screen.getByRole('article');
+    // One pane left, so its strip is in the title row.
+    const onlyPane = titleRow();
     expect(within(onlyPane).getByRole('tab', { name: 'Bravo' })).toBeInTheDocument();
     expect(within(onlyPane).getByRole('tab', { name: 'Alpha' })).toHaveAttribute(
       'aria-selected',
@@ -455,8 +499,8 @@ describe('moving a tab between panes', () => {
     stubCoreApi({ items: [ALPHA, BRAVO, CHARLIE] });
     renderAt(<App />, `/?item=${ALPHA.id}&item2=${BRAVO.id}&item3=${CHARLIE.id}`);
 
-    const firstPane = await screen.findByRole('article', { name: /Pane 1 of 3/ });
-    const picker = await within(firstPane).findByRole('combobox', {
+    await screen.findByRole('article', { name: /Pane 1 of 3/ });
+    const picker = await within(titleRow()).findByRole('combobox', {
       name: 'Move active tab, Alpha, to another pane',
     });
     expect(picker).toHaveClass('focus-visible:-outline-offset-2');
@@ -466,7 +510,7 @@ describe('moving a tab between panes', () => {
         .map((option) => option.textContent),
     ).toEqual(['Move active tab…', 'Pane 2: Bravo', 'Pane 3: Charlie']);
     expect(
-      within(firstPane).getByRole('tablist', { name: 'Open documents' }).contains(picker),
+      within(titleRow()).getByRole('tablist', { name: 'Open documents' }).contains(picker),
     ).toBe(false);
   });
 
@@ -474,11 +518,11 @@ describe('moving a tab between panes', () => {
     stubCoreApi({ items: [ALPHA, BRAVO] });
     renderAt(<App />, `/?item=${ALPHA.id}&item2=${BRAVO.id}`);
 
-    const firstPane = await screen.findByRole('article', { name: /Pane 1 of 2/ });
-    await within(firstPane).findByRole('tab', { name: 'Alpha' });
+    await screen.findByRole('article', { name: /Pane 1 of 2/ });
+    await within(titleRow()).findByRole('tab', { name: 'Alpha' });
     const secondPane = screen.getByRole('article', { name: /Pane 2 of 2/ });
-    const source = within(firstPane).getByRole('tab', { name: 'Alpha' });
-    const sourceStrip = within(firstPane).getByRole('tablist');
+    const source = within(titleRow()).getByRole('tab', { name: 'Alpha' });
+    const sourceStrip = within(titleRow()).getByRole('tablist');
     const targetStrip = within(secondPane).getByRole('tablist');
 
     const external = tabDataTransfer();
@@ -513,7 +557,7 @@ describe('moving a tab between panes', () => {
   it('keeps the native move picker on a coarse pointer without making tabs draggable', async () => {
     globalThis.matchMedia = (query: string): MediaQueryList =>
       ({
-        matches: query === '(pointer: fine)' ? false : true,
+        matches: query === '(pointer: fine)' || query === '(orientation: portrait)' ? false : true,
         media: query,
         onchange: null,
         addEventListener: () => undefined,
@@ -525,11 +569,11 @@ describe('moving a tab between panes', () => {
     stubCoreApi({ items: [ALPHA, BRAVO] });
     renderAt(<App />, `/?item=${ALPHA.id}&item2=${BRAVO.id}`);
 
-    const firstPane = await screen.findByRole('article', { name: /Pane 1 of 2/ });
-    await within(firstPane).findByRole('tab', { name: 'Alpha' });
-    expect(within(firstPane).getByRole('tab', { name: 'Alpha' })).not.toHaveAttribute('draggable');
+    await screen.findByRole('article', { name: /Pane 1 of 2/ });
+    await within(titleRow()).findByRole('tab', { name: 'Alpha' });
+    expect(within(titleRow()).getByRole('tab', { name: 'Alpha' })).not.toHaveAttribute('draggable');
     expect(
-      within(firstPane).getByRole('combobox', {
+      within(titleRow()).getByRole('combobox', {
         name: 'Move active tab, Alpha, to another pane',
       }),
     ).toBeVisible();
@@ -571,8 +615,8 @@ describe('choosing horizontal or vertical tabs', () => {
       expect(tablist).not.toHaveAttribute('aria-orientation');
     }
 
-    const firstPane = screen.getByRole('article', { name: /Pane 1 of 2/ });
-    await user.click(within(firstPane).getByRole('button', { name: 'Show tabs on the side' }));
+    screen.getByRole('article', { name: /Pane 1 of 2/ });
+    await user.click(within(titleRow()).getByRole('button', { name: 'Show tabs on the side' }));
 
     await waitFor(() => {
       for (const tablist of screen.getAllByRole('tablist')) {
