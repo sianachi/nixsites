@@ -59,6 +59,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Signing in keeps you signed in for 30 days instead of 8 hours, in the browser and the apps.
+  `Nix:BrowserAuth:SessionHours` can shorten it (at most 720 hours).
 - Your workspaces are listed in the profile menu, with All workspaces and New workspace, instead
   of a workspace button at the top. The Explorer shows the current workspace's name.
 - On desktop, tabs sit in the top row beside back and forward; Search, notifications and your

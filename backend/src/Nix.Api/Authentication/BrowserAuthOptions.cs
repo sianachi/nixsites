@@ -27,8 +27,11 @@ public sealed class BrowserAuthOptions
     /// </summary>
     public string AccountPage { get; init; } = string.Empty;
 
-    /// <summary>How long a local browser session stands before a new OIDC login.</summary>
-    public int SessionHours { get; init; } = 8;
+    /// <summary>How long a local browser session stands before a new OIDC login: 30 days by default, at most 30.</summary>
+    public int SessionHours { get; init; } = MaxSessionHours;
+
+    /// <summary>The longest a browser session may be configured to last (30 days).</summary>
+    public const int MaxSessionHours = 30 * 24;
 
     /// <summary>Whether all values required to start a login are present and safe.</summary>
     public bool IsConfigured => TryAuthority(out _) && TryPublicOrigin(out _) && !string.IsNullOrWhiteSpace(ClientId);

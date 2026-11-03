@@ -199,7 +199,7 @@ public sealed class BrowserAuthCoordinator(
             PrincipalId = principalId,
             TokenHash = secret.Hash,
             CreatedAt = now,
-            ExpiresAt = now + TimeSpan.FromHours(Math.Clamp(_options.SessionHours, 1, 24)),
+            ExpiresAt = now + TimeSpan.FromHours(Math.Clamp(_options.SessionHours, 1, BrowserAuthOptions.MaxSessionHours)),
         };
 
         _sessionContext.Set(NixSessionContext.ForTenant(registration.TenantId, principalId));

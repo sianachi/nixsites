@@ -23,6 +23,13 @@ public sealed class BrowserAuthBoundaryTests
         Assert.DoesNotContain(first.Token, first.Hash, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void A_browser_session_lasts_thirty_days_unless_configured_shorter()
+    {
+        Assert.Equal(30 * 24, new BrowserAuthOptions().SessionHours);
+        Assert.Equal(30 * 24, BrowserAuthOptions.MaxSessionHours);
+    }
+
     [Theory]
     [InlineData("https://nix.example.test", true)]
     [InlineData("http://localhost:5173", true)]
