@@ -26,6 +26,9 @@ export interface Backlinks {
    */
   readonly truncated: boolean;
 
+  /** Whether `backlinks` is the last list fetched, shown because the fresh read failed. */
+  readonly stale: boolean;
+
   /** Asks again, for the control a failed read offers. */
   readonly retry: () => void;
 }
@@ -36,10 +39,19 @@ interface BacklinksAnswer {
   readonly backlinks: readonly Backlink[];
   readonly truncated: boolean;
   readonly failed: boolean;
+  readonly stale: boolean;
 }
+
+/** The last list fetched per item, so an offline panel shows it instead of an error. */
+const lastRead = new Map<string, { backlinks: readonly Backlink[]; truncated: boolean }>();
 
 /** One empty array, so "nothing points here" does not change identity on every render. */
 const NONE: readonly Backlink[] = [];
+
+/** For tests: the cache outlives a render by design. */
+export function resetBacklinksCache(): void {
+  lastRead.clear();
+}
 
 export function useBacklinks(itemId: string | null): Backlinks {
   const client = useApiClient();
@@ -76,11 +88,13 @@ export function useBacklinks(itemId: string | null): Backlinks {
           return;
         }
 
+        lastRead.set(itemId, { backlinks: parsed.backlinks, truncated: parsed.truncated });
         setAnswer({
           request,
           backlinks: parsed.backlinks,
           truncated: parsed.truncated,
           failed: false,
+          stale: false,
         });
       } catch (cause) {
         if (controller.signal.aborted || !live.current || isCanceledError(cause)) {
@@ -88,7 +102,14 @@ export function useBacklinks(itemId: string | null): Backlinks {
         }
 
         console.warn('The backlinks read failed.', cause);
-        setAnswer({ request, backlinks: NONE, truncated: false, failed: true });
+        const last = lastRead.get(itemId);
+        setAnswer({
+          request,
+          backlinks: last?.backlinks ?? NONE,
+          truncated: last?.truncated ?? false,
+          failed: last === undefined,
+          stale: last !== undefined,
+        });
       }
     })();
 
@@ -102,6 +123,7 @@ export function useBacklinks(itemId: string | null): Backlinks {
     status: current === null ? 'loading' : current.failed ? 'error' : 'ready',
     backlinks: current?.backlinks ?? NONE,
     truncated: current?.truncated ?? false,
+    stale: current?.stale ?? false,
     retry,
   };
 }

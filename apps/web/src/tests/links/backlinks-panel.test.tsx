@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -8,6 +8,7 @@ import { useLocation } from 'react-router';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
 import { BacklinksPane } from '../../links/backlinks-panel';
+import { resetBacklinksCache } from '../../links/use-backlinks';
 import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
@@ -21,6 +22,7 @@ import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
  */
 
 beforeEach(() => {
+  resetBacklinksCache();
   signedIn();
 });
 
@@ -104,6 +106,20 @@ describe('the backlinks pane', () => {
     renderPane(TARGET.id);
 
     expect(await screen.findByText(/once the document holding them has been saved/i)).toBeVisible();
+  });
+
+  it('keeps the last list it fetched, and says backlinks need a connection, when a read fails', async () => {
+    stubCoreApi({ items: [TARGET, SOURCE], backlinks: { [TARGET.id]: [SOURCE.id] } });
+    renderPane(TARGET.id);
+    expect(await screen.findByRole('button', { name: /Ledger review/ })).toBeVisible();
+    cleanup();
+
+    stubCoreApi({ items: [TARGET, SOURCE], backlinksFail: true });
+    renderPane(TARGET.id);
+
+    expect(await screen.findByRole('button', { name: /Ledger review/ })).toBeVisible();
+    expect(screen.getByText(/Backlinks need a connection/)).toBeVisible();
+    expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument();
   });
 
   it('asks for nothing when no item is open', () => {

@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
+import { useOfflineState } from '@nix/web-platform/offline/offline-state';
 import { useBacklinks } from './use-backlinks';
 
 /**
@@ -21,7 +22,9 @@ import { useBacklinks } from './use-backlinks';
  */
 
 export function BacklinksPane({ itemId }: { readonly itemId: string | null }): ReactNode {
-  const { status, backlinks, truncated, retry } = useBacklinks(itemId);
+  const { status, backlinks, truncated, stale, retry } = useBacklinks(itemId);
+  const { bootOffline, networkDown } = useOfflineState();
+  const offline = bootOffline || networkDown;
   const { select } = useSelectedItem();
 
   if (itemId === null) {
@@ -44,7 +47,7 @@ export function BacklinksPane({ itemId }: { readonly itemId: string | null }): R
     return (
       <div className="flex flex-col items-start gap-2">
         <Text variant="bodySmall" tone="muted">
-          The links to this item could not be loaded.
+          {offline ? 'Backlinks need a connection.' : 'The links to this item could not be loaded.'}
         </Text>
         <Button variant="secondary" onClick={retry}>
           Try again
@@ -97,7 +100,13 @@ export function BacklinksPane({ itemId }: { readonly itemId: string | null }): R
         </Text>
       ) : null}
 
-      <LagNote />
+      {stale ? (
+        <Text variant="caption" tone="muted">
+          Backlinks need a connection. This is the last list fetched.
+        </Text>
+      ) : (
+        <LagNote />
+      )}
     </div>
   );
 }
