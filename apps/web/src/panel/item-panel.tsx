@@ -4,18 +4,20 @@ import {
   Globe,
   Info,
   Link2,
+  ListTree,
   MessageSquare,
   PanelRightClose,
   SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
 import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { CommentsPane } from './comments-pane';
+import { OutlinePane } from './outline-pane';
 import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
 import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
 import { SitePane } from '@nix/web-sites/sites/site-pane';
@@ -37,7 +39,7 @@ import { ViewEditor } from '@nix/web-views/core/view-editor';
  * reopening it to continue.
  */
 
-export type Pane = 'details' | 'fields' | 'views' | 'links' | 'comments' | 'site';
+export type Pane = 'details' | 'fields' | 'views' | 'links' | 'outline' | 'comments' | 'site';
 
 const PANES = [
   { value: 'details', label: 'Details' },
@@ -46,7 +48,9 @@ const PANES = [
   // Last, and not first: what points *at* this item is a question people ask after the ones about
   // what it is. It sits here rather than in a surface of its own because it is another way of
   // configuring nothing and reading something, which is what this panel already is.
-  { value: 'links', label: 'Links' },
+  { value: 'links', label: 'Backlinks' },
+  // The headings of the open note, from the live editor document.
+  { value: 'outline', label: 'Outline' },
   // The note's comment threads and suggestions.
   { value: 'comments', label: 'Comments' },
   // Publishing this item and everything inside it as a website (ADR-0063).
@@ -75,9 +79,88 @@ const PANE_ICONS: Record<Pane, LucideIcon> = {
   fields: SlidersHorizontal,
   views: Columns3,
   links: Link2,
+  outline: ListTree,
   comments: MessageSquare,
   site: Globe,
 };
+
+const WIDTH_KEY = 'nix.itemPanelWidth';
+const WIDTH_DEFAULT = 340;
+const WIDTH_MIN = 280;
+const WIDTH_MAX = 560;
+const clampWidth = (width: number): number => Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, width));
+
+function readWidth(): number {
+  try {
+    const stored = Number(window.localStorage.getItem(WIDTH_KEY));
+    return stored > 0 ? clampWidth(stored) : WIDTH_DEFAULT;
+  } catch {
+    return WIDTH_DEFAULT;
+  }
+}
+
+/** The pinned panel's left edge: drag or use the arrow keys to resize, Home/End for the limits. */
+function PanelResizer({
+  width,
+  onChange,
+}: {
+  readonly width: number;
+  readonly onChange: (width: number) => void;
+}): ReactNode {
+  function commit(next: number): void {
+    onChange(clampWidth(next));
+  }
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    const step = event.shiftKey ? 32 : 8;
+    const next =
+      event.key === 'ArrowLeft'
+        ? width + step
+        : event.key === 'ArrowRight'
+          ? width - step
+          : event.key === 'Home'
+            ? WIDTH_MIN
+            : event.key === 'End'
+              ? WIDTH_MAX
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    commit(next);
+  }
+  function onPointerDown(event: PointerEvent<HTMLDivElement>): void {
+    if (event.button !== 0) return;
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    const right = handle.parentElement?.getBoundingClientRect().right ?? 0;
+    const move = (moveEvent: globalThis.PointerEvent): void => {
+      commit(right - moveEvent.clientX);
+    };
+    const stop = (): void => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  }
+  return (
+    // A focusable separator is the ARIA window splitter, as the explorer's own divider is.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <div
+      role="separator"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      aria-orientation="vertical"
+      aria-label="Resize the details panel"
+      aria-valuenow={width}
+      aria-valuemin={WIDTH_MIN}
+      aria-valuemax={WIDTH_MAX}
+      onKeyDown={onKeyDown}
+      onPointerDown={onPointerDown}
+      className={`absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-accent/40 ${focusRing}`}
+    />
+  );
+}
 
 export function ItemPanel({
   container,
@@ -103,6 +186,16 @@ export function ItemPanel({
       ? 'details'
       : requestedPane;
   const setPane = onPaneChange ?? setOwnPane;
+  const pinned = !overlay && !drawer;
+  const [width, setWidth] = useState(readWidth);
+  const resize = (next: number): void => {
+    setWidth(next);
+    try {
+      window.localStorage.setItem(WIDTH_KEY, String(next));
+    } catch {
+      // Storage can be blocked; the width then lasts until reload.
+    }
+  };
   const options = PANES.filter(
     (option) =>
       (sitesEnabled || option.value !== 'site') &&
@@ -122,13 +215,15 @@ export function ItemPanel({
     <aside
       aria-label="Item settings"
       className={cn(
-        'flex shrink-0 flex-col overflow-hidden bg-surface',
+        'relative flex shrink-0 flex-col overflow-hidden bg-surface',
         settingsPanelWidth,
         overlay && 'min-h-0 w-full flex-1 shrink',
         drawer &&
           'min-h-0 w-full flex-1 shrink pt-[max(env(safe-area-inset-top),calc(var(--spacing)*3))]',
       )}
+      style={pinned ? { width } : undefined}
     >
+      {pinned ? <PanelResizer width={width} onChange={resize} /> : null}
       {drawer ? null : (
         <div className="flex shrink-0 items-center gap-2 px-3 py-3">
           <Segmented
@@ -136,7 +231,8 @@ export function ItemPanel({
             options={options}
             value={pane}
             onChange={setPane}
-            className="min-w-0 flex-1"
+            // One row: the seven tabs scroll sideways rather than wrapping onto a second line.
+            className="min-w-0 flex-1 flex-nowrap overflow-x-auto bg-background *:shrink-0"
           />
 
           {/* In a dialog the dialog's own close is the one way out; a second would be a duplicate. */}
@@ -164,6 +260,8 @@ export function ItemPanel({
           details.item === null ? null : (
             <CommentsPane itemId={details.item.id} />
           )
+        ) : pane === 'outline' ? (
+          <OutlinePane />
         ) : pane === 'links' ? (
           <BacklinksPane itemId={details.item?.id ?? null} />
         ) : pane === 'fields' ? (

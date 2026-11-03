@@ -97,6 +97,41 @@ describe('the settings panel', () => {
     expect(within(panel).queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
   });
 
+  it('switches to the Backlinks and Outline tabs', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [NOTE] });
+    renderAt(<App />, `/?item=${NOTE.id}`);
+
+    await user.click(await screen.findByRole('button', { name: /settings/i }));
+    const panel = await screen.findByRole('complementary', { name: /item settings/i });
+
+    await user.click(within(panel).getByRole('button', { name: 'Backlinks' }));
+    expect(await within(panel).findByText(/nothing links here yet/i)).toBeVisible();
+
+    await user.click(within(panel).getByRole('button', { name: 'Outline' }));
+    expect(within(panel).getByRole('button', { name: 'Outline' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(await within(panel).findByText(/no headings yet|open a note/i)).toBeVisible();
+  });
+
+  it('resizes the pinned panel from the keyboard', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [NOTE] });
+    renderAt(<App />, `/?item=${NOTE.id}`);
+
+    await user.click(await screen.findByRole('button', { name: /settings/i }));
+    const panel = await screen.findByRole('complementary', { name: /item settings/i });
+    const handle = within(panel).getByRole('separator', { name: /resize the details panel/i });
+
+    handle.focus();
+    await user.keyboard('{ArrowLeft}');
+
+    expect(handle).toHaveAttribute('aria-valuenow', '348');
+    expect(panel).toHaveStyle({ width: '348px' });
+  });
+
   it('offers no Site entry or pane on a deployment without sites', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [NOTE] });
