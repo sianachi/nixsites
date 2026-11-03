@@ -65,6 +65,27 @@ Run the same line again with `--version <newer release>`. The env file is kept, 
 services restart on the new images. Back up `~/nix/nix.env` together with the Docker volumes
 (`nix-*`); the env file holds every secret and cannot be regenerated.
 
+## Signing in from the iOS app
+
+The iOS app refuses any `http://` address, including one hop in the middle of the sign-in
+redirects; the sign-in page then fails with an App Transport Security error. Desktop browsers
+often upgrade that hop silently, so the web app can look fine while the phone cannot sign in.
+Check the chain from `/auth/login` with `curl -sI` and follow each `location` until it reaches
+the sign-in form: every hop must be `https://`.
+
+The bundled install is https end to end. The usual cause is an identity provider of your own
+behind a tunnel or proxy that reaches it over plain http. Zitadel's separate login UI
+(`/ui/v2/login`) builds its redirects from `X-Forwarded-Proto`, and Traefik replaces that header
+with `http` on a plain entrypoint unless it trusts the sender. Set the header on the login
+router, for example with Traefik Docker labels:
+
+```yaml
+traefik.http.middlewares.login-proto.headers.customrequestheaders.X-Forwarded-Proto: https
+traefik.http.routers.<login-router>.middlewares: login-proto
+```
+
+or list the tunnel or proxy addresses in the entrypoint's `forwardedHeaders.trustedIPs`.
+
 ## Kubernetes
 
 ```sh
