@@ -15,7 +15,7 @@ follows semantic versioning (`0.x` pre-1.0).
   profile menu) and a floating bottom bar (back, forward, find, new note, open tabs, menu); the
   Explorer and an item's details slide in from the screen edges; open tabs show as cards; search
   docks above the keyboard; menus and settings open as grouped sheets. Calendar, Inbox, your pet,
-  Settings, Import and Zen mode are in the bottom bar's menu. Wider screens are unchanged.
+  Settings, Import and Zen mode are in the bottom bar's menu.
 - In the iOS app, smart lists, charts, the Calendar page, habit trackers and finance pages work
   offline: they are recalculated from the offline copy, so property edits made offline show in
   them straight away. A view the app cannot recalculate exactly says it needs a connection.
@@ -45,8 +45,27 @@ follows semantic versioning (`0.x` pre-1.0).
   offer Switch server, the keyboard's form bar is hidden and the status bar follows the theme.
   Listing servers as app-bound domains lets the app start offline.
 
+- On iPads and other touch tablets the app picks a layout from the window's shape and switches as
+  you rotate or resize: held upright it uses the phone layout with a tab strip along the top and
+  boards with their columns side by side; held sideways it uses the desktop layout with
+  touch-sized controls and the details sliding in over the page. A narrow Split View window gets
+  the phone layout.
+- A status bar along the bottom on desktop and iPad held sideways shows backlinks, word or item
+  count and whether the note is synced. Turn it off in Settings > General > Appearance.
+- The details sidebar has an Outline tab listing the note's headings (click one to jump to it),
+  and Backlinks shows the last list it fetched, with a note, when there is no connection.
+- The tab bar's "+" opens a search box: pick a note to open it in a new tab, or create a new
+  note from what you typed. Ctrl- or Cmd-click on an item in the Explorer opens it in a new tab.
+
 ### Changed
 
+- Your workspaces are listed in the profile menu, with All workspaces and New workspace, instead
+  of a workspace button at the top. The Explorer shows the current workspace's name.
+- On desktop, tabs sit in the top row beside back and forward; Search, notifications and your
+  profile are on the left strip; Zen mode is in a note's "…" menu. Every screen width uses the
+  phone's colours (published sites and print too), and preview tabs are no longer in italics.
+- Ctrl- or Cmd-click on an item in the Explorer no longer adds it to the selection; Shift-click
+  and Space still do.
 - Browser sign-in (`/auth/login` and `/auth/callback`) is limited per address,
   `Nix:RateLimits:BrowserLoginsPerMinute` (default 30 a minute).
 - Settings > Site approvals shows the requester's name where the approver can read the
