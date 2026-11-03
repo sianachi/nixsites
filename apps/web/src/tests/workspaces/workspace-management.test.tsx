@@ -12,6 +12,7 @@ import {
 } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
+import { openProfileMenu, openWorkspacePanel, profileTrigger } from './workspace-menu';
 
 const OWNER_ID = '44444444-bbbb-4bbb-8bbb-444444444444';
 const EDITOR_ID = '55555555-bbbb-4bbb-8bbb-555555555555';
@@ -85,19 +86,21 @@ beforeEach(() => {
 
 function workspaceButton(name: string): HTMLElement {
   void name;
-  return screen.getByRole('button', { name: /, workspace menu$/ });
+  const trigger = profileTrigger();
+  if (trigger === null) throw new Error('No profile menu trigger.');
+  return trigger;
 }
 
 async function switchWorkspace(user: UserEvent, to: string): Promise<void> {
-  await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
+  await openWorkspacePanel(user);
   await user.click(
     within(screen.getByRole('region', { name: 'Workspaces' })).getByRole('link', { name: to }),
   );
 }
 
 async function createWorkspaceFromMenu(user: UserEvent, name: string): Promise<void> {
-  await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
-  await user.click(screen.getByRole('button', { name: 'New workspace…' }));
+  await openProfileMenu(user);
+  await user.click(screen.getByRole('button', { name: 'New workspace' }));
   await user.type(await screen.findByRole('textbox', { name: 'New workspace name' }), name);
   await user.click(screen.getByRole('button', { name: 'Create' }));
 }
@@ -299,7 +302,9 @@ describe('workspace management', () => {
     stubCoreApi();
     renderAt(<App />, '/settings');
 
-    await screen.findByRole('button', { name: /, workspace menu$/ });
+    await waitFor(() => {
+      expect(profileTrigger()).not.toBeNull();
+    });
     await createWorkspaceFromMenu(user, 'Project Atlas');
 
     await waitFor(() => {
@@ -324,7 +329,7 @@ describe('workspace management', () => {
     await waitFor(() => {
       expect(workspaceButton(STUB_WORKSPACE.name)).toBeVisible();
     });
-    await user.click(workspaceButton(STUB_WORKSPACE.name));
+    await openWorkspacePanel(user);
     expect(
       within(screen.getByRole('region', { name: 'Workspaces' })).queryByRole('link', {
         name: SHARED.name,
@@ -378,7 +383,7 @@ describe('workspace management', () => {
     await waitFor(() => {
       expect(workspaceButton(STUB_WORKSPACE.name)).toBeVisible();
     });
-    await user.click(workspaceButton(STUB_WORKSPACE.name));
+    await openWorkspacePanel(user);
     expect(
       within(screen.getByRole('region', { name: 'Workspaces' })).queryByRole('link', {
         name: PENDING.name,

@@ -179,7 +179,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const uploadParentRef = useRef<string | null>(null);
   const client = useApiClient();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
   const landmarks = useItemLandmarks();
   const iconReturnFocus = useRef<HTMLElement | null>(null);
   const [iconItem, setIconItem] = useState<{
@@ -293,17 +293,20 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       }}
       className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-3">
-        {/* Shown only when the whole row fits: at the default width it could only show "E…", and
-            the region keeps its name for assistive technology either way. */}
-        <Text as="span" variant="bodySmall" tone="muted" className="hidden @xs:inline">
-          Explorer
-        </Text>
-
+      {/* The workspace's name has a row of its own: beside the buttons it truncated to "N…". */}
+      <Text
+        as="p"
+        variant="bodySmall"
+        truncate
+        className="shrink-0 px-4 pt-3 font-heading text-foreground"
+      >
+        {workspace.name}
+      </Text>
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-2 pb-3">
         {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
         <Button
           variant="ghost"
-          className="px-1.5 py-1 text-xs @xs:ml-auto"
+          className="px-1.5 py-1 text-xs"
           disabled={tree.status !== 'ready' || tree.isCreating}
           onClick={() => {
             void create(null, 'Untitled note', 'note');
@@ -736,7 +739,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
   // the siblings, Alt-click opens beside, Space toggles. `openBeside` is deliberately not gated
   // here: it refuses on its own - announcing the reason and writing nothing - which is the only
   // place the check can live and still be true of every caller.
-  const gestures = rowGestures(
+  const rowGesture = rowGestures(
     rowSelection,
     item.id,
     siblings.map((sibling) => sibling.id),
@@ -747,6 +750,16 @@ function TreeNode(props: TreeNodeProps): ReactNode {
       onOpenBeside(item.id);
     },
   );
+  // Cmd/Ctrl-click opens in a new tab, as in a browser; Shift-click and Space still select.
+  const gestures = {
+    ...rowGesture,
+    onClick: (event: Parameters<typeof rowGesture.onClick>[0]) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
+        event.preventDefault();
+        onOpenPinned(item.id);
+      } else rowGesture.onClick(event);
+    },
+  };
 
   return (
     <li

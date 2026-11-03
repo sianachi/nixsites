@@ -13,7 +13,23 @@ export function readLastWorkspaceId(): string | null {
   }
 }
 
+const RECENT_KEY = 'nix.recent-workspace-ids';
+
+/** Workspace ids, most recently opened first. */
+export function readRecentWorkspaceIds(): readonly string[] {
+  try {
+    const parsed: unknown = JSON.parse(browserStorage()?.getItem(RECENT_KEY) ?? '[]');
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string' && UUID.test(id))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export function rememberLastWorkspaceId(workspaceId: string): void {
   // Workspace selection still works when browser persistence is unavailable.
   writeStored(LAST_WORKSPACE_KEY, workspaceId);
+  const recent = [workspaceId, ...readRecentWorkspaceIds().filter((id) => id !== workspaceId)];
+  writeStored(RECENT_KEY, JSON.stringify(recent.slice(0, 20)));
 }

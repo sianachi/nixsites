@@ -13,6 +13,7 @@ import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
+import { openWorkspacePanel, profileTrigger } from './workspace-menu';
 
 const SHARED_ID = '00000000-0000-4000-8000-000000000002';
 const INACCESSIBLE_ID = '00000000-0000-4000-8000-000000000099';
@@ -47,7 +48,7 @@ describe('workspace-scoped routing', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
 
     const menu = screen.getByRole('region', { name: 'Workspaces' });
     expect(within(menu).getByRole('link', { name: SHARED.name })).toHaveAttribute(
@@ -67,7 +68,7 @@ describe('workspace-scoped routing', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
     const search = screen.getByRole('searchbox', { name: 'Search workspaces' });
     expect(search).toHaveFocus();
 
@@ -86,7 +87,7 @@ describe('workspace-scoped routing', () => {
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: 'Workspaces' })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toHaveTextContent(
+    expect(await screen.findByRole('complementary', { name: 'Explorer' })).toHaveTextContent(
       SHARED.name,
     );
   });
@@ -96,7 +97,7 @@ describe('workspace-scoped routing', () => {
     renderAt(<App />, '/graph');
 
     expect(await screen.findByRole('heading', { name: 'Graph' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toBeVisible();
+    expect(profileTrigger()).toBeVisible();
     expect(screen.getByRole('link', { name: 'Graph' })).toHaveAttribute(
       'href',
       `/w/${STUB_WORKSPACE.id}/graph`,
@@ -109,13 +110,13 @@ describe('workspace-scoped routing', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     const first = renderAt(<App />, '/calendar');
     expect(await screen.findByRole('heading', { name: 'Calendar' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toBeVisible();
+    expect(profileTrigger()).toBeVisible();
     first.unmount();
 
     vi.stubGlobal('localStorage', memoryStorage({ 'nix.last-workspace-id': INACCESSIBLE_ID }));
     renderAt(<App />, '/calendar');
     expect(await screen.findByRole('heading', { name: 'Calendar' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toBeVisible();
+    expect(profileTrigger()).toBeVisible();
   });
 
   it('opens an accessible deep link without passing through the legacy resolver', async () => {
@@ -123,7 +124,7 @@ describe('workspace-scoped routing', () => {
     renderAt(<App />, `/w/${SHARED_ID}/graph`);
 
     expect(await screen.findByRole('heading', { name: 'Graph' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /, workspace menu$/ })).toBeVisible();
+    expect(profileTrigger()).toBeVisible();
   });
 
   it('routes an account with no active workspace to recover or replace archived work', async () => {
@@ -171,7 +172,7 @@ describe('workspace-scoped routing', () => {
     expect(await screen.findByRole('heading', { name: 'Workspace not found' })).toBeVisible();
     expect(screen.getByText(/unavailable or you do not have access/i)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Switch workspace' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /, workspace menu$/ })).not.toBeInTheDocument();
+    expect(profileTrigger()).toBeNull();
   });
 
   it('does not call a workspace missing when the accessible list is partial', async () => {
@@ -193,7 +194,7 @@ describe('workspace-scoped routing', () => {
     const selected = await screen.findByRole('treeitem', { name: 'Scoped note' });
     expect(selected).toHaveAttribute('aria-selected', 'true');
 
-    await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
     await user.click(
       within(screen.getByRole('region', { name: 'Workspaces' })).getByRole('link', {
         name: SHARED.name,
@@ -201,7 +202,7 @@ describe('workspace-scoped routing', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /, workspace menu$/ })).toBeVisible();
+      expect(profileTrigger()).toBeVisible();
       expect(screen.getByRole('treeitem', { name: 'Scoped note' })).toHaveAttribute(
         'aria-selected',
         'false',

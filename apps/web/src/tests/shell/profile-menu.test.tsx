@@ -10,8 +10,17 @@ import * as bodies from '@nix/web-foundation/lib/body-cache';
 import * as collaboration from '@nix/web-editor/editor/collab-sync';
 import * as drafts from '@nix/web-foundation/lib/draft-journal';
 
-const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
+const WORKSPACE_ID = '00000000-0000-4000-8000-000000000100';
 const profile = { subject: 'menu-person', name: 'Ada Person', email: 'ada@example.test' };
+
+const workspaces = vi.hoisted(() =>
+  Array.from({ length: 10 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-0000000001${String(index).padStart(2, '0')}`,
+    name: `Space ${String(index)}`,
+    lifecycleState: 'active',
+    pendingInvitationId: null,
+  })),
+);
 
 const auth = vi.hoisted(() => ({
   accountUrl: null as string | null,
@@ -30,7 +39,14 @@ vi.mock('@nix/web-platform/auth/auth-provider', () => ({
 }));
 
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
-  useWorkspace: () => ({ workspaceId: WORKSPACE_ID }),
+  useWorkspace: () => ({
+    workspaceId: WORKSPACE_ID,
+    workspace: workspaces[0],
+    workspaces,
+    listStatus: 'ready',
+    listWarning: null,
+    reload: () => undefined,
+  }),
 }));
 
 const principal: CurrentPrincipalState = {
@@ -66,6 +82,20 @@ beforeEach(() => {
 });
 
 describe('ProfileMenu', () => {
+  it('lists the eight most recent workspaces with a tick on the current one', async () => {
+    await openMenu();
+    for (let index = 0; index < 8; index += 1)
+      expect(screen.getByRole('button', { name: `Space ${String(index)}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Space 8' })).not.toBeInTheDocument();
+    // The tick is drawn on the current workspace only.
+    const tick = (name: string): Element | null =>
+      screen.getByRole('button', { name }).querySelector('span[aria-hidden]');
+    expect(tick('Space 0')).not.toHaveClass('invisible');
+    expect(tick('Space 1')).toHaveClass('invisible');
+    expect(screen.getByRole('button', { name: 'All workspaces…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New workspace' })).toBeInTheDocument();
+  });
+
   it('offers Install Nix, with the steps when the browser gives no prompt', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
@@ -94,7 +124,9 @@ describe('ProfileMenu', () => {
   it('lets the keyboard reach and change appearance without dismissing the menu', async () => {
     const user = userEvent.setup();
     await openMenu();
-    expect(screen.getByRole('link', { name: 'Settings' })).toHaveFocus();
+    // Focus opens on the first workspace; the keyboard walk this checks starts at Settings.
+    expect(screen.getByRole('button', { name: 'Space 0' })).toHaveFocus();
+    screen.getByRole('link', { name: 'Settings' }).focus();
     await user.tab({ shift: true });
     expect(screen.getByRole('radio', { name: 'System' })).toHaveFocus();
     await user.keyboard('{ArrowRight}');

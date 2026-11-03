@@ -15,6 +15,7 @@ import {
   removeGroup,
   togglePin,
 } from '@nix/web-workspaces/workspaces/arrangement';
+import { openWorkspacePanel } from './workspace-menu';
 
 const SHARED: StubWorkspace = {
   ...STUB_WORKSPACE,
@@ -64,7 +65,7 @@ describe('the workspace menu', () => {
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
     const menu = screen.getByRole('region', { name: 'Workspaces' });
     expect(within(menu).queryByRole('heading', { name: 'Pinned' })).not.toBeInTheDocument();
     await user.click(within(menu).getByRole('button', { name: `Pin ${SHARED.name}` }));
@@ -94,17 +95,11 @@ describe('the workspace menu', () => {
       },
     });
     renderAt(<App />);
-    await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
     const toggle = await screen.findByRole('button', { name: 'Clients' });
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: SHARED.name })).not.toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: /, workspace menu$/ }));
-    expect(screen.getByRole('button', { name: 'Clients' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
     await user.click(screen.getByRole('link', { name: 'Manage group Clients' }));
     expect(await screen.findByRole('heading', { name: 'Clients', level: 1 })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Manage' }));
@@ -146,7 +141,7 @@ describe('the workspace menu', () => {
     });
     renderAt(<App />);
 
-    await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+    await openWorkspacePanel(user);
     const menu = screen.getByRole('region', { name: 'Workspaces' });
     const clients = await within(menu).findByRole('list', { name: 'Clients' });
     expect(within(clients).getByRole('link', { name: SHARED.name })).toBeVisible();
@@ -157,7 +152,7 @@ describe('the workspace menu', () => {
 });
 
 async function openArrange(user: UserEvent): Promise<HTMLElement> {
-  await user.click(await screen.findByRole('button', { name: /, workspace menu$/ }));
+  await openWorkspacePanel(user);
   await user.click(screen.getByRole('button', { name: 'Arrange workspaces…' }));
   return screen.findByRole('region', { name: 'Workspace groups and pins' });
 }

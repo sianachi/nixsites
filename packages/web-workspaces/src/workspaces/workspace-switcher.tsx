@@ -1,11 +1,12 @@
 import { Dialog, Icon, Input, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
-import { Archive, Check, ChevronDown, Pin, PinOff, Plus, Settings } from 'lucide-react';
+import { Archive, Check, ChevronDown, Layers, Pin, PinOff, Plus, Settings } from 'lucide-react';
 import type { Workspace } from '@nix/api-client';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { arrangeWorkspaces, togglePin } from './arrangement';
 import { CreateWorkspaceForm } from './settings/create-workspace-form';
+import { readRecentWorkspaceIds } from './last-workspace';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { useWorkspace } from './workspace-context';
 import { WorkspaceGroupsSection } from './workspace-groups-section';
@@ -25,6 +26,125 @@ import { WorkspaceGroupsSection } from './workspace-groups-section';
  * already agreed on it.
  */
 export function WorkspaceSwitcher(): ReactNode {
+  const { workspace, items, dialogs } = useWorkspacePanel();
+  return (
+    <>
+      <Menu label="Workspaces" items={items} className="w-80 max-w-[calc(100vw-1rem)]">
+        {(trigger) => (
+          <button
+            {...trigger}
+            // Starts with the visible name so voice control can say what it sees (WCAG 2.5.3).
+            aria-label={`${workspace.name}, workspace menu`}
+            className={`flex min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
+          >
+            <span className="truncate">{workspace.name}</span>
+            <Icon icon={ChevronDown} size="sm" />
+          </button>
+        )}
+      </Menu>
+      {dialogs}
+    </>
+  );
+}
+
+const RECENT_LIMIT = 8;
+
+/**
+ * The workspace entries for the profile menu: the most recently used workspaces with a tick on the
+ * current one, "All workspaces…" (the full switcher panel in a dialog) once there are more than
+ * the limit, and "New workspace" through the same create flow the switcher uses.
+ */
+export function useWorkspaceMenuEntries(): { entries: MenuEntry[]; dialogs: ReactNode } {
+  const { workspace, workspaces } = useWorkspace();
+  const navigate = useNavigate();
+  // `opened` counts openings, which is the key that gives each "All workspaces…" a fresh dialog.
+  const [dialog, setDialog] = useState<{ kind: 'create' | 'all'; opened: number } | null>(null);
+  const openDialog = (kind: 'create' | 'all'): void => {
+    setDialog((previous) => ({ kind, opened: (previous?.opened ?? 0) + 1 }));
+  };
+  const closeDialog = (): void => {
+    setDialog(null);
+  };
+  const dialogs = (
+    <>
+      {dialog?.kind === 'all' ? <AllWorkspacesDialog key={dialog.opened} /> : null}
+      {dialog?.kind === 'create' ? (
+        <Dialog open title="New workspace" onClose={closeDialog}>
+          <CreateWorkspaceForm onCreated={closeDialog} />
+        </Dialog>
+      ) : null}
+    </>
+  );
+  const active = workspaces.filter((entry) => entry.lifecycleState === 'active');
+  const recent = readRecentWorkspaceIds();
+  const rank = (id: string): number => {
+    const at = recent.indexOf(id);
+    return at === -1 ? recent.length : at;
+  };
+  // Array.sort is stable, so workspaces never opened here keep the server's order.
+  const shown = [...active].sort((a, b) => rank(a.id) - rank(b.id)).slice(0, RECENT_LIMIT);
+  const entries: MenuEntry[] = [
+    ...shown.map((entry): MenuEntry => ({
+      kind: 'action',
+      key: `workspace-${entry.id}`,
+      label: entry.name,
+      role: 'menuitemradio',
+      checked: entry.id === workspace.id,
+      onSelect: () => void navigate(`/w/${entry.id}`),
+    })),
+    // Always offered, not only past the limit: the full panel is also where pinning, groups,
+    // archived workspaces and per-workspace management live.
+    {
+      kind: 'action',
+      label: 'All workspaces…',
+      icon: Layers,
+      onSelect: () => {
+        openDialog('all');
+      },
+    },
+    {
+      kind: 'action',
+      label: 'New workspace',
+      icon: Plus,
+      onSelect: () => {
+        openDialog('create');
+      },
+    },
+  ];
+  return { entries, dialogs };
+}
+
+/**
+ * The whole switcher panel in a dialog. Closing only hides the dialog and keeps this mounted, so
+ * the create and arrange dialogs the panel opens survive it; the caller remounts it by key.
+ */
+function AllWorkspacesDialog(): ReactNode {
+  const searchRef = useRef<HTMLInputElement>(null);
+  const { items, dialogs } = useWorkspacePanel(searchRef);
+  const [shown, setShown] = useState(true);
+  const hide = (): void => {
+    setShown(false);
+  };
+  const content = items[0];
+  return (
+    <>
+      {shown ? (
+        <Dialog open title="All workspaces" onClose={hide} initialFocus={searchRef}>
+          {content?.kind === 'content' && typeof content.content === 'function'
+            ? content.content({ close: hide })
+            : null}
+        </Dialog>
+      ) : null}
+      {dialogs}
+    </>
+  );
+}
+
+function useWorkspacePanel(searchRef?: RefObject<HTMLInputElement | null>): {
+  readonly workspace: Workspace;
+  readonly items: MenuEntry[];
+  readonly dialogs: ReactNode;
+} {
   const { workspace, workspaces, listStatus, listWarning, reload } = useWorkspace();
   const activeWorkspaces = workspaces.filter((entry) => entry.lifecycleState === 'active');
   const archivedCount = workspaces.filter((entry) => entry.lifecycleState === 'archived').length;
@@ -35,7 +155,7 @@ export function WorkspaceSwitcher(): ReactNode {
   const pinnedIds = new Set(arrangement.pinnedWorkspaceIds);
   // Creating and arranging workspaces open over the page; they live outside the menu panel, which
   // unmounts when it closes.
-  const [dialog, setDialog] = useState<'create' | 'arrange' | null>(null);
+  const [dialog, setDialog] = useState<'create' | 'arrange' | 'all' | null>(null);
   const menuAction =
     (kind: 'create' | 'arrange', close: () => void): (() => void) =>
     () => {
@@ -94,7 +214,12 @@ export function WorkspaceSwitcher(): ReactNode {
             <Text variant="bodySmall">Workspaces</Text>
           </div>
 
-          <WorkspaceSearch workspaces={activeWorkspaces} row={row} close={close}>
+          <WorkspaceSearch
+            workspaces={activeWorkspaces}
+            row={row}
+            close={close}
+            inputRef={searchRef}
+          >
             <div className="max-h-72 overflow-y-auto py-1">
               {arranged.pinned.length > 0 ? (
                 <>
@@ -241,21 +366,8 @@ export function WorkspaceSwitcher(): ReactNode {
     setDialog(null);
   };
 
-  return (
+  const dialogs = (
     <>
-      <Menu label="Workspaces" items={items} className="w-80 max-w-[calc(100vw-1rem)]">
-        {(trigger) => (
-          <button
-            {...trigger}
-            // Starts with the visible name so voice control can say what it sees (WCAG 2.5.3).
-            aria-label={`${workspace.name}, workspace menu`}
-            className={`flex min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
-          >
-            <span className="truncate">{workspace.name}</span>
-            <Icon icon={ChevronDown} size="sm" />
-          </button>
-        )}
-      </Menu>
       {dialog === 'create' ? (
         <Dialog open title="New workspace" onClose={closeDialog}>
           <CreateWorkspaceForm onCreated={closeDialog} />
@@ -268,6 +380,8 @@ export function WorkspaceSwitcher(): ReactNode {
       ) : null}
     </>
   );
+
+  return { workspace, items, dialogs };
 }
 
 /**
@@ -279,8 +393,10 @@ function WorkspaceSearch({
   workspaces,
   row,
   close,
+  inputRef,
   children,
 }: {
+  readonly inputRef: RefObject<HTMLInputElement | null> | undefined;
   readonly workspaces: readonly Workspace[];
   readonly row: (entry: Workspace, close: () => void) => ReactNode;
   readonly close: () => void;
@@ -301,6 +417,7 @@ function WorkspaceSearch({
           type="search"
           aria-label="Search workspaces"
           placeholder="Search workspaces"
+          ref={inputRef}
           value={query}
           onChange={(event) => {
             setQuery(event.currentTarget.value);

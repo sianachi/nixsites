@@ -8,6 +8,7 @@ import { inNativeShell, switchServer, useInstallNix } from '@nix/web-platform/pw
 import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { usePendingSignOut } from './use-pending-sign-out';
 
 /**
@@ -25,13 +26,17 @@ import { usePendingSignOut } from './use-pending-sign-out';
 
 export interface ProfileMenuProps {
   readonly principal: CurrentPrincipalState;
+
+  /** An icon-only trigger, for the rail: the name stays as the accessible label. */
+  readonly compactTrigger?: boolean;
 }
 
-export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
+export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuProps): ReactNode {
   const { accountUrl } = useAuth();
   const pendingSignOut = usePendingSignOut();
   const { workspaceId } = useWorkspace();
   const install = useInstallNix();
+  const workspaceMenu = useWorkspaceMenuEntries();
 
   const name = principal.principal?.displayName ?? 'Loading…';
 
@@ -59,6 +64,9 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
         </div>
       ),
     },
+    { kind: 'separator' },
+    ...workspaceMenu.entries,
+    { kind: 'separator' },
     { kind: 'content', content: <ThemeChoice /> },
     // Kept here as well as on the nav rail. The rail makes workspace administration findable from
     // anywhere; this path keeps personal access tokens beside the identity they belong to.
@@ -121,15 +129,24 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
         {(trigger) => (
           <button
             {...trigger}
-            className={[
-              'flex items-center gap-1.5 border border-transparent px-2 py-1',
-              'text-xs text-muted pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg)',
-              `hover:bg-foreground/7 ${focusRing}`,
-            ].join(' ')}
+            title={compactTrigger ? name : undefined}
+            className={
+              compactTrigger
+                ? `flex size-(--rail-control) items-center justify-center rounded-md text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`
+                : [
+                    'flex items-center gap-1.5 border border-transparent px-2 py-1',
+                    'text-xs text-muted pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg)',
+                    `hover:bg-foreground/7 ${focusRing}`,
+                  ].join(' ')
+            }
           >
             <Icon icon={User} size="sm" />
-            <span className="max-w-[16ch] truncate max-lg:sr-only">{name}</span>
-            <Icon icon={ChevronDown} size="sm" className="max-lg:hidden" />
+            <span className={compactTrigger ? 'sr-only' : 'max-w-[16ch] truncate max-lg:sr-only'}>
+              {name}
+            </span>
+            {compactTrigger ? null : (
+              <Icon icon={ChevronDown} size="sm" className="max-lg:hidden" />
+            )}
           </button>
         )}
       </Menu>
@@ -140,6 +157,7 @@ export function ProfileMenu({ principal }: ProfileMenuProps): ReactNode {
       ) : null}
       {pendingSignOut.dialog}
       {install.dialog}
+      {workspaceMenu.dialogs}
     </>
   );
 }

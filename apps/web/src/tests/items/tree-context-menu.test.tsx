@@ -317,15 +317,22 @@ describe('the sidebar row context menu', () => {
     expect(screen.queryByRole('toolbar', { name: 'Selected items' })).not.toBeInTheDocument();
   });
 
-  it('toggles a row with Ctrl-click and opens beside with Alt-click', async () => {
+  it('opens in a new tab with Ctrl-click, selects with Shift-click and opens beside with Alt-click', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
+    const onOpenPinned = vi.fn();
     const onOpenBeside = vi.fn();
-    renderSidebar(treeOf(vi.fn()), null, { onSelect, onOpenBeside });
+    renderSidebar(treeOf(vi.fn()), null, { onSelect, onOpenPinned, onOpenBeside });
 
     await user.keyboard('{Control>}');
-    await user.click(screen.getByRole('button', { name: 'First' }));
+    await user.click(screen.getByRole('button', { name: 'Second' }));
     await user.keyboard('{/Control}');
+    expect(onOpenPinned).toHaveBeenCalledWith(ROOT_B.id);
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
+
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByRole('button', { name: 'First' }));
+    await user.keyboard('{/Shift}');
     expect(screen.getByText('1 selected')).toBeVisible();
     expect(onSelect).not.toHaveBeenCalled();
     expect(onOpenBeside).not.toHaveBeenCalled();
