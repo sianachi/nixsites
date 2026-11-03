@@ -344,6 +344,24 @@ export function DocumentTabStrip({
           'bg-accent/10 outline-2 -outline-offset-2 outline-accent',
       )}
     >
+      {/* First, before the tabs, so it stays in place when the layout flips. The icon names the
+       *destination* layout, the same convention the sidebar's own collapse control uses. */}
+      {portraitTablet ? null : (
+        <button
+          type="button"
+          aria-label={
+            orientation === 'vertical' ? 'Show tabs across the top' : 'Show tabs on the side'
+          }
+          onClick={orientationToggled}
+          className={cn(
+            'flex shrink-0 items-center justify-center self-start rounded-md p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
+            focusRing,
+            inkWashStates,
+          )}
+        >
+          <Icon icon={orientation === 'vertical' ? PanelTop : PanelLeft} size="sm" />
+        </button>
+      )}
       <Tabs
         label="Open documents"
         items={items}
@@ -380,7 +398,7 @@ export function DocumentTabStrip({
               },
             }
           : {})}
-        className="min-w-0 flex-1"
+        className={orientation === 'horizontal' ? 'min-w-0' : 'min-w-0 flex-1'}
       />
 
       {portraitTablet ? (
@@ -451,24 +469,6 @@ export function DocumentTabStrip({
               })}
             </Select>
           ) : null}
-
-          {/* Beside the strip it changes, not in a settings screen this product does not have one
-            of. The icon names the *destination* layout, the same convention the sidebar's own
-            collapse control uses. */}
-          <button
-            type="button"
-            aria-label={
-              orientation === 'vertical' ? 'Show tabs across the top' : 'Show tabs on the side'
-            }
-            onClick={orientationToggled}
-            className={cn(
-              'flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
-              focusRing,
-              inkWashStates,
-            )}
-          >
-            <Icon icon={orientation === 'vertical' ? PanelTop : PanelLeft} size="sm" />
-          </button>
         </div>
       )}
 

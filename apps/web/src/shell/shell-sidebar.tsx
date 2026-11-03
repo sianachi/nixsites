@@ -10,6 +10,7 @@ import type { Sidebar } from '@nix/web-foundation/layout/use-sidebar';
 import { WorkspaceSidebar } from '../items/workspace-sidebar';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
+import { TITLE_ROW_LEAD_ID } from '../tabs/title-row-slot';
 
 export interface ShellSidebarProps {
   readonly narrow: boolean;
@@ -121,6 +122,10 @@ export function ShellSidebar({
             width={sidebar.width}
             onPreview={(width) => {
               sidebarRef.current?.style.setProperty('width', `${String(width)}px`);
+              // The title row's leading controls follow, so the tabs keep starting over the page.
+              document
+                .getElementById(TITLE_ROW_LEAD_ID)
+                ?.style.setProperty('width', `${String(width)}px`);
             }}
             onCommit={sidebar.resize}
           />

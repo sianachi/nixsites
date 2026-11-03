@@ -15,6 +15,7 @@ const settingShapes = {
   'sites.publishingEnabled': z.boolean(),
   'graph.openMode': z.enum(['page', 'dialog', 'beside', 'tab']),
   'shell.statusBar': z.boolean(),
+  'shell.iconStrip': z.boolean(),
 } as const;
 
 /** Stored settings: a key the person never set is absent, and keys a newer server adds are dropped. */
@@ -35,6 +36,7 @@ export const uiSettingsPatchSchema = z.object({
   'sites.publishingEnabled': settingShapes['sites.publishingEnabled'].nullable().optional(),
   'graph.openMode': settingShapes['graph.openMode'].nullable().optional(),
   'shell.statusBar': settingShapes['shell.statusBar'].nullable().optional(),
+  'shell.iconStrip': settingShapes['shell.iconStrip'].nullable().optional(),
 });
 
 export const uiSettingsResponseSchema = z.object({

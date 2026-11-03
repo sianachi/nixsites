@@ -87,7 +87,7 @@ describe('workspace-scoped routing', () => {
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: 'Workspaces' })).not.toBeInTheDocument();
     });
-    expect(await screen.findByRole('complementary', { name: 'Explorer' })).toHaveTextContent(
+    expect(await screen.findByRole('banner', { name: 'Workspace controls' })).toHaveTextContent(
       SHARED.name,
     );
   });

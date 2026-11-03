@@ -41,6 +41,7 @@ public static class UiSettingsValidation
         ["sites.publishingEnabled"] = null,
         ["graph.openMode"] = ["page", "dialog", "beside", "tab"],
         ["shell.statusBar"] = null,
+        ["shell.iconStrip"] = null,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     // The shape of a setting name such as "editor.pageGuides"; a null patch value may delete any name of this shape.

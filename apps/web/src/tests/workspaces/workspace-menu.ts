@@ -2,11 +2,12 @@ import { screen, waitFor } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-/** The profile menu's trigger, last on the icon strip, which carries the workspace list. */
+/** The profile menu's trigger, last in the title row, which carries the workspace list. */
 export function profileTrigger(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(
-    'nav[aria-label="Destinations"] li:last-child button[aria-haspopup]',
+  const triggers = document.querySelectorAll<HTMLElement>(
+    'header[aria-label="Workspace controls"] button[aria-haspopup]',
   );
+  return triggers[triggers.length - 1] ?? null;
 }
 
 export async function openProfileMenu(user: UserEvent): Promise<void> {

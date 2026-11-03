@@ -11,7 +11,6 @@ import {
 } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
-import { profileTrigger } from '../workspaces/workspace-menu';
 import { App } from '../../app';
 
 /**
@@ -56,12 +55,7 @@ describe('the navigation rail', () => {
     await screen.findByRole('button', { name: 'Acquisition memo' });
 
     const items = within(rail()).getAllByRole('listitem');
-    // Search and the bell sit above the destinations and carry their names as labels, not text.
-    expect(within(rail()).getByRole('button', { name: 'Search' })).toBeInTheDocument();
-    expect(within(rail()).getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
     expect(items.map((item) => item.textContent)).toEqual([
-      '',
-      '',
       'Homebase',
       'Daily notes',
       'Calendar',
@@ -69,12 +63,11 @@ describe('the navigation rail', () => {
       'Bookmarks',
       'Templates',
       'Smart lists',
+      'Workspaces',
       'Automations',
       'Trash',
       'Import',
       'Settings',
-      // The profile menu, last on the strip; its trigger names the person.
-      expect.any(String),
     ]);
     expect(within(rail()).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'href',
@@ -169,16 +162,11 @@ describe('the navigation rail', () => {
     expect(importControl).toHaveAttribute('tabindex', '-1');
     expect(settings).toHaveAttribute('tabindex', '-1');
 
-    // Tab reaches the skip link, then Search and the bell, then the destinations as one stop.
-    await user.tab();
-    await user.tab();
+    // Tab reaches the skip link, then the rail, then leaves it - every destination, one stop.
     await user.tab();
     await user.tab();
     expect(calendar).toHaveFocus();
 
-    // Next is the profile menu at the foot of the strip, then out of the rail.
-    await user.tab();
-    expect(profileTrigger()).toHaveFocus();
     await user.tab();
     expect(rail()).not.toContainElement(document.activeElement as HTMLElement | null);
   });
@@ -196,6 +184,7 @@ describe('the navigation rail', () => {
     const graph = within(rail()).getByRole('link', { name: 'Graph' });
     const templates = within(rail()).getByRole('link', { name: 'Templates' });
     const queries = within(rail()).getByRole('button', { name: 'Smart lists' });
+    const workspaces = within(rail()).getByRole('link', { name: 'Workspaces' });
     const automations = within(rail()).getByRole('link', { name: 'Automations' });
     const trash = within(rail()).getByRole('link', { name: 'Trash' });
     const importControl = within(rail()).getByRole('button', { name: 'Import' });
@@ -227,6 +216,9 @@ describe('the navigation rail', () => {
     expect(queries).toHaveFocus();
 
     // The Smart lists menu's trigger is one of the rail's stops, not a trap: the arrows pass it by.
+    await user.keyboard('{ArrowDown}');
+    expect(workspaces).toHaveFocus();
+
     await user.keyboard('{ArrowDown}');
     expect(automations).toHaveFocus();
 
@@ -377,6 +369,33 @@ describe('the navigation rail', () => {
  * `viewport.ts`'s `useNarrowViewport` takes when its window query does not match - the same technique, and
  * the same helper, `sidebar.test.tsx` uses for the drawer.
  */
+describe('the Workspaces destination', () => {
+  it('opens the workspace list and is current there', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [NOTE] });
+    renderAt(<App />);
+
+    await user.click(
+      await within(await screen.findByRole('navigation', { name: /destinations/i })).findByRole(
+        'link',
+        { name: 'Workspaces' },
+      ),
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
+    expect(within(rail()).getByRole('link', { name: 'Workspaces' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const list = screen.getByRole('list', { name: 'Your workspaces' });
+    expect(within(list).getByRole('link', { name: STUB_WORKSPACE.name })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('button', { name: 'New workspace…' })).toBeVisible();
+  });
+});
+
 describe('the navigation rail on a narrow screen', () => {
   it('reclaims the rail space until workspace navigation is opened', async () => {
     stubViewport(false);
@@ -387,10 +406,10 @@ describe('the navigation rail on a narrow screen', () => {
     await userEvent.click(await screen.findByRole('button', { name: /show the explorer/i }));
     expect(within(rail()).queryByRole('link')).not.toBeInTheDocument();
     await userEvent.click(within(rail()).getByRole('button', { name: 'Homebase' }));
-    // Nine destinations and "New smart list", which the Smart lists section folds into this one menu.
+    // Ten destinations and "New smart list", which the Smart lists section folds into this one menu.
     expect(
       screen.getByRole('menu', { name: 'Workspace pages' }).querySelectorAll('a'),
-    ).toHaveLength(10);
+    ).toHaveLength(11);
     expect(screen.getByRole('menuitem', { name: 'New smart list' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001/new/query',

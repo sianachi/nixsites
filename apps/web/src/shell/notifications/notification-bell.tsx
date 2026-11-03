@@ -25,7 +25,7 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
         aria-label={hasUnread ? `Notifications, ${String(unread)} unread` : 'Notifications'}
         className={`relative flex size-(--rail-control) shrink-0 items-center justify-center rounded-md text-muted max-sm:min-h-(--control-lg) max-sm:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
       >
-        <Icon icon={Bell} size="sm" />
+        <Icon icon={Bell} size="md" />
         {hasUnread ? (
           <span
             aria-hidden="true"

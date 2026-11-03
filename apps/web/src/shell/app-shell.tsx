@@ -46,13 +46,14 @@ import { CapabilitiesProvider } from '@nix/web-platform/session/capabilities-con
 import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
+import { useIconStripPreference } from '@nix/web-foundation/lib/icon-strip-preference';
 import { useDrawerNavigation, useLayoutKind } from '@nix/web-foundation/layout/viewport';
 import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
 import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import { useTemplates } from '@nix/web-templates/templates/use-templates';
 import { TemplateLibraryProvider } from '@nix/web-templates/templates/template-library-context';
-import { ShellHeader } from './shell-header';
+import { ShellHeader, type HeaderAccount } from './shell-header';
 import { PhoneNavbar } from './phone/phone-navbar';
 import { PhoneTopRow } from './phone/phone-top-row';
 import { TabSwitcher } from './phone/tab-switcher';
@@ -183,6 +184,7 @@ export function AppShell(): ReactNode {
   const toggleBookmark = useBookmarksStore((state) => state.toggle);
   const selectedIsKept = useIsKept(selectedId);
   const sidebar = useSidebar(narrow);
+  const iconStrip = useIconStripPreference((state) => state.enabled);
   useEdgeSwipeOpen('left', narrow && !sidebar.visible, sidebar.toggle);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
@@ -585,6 +587,18 @@ export function AppShell(): ReactNode {
     };
   }, [navRendered]);
 
+  // The wide layout's Search, bell and profile, at the right of the title row.
+  const account: HeaderAccount = {
+    principal,
+    unreadNotifications: notificationsInbox.unread,
+    onOpenSearch: () => {
+      setSearchOpen(true);
+    },
+    onOpenInbox: () => {
+      setInboxOpen(true);
+    },
+  };
+
   return (
     // design-token-exempt: device safe-area insets protect content in portrait and landscape.
     <div
@@ -684,20 +698,10 @@ export function AppShell(): ReactNode {
           `min-h-0` so this row can shrink inside the `h-dvh` column, which is what gives the pane
           row underneath a definite height to scroll against. */}
       <div className="flex min-h-0 flex-1">
-        {!zen && !narrow ? (
+        {!zen && !narrow && iconStrip ? (
           <NavRail
             onImport={() => {
               setWorkspaceImportOpen(true);
-            }}
-            account={{
-              principal,
-              unreadNotifications: notificationsInbox.unread,
-              onOpenSearch: () => {
-                setSearchOpen(true);
-              },
-              onOpenInbox: () => {
-                setInboxOpen(true);
-              },
             }}
           />
         ) : null}
@@ -718,6 +722,8 @@ export function AppShell(): ReactNode {
                   sidebarVisible={sidebar.visible}
                   sidebarToggleRef={sidebarToggleRef}
                   onToggleSidebar={sidebar.toggle}
+                  explorerWidth={sidebar.visible && !narrow ? sidebar.width : null}
+                  account={account}
                 />
               )}
             </div>
@@ -801,35 +807,39 @@ export function AppShell(): ReactNode {
                 block for `position: fixed`, so a fixed drag overlay still covers the viewport
                 geometrically - this only stops it from painting above chrome that lives outside
                 `<main>`. */}
-                <main
-                  ref={mainRef}
-                  id="main"
-                  tabIndex={-1}
-                  inert={narrow && sidebar.visible && !zen}
-                  className={`isolate flex flex-1 ${paneClip}`}
-                >
-                  {/* Mutable server-owned template state has its own subscribed context. Router
+                {/* The status bar sits under the content column only, not under the Explorer. */}
+                <div className={`flex min-w-0 flex-1 flex-col ${paneClip}`}>
+                  <main
+                    ref={mainRef}
+                    id="main"
+                    tabIndex={-1}
+                    inert={narrow && sidebar.visible && !zen}
+                    className={`isolate flex flex-1 ${paneClip}`}
+                  >
+                    {/* Mutable server-owned template state has its own subscribed context. Router
                   Outlet context is retained for shell-owned navigation state only, so an async
                   catalog response cannot leave a mounted screen holding the initial capability
                   snapshot. */}
-                  <TemplateLibraryProvider library={templateLibrary}>
-                    <CapabilitiesProvider value={capabilities}>
-                      <ItemDialogProvider tree={tree}>
-                        <Outlet
-                          context={
-                            {
-                              tree,
-                              selectedId,
-                              openImport: () => {
-                                setWorkspaceImportOpen(true);
-                              },
-                            } satisfies ShellContext
-                          }
-                        />
-                      </ItemDialogProvider>
-                    </CapabilitiesProvider>
-                  </TemplateLibraryProvider>
-                </main>
+                    <TemplateLibraryProvider library={templateLibrary}>
+                      <CapabilitiesProvider value={capabilities}>
+                        <ItemDialogProvider tree={tree}>
+                          <Outlet
+                            context={
+                              {
+                                tree,
+                                selectedId,
+                                openImport: () => {
+                                  setWorkspaceImportOpen(true);
+                                },
+                              } satisfies ShellContext
+                            }
+                          />
+                        </ItemDialogProvider>
+                      </CapabilitiesProvider>
+                    </TemplateLibraryProvider>
+                  </main>
+                  {statusBarShown ? <StatusBar tree={tree} itemId={selectedId} /> : null}
+                </div>
               </ItemCommandsProvider>
             </div>
           )}
@@ -845,7 +855,6 @@ export function AppShell(): ReactNode {
             keyboard is up, when the room is better spent on the text being typed. */}
         {keyboardVisible || zen ? null : <MiniPlayer onOpen={openPinned} />}
         {zen ? null : <PwaControls />}
-        {statusBarShown ? <StatusBar tree={tree} itemId={selectedId} /> : null}
         {navRendered && phone ? (
           <PhoneNavbar
             {...phoneMenu}

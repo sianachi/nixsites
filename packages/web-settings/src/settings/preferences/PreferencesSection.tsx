@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react';
 
+import { useIconStripPreference } from '@nix/web-foundation/lib/icon-strip-preference';
 import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
@@ -12,10 +13,19 @@ export function PreferencesSection(): ReactElement {
   const setPublishing = usePublishingPreference((state) => state.setEnabled);
   const statusBar = useStatusBarPreference((state) => state.enabled);
   const setStatusBar = useStatusBarPreference((state) => state.setEnabled);
+  const iconStrip = useIconStripPreference((state) => state.enabled);
+  const setIconStrip = useIconStripPreference((state) => state.setEnabled);
 
   return (
     <>
       <SettingsSection title="Appearance">
+        <PreferenceToggle
+          label="Show icon strip"
+          checked={iconStrip}
+          onChange={setIconStrip}
+          description="The strip of destinations down the left on a wide screen"
+          unsaved={null}
+        />
         <PreferenceToggle
           label="Show status bar"
           checked={statusBar}
