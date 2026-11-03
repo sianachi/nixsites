@@ -28,6 +28,7 @@ import { usePanes } from '@nix/web-platform/panes/pane-state';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { automationsHref } from '@nix/web-collections/items/automation-url';
 import { CommandPalette } from '../search/command-palette';
+import { OPEN_NEW_TAB_PICKER_EVENT, OPEN_TAB_SWITCHER_EVENT } from '../tabs/new-tab-picker';
 import { builtInCommands } from '../search/commands';
 import {
   useBookmarksLoader,
@@ -40,11 +41,12 @@ import { useOpenDailyOnLaunch } from '@nix/web-workspaces/launch/use-open-daily-
 import { useUiSettingsSync } from '@nix/web-settings/settings/shared/use-ui-settings-sync';
 import { DailyCaptureDialog } from '../daily-notes/daily-capture-dialog';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { CapabilitiesProvider } from '@nix/web-platform/session/capabilities-context';
 import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-principal';
 import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
-import { useDrawerNavigation } from '@nix/web-foundation/layout/viewport';
+import { useDrawerNavigation, useLayoutKind } from '@nix/web-foundation/layout/viewport';
 import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
 import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
@@ -59,6 +61,8 @@ import { usePhoneTabs } from './phone/use-phone-tabs';
 import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';
+import { StatusBar } from './status-bar';
+import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { NotificationInboxPanel } from './notifications/notification-inbox-panel';
 import { useNotificationsInbox } from './notifications/use-notifications-inbox';
 import { ShellSidebar } from './shell-sidebar';
@@ -208,13 +212,41 @@ export function AppShell(): ReactNode {
   const [inboxOpen, setInboxOpen] = useState(false);
   const phone = usePhone();
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [newTabOpen, setNewTabOpen] = useState(false);
+  useEffect(() => {
+    const open = (): void => {
+      setNewTabOpen(true);
+    };
+    const openSwitcher = (): void => {
+      setTabsOpen(true);
+    };
+    window.addEventListener(OPEN_NEW_TAB_PICKER_EVENT, open);
+    window.addEventListener(OPEN_TAB_SWITCHER_EVENT, openSwitcher);
+    return () => {
+      window.removeEventListener(OPEN_NEW_TAB_PICKER_EVENT, open);
+      window.removeEventListener(OPEN_TAB_SWITCHER_EVENT, openSwitcher);
+    };
+  }, []);
+  // Both tablet layouts take the phone's touch sizes through one root attribute (theme.css).
+  const layout = useLayoutKind();
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (layout === 'tablet-portrait' || layout === 'tablet-landscape')
+      root.dataset.layout = 'touch';
+    else delete root.dataset.layout;
+    return () => {
+      delete root.dataset.layout;
+    };
+  }, [layout]);
   const phoneTabs = usePhoneTabs(selectedId);
   const notificationsInbox = useNotificationsInbox();
   const petEntry = usePetNavEntry();
   useBackDismiss(
-    narrow && (sidebar.visible || searchOpen || workspaceImportOpen || inboxOpen || tabsOpen),
+    narrow &&
+      (sidebar.visible || searchOpen || newTabOpen || workspaceImportOpen || inboxOpen || tabsOpen),
     () => {
       setTabsOpen(false);
+      setNewTabOpen(false);
       setWorkspaceImportOpen(false);
       setSearchOpen(false);
       setInboxOpen(false);
@@ -437,9 +469,25 @@ export function AppShell(): ReactNode {
    * find or a silent failure - which is how people end up with six items called "Untitled".
    */
   function createUntitledNote(): void {
-    void tree.create(null, 'Untitled note').then((outcome) => {
+    createNote('Untitled note', openPreview);
+  }
+
+  /** Keeps the note on screen as a tab (a preview would be replaced), then opens another beside it. */
+  function openInNewTab(itemId: string): void {
+    if (selectedId !== null && selectedId !== itemId)
+      useTabStore.getState().tabPinned(0, selectedId);
+    openPinned(itemId);
+  }
+
+  /** The new-tab picker's last row: a note titled with the query, opened in its own tab. */
+  function createNoteInNewTab(title: string): void {
+    createNote(title, openInNewTab);
+  }
+
+  function createNote(title: string, open: (itemId: string) => void): void {
+    void tree.create(null, title).then((outcome) => {
       if (outcome.id !== null) {
-        openPreview(outcome.id);
+        open(outcome.id);
         return;
       }
 
@@ -492,6 +540,8 @@ export function AppShell(): ReactNode {
   // never survives past the layout it was measured for.
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
   const navRendered = narrow && !keyboardVisible && !zen;
+  const statusBarOn = useStatusBarPreference((state) => state.enabled);
+  const statusBarShown = statusBarOn && !narrow && !keyboardVisible && !zen;
   // What the phone's bottom bar and top row share: the destinations that have no room of their own.
   const phoneMenu = {
     workspaceId,
@@ -639,6 +689,16 @@ export function AppShell(): ReactNode {
             onImport={() => {
               setWorkspaceImportOpen(true);
             }}
+            account={{
+              principal,
+              unreadNotifications: notificationsInbox.unread,
+              onOpenSearch: () => {
+                setSearchOpen(true);
+              },
+              onOpenInbox: () => {
+                setInboxOpen(true);
+              },
+            }}
           />
         ) : null}
 
@@ -657,16 +717,7 @@ export function AppShell(): ReactNode {
                 <ShellHeader
                   sidebarVisible={sidebar.visible}
                   sidebarToggleRef={sidebarToggleRef}
-                  workspaceId={workspaceId}
-                  principal={principal}
-                  unreadNotifications={notificationsInbox.unread}
                   onToggleSidebar={sidebar.toggle}
-                  onOpenSearch={() => {
-                    setSearchOpen(true);
-                  }}
-                  onOpenInbox={() => {
-                    setInboxOpen(true);
-                  }}
                 />
               )}
             </div>
@@ -794,6 +845,7 @@ export function AppShell(): ReactNode {
             keyboard is up, when the room is better spent on the text being typed. */}
         {keyboardVisible || zen ? null : <MiniPlayer onOpen={openPinned} />}
         {zen ? null : <PwaControls />}
+        {statusBarShown ? <StatusBar tree={tree} itemId={selectedId} /> : null}
         {navRendered && phone ? (
           <PhoneNavbar
             {...phoneMenu}
@@ -843,7 +895,7 @@ export function AppShell(): ReactNode {
           activeId={selectedId}
           tree={tree}
           onNew={() => {
-            setCaptureOpen(true);
+            setNewTabOpen(true);
           }}
           onClose={() => {
             setTabsOpen(false);
@@ -926,6 +978,17 @@ export function AppShell(): ReactNode {
         onSelectItem={openPreview}
         onClose={() => {
           setSearchOpen(false);
+        }}
+      />
+
+      <CommandPalette
+        key={`new-tab:${workspaceId}`}
+        open={newTabOpen}
+        commands={[]}
+        onSelectItem={openInNewTab}
+        onCreateNote={createNoteInNewTab}
+        onClose={() => {
+          setNewTabOpen(false);
         }}
       />
 

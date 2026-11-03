@@ -1,25 +1,14 @@
 import { Icon, chromeSurface, focusRing } from '@nix/ui';
-import { Maximize2, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { type ReactNode, type RefObject } from 'react';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 
-import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
-import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
-import { WorkspaceSwitcher } from '@nix/web-workspaces/workspaces/workspace-switcher';
-import { shortcutFor } from '@nix/web-foundation/keyboard/shortcut-registry';
-import { toggleZenMode } from '@nix/web-foundation/lib/zen-mode';
-import { NotificationBell } from './notifications/notification-bell';
-import { ProfileMenu } from './profile-menu';
+import { TITLE_ROW_TABS_ID } from '../tabs/title-row-slot';
 
 export interface ShellHeaderProps {
   readonly sidebarVisible: boolean;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
-  readonly workspaceId: string;
-  readonly principal: CurrentPrincipalState;
-  readonly unreadNotifications: number;
   readonly onToggleSidebar: () => void;
-  readonly onOpenSearch: () => void;
-  readonly onOpenInbox: () => void;
 }
 
 /**
@@ -48,23 +37,24 @@ const TITLE_BAR_OVERLAY = [
   '[@media(display-mode:window-controls-overlay)]:[&_:is(a,button,input,select,[role=button],[role=combobox],[tabindex])]:[-webkit-app-region:no-drag]',
 ].join(' ');
 
-const SEARCH_KEYS = shortcutFor('search').keys;
+const TITLE_BUTTON = `mb-0.5 flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`;
 
-/** The persistent shell controls that remain visible while the workspace tree changes shape. */
+/**
+ * The title row: the explorer toggle, back and forward, and the first pane's tabs, all on the
+ * sheet colour so the tabs rise out of it onto the page. Search, the bell, the profile menu and
+ * Zen are not here: the first three are on the icon strip, Zen is in the note's menu and the
+ * command palette.
+ */
 export function ShellHeader({
   sidebarVisible,
   sidebarToggleRef,
-  workspaceId,
-  principal,
-  unreadNotifications,
   onToggleSidebar,
-  onOpenSearch,
-  onOpenInbox,
 }: ShellHeaderProps): ReactNode {
+  const navigate = useNavigate();
   return (
     <header
       aria-label="Workspace controls"
-      className={`flex min-w-0 shrink-0 items-center gap-1.5 px-2 py-2 sm:gap-3 sm:px-4 ${chromeSurface} ${TITLE_BAR_OVERLAY}`}
+      className={`flex min-w-0 shrink-0 items-end gap-1 bg-surface px-2 pt-1.5 ${chromeSurface} ${TITLE_BAR_OVERLAY}`}
     >
       {/* Next to the tree it opens and closes, rather than inside it - a control that vanishes
           with the thing it controls cannot bring it back. */}
@@ -74,52 +64,33 @@ export function ShellHeader({
         aria-label={sidebarVisible ? 'Hide the Explorer' : 'Show the Explorer'}
         aria-expanded={sidebarVisible}
         onClick={onToggleSidebar}
-        className={`flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted max-sm:min-h-(--control-lg) max-sm:min-w-(--control-lg) any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
+        className={TITLE_BUTTON}
       >
         <Icon icon={sidebarVisible ? PanelLeftClose : PanelLeftOpen} size="sm" />
       </button>
 
-      <Link
-        to={`/w/${workspaceId}`}
-        aria-label="Nix home"
-        className={`hidden size-(--control-sm) items-center justify-center rounded-md border border-divider font-heading text-xs sm:inline-flex ${focusRing}`}
-      >
-        NX
-      </Link>
-
-      <WorkspaceSwitcher />
-
       <button
         type="button"
-        onClick={onOpenSearch}
-        aria-label="Search"
-        className={`ml-auto hidden w-56 shrink-0 lg:flex items-center gap-2 rounded-md bg-surface px-2 py-1.5 text-xs text-muted hover:bg-foreground/7 sm:px-3 ${focusRing}`}
+        aria-label="Back"
+        onClick={() => {
+          void navigate(-1);
+        }}
+        className={TITLE_BUTTON}
       >
-        <Icon icon={Search} size="sm" />
-        <span className="hidden flex-1 text-left sm:inline">Search</span>
-        {/* The shortcut is shown rather than hidden in a tooltip: a shortcut nobody can discover
-            is a shortcut nobody uses. */}
-        <kbd className="hidden font-mono text-xs text-muted md:inline">
-          {SEARCH_KEYS.map((keys) => formatShortcut(keys)).join(' ')}
-        </kbd>
+        <Icon icon={ChevronLeft} size="sm" />
       </button>
-
-      <div className="hidden lg:block">
-        <NotificationBell unread={unreadNotifications} onClick={onOpenInbox} />
-      </div>
-
       <button
         type="button"
-        aria-label="Enter Zen mode"
-        title="Enter Zen mode"
-        onClick={toggleZenMode}
-        // Below `lg` Search is hidden, so this is the first of the trailing controls.
-        className={`flex size-(--control-sm) shrink-0 max-lg:ml-auto items-center justify-center rounded-md text-muted max-sm:min-h-(--control-lg) max-sm:min-w-(--control-lg) any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
+        aria-label="Forward"
+        onClick={() => {
+          void navigate(1);
+        }}
+        className={TITLE_BUTTON}
       >
-        <Icon icon={Maximize2} size="sm" />
+        <Icon icon={ChevronRight} size="sm" />
       </button>
 
-      <ProfileMenu principal={principal} />
+      <div id={TITLE_ROW_TABS_ID} className="ml-1 flex min-w-0 flex-1" />
     </header>
   );
 }

@@ -18,7 +18,8 @@ function reminder(n: number): ShellToast {
 function setup(toasts: readonly ShellToast[], phone: boolean) {
   // No width query matches -> the narrow (phone) arrangement; all matching -> desktop.
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: !phone,
+    // Desktop is a mouse in a landscape window: only the width queries match.
+    matches: !phone && !/pointer|orientation/.test(query),
     media: query,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),

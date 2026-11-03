@@ -1,9 +1,9 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
+import { setZenMode, toggleZenMode } from '@nix/web-foundation/lib/zen-mode';
 import { item, stubCoreApi, STUB_WORKSPACE_ID } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
@@ -31,14 +31,17 @@ describe('Zen on workspace pages', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/w/${STUB_WORKSPACE_ID}${path}`);
 
-    const enter = await screen.findByRole('button', { name: 'Enter Zen mode' });
-    const main = screen.getByRole('main');
-    await user.click(enter);
+    await screen.findByRole('main');
+    // Zen is in the note's menu and the command palette, not the title row: drive it directly.
+    await screen.findByRole('banner', { name: 'Workspace controls' });
+    act(() => {
+      toggleZenMode();
+    });
 
     expect(screen.queryByRole('banner', { name: 'Workspace controls' })).not.toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(main.contains(document.activeElement)).toBe(true);
+      expect(screen.getByRole('main').contains(document.activeElement)).toBe(true);
     });
     const exit = screen.getByRole('button', { name: 'Exit Zen mode' });
     expect(exit).toBeVisible();
@@ -46,7 +49,6 @@ describe('Zen on workspace pages', () => {
     await user.click(exit);
 
     expect(screen.getByRole('banner', { name: 'Workspace controls' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enter Zen mode' })).toBeVisible();
   });
 
   it('leaves the selected container view mounted while its controls step aside', async () => {
@@ -74,11 +76,8 @@ describe('Zen on workspace pages', () => {
     const row = await screen.findByRole('rowheader', { name: child.title });
     const title = screen.getByRole('textbox', { name: 'Note title' });
     expect(title).toHaveClass('text-lg');
-    await user.click(
-      within(screen.getByRole('banner', { name: 'Workspace controls' })).getByRole('button', {
-        name: 'Enter Zen mode',
-      }),
-    );
+    await user.click(await screen.findByRole('button', { name: 'Item actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Enter Zen mode' }));
 
     expect(screen.getByRole('rowheader', { name: child.title })).toBe(row);
     expect(title).toHaveValue(parent.title);
@@ -114,7 +113,13 @@ describe('Zen on workspace pages', () => {
   it('lets Escape close a search dialog before it leaves Zen', async () => {
     const user = userEvent.setup();
     renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/calendar`);
-    await user.click(await screen.findByRole('button', { name: 'Enter Zen mode' }));
+    await screen.findByRole('banner', { name: 'Workspace controls' });
+    act(() => {
+      toggleZenMode();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('main').contains(document.activeElement)).toBe(true);
+    });
     await user.keyboard('{Control>}k{/Control}');
     expect(screen.getByRole('dialog', { name: /Search/ })).toBeInTheDocument();
     // jsdom does not translate Escape into a native dialog cancel.

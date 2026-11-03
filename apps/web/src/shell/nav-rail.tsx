@@ -1,4 +1,7 @@
 import { Button, Icon, Menu, Text, chromeSurface, focusRing, type MenuEntry } from '@nix/ui';
+import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
+import { NotificationBell } from './notifications/notification-bell';
+import { ProfileMenu } from './profile-menu';
 import {
   Bookmark,
   CalendarClock,
@@ -11,6 +14,7 @@ import {
   ListFilterPlus,
   Network,
   PawPrint,
+  Search,
   Settings,
   Trash2,
   Zap,
@@ -190,9 +194,27 @@ export interface NavRailProps {
   /** Opens the workspace-level import flow. It is an action, so it does not change the address. */
   readonly onImport: () => void;
   readonly compact?: boolean;
+
+  /**
+   * The wide layout's own controls: Search and the bell above the destinations, the profile menu
+   * at the foot. Absent in the compact drawer menu, where the phone shell carries all three.
+   */
+  readonly account?: {
+    readonly principal: CurrentPrincipalState;
+    readonly unreadNotifications: number;
+    readonly onOpenSearch: () => void;
+    readonly onOpenInbox: () => void;
+  };
 }
 
-export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps): ReactNode {
+const RAIL_BUTTON = `flex size-(--rail-control) items-center justify-center rounded-md text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`;
+
+export function NavRail({
+  onNavigate,
+  onImport,
+  compact = false,
+  account,
+}: NavRailProps): ReactNode {
   const { pathname } = useLocation();
   const { selectedId } = useSelectedItem();
   const { workspaceId, workspace } = useWorkspace();
@@ -343,9 +365,30 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
     // one way to move around and "navigation, navigation" is not a landmark list anybody can use.
     <nav
       aria-label="Destinations"
-      className={`flex min-h-0 shrink-0 overflow-y-auto overscroll-contain border-r border-divider bg-surface ${chromeSurface}`}
+      className={`flex min-h-0 shrink-0 overflow-y-auto overscroll-contain bg-surface ${chromeSurface}`}
     >
-      <ul className="flex min-h-0 flex-1 list-none flex-col items-center gap-1 px-1 py-2 max-lg:items-stretch max-lg:px-2">
+      <ul className="flex min-h-0 flex-1 list-none flex-col items-center gap-1.5 px-1.5 py-2 max-lg:items-stretch max-lg:px-2">
+        {account ? (
+          <>
+            <li>
+              <button
+                type="button"
+                aria-label="Search"
+                title="Search"
+                onClick={account.onOpenSearch}
+                className={RAIL_BUTTON}
+              >
+                <Icon icon={Search} size="sm" />
+              </button>
+            </li>
+            <li>
+              <NotificationBell
+                unread={account.unreadNotifications}
+                onClick={account.onOpenInbox}
+              />
+            </li>
+          </>
+        ) : null}
         {items.map((item, index) => {
           const current = index === currentIndex;
           const startsUtilityGroup =
@@ -362,7 +405,7 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
               setFocusedIndex(index);
             },
           };
-          const className = `flex size-(--control-lg) items-center justify-center gap-3 rounded-md max-lg:h-(--control-lg) max-lg:w-full max-lg:justify-start max-lg:px-3 ${focusRing} ${
+          const className = `flex size-(--rail-control) items-center justify-center gap-3 rounded-md max-lg:h-(--control-lg) max-lg:w-full max-lg:justify-start max-lg:px-3 ${focusRing} ${
             current
               ? // The wash is a filled shape where the others have none, so the current
                 // destination is not told apart by hue alone even before `aria-current`.
@@ -482,6 +525,11 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
             </li>
           );
         })}
+        {account ? (
+          <li>
+            <ProfileMenu principal={account.principal} compactTrigger />
+          </li>
+        ) : null}
       </ul>
     </nav>
   );

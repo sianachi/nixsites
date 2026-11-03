@@ -332,7 +332,23 @@ export function OpenItem({
           className={`transition-transform duration-200 motion-reduce:transition-none ${quickOpen ? 'rotate-180' : ''}`}
         />
       </Button>
-      <Menu label="Item actions" items={actionEntries}>
+      <Menu
+        label="Item actions"
+        items={
+          zenAvailable
+            ? [
+                ...actionEntries,
+                // The phone's sheet carries its own Zen button, so the entry is added here only.
+                {
+                  kind: 'action',
+                  label: 'Enter Zen mode',
+                  icon: Maximize2,
+                  onSelect: toggleZenMode,
+                },
+              ]
+            : actionEntries
+        }
+      >
         {(trigger) => (
           <Button
             {...trigger}

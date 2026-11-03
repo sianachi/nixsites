@@ -11,6 +11,7 @@ import {
 } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
+import { profileTrigger } from '../workspaces/workspace-menu';
 import { App } from '../../app';
 
 /**
@@ -55,7 +56,12 @@ describe('the navigation rail', () => {
     await screen.findByRole('button', { name: 'Acquisition memo' });
 
     const items = within(rail()).getAllByRole('listitem');
+    // Search and the bell sit above the destinations and carry their names as labels, not text.
+    expect(within(rail()).getByRole('button', { name: 'Search' })).toBeInTheDocument();
+    expect(within(rail()).getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
     expect(items.map((item) => item.textContent)).toEqual([
+      '',
+      '',
       'Homebase',
       'Daily notes',
       'Calendar',
@@ -67,6 +73,8 @@ describe('the navigation rail', () => {
       'Trash',
       'Import',
       'Settings',
+      // The profile menu, last on the strip; its trigger names the person.
+      expect.any(String),
     ]);
     expect(within(rail()).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'href',
@@ -161,11 +169,16 @@ describe('the navigation rail', () => {
     expect(importControl).toHaveAttribute('tabindex', '-1');
     expect(settings).toHaveAttribute('tabindex', '-1');
 
-    // Tab reaches the skip link, then the rail, then leaves it - every destination, one stop.
+    // Tab reaches the skip link, then Search and the bell, then the destinations as one stop.
+    await user.tab();
+    await user.tab();
     await user.tab();
     await user.tab();
     expect(calendar).toHaveFocus();
 
+    // Next is the profile menu at the foot of the strip, then out of the rail.
+    await user.tab();
+    expect(profileTrigger()).toHaveFocus();
     await user.tab();
     expect(rail()).not.toContainElement(document.activeElement as HTMLElement | null);
   });

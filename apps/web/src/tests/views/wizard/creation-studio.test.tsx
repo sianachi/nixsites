@@ -72,7 +72,8 @@ describe('the guided creation studio', () => {
     await user.type(options, 'To do{Enter}In progress{Enter}Done');
     expect(options).toHaveValue('To do\nIn progress\nDone');
     await user.click(screen.getByRole('button', { name: /continue/i }));
-    await user.click(screen.getByRole('button', { name: 'Back' }));
+    // The title row has its own Back (history); the wizard's step Back is in main.
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('textbox', { name: 'Options' })).toHaveValue(
       'To do\nIn progress\nDone',
     );
