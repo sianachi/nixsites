@@ -96,8 +96,26 @@
       };
       const call = (plugin, method, options) =>
         window.Capacitor.nativePromise(plugin, method, options);
-      // The saved servers go through a message handler that only answers this bundled page.
-      const picker = (request) => window.webkit.messageHandlers.nixPicker.postMessage(request);
+      // The saved servers go through a native channel that only answers this bundled page:
+      // a WKWebView message handler on iOS, a WebMessageListener on Android (replies matched by id).
+      const android = window.nixPickerAndroid;
+      const pending = new Map();
+      if (android)
+        android.onmessage = (event) => {
+          const { id, result, error } = JSON.parse(event.data);
+          const waiting = pending.get(id);
+          pending.delete(id);
+          if (error !== undefined) waiting?.reject(error);
+          else waiting?.resolve(result);
+        };
+      let nextId = 0;
+      const picker = (request) =>
+        android
+          ? new Promise((resolve, reject) => {
+              pending.set(++nextId, { resolve, reject });
+              android.postMessage(JSON.stringify({ ...request, id: nextId }));
+            })
+          : window.webkit.messageHandlers.nixPicker.postMessage(request);
       // Native HTTP: the picker runs at capacitor://localhost, so a fetch to the server is cross-origin.
       const get = (url) => call('CapacitorHttp', 'request', { url, method: 'GET' });
 
@@ -171,8 +189,11 @@
       };
 
       try {
-        ({ servers, boundDomains: bound } = await picker({ op: 'getServers' }));
-        if (bound.length === 0)
+        ({ servers, boundDomains: bound = [] } = await picker({ op: 'getServers' }));
+        if (android)
+          document.getElementById('mode').textContent =
+            'Online only: the Android app does not keep an offline copy yet.';
+        else if (bound.length === 0)
           document.getElementById('mode').textContent =
             'Online only: this build lists no app-bound domains, so servers cannot open offline.';
         // Open the last server once per launch; after that (Switch server, or a page that failed
