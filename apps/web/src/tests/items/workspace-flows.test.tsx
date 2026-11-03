@@ -44,7 +44,8 @@ describe('creating an item', () => {
 
     expect(screen.getByRole('button', { name: 'New view' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'New view' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Canvas…' }));
+    const view = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(within(view).getByRole('button', { name: /^Canvas/ }));
     const dialog = await screen.findByRole('dialog', { name: 'New canvas' });
     expect(within(dialog).queryByRole('group', { name: 'Where' })).not.toBeInTheDocument();
   });
@@ -58,12 +59,10 @@ describe('creating an item', () => {
 
     // Root is the stable default; one choice in the dialog moves the destination, for every kind.
     for (const [entry, title] of [
-      ['Canvas…', 'New canvas'],
-      ['Structured…', 'New structured item'],
-      ['From a template…', 'New from a template'],
+      ['New view', 'New structured item'],
+      ['Upload files', 'Upload files'],
     ] as const) {
-      await user.click(screen.getByRole('button', { name: 'New view' }));
-      await user.click(await screen.findByRole('menuitem', { name: entry }));
+      await user.click(screen.getByRole('button', { name: entry }));
       const dialog = await screen.findByRole('dialog', { name: title });
       const where = within(dialog).getByRole('group', { name: 'Where' });
       expect(within(where).getByRole('button', { name: 'Inside Engineering' })).toBeVisible();
@@ -84,7 +83,8 @@ describe('creating an item', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'New view' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Canvas…' }));
+    const view = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(within(view).getByRole('button', { name: /^Canvas/ }));
     const dialog = await screen.findByRole('dialog', { name: 'New canvas' });
     expect(within(dialog).getByRole('button', { name: 'Inside Roadmap' })).toBeVisible();
   });

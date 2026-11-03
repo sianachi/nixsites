@@ -1,28 +1,8 @@
 import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
-import {
-  Button,
-  ContextMenu,
-  Skeleton,
-  chromeSurface,
-  Icon,
-  Menu,
-  Text,
-  cn,
-  focusRing,
-  type MenuEntry,
-} from '@nix/ui';
+import { Button, ContextMenu, Skeleton, chromeSurface, Icon, Text, cn, focusRing } from '@nix/ui';
 import { files as fileResources, isNixApiError, items as coreItems } from '@nix/api-client';
 import { collectDropped, uploadEntries } from './drop-upload';
-import {
-  ChevronDown,
-  Columns2,
-  FilePlus,
-  Grid3x3,
-  LayoutTemplate,
-  Shapes,
-  Upload,
-  type LucideIcon,
-} from 'lucide-react';
+import { FilePlus, LayoutGrid, MessageSquare, Upload, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -36,7 +16,6 @@ import type { TemplateSummary } from '@nix/web-templates/templates/template-api'
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';
-import { HiddenItemsPanel } from './hidden-items-panel';
 import { TreeRow } from './tree-row';
 import { handleRowMoveKey } from './tree-row-keys';
 import { useRowDragDrop } from './use-row-drag-drop';
@@ -179,7 +158,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const uploadParentRef = useRef<string | null>(null);
   const client = useApiClient();
-  const { workspaceId, workspace } = useWorkspace();
+  const { workspaceId } = useWorkspace();
   const landmarks = useItemLandmarks();
   const iconReturnFocus = useRef<HTMLElement | null>(null);
   const [iconItem, setIconItem] = useState<{
@@ -293,28 +272,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       }}
       className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
-      {/* The workspace's name has a row of its own: beside the buttons it truncated to "N…". */}
-      <Text
-        as="p"
-        variant="bodySmall"
-        truncate
-        className="shrink-0 px-4 pt-3 font-heading text-foreground"
-      >
-        {workspace.name}
-      </Text>
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-2 pb-3">
-        {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
-        <Button
-          variant="ghost"
-          className="px-1.5 py-1 text-xs"
-          disabled={tree.status !== 'ready' || tree.isCreating}
-          onClick={() => {
-            void create(null, 'Untitled note', 'note');
-          }}
-        >
-          <Icon icon={FilePlus} size="sm" />
-          New note
-        </Button>
+      <div className="flex shrink-0 flex-wrap items-center justify-center gap-0.5 px-3 pt-3 pb-3">
         <CreateMenu
           childDestination={childDestination}
           disabled={tree.status !== 'ready' || tree.isCreating}
@@ -337,7 +295,20 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
             uploadInputRef.current?.click();
           }}
         />
-        <HiddenItemsPanel onOpen={onSelect} />
+        {/* Rightmost: the one-press note is the most used. */}
+        {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
+        <Button
+          variant="ghost"
+          aria-label="New note"
+          title="New note"
+          className="p-1.5"
+          disabled={tree.status !== 'ready' || tree.isCreating}
+          onClick={() => {
+            void create(null, 'Untitled note', 'note');
+          }}
+        >
+          <Icon icon={FilePlus} size="md" />
+        </Button>
         <input
           ref={uploadInputRef}
           type="file"
@@ -474,17 +445,14 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
  * Recording a meeting is not in this menu; it is in the command palette, beside the other actions
  * that are not "make an item here".
  */
-const MENU_ENTRIES: readonly {
+const CREATE_ENTRIES: readonly {
   readonly key: string;
   readonly label: string;
   readonly icon: LucideIcon;
   readonly mode: NewItemDialogMode;
 }[] = [
-  { key: 'canvas', label: 'Canvas…', icon: Shapes, mode: { kind: 'item', type: 'canvas' } },
-  { key: 'sheet', label: 'Sheet…', icon: Grid3x3, mode: { kind: 'item', type: 'spreadsheet' } },
-  { key: 'upload', label: 'Upload files…', icon: Upload, mode: { kind: 'upload' } },
-  { key: 'structured', label: 'Structured…', icon: Columns2, mode: { kind: 'structured' } },
-  { key: 'template', label: 'From a template…', icon: LayoutTemplate, mode: { kind: 'template' } },
+  { key: 'upload', label: 'Upload files', icon: Upload, mode: { kind: 'upload' } },
+  { key: 'structured', label: 'New view', icon: LayoutGrid, mode: { kind: 'structured' } },
 ];
 
 interface CreateMenuProps {
@@ -499,37 +467,12 @@ interface CreateMenuProps {
   readonly onUpload: (parentId: string | null) => void;
 }
 
-/**
- * "New view": every other kind of item, in a short menu, each entry of which opens a dialog.
- *
- * Built on `<Menu>` for its disclosure mechanics - open state, outside-click and Escape dismissal,
- * viewport-clamped placement, the phone bottom sheet, 44px touch targets, arrow-key roving. The
- * dialog is a sibling rather than a child of the menu, so closing the menu on selection does not
- * unmount the dialog it just opened.
- */
+/** Chat and every other kind of item as a row of icon buttons, each of which opens a dialog. */
 function CreateMenu({ childDestination, disabled, ...actions }: CreateMenuProps): ReactNode {
   const [mode, setMode] = useState<NewItemDialogMode | null>(null);
   const [newChat, setNewChat] = useState(false);
   const { workspaceId } = useWorkspace();
 
-  const items: MenuEntry[] = MENU_ENTRIES.map((entry): MenuEntry => ({
-    kind: 'action',
-    key: entry.key,
-    icon: entry.icon,
-    label: entry.label,
-    onSelect: () => {
-      setMode(entry.mode);
-    },
-  }));
-
-  items.push({
-    kind: 'action',
-    key: 'chat',
-    label: 'Chat…',
-    onSelect: () => {
-      setNewChat(true);
-    },
-  });
   return (
     <>
       {newChat ? (
@@ -540,14 +483,33 @@ function CreateMenu({ childDestination, disabled, ...actions }: CreateMenuProps)
           }}
         />
       ) : null}
-      <Menu label="New view" items={items}>
-        {(trigger) => (
-          <Button {...trigger} variant="ghost" className="px-1.5 py-1 text-xs" disabled={disabled}>
-            New view
-            <Icon icon={ChevronDown} size="sm" />
-          </Button>
-        )}
-      </Menu>
+      <Button
+        variant="ghost"
+        aria-label="New chat"
+        title="New chat"
+        className="p-1.5"
+        disabled={disabled}
+        onClick={() => {
+          setNewChat(true);
+        }}
+      >
+        <Icon icon={MessageSquare} size="md" />
+      </Button>
+      {CREATE_ENTRIES.map((entry) => (
+        <Button
+          key={entry.key}
+          variant="ghost"
+          aria-label={entry.label}
+          title={entry.label}
+          className="p-1.5"
+          disabled={disabled}
+          onClick={() => {
+            setMode(entry.mode);
+          }}
+        >
+          <Icon icon={entry.icon} size="md" />
+        </Button>
+      ))}
       {mode === null ? null : (
         <NewItemDialog
           mode={mode}

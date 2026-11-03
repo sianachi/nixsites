@@ -11,7 +11,7 @@ import {
   focusRing,
 } from '@nix/ui';
 import { LayoutTemplate } from 'lucide-react';
-import { useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 
 import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
 import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
@@ -43,8 +43,7 @@ export type NewItemKind = 'note' | 'canvas' | 'spreadsheet';
 export type NewItemDialogMode =
   | { readonly kind: 'item'; readonly type: NewItemKind }
   | { readonly kind: 'upload' }
-  | { readonly kind: 'structured' }
-  | { readonly kind: 'template' };
+  | { readonly kind: 'structured' };
 
 /** What each plain kind is called, in the dialog's title and button and as its default title. */
 export const NEW_ITEM_KINDS: Readonly<
@@ -79,8 +78,6 @@ function titleOf(mode: NewItemDialogMode): string {
       return 'Upload files';
     case 'structured':
       return 'New structured item';
-    case 'template':
-      return 'New from a template';
   }
 }
 
@@ -117,10 +114,16 @@ function Choice(props: {
 }
 
 export function NewItemDialog(props: NewItemDialogProps): ReactNode {
-  const { mode, childDestination, onClose } = props;
+  const { childDestination, onClose } = props;
+  // A canvas or sheet chosen from the structured list moves on to naming it, in the same dialog.
+  const [mode, setMode] = useState(props.mode);
   const [place, setPlace] = useState<Place>('root');
   const [title, setTitle] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
+  // Naming starts at once, including after a canvas or sheet is picked from the structured list.
+  useEffect(() => {
+    if (mode.kind === 'item') titleRef.current?.focus();
+  }, [mode]);
   const placeHintId = useId();
 
   const parentId = place === 'inside' && childDestination !== null ? childDestination.id : null;
@@ -231,43 +234,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
     );
   }
 
-  if (mode.kind === 'structured') {
-    // Every recipe the registry has, under the headings it declares: the menu no longer hides the
-    // kinds that used to be reachable only through "Add view" on an existing item.
-    return (
-      <Dialog open title={titleOf(mode)} onClose={onClose}>
-        <div className="flex min-w-0 flex-col gap-4">
-          {placeControl}
-          {RECIPE_GROUPS.map((group) => {
-            const recipes = STRUCTURED_RECIPES.filter((recipe) => recipe.group === group);
-            if (recipes.length === 0) return null;
-            return (
-              <div key={group} className="flex min-w-0 flex-col gap-1">
-                <Text as="h3" variant="kicker" tone="muted" id={`new-structured-${group}`}>
-                  {group}
-                </Text>
-                <ul aria-labelledby={`new-structured-${group}`} className="-mx-3 flex flex-col">
-                  {recipes.map((recipe) => (
-                    <Choice
-                      key={recipe.id}
-                      label={recipe.label}
-                      detail={recipe.detail}
-                      onChoose={() => {
-                        done(() => {
-                          props.onStartStructured(parentId, recipe.id);
-                        });
-                      }}
-                    />
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      </Dialog>
-    );
-  }
-
+  // Structured recipes and the workspace's templates in one dialog: both start a structured item.
   const { templates, templateStatus } = props;
   return (
     <Dialog
@@ -289,30 +256,81 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
     >
       <div className="flex min-w-0 flex-col gap-4">
         {placeControl}
-        {templates.length === 0 ? (
-          <Text variant="note" tone="muted" role="status">
-            {templateStatus === 'loading'
-              ? 'Loading templates…'
-              : templateStatus === 'error'
-                ? 'Templates are unavailable.'
-                : 'This workspace has no templates yet. Manage templates to make one.'}
+        <div className="flex min-w-0 flex-col gap-1">
+          <Text as="h3" variant="kicker" tone="muted" id="new-structured-canvas">
+            Canvas and sheet
           </Text>
-        ) : (
-          <ul aria-label="Templates" className="-mx-3 flex flex-col">
-            {templates.map((template) => (
-              <Choice
-                key={template.id}
-                label={template.title}
-                detail={template.description}
-                onChoose={() => {
-                  done(() => {
-                    props.onStartTemplate(parentId, template.id);
-                  });
-                }}
-              />
-            ))}
+          <ul aria-labelledby="new-structured-canvas" className="-mx-3 flex flex-col">
+            <Choice
+              label="Canvas"
+              detail="A freeform board for shapes, notes and drawings"
+              onChoose={() => {
+                setMode({ kind: 'item', type: 'canvas' });
+              }}
+            />
+            <Choice
+              label="Sheet"
+              detail="A spreadsheet with formulas"
+              onChoose={() => {
+                setMode({ kind: 'item', type: 'spreadsheet' });
+              }}
+            />
           </ul>
-        )}
+        </div>
+        {RECIPE_GROUPS.map((group) => {
+          const recipes = STRUCTURED_RECIPES.filter((recipe) => recipe.group === group);
+          if (recipes.length === 0) return null;
+          return (
+            <div key={group} className="flex min-w-0 flex-col gap-1">
+              <Text as="h3" variant="kicker" tone="muted" id={`new-structured-${group}`}>
+                {group}
+              </Text>
+              <ul aria-labelledby={`new-structured-${group}`} className="-mx-3 flex flex-col">
+                {recipes.map((recipe) => (
+                  <Choice
+                    key={recipe.id}
+                    label={recipe.label}
+                    detail={recipe.detail}
+                    onChoose={() => {
+                      done(() => {
+                        props.onStartStructured(parentId, recipe.id);
+                      });
+                    }}
+                  />
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+        <div className="flex min-w-0 flex-col gap-1">
+          <Text as="h3" variant="kicker" tone="muted" id="new-structured-templates">
+            From a template
+          </Text>
+          {templates.length === 0 ? (
+            <Text variant="note" tone="muted" role="status">
+              {templateStatus === 'loading'
+                ? 'Loading templates…'
+                : templateStatus === 'error'
+                  ? 'Templates are unavailable.'
+                  : 'This workspace has no templates yet. Manage templates to make one.'}
+            </Text>
+          ) : (
+            <ul aria-labelledby="new-structured-templates" className="-mx-3 flex flex-col">
+              {templates.map((template) => (
+                <Choice
+                  key={template.id}
+                  label={template.title}
+                  detail={template.description}
+                  onChoose={() => {
+                    done(() => {
+                      props.onStartTemplate(parentId, template.id);
+                    });
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </Dialog>
   );

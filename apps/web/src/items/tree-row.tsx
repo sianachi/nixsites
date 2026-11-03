@@ -155,7 +155,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
         className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
         <ItemLandmarkIcon landmark={landmark} />
-        <Text as="span" variant="bodySmall" truncate>
+        <Text as="span" variant="body" truncate>
           {item.title || 'Untitled'}
         </Text>
         {deleteProtected ? (
