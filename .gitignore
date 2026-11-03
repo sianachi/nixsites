@@ -101,3 +101,6 @@ deploy/.dev-access-token-key.pem
 
 # Local embedding model, fetched by scripts/fetch-embedding-model.sh.
 backend/models
+
+# Turns the demo on in the local dev preview; never committed.
+apps/web/public/web-config.json
