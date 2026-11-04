@@ -122,10 +122,10 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
   templates, finance, habits, document import, files, chat notes, the companion, structure and
   blueprints, notifications, reminders, item protection, calendar links and automations. Settings
   has an MCP tab that mints and revokes its tokens.
-- One Go worker binary with roles for import, export, signed WebAssembly plugin
-  execution, calendar sync and notifications, driven by RabbitMQ; workers use internal
-  APIs and object capabilities without database credentials.
-- Uploads are inspected by the worker before they are published: size and expiry checks, SHA-256,
+- Imports, exports, file publication, calendar sync and notifications run as background jobs
+  inside Core; they reach the database only through Core's own internal routes and move file
+  bytes through short-lived object capabilities.
+- Uploads are inspected before they are published: size and expiry checks, SHA-256,
   media type from magic bytes, preview and thumbnail generation. Files are not malware-scanned.
 - An installable web app with manifest shortcuts (New note, Today, Search), a share target, a
   Markdown file handler, an offline page, interface settings synced across devices, last-location

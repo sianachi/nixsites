@@ -225,13 +225,6 @@ public static class NixTables
     public const string DocumentImport = "document_import";
     public const string DocumentImportItem = "document_import_item";
     public const string DocumentImportFileVersion = "document_import_file_version";
-    public const string PluginPublisher = "plugin_publisher";
-    public const string PluginComponent = "plugin_component";
-    public const string PluginInstallation = "plugin_installation";
-    public const string PluginCapabilityGrant = "plugin_capability_grant";
-    public const string PluginEventReceipt = "plugin_event_receipt";
-    public const string PluginEventInbox = "plugin_event_inbox";
-    public const string PluginInvocation = "plugin_invocation";
 
     /// <summary>A static publication of one item subtree (ADR-0063).</summary>
     public const string Site = "site";
@@ -341,13 +334,6 @@ public static class NixTables
         DocumentImport,
         DocumentImportItem,
         DocumentImportFileVersion,
-        PluginPublisher,
-        PluginComponent,
-        PluginInstallation,
-        PluginCapabilityGrant,
-        PluginEventReceipt,
-        PluginEventInbox,
-        PluginInvocation,
         Site,
         SiteHostname,
         SiteExclusion,
@@ -461,15 +447,6 @@ public static class NixTables
             [DocumentImport] = FullDml,
             [DocumentImportItem] = FullDml,
             [DocumentImportFileVersion] = FullDml,
-            [PluginPublisher] = ImmutableRegistration,
-            [PluginComponent] = ImmutableRegistration,
-            // Only enabled and updated_at carry column-level UPDATE. A table-level grant would
-            // let an application bug rewrite the installed component identity or version.
-            [PluginInstallation] = ImmutableRegistration,
-            [PluginCapabilityGrant] = ReplaceableGrant,
-            [PluginEventReceipt] = ReadOnly,
-            [PluginEventInbox] = ReadOnly,
-            [PluginInvocation] = ReadOnly,
             [ItemClosure] = FullDml,
             [AclEntry] = FullDml,
 

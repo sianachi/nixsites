@@ -70,7 +70,7 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         _client = _factory.CreateClient();
         var now = DateTimeOffset.UtcNow;
         _capabilities.Replace(new WorkerCapabilityAdvertisement(
-            "item-lock-http-worker",
+            Nix.Workers.ExportCapabilityAdvertiser.InstanceId,
             "export",
             now,
             now.AddMinutes(2),

@@ -37,13 +37,13 @@ assert 'nix-indexer' not in s and 'nix-opensearch' not in s
 assert 'nix-opensearch-data' not in c['volumes']
 assert not any('OpenSearch' in key for key in s['nix-api']['environment'])
 assert s['nix-api']['image']=='ghcr.io/sianachi/nix/api:replace-with-commit-sha'
-assert s['nix-plugin-worker']['image']=='ghcr.io/sianachi/nix/worker:replace-with-commit-sha'
+assert s['nix-companion']['image']=='ghcr.io/sianachi/nix/worker:replace-with-commit-sha'
 assert c['volumes']['nix-versity-data']['name']=='nix-versity-data'
 assert c['volumes']['nix-caddy-data']['name']=='nix-caddy-data'
 assert s['nix-web']['environment']['NIX_OBJECT_STORE_BUCKET']=='nix-worker-jobs'
 assert 'NIX_COLLAB_MIGRATOR_CONNECTION_STRING' not in s['nix-collab']['environment']
 assert s['nix-collab-migrate']['environment']['NIX_COLLAB_MIGRATOR_CONNECTION_STRING']
-assert s['nix-api']['environment']['Nix__Pets__WorkerUrl'] == 'http://nix-plugin-worker:8301'
+assert s['nix-api']['environment']['Nix__Pets__WorkerUrl'] == 'http://nix-companion:8301'
 assert s['nix-api']['environment']['Nix__Push__VapidPublicKey'] == 'replace-me-public-key'
 assert 'NIX_PUSH_VAPID_PRIVATE_KEY' not in s['nix-api']['environment']
 assert s['nix-api']['environment']['Nix__Push__VapidPrivateKey'] == 'replace-me'
@@ -52,18 +52,19 @@ assert 'nix-calendar-worker' not in s
 # The api image is chiseled: it holds only /usr/bin/dotnet (no shell, wget, curl or /dev/tcp).
 api_check = s['nix-api'].get('healthcheck', {}).get('test', [])
 assert not api_check or (api_check[0] == 'CMD' and api_check[1] not in ('wget', 'curl', 'sh', 'bash')), api_check
-assert s['nix-plugin-worker']['environment']['NIX_COMPANION_DATA_DIR'] == '/var/lib/nix-worker/companion'
-assert any(v.get('source') == 'nix-companion-data' for v in s['nix-plugin-worker']['volumes'])
-assert not s['nix-plugin-worker'].get('ports')
-assert 'nix-import-worker' not in s and 'nix-export-worker' not in s
-assert not any('companion' in name or 'codex' in name for name in s)
+assert s['nix-companion']['environment']['NIX_COMPANION_DATA_DIR'] == '/var/lib/nix-worker/companion'
+assert any(v.get('source') == 'nix-companion-data' for v in s['nix-companion']['volumes'])
+assert not s['nix-companion'].get('ports')
+assert 'NIX_RABBITMQ_URL' not in s['nix-companion']['environment']
+assert {'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker'}.isdisjoint(s)
+assert not any('codex' in name for name in s)
 assert not s['nix-versitygw'].get('ports')
 retired_observability = {'grafana', 'alloy', 'loki', 'docker-socket-proxy'}
 assert retired_observability.isdisjoint(s)
 assert {'docker-logs', 'observability', 'grafana-access'}.isdisjoint(c['networks'])
 assert {'nix-loki-data', 'nix-alloy-data', 'nix-grafana-data'}.isdisjoint(c['volumes'])
 assert s['nix-api']['environment']['Logging__Console__FormatterName'] == 'json'
-for service in ['nix-plugin-worker']:
+for service in ['nix-companion']:
  assert s[service]['healthcheck']['test'] == ['CMD', '/nix-worker', '--healthcheck']
 assert s['nix-web']['healthcheck']['test'][0] == 'CMD'
 assert not any(service.get('logging', {}).get('driver') == 'none' for service in s.values())

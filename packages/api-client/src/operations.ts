@@ -62,9 +62,9 @@ export function isHumanOnlyOperation(entry: OperationEntry): boolean {
 export type OperationRisk = 'irreversible' | 'access' | 'public' | undefined;
 
 /** Writes Core holds to its admin scope: they change access, act later with the caller's authority
- * (automations, plugins, calendar links), or move items between workspaces. */
+ * (automations, calendar links), or move items between workspaces. */
 const ACCESS_PATHS =
-  /\/(members|invitations|sharing|admins|operators|lock|unlock|protection|permissions|roles|recover|leave|archive|restore|plugins|automations|move)(\/|$)|^\/api\/v1\/me\/calendar\/links(?!.*\/sync$)|^\/api\/v1\/workspaces\/\{workspaceId\}\/(archive|restore)$/;
+  /\/(members|invitations|sharing|admins|operators|lock|unlock|protection|permissions|roles|recover|leave|archive|restore|automations|move)(\/|$)|^\/api\/v1\/me\/calendar\/links(?!.*\/sync$)|^\/api\/v1\/workspaces\/\{workspaceId\}\/(archive|restore)$/;
 
 export function operationRisk(entry: OperationEntry): OperationRisk {
   if (entry.method === 'GET') return undefined;

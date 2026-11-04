@@ -138,7 +138,6 @@ public sealed class AccessTokenScopePolicyTests
         ["PreviewTemplateCapture"] = Requirement.Read,
         ["GetTemplate"] = Requirement.Read,
         ["GetTemplateItem"] = Requirement.Read,
-        ["ListWorkspacePlugins"] = Requirement.Read,
 
         // Writes: content and structure, but never who-sees-what.
         ["UpdateItem"] = Requirement.Write,
@@ -282,10 +281,6 @@ public sealed class AccessTokenScopePolicyTests
         ["RevokeTenantAdmin"] = Requirement.Admin,
         ["ApproveSitePublish"] = Requirement.Admin,
         ["RejectSitePublish"] = Requirement.Admin,
-        ["BeginPluginComponentUpload"] = Requirement.Admin,
-        ["RegisterWorkspacePlugin"] = Requirement.Admin,
-        ["SetWorkspacePluginEnabled"] = Requirement.Admin,
-        ["ReplaceWorkspacePluginCapabilities"] = Requirement.Admin,
 
         // Automations act later as their owner, unattended, with that owner's write access
         // (ADR-0051 section 6): creating, changing, running or deleting one is an admin-scope

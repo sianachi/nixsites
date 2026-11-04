@@ -2,7 +2,6 @@ package workerapi
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,9 +10,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
-	"github.com/sianachi/Nix/apps/go-workers/internal/pluginworker"
 )
 
 func TestClientDoesNotForwardTheInternalSecretAcrossRedirects(t *testing.T) {
@@ -283,83 +279,6 @@ func TestClientObtainsExportSourceAndSizedDestinationUnderTheExecution(t *testin
 	}
 }
 
-func TestClientPreparesCallsAndCompletesAnExactPluginInvocation(t *testing.T) {
-	const eventID = "10000000-0000-4000-8000-000000000001"
-	const tenantID = "20000000-0000-4000-8000-000000000002"
-	const workspaceID = "30000000-0000-4000-8000-000000000003"
-	const itemID = "40000000-0000-4000-8000-000000000004"
-	const invocationID = "50000000-0000-4000-8000-000000000005"
-	requests := 0
-	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		requests++
-		if request.Header.Get("X-Nix-Internal-Secret") != "secret" {
-			t.Fatal("internal secret was omitted")
-		}
-		response.Header().Set("Content-Type", "application/json")
-		switch requests {
-		case 1:
-			if request.URL.Path != "/internal/worker-dispatch/plugins/events/"+eventID+"/prepare" {
-				t.Fatalf("prepare path = %s", request.URL.Path)
-			}
-			var body struct {
-				CausationID  string `json:"causationId"`
-				LeaseSeconds int    `json:"leaseSeconds"`
-			}
-			if err := json.NewDecoder(request.Body).Decode(&body); err != nil || body.CausationID != eventID || body.LeaseSeconds != 60 {
-				t.Fatalf("prepare body = %#v, %v", body, err)
-			}
-			publicKey := base64.StdEncoding.EncodeToString(make([]byte, 32))
-			signature := base64.StdEncoding.EncodeToString(make([]byte, 64))
-			_, _ = response.Write([]byte(`{"outcome":"prepared","plans":[{"invocationId":"` + invocationID + `","installationId":"60000000-0000-4000-8000-000000000006","attempt":1,"leaseUntil":"2026-09-01T12:01:00Z","component":{"publisherId":"nix.test","id":"nix.test/example","version":"1.0.0","sha256":"` + strings.Repeat("A", 64) + `","publicKey":"` + publicKey + `","signature":"` + signature + `","downloadUrl":"http://objects/component","downloadExpiresAt":"2026-09-01T12:01:00Z","byteLength":51},"capabilities":["items.read-metadata"]}]}`))
-		case 2:
-			if request.URL.Path != "/internal/worker-dispatch/plugins/invocations/"+invocationID+"/host-calls" {
-				t.Fatalf("host call path = %s", request.URL.Path)
-			}
-			_, _ = response.Write([]byte(`{"result":{"itemId":"` + itemID + `"}}`))
-		case 3:
-			if request.URL.Path != "/internal/worker-dispatch/plugins/invocations/"+invocationID+"/complete" {
-				t.Fatalf("completion path = %s", request.URL.Path)
-			}
-			_, _ = response.Write([]byte(`{"outcome":"applied","shouldRequeue":false}`))
-		default:
-			t.Fatalf("unexpected request %d", requests)
-		}
-	}))
-	defer server.Close()
-
-	client := New(server.URL, "secret", "plugin", time.Second)
-	version := int64(7)
-	preparation, err := client.PreparePluginEvent(context.Background(), broker.WorkspaceEvent{
-		MessageID: eventID, OccurredAt: time.Now(), TenantID: tenantID, WorkspaceID: workspaceID,
-		ItemID: itemID, Kind: "item.changed", AggregateVersion: &version,
-	}, 60)
-	if err != nil || preparation.Outcome != "prepared" || len(preparation.Plans) != 1 || len(preparation.Plans[0].Component.PublicKey) != 32 {
-		t.Fatalf("preparation = %#v, %v", preparation, err)
-	}
-	result, err := client.CallPluginHost(context.Background(), invocationID, "items.read-metadata", json.RawMessage(`{"itemId":"`+itemID+`"}`))
-	if err != nil || !json.Valid(result) {
-		t.Fatalf("host result = %s, %v", result, err)
-	}
-	completion, err := client.CompletePluginInvocation(context.Background(), invocationID, pluginworker.Completion{Succeeded: true})
-	if err != nil || completion.Outcome != "applied" || completion.ShouldRequeue {
-		t.Fatalf("completion = %#v, %v", completion, err)
-	}
-}
-
-func assertExecutionRequest(t *testing.T, request *http.Request, owner string, leaseSeconds int) {
-	t.Helper()
-	var body struct {
-		Owner        string `json:"owner"`
-		LeaseSeconds int    `json:"leaseSeconds"`
-	}
-	if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
-		t.Fatal(err)
-	}
-	if body.Owner != owner || body.LeaseSeconds != leaseSeconds {
-		t.Fatalf("execution request = %#v", body)
-	}
-}
-
 func TestSameOriginPathRefusesProtocolRelativeAndAbsoluteURLs(t *testing.T) {
 	for value, want := range map[string]bool{
 		"/": true,
@@ -377,5 +296,18 @@ func TestSameOriginPathRefusesProtocolRelativeAndAbsoluteURLs(t *testing.T) {
 		if got := sameOriginPath(value); got != want {
 			t.Fatalf("sameOriginPath(%q) = %v, want %v", value, got, want)
 		}
+	}
+}
+func assertExecutionRequest(t *testing.T, request *http.Request, owner string, leaseSeconds int) {
+	t.Helper()
+	var body struct {
+		Owner        string `json:"owner"`
+		LeaseSeconds int    `json:"leaseSeconds"`
+	}
+	if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Owner != owner || body.LeaseSeconds != leaseSeconds {
+		t.Fatalf("execution request = %#v", body)
 	}
 }

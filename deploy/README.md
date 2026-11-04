@@ -107,9 +107,9 @@ Core, never query application tables directly.
 
 ### Current roles and retired services
 
-The current manifest has five Go roles: import, export, plugin-events, calendar and notify.
-The import instance also hosts the optional companion HTTP runtime. Native, Markdown, DOCX
-and PDF export remain implemented in Go; only the unused TypeScript converters were removed.
+Every Go job role (import, export, plugin-events, calendar, notify) moved into Core as
+background jobs; plugins were removed. The `worker` image only hosts the pet companion now
+(`nix-companion` in Compose, the `nix-worker` Deployment in Kubernetes).
 Core searches PostgreSQL directly; OpenSearch and its indexing role are retired.
 
 Speech, browser recording, transcription APIs, dictation and voice UI are retired. There is no
@@ -343,7 +343,7 @@ OpenSearch and its indexer are retired; Core search uses PostgreSQL. The release
 containers by project/service labels and retains the `nix-opensearch-data` volume for recovery.
 Remove obsolete `NIX_OPENSEARCH_*`, `NIX_SEARCH_OPENSEARCH_*` and index broker variables from the
 private environment when convenient. RabbitMQ revokes the old index account and detaches its
-workspace-event binding while retaining queued history; plugin events remain enabled.
+workspace-event binding while retaining queued history.
 Kubernetes retirement also retains existing PVCs.
 
 Grafana, Alloy, Loki and the Alloy-only Docker socket proxy are retired. The release stops their

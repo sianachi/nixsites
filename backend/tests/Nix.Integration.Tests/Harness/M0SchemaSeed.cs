@@ -287,7 +287,6 @@ internal static class M0SchemaSeed
         var slug = rows.Slug;
         const string automationTrigger = """{"type":"schedule","freq":"daily","interval":1,"time":"09:00","startDate":"2026-01-01"}""";
         const string automationActions = """[{"type":"notify","title":"Seeded","body":""}]""";
-        var pluginDigest = new string(slug == "alpha" ? 'A' : 'B', 64);
         var browserSessionHash = new string(slug == "alpha" ? 'a' : 'b', BrowserSession.TokenHashLength);
 
         return $"""
@@ -615,55 +614,6 @@ internal static class M0SchemaSeed
                     VALUES ({auditEvent}, {tenant}, {workspace}, {item}, 'item.changed', 1,
                             jsonb_build_object('id', {item}, 'title', '{slug} item'), now(), 0);
 
-                    IF to_regclass('public.plugin_publisher') IS NOT NULL THEN
-                        INSERT INTO plugin_publisher
-                            (tenant_id, publisher_id, ed25519_public_key, pinned_by, pinned_at)
-                        VALUES ({tenant}, 'nix.seed', decode(repeat('11', 32), 'hex'),
-                                {principal}, now());
-
-                        INSERT INTO plugin_component
-                            (tenant_id, publisher_id, component_id, component_version, object_key,
-                             sha256, byte_length, ed25519_signature, registered_by, registered_at)
-                        VALUES ({tenant}, 'nix.seed', 'nix.seed/{slug}', '1.0.0',
-                                'plugins/components/{rows.TenantId:D}/nix.seed/{slug}/1.0.0/{pluginDigest}.wasm',
-                                '{pluginDigest}', 8, decode(repeat('22', 64), 'hex'),
-                                {principal}, now());
-
-                        INSERT INTO plugin_installation
-                            (installation_id, tenant_id, workspace_id, component_id,
-                             component_version, enabled, installed_by, installed_at, updated_at)
-                        VALUES ({provider}, {tenant}, {workspace}, 'nix.seed/{slug}', '1.0.0',
-                                true, {principal}, now(), now());
-
-                        INSERT INTO plugin_capability_grant
-                            (tenant_id, installation_id, capability, granted_by, granted_at)
-                        VALUES ({tenant}, {provider}, 'items.read-metadata', {principal}, now());
-
-                        INSERT INTO plugin_event_receipt
-                            (tenant_id, event_id, workspace_id, kind, item_id, aggregate_version,
-                             causation_id, causation_depth, received_at)
-                        VALUES ({tenant}, {auditEvent}, {workspace}, 'item.changed', {item}, 1,
-                                {auditEvent}, 0, now());
-
-                        INSERT INTO plugin_event_inbox
-                            (tenant_id, event_id, installation_id, workspace_id, kind, item_id,
-                             aggregate_version, causation_id, causation_depth, status, attempts,
-                             current_invocation_id, error_code, error_detail, created_at, updated_at,
-                             completed_at)
-                        VALUES ({tenant}, {auditEvent}, {provider}, {workspace}, 'item.changed',
-                                {item}, 1, {auditEvent}, 0, 'completed', 1, {invitation}, NULL,
-                                NULL, now(), now(), now());
-
-                        INSERT INTO plugin_invocation
-                            (invocation_id, tenant_id, event_id, installation_id, workspace_id,
-                             attempt, causation_id, causation_depth, status, lease_until,
-                             completion_fingerprint, succeeded, retryable, error_code,
-                             error_detail, created_at, completed_at)
-                        VALUES ({invitation}, {tenant}, {auditEvent}, {provider}, {workspace}, 1,
-                                {auditEvent}, 0, 'completed', now() + interval '1 minute',
-                                decode(repeat('33', 32), 'hex'), true, false, NULL, NULL,
-                                now(), now());
-                    END IF;
                 END IF;
 
                 IF to_regclass('public.item_transcription') IS NOT NULL THEN

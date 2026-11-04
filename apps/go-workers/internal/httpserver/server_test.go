@@ -6,12 +6,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/sianachi/Nix/apps/go-workers/internal/role"
 )
 
 func TestHealthzDoesNotRequireAWorkerPayload(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
+	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret"})
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
@@ -39,6 +37,3 @@ func TestWorkerPayloadRoutesRequireTheInternalSecret(t *testing.T) {
 		t.Fatalf("unauthenticated response = %d", response.Code)
 	}
 }
-
-// New serves every role, as a test wants one handler for all of the routes.
-func New(deps Dependencies) http.Handler { return NewForRole(role.All, deps) }

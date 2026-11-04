@@ -61,11 +61,14 @@ public sealed class ExportHttpTests : IAsyncLifetime
                 ["Nix:ObjectStorage:Bucket"] = "nix-objects",
                 ["Nix:ObjectStorage:AccessKey"] = "export-access",
                 ["Nix:ObjectStorage:SecretKey"] = "export-secret",
+                // The test plays the export worker itself (claims, delegation, result), so the
+                // in-process export host must not lease its jobs first.
+                ["Nix:Workers:Families:0"] = "notify",
             });
         _client = _factory.CreateClient();
         var now = DateTimeOffset.UtcNow;
         _capabilities.Replace(new WorkerCapabilityAdvertisement(
-            "export-http-worker",
+            Nix.Workers.ExportCapabilityAdvertiser.InstanceId,
             "export",
             now,
             now.AddMinutes(2),
@@ -342,7 +345,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
         rename.EnsureSuccessStatusCode();
         var now = DateTimeOffset.UtcNow.AddSeconds(1);
         _capabilities.Replace(new WorkerCapabilityAdvertisement(
-            "export-http-worker",
+            Nix.Workers.ExportCapabilityAdvertiser.InstanceId,
             "export",
             now,
             now.AddMinutes(2),

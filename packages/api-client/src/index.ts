@@ -223,7 +223,6 @@ export * as files from './resources/files.js';
 export * as imports from './resources/imports.js';
 export * as operations from './resources/operations.js';
 export * as exports from './resources/exports.js';
-export * as plugins from './resources/plugins.js';
 export type { FileRecord, FileThumbnail, FileVersion } from './schemas/files.js';
 export type { DocumentImport, DocumentImportPlan } from './schemas/imports.js';
 export type { Operation } from './schemas/operations.js';

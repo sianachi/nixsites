@@ -60,7 +60,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Notifications;
 using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.Pets;
-using Nix.Persistence.Plugins;
 using Nix.Persistence.Properties;
 using Nix.Persistence.Query;
 using Nix.Persistence.Recurrence;
@@ -185,8 +184,6 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddSingleton<Nix.Persistence.Workers.WorkerDispatchStore>();
         services.AddSingleton<IWorkerDispatchStore>(provider => provider.GetRequiredService<Nix.Persistence.Workers.WorkerDispatchStore>());
         services.AddScoped<IWorkerExecutionFence, Nix.Persistence.Workers.WorkerExecutionFence>();
-        services.AddSingleton<PluginDispatchStore>();
-        services.AddScoped<PluginInstallationStore>();
         services.AddScoped<Nix.Persistence.Workers.WorkerStore>();
         services.AddScoped<IWorkerJobStore>(provider => provider.GetRequiredService<Nix.Persistence.Workers.WorkerStore>());
         services.AddScoped<IWorkerOutboxStore>(provider => provider.GetRequiredService<Nix.Persistence.Workers.WorkerStore>());

@@ -1,15 +1,4 @@
-# Plugins and MCP
-
-## Plugins
-
-Nix runs plugins as signed WebAssembly components. A plugin is registered on a workspace with a declared set of capabilities, and it reacts to workspace events.
-
-- **Declared capabilities.** A plugin can only make the host calls its installation grants. Capabilities can be changed later, and a plugin can be disabled without being removed.
-- **Bounded execution.** Each run is limited in module size, memory, time and the number of host calls. The defaults are an 8 MiB module, 64 MiB of memory, 250 milliseconds and 32 host calls. A run that exceeds a limit fails visibly.
-- **No database access.** Plugins run in a dedicated worker that has no database credentials. Every action a plugin takes is checked by the server like any other request.
-- **Safe retries.** Duplicate events and retries do not repeat a plugin's changes.
-
-Plugins are managed through the workspace plugins API. There is no public marketplace.
+# MCP
 
 ## MCP server
 

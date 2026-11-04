@@ -9,6 +9,9 @@ namespace Nix.Workers;
 /// </summary>
 public sealed class ExportCapabilityAdvertiser(IWorkerCapabilityRegistry registry, InProcessJobQueue queue, TimeProvider clock) : IHostedService
 {
+    /// <summary>The instance id this process advertises under; a test that fakes a worker replaces the same entry.</summary>
+    public const string InstanceId = "in-process";
+
     /// <summary>The formats and the loss each declares, as the Go worker advertised them.</summary>
     public static IReadOnlyList<ExportFormatCapability> Formats { get; } =
     [
@@ -24,7 +27,7 @@ public sealed class ExportCapabilityAdvertiser(IWorkerCapabilityRegistry registr
     {
         if (queue.HostedFamilies.Contains(JobFamilies.Export))
         {
-            registry.Replace(new WorkerCapabilityAdvertisement("in-process", "export", clock.GetUtcNow(), DateTimeOffset.MaxValue, Formats));
+            registry.Replace(new WorkerCapabilityAdvertisement(InstanceId, "export", clock.GetUtcNow(), DateTimeOffset.MaxValue, Formats));
         }
         return Task.CompletedTask;
     }

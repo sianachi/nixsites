@@ -5,6 +5,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ## Unreleased
 
+### Removed
+
+- **Breaking:** WebAssembly plugins. The workspace plugin routes (`/api/v1/workspaces/{workspaceId}/plugins*`), the seven `plugin_*` tables and the `plugin-events` worker role are gone; nothing was installable outside seed data and no installation existed. Objects under `plugins/components/` in storage can be purged. The `worker` image now hosts only the pet companion (`nix-companion` in Compose; the `nix-worker` Deployment in Kubernetes), which needs no broker or storage credentials.
+
 ### Changed
 
 - Imports run inside Core: the `import` worker role and its container are gone. Document imports (`.nix`, Markdown, text, Word, PDF), template imports, file publication with thumbnails, template file copies and object cleanup run as Core background jobs. Import plans for `.nix`, Markdown, text, Word and template archives are byte-identical to the worker's (recorded scenarios replay); PDF text is extracted in process instead of by `pdftotext`, so PDF imports split lines differently. An import commit interrupted by a restart is failed and its staged items removed, so a retry imports once. The pet companion now runs in the `nix-plugin-worker` container (Compose: `Nix__Pets__WorkerUrl` points at it).

@@ -15,9 +15,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
-	"github.com/sianachi/Nix/apps/go-workers/internal/pluginworker"
 )
 
 var ErrResponseTooLarge = errors.New("worker API response exceeds its size limit")
@@ -554,95 +551,6 @@ func (client *Client) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (client *Client) PreparePluginEvent(ctx context.Context, event broker.WorkspaceEvent, leaseSeconds int) (pluginworker.Preparation, error) {
-	if !broker.IsCanonicalUUID(event.MessageID) || !broker.IsCanonicalUUID(event.TenantID) || !broker.IsCanonicalUUID(event.WorkspaceID) || !broker.IsCanonicalUUID(event.ItemID) || leaseSeconds < 5 || leaseSeconds > 300 {
-		return pluginworker.Preparation{}, errors.New("plugin event preparation request is invalid")
-	}
-	causationID := event.MessageID
-	if event.CausationID != nil {
-		causationID = *event.CausationID
-	}
-	body, err := json.Marshal(struct {
-		TenantID         string `json:"tenantId"`
-		WorkspaceID      string `json:"workspaceId"`
-		ItemID           string `json:"itemId"`
-		Kind             string `json:"kind"`
-		AggregateVersion *int64 `json:"aggregateVersion,omitempty"`
-		CausationID      string `json:"causationId"`
-		CausationDepth   int    `json:"causationDepth"`
-		LeaseSeconds     int    `json:"leaseSeconds"`
-	}{event.TenantID, event.WorkspaceID, event.ItemID, event.Kind, event.AggregateVersion, causationID, event.CausationDepth, leaseSeconds})
-	if err != nil {
-		return pluginworker.Preparation{}, err
-	}
-	path := "/internal/worker-dispatch/plugins/events/" + url.PathEscape(event.MessageID) + "/prepare"
-	var preparation pluginworker.Preparation
-	if err := client.requestStrictJSON(ctx, http.MethodPost, path, bytes.NewReader(body), &preparation, 512<<10); err != nil {
-		return pluginworker.Preparation{}, err
-	}
-	switch preparation.Outcome {
-	case "prepared":
-		if len(preparation.Plans) == 0 || len(preparation.Plans) > 128 {
-			return pluginworker.Preparation{}, errors.New("worker API plugin plans are invalid")
-		}
-	case "busy", "settled":
-		if len(preparation.Plans) != 0 {
-			return pluginworker.Preparation{}, errors.New("worker API plugin outcome contains unexpected plans")
-		}
-	default:
-		return pluginworker.Preparation{}, errors.New("worker API plugin preparation outcome is invalid")
-	}
-	for _, plan := range preparation.Plans {
-		if !broker.IsCanonicalUUID(plan.InvocationID) || !broker.IsCanonicalUUID(plan.InstallationID) || plan.Attempt < 1 || plan.Attempt > 5 || plan.LeaseUntil.IsZero() || plan.Component.ID == "" || plan.Component.Version == "" || len(plan.Component.PublicKey) != 32 || len(plan.Component.Signature) != 64 || plan.Component.ByteLength <= 0 || plan.Component.ByteLength > 8<<20 || plan.Component.DownloadURL == "" || plan.Component.DownloadExpiresAt.IsZero() {
-			return pluginworker.Preparation{}, errors.New("worker API plugin invocation plan is invalid")
-		}
-	}
-	return preparation, nil
-}
-
-func (client *Client) CallPluginHost(ctx context.Context, invocationID, capability string, payload json.RawMessage) (json.RawMessage, error) {
-	if !broker.IsCanonicalUUID(invocationID) || capability == "" || len(capability) > 64 || len(payload) == 0 || len(payload) > 64<<10 || !json.Valid(payload) {
-		return nil, errors.New("plugin host call request is invalid")
-	}
-	body, err := json.Marshal(struct {
-		Capability string          `json:"capability"`
-		Request    json.RawMessage `json:"request"`
-	}{capability, payload})
-	if err != nil {
-		return nil, err
-	}
-	path := "/internal/worker-dispatch/plugins/invocations/" + url.PathEscape(invocationID) + "/host-calls"
-	var response struct {
-		Result json.RawMessage `json:"result"`
-	}
-	if err := client.requestStrictJSON(ctx, http.MethodPost, path, bytes.NewReader(body), &response, 256<<10); err != nil {
-		return nil, err
-	}
-	if len(response.Result) == 0 || !json.Valid(response.Result) {
-		return nil, errors.New("worker API plugin host response is invalid")
-	}
-	return append(json.RawMessage(nil), response.Result...), nil
-}
-
-func (client *Client) CompletePluginInvocation(ctx context.Context, invocationID string, completion pluginworker.Completion) (pluginworker.CompletionResult, error) {
-	if !broker.IsCanonicalUUID(invocationID) {
-		return pluginworker.CompletionResult{}, errors.New("plugin completion identity is invalid")
-	}
-	body, err := json.Marshal(completion)
-	if err != nil {
-		return pluginworker.CompletionResult{}, err
-	}
-	path := "/internal/worker-dispatch/plugins/invocations/" + url.PathEscape(invocationID) + "/complete"
-	var result pluginworker.CompletionResult
-	if err := client.requestStrictJSON(ctx, http.MethodPost, path, bytes.NewReader(body), &result, 64<<10); err != nil {
-		return pluginworker.CompletionResult{}, err
-	}
-	if result.Outcome != "applied" && result.Outcome != "replayed" {
-		return pluginworker.CompletionResult{}, errors.New("worker API plugin completion outcome is invalid")
-	}
-	return result, nil
-}
-
 func (client *Client) LeaseJobs(ctx context.Context, kind string, limit int) ([]Job, error) {
 	var jobs []Job
 	if err := client.lease(ctx, "/internal/worker-dispatch/jobs/lease", kind, limit, &jobs); err != nil {
@@ -792,7 +700,7 @@ func (client *Client) GetObjectCleanupCapability(ctx context.Context, offset int
 }
 
 func (client *Client) GetTemplateFileTransferPlan(ctx context.Context, jobID, afterTransferID string, limit int) (*TemplateFileTransferPlan, error) {
-	if !broker.IsCanonicalUUID(jobID) || afterTransferID != "" && !broker.IsCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
+	if !isCanonicalUUID(jobID) || afterTransferID != "" && !isCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
 		return nil, errors.New("template file transfer plan request is invalid")
 	}
 	query := url.Values{}
@@ -806,13 +714,13 @@ func (client *Client) GetTemplateFileTransferPlan(ctx context.Context, jobID, af
 		return nil, err
 	}
 	if plan.JobID != jobID || plan.OwnerKind != "operation" && plan.OwnerKind != "application" ||
-		!broker.IsCanonicalUUID(plan.OwnerID) || plan.ObservedAt.IsZero() || len(plan.Transfers) > limit ||
-		plan.Complete != (plan.NextAfterTransferID == nil) || !plan.Complete && !broker.IsCanonicalUUID(*plan.NextAfterTransferID) {
+		!isCanonicalUUID(plan.OwnerID) || plan.ObservedAt.IsZero() || len(plan.Transfers) > limit ||
+		plan.Complete != (plan.NextAfterTransferID == nil) || !plan.Complete && !isCanonicalUUID(*plan.NextAfterTransferID) {
 		return nil, errors.New("worker API template file transfer plan is invalid")
 	}
 	previous := afterTransferID
 	for _, transfer := range plan.Transfers {
-		if !broker.IsCanonicalUUID(transfer.TransferID) || !broker.IsCanonicalUUID(transfer.SourceItemID) || !broker.IsCanonicalUUID(transfer.TargetItemID) ||
+		if !isCanonicalUUID(transfer.TransferID) || !isCanonicalUUID(transfer.SourceItemID) || !isCanonicalUUID(transfer.TargetItemID) ||
 			transfer.TargetVersion < 1 || transfer.TargetVersion > 100 || transfer.ByteLength < 0 || transfer.ByteLength > 100<<20 ||
 			!validSHA256(transfer.SHA256) || strings.TrimSpace(transfer.FileName) == "" || len(transfer.FileName) > 255 ||
 			strings.TrimSpace(transfer.MediaType) == "" || len(transfer.MediaType) > 160 || transfer.TransferID <= previous {
@@ -835,11 +743,11 @@ func (client *Client) GetTemplateFileTransferPlan(ctx context.Context, jobID, af
 }
 
 func (client *Client) CompleteTemplateFileTransferBatch(ctx context.Context, jobID string, transferIDs []string) error {
-	if !broker.IsCanonicalUUID(jobID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
+	if !isCanonicalUUID(jobID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
 		return errors.New("template file transfer completion request is invalid")
 	}
 	for index, transferID := range transferIDs {
-		if !broker.IsCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
+		if !isCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
 			return errors.New("template file transfer completion IDs are invalid")
 		}
 	}
@@ -862,7 +770,7 @@ func (client *Client) CompleteTemplateFileTransferBatch(ctx context.Context, job
 }
 
 func (client *Client) GetTemplateImportFilePlan(ctx context.Context, importID, afterTransferID string, limit int) (*TemplateImportFilePlan, error) {
-	if !broker.IsCanonicalUUID(importID) || afterTransferID != "" && !broker.IsCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
+	if !isCanonicalUUID(importID) || afterTransferID != "" && !isCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
 		return nil, errors.New("template import file plan request is invalid")
 	}
 	query := url.Values{}
@@ -876,12 +784,12 @@ func (client *Client) GetTemplateImportFilePlan(ctx context.Context, importID, a
 		return nil, err
 	}
 	if plan.ImportID != importID || len(plan.Files) > limit || plan.Complete != (plan.NextAfterTransferID == nil) ||
-		!plan.Complete && !broker.IsCanonicalUUID(*plan.NextAfterTransferID) {
+		!plan.Complete && !isCanonicalUUID(*plan.NextAfterTransferID) {
 		return nil, errors.New("worker API template import file plan is invalid")
 	}
 	previous := afterTransferID
 	for _, file := range plan.Files {
-		if !broker.IsCanonicalUUID(file.TransferID) || !broker.IsCanonicalUUID(file.SourceItemID) || !broker.IsCanonicalUUID(file.TargetItemID) ||
+		if !isCanonicalUUID(file.TransferID) || !isCanonicalUUID(file.SourceItemID) || !isCanonicalUUID(file.TargetItemID) ||
 			file.TargetVersion < 1 || file.TargetVersion > 100 || file.ByteLength < 0 || file.ByteLength > 100<<20 ||
 			!validSHA256(file.SHA256) || strings.TrimSpace(file.FileName) == "" || len(file.FileName) > 255 ||
 			strings.TrimSpace(file.MediaType) == "" || len(file.MediaType) > 160 || file.TransferID <= previous {
@@ -903,11 +811,11 @@ func (client *Client) GetTemplateImportFilePlan(ctx context.Context, importID, a
 }
 
 func (client *Client) CompleteTemplateImportFileBatch(ctx context.Context, importID string, transferIDs []string) error {
-	if !broker.IsCanonicalUUID(importID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
+	if !isCanonicalUUID(importID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
 		return errors.New("template import file completion request is invalid")
 	}
 	for index, transferID := range transferIDs {
-		if !broker.IsCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
+		if !isCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
 			return errors.New("template import file completion IDs are invalid")
 		}
 	}
@@ -930,7 +838,7 @@ func (client *Client) CompleteTemplateImportFileBatch(ctx context.Context, impor
 }
 
 func (client *Client) GetDocumentImportFilePlan(ctx context.Context, importID, afterTransferID string, limit int) (*TemplateImportFilePlan, error) {
-	if !broker.IsCanonicalUUID(importID) || afterTransferID != "" && !broker.IsCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
+	if !isCanonicalUUID(importID) || afterTransferID != "" && !isCanonicalUUID(afterTransferID) || limit < 1 || limit > 100 {
 		return nil, errors.New("document import file-version plan request is invalid")
 	}
 	query := url.Values{}
@@ -943,12 +851,12 @@ func (client *Client) GetDocumentImportFilePlan(ctx context.Context, importID, a
 	if err := client.requestStrictJSON(ctx, http.MethodGet, path, nil, &plan, 1<<20); err != nil {
 		return nil, err
 	}
-	if plan.ImportID != importID || len(plan.Files) > limit || plan.Complete != (plan.NextAfterTransferID == nil) || !plan.Complete && !broker.IsCanonicalUUID(*plan.NextAfterTransferID) {
+	if plan.ImportID != importID || len(plan.Files) > limit || plan.Complete != (plan.NextAfterTransferID == nil) || !plan.Complete && !isCanonicalUUID(*plan.NextAfterTransferID) {
 		return nil, errors.New("worker API document import file-version plan is invalid")
 	}
 	previous := afterTransferID
 	for _, file := range plan.Files {
-		if !broker.IsCanonicalUUID(file.TransferID) || !broker.IsCanonicalUUID(file.SourceItemID) || !broker.IsCanonicalUUID(file.TargetItemID) || file.TargetVersion < 1 || file.TargetVersion > 100 || file.ByteLength < 0 || file.ByteLength > 100<<20 || !validSHA256(file.SHA256) || strings.TrimSpace(file.FileName) == "" || len(file.FileName) > 255 || strings.TrimSpace(file.MediaType) == "" || len(file.MediaType) > 160 || file.TransferID <= previous {
+		if !isCanonicalUUID(file.TransferID) || !isCanonicalUUID(file.SourceItemID) || !isCanonicalUUID(file.TargetItemID) || file.TargetVersion < 1 || file.TargetVersion > 100 || file.ByteLength < 0 || file.ByteLength > 100<<20 || !validSHA256(file.SHA256) || strings.TrimSpace(file.FileName) == "" || len(file.FileName) > 255 || strings.TrimSpace(file.MediaType) == "" || len(file.MediaType) > 160 || file.TransferID <= previous {
 			return nil, errors.New("worker API document import file-version entry is invalid")
 		}
 		if file.Ready {
@@ -967,11 +875,11 @@ func (client *Client) GetDocumentImportFilePlan(ctx context.Context, importID, a
 }
 
 func (client *Client) CompleteDocumentImportFileBatch(ctx context.Context, importID string, transferIDs []string) error {
-	if !broker.IsCanonicalUUID(importID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
+	if !isCanonicalUUID(importID) || len(transferIDs) == 0 || len(transferIDs) > 100 {
 		return errors.New("document import file completion request is invalid")
 	}
 	for index, transferID := range transferIDs {
-		if !broker.IsCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
+		if !isCanonicalUUID(transferID) || index > 0 && transferID <= transferIDs[index-1] {
 			return errors.New("document import file completion IDs are invalid")
 		}
 	}
@@ -1243,7 +1151,7 @@ const maxNotificationSubscriptions = 20
 // GetNotificationDelivery fetches N1's rendered payload and subscription set for
 // a notify.push job.
 func (client *Client) GetNotificationDelivery(ctx context.Context, notificationID string) (*NotificationDelivery, error) {
-	if !broker.IsCanonicalUUID(notificationID) {
+	if !isCanonicalUUID(notificationID) {
 		return nil, errors.New("notification delivery request is invalid")
 	}
 	path := "/internal/worker-executions/notifications/" + url.PathEscape(notificationID) + "/delivery"
@@ -1257,7 +1165,7 @@ func (client *Client) GetNotificationDelivery(ctx context.Context, notificationI
 		return nil, errors.New("worker API notification delivery payload is invalid")
 	}
 	for _, subscription := range delivery.Subscriptions {
-		if !broker.IsCanonicalUUID(subscription.ID) || strings.TrimSpace(subscription.Endpoint) == "" ||
+		if !isCanonicalUUID(subscription.ID) || strings.TrimSpace(subscription.Endpoint) == "" ||
 			strings.TrimSpace(subscription.P256dh) == "" || strings.TrimSpace(subscription.Auth) == "" {
 			return nil, errors.New("worker API notification delivery subscription is invalid")
 		}
@@ -1276,11 +1184,11 @@ type NotificationDeliveryResult struct {
 // Core deletes "gone" subscriptions and counts "failed" toward removal after 5
 // consecutive failures.
 func (client *Client) ReportNotificationDeliveryResults(ctx context.Context, notificationID string, results []NotificationDeliveryResult) error {
-	if !broker.IsCanonicalUUID(notificationID) || len(results) == 0 || len(results) > maxNotificationSubscriptions {
+	if !isCanonicalUUID(notificationID) || len(results) == 0 || len(results) > maxNotificationSubscriptions {
 		return errors.New("notification delivery result report is invalid")
 	}
 	for _, result := range results {
-		if !broker.IsCanonicalUUID(result.SubscriptionID) {
+		if !isCanonicalUUID(result.SubscriptionID) {
 			return errors.New("notification delivery result report is invalid")
 		}
 		switch result.Status {
@@ -1504,4 +1412,20 @@ func sameOriginPath(value string) bool {
 		}
 	}
 	return true
+}
+
+// isCanonicalUUID accepts the lower-case hyphenated form only, never the nil UUID.
+func isCanonicalUUID(value string) bool {
+	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
+		return false
+	}
+	for position, character := range value {
+		if position == 8 || position == 13 || position == 18 || position == 23 {
+			continue
+		}
+		if character < '0' || character > '9' && character < 'a' || character > 'f' {
+			return false
+		}
+	}
+	return value != "00000000-0000-0000-0000-000000000000"
 }

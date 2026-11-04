@@ -1,10 +1,8 @@
 # Rendered with envsubst by deploy/k8s/deploy.sh - needs $REGISTRY, $TAG.
 #
-# One Deployment runs the Go plugin-events role from
-# the CI-published worker image, to fit a small single node. It holds the union of the role
-# credentials: the nix-worker broker account (deploy/rabbitmq/start.sh), the object store origins,
-# the calendar and push keys. The Docker production keeps one container per role; split this back
-# into per-role Deployments with the per-role *-url broker keys when memory allows.
+# The pet companion (codex app-server) behind the internal HTTP API, from the CI-published
+# worker image, until it moves into the Node process. Every job role runs inside Core
+# (backend/src/Nix.Workers); this pod holds no broker, database or storage credential.
 apiVersion: v1
 kind: Service
 metadata: { name: nix-worker, namespace: nix }
@@ -21,9 +19,6 @@ spec:
   template:
     metadata:
       labels: { app: nix-worker }
-      annotations:
-        nix.io/rabbitmq-secret-version: "${RABBITMQ_SECRET_VERSION}"
-        nix.io/object-store-secret-version: "${OBJECT_STORE_SECRET_VERSION}"
     spec:
       automountServiceAccountToken: false
       securityContext: { runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, seccompProfile: { type: RuntimeDefault } }
@@ -37,52 +32,24 @@ spec:
               value: "${NIX_RELEASE_VERSION}"
             - name: NIX_RELEASE_COMMIT
               value: "${TAG}"
-            - name: NIX_WORKER_ROLES
-              value: plugin-events
-            # The image's spool is on the read-only root; stage in the writable /tmp mount.
             - name: TMPDIR
               value: /tmp
+            - name: NIX_COMPANION_DATA_DIR
+              value: /var/lib/nix-worker/companion
             - name: NIX_WORKER_INTERNAL_SECRET
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
             - name: NIX_WORKER_API_URL
               value: http://nix-api:8080
-            - name: NIX_WORKER_COLLAB_URL
-              value: http://nix-collab:8100
-            - name: NIX_OBJECT_STORE_ENDPOINT
-              valueFrom: { secretKeyRef: { name: nix-object-store, key: endpoint } }
-            - name: NIX_OBJECT_STORE_PUBLIC_ORIGIN
-              valueFrom: { secretKeyRef: { name: nix-object-store, key: public-origin } }
-            # Both origins, as in the Docker production: Core may sign either.
-            - name: NIX_WORKER_OBJECT_ORIGINS
-              value: $(NIX_OBJECT_STORE_ENDPOINT),$(NIX_OBJECT_STORE_PUBLIC_ORIGIN)
-            - name: NIX_RABBITMQ_URL
-              valueFrom: { secretKeyRef: { name: nix-rabbitmq, key: worker-url } }
-            - name: NIX_WORKER_MAX_CONCURRENCY
-              value: "2"
-            - name: NIX_WORKER_MAX_INPUT_BYTES
-              value: "104857600"
-            - name: NIX_WORKER_MAX_LINE_BYTES
-              value: "4194304"
-            - name: NIX_WORKER_MAX_RECORDS
-              value: "100000"
-            - name: NIX_PLUGIN_MAX_MODULE_BYTES
-              value: "8388608"
-            - name: NIX_PLUGIN_MEMORY_PAGES
-              value: "1024"
-            - name: NIX_PLUGIN_TIMEOUT_MILLISECONDS
-              value: "250"
-            - name: NIX_PLUGIN_MAX_HOST_CALLS
-              value: "32"
-            - name: NIX_CALENDAR_GOOGLE_ORIGIN
-              value: https://www.googleapis.com
-            - name: NIX_CALENDAR_MICROSOFT_ORIGIN
-              value: https://graph.microsoft.com
           livenessProbe: { httpGet: { path: /healthz, port: 8301 }, periodSeconds: 10 }
           readinessProbe: { httpGet: { path: /readyz, port: 8301 }, periodSeconds: 5 }
-          resources: { requests: { cpu: 50m, memory: 160Mi }, limits: { cpu: "2", memory: 1Gi } }
-          volumeMounts: [{ name: staging, mountPath: /tmp }]
+          resources: { requests: { cpu: 50m, memory: 96Mi }, limits: { cpu: "1", memory: 512Mi } }
+          volumeMounts:
+            - { name: staging, mountPath: /tmp }
+            - { name: companion, mountPath: /var/lib/nix-worker/companion }
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
-      volumes: [{ name: staging, emptyDir: { sizeLimit: 512Mi } }]
+      volumes:
+        - { name: staging, emptyDir: { sizeLimit: 64Mi } }
+        - { name: companion, emptyDir: { sizeLimit: 256Mi } }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -93,11 +60,5 @@ spec:
   egress:
     - to: [{ podSelector: { matchLabels: { app: nix-api } } }]
       ports: [{ protocol: TCP, port: 8080 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-collab } } }]
-      ports: [{ protocol: TCP, port: 8100 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-rabbitmq } } }]
-      ports: [{ protocol: TCP, port: 5672 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-versitygw } } }]
-      ports: [{ protocol: TCP, port: 7070 }]
     - ports: [{ protocol: TCP, port: 443 }]
     - ports: [{ protocol: UDP, port: 53 }]

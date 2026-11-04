@@ -7,16 +7,11 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/sianachi/Nix/apps/go-workers/internal/role"
 )
 
 type Dependencies struct {
 	Logger         *slog.Logger
 	InternalSecret string
-	MaxInputSize   int64
-	MaxRecords     int
-	MaxLineBytes   int
 	RequestTimeout time.Duration
 	Ready          func() bool
 	Companion      http.Handler
@@ -26,7 +21,7 @@ type Server struct {
 	deps Dependencies
 }
 
-func NewForRole(service role.Service, deps Dependencies) http.Handler {
+func New(deps Dependencies) http.Handler {
 	server := &Server{deps: deps}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", server.health)

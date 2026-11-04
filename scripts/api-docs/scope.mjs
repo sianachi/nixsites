@@ -37,7 +37,7 @@ export function scopeSentence(scope) {
     case 'write':
       return 'Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.';
     case 'admin':
-      return 'Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.';
+      return 'Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.';
     case 'interactive':
       return 'A personal access token cannot call this. Only an interactive browser session can.';
     default:
@@ -110,7 +110,6 @@ export function classify(method, path) {
     (value.startsWith('/api/v1/workspaces/') &&
       (value.endsWith('/archive') || value.endsWith('/restore'))) ||
     (verb === 'DELETE' && value.startsWith('/api/v1/workspaces/')) ||
-    value.includes('/plugins') ||
     value.includes('/automations') ||
     startsWithSegment(value, '/api/v1/sites') ||
     startsWithSegment(value, '/api/v1/tenant/admins')

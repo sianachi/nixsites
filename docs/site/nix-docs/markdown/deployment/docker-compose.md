@@ -15,7 +15,7 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | nix-versitygw | S3-compatible storage for file bytes |
 | nix-api | Core: API, permissions, sign-in and search |
 | nix-collab | Collaboration: live editing, history, import and export assembly |
-| nix-plugin-worker | Signed WebAssembly plugin runs; also hosts the optional companion runtime |
+| nix-companion | The pet companion runtime (codex app-server) behind the internal API |
 | nix-sites-worker | Builds published websites (sites profile) |
 | nix-sites-serve | Serves published websites to anonymous readers (sites profile) |
 | nix-web | The web app, served by Caddy, which also routes the API, collaboration and storage |

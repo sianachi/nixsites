@@ -8,8 +8,8 @@ what the script does, the flags, upgrades, Kubernetes and image tags.
 
 Needs Docker with the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for
 Docker. The stack runs Postgres, RabbitMQ, an object store, the identity provider and four Nix
-services (API, collaboration, web, and the plugin
-worker). A default Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script
+services (API, collaboration, web, and the pet companion
+host). A default Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script
 stops if a tool is missing, and warns when Docker has less than about 8 GB.
 
 ```sh

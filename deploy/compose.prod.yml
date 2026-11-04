@@ -200,7 +200,7 @@ services:
       Logging__Console__FormatterName: json
       ConnectionStrings__Nix: ${NIX_CORE_DATABASE_URL:?set NIX_CORE_DATABASE_URL}
       Nix__InternalSecret: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      Nix__Pets__WorkerUrl: http://nix-plugin-worker:8301
+      Nix__Pets__WorkerUrl: http://nix-companion:8301
       Nix__Collaboration__BaseUrl: http://nix-collab:8100
       Nix__RabbitMq__Uri: ${NIX_RABBITMQ_API_URL:-amqp://nix-api:${NIX_RABBITMQ_API_PASSWORD:?set NIX_RABBITMQ_API_PASSWORD}@rabbitmq:5672/%2Fnix}
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
@@ -331,13 +331,13 @@ services:
         aliases:
           - nix-collab
 
-  nix-plugin-worker:
+  # The pet companion (codex app-server) behind the internal HTTP API, until it moves into the
+  # Node process. It holds no broker, database or storage credential.
+  nix-companion:
     image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
     user: "65532:65532"
     restart: unless-stopped
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       nix-api:
         condition: service_started
     environment:
@@ -345,17 +345,9 @@ services:
       NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
       NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
-      NIX_WORKER_ROLES: plugin-events
       NIX_COMPANION_DATA_DIR: /var/lib/nix-worker/companion
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
       NIX_WORKER_API_URL: http://nix-api:8080
-      NIX_WORKER_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
-      NIX_RABBITMQ_URL: ${NIX_RABBITMQ_PLUGIN_URL:-amqp://nix-plugin:${NIX_RABBITMQ_PLUGIN_PASSWORD:?set NIX_RABBITMQ_PLUGIN_PASSWORD}@rabbitmq:5672/%2Fnix}
-      NIX_WORKER_MAX_CONCURRENCY: "4"
-      NIX_PLUGIN_MAX_MODULE_BYTES: "8388608"
-      NIX_PLUGIN_MEMORY_PAGES: "1024"
-      NIX_PLUGIN_TIMEOUT_MILLISECONDS: "250"
-      NIX_PLUGIN_MAX_HOST_CALLS: "32"
     volumes:
       - nix-companion-data:/var/lib/nix-worker/companion
     healthcheck:
@@ -375,7 +367,7 @@ services:
     networks:
       default:
         aliases:
-          - nix-plugin-worker
+          - nix-companion
 
   # Sites (ADR-0063), off unless the env file sets COMPOSE_PROFILES=sites and NIX_SITES_DOMAIN.
   nix-sites-worker:

@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#plugins">Plugins</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -117,7 +117,7 @@
 <p class="id">Operation id: <code>UpdateAutomation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>ruleId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>UpdateAutomationRequest</code>.</p>
@@ -129,7 +129,7 @@
 <p class="id">Operation id: <code>DeleteAutomation</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>ruleId</code> in path (required, string (uuid))</li></ul>
 
@@ -141,7 +141,7 @@
 <p class="id">Operation id: <code>RunAutomation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>ruleId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>AutomationItemRequest</code>.</p>
@@ -165,7 +165,7 @@
 <p class="id">Operation id: <code>TestAutomation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>ruleId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>AutomationItemRequest</code>.</p>
@@ -189,7 +189,7 @@
 <p class="id">Operation id: <code>CreateAutomation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>AutomationRuleInput</code>.</p>
@@ -309,7 +309,7 @@
 <p class="id">Operation id: <code>CreateCalendarLink</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 
 <p>Request body: <code>CreateCalendarLinkRequest</code>.</p>
@@ -321,7 +321,7 @@
 <p class="id">Operation id: <code>UpdateCalendarLink</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>linkId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>UpdateCalendarLinkRequest</code>.</p>
@@ -333,7 +333,7 @@
 <p class="id">Operation id: <code>DeleteCalendarLink</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Unlinks the calendar. 'items=keep' (the default) leaves the container and its events as ordinary items; 'items=trash' moves the container to the trash. Nothing is removed from the external calendar.</p>
 <ul><li><code>linkId</code> in path (required, string (uuid))</li><li><code>items</code> in query (optional, string)</li></ul>
 
@@ -381,7 +381,7 @@
 <p class="id">Operation id: <code>UnlinkWorkspaceCalendar</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Unlinks the calendar on a container, whoever linked it. 'items=keep' (the default) leaves the container and its events as ordinary items; 'items=trash' moves the container to the trash. Workspace owners and tenant administrators only.</p>
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>containerItemId</code> in path (required, string (uuid))</li><li><code>items</code> in query (optional, string)</li></ul>
 
@@ -1017,7 +1017,7 @@
 <p class="id">Operation id: <code>GetPublicFormStatus</code></p>
 <p><strong>Can.</strong> Read the resource named in the summary.</p>
 <p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>viewId</code> in path (required, string)</li></ul>
 
@@ -1029,7 +1029,7 @@
 <p class="id">Operation id: <code>PublishPublicForm</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>viewId</code> in path (required, string)</li></ul>
 
@@ -1041,7 +1041,7 @@
 <p class="id">Operation id: <code>RevokePublicForm</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>viewId</code> in path (required, string)</li></ul>
 
@@ -1401,7 +1401,7 @@
 <p class="id">Operation id: <code>MoveItem</code></p>
 <p><strong>Can.</strong> Move the item under a new parent, including into another workspace when the request says so.</p>
 <p><strong>Cannot.</strong> Rename it, edit its body, or change its properties. A move can change who can see the item, because visibility follows the new parent.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Reparents the item and maintains the closure table. Fails with 'items.move_would_create_cycle' when the destination is the item itself or one of its own descendants, and with 'items.parent_not_found' when the destination is not visible. Fails with 'items.locked' (423) when a lock the caller has not opened covers the item or the destination.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>MoveItemRequest</code>.</p>
@@ -1803,66 +1803,6 @@
 <p>Request body: <code>SavePetSettingsRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
 </article></section>
-<section id="plugins"><h2>Plugins</h2><article id="listworkspaceplugins" data-search="get /api/v1/workspaces/{workspaceid}/plugins listworkspaceplugins   plugins">
-<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/plugins</code></h3>
-<p></p>
-<p class="id">Operation id: <code>ListWorkspacePlugins</code></p>
-<p><strong>Can.</strong> Read the resource named in the summary.</p>
-<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
-<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
-
-<p>Responses: <code>200</code>, <code>404</code>.</p>
-</article>
-<article id="registerworkspaceplugin" data-search="post /api/v1/workspaces/{workspaceid}/plugins registerworkspaceplugin   plugins">
-<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/plugins</code></h3>
-<p></p>
-<p class="id">Operation id: <code>RegisterWorkspacePlugin</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>PluginComponentRegistrationRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>201</code>, <code>400</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>503</code>.</p>
-</article>
-<article id="beginplugincomponentupload" data-search="post /api/v1/workspaces/{workspaceid}/plugins/components/upload beginplugincomponentupload   plugins">
-<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/plugins/components/upload</code></h3>
-<p></p>
-<p class="id">Operation id: <code>BeginPluginComponentUpload</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>BeginPluginComponentUploadRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>400</code>, <code>403</code>, <code>404</code>, <code>503</code>.</p>
-</article>
-<article id="replaceworkspaceplugincapabilities" data-search="put /api/v1/workspaces/{workspaceid}/plugins/{installationid}/capabilities replaceworkspaceplugincapabilities   plugins">
-<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/plugins/{installationId}/capabilities</code></h3>
-<p></p>
-<p class="id">Operation id: <code>ReplaceWorkspacePluginCapabilities</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>installationId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>ReplacePluginCapabilitiesRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>400</code>, <code>403</code>, <code>404</code>.</p>
-</article>
-<article id="setworkspacepluginenabled" data-search="put /api/v1/workspaces/{workspaceid}/plugins/{installationid}/enabled setworkspacepluginenabled   plugins">
-<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/plugins/{installationId}/enabled</code></h3>
-<p></p>
-<p class="id">Operation id: <code>SetWorkspacePluginEnabled</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>installationId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>SetPluginEnabledRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>.</p>
-</article></section>
 <section id="query"><h2>Query</h2><article id="runitemquery" data-search="get /api/v1/items/{itemid}/query runitemquery run one of an item's query views runs the saved query the named view stores: every active item the caller may read, in any container, whose properties satisfy the view's filters. the client names the view and never sends rules - the stored view is the whole query, and rules are edited through put /items/{itemid}/views like any other view configuration. 'today' is required, as yyyy-mm-dd in the caller's own zone, because a stored rule may say 'today' and only the caller knows which day that is. rows the caller may not read are excluded while the query runs, never filtered from its results, so the ceiling is spent only on rows that are actually returned. results are ordered by the first date-shaped filter's property soonest-first, else by the view's own sort compared as text, else most recently modified first, and always tie-broken by id so the same read returns the same rows twice. at most 500 rows are returned; 'truncated' says when more matched, which a list cannot convey on its own. each row carries its container's title so a cross-container list can say where a row lives. items under a lock the caller has not opened are left out, and a view stored on a locked item is refused with 'items.locked' (423) until it is unlocked. a query that runs past its time limit answers 'query.timed_out' (503). query">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/query</code></h3>
 <p>Run one of an item's query views</p>
@@ -1929,7 +1869,7 @@
 <p class="id">Operation id: <code>GrantTenantAdmin</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Idempotent; audited. The person must belong to the caller's organization. Needs a tenant administrator.</p>
 <ul><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 
@@ -1941,7 +1881,7 @@
 <p class="id">Operation id: <code>RevokeTenantAdmin</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Idempotent; audited. Refused (409 roles.last_administrator) when it would leave no administrator. Needs a tenant administrator.</p>
 <ul><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 
@@ -2061,7 +2001,7 @@
 <p class="id">Operation id: <code>CreateSite</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Creates a draft site with its default hostname under the sites domain. Nothing is public until it is published. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 
 <p>Request body: <code>CreateSiteRequest</code>.</p>
@@ -2097,7 +2037,7 @@
 <p class="id">Operation id: <code>GrantSiteOperator</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Idempotent. The person must belong to the caller's organization; audited. Only an operator of this deployment (Nix:Sites:Operators or granted in Settings; else the tenant administrators when none is configured).</p>
 <ul><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 
@@ -2109,7 +2049,7 @@
 <p class="id">Operation id: <code>RevokeSiteOperator</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Idempotent. An operator set in configuration cannot be revoked (409 sites.operator_configured); audited. Only an operator of this deployment (Nix:Sites:Operators or granted in Settings; else the tenant administrators when none is configured).</p>
 <ul><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 
@@ -2133,7 +2073,7 @@
 <p class="id">Operation id: <code>UpdateSite</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>A field that is left out is left alone. Turning on automatic republish makes the caller the principal the rebuilds run as. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>UpdateSiteRequest</code>.</p>
@@ -2145,7 +2085,7 @@
 <p class="id">Operation id: <code>DeleteSite</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Refused while the site is live, building, or still has files being deleted. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 
@@ -2157,7 +2097,7 @@
 <p class="id">Operation id: <code>RequestSiteApproval</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Where the deployment requires it, a first publish (and the first after an unpublish) waits for an operator; approval publishes as the manager who asked. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>RequestSiteApprovalRequest</code>.</p>
@@ -2169,7 +2109,7 @@
 <p class="id">Operation id: <code>ApproveSitePublish</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Runs the publish as the manager who asked, re-checking their manager rights; audited. Only an operator of this deployment (Nix:Sites:Operators or granted in Settings; else the tenant administrators when none is configured).</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 
@@ -2181,7 +2121,7 @@
 <p class="id">Operation id: <code>RejectSitePublish</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>The note is shown to the site's managers; audited. Only an operator of this deployment (Nix:Sites:Operators or granted in Settings; else the tenant administrators when none is configured).</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>RejectSiteApprovalRequest</code>.</p>
@@ -2217,7 +2157,7 @@
 <p class="id">Operation id: <code>AddSiteHostname</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>The hostname is served once a TXT record `_nix-site.&lt;hostname&gt;` holds its token; the response lists the records to create. In a zone the operator's Cloudflare account manages for this workspace, Nix creates them itself. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>AddSiteHostnameRequest</code>.</p>
@@ -2229,7 +2169,7 @@
 <p class="id">Operation id: <code>SetSiteHostnames</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>A custom hostname is served only once its ownership is verified; until then it is listed as pending. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>SetSiteHostnamesRequest</code>.</p>
@@ -2241,7 +2181,7 @@
 <p class="id">Operation id: <code>UpdateSiteHostname</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>The primary hostname is canonical once it is served. Other hostnames serve the same build (200) or redirect to the canonical one (308, path and query kept). Canonical links in pages change at the next publish. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li><li><code>hostname</code> in path (required, string)</li></ul>
 <p>Request body: <code>UpdateSiteHostnameRequest</code>.</p>
@@ -2253,7 +2193,7 @@
 <p class="id">Operation id: <code>RemoveSiteHostname</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Stops serving it and deletes only the DNS records Nix created for it. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li><li><code>hostname</code> in path (required, string)</li></ul>
 
@@ -2265,7 +2205,7 @@
 <p class="id">Operation id: <code>VerifySiteHostname</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Core looks the records up itself; nothing the client reports is trusted. One check per hostname a minute. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li><li><code>hostname</code> in path (required, string)</li></ul>
 
@@ -2289,7 +2229,7 @@
 <p class="id">Operation id: <code>SetSitePagePath</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>The old path becomes a permanent redirect. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>SetSitePagePathRequest</code>.</p>
@@ -2301,7 +2241,7 @@
 <p class="id">Operation id: <code>PublishSite</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Fixes what the caller can read as an immutable manifest and queues a build. Locked, trashed, excluded and future-dated items are never included. The first publish needs 'acknowledgeDisclosure': search engines and web archives may keep a copy of public content. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>PublishSiteRequest</code>.</p>
@@ -2313,7 +2253,7 @@
 <p class="id">Operation id: <code>RollbackSite</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Only a previous build that has not been retired can be served again. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>RollbackSiteRequest</code>.</p>
@@ -2325,7 +2265,7 @@
 <p class="id">Operation id: <code>UnpublishSite</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 <p>Removes the host manifests and deletes the builds. Search engines and archives may still hold copies. Needs workspace manager rights; a caller who cannot read the workspace gets 404.</p>
 <ul><li><code>siteId</code> in path (required, string (uuid))</li></ul>
 
@@ -2685,7 +2625,7 @@
 <p class="id">Operation id: <code>PurgeWorkspace</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
@@ -2697,7 +2637,7 @@
 <p class="id">Operation id: <code>ArchiveWorkspace</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
@@ -2757,7 +2697,7 @@
 <p class="id">Operation id: <code>CreateWorkspaceInvitation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>CreateWorkspaceInvitationRequest</code>.</p>
@@ -2769,7 +2709,7 @@
 <p class="id">Operation id: <code>RevokeWorkspaceInvitation</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>invitationId</code> in path (required, string (uuid))</li></ul>
 
@@ -2781,7 +2721,7 @@
 <p class="id">Operation id: <code>AcceptWorkspaceInvitation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>invitationId</code> in path (required, string (uuid))</li></ul>
 
@@ -2793,7 +2733,7 @@
 <p class="id">Operation id: <code>DeclineWorkspaceInvitation</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>invitationId</code> in path (required, string (uuid))</li></ul>
 
@@ -2805,7 +2745,7 @@
 <p class="id">Operation id: <code>ListWorkspaceInvitees</code></p>
 <p><strong>Can.</strong> Read the resource named in the summary.</p>
 <p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li><li><code>query</code> in query (optional, string)</li></ul>
 
@@ -2817,7 +2757,7 @@
 <p class="id">Operation id: <code>LeaveWorkspace</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
@@ -2841,7 +2781,7 @@
 <p class="id">Operation id: <code>ChangeWorkspaceMemberRole</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>ChangeWorkspaceMemberRoleRequest</code>.</p>
@@ -2853,7 +2793,7 @@
 <p class="id">Operation id: <code>RemoveWorkspaceMember</code></p>
 <p><strong>Can.</strong> Delete or revoke what the summary names.</p>
 <p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>principalId</code> in path (required, string (uuid))</li></ul>
 
@@ -2877,7 +2817,7 @@
 <p class="id">Operation id: <code>RecoverWorkspace</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>RecoverWorkspaceRequest</code>.</p>
@@ -2889,7 +2829,7 @@
 <p class="id">Operation id: <code>RestoreWorkspace</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, plugins, automations, sites, and moving an item.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 

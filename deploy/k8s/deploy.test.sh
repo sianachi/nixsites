@@ -270,11 +270,12 @@ if grep -Fq 'NIX_TEMPLATE_BOOT_MEDIA_URL' "$RENDERED_TEMPLATE_SYNC"; then
   echo 'Template sync still uses the retired Media URL.' >&2
   exit 1
 fi
-grep -Fq 'nix.io/rabbitmq-secret-version: "12345"' "$RENDERED_WORKERS"
-test "$(grep -Fc 'nix.io/object-store-secret-version: "67890"' "$RENDERED_WORKERS")" -eq 1
-# One worker Deployment runs every role under the combined broker account.
-grep -Fq 'value: plugin-events' "$RENDERED_WORKERS"
-grep -Fq 'key: worker-url' "$RENDERED_WORKERS"
+# The worker Deployment is the companion host: no broker, storage or role configuration.
+if grep -Eq 'NIX_RABBITMQ_URL|NIX_WORKER_ROLES|NIX_WORKER_OBJECT_ORIGINS' "$RENDERED_WORKERS"; then
+  echo 'The companion host still carries worker-role configuration.' >&2
+  exit 1
+fi
+grep -Fq 'name: NIX_COMPANION_DATA_DIR' "$RENDERED_WORKERS"
 grep -Fq 'key: worker-password' "$RENDERED_RABBITMQ"
 grep -Fq 'values: [nix-worker, nix-sites-worker]' "$RENDERED_RABBITMQ"
 grep -Fq 'delete:-n nix delete deployment/nix-import-worker' "$KUBECTL_LOG"

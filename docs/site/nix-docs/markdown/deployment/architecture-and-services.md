@@ -21,15 +21,9 @@ A Nix deployment is a handful of small services around one PostgreSQL database. 
 
 The six images Nix builds itself, plus a `release-tools` image used by release scripts, are published for every commit.
 
-## Worker roles
+## Background jobs
 
-The worker binary runs one role, chosen with `NIX_WORKER_ROLES`:
-
-| Role | Queue | Work |
-| --- | --- | --- |
-| plugin-events | nix.worker.plugin-events.v1 | Signed WebAssembly plugin runs |
-
-When the variable is unset, a worker runs `plugin-events`. Imports, file publication, exports, calendar sync and push delivery run inside Core.
+Imports, exports, file publication, template file copies, object cleanup, calendar sync and push delivery run as background jobs inside Core, leased from the `worker_job` table and renewed while they run. A job Core was running when it restarted is marked failed and can be retried. The `worker` image now only hosts the pet companion (`nix-companion`), which calls Core over the internal API and holds no broker, database or storage credential.
 
 ## How the services talk
 

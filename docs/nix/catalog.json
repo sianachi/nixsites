@@ -777,29 +777,6 @@
       "localProofItemId": "01a12247-5982-7314-a5f8-ea99a0d0059a"
     },
     {
-      "slug": "worker-plugins",
-      "title": "Plugin event role and signed WebAssembly components",
-      "itemId": "7d30e9ea-5d47-5fc9-a4b1-df2d7d942774",
-      "archive": "docs/nix/nix-architecture.nix",
-      "sources": [
-        "apps/go-workers/internal/pluginworker/runner.go",
-        "apps/go-workers/internal/pluginruntime/runtime.go",
-        "backend/src/Nix.Api/Features/Plugins/PluginEndpoints.cs",
-        "apps/go-workers/internal/config/config.go",
-        "apps/go-workers/internal/objecttransfer"
-      ],
-      "words": 300,
-      "properties": {
-        "area": "Workers",
-        "topic": "Service",
-        "runtime": "Go",
-        "transports": "AMQP, HTTP/internal, Provider HTTP",
-        "depends_on": "Workspace events, Core API and signed WebAssembly plugins",
-        "source_paths": "apps/go-workers/internal/pluginworker/runner.go\napps/go-workers/internal/pluginruntime/runtime.go\nbackend/src/Nix.Api/Features/Plugins/PluginEndpoints.cs\napps/go-workers/internal/config/config.go\napps/go-workers/internal/objecttransfer"
-      },
-      "localProofItemId": "01a12247-5982-7b17-aa4d-68b1258de8e6"
-    },
-    {
       "slug": "worker-calendar",
       "title": "Calendar role and external providers",
       "itemId": "2f14bf75-4919-5cc0-ad9d-ccfefb15dded",
@@ -3173,14 +3150,14 @@
   "containers": [
     {
       "slug": "architecture",
-      "title": "Nix architecture handbook \u2014 e037eb02",
+      "title": "Nix architecture handbook — e037eb02",
       "itemId": "394eaa52-acb0-5570-af4a-894bce3ab6f3",
       "archive": "docs/nix/nix-architecture.nix",
       "localProofItemId": "01a12247-5982-75fd-a1bc-ccc06429be09"
     },
     {
       "slug": "reference",
-      "title": "Nix repository reference \u2014 preserved snapshot",
+      "title": "Nix repository reference — preserved snapshot",
       "itemId": "cc38b350-5f54-5eeb-abaa-ac17ab083ba9",
       "archive": "docs/nix/nix-reference.nix",
       "localProofItemId": "01a12244-4dfc-70f3-af32-31d17a4d6ea5"
@@ -3206,7 +3183,6 @@
     "workerRoles": [
       "import",
       "export",
-      "plugin-events",
       "calendar",
       "notify"
     ],
