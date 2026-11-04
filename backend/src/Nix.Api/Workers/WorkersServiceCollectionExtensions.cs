@@ -12,6 +12,9 @@ public static class WorkersServiceCollectionExtensions
     /// <summary>The named client the calendar provider transports use.</summary>
     public const string CalendarProviderHttpClientName = "worker-calendar-provider";
 
+    /// <summary>The named client capability-URL transfers use.</summary>
+    public const string ObjectTransferHttpClientName = "worker-object-transfer";
+
     public static IServiceCollection AddNixWorkers(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -60,6 +63,36 @@ public static class WorkersServiceCollectionExtensions
             };
             return new CalendarSyncHandler(provider.GetRequiredService<WorkerLoopbackClient>(), providers, logger);
         });
+
+        // Export: the bundle stream comes from Collab, files and results move through object storage
+        // capabilities; both transports refuse redirects and keep an exact origin allowlist.
+        services.AddHttpClient(ObjectTransferHttpClientName, static client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(static () => new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                AutomaticDecompression = System.Net.DecompressionMethods.None,
+            });
+        services.AddSingleton<IWorkerJobHandler>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<WorkerOptions>>();
+            var timeout = TimeSpan.FromSeconds(options.Value.RequestTimeoutSeconds);
+            HttpClient Client()
+            {
+                var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ObjectTransferHttpClientName);
+                client.Timeout = timeout;
+                return client;
+            }
+            var collabOrigins = new[] { configuration["Nix:Collaboration:BaseUrl"] ?? string.Empty };
+            var objectOrigins = new[] { configuration["Nix:ObjectStorage:Endpoint"] ?? string.Empty, configuration["Nix:ObjectStorage:PublicOrigin"] ?? string.Empty };
+            return new ExportJobHandler(
+                provider.GetRequiredService<WorkerLoopbackClient>(),
+                new Nix.Workers.Transfer.ObjectTransfer(Client(), collabOrigins),
+                new Nix.Workers.Transfer.ObjectTransfer(Client(), objectOrigins),
+                configuration,
+                options);
+        });
+        services.TryAddSingleton<IWorkerCapabilityRegistry, Nix.Persistence.RabbitMq.WorkerCapabilityRegistry>();
+        services.AddSingleton<IHostedService, ExportCapabilityAdvertiser>();
 
         services.AddSingleton<IHostedService, InterruptedJobSweep>();
         foreach (var family in JobFamilies.All)

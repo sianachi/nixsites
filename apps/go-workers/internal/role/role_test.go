@@ -12,9 +12,9 @@ func TestParse(t *testing.T) {
 		want    []Service
 		wantErr string
 	}{
-		{name: "two roles", input: "import,export", want: []Service{Import, Export}},
-		{name: "spaces and trailing comma", input: "import, export ,", want: []Service{Import, Export}},
-		{name: "single role", input: "export", want: []Service{Export}},
+		{name: "two roles", input: "import,plugin-events", want: []Service{Import, Plugin}},
+		{name: "spaces and trailing comma", input: "import, plugin-events ,", want: []Service{Import, Plugin}},
+		{name: "single role", input: "plugin-events", want: []Service{Plugin}},
 		{name: "empty", input: "", wantErr: "at least one"},
 		{name: "only commas", input: ",,", wantErr: "at least one"},
 		{name: "unknown role", input: "import,bogus", wantErr: "bogus"},
@@ -49,7 +49,7 @@ func TestSetHas(t *testing.T) {
 	if !set.Has(Import) {
 		t.Fatal("Has(Import) = false, want true")
 	}
-	if set.Has(Export) {
-		t.Fatal("Has(Export) = true, want false")
+	if set.Has(Plugin) {
+		t.Fatal("Has(Plugin) = true, want false")
 	}
 }

@@ -16,7 +16,6 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | nix-api | Core: API, permissions, sign-in and search |
 | nix-collab | Collaboration: live editing, history, import and export assembly |
 | nix-import-worker | Imports and file inspection; also hosts the optional companion runtime |
-| nix-export-worker | Native, Markdown, PDF and Word exports |
 | nix-plugin-worker | Signed WebAssembly plugin runs |
 | nix-sites-worker | Builds published websites (sites profile) |
 | nix-sites-serve | Serves published websites to anonymous readers (sites profile) |
@@ -33,7 +32,7 @@ One-shot jobs prepare each release:
 | nix-storage-init | Creates the storage bucket (maintenance profile) |
 | nix-collab-migrate | Document schema migrations (maintenance profile) |
 
-All five workers use the same `worker` image with a different role. Every service drops all Linux capabilities, cannot gain new privileges and, where it can, runs with a read-only filesystem.
+Both workers use the same `worker` image with a different role. Every service drops all Linux capabilities, cannot gain new privileges and, where it can, runs with a read-only filesystem.
 
 ## Profiles
 

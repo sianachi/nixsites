@@ -1,0 +1,9 @@
+[
+  [
+    "A linked section is represented by its link; its live content is not included. This happened 2 times.",
+    "Columns were laid out one after another.",
+    "Text colour is not carried into exported documents.",
+    "Comments are not carried into exported documents.",
+    "A diagram that could not be drawn was represented by its code."
+  ]
+]

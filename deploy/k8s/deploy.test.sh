@@ -273,7 +273,7 @@ fi
 grep -Fq 'nix.io/rabbitmq-secret-version: "12345"' "$RENDERED_WORKERS"
 test "$(grep -Fc 'nix.io/object-store-secret-version: "67890"' "$RENDERED_WORKERS")" -eq 1
 # One worker Deployment runs every role under the combined broker account.
-grep -Fq 'value: import,export,plugin-events,calendar,notify' "$RENDERED_WORKERS"
+grep -Fq 'value: import,plugin-events' "$RENDERED_WORKERS"
 grep -Fq 'key: worker-url' "$RENDERED_WORKERS"
 grep -Fq 'key: worker-password' "$RENDERED_RABBITMQ"
 grep -Fq 'values: [nix-worker, nix-sites-worker]' "$RENDERED_RABBITMQ"

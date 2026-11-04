@@ -17,6 +17,8 @@
     <!-- WebApplicationFactory<Program>: the real host, real routing, real
          serialization, in-memory transport. -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- Export parity: reads the text back out of the Go worker's PDF goldens and ours. -->
+    <PackageReference Include="PdfPig" />
   </ItemGroup>
 
 </Project>

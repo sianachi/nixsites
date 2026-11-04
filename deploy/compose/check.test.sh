@@ -62,7 +62,7 @@ assert retired_observability.isdisjoint(s)
 assert {'docker-logs', 'observability', 'grafana-access'}.isdisjoint(c['networks'])
 assert {'nix-loki-data', 'nix-alloy-data', 'nix-grafana-data'}.isdisjoint(c['volumes'])
 assert s['nix-api']['environment']['Logging__Console__FormatterName'] == 'json'
-for service in ['nix-import-worker', 'nix-export-worker', 'nix-plugin-worker']:
+for service in ['nix-import-worker', 'nix-plugin-worker']:
  assert s[service]['healthcheck']['test'] == ['CMD', '/nix-worker', '--healthcheck']
 assert s['nix-web']['healthcheck']['test'][0] == 'CMD'
 assert not any(service.get('logging', {}).get('driver') == 'none' for service in s.values())

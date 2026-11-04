@@ -14,9 +14,7 @@ const (
 	CommandsExchange     = "nix.commands.v1"
 	ResultsExchange      = "nix.results.v1"
 	WorkspaceExchange    = "nix.workspace.v1"
-	CapabilitiesExchange = "nix.capabilities.v1"
 	ImportQueue          = "nix.worker.import.v1"
-	ExportQueue          = "nix.worker.export.v1"
 	PluginEventsQueue    = "nix.worker.plugin-events.v1"
 	ResultRoutingKey     = "job.result"
 	CommandMessageType   = "worker.command.v1"
@@ -82,26 +80,6 @@ type WorkerResult struct {
 	ErrorCode     *string         `json:"errorCode,omitempty"`
 	ErrorDetail   *string         `json:"errorDetail,omitempty"`
 	TraceParent   *string         `json:"traceParent,omitempty"`
-}
-
-type ExportFormatCapability struct {
-	Format       string   `json:"format"`
-	Label        string   `json:"label"`
-	Extension    string   `json:"extension"`
-	MediaType    string   `json:"mediaType"`
-	Lossless     bool     `json:"lossless"`
-	DeclaredLoss []string `json:"declaredLoss"`
-}
-
-type WorkerCapabilities struct {
-	SchemaVersion int                      `json:"schemaVersion"`
-	MessageID     string                   `json:"messageId"`
-	MessageType   string                   `json:"messageType"`
-	InstanceID    string                   `json:"instanceId"`
-	Role          string                   `json:"role"`
-	OccurredAt    time.Time                `json:"occurredAt"`
-	ExpiresAt     time.Time                `json:"expiresAt"`
-	ExportFormats []ExportFormatCapability `json:"exportFormats"`
 }
 
 func ParseEnvelope(body []byte, maxBytes int) (Envelope, error) {

@@ -145,7 +145,7 @@ func TestConsumerReadinessTracksEveryActiveSlot(t *testing.T) {
 	if !client.ConsumerReady(ImportQueue) {
 		t.Fatal("queue was not ready with active consumers")
 	}
-	if client.ConsumerReady(ExportQueue) {
+	if client.ConsumerReady(PluginEventsQueue) {
 		t.Fatal("one queue made an unrelated queue ready")
 	}
 	client.consumerStopped(ImportQueue)

@@ -50,6 +50,18 @@ public sealed class WorkerOptions
 
     /// <summary>Timeout for one loopback or provider request.</summary>
     public int RequestTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>The largest export source, import source or export output in bytes.</summary>
+    public long MaxInputBytes { get; set; } = 100L << 20;
+
+    /// <summary>The longest line of a bundle stream and the byte budget of one projected note.</summary>
+    public int MaxLineBytes { get; set; } = 4 << 20;
+
+    /// <summary>The most items one export or import may carry.</summary>
+    public int MaxRecords { get; set; } = 100_000;
+
+    /// <summary>Where spool files go; the temp directory when unset.</summary>
+    public string? SpoolDirectory { get; set; }
 }
 
 /// <summary>Web push self-identification, bound to <c>Nix:Push</c>. The public key alone already lived here.</summary>

@@ -13,7 +13,7 @@ import (
 )
 
 func TestBrokerWorkersRequireAuthenticatedDependencies(t *testing.T) {
-	for _, service := range []role.Service{role.Import, role.Export, role.Plugin} {
+	for _, service := range []role.Service{role.Import, role.Plugin} {
 		roles := role.Set{service: true}
 		if err := validateSettings(roles, config.Settings{}); err == nil {
 			t.Fatalf("%s accepted an empty internal credential", service)
@@ -25,10 +25,10 @@ func TestBrokerWorkersRequireAuthenticatedDependencies(t *testing.T) {
 			t.Fatalf("%s accepted an empty broker URL", service)
 		}
 		valid := config.Settings{InternalAPIURL: "http://api", InternalSecret: "secret", RabbitMQURL: "amqp://rabbit"}
-		if service == role.Import || service == role.Export {
+		if service == role.Import {
 			valid.CollaborationURL = "http://collab"
 		}
-		if service == role.Import || service == role.Export || service == role.Plugin {
+		if service == role.Import || service == role.Plugin {
 			valid.ObjectOrigins = []string{"https://objects.example.test"}
 		}
 		if err := validateSettings(roles, valid); err != nil {
@@ -112,11 +112,11 @@ func TestObjectStoreProbeAcceptsPrivateRefusalButRejectsRedirectAndOutage(t *tes
 }
 
 func TestCombinedWorkerParsesConfiguredRoles(t *testing.T) {
-	roles, err := selectedRoles(role.All, "import,export,plugin-events")
+	roles, err := selectedRoles(role.All, "import,plugin-events")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !roles.Has(role.Import) || !roles.Has(role.Export) || !roles.Has(role.Plugin) {
+	if !roles.Has(role.Import) || !roles.Has(role.Plugin) {
 		t.Fatalf("configured roles were not preserved: %#v", roles)
 	}
 }
@@ -134,11 +134,11 @@ func TestReadinessURLAcceptsWildcardAndExplicitAddresses(t *testing.T) {
 
 func TestReadinessRequiresAnActiveConsumerForEveryEnabledRole(t *testing.T) {
 	consumers := map[string]bool{
-		broker.ImportQueue: true,
-		broker.ExportQueue: false,
+		broker.ImportQueue:       true,
+		broker.PluginEventsQueue: false,
 	}
 	state := newReadinessState(
-		role.Set{role.Import: true, role.Export: true},
+		role.Set{role.Import: true, role.Plugin: true},
 		func(queue string) bool { return consumers[queue] },
 	)
 	state.api.Store(true)
@@ -149,26 +149,26 @@ func TestReadinessRequiresAnActiveConsumerForEveryEnabledRole(t *testing.T) {
 	if !state.RoleReady(role.Import) {
 		t.Fatal("import role was not ready with healthy dependencies and an active consumer")
 	}
-	if state.RoleReady(role.Export) {
-		t.Fatal("export role was ready without an active consumer")
+	if state.RoleReady(role.Plugin) {
+		t.Fatal("plugin role was ready without an active consumer")
 	}
 	if state.AllReady() {
 		t.Fatal("combined worker was ready while one enabled role had no consumer")
 	}
 }
 
-func TestCombinedDependencyFailureDoesNotPoisonExportAdvertisement(t *testing.T) {
+func TestCombinedDependencyFailureDoesNotPoisonAnotherRole(t *testing.T) {
 	state := newReadinessState(
-		role.Set{role.Export: true, role.Plugin: true},
-		func(queue string) bool { return queue == broker.ExportQueue },
+		role.Set{role.Import: true, role.Plugin: true},
+		func(queue string) bool { return queue == broker.ImportQueue },
 	)
 	state.api.Store(true)
 	state.rabbit.Store(true)
 	state.collaboration.Store(true)
 	state.objects.Store(true)
 
-	if !state.RoleReady(role.Export) {
-		t.Fatal("an unrelated plugin consumer outage poisoned export readiness")
+	if !state.RoleReady(role.Import) {
+		t.Fatal("an unrelated plugin consumer outage poisoned import readiness")
 	}
 	if state.RoleReady(role.Plugin) {
 		t.Fatal("plugin role was ready without an active consumer")

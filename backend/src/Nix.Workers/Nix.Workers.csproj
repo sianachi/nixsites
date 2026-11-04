@@ -12,4 +12,18 @@
     <RootNamespace>Nix.Workers</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="PdfSharp" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="Svg.Skia" />
+    <!-- Security floor for PdfSharp's transitive dependency; see Directory.Packages.props. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <!-- The Go fonts (BSD, Fonts/LICENSE): the PDF and diagram renderers carry their own glyphs, as the Go worker did. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts/*.ttf" />
+  </ItemGroup>
+
 </Project>

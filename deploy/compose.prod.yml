@@ -378,51 +378,6 @@ services:
         aliases:
           - nix-import-worker
 
-  nix-export-worker:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
-    user: "65532:65532"
-    restart: unless-stopped
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      nix-api:
-        condition: service_started
-      nix-collab:
-        condition: service_healthy
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
-      TMPDIR: /var/lib/nix-worker/spool
-      NIX_WORKER_ROLES: export
-      NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_WORKER_API_URL: http://nix-api:8080
-      NIX_WORKER_COLLAB_URL: http://nix-collab:8100
-      NIX_WORKER_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
-      NIX_RABBITMQ_URL: ${NIX_RABBITMQ_EXPORT_URL:-amqp://nix-export:${NIX_RABBITMQ_EXPORT_PASSWORD:?set NIX_RABBITMQ_EXPORT_PASSWORD}@rabbitmq:5672/%2Fnix}
-      NIX_WORKER_MAX_CONCURRENCY: "4"
-      NIX_WORKER_MAX_INPUT_BYTES: "104857600"
-      NIX_WORKER_MAX_LINE_BYTES: "4194304"
-      NIX_WORKER_MAX_RECORDS: "100000"
-    healthcheck:
-      test: ["CMD", "/nix-worker", "--healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-    mem_limit: 1g
-    cpus: 2
-    read_only: true
-    tmpfs:
-      - "/var/lib/nix-worker/spool:rw,noexec,nosuid,nodev,size=512m,uid=65532,gid=65532,mode=0700"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-export-worker
-
   nix-plugin-worker:
     image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
     user: "65532:65532"

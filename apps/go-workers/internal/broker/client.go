@@ -181,10 +181,6 @@ func (client *Client) PublishResult(ctx context.Context, result WorkerResult) er
 	return client.publish(ctx, ResultsExchange, ResultRoutingKey, result.MessageID, result.JobID, result.MessageType, result.OccurredAt, "", true, result)
 }
 
-func (client *Client) PublishCapabilities(ctx context.Context, capabilities WorkerCapabilities) error {
-	return client.publish(ctx, CapabilitiesExchange, "worker."+capabilities.Role, capabilities.MessageID, capabilities.InstanceID, capabilities.MessageType, capabilities.OccurredAt, "90000", false, capabilities)
-}
-
 func (client *Client) NewMessageID() (string, error) {
 	var value [16]byte
 	if _, err := rand.Read(value[:]); err != nil {

@@ -10,7 +10,6 @@ type Service string
 const (
 	All    Service = "all"
 	Import Service = "import"
-	Export Service = "export"
 	Plugin Service = "plugin-events"
 )
 
@@ -21,7 +20,7 @@ func Parse(value string) (Set, error) {
 	for raw := range strings.SplitSeq(value, ",") {
 		candidate := Service(strings.TrimSpace(raw))
 		switch candidate {
-		case Import, Export, Plugin:
+		case Import, Plugin:
 			roles[candidate] = true
 		case "":
 			continue

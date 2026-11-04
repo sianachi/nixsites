@@ -21,7 +21,6 @@ import (
 	"github.com/sianachi/Nix/apps/go-workers/internal/companion"
 	"github.com/sianachi/Nix/apps/go-workers/internal/config"
 	"github.com/sianachi/Nix/apps/go-workers/internal/documentimport"
-	"github.com/sianachi/Nix/apps/go-workers/internal/exportjob"
 	"github.com/sianachi/Nix/apps/go-workers/internal/fileinspect"
 	"github.com/sianachi/Nix/apps/go-workers/internal/httpserver"
 	"github.com/sianachi/Nix/apps/go-workers/internal/importer"
@@ -128,10 +127,10 @@ func Run(service role.Service) {
 
 	var collaborationProbe *serviceProbe
 	var objectProbe *objectStoreProbe
-	if roles.Has(role.Import) || roles.Has(role.Export) {
+	if roles.Has(role.Import) {
 		collaborationProbe = newServiceProbe(settings.CollaborationURL, settings.RequestTimeout)
 	}
-	if roles.Has(role.Import) || roles.Has(role.Export) || roles.Has(role.Plugin) {
+	if roles.Has(role.Import) || roles.Has(role.Plugin) {
 		objectProbe = newObjectStoreProbe(settings.ObjectOrigins, settings.RequestTimeout)
 	}
 	var apiProbe *workerapi.Client
@@ -211,23 +210,6 @@ func Run(service role.Service) {
 		}
 		go runner.Run(ctx)
 	}
-	if roles.Has(role.Export) {
-		go advertiseExportFormats(ctx, brokerClient, workerInstanceID(settings.WorkerID), func() bool {
-			return readiness.RoleReady(role.Export)
-		}, logger)
-		handler := exportjob.New(
-			apiClient,
-			objecttransfer.New(settings.RequestTimeout, settings.CollaborationURL),
-			objecttransfer.New(settings.RequestTimeout, settings.ObjectOrigins...),
-			settings.InternalSecret,
-			stream.Limits{MaxBytes: settings.MaxInputBytes, MaxLine: settings.MaxLineBytes, MaxRecords: settings.MaxRecords})
-		runner, runnerErr := brokerjob.New(brokerClient, apiClient, handler, broker.ExportQueue, exportjob.Kinds, settings.WorkerID, settings.MaxConcurrency, settings.LeaseDuration, settings.RenewInterval, logger)
-		if runnerErr != nil {
-			logger.Error("export job runner configuration failed", "error", runnerErr)
-			os.Exit(1)
-		}
-		go runner.Run(ctx)
-	}
 	if roles.Has(role.Plugin) {
 		pluginRuntime, runtimeErr := pluginruntime.New(pluginruntime.Limits{
 			MaxModuleBytes:       int(settings.PluginMaxModuleBytes),
@@ -289,62 +271,6 @@ func Run(service role.Service) {
 	logger.Info("go worker stopped", "roles", settings.WorkerRoles)
 }
 
-func advertiseExportFormats(ctx context.Context, client *broker.Client, instanceID string, isReady func() bool, logger *slog.Logger) {
-	formats := []broker.ExportFormatCapability{
-		{Format: "nix", Label: "Archive", Extension: "nix", MediaType: "application/vnd.nix.archive+zip", Lossless: true, DeclaredLoss: []string{}},
-		{Format: "markdown", Label: "Markdown", Extension: "md", MediaType: "text/markdown; charset=utf-8", DeclaredLoss: []string{"Views and interactive metadata are represented as text."}},
-		{Format: "docx", Label: "Word", Extension: "docx", MediaType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", DeclaredLoss: []string{"Interactive workspace behavior is flattened into a document.", "Links outside HTTP, HTTPS, email, and Nix are flattened to visible labels."}},
-		{Format: "pdf", Label: "PDF", Extension: "pdf", MediaType: "application/pdf", DeclaredLoss: []string{"Interactive workspace behavior is flattened into fixed pages.", "Characters not supported by the embedded PDF font are replaced.", "Complex layouts and unsupported formatting may be simplified."}},
-	}
-	publish := func() {
-		if !isReady() {
-			return
-		}
-		messageID, err := client.NewMessageID()
-		if err != nil {
-			logger.Warn("export capability message identity failed", "error", err)
-			return
-		}
-		now := time.Now().UTC()
-		publishContext, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		err = client.PublishCapabilities(publishContext, broker.WorkerCapabilities{
-			SchemaVersion: 1,
-			MessageID:     messageID,
-			MessageType:   "worker.capabilities.v1",
-			InstanceID:    instanceID,
-			Role:          "export",
-			OccurredAt:    now,
-			ExpiresAt:     now.Add(90 * time.Second),
-			ExportFormats: formats,
-		})
-		if err != nil && ctx.Err() == nil {
-			logger.Warn("export capability advertisement failed", "error", err)
-		}
-	}
-	readiness := time.NewTicker(100 * time.Millisecond)
-	for !isReady() {
-		select {
-		case <-ctx.Done():
-			readiness.Stop()
-			return
-		case <-readiness.C:
-		}
-	}
-	readiness.Stop()
-	publish()
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			publish()
-		}
-	}
-}
-
 func selectedRoles(service role.Service, configured string) (role.Set, error) {
 	if service == role.All {
 		return role.Parse(configured)
@@ -365,14 +291,14 @@ func validateSettings(roles role.Set, settings config.Settings) error {
 	if settings.RabbitMQURL == "" {
 		return errors.New("NIX_RABBITMQ_URL is required")
 	}
-	if roles.Has(role.Import) || roles.Has(role.Export) {
+	if roles.Has(role.Import) {
 		if !validServiceOrigin(settings.CollaborationURL) {
-			return errors.New("NIX_WORKER_COLLAB_URL must be a valid collaboration service origin for imports and exports")
+			return errors.New("NIX_WORKER_COLLAB_URL must be a valid collaboration service origin for imports")
 		}
 	}
-	if roles.Has(role.Import) || roles.Has(role.Export) || roles.Has(role.Plugin) {
+	if roles.Has(role.Import) || roles.Has(role.Plugin) {
 		if len(settings.ObjectOrigins) == 0 {
-			return errors.New("NIX_WORKER_OBJECT_ORIGINS is required for imports, exports, and plugins")
+			return errors.New("NIX_WORKER_OBJECT_ORIGINS is required for imports and plugins")
 		}
 	}
 	return nil
@@ -542,7 +468,7 @@ func (state *readinessState) RoleReady(service role.Service) bool {
 		return false
 	}
 	switch service {
-	case role.Import, role.Export:
+	case role.Import:
 		return state.collaboration.Load() && state.objects.Load()
 	case role.Plugin:
 		return state.objects.Load()
@@ -567,8 +493,6 @@ func queueForRole(service role.Service) string {
 	switch service {
 	case role.Import:
 		return broker.ImportQueue
-	case role.Export:
-		return broker.ExportQueue
 	case role.Plugin:
 		return broker.PluginEventsQueue
 	default:
@@ -588,10 +512,10 @@ func startReadinessProbes(
 ) {
 	go probeDependency(ctx, "Nix.Api", api, &state.api, interval, logger)
 	go probeDependency(ctx, "RabbitMQ", rabbit, &state.rabbit, interval, logger)
-	if state.roles.Has(role.Import) || state.roles.Has(role.Export) {
+	if state.roles.Has(role.Import) {
 		go probeDependency(ctx, "Collaboration", collaboration, &state.collaboration, interval, logger)
 	}
-	if state.roles.Has(role.Import) || state.roles.Has(role.Export) || state.roles.Has(role.Plugin) {
+	if state.roles.Has(role.Import) || state.roles.Has(role.Plugin) {
 		go probeDependency(ctx, "object storage", objects, &state.objects, interval, logger)
 	}
 }

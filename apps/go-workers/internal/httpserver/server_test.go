@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -32,26 +31,13 @@ func TestReadinessReflectsDependencies(t *testing.T) {
 
 func TestImportRoleDoesNotExposeOtherWorkerRoutes(t *testing.T) {
 	server := NewForRole(role.Import, Dependencies{Logger: slog.Default(), InternalSecret: "secret"})
-	for _, path := range []string{"/v1/export/ndjson", "/v1/search"} {
+	for _, path := range []string{"/v1/search"} {
 		request := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
 		request.Header.Set("X-Nix-Internal-Secret", "secret")
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, request)
 		if response.Code != http.StatusNotFound {
 			t.Fatalf("import role exposed %s with status %d", path, response.Code)
-		}
-	}
-}
-
-func TestExportRoleDoesNotExposeOtherWorkerRoutes(t *testing.T) {
-	server := NewForRole(role.Export, Dependencies{Logger: slog.Default(), InternalSecret: "secret"})
-	for _, path := range []string{"/v1/import/ndjson", "/v1/search"} {
-		request := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
-		request.Header.Set("X-Nix-Internal-Secret", "secret")
-		response := httptest.NewRecorder()
-		server.ServeHTTP(response, request)
-		if response.Code != http.StatusNotFound {
-			t.Fatalf("export role exposed %s with status %d", path, response.Code)
 		}
 	}
 }
@@ -100,32 +86,6 @@ func TestDocumentImportParsesMarkdownWithHonestResponse(t *testing.T) {
 	server.ServeHTTP(response, request)
 	if response.Code != http.StatusAccepted || !strings.Contains(response.Body.String(), `"# Heading"`) {
 		t.Fatalf("document import response = %d %q", response.Code, response.Body.String())
-	}
-}
-
-func TestDocumentExportWritesMarkdown(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
-	request := httptest.NewRequest(http.MethodPost, "/v1/export/document?format=markdown", strings.NewReader(`{"id":"one","title":"Note","body":"Body"}
-`))
-	request.Header.Set("X-Nix-Internal-Secret", "secret")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	if response.Code != http.StatusOK || response.Body.String() != "# Note\n\nBody\n\n" {
-		t.Fatalf("document export response = %d %q", response.Code, response.Body.String())
-	}
-}
-
-func TestExportReturnsNdjsonRecords(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
-	request := httptest.NewRequest(http.MethodPost, "/v1/export/ndjson", strings.NewReader(`{"id":"one","title":"One"}
-`))
-	request.Header.Set("X-Nix-Internal-Secret", "secret")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	body, _ := io.ReadAll(response.Body)
-	if response.Code != http.StatusOK || string(body) != `{"id":"one","title":"One"}
-` {
-		t.Fatalf("export response = %d %q", response.Code, body)
 	}
 }
 

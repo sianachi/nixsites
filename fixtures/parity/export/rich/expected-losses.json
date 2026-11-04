@@ -1,0 +1,19 @@
+[
+  [
+    "Suggestions were resolved.",
+    "Comments were dropped.",
+    "A \"sidebar\" block written by a newer version of Nix was drawn as its text only.",
+    "An unavailable or unsupported image was represented by its description.",
+    "Views are represented by their accessible source records and form content; live queries, calculations and interactions are not reproduced.",
+    "The exported view source records are incomplete."
+  ],
+  [
+    "Spreadsheet cells and formulas are shown as text; formulas are not recalculated and grid styling is not preserved."
+  ],
+  [
+    "Canvas elements are represented as a text inventory; their visual arrangement is described rather than drawn."
+  ],
+  [
+    "Attachments are linked to their original Nix items; binary contents are not embedded as editable text."
+  ]
+]

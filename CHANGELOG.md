@@ -7,6 +7,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Exports run inside Core: the `export` worker role and its container are gone. Markdown, Word and `.nix` exports are byte-identical to the worker's; PDF exports carry the same text on the same pages but are written by a different library, so the bytes differ and Mermaid diagrams are rasterised by a different engine. An export interrupted by a restart is marked failed and can be retried.
 - Calendar sync runs inside Core: the `calendar` worker role and its container are gone. Google Calendar and Microsoft Graph are called from Core with the same requests the worker sent (nine recorded scenarios replay identically). The provider API origins are `Nix:Calendar:Google:ApiOrigin` and `Nix:Calendar:Microsoft:ApiOrigin`; `NIX_CALENDAR_*_ORIGIN` on the worker is no longer read. A sync interrupted by a restart is marked failed and the next five-minute slot re-runs it; cursors are stored only after a full round, so nothing is left half-applied.
 - Web Push delivery runs inside Core: the `notify` worker role and its container are gone, and Core now needs `Nix:Push:VapidPrivateKey` and `Nix:Push:VapidSubject` (Compose: `NIX_PUSH_VAPID_PRIVATE_KEY` and `NIX_PUSH_VAPID_SUBJECT`, already in the env file; Kubernetes: the `nix-push-vapid` secret, already present). A notification's push is handed to the worker once, so a restart mid-delivery can never push the same notification twice. Jobs Core was running when it restarted are marked `failed` with `interrupted_by_restart` and can be retried.
 

@@ -15,3 +15,4 @@ packages/site-render/src/__golden__/
 packages/structure-spec/evals/openui-library.json
 # Written by Xcode and the Capacitor CLI (`cap add`, `cap sync`), never reformat.
 apps/mobile/ios/
+fixtures/parity/

@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -10,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sianachi/Nix/apps/go-workers/internal/exporter"
 	"github.com/sianachi/Nix/apps/go-workers/internal/importer"
 	"github.com/sianachi/Nix/apps/go-workers/internal/role"
 	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
@@ -42,10 +40,6 @@ func NewForRole(service role.Service, deps Dependencies) http.Handler {
 	if service == role.All || service == role.Import {
 		mux.Handle("POST /v1/import/ndjson", server.requireInternal(http.HandlerFunc(server.importNDJSON)))
 		mux.Handle("POST /v1/import/document", server.requireInternal(http.HandlerFunc(server.importDocument)))
-	}
-	if service == role.All || service == role.Export {
-		mux.Handle("POST /v1/export/ndjson", server.requireInternal(http.HandlerFunc(server.exportNDJSON)))
-		mux.Handle("POST /v1/export/document", server.requireInternal(http.HandlerFunc(server.exportDocument)))
 	}
 	timeout := deps.RequestTimeout
 	if timeout <= 0 {
@@ -115,52 +109,6 @@ func (s *Server) importDocument(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	writeJSON(response, http.StatusAccepted, result)
-}
-
-func (s *Server) exportNDJSON(response http.ResponseWriter, request *http.Request) {
-	request.Body = http.MaxBytesReader(response, request.Body, s.deps.MaxInputSize)
-	response.Header().Set("Content-Type", "application/x-ndjson")
-	response.WriteHeader(http.StatusOK)
-	writer := stream.NewWriter(response, s.limits())
-	if _, err := stream.ReadRecords(request.Body, s.limits(), func(record stream.Record) error {
-		return writer.Write(record)
-	}); err != nil {
-		if s.deps.Logger != nil {
-			s.deps.Logger.Error("export stream refused", "error", err, "records", writer.Summary().Records)
-		}
-		return
-	}
-}
-
-func (s *Server) exportDocument(response http.ResponseWriter, request *http.Request) {
-	format := request.URL.Query().Get("format")
-	if format == "" {
-		writeJSON(response, http.StatusBadRequest, map[string]string{"code": "export_invalid", "detail": "format is required."})
-		return
-	}
-	request.Body = http.MaxBytesReader(response, request.Body, s.deps.MaxInputSize)
-	records := make([]stream.Record, 0)
-	if _, err := stream.ReadRecords(request.Body, s.limits(), func(record stream.Record) error {
-		records = append(records, record)
-		return nil
-	}); err != nil {
-		writeStreamError(response, err)
-		return
-	}
-	var output bytes.Buffer
-	if err := exporter.Write(format, records, &output, s.limits()); err != nil {
-		writeStreamError(response, err)
-		return
-	}
-	contentType := "application/octet-stream"
-	if format == "markdown" || format == "md" {
-		contentType = "text/markdown; charset=utf-8"
-	} else if format == "ndjson" || format == "jsonl" {
-		contentType = "application/x-ndjson"
-	}
-	response.Header().Set("Content-Type", contentType)
-	response.WriteHeader(http.StatusOK)
-	_, _ = response.Write(output.Bytes())
 }
 
 func (s *Server) limits() stream.Limits {

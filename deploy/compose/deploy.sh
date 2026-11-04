@@ -68,7 +68,7 @@ smoke() {
 smoke --preflight
 # Fetch release images before writers stop, so the maintenance window excludes the download.
 # Host-built images (NIX_IMAGE_REGISTRY=localhost/nix) must already exist locally.
-release_services=(nix-migrate nix-api nix-collab-migrate nix-collab nix-import-worker nix-export-worker nix-plugin-worker nix-web ${optional_services[@]+"${optional_services[@]}"})
+release_services=(nix-migrate nix-api nix-collab-migrate nix-collab nix-import-worker nix-plugin-worker nix-web ${optional_services[@]+"${optional_services[@]}"})
 while IFS= read -r image; do
   case "$image" in
     localhost/*) docker image inspect "$image" >/dev/null ;;
@@ -91,7 +91,7 @@ done
 # migrations run. RabbitMQ mounts its configuration from the release checkout, so every release
 # recreates it; with publishers and consumers stopped, that restart cannot interrupt a delivery
 # (queues are durable and messages persistent). Failure leaves writers stopped for inspection.
-"${compose[@]}" stop nix-web ${optional_services[@]+"${optional_services[@]}"} nix-import-worker nix-export-worker nix-plugin-worker nix-collab nix-api
+"${compose[@]}" stop nix-web ${optional_services[@]+"${optional_services[@]}"} nix-import-worker nix-plugin-worker nix-collab nix-api
 "${compose[@]}" up -d --wait --wait-timeout 180 postgres rabbitmq nix-versitygw
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-storage-init
 # The BackupRuns migration grants to the nix_backup role, which migrations cannot create. Create
@@ -105,6 +105,6 @@ fi
 "${compose[@]}" run --rm --no-deps nix-api-init
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-collab-migrate
 "${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-api nix-collab
-"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-import-worker nix-export-worker nix-plugin-worker ${optional_services[@]+"${optional_services[@]}"} nix-web cloudflared
+"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-import-worker nix-plugin-worker ${optional_services[@]+"${optional_services[@]}"} nix-web cloudflared
 smoke
 echo 'Compose release passed import/export verification. Complete browser checks in the runbook.'
