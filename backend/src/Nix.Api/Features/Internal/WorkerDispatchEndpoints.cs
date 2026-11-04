@@ -15,8 +15,6 @@ internal static class WorkerDispatchEndpoints
         group.MapPost("/worker-dispatch/jobs/{jobId:guid}/renew", RenewJob);
         group.MapGet("/worker-dispatch/jobs/{jobId:guid}/state", GetJobState);
         group.MapPost("/worker-dispatch/jobs/{jobId:guid}/complete", CompleteJob);
-        group.MapPost("/worker-dispatch/outbox/lease", LeaseOutbox);
-        group.MapPost("/worker-dispatch/outbox/{eventId:guid}/finish", FinishOutbox);
     }
 
     private static async Task<Ok<IReadOnlyList<DispatchedWorkerJob>>> LeaseJobs(
@@ -84,33 +82,8 @@ internal static class WorkerDispatchEndpoints
             ? TypedResults.NoContent()
             : TypedResults.Conflict();
 
-    private static async Task<Ok<IReadOnlyList<DispatchedOutboxEvent>>> LeaseOutbox(
-        DispatchLeaseRequest request,
-        [FromServices] IWorkerDispatchStore store,
-        CancellationToken cancellationToken) => TypedResults.Ok(
-            await store.LeaseOutboxAsync(
-                request.Kind,
-                request.Owner,
-                Math.Clamp(request.Limit, 1, 100),
-                Math.Clamp(request.LeaseSeconds, 5, 300),
-                cancellationToken).ConfigureAwait(false));
-
-    private static async Task<Results<NoContent, Conflict>> FinishOutbox(
-        Guid eventId,
-        DispatchOutboxCompletion request,
-        [FromServices] IWorkerDispatchStore store,
-        CancellationToken cancellationToken) =>
-        await store.FinishOutboxAsync(
-            eventId,
-            request.Owner,
-            request.Succeeded,
-            request.Error,
-            cancellationToken).ConfigureAwait(false)
-            ? TypedResults.NoContent()
-            : TypedResults.Conflict();
 }
 
 public sealed record DispatchLeaseRequest(string Owner, string? Kind = null, int Limit = 10, int LeaseSeconds = 60);
 public sealed record DispatchExecutionRequest(string Owner, int LeaseSeconds = 60);
 public sealed record DispatchJobCompletion(string Owner, bool Succeeded, bool Retryable = false, JsonNode? Result = null, string? ErrorCode = null, string? ErrorDetail = null);
-public sealed record DispatchOutboxCompletion(string Owner, bool Succeeded, string? Error = null);

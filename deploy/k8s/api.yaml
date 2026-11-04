@@ -26,7 +26,6 @@ spec:
     metadata:
       labels: { app: nix-api }
       annotations:
-        nix.io/rabbitmq-secret-version: "${RABBITMQ_SECRET_VERSION}"
         nix.io/object-store-secret-version: "${OBJECT_STORE_SECRET_VERSION}"
         nix.io/sites-secret-version: "${SITES_SECRET_VERSION}"
     spec:
@@ -71,8 +70,6 @@ spec:
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
             - name: Nix__Collaboration__BaseUrl
               value: http://nix-collab:8100
-            - name: Nix__RabbitMq__Uri
-              valueFrom: { secretKeyRef: { name: nix-rabbitmq, key: api-url } }
             # Core only signs: a URL takes its host from the public origin and its path from this
             # endpoint, and Core refuses a plain-HTTP endpoint off loopback. The in-cluster endpoint
             # stays for the workers and sites serve, which open the store themselves.

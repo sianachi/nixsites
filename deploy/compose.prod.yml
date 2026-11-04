@@ -60,39 +60,6 @@ services:
         aliases:
           - postgres
 
-  rabbitmq:
-    image: rabbitmq:4.1-management-alpine@sha256:410a1c8844e9c9227f72735d95a391fca4559ca8b61cce9dad707ce5e2229a3a
-    restart: unless-stopped
-    user: "100:101"
-    # This listener is plaintext by design and is reachable only on the private Compose network.
-    # Set the per-service URL overrides to amqps:// when using an external TLS broker.
-    environment:
-      NIX_RABBITMQ_API_PASSWORD: ${NIX_RABBITMQ_API_PASSWORD:?set NIX_RABBITMQ_API_PASSWORD}
-      NIX_RABBITMQ_IMPORT_PASSWORD: ${NIX_RABBITMQ_IMPORT_PASSWORD:?set NIX_RABBITMQ_IMPORT_PASSWORD}
-      NIX_RABBITMQ_EXPORT_PASSWORD: ${NIX_RABBITMQ_EXPORT_PASSWORD:?set NIX_RABBITMQ_EXPORT_PASSWORD}
-      NIX_RABBITMQ_PLUGIN_PASSWORD: ${NIX_RABBITMQ_PLUGIN_PASSWORD:?set NIX_RABBITMQ_PLUGIN_PASSWORD}
-      NIX_RABBITMQ_CALENDAR_PASSWORD: ${NIX_RABBITMQ_CALENDAR_PASSWORD:?set NIX_RABBITMQ_CALENDAR_PASSWORD}
-      NIX_RABBITMQ_NOTIFY_PASSWORD: ${NIX_RABBITMQ_NOTIFY_PASSWORD:?set NIX_RABBITMQ_NOTIFY_PASSWORD}
-      # Optional: unset removes the nix-sites account (deploy/rabbitmq/start.sh).
-      NIX_RABBITMQ_SITES_PASSWORD: ${NIX_RABBITMQ_SITES_PASSWORD:-}
-    volumes:
-      - nix-rabbitmq-data:/var/lib/rabbitmq
-      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
-      - ./rabbitmq/start.sh:/usr/local/bin/nix-rabbitmq-start:ro
-    command: ["/bin/sh", "/usr/local/bin/nix-rabbitmq-start"]
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /var/lib/rabbitmq/.nix-topology-ready && rabbitmq-diagnostics -q check_running"]
-      interval: 10s
-      timeout: 5s
-      retries: 18
-      start_period: 20s
-    mem_limit: 768m
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-
   nix-api-init:
     image: busybox:1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
     restart: "no"
@@ -190,8 +157,6 @@ services:
         condition: service_completed_successfully
       nix-template-presets:
         condition: service_completed_successfully
-      rabbitmq:
-        condition: service_healthy
     environment:
       # The release this container runs, shown in Settings > About.
       NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
@@ -202,7 +167,6 @@ services:
       Nix__InternalSecret: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
       Nix__Pets__WorkerUrl: http://nix-companion:8301
       Nix__Collaboration__BaseUrl: http://nix-collab:8100
-      Nix__RabbitMq__Uri: ${NIX_RABBITMQ_API_URL:-amqp://nix-api:${NIX_RABBITMQ_API_PASSWORD:?set NIX_RABBITMQ_API_PASSWORD}@rabbitmq:5672/%2Fnix}
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
       Nix__ObjectStorage__PublicOrigin: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
       Nix__ObjectStorage__Region: ${NIX_OBJECT_STORE_REGION:-us-east-1}
@@ -544,8 +508,6 @@ volumes:
     name: nix-companion-data
   nix-postgres-data:
     name: nix-postgres-data
-  nix-rabbitmq-data:
-    name: nix-rabbitmq-data
   nix-versity-data:
     name: nix-versity-data
   nix-caddy-data:

@@ -119,7 +119,7 @@ export NIX_RELEASE_VERSION
 SITES_FOREIGN_LABEL_SUFFIX="${SITES_FOREIGN_LABEL_SUFFIX--home}"
 export REGISTRY TAG OIDC_ISSUER OIDC_CLIENT_ID DOMAIN SITES_REQUIRE_OPERATOR_APPROVAL SITES_FOREIGN_LABEL_SUFFIX BACKUP_OFFSITE
 
-render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${BACKUP_OFFSITE} ${RABBITMQ_SECRET_VERSION} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION}' < "$1"; }
+render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION}' < "$1"; }
 
 if ! kubectl -n nix get secret nix-db >/dev/null 2>&1; then
   echo "secret nix-db not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
@@ -129,10 +129,6 @@ if ! kubectl -n nix get secret nix-auth >/dev/null 2>&1; then
   echo "secret nix-auth not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
   exit 1
 fi
-if ! kubectl -n nix get secret nix-rabbitmq >/dev/null 2>&1; then
-  echo "secret nix-rabbitmq not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
-  exit 1
-fi
 if ! kubectl -n nix get secret nix-object-store >/dev/null 2>&1; then
   echo "secret nix-object-store not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
   exit 1
@@ -140,13 +136,6 @@ fi
 for required_secret in nix-sites nix-tls nix-zitadel; do
   if ! kubectl -n nix get secret "$required_secret" >/dev/null 2>&1; then
     echo "secret $required_secret not found in namespace nix - run deploy/k8s/create-secrets.sh --${required_secret#nix-}-only" >&2
-    exit 1
-  fi
-done
-for rabbitmq_key in api-password import-password export-password plugin-password calendar-password notify-password sites-password worker-password api-url import-url export-url plugin-url calendar-url notify-url sites-url worker-url; do
-  rabbitmq_value="$(kubectl -n nix get secret nix-rabbitmq -o "jsonpath={.data['$rabbitmq_key']}")"
-  if [ -z "$rabbitmq_value" ]; then
-    echo "secret nix-rabbitmq is missing $rabbitmq_key - run deploy/k8s/create-secrets.sh --rabbitmq-only" >&2
     exit 1
   fi
 done
@@ -173,11 +162,6 @@ if [ "$BACKUP_OFFSITE" = true ]; then
     fi
   done
 fi
-RABBITMQ_SECRET_VERSION="$(kubectl -n nix get secret nix-rabbitmq -o jsonpath='{.metadata.resourceVersion}')"
-if [ -z "$RABBITMQ_SECRET_VERSION" ]; then
-  echo "secret nix-rabbitmq has no resource version" >&2
-  exit 1
-fi
 OBJECT_STORE_SECRET_VERSION="$(kubectl -n nix get secret nix-object-store -o jsonpath='{.metadata.resourceVersion}')"
 if [ -z "$OBJECT_STORE_SECRET_VERSION" ]; then
   echo "secret nix-object-store has no resource version" >&2
@@ -188,7 +172,7 @@ if [ -z "$SITES_SECRET_VERSION" ]; then
   echo "secret nix-sites has no resource version" >&2
   exit 1
 fi
-export RABBITMQ_SECRET_VERSION OBJECT_STORE_SECRET_VERSION SITES_SECRET_VERSION
+export OBJECT_STORE_SECRET_VERSION SITES_SECRET_VERSION
 
 # Retire workloads explicitly; leave all PersistentVolumeClaims intact.
 kubectl -n nix delete deployment/nix-indexer --ignore-not-found
@@ -215,6 +199,10 @@ if [ -n "$retired_loki" ]; then
 fi
 kubectl -n nix delete deployment/nix-alloy deployment/nix-grafana --ignore-not-found
 kubectl -n nix delete statefulset/nix-loki --ignore-not-found
+# RabbitMQ is gone (jobs are worker_job rows leased by Core). Its PersistentVolumeClaim is kept on
+# purpose: delete it by hand once nothing needs a rollback to the broker release.
+kubectl -n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress \
+  configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found
 kubectl -n nix delete service/nix-loki service/nix-grafana --ignore-not-found
 kubectl -n nix delete serviceaccount/nix-alloy role/nix-alloy rolebinding/nix-alloy \
   configmap/nix-loki-config configmap/nix-alloy-config configmap/nix-grafana-provisioning \
@@ -230,17 +218,6 @@ kubectl -n nix rollout status statefulset/nix-versitygw --timeout=180s
 kubectl -n nix delete "job/nix-storage-init-$TAG" --ignore-not-found
 render deploy/k8s/job-storage-init.yaml | kubectl apply -f -
 kubectl -n nix wait --for=condition=complete "job/nix-storage-init-$TAG" --timeout=180s
-
-echo "== RabbitMQ =="
-kubectl -n nix create configmap nix-rabbitmq-config \
-  --from-file=rabbitmq.conf=deploy/rabbitmq/rabbitmq.conf \
-  --from-file=definitions.json=deploy/rabbitmq/definitions.json \
-  --from-file=start.sh=deploy/rabbitmq/start.sh \
-  --dry-run=client -o yaml | kubectl apply -f -
-render deploy/k8s/rabbitmq.yaml | kubectl apply -f -
-# Apply startup topology and account retirement even when the secret version is unchanged.
-kubectl -n nix rollout restart statefulset/nix-rabbitmq
-kubectl -n nix rollout status statefulset/nix-rabbitmq --timeout=180s
 
 echo "== Seed =="
 # A Job's pod template is immutable; the seed is idempotent, so re-create it rather than apply over it.

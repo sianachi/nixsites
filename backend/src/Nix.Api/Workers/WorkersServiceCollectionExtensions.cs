@@ -91,7 +91,7 @@ public static class WorkersServiceCollectionExtensions
                 configuration,
                 options);
         });
-        services.TryAddSingleton<IWorkerCapabilityRegistry, Nix.Persistence.RabbitMq.WorkerCapabilityRegistry>();
+        services.TryAddSingleton<IWorkerCapabilityRegistry, WorkerCapabilityRegistry>();
         services.AddSingleton<IHostedService, ExportCapabilityAdvertiser>();
 
         // Import family: uploads, imports, template imports and copies move bytes through object

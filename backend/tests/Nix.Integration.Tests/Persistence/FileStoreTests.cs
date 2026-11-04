@@ -307,13 +307,6 @@ public sealed class FileStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
             .ToArray();
         Assert.Contains($"files/uploads/{M0SchemaSeed.Alpha.TenantId:D}/{uploadId:D}", targets);
         Assert.Contains($"files/versions/{M0SchemaSeed.Alpha.TenantId:D}/{uploadId:D}", targets);
-        var commandEvent = (await verify.DbContext.WorkerOutboxEvents
-            .Where(value => value.Kind == "worker.command")
-            .ToListAsync(Cancellation))
-            .Single(value => JsonDocument.Parse(value.Payload).RootElement
-                .GetProperty("jobId").GetGuid() == cleanupJob.Id.Value);
-        using var commandPayload = JsonDocument.Parse(commandEvent.Payload);
-        Assert.Equal("object.cleanup", commandPayload.RootElement.GetProperty("kind").GetString());
     }
 
     [Fact]

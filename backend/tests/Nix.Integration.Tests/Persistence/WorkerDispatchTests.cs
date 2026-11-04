@@ -41,17 +41,6 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
-    public async Task Outbox_events_are_retried_or_acknowledged_by_their_lease_owner()
-    {
-        await using var scope = fixture.Application.CreateUnscopedScope();
-        var store = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
-        var first = Assert.Single(await store.LeaseOutboxAsync("item.changed", "outbox-publisher", 1, 60, Cancellation));
-
-        Assert.False(await store.FinishOutboxAsync(first.Id, "other", succeeded: true, failureDetail: null, Cancellation));
-        Assert.True(await store.FinishOutboxAsync(first.Id, "outbox-publisher", succeeded: false, failureDetail: "temporary", Cancellation));
-    }
-
-    [Fact]
     public async Task A_transient_job_failure_is_backed_off_instead_of_completed()
     {
         await using var scope = fixture.Application.CreateUnscopedScope();
@@ -218,7 +207,7 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
-    public async Task A_retryable_broker_result_schedules_a_new_durable_command()
+    public async Task A_retryable_broker_result_makes_the_job_leasable_again_later()
     {
         await using var scope = fixture.Application.CreateUnscopedScope();
         var store = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
@@ -240,11 +229,11 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
         {
             const string sql = """
                 SELECT count(*)
-                  FROM worker_outbox_event
-                 WHERE kind = 'worker.command'
-                   AND payload ->> 'jobId' = @job_id
-                   AND processed_at IS NULL
-                   AND available_at > now()
+                  FROM worker_job
+                 WHERE job_id = @job_id::uuid
+                   AND status = 'running'
+                   AND lease_owner IS NULL
+                   AND lease_until > now()
                 """;
             var command = new NpgsqlCommand(sql, connection);
             await using (command.ConfigureAwait(false))
@@ -278,19 +267,10 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
             await work.CommitAsync(Cancellation);
         }
 
-        await using var connection = await fixture.OpenMigratorConnectionAsync();
-        var command = new NpgsqlCommand(
-            "SELECT available_at FROM worker_outbox_event WHERE payload ->> 'jobId' = @job_id",
-            connection);
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.AddWithValue("job_id", cleanupJobId.ToString("D"));
-            var availableAt = Assert.IsType<DateTime>(await command.ExecuteScalarAsync(Cancellation));
-            Assert.InRange(
-                new DateTimeOffset(availableAt, TimeSpan.Zero),
-                notBefore.AddMilliseconds(-1),
-                notBefore.AddMilliseconds(1));
-        }
+        await using var scope = fixture.Application.CreateUnscopedScope();
+        var store = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
+        var leased = await store.LeaseJobsAsync("object.cleanup", "cleanup-worker", 100, 60, Cancellation);
+        Assert.DoesNotContain(leased, job => job.Id == cleanupJobId);
     }
 
     [Fact]
@@ -376,11 +356,8 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
         await using var connection = await fixture.OpenMigratorConnectionAsync();
         const string sql = """
             SELECT cleanup.payload,
-                   command.available_at,
                    source.completed_at
               FROM worker_job cleanup
-              JOIN worker_outbox_event command
-                ON command.payload ->> 'jobId' = cleanup.job_id::text
               JOIN worker_job source
                 ON source.job_id = @export_id
              WHERE cleanup.idempotency_key = 'object.cleanup:export:' || @export_id::text
@@ -401,9 +378,9 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
                 Assert.Equal(
                     $"exports/results/{TestTenants.Alpha:D}/{exportId:D}/{attemptId:D}.pdf",
                     key);
-                var availableAt = await reader.GetFieldValueAsync<DateTimeOffset>(1, Cancellation);
-                var completedAt = await reader.GetFieldValueAsync<DateTimeOffset>(2, Cancellation);
-                Assert.InRange(availableAt, completedAt.AddHours(24), completedAt.AddHours(24).AddMilliseconds(1));
+                var notBefore = payload.RootElement.GetProperty("notBefore").GetDateTimeOffset();
+                var completedAt = await reader.GetFieldValueAsync<DateTimeOffset>(1, Cancellation);
+                Assert.InRange(notBefore, completedAt.AddHours(24).AddMilliseconds(-1), completedAt.AddHours(24).AddMilliseconds(1));
                 Assert.False(await reader.ReadAsync(Cancellation));
             }
         }
@@ -580,21 +557,13 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
         await using (var connection = await fixture.OpenMigratorConnectionAsync())
         {
             const string breakCleanup = """
-                WITH damaged AS (
-                    UPDATE worker_job cleanup
-                       SET status = 'failed',
-                           attempts = 5,
-                           error_code = 'cleanup_failed',
-                           error_detail = 'temporary',
-                           completed_at = clock_timestamp()
-                     WHERE cleanup.idempotency_key = 'object.cleanup:export:' || @export_id::text
-                    RETURNING cleanup.job_id)
-                UPDATE worker_outbox_event command
-                   SET processed_at = clock_timestamp(),
-                       lease_owner = NULL,
-                       lease_until = NULL
-                  FROM damaged
-                 WHERE command.payload ->> 'jobId' = damaged.job_id::text
+                UPDATE worker_job cleanup
+                   SET status = 'failed',
+                       attempts = 5,
+                       error_code = 'cleanup_failed',
+                       error_detail = 'temporary',
+                       completed_at = clock_timestamp()
+                 WHERE cleanup.idempotency_key = 'object.cleanup:export:' || @export_id::text
                 """;
             var command = new NpgsqlCommand(breakCleanup, connection);
             await using (command.ConfigureAwait(false))
@@ -621,13 +590,9 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
         const string query = """
             SELECT cleanup.status,
                    cleanup.attempts,
-                   cleanup.cancellation_requested,
-                   count(*) FILTER (WHERE command.processed_at IS NULL)
+                   cleanup.cancellation_requested
               FROM worker_job cleanup
-              JOIN worker_outbox_event command
-                ON command.payload ->> 'jobId' = cleanup.job_id::text
              WHERE cleanup.idempotency_key = 'object.cleanup:export:' || @export_id::text
-             GROUP BY cleanup.status, cleanup.attempts, cleanup.cancellation_requested
             """;
         var verify = new NpgsqlCommand(query, verification);
         await using (verify.ConfigureAwait(false))
@@ -640,7 +605,6 @@ public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLife
                 Assert.Equal("queued", reader.GetString(0));
                 Assert.Equal(0, reader.GetInt32(1));
                 Assert.False(reader.GetBoolean(2));
-                Assert.Equal(1L, reader.GetInt64(3));
                 Assert.False(await reader.ReadAsync(Cancellation));
             }
         }

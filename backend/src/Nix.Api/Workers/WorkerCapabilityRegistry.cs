@@ -1,6 +1,6 @@
 using Nix.Abstractions.Workers;
 
-namespace Nix.Persistence.RabbitMq;
+namespace Nix.Workers;
 
 /// <summary>Process-local projection of unexpired worker advertisements.</summary>
 public sealed class WorkerCapabilityRegistry : IWorkerCapabilityRegistry

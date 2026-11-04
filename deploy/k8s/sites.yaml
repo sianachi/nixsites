@@ -20,7 +20,6 @@ spec:
     metadata:
       labels: { app: nix-sites-worker }
       annotations:
-        nix.io/rabbitmq-secret-version: "${RABBITMQ_SECRET_VERSION}"
         nix.io/object-store-secret-version: "${OBJECT_STORE_SECRET_VERSION}"
     spec:
       automountServiceAccountToken: false

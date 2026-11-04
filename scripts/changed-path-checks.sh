@@ -78,7 +78,6 @@ has_workflow_script=false
 has_compose=false
 has_catalog=false
 has_api_docs=false
-has_rabbitmq=false
 frontend_packages=()
 dependent_typechecks=()
 add_dependent_typecheck() {
@@ -119,7 +118,6 @@ for path in "${paths[@]}"; do
     *.ts|*.tsx|*.mts|*.cts) if [ -f "$path" ]; then prettier_paths+=("$path"); fi ;;
   esac
   case "$path" in
-    deploy/rabbitmq/*) has_rabbitmq=true ;;
     deploy/compose/*|deploy/compose.prod*|deploy/Caddyfile.prod|deploy/docker/*|deploy/k8s/deploy*|.github/workflows/ci-deploy.yml) has_compose=true ;;
     backend/openapi/*)
       has_openapi=true; has_backend=true; has_frontend=true; has_frontend_sources=true; has_api_docs=true
@@ -228,9 +226,6 @@ if [ "$has_compose" = true ]; then
   emit 'bash deploy/k8s/deploy.test.sh'
 fi
 
-if [ "$has_rabbitmq" = true ]; then
-  emit 'node --test deploy/rabbitmq/definitions.test.mjs'
-fi
 
 if [ "$has_workers" = true ]; then
   emit '(cd apps/go-workers && test -z "$(gofmt -l .)")'

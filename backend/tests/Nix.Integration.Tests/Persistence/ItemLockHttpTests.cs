@@ -11,7 +11,7 @@ using Nix.Domain.Identity;
 using Nix.Features.Tokens;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
-using Nix.Persistence.RabbitMq;
+using Nix.Workers;
 
 namespace Nix.Integration.Tests.Persistence;
 

@@ -217,7 +217,6 @@ public static class NixTables
     public const string WorkerJob = "worker_job";
 
     /// <summary>Backend-owned durable events for rebuildable derived data.</summary>
-    public const string WorkerOutboxEvent = "worker_outbox_event";
 
     public const string FileBody = "file_body";
     public const string FileVersion = "file_version";
@@ -327,7 +326,6 @@ public static class NixTables
         TemplateApplicationItem,
         TemplateFileTransfer,
         WorkerJob,
-        WorkerOutboxEvent,
         FileBody,
         FileVersion,
         FileUpload,
@@ -440,7 +438,6 @@ public static class NixTables
             [TemplateApplicationItem] = FullDml,
             [TemplateFileTransfer] = FullDml,
             [WorkerJob] = FullDml,
-            [WorkerOutboxEvent] = FullDml,
             [FileBody] = FullDml,
             [FileVersion] = FullDml,
             [FileUpload] = FullDml,

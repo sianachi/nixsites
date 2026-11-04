@@ -35,10 +35,9 @@ Nix does not store passwords. Sign-in goes through an OpenID Connect provider us
 Both deployment paths run these for you:
 
 - PostgreSQL 16 with pgvector;
-- RabbitMQ 4.1;
 - Versity, an S3-compatible gateway for file storage.
 
-You can point Nix at an external S3-compatible store or an external TLS RabbitMQ instead. See [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
+You can point Nix at an external S3-compatible store instead. See [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 
 ## Keys you generate once
 

@@ -82,7 +82,7 @@ publishing above.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker. The stack runs
-Postgres, RabbitMQ, an object store, the identity provider and four Nix services (API,
+Postgres, an object store, the identity provider and four Nix services (API,
 collaboration, web, and the pet companion host). A default
 Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script stops if a tool is
 missing, and warns when Docker has less than about 8 GB.
@@ -132,7 +132,7 @@ Run/Debug configurations for each service.
 ## Stack
 
 ASP.NET Core 10 and Postgres 16 (row-level security, pgvector) · React 19, TypeScript, Tailwind v4 ·
-Node 22 collaboration service (CRDT over WebSocket) · Go workers on RabbitMQ · OIDC login (Zitadel).
+Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Core · OIDC login (Zitadel).
 
 ```
 apps/web         React app, installable as a PWA

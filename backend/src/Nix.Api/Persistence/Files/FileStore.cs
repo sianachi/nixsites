@@ -278,21 +278,6 @@ public sealed class FileStore(
         upload.PublishedItemId = itemId;
         upload.Status = "completed";
         upload.UpdatedAt = clock.GetUtcNow();
-        // A new file item is covered by the deferred item trigger. Replacement changes only the
-        // current immutable file version, so it needs one explicit projection refresh.
-        if (upload.TargetItemId is not null)
-        {
-            database.WorkerOutboxEvents.Add(new WorkerOutboxEvent
-            {
-                Id = WorkerOutboxEventId.Create(),
-                TenantId = context.TenantId,
-                WorkspaceId = upload.WorkspaceId,
-                ItemId = itemId,
-                Kind = "item.changed",
-                Payload = "{}",
-                AvailableAt = upload.UpdatedAt,
-            });
-        }
         await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return await GetAsync(itemId, cancellationToken).ConfigureAwait(false);
     }

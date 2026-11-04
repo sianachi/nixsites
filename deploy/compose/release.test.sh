@@ -45,8 +45,7 @@ echo "docker $*" >> "$TEST_LOG"
 case "$*" in
   *'config --images')
     for name in api migrator collab worker; do echo "$NIX_IMAGE_REGISTRY/$name:$NIX_IMAGE_TAG"; done
-    echo "$NIX_IMAGE_REGISTRY/web:$NIX_WEB_IMAGE_TAG"
-    echo 'rabbitmq:4.1-management-alpine' ;;
+    echo "$NIX_IMAGE_REGISTRY/web:$NIX_WEB_IMAGE_TAG" ;;
   'manifest inspect '*) [[ "$3" != "${MISSING_IMAGE:-none}" ]] ;;
   *) exit 1 ;;
 esac

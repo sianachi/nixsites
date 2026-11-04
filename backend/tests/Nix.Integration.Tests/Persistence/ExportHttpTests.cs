@@ -18,8 +18,8 @@ using Nix.Features.Tokens;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
 using Nix.Persistence.ObjectStorage;
-using Nix.Persistence.RabbitMq;
 using Nix.Persistence.Workers;
+using Nix.Workers;
 
 namespace Nix.Integration.Tests.Persistence;
 

@@ -11,9 +11,6 @@
 #     `up` will recreate, and services that `up` would create;
 #   - exits 3 when a stateful infrastructure service (postgres, versitygw) would be
 #     recreated, unless NIX_ALLOW_INFRA_RECREATE=1. NIX_INFRA_SERVICES overrides that list;
-#   - names services recreated only after writers stop (RabbitMQ, whose configuration is
-#     mounted from the release checkout and so changes path every release) without refusing
-#     them. NIX_AFTER_WRITERS_SERVICES overrides that list.
 # Image-only changes under an unchanged tag are not detected; release tags are immutable.
 set -euo pipefail
 
@@ -37,7 +34,6 @@ if [ -z "$project" ] || [ "${#files[@]}" -eq 0 ]; then
   exit 2
 fi
 read -r -a infra <<< "${NIX_INFRA_SERVICES:-postgres nix-versitygw}"
-read -r -a after_writers <<< "${NIX_AFTER_WRITERS_SERVICES:-rabbitmq}"
 
 # Compose records absolute manifest paths joined by commas.
 expected=''
@@ -97,12 +93,6 @@ orphan=$(awk '$1 == "orphan" { printf "%s ", $2 }' "$work/plan")
 echo "drift: Compose will recreate: ${recreate:-none}"
 [ -z "$create" ] || echo "drift: Compose will create: $create"
 [ -z "$orphan" ] || echo "drift: running but not in this manifest (left alone): $orphan"
-
-for svc in "${after_writers[@]}"; do
-  case " $recreate" in
-    *" $svc "*) echo "drift: $svc will be recreated after writers stop (durable queues, persistent messages)" ;;
-  esac
-done
 
 blocked=''
 for svc in "${infra[@]}"; do

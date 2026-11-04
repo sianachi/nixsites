@@ -44,7 +44,6 @@ using Nix.Features.Workspaces;
 using Nix.Http;
 using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
-using Nix.Persistence.RabbitMq;
 using Nix.Persistence.Sync;
 using Nix.Serialization;
 using Nix.Workers;
@@ -422,7 +421,6 @@ if (persistenceConfigured)
         ConnectionString = nixConnectionString!,
         SchedulingEnabled = builder.Configuration.GetValue("Nix:Scheduling:Enabled", true),
     });
-    builder.Services.AddNixRabbitMq(builder.Configuration);
     builder.Services.AddNixWorkers(builder.Configuration);
 
     // Scoped, because it resolves issuers through the request's own connection. The signing-key

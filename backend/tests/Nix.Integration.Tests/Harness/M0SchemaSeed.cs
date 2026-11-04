@@ -608,12 +608,6 @@ internal static class M0SchemaSeed
                             '{slug}-worker-job', jsonb_build_object('source', '{slug}'), 'queued',
                             0, false, now(), now());
 
-                    INSERT INTO worker_outbox_event
-                        (event_id, tenant_id, workspace_id, item_id, kind, aggregate_version,
-                         payload, available_at, attempts)
-                    VALUES ({auditEvent}, {tenant}, {workspace}, {item}, 'item.changed', 1,
-                            jsonb_build_object('id', {item}, 'title', '{slug} item'), now(), 0);
-
                 END IF;
 
                 IF to_regclass('public.item_transcription') IS NOT NULL THEN

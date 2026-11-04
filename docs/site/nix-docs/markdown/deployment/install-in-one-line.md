@@ -27,7 +27,7 @@ curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/insta
 The installer:
 
 1. generates every secret into `~/nix/nix.env`;
-2. starts PostgreSQL, RabbitMQ, the object store and a bundled identity provider (Zitadel) behind Caddy, which fetches the TLS certificates itself;
+2. starts PostgreSQL, the object store and a bundled identity provider (Zitadel) behind Caddy, which fetches the TLS certificates itself;
 3. registers the web application with the identity provider;
 4. runs the database migrations and the identity bootstrap;
 5. starts every service and prints the administrator sign-in: `admin@nix.auth.<host>` and a one-time password you must change at first sign-in.

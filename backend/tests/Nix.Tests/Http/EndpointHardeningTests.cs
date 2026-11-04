@@ -47,16 +47,6 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
     }
 
     [Fact]
-    public void Worker_jobs_can_only_be_created_through_the_authorized_typed_routes()
-    {
-        var routes = Routes();
-
-        Assert.DoesNotContain(routes, endpoint => endpoint.RoutePattern.RawText == "/internal/worker/jobs");
-        Assert.Contains(routes, endpoint => endpoint.RoutePattern.RawText == "/internal/worker/jobs/imports");
-        Assert.Contains(routes, endpoint => endpoint.RoutePattern.RawText == "/internal/worker/jobs/exports");
-    }
-
-    [Fact]
     public void The_canvas_library_put_declares_its_two_mebibyte_body_bound()
     {
         var endpoint = Assert.Single(

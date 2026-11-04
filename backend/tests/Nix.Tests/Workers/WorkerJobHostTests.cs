@@ -136,8 +136,6 @@ public sealed class WorkerJobHostTests
         public ValueTask<DispatchedWorkerJob?> ClaimJobAsync(Guid jobId, string owner, int leaseSeconds, CancellationToken cancellationToken) => throw new NotSupportedException();
         public ValueTask<WorkerExecutionAuthorization?> AuthorizeExecutionAsync(Guid jobId, string owner, CancellationToken cancellationToken) => throw new NotSupportedException();
         public ValueTask<bool> FinishJobAsync(Guid jobId, string owner, bool succeeded, bool retryable, string? result, string? errorCode, string? errorDetail, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<IReadOnlyList<DispatchedOutboxEvent>> LeaseOutboxAsync(string? kind, string owner, int limit, int leaseSeconds, CancellationToken cancellationToken) => throw new NotSupportedException();
         public ValueTask<IReadOnlyList<DispatchedWorkerJob>> InterruptJobsAsync(string ownerPrefix, IReadOnlyList<string> kinds, string errorCode, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<bool> FinishOutboxAsync(Guid eventId, string owner, bool succeeded, string? failureDetail, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

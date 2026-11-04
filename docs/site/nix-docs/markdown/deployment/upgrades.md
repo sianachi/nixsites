@@ -41,7 +41,7 @@ If you prefer not to use the script, the order matters:
 ```sh
 export NIX_IMAGE_TAG=<full-commit-sha> NIX_WEB_IMAGE_TAG=<full-commit-sha>
 dc pull
-dc up -d --wait postgres rabbitmq nix-versitygw
+dc up -d --wait postgres nix-versitygw
 dc --profile maintenance run --rm --no-deps nix-storage-init
 dc run --rm --no-deps nix-migrate
 dc run --rm --no-deps nix-template-presets
@@ -52,6 +52,12 @@ dc up -d --wait
 ```
 
 `dc` is the Compose shorthand from [Docker Compose](nix://item/01a130b0-156d-7ac6-99ed-ebee0b7d7dfe). If a migration fails, leave the application stopped and investigate before starting anything.
+
+## Upgrading to the release without RabbitMQ
+
+RabbitMQ only carried wake-up hints; every job is a `worker_job` row in PostgreSQL, so nothing in RabbitMQ needs backing up. Before upgrading, wait until no export or import is running (Settings > Operations, or `nixctl operation`). Jobs still queued at upgrade time are leased by Core on its first start. Exports and imports that were running are marked failed by the startup sweep with "try again".
+
+After the upgrade, remove the `rabbitmq` service and its volume, the `NIX_RABBITMQ_*` variables from your environment file, and the retired worker services (import, export, plugin, calendar and notify). On Compose, `deploy.sh` removes those containers for you and leaves the volumes; delete `nix-rabbitmq-data` by hand once you no longer need to roll back. On Kubernetes, `deploy.sh` deletes the RabbitMQ StatefulSet, Service, policy and Secret and keeps its volume claim.
 
 ## On Kubernetes
 

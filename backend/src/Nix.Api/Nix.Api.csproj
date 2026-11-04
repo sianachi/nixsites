@@ -56,7 +56,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="RabbitMQ.Client" />
     <!-- Security floor for a transitive dependency; see Directory.Packages.props. -->
     <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">

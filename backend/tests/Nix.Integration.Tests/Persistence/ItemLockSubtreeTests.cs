@@ -479,10 +479,10 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
 
     /// <summary>
     /// The derived index is fed by a reader that runs with no credential, so it withholds the body
-    /// of anything under a lock, and placing the lock re-indexes the subtree so the index drops it.
+    /// of anything under a lock.
     /// </summary>
     [Fact]
-    public async Task The_search_index_feed_withholds_bodies_under_a_lock_and_is_told_to_reindex_them()
+    public async Task The_search_index_feed_withholds_bodies_under_a_lock()
     {
         var child = await CreateAsync("Child", Folder);
         await ExecuteAsMigratorAsync(
@@ -491,14 +491,12 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
             VALUES ({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(child.Value)}, 1, now(),
                     to_tsvector('english', 'secret words'), 'secret words')
             """);
-        var queuedBefore = await QueuedEventsForAsync(child);
 
         Assert.Equal("secret words", await IndexedBodyAsync(child));
 
         await LockAsync(Locker, Folder, "hunter22");
 
         Assert.Null(await IndexedBodyAsync(child));
-        Assert.True(await QueuedEventsForAsync(child) > queuedBefore);
     }
 
     private async Task<ItemId> CreateAsync(string title, ItemId? parent, JsonObject? properties = null)
@@ -629,19 +627,6 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
                 connection,
                 transaction: null,
                 $"SELECT body_text FROM nix_read_search_index_body({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(item.Value)})");
-        }
-    }
-
-    private async Task<long> QueuedEventsForAsync(ItemId item)
-    {
-        var connection = await fixture.OpenMigratorConnectionAsync();
-        await using (connection.ConfigureAwait(false))
-        {
-            var count = await RawSql.TextAsync(
-                connection,
-                transaction: null,
-                $"SELECT count(*)::text FROM worker_outbox_event WHERE item_id = {Literal(item.Value)}");
-            return long.Parse(count ?? "0", CultureInfo.InvariantCulture);
         }
     }
 

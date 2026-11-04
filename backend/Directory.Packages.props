@@ -71,7 +71,6 @@
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <!-- Test-only: PDF text extraction for export parity. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
-    <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
   </ItemGroup>
 
   <!--

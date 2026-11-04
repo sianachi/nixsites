@@ -6,7 +6,7 @@
 #   deploy/seed/seed.sh                                   # idempotent DB seed (roles, database, pgvector)
 #
 # Profiles:
-#   core   - the default developer set: app Postgres (pgvector), RabbitMQ, Versity S3
+#   core   - the default developer set: app Postgres (pgvector), Versity S3
 #            gateway, Zitadel (with its own Postgres), Mailpit (Zitadel's outbox).
 #   media  - clamd virus scanner (heavy: ~1-2 GB RAM for the signature DB).
 #
@@ -22,8 +22,6 @@
 # Host ports (chosen to dodge common local conflicts; override in .env):
 #   5433  app Postgres        (5432 is usually taken by a local Postgres)
 #   7070  Versity S3 gateway  (versitygw native port; 9000 clashes with MinIO)
-#   5673  RabbitMQ AMQP       (5672 is commonly occupied)
-#   15673 RabbitMQ management
 #   8300  Zitadel             (8080 is too popular to claim)
 #   8325  Mailpit web UI      (Zitadel's password-reset and verification mail)
 #
@@ -70,36 +68,6 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
-
-  rabbitmq:
-    image: rabbitmq:4.1-management-alpine
-    profiles: ["core"]
-    user: "100:101"
-    environment:
-      NIX_RABBITMQ_API_PASSWORD: ${NIX_RABBITMQ_API_PASSWORD:-nix-dev-api-rabbit}
-      NIX_RABBITMQ_IMPORT_PASSWORD: ${NIX_RABBITMQ_IMPORT_PASSWORD:-nix-dev-import-rabbit}
-      NIX_RABBITMQ_EXPORT_PASSWORD: ${NIX_RABBITMQ_EXPORT_PASSWORD:-nix-dev-export-rabbit}
-      NIX_RABBITMQ_PLUGIN_PASSWORD: ${NIX_RABBITMQ_PLUGIN_PASSWORD:-nix-dev-plugin-rabbit}
-      NIX_RABBITMQ_CALENDAR_PASSWORD: ${NIX_RABBITMQ_CALENDAR_PASSWORD:-nix-dev-calendar-rabbit}
-      NIX_RABBITMQ_NOTIFY_PASSWORD: ${NIX_RABBITMQ_NOTIFY_PASSWORD:-nix-dev-notify-rabbit}
-      NIX_RABBITMQ_SITES_PASSWORD: ${NIX_RABBITMQ_SITES_PASSWORD:-nix-dev-sites-rabbit}
-      NIX_RABBITMQ_DEV_WORKER_PASSWORD: ${NIX_RABBITMQ_DEV_WORKER_PASSWORD:-nix-dev-combined-worker-rabbit}
-      NIX_RABBITMQ_ADMIN_PASSWORD: ${NIX_RABBITMQ_ADMIN_PASSWORD:-nix-dev-admin-rabbit}
-    ports:
-      - "127.0.0.1:${NIX_RABBITMQ_PORT:-5673}:5672"
-      - "127.0.0.1:${NIX_RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
-    volumes:
-      - nix-rabbitmq-data:/var/lib/rabbitmq
-      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
-      - ./rabbitmq/start.sh:/usr/local/bin/nix-rabbitmq-start:ro
-    command: ["/bin/sh", "/usr/local/bin/nix-rabbitmq-start"]
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /var/lib/rabbitmq/.nix-topology-ready && rabbitmq-diagnostics -q check_running"]
-      interval: 5s
-      timeout: 5s
-      retries: 18
-      start_period: 15s
 
   versitygw:
     image: versity/versitygw:v1.7.0
@@ -220,7 +188,6 @@ services:
 
 volumes:
   nix-pg-data:
-  nix-rabbitmq-data:
   versity-data:
   zitadel-pg-data:
   zitadel-machinekey:

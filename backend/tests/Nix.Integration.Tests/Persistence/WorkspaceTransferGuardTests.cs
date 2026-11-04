@@ -90,11 +90,10 @@ public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITes
     }
 
     [Fact]
-    public async Task Deep_transfer_with_thousands_of_jobs_enqueues_one_search_event_per_envelope_plus_root_update()
+    public async Task Deep_transfer_with_thousands_of_jobs_completes()
     {
         await SeedChainAsync();
         await SeedJobsAsync();
-        await ClearOutboxAsync();
         var watch = Stopwatch.StartNew();
         await using (var transfer = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
         {
@@ -104,31 +103,8 @@ public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITes
             await transfer.CommitAsync(Cancellation);
         }
         watch.Stop();
-        await using var connection = await fixture.OpenMigratorConnectionAsync();
-        var count = await RawSql.CountAsync(connection, null,
-            $"SELECT count(*) FROM worker_outbox_event WHERE tenant_id = '{M0SchemaSeed.Alpha.TenantId:D}'::uuid AND kind = 'item.changed'");
-        // Root already had no parent, so its sequence update is one extra point event.
-        Assert.Equal(ChainSize + 1, count);
-        Assert.Equal(ChainSize, await RawSql.CountAsync(connection, null,
-            $"SELECT count(DISTINCT item_id) FROM worker_outbox_event WHERE workspace_id = '{Destination:D}'::uuid AND kind = 'item.changed'"));
-        output.WriteLine("Moved {0} levels with {1} active jobs in each tenant: {2} search events, {3} ms.",
-            ChainSize, JobCount, count, watch.ElapsedMilliseconds);
-    }
-
-    [Fact]
-    public async Task Lifecycle_changes_still_invalidate_the_whole_descendant_range()
-    {
-        await SeedChainAsync();
-        await ClearOutboxAsync();
-        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
-        {
-            await work.DbContext.Items.Where(item => item.Id == ItemId.From(ChainItem(1)))
-                .ExecuteUpdateAsync(update => update.SetProperty(item => item.LifecycleState, ItemLifecycleState.Deleted), Cancellation);
-            await work.CommitAsync(Cancellation);
-        }
-        await using var connection = await fixture.OpenMigratorConnectionAsync();
-        Assert.Equal(ChainSize, await RawSql.CountAsync(connection, null,
-            $"SELECT count(*) FROM worker_outbox_event WHERE tenant_id = '{M0SchemaSeed.Alpha.TenantId:D}'::uuid AND kind = 'item.changed'"));
+        output.WriteLine("Moved {0} levels with {1} active jobs in each tenant: {2} ms.",
+            ChainSize, JobCount, watch.ElapsedMilliseconds);
     }
 
     [Fact]
@@ -258,9 +234,6 @@ public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITes
         var restored = await RawSql.TextAsync(connection, transaction,
             "SELECT pg_get_functiondef('public.nix_follow_item_workspace()'::regprocedure)");
         Assert.Contains("strpos(job.payload::text, NEW.id::text)", restored, StringComparison.Ordinal);
-        var search = await RawSql.TextAsync(connection, transaction,
-            "SELECT pg_get_functiondef('public.nix_queue_item_search_event()'::regprocedure)");
-        Assert.Contains("OR OLD.workspace_id IS DISTINCT FROM NEW.workspace_id", search, StringComparison.Ordinal);
         await transaction.RollbackAsync(Cancellation);
     }
 
@@ -299,12 +272,6 @@ public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITes
                     'queued', 0, false, now(), now() FROM generate_series(1, {JobCount}) n;
                 """);
         }
-    }
-
-    private async Task ClearOutboxAsync()
-    {
-        await using var connection = await fixture.OpenMigratorConnectionAsync();
-        await RawSql.ExecuteAsync(connection, null, "DELETE FROM worker_outbox_event;");
     }
 
     private static Guid ChainItem(int index) => new("aaaaaaaa-aaaa-4aaa-8aaa-" + index.ToString("D12", CultureInfo.InvariantCulture));

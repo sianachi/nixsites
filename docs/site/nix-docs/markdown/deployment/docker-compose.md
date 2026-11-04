@@ -11,7 +11,6 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | Service | Role |
 | --- | --- |
 | postgres | PostgreSQL 16 with pgvector: all durable state and search |
-| rabbitmq | Job transport between Core and the workers |
 | nix-versitygw | S3-compatible storage for file bytes |
 | nix-api | Core: API, permissions, sign-in and search |
 | nix-collab | Collaboration: live editing, history, import and export assembly |
@@ -87,7 +86,7 @@ Then proxy `https://<your-domain>` to `http://127.0.0.1:8090`, passing the origi
 
 ## First start
 
-1. **Check out the release.** Clone the repository and check out the full commit SHA you intend to run. The manifest, RabbitMQ configuration and seed files must match the images. Wait until CI has published images for that commit.
+1. **Check out the release.** Clone the repository and check out the full commit SHA you intend to run. The manifest and seed files must match the images. Wait until CI has published images for that commit.
 2. **Write the environment file.** Copy `deploy/compose.prod.env.example` to a private path outside the checkout, set its mode to `0600` and replace every placeholder. See [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 
    ```sh
@@ -106,7 +105,7 @@ Then proxy `https://<your-domain>` to `http://127.0.0.1:8090`, passing the origi
 4. **Start the infrastructure.**
 
    ```sh
-   dc up -d --wait postgres rabbitmq nix-versitygw
+   dc up -d --wait postgres nix-versitygw
    ```
 5. **Create the database and roles.** Nix uses three database roles: `nix_migrator` owns the schema and runs migrations, `nix_app` is Core's runtime role, and `nix_collab` is the collaboration service's role. Neither runtime role may bypass row-level security. The repository's seed files create them with your passwords:
 

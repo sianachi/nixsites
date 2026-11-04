@@ -26,7 +26,7 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
-    public async Task Upgrade_cancels_only_active_speech_jobs_and_retires_only_pending_speech_commands()
+    public async Task Upgrade_cancels_only_active_speech_jobs()
     {
         var options = new DbContextOptionsBuilder<NixDbContext>()
             .UseNpgsql(fixture.MigratorConnectionString).Options;
@@ -37,7 +37,6 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
         {
             var before = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
             var jobs = new List<WorkerJob>();
-            var speechCommands = new List<WorkerOutboxEventId>();
             foreach (var (kind, status, tenant) in new[]
             {
                 ("transcribe.audio", "queued", M0SchemaSeed.Alpha),
@@ -68,50 +67,12 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
                 };
                 jobs.Add(job);
                 context.WorkerJobs.Add(job);
-                var command = new WorkerOutboxEvent
-                {
-                    Id = WorkerOutboxEventId.Create(),
-                    TenantId = job.TenantId,
-                    WorkspaceId = job.WorkspaceId,
-                    Kind = "worker.command",
-                    Payload = JsonSerializer.Serialize(new { jobId = job.Id.Value, kind }),
-                    AvailableAt = before,
-                    LeaseOwner = job.LeaseOwner,
-                    LeaseUntil = job.LeaseUntil,
-                };
-                context.WorkerOutboxEvents.Add(command);
-                if (kind == "transcribe.audio")
-                {
-                    speechCommands.Add(command.Id);
-                }
             }
-            var published = new WorkerOutboxEvent
-            {
-                Id = WorkerOutboxEventId.Create(),
-                TenantId = TenantId.From(M0SchemaSeed.Alpha.TenantId),
-                Kind = "worker.command",
-                Payload = "{\"kind\": \"transcribe.audio\"}",
-                AvailableAt = before,
-                ProcessedAt = before,
-            };
-            var changed = new WorkerOutboxEvent
-            {
-                Id = WorkerOutboxEventId.Create(),
-                TenantId = published.TenantId,
-                Kind = "item.changed",
-                Payload = published.Payload,
-                AvailableAt = before,
-            };
-            context.WorkerOutboxEvents.AddRange(published, changed);
             await context.SaveChangesAsync(Cancellation);
 
             var unchangedJobs = jobs.Where(job => job.Kind != "transcribe.audio"
                 || job.Status is "completed" or "failed" or "cancelled")
                 .ToDictionary(job => job.Id, job => JsonSerializer.Serialize(job));
-            var publishedBefore = JsonSerializer.Serialize(await context.WorkerOutboxEvents.AsNoTracking()
-                .SingleAsync(row => row.Id == published.Id, Cancellation));
-            var changedBefore = JsonSerializer.Serialize(await context.WorkerOutboxEvents.AsNoTracking()
-                .SingleAsync(row => row.Id == changed.Id, Cancellation));
             var files = await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).ToListAsync(Cancellation);
             var transcripts = await context.ItemTranscriptions.AsNoTracking().OrderBy(row => row.AudioItemId).ToListAsync(Cancellation);
             Assert.NotEmpty(files);
@@ -141,29 +102,12 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
                     Assert.True(job.UpdatedAt > before);
                 }
             }
-            var retiredCommands = await context.WorkerOutboxEvents.AsNoTracking()
-                .Where(row => speechCommands.Contains(row.Id)).ToListAsync(Cancellation);
-            Assert.Equal(speechCommands.Count, retiredCommands.Count);
-            Assert.All(retiredCommands, command =>
-            {
-                Assert.True(command.ProcessedAt > before);
-                Assert.Null(command.LeaseOwner);
-                Assert.Null(command.LeaseUntil);
-                Assert.Equal("Speech transcription has been retired.", command.LastError);
-            });
-            Assert.Equal(publishedBefore, JsonSerializer.Serialize(await context.WorkerOutboxEvents.AsNoTracking()
-                .SingleAsync(row => row.Id == published.Id, Cancellation)));
-            Assert.Equal(changedBefore, JsonSerializer.Serialize(await context.WorkerOutboxEvents.AsNoTracking()
-                .SingleAsync(row => row.Id == changed.Id, Cancellation)));
             Assert.Equal(filesBefore, JsonSerializer.Serialize(await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).ToListAsync(Cancellation)));
             Assert.Equal(transcriptsBefore, JsonSerializer.Serialize(await context.ItemTranscriptions.AsNoTracking().OrderBy(row => row.AudioItemId).ToListAsync(Cancellation)));
 
             await using var scope = fixture.Application.CreateUnscopedScope();
             var dispatch = scope.ServiceProvider.GetRequiredService<IWorkerDispatchStore>();
             Assert.Empty(await dispatch.LeaseJobsAsync("transcribe.audio", "new-worker", 10, 60, Cancellation));
-            var leasedCommand = Assert.Single(await dispatch.LeaseOutboxAsync("worker.command", "publisher", 100, 60, Cancellation));
-            using var payload = JsonDocument.Parse(leasedCommand.Payload);
-            Assert.Equal("export.docx", payload.RootElement.GetProperty("kind").GetString());
         }
         finally
         {

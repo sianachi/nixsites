@@ -13,23 +13,11 @@ public interface IWorkerDispatchStore
 
     /// <summary>Fails every running job of the given kinds whose lease owner starts with <paramref name="ownerPrefix"/>; the startup sweep's one call.</summary>
     public ValueTask<IReadOnlyList<DispatchedWorkerJob>> InterruptJobsAsync(string ownerPrefix, IReadOnlyList<string> kinds, string errorCode, CancellationToken cancellationToken);
-    public ValueTask<IReadOnlyList<DispatchedOutboxEvent>> LeaseOutboxAsync(string? kind, string owner, int limit, int leaseSeconds, CancellationToken cancellationToken);
-    public ValueTask<bool> FinishOutboxAsync(Guid eventId, string owner, bool succeeded, string? failureDetail, CancellationToken cancellationToken);
 }
 
 public sealed record DispatchedWorkerJob(Guid Id, Guid TenantId, Guid? WorkspaceId, Guid? ActorId, string Kind, string Payload, int Attempts, bool CancellationRequested);
 public sealed record WorkerExecutionState(string Status, bool CancellationRequested, bool LeaseOwned, DateTimeOffset? LeaseUntil);
 public sealed record WorkerExecutionAuthorization(Guid TenantId, Guid? WorkspaceId, Guid ActorId, string Kind, bool IncludeComments = false);
-public sealed record DispatchedOutboxEvent(
-    Guid Id,
-    Guid TenantId,
-    Guid? WorkspaceId,
-    Guid? ItemId,
-    string Kind,
-    string Payload,
-    int Attempts,
-    DateTimeOffset AvailableAt,
-    long? AggregateVersion = null);
 
 public enum WorkerResultApplicationOutcome
 {

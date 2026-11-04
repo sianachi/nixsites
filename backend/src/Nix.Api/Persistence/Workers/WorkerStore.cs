@@ -8,7 +8,7 @@ using Nix.Domain.Workers;
 
 namespace Nix.Persistence.Workers;
 
-public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQueue? queue = null) : IWorkerJobStore, IWorkerOutboxStore
+public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQueue? queue = null) : IWorkerJobStore
 {
     public async ValueTask<WorkerJobRecord> CreateAsync(
         TenantId tenantId,
@@ -53,21 +53,9 @@ public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQue
             UpdatedAt = now,
         };
         database.WorkerJobs.Add(job);
-        // A kind hosted in this process is woken by a hint once the row is visible; any other kind
-        // is announced to the external worker through the outbox, as before.
-        var hosted = queue?.Hint(kind) ?? false;
-        if (!hosted)
-        {
-            database.WorkerOutboxEvents.Add(new WorkerOutboxEvent
-            {
-                Id = WorkerOutboxEventId.Create(),
-                TenantId = tenantId,
-                WorkspaceId = workspaceId,
-                Kind = "worker.command",
-                Payload = JsonSerializer.Serialize(new WorkerCommandReference(job.Id.Value, kind)),
-                AvailableAt = AvailableAt(kind, payload, now),
-            });
-        }
+        // The host of this kind is woken by a hint once the row is visible; site.* kinds are
+        // polled by the sites worker, so their hint is a no-op.
+        queue?.Hint(kind);
         await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return ToRecord(job);
     }
@@ -170,73 +158,7 @@ public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQue
                 .ConfigureAwait(false);
     }
 
-    async ValueTask<IReadOnlyList<WorkerOutboxRecord>> IWorkerOutboxStore.LeaseAsync(TenantId tenantId, string owner, string? kind, int limit, int leaseSeconds, CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var leaseUntil = now.AddSeconds(leaseSeconds);
-        var query = database.WorkerOutboxEvents.Where(evt => evt.TenantId == tenantId && evt.ProcessedAt == null && evt.AvailableAt <= now && (evt.LeaseUntil == null || evt.LeaseUntil < now));
-        if (!string.IsNullOrWhiteSpace(kind))
-        {
-            query = query.Where(evt => evt.Kind == kind);
-        }
-        var events = await query.OrderBy(evt => evt.AvailableAt).Take(limit).ToListAsync(cancellationToken).ConfigureAwait(false);
-        foreach (var evt in events)
-        {
-            evt.Attempts++;
-            evt.LeaseOwner = owner;
-            evt.LeaseUntil = leaseUntil;
-        }
-        await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return events.Select(ToRecord).ToArray();
-    }
-
-    public async ValueTask<bool> AcknowledgeAsync(TenantId tenantId, Guid eventId, CancellationToken cancellationToken) =>
-        await database.WorkerOutboxEvents
-            .Where(evt => evt.TenantId == tenantId && evt.Id == WorkerOutboxEventId.From(eventId))
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(evt => evt.ProcessedAt, DateTimeOffset.UtcNow)
-                .SetProperty(evt => evt.LeaseOwner, (string?)null)
-                .SetProperty(evt => evt.LeaseUntil, (DateTimeOffset?)null), cancellationToken)
-            .ConfigureAwait(false) != 0;
-
-    public async ValueTask<bool> FailAsync(TenantId tenantId, Guid eventId, string failureDetail, CancellationToken cancellationToken)
-    {
-        var evt = await database.WorkerOutboxEvents.SingleOrDefaultAsync(item => item.TenantId == tenantId && item.Id == WorkerOutboxEventId.From(eventId), cancellationToken).ConfigureAwait(false);
-        if (evt is null)
-        {
-            return false;
-        }
-        evt.LastError = failureDetail;
-        evt.LeaseOwner = null;
-        evt.LeaseUntil = null;
-        evt.AvailableAt = DateTimeOffset.UtcNow.AddSeconds(Math.Min(Math.Max(evt.Attempts * 5, 5), 300));
-        await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return true;
-    }
-
     private static WorkerJobRecord ToRecord(WorkerJob job) => new(job.Id.Value, job.Kind, job.Status, job.Payload, job.Result, job.ErrorCode, job.ErrorDetail, job.Attempts, job.CancellationRequested, job.CreatedAt, job.CompletedAt);
-    private static WorkerOutboxRecord ToRecord(WorkerOutboxEvent evt) => new(evt.Id.Value, evt.Kind, evt.Payload, evt.Attempts, evt.AvailableAt);
-
-    private static DateTimeOffset AvailableAt(string kind, string payload, DateTimeOffset now)
-    {
-        if (kind != ObjectCleanupJobs.Kind)
-        {
-            return now;
-        }
-        try
-        {
-            var cleanup = JsonSerializer.Deserialize(
-                payload,
-                ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload);
-            return cleanup is not null && cleanup.NotBefore > now
-                ? cleanup.NotBefore
-                : now;
-        }
-        catch (JsonException)
-        {
-            return now;
-        }
-    }
 
     private static bool PayloadEquivalent(string kind, string left, string right)
     {
@@ -300,8 +222,4 @@ public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQue
         identity = (itemId, workspaceId, format.GetString()!, scope.GetString()!, includeComments, pageSize);
         return true;
     }
-
-    private sealed record WorkerCommandReference(
-        [property: JsonPropertyName("jobId")] Guid JobId,
-        [property: JsonPropertyName("kind")] string Kind);
 }

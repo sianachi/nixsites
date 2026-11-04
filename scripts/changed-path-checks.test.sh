@@ -40,8 +40,6 @@ assert_contains "$cli_output" 'pnpm exec prettier --check apps/cli/src/index.ts'
 sites_output=$("$planner" apps/sites/src/serve/server.ts)
 assert_contains "$sites_output" 'pnpm --filter @nix/sites test'
 
-rabbit_output=$("$planner" deploy/rabbitmq/start.sh)
-assert_contains "$rabbit_output" 'node --test deploy/rabbitmq/definitions.test.mjs'
 
 backend_output=$("$planner" backend/src/Nix.Api/Authentication/UserInfoClient.cs)
 assert_contains "$backend_output" 'dotnet test --project backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj'

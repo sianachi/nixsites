@@ -186,7 +186,6 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IWorkerExecutionFence, Nix.Persistence.Workers.WorkerExecutionFence>();
         services.AddScoped<Nix.Persistence.Workers.WorkerStore>();
         services.AddScoped<IWorkerJobStore>(provider => provider.GetRequiredService<Nix.Persistence.Workers.WorkerStore>());
-        services.AddScoped<IWorkerOutboxStore>(provider => provider.GetRequiredService<Nix.Persistence.Workers.WorkerStore>());
         services.AddScoped<IFileStore, Nix.Persistence.Files.FileStore>();
         services.AddScoped<IDocumentImportStore, Nix.Persistence.Importing.DocumentImportStore>();
         services.AddSingleton<AbandonedObjectOperationStore>();

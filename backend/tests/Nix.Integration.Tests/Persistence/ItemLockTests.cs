@@ -261,27 +261,6 @@ public sealed class ItemLockTests(NixPostgresFixture fixture) : IAsyncLifetime
         Assert.Empty(await BacklinksAsync());
     }
 
-    /// <summary>Lock changes notify consumers of the shared workspace event stream.</summary>
-    [Fact]
-    public async Task Locking_an_item_emits_a_workspace_change()
-    {
-        await ExecuteAsMigratorAsync(
-            $"UPDATE item_search SET body_text = 'alpha note body' WHERE item_id = {Literal(M0SchemaSeed.Alpha.ItemId)}");
-        await ExecuteAsMigratorAsync("DELETE FROM worker_outbox_event");
-
-        await LockAsync(Locker, "hunter22");
-
-        var connection = await fixture.OpenMigratorConnectionAsync();
-        await using (connection.ConfigureAwait(false))
-        {
-            var queued = await RawSql.CountAsync(
-                connection,
-                transaction: null,
-                $"SELECT count(*) FROM worker_outbox_event WHERE kind = 'item.changed' AND item_id = {Literal(M0SchemaSeed.Alpha.ItemId)}");
-            Assert.True(queued >= 1);
-        }
-    }
-
     [Fact]
     public async Task A_subtree_is_locked_when_its_root_or_anything_under_it_is()
     {

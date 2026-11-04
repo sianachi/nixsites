@@ -21,8 +21,7 @@ flowchart TB
   Edge --> Store[(S3-compatible object store)]
   Core --> PG[(PostgreSQL)]
   Collab --> PG
-  Core --> MQ[RabbitMQ]
-  MQ --> Companion[Pet companion host]
+  Core --> Companion[Pet companion host]
   Workers --> Core
   Workers --> Store
   Core --> IdP[OIDC identity provider: bundled Zitadel or your own]

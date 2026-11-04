@@ -205,9 +205,6 @@ public sealed class NixDbContext : DbContext
     /// <summary>Gets durable worker jobs.</summary>
     public DbSet<WorkerJob> WorkerJobs => Set<WorkerJob>();
 
-    /// <summary>Gets durable worker outbox events.</summary>
-    public DbSet<WorkerOutboxEvent> WorkerOutboxEvents => Set<WorkerOutboxEvent>();
-
     public DbSet<FileBody> FileBodies => Set<FileBody>();
     public DbSet<FileVersion> FileVersions => Set<FileVersion>();
     public DbSet<FileUpload> FileUploads => Set<FileUpload>();
@@ -298,7 +295,6 @@ public sealed class NixDbContext : DbContext
         configurationBuilder.Properties<TemplateOperationId>().HaveConversion<NixIdConverter<TemplateOperationId>>();
         configurationBuilder.Properties<TemplateApplicationId>().HaveConversion<NixIdConverter<TemplateApplicationId>>();
         configurationBuilder.Properties<WorkerJobId>().HaveConversion<NixIdConverter<WorkerJobId>>();
-        configurationBuilder.Properties<WorkerOutboxEventId>().HaveConversion<NixIdConverter<WorkerOutboxEventId>>();
         configurationBuilder.Properties<FileVersionId>().HaveConversion<NixIdConverter<FileVersionId>>();
         configurationBuilder.Properties<FileUploadId>().HaveConversion<NixIdConverter<FileUploadId>>();
     }
@@ -374,7 +370,6 @@ public sealed class NixDbContext : DbContext
         modelBuilder.ApplyConfiguration(new TemplateApplicationItemConfiguration());
         modelBuilder.ApplyConfiguration(new TemplateFileTransferConfiguration());
         modelBuilder.ApplyConfiguration(new WorkerJobConfiguration());
-        modelBuilder.ApplyConfiguration(new WorkerOutboxEventConfiguration());
         modelBuilder.ApplyConfiguration(new FileBodyConfiguration());
         modelBuilder.ApplyConfiguration(new FileVersionConfiguration());
         modelBuilder.ApplyConfiguration(new FileUploadConfiguration());

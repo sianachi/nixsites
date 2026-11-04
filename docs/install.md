@@ -7,7 +7,7 @@ what the script does, the flags, upgrades, Kubernetes and image tags.
 ## Try it on your machine
 
 Needs Docker with the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for
-Docker. The stack runs Postgres, RabbitMQ, an object store, the identity provider and four Nix
+Docker. The stack runs Postgres, an object store, the identity provider and four Nix
 services (API, collaboration, web, and the pet companion
 host). A default Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script
 stops if a tool is missing, and warns when Docker has less than about 8 GB.
@@ -34,7 +34,7 @@ ports 80 and 443 free. The tools and the 8 GB of Docker memory are the same as t
 
 ## What it does
 
-The installer generates every secret into `~/nix/nix.env`, starts Postgres, RabbitMQ, the object
+The installer generates every secret into `~/nix/nix.env`, starts Postgres, the object
 store and a bundled identity provider (Zitadel) behind Caddy, which fetches the TLS certificates
 itself; registers the web application with the identity provider; runs the database migrations;
 starts every service; prints the administrator sign-in (`admin@nix.auth.<host>` and a one-time

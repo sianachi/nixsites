@@ -9,7 +9,6 @@ fake_bin="$test_root/bin"
 mkdir -p "$fake_bin"
 export KUBECTL_LOG="$test_root/kubectl.log"
 export RENDERED_PRESET_JOB="$test_root/template-presets.yaml"
-export RENDERED_RABBITMQ="$test_root/rabbitmq.yaml"
 export RENDERED_API="$test_root/api.yaml"
 export RENDERED_TEMPLATE_SYNC="$test_root/template-sync.yaml"
 export RENDERED_WORKERS="$test_root/workers.yaml"
@@ -55,11 +54,6 @@ if [[ " $* " == *" patch statefulset nix-loki "* ]]; then
   exit 0
 fi
 
-if [[ " $* " == *" get secret nix-rabbitmq "* && " $* " == *"metadata.resourceVersion"* ]]; then
-  printf '12345'
-  exit 0
-fi
-
 if [[ " $* " == *" get secret nix-object-store "* && " $* " == *"metadata.resourceVersion"* ]]; then
   printf '67890'
   exit 0
@@ -90,11 +84,6 @@ if [[ " $* " == *" create secret generic nix-backup-offsite "* ]]; then
   exit 0
 fi
 
-if [[ " $* " == *" get secret nix-rabbitmq "* && " $* " == *" jsonpath="* ]]; then
-  printf 'dGVzdA=='
-  exit 0
-fi
-
 if [[ " $* " == *" get secret nix-object-store "* && " $* " == *" jsonpath="* ]]; then
   printf 'dGVzdA=='
   exit 0
@@ -109,9 +98,6 @@ if [[ " $* " == *" apply -f - "* ]]; then
   printf 'apply-stdin:%s\n' "$names" >> "$KUBECTL_LOG"
   if [[ "$payload" == *"nix-template-presets-"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_PRESET_JOB"
-  fi
-  if [[ "$payload" == *"kind: StatefulSet"* && "$payload" == *"name: nix-rabbitmq"* ]]; then
-    printf '%s\n' "$payload" > "$RENDERED_RABBITMQ"
   fi
   if [[ "$payload" == *"name: nix-api-data-protection"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_API"
@@ -229,7 +215,7 @@ assert_before \
   "apply-stdin:nix-template-presets-render-order" \
   "wait:-n nix wait --for=condition=complete job/nix-template-presets-render-order"
 assert_before \
-  "rollout:-n nix rollout status statefulset/nix-rabbitmq" \
+  "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found" \
   "apply-stdin:nix-api-data-protection,nix-api,nix-api"
 assert_before \
   "wait:-n nix wait --for=condition=complete job/nix-template-presets-render-order" \
@@ -244,18 +230,9 @@ grep -Fq 'fsGroup: 999' "$RENDERED_PRESET_JOB"
 grep -Fq 'automountServiceAccountToken: false' "$RENDERED_PRESET_JOB"
 grep -Fq 'configMap: { name: nix-template-presets }' "$RENDERED_PRESET_JOB"
 grep -Fq 'name: PGUSER, value: nix_migrator' "$RENDERED_PRESET_JOB"
-grep -Fq 'create-configmap:nix-rabbitmq-config' "$KUBECTL_LOG"
-grep -Fq 'apply-stdin:nix-rabbitmq,nix-rabbitmq,rabbitmq-ingress' "$KUBECTL_LOG"
-grep -Fq 'nix.io/rabbitmq-secret-version: "12345"' "$RENDERED_RABBITMQ"
-grep -Fq 'key: api-password' "$RENDERED_RABBITMQ"
-grep -Fq 'key: import-password' "$RENDERED_RABBITMQ"
-grep -Fq 'key: export-password' "$RENDERED_RABBITMQ"
-grep -Fq 'key: plugin-password' "$RENDERED_RABBITMQ"
-grep -Fq 'key: calendar-password' "$RENDERED_RABBITMQ"
-grep -Fq 'key: notify-password' "$RENDERED_RABBITMQ"
-grep -Fq 'nix.io/rabbitmq-secret-version: "12345"' "$RENDERED_API"
+grep -Fq 'delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found' "$KUBECTL_LOG"
+# The broker's volume claim is kept.
 test "$(grep -Fc 'nix.io/object-store-secret-version: "67890"' "$RENDERED_API")" -eq 1
-grep -Fq 'key: api-url' "$RENDERED_API"
 grep -Fq 'name: Nix__ObjectStorage__PublicOrigin' "$RENDERED_API"
 grep -Fq 'key: public-origin' "$RENDERED_API"
 # Core refuses a plain-HTTP endpoint off loopback, so it never gets the in-cluster one.
@@ -276,8 +253,6 @@ if grep -Eq 'NIX_RABBITMQ_URL|NIX_WORKER_ROLES|NIX_WORKER_OBJECT_ORIGINS' "$REND
   exit 1
 fi
 grep -Fq 'name: NIX_COMPANION_DATA_DIR' "$RENDERED_WORKERS"
-grep -Fq 'key: worker-password' "$RENDERED_RABBITMQ"
-grep -Fq 'values: [nix-worker, nix-sites-worker]' "$RENDERED_RABBITMQ"
 grep -Fq 'delete:-n nix delete deployment/nix-import-worker' "$KUBECTL_LOG"
 grep -Fq 'rollout:-n nix rollout status deployment/nix-worker ' "$KUBECTL_LOG"
 if grep -Eq 'rollout:.*nix-(import|export|plugin|calendar|notify)-worker' "$KUBECTL_LOG"; then
@@ -301,11 +276,10 @@ grep -Fq 'command: ["node", "--experimental-strip-types", "src/serve/index.ts"]'
 test "$(grep -Fc 'readOnlyRootFilesystem: true' "$RENDERED_SITES")" -eq 2
 test "$(grep -Fc 'httpHeaders: [{ name: Host, value: localhost }]' "$RENDERED_SITES")" -eq 2
 serve_section="$(sed -n '/name: nix-sites-serve, namespace/,/name: sites-worker-egress/p' "$RENDERED_SITES")"
-if printf '%s\n' "$serve_section" | grep -Eq 'nix-internal|nix-connections|nix-rabbitmq|key: access-key|key: secret-key'; then
+if printf '%s\n' "$serve_section" | grep -Eq 'nix-internal|nix-connections|key: access-key|key: secret-key'; then
   echo 'The anonymous sites server received a Core, database, broker or write credential.' >&2
   exit 1
 fi
-grep -Fq 'key: sites-password' "$RENDERED_RABBITMQ"
 grep -Fq 'name: Nix__Sites__Domain' "$RENDERED_API"
 grep -Fq 'name: Nix__Sites__SharedAppDomain' "$RENDERED_API"
 grep -A1 -F 'name: Nix__Sites__ForeignLabelSuffixes__0' "$RENDERED_API" | grep -Fq 'value: "-home"'
@@ -382,13 +356,13 @@ run_deploy
 OIDC_ISSUER= run_deploy
 grep -Fq 'value: "https://auth.nix.example.test"' "$RENDERED_API"
 
-if grep -Eq 'nix-indexer|OpenSearch|opensearch|index-password|index-url' "$RENDERED_WORKERS" "$RENDERED_API" "$RENDERED_RABBITMQ"; then
+if grep -Eq 'nix-indexer|OpenSearch|opensearch|index-password|index-url' "$RENDERED_WORKERS" "$RENDERED_API"; then
   echo 'Deployment still renders retired search components.' >&2
   exit 1
 fi
 assert_before "kubectl:-n nix patch statefulset nix-opensearch" "delete:-n nix delete statefulset/nix-opensearch"
 grep -Fq '"whenDeleted":"Retain","whenScaled":"Retain"' "$KUBECTL_LOG"
-assert_before "delete:-n nix delete deployment/nix-indexer" "create-configmap:nix-rabbitmq-config"
+assert_before "delete:-n nix delete deployment/nix-indexer" "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found"
 if grep -Eq 'delete.*(persistentvolume|pvc)' "$KUBECTL_LOG"; then
   echo 'Deployment attempted to delete retained storage.' >&2
   exit 1
@@ -396,14 +370,17 @@ fi
 assert_before "kubectl:-n nix patch statefulset nix-loki" "delete:-n nix delete statefulset/nix-loki"
 grep -Fq 'kubectl:-n nix patch statefulset nix-loki --type=merge -p {"spec":{"persistentVolumeClaimRetentionPolicy":{"whenDeleted":"Retain","whenScaled":"Retain"}}}' "$KUBECTL_LOG"
 assert_before "delete:-n nix delete deployment/nix-alloy deployment/nix-grafana" "delete:-n nix delete statefulset/nix-loki"
-assert_before "delete:-n nix delete statefulset/nix-loki" "create-configmap:nix-rabbitmq-config"
+assert_before "delete:-n nix delete statefulset/nix-loki" "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found"
 grep -Fq 'delete:-n nix delete service/nix-loki service/nix-grafana --ignore-not-found' "$KUBECTL_LOG"
 grep -Fq 'serviceaccount/nix-alloy role/nix-alloy rolebinding/nix-alloy configmap/nix-loki-config configmap/nix-alloy-config configmap/nix-grafana-provisioning secret/nix-observability --ignore-not-found' "$KUBECTL_LOG"
 if grep -Eq '(create-configmap|apply-file|apply-stdin|rollout):.*(loki|alloy|grafana|observability)' "$KUBECTL_LOG"; then
   echo 'Deployment still starts retired observability components.' >&2
   exit 1
 fi
-assert_before "kubectl:-n nix rollout restart statefulset/nix-rabbitmq" "rollout:-n nix rollout status statefulset/nix-rabbitmq"
+if grep -Eq 'rabbitmq.*(pvc|persistentvolume)' "$KUBECTL_LOG"; then
+  echo 'Deployment touched the RabbitMQ volume claim.' >&2
+  exit 1
+fi
 : > "$KUBECTL_LOG"
 if FAIL_RETIRED_SEARCH_LOOKUP=1 run_deploy; then
   echo 'Deployment ignored a failed retained-storage lookup.' >&2
@@ -698,7 +675,7 @@ grep -Fq 'router.middlewares: ""' "$RENDERED_INGRESS"
 grep -Fq 'value: "X-Forwarded-For"' "$RENDERED_WEB"
 grep -Fq 'ZITADEL_EXTERNALSECURE: "false"' "$RENDERED_ZITADEL"
 grep -Fq '"--tlsMode", "external"' "$RENDERED_ZITADEL"
-assert_before "rollout:-n nix rollout status statefulset/nix-rabbitmq" "kubectl:-n nix rollout restart deployment/nix-worker deployment/nix-sites-worker"
+assert_before "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found" "kubectl:-n nix rollout restart deployment/nix-worker deployment/nix-sites-worker"
 if grep -Fq 'cloudflare-only.yaml' "$KUBECTL_LOG"; then
   echo 'Deployment applied the Cloudflare origin lock on a generic cluster.' >&2
   exit 1

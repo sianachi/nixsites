@@ -1,5 +1,5 @@
 using Nix.Abstractions.Workers;
-using Nix.Persistence.RabbitMq;
+using Nix.Workers;
 
 namespace Nix.Tests.Persistence;
 

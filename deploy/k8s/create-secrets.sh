@@ -13,7 +13,7 @@
 # once this is more than a first bring-up.
 #
 # Existing clusters can update an external service secret without touching database or signing
-# secrets by running this script with `--rabbitmq-only`, `--object-store-only`, `--sites-only`,
+# secrets by running this script with `--object-store-only`, `--sites-only`,
 # `--tls-only`, `--backup-offsite-only`, `--sites-cloudflare-only`, `--push-only` (creates the Web Push key pair only when
 # missing) or `--zitadel-only` (creates the identity provider's secret only when missing). Production values (keys, certificate paths) come from the operator's local,
 # uncommitted environment, never from this repository.
@@ -25,68 +25,6 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 kubectl get namespace nix >/dev/null 2>&1 || kubectl apply -f deploy/k8s/namespace.yaml
-
-create_rabbitmq_secret() {
-  local update_existing="$1"
-  local rabbitmq_api_password rabbitmq_import_password rabbitmq_export_password rabbitmq_plugin_password rabbitmq_calendar_password rabbitmq_notify_password rabbitmq_sites_password rabbitmq_worker_password
-  local rabbitmq_api_url rabbitmq_import_url rabbitmq_export_url rabbitmq_plugin_url rabbitmq_calendar_url rabbitmq_notify_url rabbitmq_sites_url rabbitmq_worker_url rabbitmq_url
-
-  rabbitmq_api_password="$(openssl rand -hex 24)"
-  rabbitmq_import_password="$(openssl rand -hex 24)"
-  rabbitmq_export_password="$(openssl rand -hex 24)"
-  rabbitmq_plugin_password="$(openssl rand -hex 24)"
-  rabbitmq_calendar_password="$(openssl rand -hex 24)"
-  rabbitmq_notify_password="$(openssl rand -hex 24)"
-  rabbitmq_sites_password="$(openssl rand -hex 24)"
-  rabbitmq_worker_password="$(openssl rand -hex 24)"
-
-  # The defaults are intentionally plaintext only across the namespace-internal NetworkPolicy.
-  # Supplying all full amqps:// URLs moves application traffic to an external TLS broker while
-  # retaining independent identities. Port 443 is already permitted by the worker egress policy.
-  rabbitmq_api_url="${NIX_RABBITMQ_API_URL:-amqp://nix-api:$rabbitmq_api_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_import_url="${NIX_RABBITMQ_IMPORT_URL:-amqp://nix-import:$rabbitmq_import_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_export_url="${NIX_RABBITMQ_EXPORT_URL:-amqp://nix-export:$rabbitmq_export_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_plugin_url="${NIX_RABBITMQ_PLUGIN_URL:-amqp://nix-plugin:$rabbitmq_plugin_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_calendar_url="${NIX_RABBITMQ_CALENDAR_URL:-amqp://nix-calendar:$rabbitmq_calendar_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_notify_url="${NIX_RABBITMQ_NOTIFY_URL:-amqp://nix-notify:$rabbitmq_notify_password@nix-rabbitmq:5672/%2Fnix}"
-  rabbitmq_sites_url="${NIX_RABBITMQ_SITES_URL:-amqp://nix-sites:$rabbitmq_sites_password@nix-rabbitmq:5672/%2Fnix}"
-  # The combined Go worker (deploy/k8s/worker.yaml) connects as nix-worker.
-  rabbitmq_worker_url="${NIX_RABBITMQ_WORKER_URL:-amqp://nix-worker:$rabbitmq_worker_password@nix-rabbitmq:5672/%2Fnix}"
-  for rabbitmq_url in "$rabbitmq_api_url" "$rabbitmq_import_url" "$rabbitmq_export_url" "$rabbitmq_plugin_url" "$rabbitmq_calendar_url" "$rabbitmq_notify_url" "$rabbitmq_sites_url" "$rabbitmq_worker_url"; do
-    case "$rabbitmq_url" in
-      amqp://* | amqps://*) ;;
-      *)
-        echo "RabbitMQ URLs must use amqp:// or amqps://." >&2
-        exit 1
-        ;;
-    esac
-  done
-
-  local -a rabbitmq_secret_args=(
-    -n nix create secret generic nix-rabbitmq
-    --from-literal=api-password="$rabbitmq_api_password"
-    --from-literal=import-password="$rabbitmq_import_password"
-    --from-literal=export-password="$rabbitmq_export_password"
-    --from-literal=plugin-password="$rabbitmq_plugin_password"
-    --from-literal=calendar-password="$rabbitmq_calendar_password"
-    --from-literal=notify-password="$rabbitmq_notify_password"
-    --from-literal=sites-password="$rabbitmq_sites_password"
-    --from-literal=worker-password="$rabbitmq_worker_password"
-    --from-literal=api-url="$rabbitmq_api_url"
-    --from-literal=import-url="$rabbitmq_import_url"
-    --from-literal=export-url="$rabbitmq_export_url"
-    --from-literal=plugin-url="$rabbitmq_plugin_url"
-    --from-literal=calendar-url="$rabbitmq_calendar_url"
-    --from-literal=notify-url="$rabbitmq_notify_url"
-    --from-literal=sites-url="$rabbitmq_sites_url"
-    --from-literal=worker-url="$rabbitmq_worker_url"
-  )
-  if [ "$update_existing" = true ]; then
-    kubectl "${rabbitmq_secret_args[@]}" --dry-run=client -o yaml | kubectl apply -f -
-  else
-    kubectl "${rabbitmq_secret_args[@]}"
-  fi
-}
 
 create_object_store_secret() {
   local update_existing="$1"
@@ -304,11 +242,6 @@ case "${1:-}" in
     create_zitadel_secret
     exit 0
     ;;
-  --rabbitmq-only)
-    create_rabbitmq_secret true
-    echo "RabbitMQ service credentials rotated. Run deploy/k8s/deploy.sh to roll them out."
-    exit 0
-    ;;
   --object-store-only)
     create_object_store_secret true
     echo "Object-store configuration updated. Run deploy/k8s/deploy.sh to roll it out."
@@ -340,7 +273,7 @@ case "${1:-}" in
     ;;
   "") ;;
   *)
-    echo "usage: deploy/k8s/create-secrets.sh [--rabbitmq-only|--backup-offsite-only|--object-store-only|--calendar-only|--sites-only|--sites-cloudflare-only|--push-only|--tls-only|--zitadel-only]" >&2
+    echo "usage: deploy/k8s/create-secrets.sh [--backup-offsite-only|--object-store-only|--calendar-only|--sites-only|--sites-cloudflare-only|--push-only|--tls-only|--zitadel-only]" >&2
     exit 2
     ;;
 esac
@@ -366,7 +299,6 @@ kubectl -n nix create secret generic nix-internal \
   --from-literal=secret="$(openssl rand -hex 32)" \
   --from-literal=public-forms-signing-key="$(openssl rand -hex 32)"
 
-create_rabbitmq_secret false
 create_object_store_secret false
 create_calendar_secret false
 create_sites_secret false

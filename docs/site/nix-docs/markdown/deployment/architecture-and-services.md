@@ -12,9 +12,8 @@ A Nix deployment is a handful of small services around one PostgreSQL database. 
 | Web | web | The installed web app, served by Caddy on port 8090. Caddy also routes the API, collaboration and storage paths, so the whole product sits behind one origin. |
 | Workers | worker | One Go binary, nix-worker, with selectable roles. See below. |
 | Sites worker | sites | Optional. Builds published websites from the build manifest Core freezes, and writes them to the sites bucket. |
-| Sites serve | sites | Optional. Serves published websites to anonymous readers. It has no database, no broker account and no Core secret, only a key to read the sites bucket. |
+| Sites serve | sites | Optional. Serves published websites to anonymous readers. It has no database and no Core secret, only a key to read the sites bucket. |
 | PostgreSQL | pgvector/pgvector:pg16 | All durable state, with row-level security, and full-text search. |
-| RabbitMQ | rabbitmq:4.1-management-alpine | The job transport between Core and the workers. Each component has its own account. |
 | Object store | versity/versitygw | An S3-compatible gateway that stores file bytes on disk. Any S3-compatible store can replace it. |
 | Identity provider | ghcr.io/zitadel/zitadel | Sign-in through OpenID Connect. The Kubernetes manifests include Zitadel; with Compose you bring your own provider. |
 | Tunnel | cloudflare/cloudflared | Optional public ingress without opening ports. |
@@ -23,7 +22,7 @@ The six images Nix builds itself, plus a `release-tools` image used by release s
 
 ## Background jobs
 
-Imports, exports, file publication, template file copies, object cleanup, calendar sync and push delivery run as background jobs inside Core, leased from the `worker_job` table and renewed while they run. A job Core was running when it restarted is marked failed and can be retried. The `worker` image now only hosts the pet companion (`nix-companion`), which calls Core over the internal API and holds no broker, database or storage credential.
+Imports, exports, file publication, template file copies, object cleanup, calendar sync and push delivery run as background jobs inside Core, leased from the `worker_job` table and renewed while they run. A job Core was running when it restarted is marked failed and can be retried. The `worker` image now only hosts the pet companion (`nix-companion`), which calls Core over the internal API and holds no database or storage credential.
 
 ## How the services talk
 
@@ -31,7 +30,7 @@ Imports, exports, file publication, template file copies, object cleanup, calend
 
 **Services call each other over **`/internal`. Collaboration, the workers and the sites worker call Core's internal routes with a shared secret in a request header. A missing or wrong secret is answered with `404`, not `401`, so the routes do not advertise themselves, and they are left out of the public API description. Routes that act for a person also need that person's forwarded token; worker routes take their workspace from the job they are running.
 
-**Jobs travel through RabbitMQ, but PostgreSQL is the record.** Core writes each job to a durable outbox in the same transaction as the change that caused it, then publishes it. Workers lease and complete jobs through Core. If the broker is lost, nothing durable is lost with it.
+**PostgreSQL is the record of every job.** Jobs are rows in `worker_job`, leased and renewed by Core's own background hosts. A restart marks the jobs that were running as failed, so they can be retried.
 
 **File bytes never pass through Core.** Core signs short-lived capability URLs on the object store's public origin, and browsers and workers upload and download directly. Workers only accept storage URLs on origins listed in their configuration, and access tokens are never sent to storage.
 

@@ -55,7 +55,7 @@ assert not api_check or (api_check[0] == 'CMD' and api_check[1] not in ('wget', 
 assert s['nix-companion']['environment']['NIX_COMPANION_DATA_DIR'] == '/var/lib/nix-worker/companion'
 assert any(v.get('source') == 'nix-companion-data' for v in s['nix-companion']['volumes'])
 assert not s['nix-companion'].get('ports')
-assert 'NIX_RABBITMQ_URL' not in s['nix-companion']['environment']
+assert 'rabbitmq' not in s
 assert {'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker'}.isdisjoint(s)
 assert not any('codex' in name for name in s)
 assert not s['nix-versitygw'].get('ports')
@@ -177,7 +177,7 @@ import sys,os,json
 args=sys.argv[1:]
 with open(os.environ['DOCKER_TEST_LOG'],'a') as f: f.write(' '.join(args)+'\n')
 if args[0]=='ps':
- for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana', 'alloy', 'loki', 'docker-socket-proxy']:
+ for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana', 'alloy', 'loki', 'docker-socket-proxy', 'rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker']:
   if 'label=com.docker.compose.service='+service in args and os.environ.get('RETIRED_CONTAINERS'):
    print('retired-'+service)
 elif 'config' in args and '--format' in args:
@@ -190,8 +190,6 @@ elif args[-2:]==['config','--services']:
 elif 'config' in args and '--images' in args:
  print('localhost/nix/api:test\nghcr.io/sianachi/nix/worker:test')
 elif 'run' in args and args[-1]=='nix-migrate' and os.environ.get('FAIL_MIGRATION'):
- sys.exit(1)
-elif 'run' in args and '--entrypoint' in args and '/bin/sh' in args and 'rabbitmq' in args and os.environ.get('FAIL_RELEASE_BINDS'):
  sys.exit(1)
 PYCODE
 chmod +x "$fixture/bin/docker"
@@ -229,18 +227,20 @@ tools='ghcr.io/sianachi/nix/release-tools:replace-with-commit-sha'
 smokes=[i for i,s in enumerate(calls) if s.startswith('run --rm ') and tools+' smoke' in s]
 assert len(smokes)==2 and calls[smokes[0]].endswith(' smoke --preflight') and calls[smokes[1]].endswith(tools+' smoke')
 assert calls.index('pull --quiet '+tools) < smokes[0] < stop < start < smokes[1]
-# Writers stop before the infrastructure `up`, so a RabbitMQ recreate never meets a publisher.
-infra=next(i for i,s in enumerate(calls) if ' up ' in s and s.endswith('postgres rabbitmq nix-versitygw'))
+infra=next(i for i,s in enumerate(calls) if ' up ' in s and s.endswith('postgres nix-versitygw'))
 assert stop < infra < migrate
 # The BackupRuns migration needs the nix_backup role; it is created idempotently before the migrator runs.
 role=next(i for i,s in enumerate(calls) if 'exec -T postgres psql' in s and 'CREATE ROLE nix_backup NOLOGIN' in s and 'IF NOT EXISTS' in s and 'ALTER ROLE nix_backup NOLOGIN NOINHERIT NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE' in s)
 assert infra < role < migrate
-bind_check=next(i for i,s in enumerate(calls) if 'run --rm --no-deps --entrypoint /bin/sh rabbitmq -c ' in s)
 for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana', 'alloy', 'loki', 'docker-socket-proxy']:
  retired=calls.index('stop retired-'+service)
- assert bind_check < retired < stop
+ assert retired < stop
  assert any('label=com.docker.compose.project=nix' in call and 'label=com.docker.compose.service='+service in call for call in calls)
 assert len([call for call in calls if call.startswith('stop retired-')]) == 7
+# Containers of the retired broker and workers are removed (never volumes) after the writers stop.
+for service in ['rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker']:
+ assert stop < calls.index('rm -f retired-'+service) < migrate, service
+assert not any('volume' in call or ' -v' in call for call in calls if call.startswith('rm '))
 assert not any(' stop ' in call and 'nix-indexer' in call for call in calls)
 assert not any(' up ' in call and 'nix-opensearch' in call for call in calls)
 assert all(':/config/nixctl/config.json:ro' in calls[i] for i in smokes)
@@ -282,12 +282,6 @@ drift=next(i for i,s in enumerate(calls) if s.endswith("config --hash *"))
 assert drift < next(i for i,s in enumerate(calls) if ' up ' in s)
 PYCODE
 : > "$DOCKER_TEST_LOG"
-if FAIL_RELEASE_BINDS=1 PATH="$fixture/nodeless:$PATH" bash deploy/compose/deploy.sh > "$fixture/deploy-unreadable" 2>&1; then
- echo 'Rollout accepted unreadable RabbitMQ release bind mounts' >&2; exit 1
-fi
-if rg -q ' stop | up |run --rm --no-deps nix-migrate' "$DOCKER_TEST_LOG"; then
- echo 'Rollout stopped or changed services with unreadable release bind mounts' >&2; exit 1
-fi
 : > "$DOCKER_TEST_LOG"
 if FAIL_MIGRATION=1 PATH="$fixture/nodeless:$PATH" bash deploy/compose/deploy.sh > "$fixture/deploy-failure" 2>&1; then
  echo 'Rollout accepted a failed migration' >&2; exit 1

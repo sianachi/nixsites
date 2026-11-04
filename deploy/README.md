@@ -31,7 +31,7 @@ HTTPS capabilities through the public origin. Never send bearer tokens to object
 
 Versity v1.7.0 owns `nix-versity-data`. MinIO and the old Node Media service are retired.
 Do not delete their retained rollback volumes or restart them as part of a normal release.
-Postgres, RabbitMQ, data-protection keys, companion state and Caddy also use named persistent volumes.
+Postgres, data-protection keys, companion state and Caddy also use named persistent volumes.
 Never use `docker compose down -v`, `volume prune`, or `--remove-orphans` during deployment.
 
 The last verified deployment uses `/home/nix/nix-release-14e0a39d/deploy/compose.host.yml`
@@ -341,9 +341,8 @@ bash deploy/compose/deploy.sh
 
 OpenSearch and its indexer are retired; Core search uses PostgreSQL. The release stops their old
 containers by project/service labels and retains the `nix-opensearch-data` volume for recovery.
-Remove obsolete `NIX_OPENSEARCH_*`, `NIX_SEARCH_OPENSEARCH_*` and index broker variables from the
-private environment when convenient. RabbitMQ revokes the old index account and detaches its
-workspace-event binding while retaining queued history.
+Remove obsolete `NIX_OPENSEARCH_*` and `NIX_SEARCH_OPENSEARCH_*` variables from the
+private environment when convenient.
 Kubernetes retirement also retains existing PVCs.
 
 Grafana, Alloy, Loki and the Alloy-only Docker socket proxy are retired. The release stops their
@@ -363,10 +362,9 @@ It does not prune containers or volumes.
 The script validates configuration, pulls or checks the release images, checks verification
 credentials and confirms the profile URL matches the deployed public origin, previews drift, stops
 application writers, brings up infrastructure and the bucket, runs Core/template/document
-migrations, then starts compatible services before the frontend. RabbitMQ mounts its configuration
-from the release checkout, so each release recreates it; writers are stopped first so that restart
-cannot interrupt a delivery (queues are durable and messages persistent). The drift preview names
-that restart and refuses only a recreate of Postgres or Versity. Before current writer stop,
+migrations, then starts compatible services before the frontend. The broker was removed (jobs are
+`worker_job` rows); the script removes its old container and the retired worker containers once.
+The drift preview refuses only a recreate of Postgres or Versity. Before current writer stop,
 it stops retained containers for retired services without deleting their volumes. Expect a
 maintenance window. It deliberately
 does not seed users, delete volumes, force an automatic schema rollback or restart unrelated stacks.

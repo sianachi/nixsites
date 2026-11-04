@@ -75,9 +75,6 @@ while IFS= read -r image; do
     *) docker pull --quiet "$image" >/dev/null ;;
   esac
 done < <("${compose[@]}" --profile maintenance config --images "${release_services[@]}" | sort -u)
-# Check the release's bind mounts as RabbitMQ's runtime user before stopping writers.
-# A private umask on the checkout can leave these public source files unreadable.
-"${compose[@]}" run --rm --no-deps --entrypoint /bin/sh rabbitmq -c 'for file in /usr/local/bin/nix-rabbitmq-start /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/definitions.json; do if [ ! -r "$file" ]; then printf "Release bind mount is not readable: %s\n" "$file" >&2; exit 1; fi; done'
 # Preview drift before anything is recreated; refuses recreating stateful infrastructure.
 bash "$root/deploy/compose/drift.sh" "${compose[@]}"
 # Stop retired services from an older manifest without removing their volumes.
@@ -88,11 +85,20 @@ for service in nix-speech-worker nix-indexer nix-opensearch grafana alloy loki d
   fi
 done
 # Stop writers before the infrastructure `up`, and keep them stopped while document/schema
-# migrations run. RabbitMQ mounts its configuration from the release checkout, so every release
-# recreates it; with publishers and consumers stopped, that restart cannot interrupt a delivery
-# (queues are durable and messages persistent). Failure leaves writers stopped for inspection.
+# migrations run. Failure leaves writers stopped for inspection.
 "${compose[@]}" stop nix-web ${optional_services[@]+"${optional_services[@]}"} nix-companion nix-collab nix-api
-"${compose[@]}" up -d --wait --wait-timeout 180 postgres rabbitmq nix-versitygw
+"${compose[@]}" up -d --wait --wait-timeout 180 postgres nix-versitygw
+# One-time cleanup of services an earlier release ran: the RabbitMQ broker and the five worker
+# processes that now run inside Core. Containers only; volumes stay (the old nix-rabbitmq-data
+# volume can be removed by hand with `docker volume rm nix-rabbitmq-data` once nothing needs a rollback).
+# Containers are removed by label because these services are no longer in the manifest, which
+# `docker compose rm` rejects as an unknown service.
+for service in rabbitmq nix-import-worker nix-export-worker nix-plugin-worker nix-calendar-worker nix-notify-worker; do
+  old=$(docker ps -aq --filter label=com.docker.compose.project=nix --filter "label=com.docker.compose.service=$service")
+  if [ -n "$old" ]; then
+    while IFS= read -r container; do docker rm -f "$container"; done <<< "$old"
+  fi
+done
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-storage-init
 # The BackupRuns migration grants to the nix_backup role, which migrations cannot create. Create
 # it here, idempotently, with the attributes seed.sql gives it; never run deploy/seed/seed.sql on production (it resets role passwords).

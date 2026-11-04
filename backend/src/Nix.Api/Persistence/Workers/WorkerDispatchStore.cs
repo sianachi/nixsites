@@ -16,8 +16,6 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
     private const string ApplyResultSql = "SELECT * FROM nix_apply_worker_result(@job_id, @owner, @succeeded, @retryable, @result, @error_code, @error_detail, @expected_attempt_id)";
     private const string ScheduleExportCleanupSql = "SELECT nix_schedule_export_result_cleanup(@job_id)";
     private const string InterruptJobsSql = "SELECT * FROM nix_interrupt_worker_jobs(@owner_prefix, @kinds, @error_code)";
-    private const string LeaseOutboxSql = "SELECT * FROM nix_lease_worker_outbox(@kind, @owner, @limit, @lease_seconds)";
-    private const string FinishOutboxSql = "SELECT nix_finish_worker_outbox(@event_id, @owner, @succeeded, @error)";
 
     /// <summary>Atomically leases globally queued jobs without exposing an unbounded tenant read.</summary>
     public async ValueTask<IReadOnlyList<DispatchedWorkerJob>> LeaseJobsAsync(
@@ -295,60 +293,6 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
         return results;
     }
 
-    /// <summary>Atomically leases globally queued derived-data events.</summary>
-    public async ValueTask<IReadOnlyList<DispatchedOutboxEvent>> LeaseOutboxAsync(
-        string? kind,
-        string owner,
-        int limit,
-        int leaseSeconds,
-        CancellationToken cancellationToken)
-    {
-        var results = new List<DispatchedOutboxEvent>(limit);
-        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using (connection.ConfigureAwait(false))
-        {
-            var command = new NpgsqlCommand(LeaseOutboxSql, connection);
-            await using (command.ConfigureAwait(false))
-            {
-                command.Parameters.Add(Text("kind", kind));
-                command.Parameters.Add(Text("owner", owner));
-                command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-                command.Parameters.Add(new NpgsqlParameter<int>("lease_seconds", NpgsqlDbType.Integer) { TypedValue = leaseSeconds });
-                var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                await using (reader.ConfigureAwait(false))
-                {
-                    while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        results.Add(new DispatchedOutboxEvent(
-                            reader.GetGuid(0),
-                            reader.GetGuid(1),
-                            await reader.IsDBNullAsync(2, cancellationToken).ConfigureAwait(false) ? null : reader.GetGuid(2),
-                            await reader.IsDBNullAsync(3, cancellationToken).ConfigureAwait(false) ? null : reader.GetGuid(3),
-                            reader.GetString(4),
-                            reader.GetString(5),
-                            reader.GetInt32(6),
-                            await reader.GetFieldValueAsync<DateTimeOffset>(7, cancellationToken).ConfigureAwait(false),
-                            await reader.IsDBNullAsync(8, cancellationToken).ConfigureAwait(false)
-                                ? null
-                                : reader.GetInt64(8)));
-                    }
-                }
-            }
-        }
-        return results;
-    }
-
-    /// <summary>Acknowledges or retries an event only while the caller owns its live lease.</summary>
-    public ValueTask<bool> FinishOutboxAsync(
-        Guid eventId,
-        string owner,
-        bool succeeded,
-        string? failureDetail,
-        CancellationToken cancellationToken) => ExecuteBooleanAsync(
-            FinishOutboxSql,
-            [Uuid("event_id", eventId), Text("owner", owner), Boolean("succeeded", succeeded), Text("error", failureDetail)],
-            cancellationToken);
-
     private async ValueTask<bool> ExecuteBooleanAsync(
         string sql,
         NpgsqlParameter[] parameters,
@@ -358,7 +302,7 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
         await using (connection.ConfigureAwait(false))
         {
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
-            // Justification: every caller passes one of the four constants declared above; values are bound.
+            // Justification: every caller passes one of the constants declared above; values are bound.
             var command = new NpgsqlCommand(sql, connection);
 #pragma warning restore CA2100
             await using (command.ConfigureAwait(false))

@@ -40,8 +40,6 @@ internal static class InternalEndpoints
 
         group.MapGet("/authz/items/{itemId:guid}", GetItemAuthorizationEndpoint.Handle);
         group.MapPost("/items/{itemId:guid}/touched", TouchItemEndpoint.Handle);
-        WorkerJobEndpoints.Map(group);
-        WorkerOutboxEndpoints.Map(group);
         WorkerDispatchEndpoints.Map(group);
         FileEndpoints.MapWorkerExecutions(group.MapGroup("/worker-executions"));
         DocumentImportWorkerEndpoints.MapWorkerExecutions(group.MapGroup("/worker-executions"));

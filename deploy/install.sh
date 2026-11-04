@@ -339,12 +339,6 @@ NIX_COLLAB_DATABASE_URL=postgresql://nix_collab:$pg_collab@postgres:5432/nix
 NIX_COLLAB_MIGRATOR_CONNECTION_STRING=postgresql://nix_migrator:$pg_migrator@postgres:5432/nix
 NIX_INTERNAL_SECRET=$(secret 32)
 NIX_PUBLIC_FORMS_SIGNING_KEY=$(secret 32)
-NIX_RABBITMQ_API_PASSWORD=$(secret 24)
-NIX_RABBITMQ_IMPORT_PASSWORD=$(secret 24)
-NIX_RABBITMQ_EXPORT_PASSWORD=$(secret 24)
-NIX_RABBITMQ_PLUGIN_PASSWORD=$(secret 24)
-NIX_RABBITMQ_CALENDAR_PASSWORD=$(secret 24)
-NIX_RABBITMQ_NOTIFY_PASSWORD=$(secret 24)
 NIX_PUSH_VAPID_PRIVATE_KEY=$vapid_private
 NIX_PUSH_VAPID_PUBLIC_KEY=$vapid_public
 NIX_PUSH_VAPID_SUBJECT=$vapid_subject
@@ -369,7 +363,7 @@ compose=(docker compose -p nix --env-file "$env_file" -f "$src/compose.prod.yml"
 "${compose[@]}" config --quiet
 
 say "starting the database, broker, object store and identity provider"
-"${compose[@]}" up -d --wait --wait-timeout 180 postgres rabbitmq nix-versitygw
+"${compose[@]}" up -d --wait --wait-timeout 180 postgres nix-versitygw
 # No healthcheck on the distroless Zitadel image; register_app polls its discovery document.
 "${compose[@]}" up -d zitadel
 "${compose[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres \
