@@ -14,7 +14,7 @@ func TestParse(t *testing.T) {
 	}{
 		{name: "two roles", input: "import,export", want: []Service{Import, Export}},
 		{name: "spaces and trailing comma", input: "import, export ,", want: []Service{Import, Export}},
-		{name: "single role", input: "calendar", want: []Service{Calendar}},
+		{name: "single role", input: "export", want: []Service{Export}},
 		{name: "empty", input: "", wantErr: "at least one"},
 		{name: "only commas", input: ",,", wantErr: "at least one"},
 		{name: "unknown role", input: "import,bogus", wantErr: "bogus"},

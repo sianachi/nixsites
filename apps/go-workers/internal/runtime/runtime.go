@@ -18,7 +18,6 @@ import (
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
 	"github.com/sianachi/Nix/apps/go-workers/internal/brokerjob"
-	"github.com/sianachi/Nix/apps/go-workers/internal/calendarsync"
 	"github.com/sianachi/Nix/apps/go-workers/internal/companion"
 	"github.com/sianachi/Nix/apps/go-workers/internal/config"
 	"github.com/sianachi/Nix/apps/go-workers/internal/documentimport"
@@ -263,25 +262,6 @@ func Run(service role.Service) {
 		}
 		go runner.Run(ctx)
 	}
-	if roles.Has(role.Calendar) {
-		googleClient, googleErr := calendarsync.NewGoogleClient(settings.CalendarGoogleOrigin, settings.RequestTimeout, logger)
-		if googleErr != nil {
-			logger.Error("google calendar client configuration failed", "error", googleErr)
-			os.Exit(1)
-		}
-		microsoftClient, microsoftErr := calendarsync.NewMicrosoftClient(settings.CalendarMicrosoftOrigin, settings.RequestTimeout, logger)
-		if microsoftErr != nil {
-			logger.Error("microsoft calendar client configuration failed", "error", microsoftErr)
-			os.Exit(1)
-		}
-		handler := calendarsync.NewHandler(apiClient, googleClient, microsoftClient, logger)
-		runner, runnerErr := brokerjob.New(brokerClient, apiClient, handler, broker.CalendarQueue, calendarsync.Kinds, settings.WorkerID, settings.MaxConcurrency, settings.LeaseDuration, settings.RenewInterval, logger)
-		if runnerErr != nil {
-			logger.Error("calendar job runner configuration failed", "error", runnerErr)
-			os.Exit(1)
-		}
-		go runner.Run(ctx)
-	}
 	serverFailures := make(chan error, 1)
 	go func() {
 		logger.Info("go worker listening", "address", settings.Address, "roles", settings.WorkerRoles)
@@ -393,14 +373,6 @@ func validateSettings(roles role.Set, settings config.Settings) error {
 	if roles.Has(role.Import) || roles.Has(role.Export) || roles.Has(role.Plugin) {
 		if len(settings.ObjectOrigins) == 0 {
 			return errors.New("NIX_WORKER_OBJECT_ORIGINS is required for imports, exports, and plugins")
-		}
-	}
-	if roles.Has(role.Calendar) {
-		if !validServiceOrigin(settings.CalendarGoogleOrigin) {
-			return errors.New("NIX_CALENDAR_GOOGLE_ORIGIN must be a valid Google Calendar API origin")
-		}
-		if !validServiceOrigin(settings.CalendarMicrosoftOrigin) {
-			return errors.New("NIX_CALENDAR_MICROSOFT_ORIGIN must be a valid Microsoft Graph origin")
 		}
 	}
 	return nil
@@ -574,8 +546,6 @@ func (state *readinessState) RoleReady(service role.Service) bool {
 		return state.collaboration.Load() && state.objects.Load()
 	case role.Plugin:
 		return state.objects.Load()
-	case role.Calendar:
-		return true
 	default:
 		return false
 	}
@@ -601,8 +571,6 @@ func queueForRole(service role.Service) string {
 		return broker.ExportQueue
 	case role.Plugin:
 		return broker.PluginEventsQueue
-	case role.Calendar:
-		return broker.CalendarQueue
 	default:
 		return ""
 	}

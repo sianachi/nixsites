@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Nix.Features.CalendarSync;
 
-// The C1-C6 wire shapes, matched field for field to apps/go-workers/internal/workerapi/calendar.go
-// and its fixtures in testdata/calendar/. Requests refuse unknown members, missing members and
-// nulls where Go never sends one; responses carry exactly the members Go decodes, because Go
-// decodes them with DisallowUnknownFields.
+// The C1-C6 wire shapes, matched field for field to the in-process calendar worker
+// (Nix.Workers.CalendarSyncHandler) and the shared fixtures in fixtures/calendar-contract/.
+// Requests refuse unknown members, missing members and nulls the worker never sends; responses
+// carry exactly the members it decodes, strictly, as the Go worker did before it.
 
 /// <summary>C1 response: the link's sync state and a short-lived access token.</summary>
 public sealed record CalendarSessionResponse(

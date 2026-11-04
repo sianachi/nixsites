@@ -48,6 +48,7 @@ assert s['nix-api']['environment']['Nix__Push__VapidPublicKey'] == 'replace-me-p
 assert 'NIX_PUSH_VAPID_PRIVATE_KEY' not in s['nix-api']['environment']
 assert s['nix-api']['environment']['Nix__Push__VapidPrivateKey'] == 'replace-me'
 assert 'nix-notify-worker' not in s
+assert 'nix-calendar-worker' not in s
 # The api image is chiseled: it holds only /usr/bin/dotnet (no shell, wget, curl or /dev/tcp).
 api_check = s['nix-api'].get('healthcheck', {}).get('test', [])
 assert not api_check or (api_check[0] == 'CMD' and api_check[1] not in ('wget', 'curl', 'sh', 'bash')), api_check
@@ -61,7 +62,7 @@ assert retired_observability.isdisjoint(s)
 assert {'docker-logs', 'observability', 'grafana-access'}.isdisjoint(c['networks'])
 assert {'nix-loki-data', 'nix-alloy-data', 'nix-grafana-data'}.isdisjoint(c['volumes'])
 assert s['nix-api']['environment']['Logging__Console__FormatterName'] == 'json'
-for service in ['nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker']:
+for service in ['nix-import-worker', 'nix-export-worker', 'nix-plugin-worker']:
  assert s[service]['healthcheck']['test'] == ['CMD', '/nix-worker', '--healthcheck']
 assert s['nix-web']['healthcheck']['test'][0] == 'CMD'
 assert not any(service.get('logging', {}).get('driver') == 'none' for service in s.values())

@@ -159,7 +159,7 @@ func TestReadinessRequiresAnActiveConsumerForEveryEnabledRole(t *testing.T) {
 
 func TestCombinedDependencyFailureDoesNotPoisonExportAdvertisement(t *testing.T) {
 	state := newReadinessState(
-		role.Set{role.Export: true, role.Calendar: true},
+		role.Set{role.Export: true, role.Plugin: true},
 		func(queue string) bool { return queue == broker.ExportQueue },
 	)
 	state.api.Store(true)
@@ -168,13 +168,13 @@ func TestCombinedDependencyFailureDoesNotPoisonExportAdvertisement(t *testing.T)
 	state.objects.Store(true)
 
 	if !state.RoleReady(role.Export) {
-		t.Fatal("an unrelated calendar consumer outage poisoned export readiness")
+		t.Fatal("an unrelated plugin consumer outage poisoned export readiness")
 	}
-	if state.RoleReady(role.Calendar) {
-		t.Fatal("calendar role was ready without an active consumer")
+	if state.RoleReady(role.Plugin) {
+		t.Fatal("plugin role was ready without an active consumer")
 	}
 	if state.AllReady() {
-		t.Fatal("combined readiness hid the failed calendar consumer")
+		t.Fatal("combined readiness hid the failed plugin consumer")
 	}
 }
 

@@ -466,46 +466,6 @@ services:
         aliases:
           - nix-plugin-worker
 
-  nix-calendar-worker:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
-    user: "65532:65532"
-    restart: unless-stopped
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      nix-api:
-        condition: service_started
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
-      TMPDIR: /var/lib/nix-worker/spool
-      NIX_WORKER_ROLES: calendar
-      NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_WORKER_API_URL: http://nix-api:8080
-      NIX_RABBITMQ_URL: ${NIX_RABBITMQ_CALENDAR_URL:-amqp://nix-calendar:${NIX_RABBITMQ_CALENDAR_PASSWORD:?set NIX_RABBITMQ_CALENDAR_PASSWORD}@rabbitmq:5672/%2Fnix}
-      NIX_WORKER_MAX_CONCURRENCY: "4"
-      NIX_CALENDAR_GOOGLE_ORIGIN: ${NIX_CALENDAR_GOOGLE_ORIGIN:-https://www.googleapis.com}
-      NIX_CALENDAR_MICROSOFT_ORIGIN: ${NIX_CALENDAR_MICROSOFT_ORIGIN:-https://graph.microsoft.com}
-    healthcheck:
-      test: ["CMD", "/nix-worker", "--healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-    mem_limit: 256m
-    cpus: 1
-    read_only: true
-    tmpfs:
-      - "/var/lib/nix-worker/spool:rw,noexec,nosuid,nodev,size=16m,uid=65532,gid=65532,mode=0700"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-calendar-worker
-
   # Sites (ADR-0063), off unless the env file sets COMPOSE_PROFILES=sites and NIX_SITES_DOMAIN.
   nix-sites-worker:
     image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/sites:${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}

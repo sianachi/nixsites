@@ -1,6 +1,6 @@
 # Rendered with envsubst by deploy/k8s/deploy.sh - needs $REGISTRY, $TAG.
 #
-# One Deployment runs every Go worker role (import, export, plugin events, calendar) from
+# One Deployment runs every Go worker role (import, export, plugin events) from
 # the CI-published worker image, to fit a small single node. It holds the union of the role
 # credentials: the nix-worker broker account (deploy/rabbitmq/start.sh), the object store origins,
 # the calendar and push keys. The Docker production keeps one container per role; split this back
@@ -38,7 +38,7 @@ spec:
             - name: NIX_RELEASE_COMMIT
               value: "${TAG}"
             - name: NIX_WORKER_ROLES
-              value: import,export,plugin-events,calendar
+              value: import,export,plugin-events
             # The image's spool is on the read-only root; stage in the writable /tmp mount.
             - name: TMPDIR
               value: /tmp

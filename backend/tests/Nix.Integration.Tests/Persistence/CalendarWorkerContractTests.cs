@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>
 /// Contracts C1-C6 at the wire (ADR-0052, Amendment 1): the shared fixtures in
-/// <c>apps/go-workers/internal/workerapi/testdata/calendar/</c> posted exactly and answered with
+/// <c>fixtures/calendar-contract/</c> (shared with the in-process worker) posted exactly and answered with
 /// exactly their key sets, and the pull, push, cursor and log semantics behind them.
 /// </summary>
 [Collection(PostgresCollectionDefinition.Name)]
@@ -1103,7 +1103,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     }
 
     private static string FixtureText(string name) =>
-        File.ReadAllText(Path.Combine(RepositoryRoot(), "apps", "go-workers", "internal", "workerapi", "testdata", "calendar", name));
+        File.ReadAllText(Path.Combine(RepositoryRoot(), "fixtures", "calendar-contract", name));
 
     private static string RepositoryRoot()
     {

@@ -8,11 +8,10 @@ import (
 type Service string
 
 const (
-	All      Service = "all"
-	Import   Service = "import"
-	Export   Service = "export"
-	Plugin   Service = "plugin-events"
-	Calendar Service = "calendar"
+	All    Service = "all"
+	Import Service = "import"
+	Export Service = "export"
+	Plugin Service = "plugin-events"
 )
 
 type Set map[Service]bool
@@ -22,7 +21,7 @@ func Parse(value string) (Set, error) {
 	for raw := range strings.SplitSeq(value, ",") {
 		candidate := Service(strings.TrimSpace(raw))
 		switch candidate {
-		case Import, Export, Plugin, Calendar:
+		case Import, Export, Plugin:
 			roles[candidate] = true
 		case "":
 			continue
