@@ -78,6 +78,21 @@ public sealed class WorkerJobHostTests
     }
 
     [Fact]
+    public async Task A_renewal_that_throws_stops_the_handler_like_a_lost_lease()
+    {
+        var dispatch = new RecordingDispatch { RenewThrows = true };
+        using var host = Host(dispatch, new StubHandler(async token =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            return null;
+        }), renewSeconds: 1);
+
+        await host.RunAsync(Execution(), slot: null, CancellationToken.None);
+
+        Assert.Empty(dispatch.Applied);
+    }
+
+    [Fact]
     public async Task The_slot_is_released_whatever_the_outcome()
     {
         var dispatch = new RecordingDispatch();
@@ -113,6 +128,7 @@ public sealed class WorkerJobHostTests
         public List<(Guid JobId, string Owner, bool Succeeded, bool Retryable, string? Result, string? ErrorCode, string? ErrorDetail)> Applied { get; } = [];
         public WorkerResultApplication Application { get; init; } = new(WorkerResultApplicationOutcome.Completed, RequiresExportCleanup: false);
         public bool LeaseOwned { get; init; } = true;
+        public bool RenewThrows { get; init; }
         public int CleanupCalls { get; private set; }
 
         public ValueTask<WorkerResultApplication> ApplyResultAsync(Guid jobId, string owner, bool succeeded, bool retryable, string? result, string? errorCode, string? errorDetail, CancellationToken cancellationToken)
@@ -127,8 +143,9 @@ public sealed class WorkerJobHostTests
             return ValueTask.FromResult(true);
         }
 
-        public ValueTask<WorkerExecutionState?> GetJobStateAsync(Guid jobId, string owner, CancellationToken cancellationToken) =>
-            ValueTask.FromResult<WorkerExecutionState?>(new WorkerExecutionState("running", false, LeaseOwned, DateTimeOffset.UtcNow.AddMinutes(1)));
+        public ValueTask<WorkerExecutionState?> GetJobStateAsync(Guid jobId, string owner, CancellationToken cancellationToken) => RenewThrows
+            ? throw new InvalidOperationException("database unavailable")
+            : ValueTask.FromResult<WorkerExecutionState?>(new WorkerExecutionState("running", false, LeaseOwned, DateTimeOffset.UtcNow.AddMinutes(1)));
 
         public ValueTask<bool> RenewJobAsync(Guid jobId, string owner, int leaseSeconds, CancellationToken cancellationToken) => ValueTask.FromResult(LeaseOwned);
 

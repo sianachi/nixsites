@@ -38,17 +38,16 @@ public static class DocxWriter
         using var archive = new ZipArchive(limited, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var (name, body) in new[] { ("[Content_Types].xml", ContentTypes), ("_rels/.rels", RootRelationships), ("word/styles.xml", Styles), ("word/numbering.xml", NumberingXml()) })
         {
-            await Entry(archive, name, Encoding.UTF8.GetBytes(body), limits, cancellationToken).ConfigureAwait(false);
+            await Entry(archive, name, body, limits, cancellationToken).ConfigureAwait(false);
         }
-        var documentPath = Path.Combine(Path.GetTempPath(), $"nix-export-docx-{Guid.NewGuid():N}");
-        var document = new FileStream(documentPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 64 * 1024, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        var documentPath = Nix.Workers.Transfer.WorkSpool.Create(null, "nix-export-");
+        var document = new FileStream(documentPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None, 64 * 1024, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
         await using (document.ConfigureAwait(false))
         {
             var writer = new StreamWriter(document, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
             await using (writer.ConfigureAwait(false))
             {
-                var relationships = new StringBuilder(DocumentRelationships[..^"</Relationships>".Length]);
-                var imageId = 0;
+                var state = new RelationshipState();
                 var count = 0;
                 await writer.WriteAsync(DocumentOpen).ConfigureAwait(false);
                 await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
@@ -62,28 +61,7 @@ public static class DocxWriter
                     {
                         throw new StreamLimitException();
                     }
-                    var media = new List<(string Name, byte[] Data)>();
-                    var (title, _) = TextRules.ProjectTitle(record.Title);
-                    await WriteParagraphAsync(writer, [new Run { Text = title }], new Paragraph("Title", PageBreakBefore: count > 1)).ConfigureAwait(false);
-                    await WriteBlocksAsync(writer, record, record.Blocks, new Paragraph(), async (raster, alt) =>
-                    {
-                        imageId++;
-                        var name = $"media/image{Invariant(imageId)}.{raster.Format}";
-                        var rel = $"rImage{Invariant(imageId)}";
-                        relationships.Append("<Relationship Id=\"").Append(rel).Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"").Append(name).Append("\"/>");
-                        media.Add((name, raster.Data));
-                        await WriteImageAsync(writer, raster, alt, rel, imageId).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
-                    foreach (var (name, data) in media)
-                    {
-                        var entry = archive.CreateEntry("word/" + name, CompressionLevel.Optimal);
-                        entry.LastWriteTime = FixedEntryTime;
-                        var target = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
-                        await using (target.ConfigureAwait(false))
-                        {
-                            await target.WriteAsync(data, cancellationToken).ConfigureAwait(false);
-                        }
-                    }
+                    await WriteRecordAsync(writer, archive, record, count, state, cancellationToken).ConfigureAwait(false);
                     await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
                     if (document.Length > limits.MaxBytes)
                     {
@@ -97,20 +75,54 @@ public static class DocxWriter
                 await writer.WriteAsync("<w:sectPr/></w:body></w:document>").ConfigureAwait(false);
                 await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
                 document.Position = 0;
-                var documentEntry = archive.CreateEntry("word/document.xml", CompressionLevel.Optimal);
-                documentEntry.LastWriteTime = FixedEntryTime;
-                var documentTarget = await documentEntry.OpenAsync(cancellationToken).ConfigureAwait(false);
-                await using (documentTarget.ConfigureAwait(false))
-                {
-                    await document.CopyToAsync(documentTarget, cancellationToken).ConfigureAwait(false);
-                }
-                await Entry(archive, "word/_rels/document.xml.rels", Encoding.UTF8.GetBytes(relationships.Append("</Relationships>").ToString()), limits, cancellationToken).ConfigureAwait(false);
+                await AddEntryAsync(archive, "word/document.xml", document, cancellationToken).ConfigureAwait(false);
+                await Entry(archive, "word/_rels/document.xml.rels", state.Relationships.Append("</Relationships>").ToString(), limits, cancellationToken).ConfigureAwait(false);
             }
         }
     }
 
-    private static async Task Entry(ZipArchive archive, string name, byte[] body, StreamLimits limits, CancellationToken cancellationToken)
+    private sealed class RelationshipState
     {
+        public int ImageId { get; set; }
+
+        public StringBuilder Relationships { get; } = new(DocumentRelationships[..^"</Relationships>".Length]);
+    }
+
+    private static async Task WriteRecordAsync(StreamWriter writer, ZipArchive archive, ExportRecord record, int count, RelationshipState state, CancellationToken cancellationToken)
+    {
+        var media = new List<(string Name, byte[] Data)>();
+        var (title, _) = TextRules.ProjectTitle(record.Title);
+        await WriteParagraphAsync(writer, [new Run { Text = title }], new Paragraph("Title", PageBreakBefore: count > 1)).ConfigureAwait(false);
+        await WriteBlocksAsync(writer, record, record.Blocks, new Paragraph(), async (raster, alt) =>
+        {
+            state.ImageId++;
+            var name = $"media/image{Invariant(state.ImageId)}.{raster.Format}";
+            var rel = $"rImage{Invariant(state.ImageId)}";
+            state.Relationships.Append("<Relationship Id=\"").Append(rel).Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"").Append(name).Append("\"/>");
+            media.Add((name, raster.Data));
+            await WriteImageAsync(writer, raster, alt, rel, state.ImageId).ConfigureAwait(false);
+        }).ConfigureAwait(false);
+        foreach (var (name, data) in media)
+        {
+            await AddEntryAsync(archive, "word/" + name, new MemoryStream(data, writable: false), cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    // Own method per zip entry: CA2000's disposal dataflow is quadratic in the size of the method it analyses.
+    private static async Task AddEntryAsync(ZipArchive archive, string name, Stream source, CancellationToken cancellationToken)
+    {
+        var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
+        entry.LastWriteTime = FixedEntryTime;
+        var target = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using (target.ConfigureAwait(false))
+        {
+            await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task Entry(ZipArchive archive, string name, string text, StreamLimits limits, CancellationToken cancellationToken)
+    {
+        var body = Encoding.UTF8.GetBytes(text);
         if (body.Length > limits.MaxLine)
         {
             throw new StreamLimitException();
@@ -244,79 +256,97 @@ public static class DocxWriter
 
     // Walks a render tree. `inherited` carries list numbering and depth into nested blocks: OOXML
     // lists are flat paragraphs with a level, so the nesting is a number here rather than a structure.
+    // One small method per kind: CA2000's flow analysis blows up on a single big async switch.
     private static async Task WriteBlocksAsync(TextWriter output, ExportRecord record, IList<Block> blocks, Paragraph inherited, Func<ExportImage, string, Task> embed)
     {
         foreach (var block in blocks)
         {
-            var paragraph = inherited;
-            switch (block.Kind)
+            await WriteBlockAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task WriteBlockAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    {
+        switch (block.Kind)
+        {
+            case "heading":
+                await WriteParagraphAsync(output, block.RunsOrEmpty, inherited with { Style = "Heading" + Invariant(Math.Min(Math.Max(block.Level, 1), 3)) }).ConfigureAwait(false);
+                break;
+            case "quote":
+            case "callout":
+                await WriteQuoteAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                break;
+            case "code":
+                await WriteCodeAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                break;
+            case "rule":
+                await WriteParagraphAsync(output, [], new Paragraph()).ConfigureAwait(false);
+                break;
+            case "pageBreak":
+                await output.WriteAsync("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>").ConfigureAwait(false);
+                break;
+            case "image":
+                if (record.Image(block.Src) is { } raster)
+                {
+                    await embed(raster, block.Alt ?? string.Empty).ConfigureAwait(false);
+                    break;
+                }
+                await WriteParagraphAsync(output, [new Run { Text = "Image: " + (block.Alt ?? string.Empty), Href = block.Src }], inherited).ConfigureAwait(false);
+                break;
+            case "list":
+                await WriteListAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                break;
+            case "table":
+                await WriteTableAsync(output, block.RowsOrEmpty).ConfigureAwait(false);
+                break;
+            case "details":
+                await WriteParagraphAsync(output, block.SummaryOrEmpty, new Paragraph("Heading3")).ConfigureAwait(false);
+                await WriteBlocksAsync(output, record, block.BlocksOrEmpty, inherited, embed).ConfigureAwait(false);
+                break;
+            default: // paragraph, and any kind this build does not know but whose runs it can keep.
+                await WriteParagraphAsync(output, block.RunsOrEmpty, inherited).ConfigureAwait(false);
+                break;
+        }
+    }
+
+    private static async Task WriteQuoteAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    {
+        var paragraph = inherited with { Style = "Quote" };
+        if (block.Kind == "callout" && !string.IsNullOrEmpty(block.Tone))
+        {
+            await WriteParagraphAsync(output, [new Run { Text = block.Tone, Styles = ["bold"] }], paragraph).ConfigureAwait(false);
+        }
+        await WriteBlocksAsync(output, record, block.BlocksOrEmpty, paragraph, embed).ConfigureAwait(false);
+    }
+
+    private static async Task WriteCodeAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    {
+        if (record.Image(block.Src) is { } diagram)
+        {
+            await embed(diagram, "Diagram").ConfigureAwait(false);
+            return;
+        }
+        var paragraph = inherited with { Style = "Code" };
+        foreach (var line in (block.Text ?? string.Empty).Split('\n'))
+        {
+            await WriteParagraphAsync(output, [new Run { Text = line }], paragraph).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task WriteListAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    {
+        var numbering = block.Ordered ? 2 : 1;
+        var level = inherited.Numbering != 0 ? inherited.Level + 1 : 0;
+        foreach (var item in block.ItemsOrEmpty)
+        {
+            var itemBlocks = item.Blocks;
+            if (item.Checked is { } check && itemBlocks.Count > 0 && itemBlocks[0].Kind == "paragraph")
             {
-                case "heading":
-                    await WriteParagraphAsync(output, block.RunsOrEmpty, paragraph with { Style = "Heading" + Invariant(Math.Min(Math.Max(block.Level, 1), 3)) }).ConfigureAwait(false);
-                    break;
-                case "quote":
-                case "callout":
-                    paragraph = paragraph with { Style = "Quote" };
-                    if (block.Kind == "callout" && !string.IsNullOrEmpty(block.Tone))
-                    {
-                        await WriteParagraphAsync(output, [new Run { Text = block.Tone, Styles = ["bold"] }], paragraph).ConfigureAwait(false);
-                    }
-                    await WriteBlocksAsync(output, record, block.BlocksOrEmpty, paragraph, embed).ConfigureAwait(false);
-                    break;
-                case "code":
-                    if (record.Image(block.Src) is { } diagram)
-                    {
-                        await embed(diagram, "Diagram").ConfigureAwait(false);
-                        continue;
-                    }
-                    paragraph = paragraph with { Style = "Code" };
-                    foreach (var line in (block.Text ?? string.Empty).Split('\n'))
-                    {
-                        await WriteParagraphAsync(output, [new Run { Text = line }], paragraph).ConfigureAwait(false);
-                    }
-                    break;
-                case "rule":
-                    await WriteParagraphAsync(output, [], new Paragraph()).ConfigureAwait(false);
-                    break;
-                case "pageBreak":
-                    await output.WriteAsync("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>").ConfigureAwait(false);
-                    break;
-                case "image":
-                    if (record.Image(block.Src) is { } raster)
-                    {
-                        await embed(raster, block.Alt ?? string.Empty).ConfigureAwait(false);
-                        continue;
-                    }
-                    await WriteParagraphAsync(output, [new Run { Text = "Image: " + (block.Alt ?? string.Empty), Href = block.Src }], paragraph).ConfigureAwait(false);
-                    break;
-                case "list":
-                    {
-                        var numbering = block.Ordered ? 2 : 1;
-                        var level = inherited.Numbering != 0 ? inherited.Level + 1 : 0;
-                        foreach (var item in block.ItemsOrEmpty)
-                        {
-                            var itemBlocks = item.Blocks;
-                            if (item.Checked is { } check && itemBlocks.Count > 0 && itemBlocks[0].Kind == "paragraph")
-                            {
-                                var first = itemBlocks[0];
-                                var marked = new Block { Kind = first.Kind, Level = first.Level, Align = first.Align, Runs = [new Run { Text = check ? "☑ " : "☐ " }, .. first.RunsOrEmpty] };
-                                itemBlocks = [marked, .. itemBlocks.Skip(1)];
-                            }
-                            await WriteBlocksAsync(output, record, itemBlocks, new Paragraph(Numbering: numbering, Level: level), embed).ConfigureAwait(false);
-                        }
-                        break;
-                    }
-                case "table":
-                    await WriteTableAsync(output, block.RowsOrEmpty).ConfigureAwait(false);
-                    break;
-                case "details":
-                    await WriteParagraphAsync(output, block.SummaryOrEmpty, new Paragraph("Heading3")).ConfigureAwait(false);
-                    await WriteBlocksAsync(output, record, block.BlocksOrEmpty, inherited, embed).ConfigureAwait(false);
-                    break;
-                default: // paragraph, and any kind this build does not know but whose runs it can keep.
-                    await WriteParagraphAsync(output, block.RunsOrEmpty, paragraph).ConfigureAwait(false);
-                    break;
+                var first = itemBlocks[0];
+                var marked = new Block { Kind = first.Kind, Level = first.Level, Align = first.Align, Runs = [new Run { Text = check ? "☑ " : "☐ " }, .. first.RunsOrEmpty] };
+                itemBlocks = [marked, .. itemBlocks.Skip(1)];
             }
+            await WriteBlocksAsync(output, record, itemBlocks, new Paragraph(Numbering: numbering, Level: level), embed).ConfigureAwait(false);
         }
     }
 

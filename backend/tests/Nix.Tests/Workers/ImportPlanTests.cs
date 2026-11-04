@@ -442,4 +442,41 @@ public sealed class ImportPlanTests
         var limits = Limits with { MaxBodyBytes = 8 };
         await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(Source("big.pdf", "pdf", Pdf("Hello page one")), limits, Token));
     }
+
+    [Fact]
+    public async Task Pdf_flate_streams_inflate_only_within_the_budget()
+    {
+        var plan = await ImportPlanner.ParseAsync(Source("flate.pdf", "pdf", FlatePdf("Hello flate", 0)), Limits, Token);
+        Assert.Contains("Hello flate", plan.Items[0].Body!.Text!, StringComparison.Ordinal);
+
+        // 64 MiB of spaces deflates to ~64 KiB and would inflate in memory; the budget is 16 x 1 MiB.
+        var bomb = Source("bomb.pdf", "pdf", FlatePdf("Hello flate", 64 << 20));
+        var refused = await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(bomb, Limits with { MaxBodyBytes = 1 << 20 }, Token));
+        Assert.Contains("expand", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Zip_directory_records_are_counted_before_the_archive_loads_them()
+    {
+        // The end record declares one entry, so ZipArchive alone would read all 400 records and only then fail on the count.
+        using var records = new MemoryStream();
+        using var writer = new BinaryWriter(records, Encoding.ASCII, leaveOpen: true);
+        for (var index = 0; index < 400; index++)
+        {
+            writer.Write(0x02014b50u);
+            writer.Write(new byte[24]);
+            writer.Write((ushort)1);
+            writer.Write(new byte[16]);
+            writer.Write((byte)'a');
+        }
+        writer.Write(0x06054b50u);
+        writer.Write(new byte[6]);
+        writer.Write((ushort)1);
+        writer.Write((uint)(records.Length - 4 - 6 - 2));
+        writer.Write(0u);
+        writer.Write((ushort)0);
+
+        var refused = await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(Source("many.docx", "docx", records.ToArray()), Limits, Token));
+        Assert.Equal("archive contains too many entries", refused.Message);
+    }
 }

@@ -15,9 +15,16 @@ internal static partial class ImportArchive
 {
     public static ZipArchive Open(string path, ImportPlanLimits limits, bool allowNixFileVersions)
     {
+        ArgumentNullException.ThrowIfNull(limits);
         ZipArchive archive;
         try
         {
+            // ZipArchive materialises every directory record before Entries.Count can be checked:
+            // a 94 MB directory of empty records costs ~700 MB, so the records are counted first.
+            if (CountDirectoryRecords(path, MaxEntries(limits, allowNixFileVersions)) > MaxEntries(limits, allowNixFileVersions))
+            {
+                throw new ImportPlanException("archive contains too many entries");
+            }
             archive = ZipFile.OpenRead(path);
         }
         catch (InvalidDataException exception)
@@ -36,13 +43,63 @@ internal static partial class ImportArchive
         }
     }
 
+    private static int MaxEntries(ImportPlanLimits limits, bool allowNixFileVersions) => !allowNixFileVersions
+        ? limits.MaxItems + 100
+        : limits.MaxItems <= NixArchive.MaxTemplateArchiveItems ? NixArchive.MaxTemplateArchiveEntries : NixArchive.MaxArchiveEntries;
+
+    /// <summary>
+    /// Counts central directory records the way ZipArchive reads them (from the end record's offset,
+    /// for as long as the record signature repeats), stopping once past <paramref name="stopAfter"/>.
+    /// Anything unreadable returns 0 and is left to ZipArchive to refuse.
+    /// </summary>
+    internal static long CountDirectoryRecords(string path, int stopAfter)
+    {
+        using var file = File.OpenRead(path);
+        using var reader = new BinaryReader(file);
+        var tail = (int)Math.Min(file.Length, 22 + ushort.MaxValue);
+        file.Position = file.Length - tail;
+        var window = reader.ReadBytes(tail);
+        var end = window.AsSpan().LastIndexOf("PK\u0005\u0006"u8);
+        if (end < 0 || end + 22 > window.Length)
+        {
+            return 0;
+        }
+        // ZipArchive switches to the zip64 record on any sentinel field, so both candidate offsets are counted.
+        var offsets = new List<long> { System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(window.AsSpan(end + 16)) };
+        var locator = end - 20;
+        if (locator >= 0 && window.AsSpan(locator).StartsWith("PK\u0006\u0007"u8))
+        {
+            var zip64End = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(window.AsSpan(locator + 8));
+            if (zip64End >= 0 && zip64End <= file.Length - 56)
+            {
+                file.Position = zip64End;
+                if (reader.ReadUInt32() == 0x06064b50)
+                {
+                    file.Position = zip64End + 48;
+                    offsets.Add(reader.ReadInt64());
+                }
+            }
+        }
+        long most = 0;
+        foreach (var offset in offsets.Where(offset => offset >= 0 && offset < file.Length))
+        {
+            file.Position = offset;
+            long count = 0;
+            while (count <= stopAfter && file.Length - file.Position >= 46 && reader.ReadUInt32() == 0x02014b50)
+            {
+                file.Position += 24;
+                var skip = reader.ReadUInt16() + reader.ReadUInt16() + reader.ReadUInt16();
+                file.Position += 12 + skip;
+                count++;
+            }
+            most = Math.Max(most, count);
+        }
+        return most;
+    }
+
     private static void Validate(ZipArchive archive, ImportPlanLimits limits, bool allowNixFileVersions)
     {
-        var maxEntries = limits.MaxItems + 100;
-        if (allowNixFileVersions)
-        {
-            maxEntries = limits.MaxItems <= NixArchive.MaxTemplateArchiveItems ? NixArchive.MaxTemplateArchiveEntries : NixArchive.MaxArchiveEntries;
-        }
+        var maxEntries = MaxEntries(limits, allowNixFileVersions);
         if (archive.Entries.Count > maxEntries)
         {
             throw new ImportPlanException("archive contains too many entries");

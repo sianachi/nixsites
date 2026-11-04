@@ -39,6 +39,11 @@ public sealed class WorkerJobHost(
     public static string OwnerPrefix(WorkerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        // A colon would let instance "a" own "a:b"'s leases in the startup sweep's prefix match.
+        if (string.IsNullOrWhiteSpace(options.InstanceId) || options.InstanceId.Contains(':', StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Nix:Workers:InstanceId must be non-empty and contain no ':'.");
+        }
         return $"nix-api:{options.InstanceId}:";
     }
 
@@ -234,6 +239,13 @@ public sealed class WorkerJobHost(
         {
             // The handler finished, or the host is stopping.
         }
+#pragma warning disable CA1031 // Justification: a lease that cannot be confirmed is a lost lease; the handler must stop rather than outlive it.
+        catch (Exception exception)
+        {
+            WorkerJobHostLog.RenewFailed(logger, execution.Job.Id, exception);
+            await lost.CancelAsync().ConfigureAwait(false);
+        }
+#pragma warning restore CA1031
     }
 }
 
@@ -256,4 +268,7 @@ internal static partial class WorkerJobHostLog
 
     [LoggerMessage(5405, LogLevel.Information, "Job {JobId} ({Kind}) applied: {Outcome}")]
     internal static partial void Applied(ILogger logger, Guid jobId, string kind, string outcome);
+
+    [LoggerMessage(5406, LogLevel.Warning, "Job {JobId} could not renew its lease and stops")]
+    internal static partial void RenewFailed(ILogger logger, Guid jobId, Exception exception);
 }

@@ -76,8 +76,9 @@ public sealed class ExportJobHandler(
         }
 
         var limits = Limits;
-        var spool = Path.Combine(options.Value.SpoolDirectory ?? Path.GetTempPath(), $"nix-export-{Guid.NewGuid():N}");
-        var file = new FileStream(spool, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 64 * 1024, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        // The owner-only spool directory the sweeper cleans, so a crash mid-export leaves nothing readable for good.
+        var spool = WorkSpool.Create(options.Value.SpoolDirectory, "nix-export-");
+        var file = new FileStream(spool, FileMode.Open, FileAccess.ReadWrite, FileShare.None, 64 * 1024, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
         await using (file.ConfigureAwait(false))
         {
             using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);

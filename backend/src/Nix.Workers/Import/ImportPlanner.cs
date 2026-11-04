@@ -147,8 +147,9 @@ public static class ImportPlanner
     /// <summary>
     /// PDF text through PdfPig, in process: a different extractor from the Go worker's
     /// <c>pdftotext -layout</c>, so line breaks and spacing differ (accepted; words, page order and
-    /// the page-break markers match). shortcut: no address-space cap as prlimit gave pdftotext; the
-    /// time limit abandons the extraction between pages, so a hostile page can still pin a thread.
+    /// the page-break markers match). shortcut: no address-space cap as prlimit gave pdftotext, only the
+    /// decoded-stream budget of <see cref="BoundedPdfFilters"/>; the time limit abandons the extraction
+    /// between pages, so a hostile page can still pin a thread.
     /// </summary>
     private static async Task<ImportPlan> ParsePdfAsync(ImportSource source, ImportPlanLimits limits, CancellationToken cancellationToken)
     {
@@ -202,7 +203,8 @@ public static class ImportPlanner
     /// <summary>Each page's words in reading order, one line per baseline, the page ended by a form feed as pdftotext ends it.</summary>
     private static string ExtractPdfText(string path, long maxBytes, CancellationToken cancellationToken)
     {
-        using var document = PdfDocument.Open(path);
+        // Decoded streams (content, fonts, object streams) may total 16 times the text budget.
+        using var document = PdfDocument.Open(path, new ParsingOptions { FilterProvider = new BoundedPdfFilters(16 * maxBytes) });
         var output = new StringBuilder();
         long bytes = 0;
         foreach (var page in document.GetPages())

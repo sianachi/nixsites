@@ -18,6 +18,11 @@ public static partial class CalendarWire
     public static string PathEscape(string segment)
     {
         ArgumentNullException.ThrowIfNull(segment);
+        // Unlike Go's client, System.Uri collapses dot segments, so "." or ".." would climb the provider path.
+        if (segment is "." or "..")
+        {
+            throw new CalendarProviderException("calendar path segment is invalid");
+        }
         var builder = new StringBuilder(segment.Length);
         foreach (var b in Encoding.UTF8.GetBytes(segment))
         {

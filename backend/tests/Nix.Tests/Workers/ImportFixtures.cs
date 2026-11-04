@@ -285,4 +285,49 @@ internal static class ImportFixtures
         output.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
         return Encoding.ASCII.GetBytes(output.ToString());
     }
+
+    /// <summary>A one-page PDF whose content stream is Flate-compressed and padded with <paramref name="padding"/> spaces.</summary>
+    public static byte[] FlatePdf(string text, int padding)
+    {
+        using var compressed = new MemoryStream();
+        using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true))
+        {
+            zlib.Write(Encoding.ASCII.GetBytes($"BT /F1 12 Tf 72 720 Td ({text}) Tj ET\n"));
+            var spaces = new byte[1 << 20];
+            spaces.AsSpan().Fill((byte)' ');
+            for (var left = padding; left > 0; left -= spaces.Length)
+            {
+                zlib.Write(spaces, 0, Math.Min(left, spaces.Length));
+            }
+        }
+        var stream = compressed.ToArray();
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>",
+        ];
+        using var output = new MemoryStream();
+        void Ascii(string value) => output.Write(Encoding.ASCII.GetBytes(value));
+        var offsets = new List<long>();
+        Ascii("%PDF-1.4\n");
+        foreach (var body in objects)
+        {
+            offsets.Add(output.Length);
+            Ascii(string.Create(CultureInfo.InvariantCulture, $"{offsets.Count} 0 obj\n{body}\nendobj\n"));
+        }
+        offsets.Add(output.Length);
+        Ascii(string.Create(CultureInfo.InvariantCulture, $"5 0 obj\n<< /Length {stream.Length} /Filter /FlateDecode >>\nstream\n"));
+        output.Write(stream);
+        Ascii("\nendstream\nendobj\n");
+        var xref = output.Length;
+        Ascii("xref\n0 6\n0000000000 65535 f \n");
+        foreach (var offset in offsets)
+        {
+            Ascii(string.Create(CultureInfo.InvariantCulture, $"{offset:D10} 00000 n \n"));
+        }
+        Ascii(string.Create(CultureInfo.InvariantCulture, $"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n"));
+        return output.ToArray();
+    }
 }
