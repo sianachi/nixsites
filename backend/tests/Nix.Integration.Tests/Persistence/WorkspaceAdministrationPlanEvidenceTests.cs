@@ -260,7 +260,7 @@ public sealed class WorkspaceAdministrationPlanEvidenceTests : IAsyncLifetime
                 ANALYZE workspace;
                 ANALYZE workspace_member;
                 ANALYZE workspace_invitation;
-                """);
+                """, commandTimeoutSeconds: 120);
         }
     }
 
