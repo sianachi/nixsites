@@ -424,7 +424,7 @@ public static class PdfWriter
 
         private void Image(ExportImage raster, double indent)
         {
-            var (width, height) = Images.Size(raster, ContentWidth - indent, Bottom - Margin);
+            var (width, height) = ImageFiles.Size(raster, ContentWidth - indent, Bottom - Margin);
             Space(height + 8);
             using var image = XImage.FromStream(new MemoryStream(raster.Data));
             graphics!.DrawImage(image, Margin + indent, y, width, height);

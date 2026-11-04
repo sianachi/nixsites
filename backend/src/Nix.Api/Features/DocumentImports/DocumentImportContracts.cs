@@ -221,5 +221,6 @@ public sealed record RejectDocumentImportRequest(string Code);
 [JsonSerializable(typeof(DocumentImportBodyAuthorizationItemResponse))]
 [JsonSerializable(typeof(RejectDocumentImportRequest))]
 [JsonSerializable(typeof(IReadOnlyList<string>))]
+[JsonSerializable(typeof(IReadOnlyList<ImportCommentThread>))]
 [JsonSerializable(typeof(OperationResponse))]
 internal sealed partial class DocumentImportsJsonContext : JsonSerializerContext;

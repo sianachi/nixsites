@@ -200,7 +200,7 @@ services:
       Logging__Console__FormatterName: json
       ConnectionStrings__Nix: ${NIX_CORE_DATABASE_URL:?set NIX_CORE_DATABASE_URL}
       Nix__InternalSecret: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      Nix__Pets__WorkerUrl: http://nix-import-worker:8301
+      Nix__Pets__WorkerUrl: http://nix-plugin-worker:8301
       Nix__Collaboration__BaseUrl: http://nix-collab:8100
       Nix__RabbitMq__Uri: ${NIX_RABBITMQ_API_URL:-amqp://nix-api:${NIX_RABBITMQ_API_PASSWORD:?set NIX_RABBITMQ_API_PASSWORD}@rabbitmq:5672/%2Fnix}
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
@@ -331,53 +331,6 @@ services:
         aliases:
           - nix-collab
 
-  nix-import-worker:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
-    user: "65532:65532"
-    restart: unless-stopped
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      nix-api:
-        condition: service_started
-      nix-collab:
-        condition: service_healthy
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
-      TMPDIR: /var/lib/nix-worker/spool
-      NIX_WORKER_ROLES: import
-      NIX_COMPANION_DATA_DIR: /var/lib/nix-worker/companion
-      NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_WORKER_API_URL: http://nix-api:8080
-      NIX_WORKER_COLLAB_URL: http://nix-collab:8100
-      NIX_WORKER_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
-      NIX_RABBITMQ_URL: ${NIX_RABBITMQ_IMPORT_URL:-amqp://nix-import:${NIX_RABBITMQ_IMPORT_PASSWORD:?set NIX_RABBITMQ_IMPORT_PASSWORD}@rabbitmq:5672/%2Fnix}
-      NIX_WORKER_MAX_CONCURRENCY: "1"
-      NIX_WORKER_MAX_INPUT_BYTES: "104857600"
-      NIX_WORKER_MAX_LINE_BYTES: "4194304"
-      NIX_WORKER_MAX_RECORDS: "100000"
-    volumes:
-      - nix-companion-data:/var/lib/nix-worker/companion
-    healthcheck:
-      test: ["CMD", "/nix-worker", "--healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-    mem_limit: 1g
-    read_only: true
-    tmpfs:
-      - "/var/lib/nix-worker/spool:rw,noexec,nosuid,nodev,size=256m,uid=65532,gid=65532,mode=0700"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-import-worker
-
   nix-plugin-worker:
     image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
     user: "65532:65532"
@@ -393,6 +346,7 @@ services:
       NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
       TMPDIR: /var/lib/nix-worker/spool
       NIX_WORKER_ROLES: plugin-events
+      NIX_COMPANION_DATA_DIR: /var/lib/nix-worker/companion
       NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
       NIX_WORKER_API_URL: http://nix-api:8080
       NIX_WORKER_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
@@ -402,6 +356,8 @@ services:
       NIX_PLUGIN_MEMORY_PAGES: "1024"
       NIX_PLUGIN_TIMEOUT_MILLISECONDS: "250"
       NIX_PLUGIN_MAX_HOST_CALLS: "32"
+    volumes:
+      - nix-companion-data:/var/lib/nix-worker/companion
     healthcheck:
       test: ["CMD", "/nix-worker", "--healthcheck"]
       interval: 10s

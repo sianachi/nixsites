@@ -16,6 +16,8 @@ public static partial class NixArchive
     public const int MaxFileVersionsPerItem = 100;
     public const int MaxArchiveEntries = 100_001;
     public const int MaxArchiveItems = 10_000;
+    public const int MaxTemplateArchiveEntries = 20_201;
+    public const int MaxTemplateArchiveItems = 200;
     public const long MaxFileVersionBytes = 100L << 20;
 
     public static bool SafeId(string? value) => value is not null && SafeIdPattern().IsMatch(value);
@@ -201,10 +203,10 @@ public static partial class NixArchive
     public static bool SafeReportText(string? value, int maximum) =>
         !string.IsNullOrWhiteSpace(value) && value.Length <= maximum && value.IndexOfAny(['\r', '\n']) < 0;
 
-    [GeneratedRegex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")]
+    [GeneratedRegex(@"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z")]
     private static partial Regex SafeIdPattern();
 
-    [GeneratedRegex("^[0-9a-f]{64}$")]
+    [GeneratedRegex(@"^[0-9a-f]{64}\z")]
     private static partial Regex Sha256Pattern();
 }
 

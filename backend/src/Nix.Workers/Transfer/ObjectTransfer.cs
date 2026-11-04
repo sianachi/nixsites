@@ -27,6 +27,9 @@ public sealed class ObjectTransferException : Exception
 
     /// <summary>The source is larger than the caller allowed.</summary>
     public bool TooLarge { get; init; }
+
+    /// <summary>An immutable destination already holds different bytes: a durable conflict, never retried.</summary>
+    public bool Conflict { get; init; }
 }
 
 /// <summary>A download in progress: a bounded body and the digest of everything read from it.</summary>
@@ -122,36 +125,55 @@ public sealed class ObjectTransfer
     }
 
     /// <summary>A create-only PUT (<c>If-None-Match: *</c>) carrying the SHA-256 both as the Nix header and the storage checksum.</summary>
-    public async Task UploadCreateOnlyAsync(Uri url, string contentType, Stream body, long size, string sha256Hex, CancellationToken cancellationToken)
+    public Task UploadCreateOnlyAsync(Uri url, string contentType, Stream body, long size, string sha256Hex, CancellationToken cancellationToken) =>
+        UploadAsync(url, contentType, body, size, sha256Hex, createOnly: true, storageChecksum: true, cancellationToken);
+
+    /// <summary>
+    /// A PUT through a capability URL. <paramref name="createOnly"/> adds <c>If-None-Match: *</c>
+    /// (an existing object answers <see cref="ObjectTransferException.AlreadyExists"/>);
+    /// <paramref name="storageChecksum"/> adds <c>X-Amz-Checksum-Sha256</c>, which only a capability
+    /// signed for it accepts. A digest, when given, always travels as <c>X-Nix-Content-SHA256</c>.
+    /// </summary>
+    public async Task UploadAsync(Uri url, string contentType, Stream body, long size, string? sha256Hex, bool createOnly, bool storageChecksum, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(url);
         ArgumentNullException.ThrowIfNull(body);
-        ArgumentNullException.ThrowIfNull(sha256Hex);
         if (size < 0)
         {
             throw new ArgumentException("upload size must be known", nameof(size));
         }
         Validate(url);
-        byte[] checksum;
-        try
-        {
-            checksum = Convert.FromHexString(sha256Hex);
-        }
-        catch (FormatException)
-        {
-            throw new ObjectTransferException("destination checksum is invalid");
-        }
-        if (checksum.Length != 32)
-        {
-            throw new ObjectTransferException("destination checksum is invalid");
-        }
         using var request = new HttpRequestMessage(HttpMethod.Put, url);
         request.Content = new StreamContent(body);
         request.Content.Headers.ContentLength = size;
         request.Content.Headers.TryAddWithoutValidation("Content-Type", contentType);
-        request.Headers.TryAddWithoutValidation("If-None-Match", "*");
-        request.Headers.TryAddWithoutValidation("X-Nix-Content-SHA256", Convert.ToHexStringLower(checksum));
-        request.Headers.TryAddWithoutValidation("X-Amz-Checksum-Sha256", Convert.ToBase64String(checksum));
+        if (createOnly)
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", "*");
+        }
+        if (!string.IsNullOrEmpty(sha256Hex))
+        {
+#pragma warning disable CA1308 // Justification: the storage service compares the hex digest case-sensitively in lower case.
+            request.Headers.TryAddWithoutValidation("X-Nix-Content-SHA256", sha256Hex.ToLowerInvariant());
+#pragma warning restore CA1308
+        }
+        if (storageChecksum)
+        {
+            byte[] checksum;
+            try
+            {
+                checksum = Convert.FromHexString(sha256Hex ?? string.Empty);
+            }
+            catch (FormatException)
+            {
+                throw new ObjectTransferException("destination checksum is invalid");
+            }
+            if (checksum.Length != 32)
+            {
+                throw new ObjectTransferException("destination checksum is invalid");
+            }
+            request.Headers.TryAddWithoutValidation("X-Amz-Checksum-Sha256", Convert.ToBase64String(checksum));
+        }
         HttpResponseMessage response;
         try
         {
@@ -164,7 +186,7 @@ public sealed class ObjectTransfer
         using (response)
         {
             var status = (int)response.StatusCode;
-            if (status is 409 or 412)
+            if (createOnly && status is 409 or 412)
             {
                 throw new ObjectTransferException("destination object already exists") { AlreadyExists = true };
             }

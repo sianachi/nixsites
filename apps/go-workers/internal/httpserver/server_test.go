@@ -29,63 +29,14 @@ func TestReadinessReflectsDependencies(t *testing.T) {
 	}
 }
 
-func TestImportRoleDoesNotExposeOtherWorkerRoutes(t *testing.T) {
-	server := NewForRole(role.Import, Dependencies{Logger: slog.Default(), InternalSecret: "secret"})
-	for _, path := range []string{"/v1/search"} {
-		request := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
-		request.Header.Set("X-Nix-Internal-Secret", "secret")
-		response := httptest.NewRecorder()
-		server.ServeHTTP(response, request)
-		if response.Code != http.StatusNotFound {
-			t.Fatalf("import role exposed %s with status %d", path, response.Code)
-		}
-	}
-}
-
-func TestImportValidatesNdjsonWithoutWritingToAStore(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
-	request := httptest.NewRequest(http.MethodPost, "/v1/import/ndjson", strings.NewReader(`{"id":"one","title":"One"}
-`))
-	request.Header.Set("Content-Type", "application/x-ndjson")
-	request.Header.Set("X-Nix-Internal-Secret", "secret")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	if response.Code != http.StatusAccepted || !strings.Contains(response.Body.String(), `"records":1`) {
-		t.Fatalf("import response = %d %q", response.Code, response.Body.String())
-	}
-}
-
 func TestWorkerPayloadRoutesRequireTheInternalSecret(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
-	request := httptest.NewRequest(http.MethodPost, "/v1/import/ndjson", strings.NewReader(`{"id":"one","title":"One"}
-`))
+	companion := http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) { response.WriteHeader(http.StatusOK) })
+	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", Companion: companion})
+	request := httptest.NewRequest(http.MethodPost, "/v1/companion", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated response = %d", response.Code)
-	}
-}
-
-func TestImportRefusesAnOversizedRecord(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 16})
-	request := httptest.NewRequest(http.MethodPost, "/v1/import/ndjson", strings.NewReader(`{"id":"one","title":"This title is too long"}
-`))
-	request.Header.Set("X-Nix-Internal-Secret", "secret")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	if response.Code != http.StatusRequestEntityTooLarge {
-		t.Fatalf("import response = %d %q", response.Code, response.Body.String())
-	}
-}
-
-func TestDocumentImportParsesMarkdownWithHonestResponse(t *testing.T) {
-	server := New(Dependencies{Logger: slog.Default(), InternalSecret: "secret", MaxInputSize: 1024, MaxRecords: 10, MaxLineBytes: 256})
-	request := httptest.NewRequest(http.MethodPost, "/v1/import/document?format=markdown&id=one&title=Note", strings.NewReader("# Heading"))
-	request.Header.Set("X-Nix-Internal-Secret", "secret")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	if response.Code != http.StatusAccepted || !strings.Contains(response.Body.String(), `"# Heading"`) {
-		t.Fatalf("document import response = %d %q", response.Code, response.Body.String())
 	}
 }
 

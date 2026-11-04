@@ -14,7 +14,6 @@ const (
 	CommandsExchange     = "nix.commands.v1"
 	ResultsExchange      = "nix.results.v1"
 	WorkspaceExchange    = "nix.workspace.v1"
-	ImportQueue          = "nix.worker.import.v1"
 	PluginEventsQueue    = "nix.worker.plugin-events.v1"
 	ResultRoutingKey     = "job.result"
 	CommandMessageType   = "worker.command.v1"

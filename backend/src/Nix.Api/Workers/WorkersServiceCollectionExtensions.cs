@@ -94,6 +94,22 @@ public static class WorkersServiceCollectionExtensions
         services.TryAddSingleton<IWorkerCapabilityRegistry, Nix.Persistence.RabbitMq.WorkerCapabilityRegistry>();
         services.AddSingleton<IHostedService, ExportCapabilityAdvertiser>();
 
+        // Import family: uploads, imports, template imports and copies move bytes through object
+        // storage capabilities; note bodies go to Collab with the execution proof.
+        services.AddSingleton<IWorkerJobHandler>(provider => new ObjectCleanupHandler(
+            provider.GetRequiredService<WorkerLoopbackClient>(), ObjectTransfer(provider, configuration), provider.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<IWorkerJobHandler>(provider => new TemplateFileCopyHandler(
+            provider.GetRequiredService<WorkerLoopbackClient>(), ObjectTransfer(provider, configuration)));
+        services.AddSingleton<IWorkerJobHandler>(provider => new FilePublishHandler(
+            provider.GetRequiredService<WorkerLoopbackClient>(), ObjectTransfer(provider, configuration), provider.GetRequiredService<IOptions<WorkerOptions>>(),
+            provider.GetRequiredService<TimeProvider>(), provider.GetService<ILogger<FilePublishHandler>>()));
+        services.AddSingleton<IWorkerJobHandler>(provider => new DocumentImportHandler(
+            provider.GetRequiredService<WorkerLoopbackClient>(), ObjectTransfer(provider, configuration), CollabClient(provider, configuration), provider.GetRequiredService<IOptions<WorkerOptions>>()));
+        services.AddSingleton<IWorkerJobHandler>(provider => new TemplateImportHandler(
+            provider.GetRequiredService<WorkerLoopbackClient>(), ObjectTransfer(provider, configuration), CollabClient(provider, configuration), provider.GetRequiredService<IOptions<WorkerOptions>>()));
+        services.AddSingleton<IInterruptedJobCleanup, InterruptedImportCleanup>();
+        services.AddSingleton<IHostedService, SpoolSweeper>();
+
         services.AddSingleton<IHostedService, InterruptedJobSweep>();
         foreach (var family in JobFamilies.All)
         {
@@ -113,6 +129,21 @@ public static class WorkersServiceCollectionExtensions
             });
         }
         return services;
+    }
+
+    private static Nix.Workers.Transfer.ObjectTransfer ObjectTransfer(IServiceProvider provider, IConfiguration configuration)
+    {
+        var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ObjectTransferHttpClientName);
+        client.Timeout = TimeSpan.FromSeconds(provider.GetRequiredService<IOptions<WorkerOptions>>().Value.RequestTimeoutSeconds);
+        return new Nix.Workers.Transfer.ObjectTransfer(client, [configuration["Nix:ObjectStorage:Endpoint"] ?? string.Empty, configuration["Nix:ObjectStorage:PublicOrigin"] ?? string.Empty]);
+    }
+
+    private static CollabImportClient CollabClient(IServiceProvider provider, IConfiguration configuration)
+    {
+        var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ObjectTransferHttpClientName);
+        client.Timeout = Timeout.InfiniteTimeSpan;
+        return new CollabImportClient(client, new Uri(configuration["Nix:Collaboration:BaseUrl"] ?? "http://localhost:8100", UriKind.Absolute),
+            configuration["Nix:InternalSecret"] ?? string.Empty, provider.GetRequiredService<IOptions<WorkerOptions>>());
     }
 
     /// <summary>A family not hosted here; its kinds keep going to the external worker.</summary>

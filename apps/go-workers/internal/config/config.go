@@ -112,7 +112,7 @@ func Load(getenv func(string) string) (Settings, error) {
 		WorkerID:             valueOr(getenv("NIX_WORKER_ID"), "go-worker"),
 		MaxConcurrency:       maxConcurrency,
 		RabbitMQURL:          getenv("NIX_RABBITMQ_URL"),
-		WorkerRoles:          valueOr(getenv("NIX_WORKER_ROLES"), "import,plugin-events"),
+		WorkerRoles:          valueOr(getenv("NIX_WORKER_ROLES"), "plugin-events"),
 		LeaseDuration:        time.Duration(leaseSeconds) * time.Second,
 		RenewInterval:        time.Duration(renewSeconds) * time.Second,
 		MaxMessageBytes:      maxMessageBytes,

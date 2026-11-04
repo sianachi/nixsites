@@ -104,7 +104,7 @@ public static class Projection
                     AppendLoss(result.Losses, $"A \"{block.Kind}\" block written by a newer version of Nix was drawn as its text only.");
                 }
             });
-            result.Images = await Images.LoadAsync(result.Blocks, load, result.Losses, cancellationToken).ConfigureAwait(false);
+            result.Images = await ImageFiles.LoadAsync(result.Blocks, load, result.Losses, cancellationToken).ConfigureAwait(false);
         }
         else if (IsValue(bundle.Body))
         {

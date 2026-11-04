@@ -12,12 +12,12 @@ func TestParse(t *testing.T) {
 		want    []Service
 		wantErr string
 	}{
-		{name: "two roles", input: "import,plugin-events", want: []Service{Import, Plugin}},
-		{name: "spaces and trailing comma", input: "import, plugin-events ,", want: []Service{Import, Plugin}},
+		{name: "repeated role", input: "plugin-events,plugin-events", want: []Service{Plugin}},
+		{name: "spaces and trailing comma", input: " plugin-events ,", want: []Service{Plugin}},
 		{name: "single role", input: "plugin-events", want: []Service{Plugin}},
 		{name: "empty", input: "", wantErr: "at least one"},
 		{name: "only commas", input: ",,", wantErr: "at least one"},
-		{name: "unknown role", input: "import,bogus", wantErr: "bogus"},
+		{name: "unknown role", input: "plugin-events,bogus", wantErr: "bogus"},
 		{name: "all is not parseable", input: "all", wantErr: "all"},
 	}
 	for _, tc := range cases {
@@ -45,11 +45,11 @@ func TestParse(t *testing.T) {
 }
 
 func TestSetHas(t *testing.T) {
-	set := Set{Import: true}
-	if !set.Has(Import) {
-		t.Fatal("Has(Import) = false, want true")
+	set := Set{Plugin: true}
+	if !set.Has(Plugin) {
+		t.Fatal("Has(Plugin) = false, want true")
 	}
-	if set.Has(Plugin) {
-		t.Fatal("Has(Plugin) = true, want false")
+	if set.Has(All) {
+		t.Fatal("Has(All) = true, want false")
 	}
 }

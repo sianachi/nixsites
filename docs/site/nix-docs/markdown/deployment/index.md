@@ -22,7 +22,7 @@ flowchart TB
   Core --> PG[(PostgreSQL)]
   Collab --> PG
   Core --> MQ[RabbitMQ]
-  MQ --> Workers[Go workers: import, plugins]
+  MQ --> Workers[Go worker: plugins]
   Workers --> Core
   Workers --> Store
   Core --> IdP[OIDC identity provider: bundled Zitadel or your own]

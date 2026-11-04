@@ -137,23 +137,20 @@ func TestPublishConfirmationPaths(t *testing.T) {
 func TestConsumerReadinessTracksEveryActiveSlot(t *testing.T) {
 	client := &Client{activeConsumers: make(map[string]int)}
 
-	if client.ConsumerReady(ImportQueue) {
+	if client.ConsumerReady(PluginEventsQueue) {
 		t.Fatal("queue was ready before a consumer was accepted")
 	}
-	client.consumerStarted(ImportQueue)
-	client.consumerStarted(ImportQueue)
-	if !client.ConsumerReady(ImportQueue) {
+	client.consumerStarted(PluginEventsQueue)
+	client.consumerStarted(PluginEventsQueue)
+	if !client.ConsumerReady(PluginEventsQueue) {
 		t.Fatal("queue was not ready with active consumers")
 	}
-	if client.ConsumerReady(PluginEventsQueue) {
-		t.Fatal("one queue made an unrelated queue ready")
-	}
-	client.consumerStopped(ImportQueue)
-	if !client.ConsumerReady(ImportQueue) {
+	client.consumerStopped(PluginEventsQueue)
+	if !client.ConsumerReady(PluginEventsQueue) {
 		t.Fatal("one stopped slot hid another active consumer")
 	}
-	client.consumerStopped(ImportQueue)
-	if client.ConsumerReady(ImportQueue) {
+	client.consumerStopped(PluginEventsQueue)
+	if client.ConsumerReady(PluginEventsQueue) {
 		t.Fatal("queue remained ready after its last consumer stopped")
 	}
 }

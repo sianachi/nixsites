@@ -17,26 +17,14 @@ import (
 	"time"
 
 	"github.com/sianachi/Nix/apps/go-workers/internal/broker"
-	"github.com/sianachi/Nix/apps/go-workers/internal/brokerjob"
 	"github.com/sianachi/Nix/apps/go-workers/internal/companion"
 	"github.com/sianachi/Nix/apps/go-workers/internal/config"
-	"github.com/sianachi/Nix/apps/go-workers/internal/documentimport"
-	"github.com/sianachi/Nix/apps/go-workers/internal/fileinspect"
 	"github.com/sianachi/Nix/apps/go-workers/internal/httpserver"
-	"github.com/sianachi/Nix/apps/go-workers/internal/importer"
-	"github.com/sianachi/Nix/apps/go-workers/internal/importjob"
-	"github.com/sianachi/Nix/apps/go-workers/internal/importplan"
-	"github.com/sianachi/Nix/apps/go-workers/internal/jobrunner"
-	"github.com/sianachi/Nix/apps/go-workers/internal/objectcleanup"
 	"github.com/sianachi/Nix/apps/go-workers/internal/objecttransfer"
 	"github.com/sianachi/Nix/apps/go-workers/internal/pluginruntime"
 	"github.com/sianachi/Nix/apps/go-workers/internal/pluginworker"
 	"github.com/sianachi/Nix/apps/go-workers/internal/role"
-	"github.com/sianachi/Nix/apps/go-workers/internal/stream"
-	"github.com/sianachi/Nix/apps/go-workers/internal/templatefilecopy"
-	"github.com/sianachi/Nix/apps/go-workers/internal/templateimport"
 	"github.com/sianachi/Nix/apps/go-workers/internal/workerapi"
-	"github.com/sianachi/Nix/apps/go-workers/internal/worktemp"
 )
 
 func Run(service role.Service) {
@@ -57,9 +45,6 @@ func Run(service role.Service) {
 	if err := validateSettings(roles, settings); err != nil {
 		logger.Error("invalid service configuration", "roles", settings.WorkerRoles, "error", err)
 		os.Exit(1)
-	}
-	if err := worktemp.Sweep(time.Now().UTC(), 24*time.Hour); err != nil {
-		logger.Warn("abandoned worker temporary files could not be swept", "error", err)
 	}
 	if len(os.Args) == 2 && os.Args[1] == "--healthcheck" {
 		if readinessErr := checkReadiness(settings.Address, 3*time.Second); readinessErr != nil {
@@ -125,91 +110,15 @@ func Run(service role.Service) {
 		MaxHeaderBytes:    16 * 1024,
 	}
 
-	var collaborationProbe *serviceProbe
 	var objectProbe *objectStoreProbe
-	if roles.Has(role.Import) {
-		collaborationProbe = newServiceProbe(settings.CollaborationURL, settings.RequestTimeout)
-	}
-	if roles.Has(role.Import) || roles.Has(role.Plugin) {
+	if roles.Has(role.Plugin) {
 		objectProbe = newObjectStoreProbe(settings.ObjectOrigins, settings.RequestTimeout)
 	}
 	var apiProbe *workerapi.Client
 	if settings.InternalAPIURL != "" {
 		apiProbe = apiClient
 	}
-	startReadinessProbes(ctx, apiProbe, brokerClient, collaborationProbe, objectProbe, readiness, settings.PollInterval, logger)
-	if roles.Has(role.Import) {
-		transfer := objecttransfer.New(settings.RequestTimeout, settings.ObjectOrigins...)
-		imports := importjob.New(
-			transfer,
-			importer.Limits{MaxBytes: settings.MaxInputBytes, MaxItems: settings.MaxRecords, MaxEntry: int64(settings.MaxLineBytes)},
-			stream.Limits{MaxBytes: settings.MaxInputBytes, MaxLine: settings.MaxLineBytes, MaxRecords: settings.MaxRecords})
-		files := fileinspect.New(apiClient, transfer, settings.MaxInputBytes)
-		cleanup := objectcleanup.New(apiClient, transfer)
-		fileCopies := templatefilecopy.New(apiClient, transfer)
-		planLimits := importplan.Limits{
-			MaxSourceBytes: settings.MaxInputBytes,
-			MaxPlanBytes:   16 << 20,
-			MaxBodyBytes:   8 << 20,
-			MaxEntryBytes:  8 << 20,
-			MaxItems:       min(settings.MaxRecords, 10_000),
-			MaxDepth:       32,
-			PDFTimeoutSecs: max(1, int(settings.RequestTimeout/time.Second)),
-		}
-		documents, documentsErr := documentimport.New(
-			apiClient,
-			transfer,
-			settings.CollaborationURL,
-			settings.InternalSecret,
-			planLimits,
-			settings.RequestTimeout,
-		)
-		if documentsErr != nil {
-			logger.Error("document import handler configuration failed", "error", documentsErr)
-			os.Exit(1)
-		}
-		templates, templatesErr := templateimport.New(
-			apiClient,
-			transfer,
-			settings.CollaborationURL,
-			settings.InternalSecret,
-			planLimits,
-			settings.RequestTimeout,
-		)
-		if templatesErr != nil {
-			logger.Error("template import handler configuration failed", "error", templatesErr)
-			os.Exit(1)
-		}
-		routes := make(map[string]jobrunner.Handler, len(importjob.Kinds)+len(documentimport.Kinds)+len(templateimport.Kinds)+len(fileinspect.Kinds)+len(objectcleanup.Kinds)+1)
-		for _, kind := range importjob.Kinds {
-			routes[kind] = imports
-		}
-		for _, kind := range fileinspect.Kinds {
-			routes[kind] = files
-		}
-		for _, kind := range documentimport.Kinds {
-			routes[kind] = documents
-		}
-		for _, kind := range templateimport.Kinds {
-			routes[kind] = templates
-		}
-		for _, kind := range objectcleanup.Kinds {
-			routes[kind] = cleanup
-		}
-		routes[templatefilecopy.Kind] = fileCopies
-		handler, routeErr := jobrunner.NewRouter(routes)
-		if routeErr != nil {
-			logger.Error("import handler routing failed", "error", routeErr)
-			os.Exit(1)
-		}
-		kinds := append(append(append(append(append(append([]string{}, importjob.Kinds...), documentimport.Kinds...), templateimport.Kinds...), fileinspect.Kinds...), objectcleanup.Kinds...), templatefilecopy.Kind)
-		runner, runnerErr := brokerjob.New(brokerClient, apiClient, handler, broker.ImportQueue, kinds, settings.WorkerID, settings.MaxConcurrency, settings.LeaseDuration, settings.RenewInterval, logger)
-		if runnerErr != nil {
-			logger.Error("import job runner configuration failed", "error", runnerErr)
-			os.Exit(1)
-		}
-		go runner.Run(ctx)
-	}
+	startReadinessProbes(ctx, apiProbe, brokerClient, objectProbe, readiness, settings.PollInterval, logger)
 	if roles.Has(role.Plugin) {
 		pluginRuntime, runtimeErr := pluginruntime.New(pluginruntime.Limits{
 			MaxModuleBytes:       int(settings.PluginMaxModuleBytes),
@@ -291,14 +200,9 @@ func validateSettings(roles role.Set, settings config.Settings) error {
 	if settings.RabbitMQURL == "" {
 		return errors.New("NIX_RABBITMQ_URL is required")
 	}
-	if roles.Has(role.Import) {
-		if !validServiceOrigin(settings.CollaborationURL) {
-			return errors.New("NIX_WORKER_COLLAB_URL must be a valid collaboration service origin for imports")
-		}
-	}
-	if roles.Has(role.Import) || roles.Has(role.Plugin) {
+	if roles.Has(role.Plugin) {
 		if len(settings.ObjectOrigins) == 0 {
-			return errors.New("NIX_WORKER_OBJECT_ORIGINS is required for imports and plugins")
+			return errors.New("NIX_WORKER_OBJECT_ORIGINS is required for plugins")
 		}
 	}
 	return nil
@@ -455,7 +359,6 @@ type readinessState struct {
 	consumerReady func(string) bool
 	api           atomic.Bool
 	rabbit        atomic.Bool
-	collaboration atomic.Bool
 	objects       atomic.Bool
 }
 
@@ -468,8 +371,6 @@ func (state *readinessState) RoleReady(service role.Service) bool {
 		return false
 	}
 	switch service {
-	case role.Import:
-		return state.collaboration.Load() && state.objects.Load()
 	case role.Plugin:
 		return state.objects.Load()
 	default:
@@ -491,8 +392,6 @@ func (state *readinessState) AllReady() bool {
 
 func queueForRole(service role.Service) string {
 	switch service {
-	case role.Import:
-		return broker.ImportQueue
 	case role.Plugin:
 		return broker.PluginEventsQueue
 	default:
@@ -504,7 +403,6 @@ func startReadinessProbes(
 	ctx context.Context,
 	api *workerapi.Client,
 	rabbit *broker.Client,
-	collaboration *serviceProbe,
 	objects *objectStoreProbe,
 	state *readinessState,
 	interval time.Duration,
@@ -512,10 +410,7 @@ func startReadinessProbes(
 ) {
 	go probeDependency(ctx, "Nix.Api", api, &state.api, interval, logger)
 	go probeDependency(ctx, "RabbitMQ", rabbit, &state.rabbit, interval, logger)
-	if state.roles.Has(role.Import) {
-		go probeDependency(ctx, "Collaboration", collaboration, &state.collaboration, interval, logger)
-	}
-	if state.roles.Has(role.Import) || state.roles.Has(role.Plugin) {
+	if state.roles.Has(role.Plugin) {
 		go probeDependency(ctx, "object storage", objects, &state.objects, interval, logger)
 	}
 }

@@ -216,7 +216,7 @@ public static class DocxWriter
 
     private static async Task WriteImageAsync(TextWriter output, ExportImage raster, string alt, string rel, int id)
     {
-        var (width, height) = Images.Size(raster, 468, 648);
+        var (width, height) = ImageFiles.Size(raster, 468, 648);
         var cx = (long)(width * 12700);
         var cy = (long)(height * 12700);
         var n = Invariant(id);
