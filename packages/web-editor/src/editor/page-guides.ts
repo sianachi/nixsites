@@ -25,8 +25,8 @@
  */
 
 /**
- * The exported page, in points: A4, the Go exporter's uniform `pdfMargin`, and the body size and
- * leading it writes paragraphs with (`SetFont("Nix", "", 11)` and `Write(size*1.45, ...)`).
+ * The exported page, in points: A4, the PDF writer's uniform `Margin`, and the body size and
+ * leading it writes paragraphs with (`PdfWriter.cs`: 11 pt body, `size * 1.45` line height).
  */
 export const EXPORT_PAGE = {
   width: 595.28,

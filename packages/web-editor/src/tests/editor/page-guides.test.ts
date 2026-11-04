@@ -22,22 +22,23 @@ import {
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..');
 
 describe('the exported page', () => {
-  it('is the one the Go PDF exporter prints', () => {
-    // The exporter is Go and cannot be imported here, so its numbers are mirrored. This is what
+  it('is the one the PDF exporter prints', () => {
+    // The exporter is C# and cannot be imported here, so its numbers are mirrored. This is what
     // keeps the mirror honest: change the margin there and this names the constant to change
     // here.
     const source = readFileSync(
-      join(repoRoot, 'apps', 'go-workers', 'internal', 'exporter', 'pdf.go'),
+      join(repoRoot, 'backend', 'src', 'Nix.Workers', 'Export', 'PdfWriter.cs'),
       'utf8',
     );
     const [left, top, right, bottom] = EXPORT_PAGE.margins;
-    expect(new Set([left, top, right, bottom]).size, 'the Go margin is uniform').toBe(1);
-    expect(source).toContain(`const pdfMargin = ${String(left)}.0`);
+    expect(new Set([left, top, right, bottom]).size, 'the margin is uniform').toBe(1);
+    expect(source).toContain(`private const double Margin = ${String(left)}.0;`);
     // A4 is the default page; Letter is an explicit per-export choice.
-    expect(source).toContain(`size := "A4"`);
-    expect(source).toContain(`fpdf.New("P", "pt", size, "")`);
-    expect(source).toContain(`pdf.SetFont("Nix", "", ${String(EXPORT_PAGE.bodySize)})`);
-    expect(source).toContain(`pdf.Write(size*${String(EXPORT_PAGE.lineHeight)}, pdfText(text))`);
+    expect(source).toContain(
+      `pageSize == "letter" ? PdfSharp.PageSize.Letter : PdfSharp.PageSize.A4`,
+    );
+    expect(source).toContain(`XFontStyleEx.Regular, ${String(EXPORT_PAGE.bodySize)})`);
+    expect(source).toContain(`var lineHeight = size * ${String(EXPORT_PAGE.lineHeight)};`);
   });
 });
 
