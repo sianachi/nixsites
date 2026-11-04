@@ -253,7 +253,8 @@ describe('what never reaches approval', () => {
   it('refuses, without throwing, arguments nested too deep to flatten', async () => {
     const { h, tools } = await start();
     const deep: unknown = JSON.parse(`${'['.repeat(5000)}${']'.repeat(5000)}`);
-    expect(h.transport.toolCall(1, 'a', 'nix_add_view', { itemId: ID, spec: { a: deep } })).toBe(
+    const args = { itemId: ID, spec: { a: deep } };
+    expect(h.transport.toolCall(1, 'a', 'nix_add_view', args, 'provider-thread', 10_100)).toBe(
       false,
     );
     expect(tools()).toEqual([]);

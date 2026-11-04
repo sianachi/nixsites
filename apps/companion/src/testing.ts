@@ -127,9 +127,15 @@ export class FakeTransport implements Transport {
     tool: string,
     args: unknown,
     threadId = 'provider-thread',
+    byteLength?: number,
   ): boolean {
     const params = { threadId, tool, callId, arguments: args };
-    return this.handler?.(id, 'item/tool/call', params, JSON.stringify(params).length) ?? false;
+    // The wire length is what the real reader measured on the raw line; a caller passes it when
+    // the arguments are too deep for JSON.stringify on older Node versions.
+    return (
+      this.handler?.(id, 'item/tool/call', params, byteLength ?? JSON.stringify(params).length) ??
+      false
+    );
   }
 }
 
