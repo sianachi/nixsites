@@ -1,14 +1,10 @@
-import { randomUUID } from 'node:crypto';
-
 import { CoreResponseError, type CoreClient, type Execution } from './core-client.ts';
 
 /**
- * Claim, renew and result for one broker delivery: a port of the Go `brokerjob.Runner`.
- *
- * Core owns the durable job and its lease; the broker only says "look at this job". The runner
- * claims it under a fresh execution id, keeps the lease alive while the handler works, and hands
- * the outcome back as a result message (never an HTTP complete). A lease lost mid-run, or a
- * delivery that cannot be settled, requeues the message so another execution can take over.
+ * Runs one leased job: keeps the lease alive while the handler works and completes it through
+ * Core's dispatch route. Core owns the durable job and its lease; the poller leases it under a
+ * fresh execution id and hands it here. A lease lost mid-run leaves the job for the next lease,
+ * never a second completion.
  */
 
 export interface LeaseJob {
@@ -50,112 +46,66 @@ export interface JobContext {
 
 export type JobHandler = (context: JobContext) => Promise<unknown>;
 
-export interface WorkerResult {
-  readonly schemaVersion: 1;
-  readonly messageId: string;
-  readonly messageType: 'worker.result.v1';
-  readonly occurredAt: string;
-  readonly jobId: string;
-  readonly executionId: string;
+/** The body of `POST /internal/worker-dispatch/jobs/{id}/complete`. */
+export interface JobCompletion {
+  readonly owner: string;
   readonly succeeded: boolean;
   readonly retryable: boolean;
   readonly result?: unknown;
   readonly errorCode?: string;
   readonly errorDetail?: string;
-  readonly traceParent?: string;
 }
 
-export type DeliveryAction = 'ack' | 'requeue' | 'reject';
-
-export interface ResultPublisher {
-  publishResult(result: WorkerResult): Promise<void>;
-}
+export type RunOutcome = 'completed' | 'lease_lost' | 'already_settled';
 
 export interface RunnerOptions {
-  readonly core: Pick<CoreClient, 'claim' | 'renew' | 'state'>;
-  readonly publisher: ResultPublisher;
-  /** Job kind to handler. A kind not listed is rejected. */
+  readonly core: Pick<CoreClient, 'complete' | 'renew' | 'state'>;
+  /** Job kind to handler. A kind not listed is failed permanently. */
   readonly handlers: Readonly<Record<string, JobHandler>>;
-  readonly workerId: string;
   readonly leaseSeconds: number;
   readonly renewSeconds: number;
   readonly log?: (message: string, fields?: Record<string, unknown>) => void;
-  /** Injected for tests. */
-  readonly newId?: () => string;
 }
 
-const TERMINAL = new Set(['completed', 'failed', 'cancelled']);
 const ERROR_CODE = /^[A-Za-z0-9_.-]{1,64}$/;
-
-export interface CommandReference {
-  readonly jobId: string;
-  readonly kind: string;
-}
 
 export class JobRunner {
   private readonly log: (message: string, fields?: Record<string, unknown>) => void;
-  private readonly newId: () => string;
 
   private readonly options: RunnerOptions;
 
   constructor(options: RunnerOptions) {
     this.options = options;
     this.log = options.log ?? (() => undefined);
-    this.newId = options.newId ?? randomUUID;
   }
 
-  executionId(): string {
-    const id = this.newId();
-    const prefix = this.options.workerId.trim().slice(0, 128 - 1 - id.length);
-    return `${prefix}:${id}`;
-  }
+  /** Runs a job this execution already holds the lease for and completes it. */
+  async run(job: LeaseJob, executionId: string): Promise<RunOutcome> {
+    const handler = this.options.handlers[job.kind];
+    const outcome =
+      handler === undefined
+        ? {
+            value: undefined,
+            failure: new JobError('worker_kind_unsupported', `No handler runs ${job.kind}.`),
+            leaseLost: false,
+            cancelled: false,
+          }
+        : await this.execute(job, executionId, handler);
+    if (outcome.leaseLost) return 'lease_lost';
 
-  async handle(command: CommandReference, traceParent: string | null): Promise<DeliveryAction> {
-    const handler = this.options.handlers[command.kind];
-    if (handler === undefined) {
-      this.log('worker command routed to the wrong queue', { kind: command.kind });
-      return 'reject';
-    }
-
-    const executionId = this.executionId();
-    let job: LeaseJob | null;
+    let accepted: boolean;
     try {
-      job = await this.options.core.claim(command.jobId, executionId, this.options.leaseSeconds);
+      accepted = await this.options.core.complete(job.id, this.completion(executionId, outcome));
     } catch (error) {
-      this.log('worker job claim failed', { jobId: command.jobId, error: String(error) });
-      return 'requeue';
+      this.log('worker job completion failed', { jobId: job.id, error: String(error) });
+      return 'lease_lost';
     }
-
-    if (job === null) {
-      try {
-        const state = await this.options.core.state(command.jobId, executionId);
-        if (state === null || TERMINAL.has(state.status) || state.cancellationRequested) {
-          return 'ack';
-        }
-      } catch {
-        return 'requeue';
-      }
-      // Another execution holds a live lease; look again after it has had a moment to finish.
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return 'requeue';
+    if (!accepted) {
+      // Core already settled the job (cancelled, or a replica's completion won): nothing to redo.
+      this.log('worker job completion refused', { jobId: job.id });
+      return 'already_settled';
     }
-    if (job.kind !== command.kind) {
-      this.log('claimed job kind did not match the broker command', { jobId: job.id });
-      return 'reject';
-    }
-
-    const outcome = await this.execute(job, executionId, handler);
-    if (outcome.leaseLost) return 'requeue';
-
-    try {
-      await this.options.publisher.publishResult(
-        this.resultMessage(job.id, executionId, outcome, traceParent),
-      );
-    } catch (error) {
-      this.log('worker result publish failed', { jobId: job.id, error: String(error) });
-      return 'requeue';
-    }
-    return 'ack';
+    return 'completed';
   }
 
   private async execute(job: LeaseJob, executionId: string, handler: JobHandler): Promise<Outcome> {
@@ -210,24 +160,10 @@ export class JobRunner {
     return { value, failure, leaseLost: flags.leaseLost, cancelled: flags.cancelled };
   }
 
-  private resultMessage(
-    jobId: string,
-    executionId: string,
-    outcome: Outcome,
-    traceParent: string | null,
-  ): WorkerResult {
-    const base = {
-      schemaVersion: 1 as const,
-      messageId: this.newId(),
-      messageType: 'worker.result.v1' as const,
-      occurredAt: new Date().toISOString(),
-      jobId,
-      executionId,
-      ...(traceParent === null ? {} : { traceParent }),
-    };
+  private completion(executionId: string, outcome: Outcome): JobCompletion {
     if (outcome.cancelled) {
       return {
-        ...base,
+        owner: executionId,
         succeeded: false,
         retryable: false,
         errorCode: 'job_cancelled',
@@ -236,7 +172,7 @@ export class JobRunner {
     }
     if (outcome.failure === null) {
       return {
-        ...base,
+        owner: executionId,
         succeeded: true,
         retryable: false,
         ...(outcome.value === undefined ? {} : { result: outcome.value }),
@@ -256,7 +192,7 @@ export class JobRunner {
     }
     if (!ERROR_CODE.test(code)) code = 'worker_failed';
     return {
-      ...base,
+      owner: executionId,
       succeeded: false,
       retryable,
       errorCode: code,

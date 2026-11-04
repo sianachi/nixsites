@@ -117,7 +117,7 @@ The public gets no read path into Postgres. When a build starts, Core:
 
 View and chart rows come from the same eligibility query, so a rendered image never shows an excluded item.
 
-A new `sites` worker role, written in TypeScript, consumes the job from RabbitMQ. It reads bodies and files through the service-authenticated `/internal` API and renders with a shared `@nix/site-render` package:
+A new `sites` worker role, written in TypeScript, consumes the job (from RabbitMQ at first; since November 2026 it leases the job from Core over the internal dispatch route). It reads bodies and files through the service-authenticated `/internal` API and renders with a shared `@nix/site-render` package:
 
 - **HTML:** an HTML projection built on the `@nix/export` visitor, with the same loss reporting as the other projections.
 - **Views:** list, board and gallery views use `view-render`.

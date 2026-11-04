@@ -41,8 +41,6 @@ spec:
               value: http://nix-collab:8100
             - name: NIX_SITES_INTERNAL_SECRET
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
-            - name: NIX_SITES_RABBITMQ_URL
-              valueFrom: { secretKeyRef: { name: nix-rabbitmq, key: sites-url } }
             - name: NIX_OBJECT_STORE_ENDPOINT
               valueFrom: { secretKeyRef: { name: nix-object-store, key: endpoint } }
             - name: NIX_OBJECT_STORE_PUBLIC_ORIGIN
@@ -134,8 +132,6 @@ spec:
       ports: [{ protocol: TCP, port: 8080 }]
     - to: [{ podSelector: { matchLabels: { app: nix-collab } } }]
       ports: [{ protocol: TCP, port: 8100 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-rabbitmq } } }]
-      ports: [{ protocol: TCP, port: 5672 }]
     - to: [{ podSelector: { matchLabels: { app: nix-versitygw } } }]
       ports: [{ protocol: TCP, port: 7070 }]
     - ports: [{ protocol: TCP, port: 443 }]

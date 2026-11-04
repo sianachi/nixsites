@@ -8,7 +8,8 @@
 export interface WorkerConfig {
   readonly apiUrl: string;
   readonly internalSecret: string;
-  readonly rabbitmqUrl: string;
+  /** How often an idle slot asks Core for work. */
+  readonly pollSeconds: number;
   /** Origins Core's capability URLs may point at (the sites bucket's object store). */
   readonly objectOrigins: readonly string[];
   /** The only origin the internal secret and a body bearer are ever sent to. */
@@ -69,7 +70,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   return {
     apiUrl: required(env, 'NIX_SITES_API_URL').replace(/\/+$/, ''),
     internalSecret: required(env, 'NIX_SITES_INTERNAL_SECRET'),
-    rabbitmqUrl: required(env, 'NIX_SITES_RABBITMQ_URL'),
+    pollSeconds: integer(env, 'NIX_SITES_POLL_SECONDS', 5, 1, 300),
     objectOrigins: (env.NIX_SITES_OBJECT_ORIGINS ?? '')
       .split(',')
       .map((origin) => origin.trim())

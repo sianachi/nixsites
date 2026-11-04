@@ -375,8 +375,6 @@ services:
     profiles: [sites]
     restart: unless-stopped
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       nix-api:
         condition: service_started
       nix-collab:
@@ -388,7 +386,6 @@ services:
       NIX_SITES_API_URL: http://nix-api:8080
       NIX_SITES_COLLAB_URL: http://nix-collab:8100
       NIX_SITES_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_SITES_RABBITMQ_URL: ${NIX_RABBITMQ_SITES_URL:-amqp://nix-sites:${NIX_RABBITMQ_SITES_PASSWORD:-}@rabbitmq:5672/%2Fnix}
       NIX_SITES_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
       NIX_SITES_WORKER_ADDRESS: ":8301"
       NIX_SITES_CONCURRENCY: "1"

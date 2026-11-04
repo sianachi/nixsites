@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Starts the sites build worker (apps/sites) for local development: it consumes
-# nix.worker.sites.v1 and builds, activates and purges published sites.
+# Starts the sites build worker (apps/sites) for local development: it leases site.build,
+# site.activate and site.purge jobs from Core and builds, activates and purges published sites.
 #
 # Usage: scripts/dev-sites-worker.sh
 set -euo pipefail
@@ -19,8 +19,5 @@ export NIX_SITES_COLLAB_URL="${NIX_SITES_COLLAB_URL:-$NIX_COLLAB_ORIGIN}"
 export NIX_SITES_OBJECT_ORIGINS="${NIX_SITES_OBJECT_ORIGINS:-http://localhost:${VERSITY_PORT:-7070}}"
 # :8302 is the Go calendar worker role in the shared dev stack.
 export NIX_SITES_WORKER_ADDRESS="${NIX_SITES_WORKER_ADDRESS:-:8303}"
-# The dedicated nix-sites account exists only when the broker is started with
-# NIX_RABBITMQ_SITES_PASSWORD (deploy/compose.dev.yml sets it for local development).
-export NIX_SITES_RABBITMQ_URL="${NIX_SITES_RABBITMQ_URL:-amqp://nix-sites:nix-dev-sites-rabbit@localhost:5673/%2Fnix}"
 
 exec pnpm --filter @nix/sites dev:worker

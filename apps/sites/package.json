@@ -15,8 +15,7 @@
   },
   "dependencies": {
     "@nix/export": "workspace:*",
-    "@nix/site-render": "workspace:*",
-    "amqplib": "^2.2.0"
+    "@nix/site-render": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

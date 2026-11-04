@@ -290,7 +290,10 @@ test "$(grep -Fc 'nix.io/object-store-secret-version: "67890"' "$RENDERED_WEB")"
 
 # Sites (ADR-0063): own image, broker identity, read-only bucket key, host-routed ingress.
 grep -Fq 'image: registry.example.test/sites:render-order' "$RENDERED_SITES"
-grep -Fq 'key: sites-url' "$RENDERED_SITES"
+if grep -Fq 'NIX_SITES_RABBITMQ_URL' "$RENDERED_SITES"; then
+  echo 'The sites worker still reads a broker URL.' >&2
+  exit 1
+fi
 grep -Fq 'key: read-access-key' "$RENDERED_SITES"
 grep -Fq 'value: "nix.example.test"' "$RENDERED_SITES"
 grep -Fq 'nix.io/sites-secret-version: "24680"' "$RENDERED_SITES"

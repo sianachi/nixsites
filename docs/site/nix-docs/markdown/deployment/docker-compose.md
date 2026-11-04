@@ -42,7 +42,7 @@ Two Compose profiles keep optional services out of a normal `up`:
 | maintenance | nix-storage-init, nix-collab-migrate | Run as one-shot jobs during a release |
 | sites | nix-sites-worker, nix-sites-serve | Set COMPOSE\_PROFILES=sites and NIX\_SITES\_DOMAIN to publish websites |
 
-To enable Sites, set the two variables above and a distinct broker password for the sites worker, then point a wildcard hostname for `*.<sites-domain>` at the web container with the `Host` header left as sent. Caddy routes one-label hostnames under the sites domain to `nix-sites-serve`. `nix-storage-init` creates the sites bucket. See [Sites](nix://item/01a130b0-106e-79a7-868c-435fae417b52) and [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
+To enable Sites, set the two variables above, then point a wildcard hostname for `*.<sites-domain>` at the web container with the `Host` header left as sent. Caddy routes one-label hostnames under the sites domain to `nix-sites-serve`. `nix-storage-init` creates the sites bucket. See [Sites](nix://item/01a130b0-106e-79a7-868c-435fae417b52) and [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 
 ## The release scripts
 

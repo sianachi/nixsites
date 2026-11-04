@@ -1,4 +1,4 @@
-import type { LeaseJob, JobState } from './dispatch.ts';
+import type { JobCompletion, LeaseJob, JobState } from './dispatch.ts';
 
 /**
  * Core's `/internal` surface for the sites worker: job dispatch and the lease-bound
@@ -171,6 +171,45 @@ export class CoreClient {
   }
 
   // -- dispatch (lease) ------------------------------------------------------
+
+  /** Leases up to one job of exactly `kind` under `owner`; the lease is the claim. */
+  async lease(
+    kind: string,
+    owner: string,
+    leaseSeconds: number,
+    signal?: AbortSignal,
+  ): Promise<LeaseJob[]> {
+    const { status, json } = await this.call(
+      'POST',
+      '/internal/worker-dispatch/jobs/lease',
+      { owner, kind, limit: 1, leaseSeconds },
+      null,
+      signal,
+    );
+    if (status !== 200 || !Array.isArray(json)) {
+      throw new Error(`The lease answered ${String(status)}.`);
+    }
+    return (json as (Omit<LeaseJob, 'payload'> & { payload: unknown })[]).map((job) => ({
+      ...job,
+      // Core stores payloads as JSON text and may expose that text as a string.
+      payload: typeof job.payload === 'string' ? (JSON.parse(job.payload) as unknown) : job.payload,
+    }));
+  }
+
+  /** Completes a leased job; false on 409 (the job is already settled or the lease is gone). */
+  async complete(jobId: string, completion: JobCompletion): Promise<boolean> {
+    const { status } = await this.call(
+      'POST',
+      `/internal/worker-dispatch/jobs/${jobId}/complete`,
+      completion,
+      null,
+      undefined,
+    );
+    if (status === 409) return false;
+    if (status < 200 || status >= 300)
+      throw new Error(`The completion answered ${String(status)}.`);
+    return true;
+  }
 
   /** The claimed job, or null on 409 (another execution owns it). */
   async claim(jobId: string, executionId: string, leaseSeconds: number): Promise<LeaseJob | null> {
