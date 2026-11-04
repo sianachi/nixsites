@@ -1,0 +1,19 @@
+{
+  "name": "@nix/node-host",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "description": "Nix node host: runs the collaboration service, the pet companion and the sites worker in one process",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "start": "node --experimental-strip-types src/index.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.7"
+  }
+}

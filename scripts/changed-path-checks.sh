@@ -103,6 +103,8 @@ for path in "${paths[@]}"; do
     apps/collab/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/collab' ;;
     apps/cli/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/cli' ;;
     apps/sites/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/sites' ;;
+    apps/companion/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/companion-service' ;;
+    apps/node-host/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/node-host' ;;
     packages/*/*)
       has_frontend=true; has_frontend_sources=true
       package_name=${path#packages/}
@@ -138,7 +140,7 @@ for path in "${paths[@]}"; do
     scripts/changed-path-checks.sh|scripts/changed-path-checks.test.sh|scripts/validate-changed.sh|scripts/validate-changed.test.sh|scripts/new-goal-worktree.sh|scripts/rebuild-stale-packages.sh|scripts/rebuild-stale-packages.test.sh|scripts/release-version.sh|scripts/release-version.test.sh|scripts/dev-db-drift.sh|lefthook.yml)
       has_workflow_script=true
       ;;
-    packages/structure-spec/*|apps/go-workers/internal/companion/catalog/*)
+    packages/structure-spec/*)
       has_catalog=true
       ;;
     backend/*Authentication*|backend/*Authorization*|backend/*Permission*|backend/*Migration*|backend/*Persistence*|backend/*/Sql/*|backend/*/Domain/Identity/*)
@@ -213,7 +215,7 @@ if [ "$has_catalog" = true ]; then
   # git status --porcelain, not git diff --exit-code: diff is blind to untracked files, so a
   # generator that grew a new output would pass a diff-only check silently. CI's "Structure
   # catalog is current" step checks the same way.
-  emit 'pnpm --filter @nix/structure-spec catalog && test -z "$(git status --porcelain -- packages/structure-spec/src/generated apps/go-workers/internal/companion/catalog)"'
+  emit 'pnpm --filter @nix/structure-spec catalog && test -z "$(git status --porcelain -- packages/structure-spec/src/generated)"'
 fi
 
 if [ "$has_sensitive_backend" = true ]; then

@@ -16,7 +16,7 @@
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
     "dev": "bash scripts/dev.sh",
-    "dev:collab": "bash scripts/dev-collab.sh"
+    "dev:node": "bash scripts/dev-node.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",

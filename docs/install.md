@@ -8,8 +8,8 @@ what the script does, the flags, upgrades, Kubernetes and image tags.
 
 Needs Docker with the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for
 Docker. The stack runs Postgres, an object store, the identity provider and four Nix
-services (API, collaboration, web, and the pet companion
-host). A default Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script
+services (API, web, and one Node service for collaboration, the pet
+companion and the sites worker). A default Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script
 stops if a tool is missing, and warns when Docker has less than about 8 GB.
 
 ```sh
@@ -106,7 +106,7 @@ Operating an install by hand, after the installer or instead of it, is covered i
 ## Images and tags
 
 Every commit on `main` is published as `ghcr.io/sianachi/nix/<image>:<sha>`. The images are `api`,
-`migrator`, `collab`, `worker`, `web`, `sites` and `release-tools`. Pushing a `vX.Y.Z` tag names
+`migrator`, `collab`, `web`, `sites` and `release-tools`. Pushing a `vX.Y.Z` tag names
 that commit's images `vX.Y.Z` and `latest`, which the installer uses by default. `--version` also
 accepts a full commit SHA.
 

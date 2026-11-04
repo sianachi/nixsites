@@ -1,0 +1,22 @@
+{
+  "name": "@nix/companion-service",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "description": "Nix pet companion service: the Codex app-server and API-key providers behind Core's /v1/companion contract",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "start": "node --experimental-strip-types src/index.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nix/structure-spec": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.7"
+  }
+}

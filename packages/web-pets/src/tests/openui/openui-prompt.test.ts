@@ -6,9 +6,9 @@ import { nixLibrary } from '../../openui/library';
 import { openUiPrompt, PROMPT_EXAMPLES } from '../../openui/prompt';
 
 describe('the pet’s OpenUI instructions', () => {
-  it('match the catalog the Go worker embeds (regenerate with vitest -u)', async () => {
+  it('match the catalog the companion reads (regenerate with vitest -u)', async () => {
     await expect(openUiPrompt()).toMatchFileSnapshot(
-      '../../../../../apps/go-workers/internal/companion/catalog/openui.txt',
+      '../../../../../apps/companion/src/openui.txt',
     );
   });
 

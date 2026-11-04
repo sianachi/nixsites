@@ -165,8 +165,8 @@ services:
       Logging__Console__FormatterName: json
       ConnectionStrings__Nix: ${NIX_CORE_DATABASE_URL:?set NIX_CORE_DATABASE_URL}
       Nix__InternalSecret: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      Nix__Pets__WorkerUrl: http://nix-companion:8301
-      Nix__Collaboration__BaseUrl: http://nix-collab:8100
+      Nix__Pets__WorkerUrl: http://nix-node:8302
+      Nix__Collaboration__BaseUrl: http://nix-node:8100
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
       Nix__ObjectStorage__PublicOrigin: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
       Nix__ObjectStorage__Region: ${NIX_OBJECT_STORE_REGION:-us-east-1}
@@ -251,8 +251,12 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  nix-collab:
+  # One Node process runs collaboration (8100), the pet companion (8302) and, when sites are
+  # enabled, the sites worker (8301). Each role keeps its own port and environment.
+  nix-node:
     image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/collab:${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}
+    # The uid that owns the nix-companion-data volume from earlier releases.
+    user: "65532:65532"
     restart: unless-stopped
     stop_grace_period: 60s
     depends_on:
@@ -264,6 +268,8 @@ services:
       # The release this container runs, shown in Settings > About.
       NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
       NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
+      NIX_NODE_ROLES: collab,companion${NIX_SITES_DOMAIN:+,sites-worker}
+      TMPDIR: /tmp
       NIX_COLLAB_DATABASE_URL: ${NIX_COLLAB_DATABASE_URL:?set NIX_COLLAB_DATABASE_URL}
       NIX_COLLAB_CORE_BASE_URL: http://nix-api:8080
       NIX_COLLAB_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
@@ -273,94 +279,33 @@ services:
       NIX_COLLAB_MAX_RESIDENT_MB: "256"
       NIX_COLLAB_MAX_DOCS: "200"
       NIX_COLLAB_PORT: "8100"
+      # The companion holds no database or storage credential.
+      NIX_COMPANION_DATA_DIR: /var/lib/nix-companion
+      NIX_COMPANION_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
+      NIX_COMPANION_API_URL: http://nix-api:8080
+      NIX_COMPANION_ADDRESS: ":8302"
+      # Sites worker (only started when NIX_SITES_DOMAIN is set).
+      NIX_SITES_API_URL: http://nix-api:8080
+      NIX_SITES_COLLAB_URL: http://nix-node:8100
+      NIX_SITES_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
+      NIX_SITES_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
+      NIX_SITES_WORKER_ADDRESS: ":8301"
+      NIX_SITES_CONCURRENCY: "1"
+    volumes:
+      - nix-companion-data:/var/lib/nix-companion
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:8100/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "Promise.all(['8100','8302'${NIX_SITES_DOMAIN:+,'8301'}].map(p=>fetch('http://127.0.0.1:'+p+(p==='8301'?'/readyz':'/healthz')).then(r=>{if(!r.ok)throw 0}))).then(()=>process.exit(0),()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 3s
       retries: 12
       start_period: 90s
-    mem_limit: 768m
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-collab
-
-  # The pet companion (codex app-server) behind the internal HTTP API, until it moves into the
-  # Node process. It holds no broker, database or storage credential.
-  nix-companion:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
-    user: "65532:65532"
-    restart: unless-stopped
-    depends_on:
-      nix-api:
-        condition: service_started
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
-      TMPDIR: /var/lib/nix-worker/spool
-      NIX_COMPANION_DATA_DIR: /var/lib/nix-worker/companion
-      NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_WORKER_API_URL: http://nix-api:8080
-    volumes:
-      - nix-companion-data:/var/lib/nix-worker/companion
-    healthcheck:
-      test: ["CMD", "/nix-worker", "--healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-    mem_limit: 512m
-    cpus: 1
-    read_only: true
-    tmpfs:
-      - "/var/lib/nix-worker/spool:rw,noexec,nosuid,nodev,size=64m,uid=65532,gid=65532,mode=0700"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-companion
-
-  # Sites (ADR-0063), off unless the env file sets COMPOSE_PROFILES=sites and NIX_SITES_DOMAIN.
-  nix-sites-worker:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/sites:${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}
-    profiles: [sites]
-    restart: unless-stopped
-    depends_on:
-      nix-api:
-        condition: service_started
-      nix-collab:
-        condition: service_healthy
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
-      NIX_SITES_API_URL: http://nix-api:8080
-      NIX_SITES_COLLAB_URL: http://nix-collab:8100
-      NIX_SITES_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_SITES_OBJECT_ORIGINS: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT},${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
-      NIX_SITES_WORKER_ADDRESS: ":8301"
-      NIX_SITES_CONCURRENCY: "1"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8301/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-      start_period: 20s
-    mem_limit: 768m
-    cpus: 1
+    mem_limit: 1280m
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -368,6 +313,10 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    networks:
+      default:
+        aliases:
+          - nix-node
 
   # Anonymous: no Core secret, no database, no broker. Reached only through nix-web's sites host.
   nix-sites-serve:
@@ -425,7 +374,7 @@ services:
       NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
       NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_API_URL: http://nix-api:8080
-      NIX_COLLAB_URL: http://nix-collab:8100
+      NIX_COLLAB_URL: http://nix-node:8100
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8500/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 10s
@@ -447,7 +396,7 @@ services:
     depends_on:
       nix-api:
         condition: service_started
-      nix-collab:
+      nix-node:
         condition: service_healthy
     environment:
       # The release this container runs, shown in Settings > About.

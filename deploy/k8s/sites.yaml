@@ -1,64 +1,7 @@
 # Rendered with envsubst by deploy/k8s/deploy.sh - needs $REGISTRY, $TAG, $DOMAIN.
 #
-# Nix sites (ADR-0063). The worker builds published subtrees into the sites bucket through Core's
-# capability URLs; the serving process answers <slug>.$DOMAIN anonymously from that bucket. Serve
-# holds no Core secret and no database credential: only a read key for the sites bucket.
-apiVersion: v1
-kind: Service
-metadata: { name: nix-sites-worker, namespace: nix }
-spec:
-  selector: { app: nix-sites-worker }
-  ports: [{ port: 8301, targetPort: 8301 }]
----
-apiVersion: apps/v1
-kind: Deployment
-metadata: { name: nix-sites-worker, namespace: nix }
-spec:
-  replicas: 1
-  selector: { matchLabels: { app: nix-sites-worker } }
-  template:
-    metadata:
-      labels: { app: nix-sites-worker }
-      annotations:
-        nix.io/object-store-secret-version: "${OBJECT_STORE_SECRET_VERSION}"
-    spec:
-      automountServiceAccountToken: false
-      securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
-      containers:
-        - name: sites-worker
-          image: ${REGISTRY}/sites:${TAG}
-          ports: [{ containerPort: 8301 }]
-          env:
-            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
-            - name: NIX_RELEASE_VERSION
-              value: "${NIX_RELEASE_VERSION}"
-            - name: NIX_RELEASE_COMMIT
-              value: "${TAG}"
-            - name: NIX_SITES_API_URL
-              value: http://nix-api:8080
-            - name: NIX_SITES_COLLAB_URL
-              value: http://nix-collab:8100
-            - name: NIX_SITES_INTERNAL_SECRET
-              valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
-            - name: NIX_OBJECT_STORE_ENDPOINT
-              valueFrom: { secretKeyRef: { name: nix-object-store, key: endpoint } }
-            - name: NIX_OBJECT_STORE_PUBLIC_ORIGIN
-              valueFrom: { secretKeyRef: { name: nix-object-store, key: public-origin } }
-            - name: NIX_SITES_OBJECT_ORIGINS
-              value: $(NIX_OBJECT_STORE_ENDPOINT),$(NIX_OBJECT_STORE_PUBLIC_ORIGIN)
-            - name: NIX_SITES_WORKER_ADDRESS
-              value: ":8301"
-            - name: NIX_SITES_WORKER_ID
-              valueFrom: { fieldRef: { fieldPath: metadata.name } }
-            - name: NIX_SITES_CONCURRENCY
-              value: "1"
-          livenessProbe: { httpGet: { path: /healthz, port: 8301 }, periodSeconds: 10 }
-          readinessProbe: { httpGet: { path: /readyz, port: 8301 }, periodSeconds: 5 }
-          resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { cpu: "1", memory: 768Mi } }
-          volumeMounts: [{ name: tmp, mountPath: /tmp }]
-          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
-      volumes: [{ name: tmp, emptyDir: { sizeLimit: 64Mi } }]
----
+# Nix sites (ADR-0063). The build worker runs in nix-node (node.yaml); the serving process
+# answers <slug>.$DOMAIN anonymously from the sites bucket. Serve holds no Core secret and no database credential: only a read key for the sites bucket.
 apiVersion: v1
 kind: Service
 metadata: { name: nix-sites-serve, namespace: nix }
@@ -119,22 +62,6 @@ spec:
           volumeMounts: [{ name: tmp, mountPath: /tmp }]
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
       volumes: [{ name: tmp, emptyDir: { sizeLimit: 16Mi } }]
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata: { name: sites-worker-egress, namespace: nix }
-spec:
-  podSelector: { matchLabels: { app: nix-sites-worker } }
-  policyTypes: [Egress]
-  egress:
-    - to: [{ podSelector: { matchLabels: { app: nix-api } } }]
-      ports: [{ protocol: TCP, port: 8080 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-collab } } }]
-      ports: [{ protocol: TCP, port: 8100 }]
-    - to: [{ podSelector: { matchLabels: { app: nix-versitygw } } }]
-      ports: [{ protocol: TCP, port: 7070 }]
-    - ports: [{ protocol: TCP, port: 443 }]
-    - ports: [{ protocol: UDP, port: 53 }]
 ---
 # Anonymous content process: the object store and DNS, nothing else inside the namespace.
 apiVersion: networking.k8s.io/v1

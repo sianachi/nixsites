@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["node"],
+    // The service runs from source under Node's type-stripping loader rather than through a
+    // build step, so imports carry their .ts extension and this has to allow them. There is
+    // no dist to keep in step with source, which for a service is one fewer thing to get
+    // wrong; the packages it imports are built normally.
+    "allowImportingTsExtensions": true,
+    // Node strips types without compiling, so parameter properties and enums cannot be used.
+    "erasableSyntaxOnly": true
+  },
+  "include": ["src/**/*.ts", "vitest.config.ts"]
+}

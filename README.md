@@ -83,7 +83,7 @@ publishing above.
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker. The stack runs
 Postgres, an object store, the identity provider and four Nix services (API,
-collaboration, web, and the pet companion host). A default
+web, and one Node service for collaboration, the pet companion and the sites worker). A default
 Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script stops if a tool is
 missing, and warns when Docker has less than about 8 GB.
 
@@ -137,7 +137,8 @@ Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Co
 ```
 apps/web         React app, installable as a PWA
 apps/collab      Collaboration service
-apps/go-workers  Pet companion host (codex app-server)
+apps/companion   Pet companion (codex app-server)
+apps/node-host   One process for collab, companion and the sites worker
 apps/cli         nixctl and the MCP server
 apps/sites       Static site builder and server
 backend/         Core API (ASP.NET) and the migrator

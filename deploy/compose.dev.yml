@@ -32,8 +32,9 @@
 # one place:
 #   5014  Nix.Api             (dotnet run --project backend/src/Nix.Api)
 #   5173  web                 (pnpm --filter @nix/web dev)
-#   8100  collaboration       (pnpm --filter @nix/collab dev)
-#   8301  unified Go worker   (scripts/dev-worker.sh)
+#   8100  collaboration       (scripts/dev-node.sh)
+#   8301  sites worker        (scripts/dev-node.sh)
+#   8302  pet companion       (scripts/dev-node.sh)
 
 name: nix-dev
 

@@ -26,14 +26,10 @@ echo "== Core has persistence configured (expect no matches below) =="
 kubectl -n nix logs deploy/nix-api | grep -i "persistence" || true
 kubectl -n nix logs deploy/nix-api | grep -i "internal surface" || true
 
-echo "== Collab =="
-kubectl -n nix run verify-curl-collab --rm -i --image=curlimages/curl --restart=Never -- \
-  curl -fsS http://nix-collab:8100/healthz
-
-echo "== Go workers =="
-for worker in worker sites-worker; do
-  kubectl -n nix run "verify-curl-$worker" --rm -i --image=curlimages/curl --restart=Never -- \
-    curl -fsS "http://nix-$worker:8301/healthz"
+echo "== Node host (collab 8100, sites worker 8301, companion 8302) =="
+for port in 8100 8301 8302; do
+  kubectl -n nix run "verify-curl-node-$port" --rm -i --image=curlimages/curl --restart=Never -- \
+    curl -fsS "http://nix-node:$port/healthz"
 done
 
 echo "== Object store =="

@@ -44,7 +44,7 @@ cat > "$fixture/bin/docker" <<'SH'
 echo "docker $*" >> "$TEST_LOG"
 case "$*" in
   *'config --images')
-    for name in api migrator collab worker; do echo "$NIX_IMAGE_REGISTRY/$name:$NIX_IMAGE_TAG"; done
+    for name in api migrator collab; do echo "$NIX_IMAGE_REGISTRY/$name:$NIX_IMAGE_TAG"; done
     echo "$NIX_IMAGE_REGISTRY/web:$NIX_WEB_IMAGE_TAG" ;;
   'manifest inspect '*) [[ "$3" != "${MISSING_IMAGE:-none}" ]] ;;
   *) exit 1 ;;
@@ -87,7 +87,7 @@ refuses 'full lowercase 40-character' --yes "${sha}0"
 refuses 'usage:' --yes
 TEST_HEAD=$other refuses "checkout HEAD is $other" --yes "$sha"
 NIX_RELEASE_CONF="$fixture/absent.conf" refuses 'release configuration not found' --yes "$sha"
-MISSING_IMAGE="ghcr.io/sianachi/nix/worker:$sha" refuses "image not published: ghcr.io/sianachi/nix/worker:$sha" --yes "$sha"
+MISSING_IMAGE="ghcr.io/sianachi/nix/collab:$sha" refuses "image not published: ghcr.io/sianachi/nix/collab:$sha" --yes "$sha"
 NIX_BACKUP_REFERENCE="$fixture/no-such-backup" refuses 'not an existing directory' --yes "$sha"
 refuses 'without --yes' "$sha"
 NIX_OFFSITE_REQUIRED=yes refuses 'NIX_OFFSITE_REQUIRED must be 0 or 1' --yes "$sha"

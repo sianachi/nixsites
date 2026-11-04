@@ -7,8 +7,8 @@ import { MUTATION_TOOLS } from './tool-provider';
 
 /**
  * The pet's instructions for interactive replies, generated from the same library the renderer
- * draws with so the two cannot drift. `openui-prompt.test.ts` writes it to the Go worker's
- * embedded catalog (`apps/go-workers/internal/companion/catalog/openui.txt`) as a file snapshot:
+ * draws with so the two cannot drift. `openui-prompt.test.ts` writes it to the companion's
+ * catalog (`apps/companion/src/openui.txt`) as a file snapshot:
  * `vitest -u` regenerates it, and a stale copy fails the test.
  */
 

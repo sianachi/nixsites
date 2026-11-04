@@ -1,0 +1,134 @@
+# Rendered with envsubst by deploy/k8s/deploy.sh.
+#
+# One Node process (apps/node-host) runs collaboration (8100), the pet companion (8302) and the
+# sites worker (8301). Each role keeps its own port and environment. The image is named collab.
+apiVersion: v1
+kind: Service
+metadata: { name: nix-node, namespace: nix }
+spec:
+  selector: { app: nix-node }
+  ports:
+    - { name: collab, port: 8100, targetPort: 8100 }
+    - { name: sites-worker, port: 8301, targetPort: 8301 }
+    - { name: companion, port: 8302, targetPort: 8302 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: nix-node, namespace: nix }
+spec:
+  # One replica. This is a correctness constraint, not a capacity choice: a resident
+  # document must live on exactly one process. apps/collab/src/db/advisory-lock.ts makes a
+  # second owner refuse the socket (close code 4423) instead of silently corrupting state,
+  # but two replicas behind a round-robin Service still means clients can bounce between
+  # pods repeatedly. Raise this only once there is item-aware routing in front of it.
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: nix-node } }
+  template:
+    metadata:
+      labels: { app: nix-node }
+      annotations:
+        nix.io/object-store-secret-version: "${OBJECT_STORE_SECRET_VERSION}"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        # The node image names its user (node, uid 1000); the kubelet only accepts a numeric id.
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      # Service links would set NIX_COLLAB_PORT=tcp://... from a Service, which collab
+      # reads as its listen port (NaN) and exits.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60   # drain: final flushes and snapshots
+      containers:
+        - name: node
+          image: ${REGISTRY}/collab:${TAG}
+          ports: [{ containerPort: 8100 }, { containerPort: 8301 }, { containerPort: 8302 }]
+          env:
+            # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
+            - name: NIX_RELEASE_VERSION
+              value: "${NIX_RELEASE_VERSION}"
+            - name: NIX_RELEASE_COMMIT
+              value: "${TAG}"
+            - name: NIX_COLLAB_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: nix-connections, key: collab } }
+            - name: NIX_COLLAB_CORE_BASE_URL
+              value: http://nix-api:8080
+            - name: NIX_COLLAB_INTERNAL_SECRET
+              valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
+            - name: NIX_COLLAB_OIDC_ISSUERS
+              value: "${OIDC_ISSUER},${PUBLIC_ORIGIN}|http://nix-api:8080/public/v1/auth/jwks"
+            - name: NIX_COLLAB_OIDC_AUDIENCE
+              value: "${OIDC_CLIENT_ID},nix"
+            - name: NIX_COLLAB_REAUTH_SECONDS
+              value: "60"
+            - name: NIX_COLLAB_MAX_RESIDENT_MB
+              value: "256"
+            - name: NIX_COLLAB_MAX_DOCS
+              value: "200"
+            - name: TMPDIR
+              value: /tmp
+            - name: NIX_COMPANION_DATA_DIR
+              value: /var/lib/nix-companion
+            - name: NIX_COMPANION_INTERNAL_SECRET
+              valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
+            - name: NIX_COMPANION_API_URL
+              value: http://nix-api:8080
+            - name: NIX_SITES_API_URL
+              value: http://nix-api:8080
+            - name: NIX_SITES_COLLAB_URL
+              value: http://nix-node:8100
+            - name: NIX_SITES_INTERNAL_SECRET
+              valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
+            - name: NIX_OBJECT_STORE_ENDPOINT
+              valueFrom: { secretKeyRef: { name: nix-object-store, key: endpoint } }
+            - name: NIX_OBJECT_STORE_PUBLIC_ORIGIN
+              valueFrom: { secretKeyRef: { name: nix-object-store, key: public-origin } }
+            - name: NIX_SITES_OBJECT_ORIGINS
+              value: $(NIX_OBJECT_STORE_ENDPOINT),$(NIX_OBJECT_STORE_PUBLIC_ORIGIN)
+            - name: NIX_SITES_WORKER_ADDRESS
+              value: ":8301"
+            - name: NIX_SITES_WORKER_ID
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: NIX_SITES_CONCURRENCY
+              value: "1"
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8100 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8100 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 150m, memory: 448Mi }
+            # Above NIX_COLLAB_MAX_RESIDENT_MB with headroom for the pool, the companion and the
+            # sites worker.
+            limits: { memory: 1536Mi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: companion, mountPath: /var/lib/nix-companion }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
+        - { name: companion, emptyDir: { sizeLimit: 256Mi } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: node-egress, namespace: nix }
+spec:
+  podSelector: { matchLabels: { app: nix-node } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: nix-api } } }]
+      ports: [{ protocol: TCP, port: 8080 }]
+    - to: [{ podSelector: { matchLabels: { app: postgres } } }]
+      ports: [{ protocol: TCP, port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: nix-versitygw } } }]
+      ports: [{ protocol: TCP, port: 7070 }]
+    - to: [{ podSelector: { matchLabels: { app: nix-zitadel } } }]
+      ports: [{ protocol: TCP, port: 8080 }]
+    - ports: [{ protocol: TCP, port: 443 }, { protocol: TCP, port: 80 }]
+    - ports: [{ protocol: UDP, port: 53 }]

@@ -394,6 +394,6 @@ say "running migrations"
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-collab-migrate
 say "starting Nix $version"
 "${compose[@]}" up -d
-"${compose[@]}" up -d --wait --wait-timeout 300 nix-api nix-collab nix-web
+"${compose[@]}" up -d --wait --wait-timeout 300 nix-api nix-node nix-web
 finish "$(env_get NIX_ADMIN_PASSWORD)"
 echo "Logs:    ${compose[*]} logs -f"

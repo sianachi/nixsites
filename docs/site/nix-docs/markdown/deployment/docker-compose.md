@@ -13,9 +13,7 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | postgres | PostgreSQL 16 with pgvector: all durable state and search |
 | nix-versitygw | S3-compatible storage for file bytes |
 | nix-api | Core: API, permissions, sign-in and search |
-| nix-collab | Collaboration: live editing, history, import and export assembly |
-| nix-companion | The pet companion runtime (codex app-server) behind the internal API |
-| nix-sites-worker | Builds published websites (sites profile) |
+| nix-node | One Node process: collaboration (live editing, history, import and export assembly), the pet companion runtime (codex app-server) and, when `NIX_SITES_DOMAIN` is set, the sites build worker |
 | nix-sites-serve | Serves published websites to anonymous readers (sites profile) |
 | nix-web | The web app, served by Caddy, which also routes the API, collaboration and storage |
 | cloudflared | An optional tunnel connector for public ingress |
@@ -39,7 +37,7 @@ Two Compose profiles keep optional services out of a normal `up`:
 | Profile | Services | How it is used |
 | --- | --- | --- |
 | maintenance | nix-storage-init, nix-collab-migrate | Run as one-shot jobs during a release |
-| sites | nix-sites-worker, nix-sites-serve | Set COMPOSE\_PROFILES=sites and NIX\_SITES\_DOMAIN to publish websites |
+| sites | nix-sites-serve | Set COMPOSE\_PROFILES=sites and NIX\_SITES\_DOMAIN to publish websites |
 
 To enable Sites, set the two variables above, then point a wildcard hostname for `*.<sites-domain>` at the web container with the `Host` header left as sent. Caddy routes one-label hostnames under the sites domain to `nix-sites-serve`. `nix-storage-init` creates the sites bucket. See [Sites](nix://item/01a130b0-106e-79a7-868c-435fae417b52) and [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 

@@ -27,4 +27,4 @@ scripts/fetch-embedding-model.sh   # pet retrieval's local model; full-text only
 deploy/seed/zitadel-configure.sh
 deploy/seed/seed.sh   # second pass: the schema exists now, seeds tenants + identity_provider
 
-echo "dev-stack-up: start Core (scripts/dev-api.sh), Collaboration (scripts/dev-collab.sh), the Go worker (scripts/dev-worker.sh), the sites worker and server (scripts/dev-sites-worker.sh, scripts/dev-sites-serve.sh), and web (pnpm --filter @nix/web dev)"
+echo "dev-stack-up: start Core (scripts/dev-api.sh), the Node host with collaboration, the pet companion and the sites worker (scripts/dev-node.sh), the sites server (scripts/dev-sites-serve.sh), and web (pnpm --filter @nix/web dev)"

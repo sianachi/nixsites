@@ -64,5 +64,5 @@ spec:
     - from:
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [nix-api, nix-collab, nix-web, nix-worker, nix-sites-worker, nix-sites-serve, nix-storage-init] }
+              - { key: app, operator: In, values: [nix-api, nix-node, nix-web, nix-sites-serve, nix-storage-init] }
       ports: [{ protocol: TCP, port: 7070 }]

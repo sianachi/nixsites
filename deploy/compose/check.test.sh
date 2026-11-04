@@ -37,13 +37,14 @@ assert 'nix-indexer' not in s and 'nix-opensearch' not in s
 assert 'nix-opensearch-data' not in c['volumes']
 assert not any('OpenSearch' in key for key in s['nix-api']['environment'])
 assert s['nix-api']['image']=='ghcr.io/sianachi/nix/api:replace-with-commit-sha'
-assert s['nix-companion']['image']=='ghcr.io/sianachi/nix/worker:replace-with-commit-sha'
+assert s['nix-node']['image']=='ghcr.io/sianachi/nix/collab:replace-with-commit-sha'
+assert {'nix-collab', 'nix-companion', 'nix-sites-worker'}.isdisjoint(s)
 assert c['volumes']['nix-versity-data']['name']=='nix-versity-data'
 assert c['volumes']['nix-caddy-data']['name']=='nix-caddy-data'
 assert s['nix-web']['environment']['NIX_OBJECT_STORE_BUCKET']=='nix-worker-jobs'
-assert 'NIX_COLLAB_MIGRATOR_CONNECTION_STRING' not in s['nix-collab']['environment']
+assert 'NIX_COLLAB_MIGRATOR_CONNECTION_STRING' not in s['nix-node']['environment']
 assert s['nix-collab-migrate']['environment']['NIX_COLLAB_MIGRATOR_CONNECTION_STRING']
-assert s['nix-api']['environment']['Nix__Pets__WorkerUrl'] == 'http://nix-companion:8301'
+assert s['nix-api']['environment']['Nix__Pets__WorkerUrl'] == 'http://nix-node:8302'
 assert s['nix-api']['environment']['Nix__Push__VapidPublicKey'] == 'replace-me-public-key'
 assert 'NIX_PUSH_VAPID_PRIVATE_KEY' not in s['nix-api']['environment']
 assert s['nix-api']['environment']['Nix__Push__VapidPrivateKey'] == 'replace-me'
@@ -52,9 +53,10 @@ assert 'nix-calendar-worker' not in s
 # The api image is chiseled: it holds only /usr/bin/dotnet (no shell, wget, curl or /dev/tcp).
 api_check = s['nix-api'].get('healthcheck', {}).get('test', [])
 assert not api_check or (api_check[0] == 'CMD' and api_check[1] not in ('wget', 'curl', 'sh', 'bash')), api_check
-assert s['nix-companion']['environment']['NIX_COMPANION_DATA_DIR'] == '/var/lib/nix-worker/companion'
-assert any(v.get('source') == 'nix-companion-data' for v in s['nix-companion']['volumes'])
-assert not s['nix-companion'].get('ports')
+assert s['nix-node']['environment']['NIX_COMPANION_DATA_DIR'] == '/var/lib/nix-companion'
+assert any(v.get('source') == 'nix-companion-data' for v in s['nix-node']['volumes'])
+assert not s['nix-node'].get('ports')
+assert s['nix-node']['environment']['NIX_NODE_ROLES'] == 'collab,companion'
 assert 'rabbitmq' not in s
 assert {'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker'}.isdisjoint(s)
 assert not any('codex' in name for name in s)
@@ -64,8 +66,7 @@ assert retired_observability.isdisjoint(s)
 assert {'docker-logs', 'observability', 'grafana-access'}.isdisjoint(c['networks'])
 assert {'nix-loki-data', 'nix-alloy-data', 'nix-grafana-data'}.isdisjoint(c['volumes'])
 assert s['nix-api']['environment']['Logging__Console__FormatterName'] == 'json'
-for service in ['nix-companion']:
- assert s[service]['healthcheck']['test'] == ['CMD', '/nix-worker', '--healthcheck']
+assert s['nix-node']['healthcheck']['test'][:2] == ['CMD', 'node']
 assert s['nix-web']['healthcheck']['test'][0] == 'CMD'
 assert not any(service.get('logging', {}).get('driver') == 'none' for service in s.values())
 from pathlib import Path
@@ -177,7 +178,7 @@ import sys,os,json
 args=sys.argv[1:]
 with open(os.environ['DOCKER_TEST_LOG'],'a') as f: f.write(' '.join(args)+'\n')
 if args[0]=='ps':
- for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana', 'alloy', 'loki', 'docker-socket-proxy', 'rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker']:
+ for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana', 'alloy', 'loki', 'docker-socket-proxy', 'rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker', 'nix-collab', 'nix-companion', 'nix-sites-worker']:
   if 'label=com.docker.compose.service='+service in args and os.environ.get('RETIRED_CONTAINERS'):
    print('retired-'+service)
 elif 'config' in args and '--format' in args:
@@ -186,9 +187,9 @@ elif 'config' in args and '--format' in args:
  c['services']['nix-api']['environment']['Nix__Sites__Domain']=os.environ.get('SITES_DOMAIN','')
  print(json.dumps(c))
 elif args[-2:]==['config','--services']:
- print('nix-api\nnix-sites-worker\nnix-sites-serve' if os.environ.get('SITES_PROFILE') else 'nix-mcp\nnix-api' if os.environ.get('MCP_PROFILE') else 'nix-api')
+ print('nix-api\nnix-sites-serve' if os.environ.get('SITES_PROFILE') else 'nix-mcp\nnix-api' if os.environ.get('MCP_PROFILE') else 'nix-api')
 elif 'config' in args and '--images' in args:
- print('localhost/nix/api:test\nghcr.io/sianachi/nix/worker:test')
+ print('localhost/nix/api:test\nghcr.io/sianachi/nix/collab:test')
 elif 'run' in args and args[-1]=='nix-migrate' and os.environ.get('FAIL_MIGRATION'):
  sys.exit(1)
 PYCODE
@@ -207,7 +208,7 @@ for reference in fixture-backup "$fixture/missing-backup"; do
 done
 if [ -s "$DOCKER_TEST_LOG" ]; then echo 'Rollout touched Docker without a verified backup' >&2; exit 1; fi
 # The host has no Node: deploy.sh reaches nixctl and smoke only through the release-tools image.
-if rg -q '\bnode\b' deploy/compose/deploy.sh; then echo 'deploy.sh still calls node' >&2; exit 1; fi
+if rg -q '(^|[^-[:alnum:]_])node\b' deploy/compose/deploy.sh; then echo 'deploy.sh still calls node' >&2; exit 1; fi
 mkdir "$fixture/nodeless"
 printf '#!/bin/sh\necho "node called on the host" >&2\nexit 97\n' > "$fixture/nodeless/node"
 chmod +x "$fixture/nodeless/node"
@@ -218,8 +219,8 @@ calls=open(sys.argv[1]).read().splitlines()
 stop=next(i for i,s in enumerate(calls) if ' stop nix-web ' in s)
 migrate=next(i for i,s in enumerate(calls) if s.endswith('run --rm --no-deps nix-migrate'))
 doc=next(i for i,s in enumerate(calls) if s.endswith('run --rm --no-deps nix-collab-migrate'))
-start=next(i for i,s in enumerate(calls) if ' up ' in s and s.endswith('nix-api nix-collab'))
-pull=next(i for i,s in enumerate(calls) if s=='pull --quiet ghcr.io/sianachi/nix/worker:test')
+start=next(i for i,s in enumerate(calls) if ' up ' in s and s.endswith('nix-api nix-node'))
+pull=next(i for i,s in enumerate(calls) if s=='pull --quiet ghcr.io/sianachi/nix/collab:test')
 assert not any(s.startswith('pull ') and 'localhost/' in s for s in calls)
 assert pull < stop < migrate < doc < start
 assert not any('--remove-orphans' in s or ' down ' in s for s in calls)
@@ -238,14 +239,14 @@ for service in ['nix-speech-worker', 'nix-indexer', 'nix-opensearch', 'grafana',
  assert any('label=com.docker.compose.project=nix' in call and 'label=com.docker.compose.service='+service in call for call in calls)
 assert len([call for call in calls if call.startswith('stop retired-')]) == 7
 # Containers of the retired broker and workers are removed (never volumes) after the writers stop.
-for service in ['rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker']:
+for service in ['rabbitmq', 'nix-import-worker', 'nix-export-worker', 'nix-plugin-worker', 'nix-calendar-worker', 'nix-notify-worker', 'nix-collab', 'nix-companion', 'nix-sites-worker']:
  assert stop < calls.index('rm -f retired-'+service) < migrate, service
 assert not any('volume' in call or ' -v' in call for call in calls if call.startswith('rm '))
 assert not any(' stop ' in call and 'nix-indexer' in call for call in calls)
 assert not any(' up ' in call and 'nix-opensearch' in call for call in calls)
 assert all(':/config/nixctl/config.json:ro' in calls[i] for i in smokes)
 # Sites are not enabled in the example env, so the rollout leaves them alone.
-assert not any(s in call.split() for call in calls for s in ('nix-sites-worker', 'nix-sites-serve', 'nix-mcp'))
+assert not any(s in call.split() for call in calls for s in ('nix-sites-serve', 'nix-mcp'))
 PYCODE
 # Enabled by profile or by domain, sites are pre-pulled, stopped with the writers and rolled with --wait.
 for enable in SITES_PROFILE=1 SITES_DOMAIN=sites.example.test; do
@@ -257,7 +258,7 @@ calls=open(sys.argv[1]).read().splitlines()
 pull=next(s for s in calls if '--images' in s)
 stop=next(s for s in calls if ' stop nix-web ' in s)
 roll=next(s for s in calls if ' up ' in s and s.endswith(' nix-web cloudflared'))
-for service in ['nix-sites-worker', 'nix-sites-serve']:
+for service in ['nix-sites-serve']:
  assert service in pull.split() and service in stop.split() and service in roll.split(), service
 assert '--wait' in roll.split()
 PYCODE
@@ -272,7 +273,7 @@ pull=next(s for s in calls if '--images' in s)
 stop=next(s for s in calls if ' stop nix-web ' in s)
 roll=next(s for s in calls if ' up ' in s and s.endswith(' nix-web cloudflared'))
 assert all('nix-mcp' in s.split() for s in (pull, stop, roll))
-assert not any('nix-sites-worker' in call.split() for call in calls)
+assert not any('nix-sites-serve' in call.split() for call in calls)
 PYCODE
 # The drift preview must run before the first `up` can recreate a service.
 python3 - "$DOCKER_TEST_LOG" <<'PYCODE'
@@ -286,7 +287,7 @@ PYCODE
 if FAIL_MIGRATION=1 PATH="$fixture/nodeless:$PATH" bash deploy/compose/deploy.sh > "$fixture/deploy-failure" 2>&1; then
  echo 'Rollout accepted a failed migration' >&2; exit 1
 fi
-if rg -q 'up .*nix-api nix-collab' "$DOCKER_TEST_LOG"; then
+if rg -q 'up .*nix-api nix-node' "$DOCKER_TEST_LOG"; then
  echo 'Rollout restarted writers after a failed migration' >&2; exit 1
 fi
 # Identity bootstrap is opt-in, runs after the migrator, and is validated before writers stop.

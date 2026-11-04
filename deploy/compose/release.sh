@@ -46,8 +46,7 @@ export NIX_DEPLOY_ENV NIXCTL_PROFILE NIX_SMOKE_WORKSPACE NIX_BACKUP_ROOT NIX_IMA
 export NIX_IMAGE_TAG="$sha" NIX_WEB_IMAGE_TAG="$sha"
 compose=(docker compose -p nix --env-file "$NIX_DEPLOY_ENV" -f "$root/deploy/compose.prod.yml")
 
-# Resolve the release image matrix exactly as deploy.sh will (including a reviewed
-# NIX_WORKER_IMAGE_TAG override in the env file) and confirm it exists before anything else.
+# Resolve the release image matrix exactly as deploy.sh will and confirm it exists before anything else.
 images=()
 while IFS= read -r image; do
   if [[ "$image" == "$NIX_IMAGE_REGISTRY/"* ]]; then images+=("$image"); fi

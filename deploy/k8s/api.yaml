@@ -69,7 +69,7 @@ spec:
             - name: Nix__InternalSecret
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
             - name: Nix__Collaboration__BaseUrl
-              value: http://nix-collab:8100
+              value: http://nix-node:8100
             # Core only signs: a URL takes its host from the public origin and its path from this
             # endpoint, and Core refuses a plain-HTTP endpoint off loopback. The in-cluster endpoint
             # stays for the workers and sites serve, which open the store themselves.

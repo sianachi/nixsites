@@ -1,4 +1,4 @@
-# Rendered and launched once per release after Core, Collab and Go workers are ready.
+# Rendered and launched once per release after Core and the node host are ready.
 apiVersion: v1
 kind: ServiceAccount
 metadata: { name: nix-template-boot, namespace: nix }
@@ -44,7 +44,7 @@ spec:
             - name: NIX_TEMPLATE_BOOT_OBJECT_ORIGINS
               value: "$(NIX_OBJECT_STORE_ENDPOINT),$(NIX_OBJECT_STORE_PUBLIC_ORIGIN)"
             - name: NIX_TEMPLATE_BOOT_HEALTH_URLS
-              value: http://nix-api:8080/healthz,http://nix-collab:8100/healthz
+              value: http://nix-api:8080/healthz,http://nix-node:8100/healthz
             - { name: NIX_TEMPLATE_BOOT_HEALTH_TIMEOUT_MS, value: "180000" }
           volumeMounts:
             - { name: script, mountPath: /sync, readOnly: true }

@@ -34,7 +34,7 @@ spec:
             - name: NIX_API_URL
               value: http://nix-api:8080
             - name: NIX_COLLAB_URL
-              value: http://nix-collab:8100
+              value: http://nix-node:8100
           livenessProbe:
             httpGet: { path: /healthz, port: 8500 }
             periodSeconds: 10

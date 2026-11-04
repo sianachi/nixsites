@@ -11,7 +11,6 @@ for target in api migrator; do
   docker build --target "$target" -f "$context/deploy/docker/backend.Dockerfile" -t "localhost/nix/$target:$sha" "$context"
 done
 docker build --target collab -f "$context/deploy/docker/node.Dockerfile" -t "localhost/nix/collab:$sha" "$context"
-docker build -f "$context/deploy/docker/go-workers.Dockerfile" -t "localhost/nix/worker:$sha" "$context"
 docker build --target web -f "$context/deploy/docker/web.Dockerfile" -t "localhost/nix/web:$sha" "$context"
 docker build --target release-tools -f "$context/deploy/docker/release-tools.Dockerfile" -t "localhost/nix/release-tools:$sha" "$context"
 docker build --target sites -f "$context/deploy/docker/sites.Dockerfile" -t "localhost/nix/sites:$sha" "$context"

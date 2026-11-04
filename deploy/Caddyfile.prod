@@ -46,7 +46,7 @@
 	}
 
 	handle_path /collab/* {
-		reverse_proxy nix-collab:8100
+		reverse_proxy nix-node:8100
 	}
 
 	# The web app's per-install switches and the release this web image runs (packages/web-foundation/src/lib/web-config.ts).

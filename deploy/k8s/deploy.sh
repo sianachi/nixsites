@@ -176,13 +176,17 @@ export OBJECT_STORE_SECRET_VERSION SITES_SECRET_VERSION
 
 # Retire workloads explicitly; leave all PersistentVolumeClaims intact.
 kubectl -n nix delete deployment/nix-indexer --ignore-not-found
-# The per-role Go workers became one nix-worker Deployment (deploy/k8s/worker.yaml).
+# The per-role Go workers, then nix-collab, nix-worker and nix-sites-worker, became one nix-node
+# Deployment (deploy/k8s/node.yaml).
 kubectl -n nix delete deployment/nix-import-worker deployment/nix-export-worker deployment/nix-plugin-worker \
   deployment/nix-calendar-worker deployment/nix-notify-worker \
   service/nix-import-worker service/nix-export-worker service/nix-plugin-worker \
   service/nix-calendar-worker service/nix-notify-worker \
   networkpolicy/go-workers-egress networkpolicy/plugin-worker-egress \
-  networkpolicy/calendar-worker-egress networkpolicy/notify-worker-egress --ignore-not-found
+  networkpolicy/calendar-worker-egress networkpolicy/notify-worker-egress \
+  deployment/nix-collab deployment/nix-worker deployment/nix-sites-worker \
+  service/nix-collab service/nix-worker service/nix-sites-worker \
+  networkpolicy/worker-egress networkpolicy/sites-worker-egress --ignore-not-found
 retired_search=$(kubectl -n nix get statefulset nix-opensearch --ignore-not-found -o name)
 if [ -n "$retired_search" ]; then
   kubectl -n nix patch statefulset nix-opensearch --type=merge \
@@ -263,8 +267,7 @@ kubectl -n nix create configmap nix-caddy --from-file=Caddyfile=deploy/k8s/Caddy
 
 echo "== Workloads =="
 render deploy/k8s/api.yaml | kubectl apply -f -
-render deploy/k8s/collab.yaml | kubectl apply -f -
-render deploy/k8s/worker.yaml | kubectl apply -f -
+render deploy/k8s/node.yaml | kubectl apply -f -
 render deploy/k8s/web.yaml | kubectl apply -f -
 render deploy/k8s/sites.yaml | kubectl apply -f -
 if [ -n "$MCP_PUBLIC_URL" ]; then
@@ -274,22 +277,20 @@ else
 fi
 # The broker restarted above and the Go workers' consumers do not reconnect; an unchanged template
 # would keep the cut-off pods, so restart them the way Compose restarts its writers.
-kubectl -n nix rollout restart deployment/nix-worker deployment/nix-sites-worker
+kubectl -n nix rollout restart deployment/nix-node
 
 kubectl -n nix rollout status deployment/nix-api --timeout=180s
-kubectl -n nix rollout status deployment/nix-collab --timeout=180s
 kubectl -n nix rollout status deployment/nix-web --timeout=180s
-kubectl -n nix rollout status deployment/nix-sites-worker --timeout=180s
 kubectl -n nix rollout status deployment/nix-sites-serve --timeout=180s
 # A first install runs Zitadel's instance setup before it listens; that can take several minutes.
 kubectl -n nix rollout status deployment/nix-zitadel --timeout=900s
 
-# The worker's readiness probes the object store's public origin, which is this Ingress, and managed
+# The node host's readiness probes the object store's public origin, which is this Ingress, and managed
 # templates upload through it too: on a first install nothing answers there until it is applied.
 echo "== Ingress =="
 if [ "$NIX_INGRESS_CLOUDFLARE_ONLY" = true ]; then kubectl apply -f deploy/k8s/cloudflare-only.yaml; fi
 render deploy/k8s/ingress.yaml | kubectl apply -f -
-kubectl -n nix rollout status deployment/nix-worker --timeout=180s
+kubectl -n nix rollout status deployment/nix-node --timeout=180s
 render deploy/k8s/backup.yaml | kubectl apply -f -
 
 if [ "$NIX_TEMPLATE_BOOT_ENABLED" = true ]; then

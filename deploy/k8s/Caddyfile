@@ -63,7 +63,7 @@
 	# WebSocket upgrades proxy transparently.
 	# This also exposes service routes; Collab's internal-secret check is the boundary.
 	handle_path /collab/* {
-		reverse_proxy nix-collab:8100
+		reverse_proxy nix-node:8100
 	}
 
 	# The web app's per-install front-door switches (packages/web-foundation/src/lib/web-config.ts). Answered here,

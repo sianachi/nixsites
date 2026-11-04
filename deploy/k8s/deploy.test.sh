@@ -105,7 +105,7 @@ if [[ " $* " == *" apply -f - "* ]]; then
   if [[ "$payload" == *"name: nix-template-boot-render-order"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_TEMPLATE_SYNC"
   fi
-  if [[ "$payload" == *"kind: Deployment"* && "$payload" == *"name: nix-worker, namespace"* ]]; then
+  if [[ "$payload" == *"kind: Deployment"* && "$payload" == *"name: nix-node, namespace"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_WORKERS"
   fi
   if [[ "$payload" == *"name: nix-sites-serve"* && "$payload" == *"kind: Deployment"* ]]; then
@@ -247,14 +247,14 @@ if grep -Fq 'NIX_TEMPLATE_BOOT_MEDIA_URL' "$RENDERED_TEMPLATE_SYNC"; then
   echo 'Template sync still uses the retired Media URL.' >&2
   exit 1
 fi
-# The worker Deployment is the companion host: no broker, storage or role configuration.
+# The node Deployment hosts collab, the companion and the sites worker: no broker or worker-role configuration.
 if grep -Eq 'NIX_RABBITMQ_URL|NIX_WORKER_ROLES|NIX_WORKER_OBJECT_ORIGINS' "$RENDERED_WORKERS"; then
   echo 'The companion host still carries worker-role configuration.' >&2
   exit 1
 fi
 grep -Fq 'name: NIX_COMPANION_DATA_DIR' "$RENDERED_WORKERS"
 grep -Fq 'delete:-n nix delete deployment/nix-import-worker' "$KUBECTL_LOG"
-grep -Fq 'rollout:-n nix rollout status deployment/nix-worker ' "$KUBECTL_LOG"
+grep -Fq 'rollout:-n nix rollout status deployment/nix-node ' "$KUBECTL_LOG"
 if grep -Eq 'rollout:.*nix-(import|export|plugin|calendar|notify)-worker' "$KUBECTL_LOG"; then
   echo 'Deployment still waits for retired per-role workers.' >&2
   exit 1
@@ -273,9 +273,9 @@ grep -Fq 'key: read-access-key' "$RENDERED_SITES"
 grep -Fq 'value: "nix.example.test"' "$RENDERED_SITES"
 grep -Fq 'nix.io/sites-secret-version: "24680"' "$RENDERED_SITES"
 grep -Fq 'command: ["node", "--experimental-strip-types", "src/serve/index.ts"]' "$RENDERED_SITES"
-test "$(grep -Fc 'readOnlyRootFilesystem: true' "$RENDERED_SITES")" -eq 2
+test "$(grep -Fc 'readOnlyRootFilesystem: true' "$RENDERED_SITES")" -eq 1
 test "$(grep -Fc 'httpHeaders: [{ name: Host, value: localhost }]' "$RENDERED_SITES")" -eq 2
-serve_section="$(sed -n '/name: nix-sites-serve, namespace/,/name: sites-worker-egress/p' "$RENDERED_SITES")"
+serve_section="$(sed -n '/name: nix-sites-serve, namespace/,$p' "$RENDERED_SITES")"
 if printf '%s\n' "$serve_section" | grep -Eq 'nix-internal|nix-connections|key: access-key|key: secret-key'; then
   echo 'The anonymous sites server received a Core, database, broker or write credential.' >&2
   exit 1
@@ -296,7 +296,7 @@ if grep -Eq '^ *- host:|hosts:' <<<"$custom_ingress"; then
   echo 'The custom-hostname Ingress must not name a host.' >&2
   exit 1
 fi
-assert_before "apply-stdin:nix-sites-worker,nix-sites-worker" "rollout:-n nix rollout status deployment/nix-sites-serve"
+assert_before "apply-stdin:nix-sites-serve,nix-sites-serve,sites-serve-egress" "rollout:-n nix rollout status deployment/nix-sites-serve"
 # Every first-party image the manifests pull is one CI publishes (ci-images.yml plan lines).
 published="$(sed -nE 's/^ *plan ([a-z-]+) deploy\/docker\/.*/\1/p' "$repo_root/.github/workflows/ci-images.yml" | sort -u)"
 pulled="$(sed -nE 's/^ *image: registry\.example\.test\/([^:]+):render-order$/\1/p' "$RENDERED_ALL" | sort -u)"
@@ -459,13 +459,13 @@ if awk 'BEGIN { RS = "\n---\n" } /runAsNonRoot: true/ && !/runAsUser:/ { found =
   echo 'A runAsNonRoot pod has no numeric runAsUser.' >&2
   exit 1
 fi
-# Collab reads NIX_COLLAB_PORT, which the nix-collab Service's link variables would overwrite.
-awk 'BEGIN { RS = "\n---\n" } /name: nix-collab, namespace/ && /kind: Deployment/ && /enableServiceLinks: false/ { found = 1 } END { exit !found }' "$RENDERED_ALL"
+# Collab reads NIX_COLLAB_PORT, which the nix-node Service's link variables would overwrite.
+awk 'BEGIN { RS = "\n---\n" } /name: nix-node, namespace/ && /kind: Deployment/ && /enableServiceLinks: false/ { found = 1 } END { exit !found }' "$RENDERED_ALL"
 # The worker's readiness needs the public origin, so the Ingress precedes its rollout wait.
 : > "$KUBECTL_LOG"
 run_deploy
-assert_before "apply-file:deploy/k8s/cloudflare-only.yaml" "rollout:-n nix rollout status deployment/nix-worker"
-assert_before "rollout:-n nix rollout status deployment/nix-worker" "apply-stdin:nix-template-boot,nix-template-boot-render-order"
+assert_before "apply-file:deploy/k8s/cloudflare-only.yaml" "rollout:-n nix rollout status deployment/nix-node"
+assert_before "rollout:-n nix rollout status deployment/nix-node" "apply-stdin:nix-template-boot,nix-template-boot-render-order"
 # auth.$DOMAIN must not fall to the sites wildcard: it sits in its own lowest-priority Ingress.
 awk 'BEGIN { RS = "\n---\n" } /name: nix-sites\n/ && /host: "\*\.nix\.example\.test"/ && /router.priority: "1"/ && !/host: "auth\./ { found = 1 } END { exit !found }' "$RENDERED_INGRESS"
 awk 'BEGIN { RS = "\n---\n" } /name: nix\n/ && /host: "auth\.nix\.example\.test"/ && !/host: "\*\./ { found = 1 } END { exit !found }' "$RENDERED_INGRESS"
@@ -675,7 +675,7 @@ grep -Fq 'router.middlewares: ""' "$RENDERED_INGRESS"
 grep -Fq 'value: "X-Forwarded-For"' "$RENDERED_WEB"
 grep -Fq 'ZITADEL_EXTERNALSECURE: "false"' "$RENDERED_ZITADEL"
 grep -Fq '"--tlsMode", "external"' "$RENDERED_ZITADEL"
-assert_before "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found" "kubectl:-n nix rollout restart deployment/nix-worker deployment/nix-sites-worker"
+assert_before "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found" "kubectl:-n nix rollout restart deployment/nix-node"
 if grep -Fq 'cloudflare-only.yaml' "$KUBECTL_LOG"; then
   echo 'Deployment applied the Cloudflare origin lock on a generic cluster.' >&2
   exit 1

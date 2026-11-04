@@ -101,25 +101,8 @@ write(
   ].join('\n    '),
 );
 
-node('Collab', 'apps/collab', 'src/index.ts', 'dev-collab.sh');
-node('Sites worker', 'apps/sites', 'src/worker/index.ts', 'dev-sites-worker.sh');
+node('Node host', 'apps/node-host', 'src/index.ts', 'dev-node.sh');
 node('Sites serve', 'apps/sites', 'src/serve/index.ts', 'dev-sites-serve.sh');
-
-// Go worker: same shape as the existing Go configs; needs the Go plugin (GoLand, or Rider with it).
-write(
-  'Go worker',
-  'GoApplicationRunConfiguration',
-  'Go Application',
-  '',
-  [
-    `<module name="Nix" />`,
-    `<working_directory value="$PROJECT_DIR$/apps/go-workers" />`,
-    envs(captureEnv('dev-worker.sh')),
-    `<kind value="PACKAGE" />`,
-    `<package value="github.com/sianachi/Nix/apps/go-workers/cmd/nix-worker" />`,
-    `<directory value="$PROJECT_DIR$/apps/go-workers/cmd/nix-worker" />`,
-  ].join('\n    '),
-);
 
 npm('Web', 'apps/web/package.json', 'dev');
 write(
@@ -151,9 +134,7 @@ compound('Nix prepare', [
 ]);
 compound('Nix all services', [
   ['DotNetProject', 'Core API'],
-  ['NodeJSConfigurationType', 'Collab'],
-  ['GoApplicationRunConfiguration', 'Go worker'],
-  ['NodeJSConfigurationType', 'Sites worker'],
+  ['NodeJSConfigurationType', 'Node host'],
   ['NodeJSConfigurationType', 'Sites serve'],
   ['js.build_tools.npm', 'Web'],
 ]);

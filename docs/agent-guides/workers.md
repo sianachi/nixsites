@@ -1,6 +1,11 @@
 # Go worker guide
 
-Read for `apps/go-workers/` changes.
+Read for `apps/go-workers/`, `apps/companion/`, `apps/node-host/` and `apps/sites/` worker changes.
+
+`apps/node-host` runs collaboration, the pet companion and the sites worker in one process
+(`NIX_NODE_ROLES`, default `collab,companion,sites-worker`); each role keeps its own port
+(8100, 8302, 8301) and environment. Compose and Kubernetes run it as `nix-node` from the `collab`
+image. The Go binary below is no longer deployed and is removed in a later change.
 
 Keep `cmd/*/main.go` wiring-only. Workers use `internal/workerapi`, never database
 credentials or backend implementation concepts. They transfer bytes only through

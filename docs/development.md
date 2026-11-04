@@ -51,7 +51,10 @@ node scripts/generate-api-docs.mjs
 Migrations: `dotnet run --project backend/src/Nix.Migrator` with
 `NIX_MIGRATOR_CONNECTION_STRING` set.
 
-**Go workers** (from `apps/go-workers`)
+**Node host** (collaboration, pet companion, sites worker): `scripts/dev-node.sh`; tests with
+`pnpm --filter @nix/node-host test`.
+
+**Go workers** (from `apps/go-workers`, retired next)
 
 ```sh
 go vet ./...

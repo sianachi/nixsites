@@ -47,7 +47,7 @@ dc run --rm --no-deps nix-migrate
 dc run --rm --no-deps nix-template-presets
 dc run --rm --no-deps nix-api-init
 dc --profile maintenance run --rm --no-deps nix-collab-migrate
-dc up -d --no-deps --wait nix-api nix-collab
+dc up -d --no-deps --wait nix-api nix-node
 dc up -d --wait
 ```
 
@@ -81,3 +81,6 @@ Keep the previous release's checkout and backup until the new version has been c
 
 - title: Upgrades
 
+## Upgrading to the single Node service
+
+Collaboration, the pet companion and the sites worker now run as one `nix-node` service. The old `nix-collab`, `nix-companion` and `nix-sites-worker` services are removed by `deploy.sh` (their containers only; the `nix-companion-data` volume carries over and `nix-node` mounts it). On Kubernetes, `deploy.sh` deletes the `nix-collab`, `nix-worker` and `nix-sites-worker` Deployments and Services once and applies `nix-node`. The `worker` image is no longer built or pulled, and `NIX_WORKER_IMAGE_TAG` is no longer read. The companion is a Node service now: `NIX_COMPANION_IDLE_SECONDS` (default 300) sets how long an idle account's provider process is kept. Core's `Nix:Collaboration:BaseUrl` and `Nix:Pets:WorkerUrl` only change host (`nix-node`, ports 8100 and 8302); the manifests set them for you.

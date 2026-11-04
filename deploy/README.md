@@ -108,8 +108,8 @@ Core, never query application tables directly.
 ### Current roles and retired services
 
 Every Go job role (import, export, plugin-events, calendar, notify) moved into Core as
-background jobs; plugins were removed. The `worker` image only hosts the pet companion now
-(`nix-companion` in Compose, the `nix-worker` Deployment in Kubernetes).
+background jobs; plugins were removed. The `collab` image now runs one Node process (`nix-node` in Compose and Kubernetes) that hosts
+collaboration, the pet companion and the sites worker.
 Core searches PostgreSQL directly; OpenSearch and its indexing role are retired.
 
 Speech, browser recording, transcription APIs, dictation and voice UI are retired. There is no
@@ -190,10 +190,8 @@ are ignored. Every confirmed attempt appends one tab-separated line to the ledge
 SHA, backup directory, result (`succeeded`, `failed:backup`, `failed:offsite` or `failed:deploy`) and
 `operator=$USER`.
 
-Normally leave `NIX_WORKER_IMAGE_TAG` unset. For a reviewed worker-only hotfix it may select
-another immutable worker image in the secrets file while other services take the release SHA;
-the printed plan shows the resulting matrix and `release.sh` checks it like the others. The
-images are pulled before any writer stops.
+All images take the release SHA; the printed plan shows the matrix and `release.sh` checks it.
+The images are pulled before any writer stops.
 
 To run an unpublished tree instead, build it on the host with `bash deploy/compose/build.sh HEAD`
 and set `NIX_IMAGE_REGISTRY=localhost/nix` in `release.conf`; the release then checks those local

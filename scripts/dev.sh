@@ -2,7 +2,8 @@
 # Run the whole local dev environment from one terminal.
 #
 # Brings up infrastructure, rebuilds the workspace packages, then starts Core,
-# Collaboration, the Go worker, the sites worker and server, and the web dev server side by side.
+# the Node host (collaboration, pet companion, sites worker), the sites server and the web dev
+# server side by side.
 # Output from each process is prefixed with its name and also written to .local/logs/<name>.log.
 # Ctrl-C stops everything; if any one process exits, the rest are stopped too so a
 # half-running stack is never left behind.
@@ -12,14 +13,14 @@
 #   scripts/dev.sh --skip-stack       # infrastructure is already up
 #   scripts/dev.sh api web            # only the named processes
 #
-# Processes: api, collab, worker, sites, sites-serve, web. Port overrides (NIX_API_PORT and
+# Processes: api, node, sites-serve, web. Port overrides (NIX_API_PORT and
 # friends) are read from the calling shell, exactly as the individual dev-*.sh scripts do.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-all_services="api collab worker sites sites-serve web"
+all_services="api node sites-serve web"
 skip_stack=false
 services=""
 
@@ -30,7 +31,7 @@ for arg in "$@"; do
       sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
-    api|collab|worker|sites|sites-serve|web) services="$services $arg" ;;
+    api|node|sites-serve|web) services="$services $arg" ;;
     *)
       echo "dev: unknown argument '$arg' (expected --skip-stack or one of: $all_services)" >&2
       exit 2
@@ -42,9 +43,7 @@ services="${services:-$all_services}"
 service_command() {
   case "$1" in
     api) echo "bash scripts/dev-api.sh" ;;
-    collab) echo "bash scripts/dev-collab.sh" ;;
-    worker) echo "bash scripts/dev-worker.sh" ;;
-    sites) echo "bash scripts/dev-sites-worker.sh" ;;
+    node) echo "bash scripts/dev-node.sh" ;;
     sites-serve) echo "bash scripts/dev-sites-serve.sh" ;;
     web) echo "pnpm --filter @nix/web dev" ;;
   esac
@@ -53,9 +52,7 @@ service_command() {
 service_color() {
   case "$1" in
     api) echo 34 ;;
-    collab) echo 35 ;;
-    worker) echo 33 ;;
-    sites) echo 32 ;;
+    node) echo 35 ;;
     sites-serve) echo 31 ;;
     web) echo 36 ;;
   esac
@@ -65,10 +62,10 @@ if [ "$skip_stack" = false ]; then
   bash scripts/dev-stack-up.sh
 fi
 
-# The web app, collab and the sites worker import the workspace packages from their built dist/
+# The web app and the node host import the workspace packages from their built dist/
 # output, so a stale build after a pull fails at runtime with a missing export.
 case " $services " in
-  *" web "*|*" collab "*|*" sites "*) pnpm run prepare ;;
+  *" web "*|*" node "*) pnpm run prepare ;;
 esac
 
 log_dir="$repo_root/.local/logs"

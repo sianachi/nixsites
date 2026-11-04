@@ -137,8 +137,8 @@ jobs:
           fi
 
       # The pet's capability catalog is generated from packages/structure-spec's own tables into
-      # a committed src/generated/catalog.json plus the committed outputs the Go worker embeds
-      # (two plain text catalogs and three typed-tool JSON files). Same discipline as the
+      # a committed src/generated/catalog.json (the companion builds its text catalog and typed tools from
+      # @nix/structure-spec at run time). Same discipline as the
       # generated API client
       # above: regenerate, then fail on any drift so a hand-edit or a stale commit is caught here
       # rather than shipping a catalog that disagrees with the validator and executor it is
@@ -146,7 +146,7 @@ jobs:
       - name: Structure catalog is current
         run: |
           pnpm --filter @nix/structure-spec catalog
-          if [ -n "$(git status --porcelain -- packages/structure-spec/src/generated apps/go-workers/internal/companion/catalog)" ]; then
+          if [ -n "$(git status --porcelain -- packages/structure-spec/src/generated)" ]; then
             echo "::error title=Structure catalog is stale::The generated catalog files do not match packages/structure-spec's tables. Run 'pnpm --filter @nix/structure-spec catalog' and commit the result."
             echo
             echo "The catalog files are generated from packages/structure-spec/src/catalog and"
@@ -154,13 +154,13 @@ jobs:
             echo "from the repository root:"
             echo
             echo "    pnpm --filter @nix/structure-spec catalog"
-            echo "    git add packages/structure-spec/src/generated apps/go-workers/internal/companion/catalog"
+            echo "    git add packages/structure-spec/src/generated"
             echo "    git commit"
             echo
             echo "Never hand-edit the generated files. The drift is:"
             echo
-            git status --short -- packages/structure-spec/src/generated apps/go-workers/internal/companion/catalog
-            git --no-pager diff -- packages/structure-spec/src/generated apps/go-workers/internal/companion/catalog
+            git status --short -- packages/structure-spec/src/generated
+            git --no-pager diff -- packages/structure-spec/src/generated
             exit 1
           fi
 

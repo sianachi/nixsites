@@ -4,6 +4,8 @@ packages:
   - apps/collab
   - apps/cli
   - apps/sites
+  - apps/companion
+  - apps/node-host
   - apps/mobile
 
 # Install scripts are denied by default (pnpm 10). Only the build toolchain's

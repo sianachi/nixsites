@@ -22,7 +22,7 @@ cd "$(git rev-parse --show-toplevel)"
 PLATFORM="${PLATFORM:-linux/arm64}"
 TAG="${TAG:-$(git rev-parse HEAD)}"  # full SHA, the tag CI publishes
 
-echo "Building $REGISTRY/{api,migrator,collab,worker,web,sites,release-tools}:$TAG for $PLATFORM"
+echo "Building $REGISTRY/{api,migrator,collab,web,sites,release-tools}:$TAG for $PLATFORM"
 
 docker buildx build --platform "$PLATFORM" --target api \
   -f deploy/docker/backend.Dockerfile -t "$REGISTRY/api:$TAG" --push .
@@ -32,9 +32,6 @@ docker buildx build --platform "$PLATFORM" --target migrator \
 
 docker buildx build --platform "$PLATFORM" --target collab \
   -f deploy/docker/node.Dockerfile -t "$REGISTRY/collab:$TAG" --push .
-
-docker buildx build --platform "$PLATFORM" \
-  -f deploy/docker/go-workers.Dockerfile -t "$REGISTRY/worker:$TAG" --push .
 
 docker buildx build --platform "$PLATFORM" --target web \
   -f deploy/docker/web.Dockerfile \

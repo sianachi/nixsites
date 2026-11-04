@@ -47,8 +47,8 @@ esac
 # sites. Otherwise they are left alone.
 optional_services=()
 active_services=$("${compose[@]}" config --services)
-if [ -n "$sites_domain" ] || grep -qx nix-sites-worker <<< "$active_services"; then
-  optional_services=(nix-sites-worker nix-sites-serve)
+if [ -n "$sites_domain" ] || grep -qx nix-sites-serve <<< "$active_services"; then
+  optional_services=(nix-sites-serve)
 fi
 if grep -qx nix-mcp <<< "$active_services"; then
   optional_services+=(nix-mcp)
@@ -68,7 +68,7 @@ smoke() {
 smoke --preflight
 # Fetch release images before writers stop, so the maintenance window excludes the download.
 # Host-built images (NIX_IMAGE_REGISTRY=localhost/nix) must already exist locally.
-release_services=(nix-migrate nix-api nix-collab-migrate nix-collab nix-companion nix-web ${optional_services[@]+"${optional_services[@]}"})
+release_services=(nix-migrate nix-api nix-collab-migrate nix-node nix-web ${optional_services[@]+"${optional_services[@]}"})
 while IFS= read -r image; do
   case "$image" in
     localhost/*) docker image inspect "$image" >/dev/null ;;
@@ -86,14 +86,16 @@ for service in nix-speech-worker nix-indexer nix-opensearch grafana alloy loki d
 done
 # Stop writers before the infrastructure `up`, and keep them stopped while document/schema
 # migrations run. Failure leaves writers stopped for inspection.
-"${compose[@]}" stop nix-web ${optional_services[@]+"${optional_services[@]}"} nix-companion nix-collab nix-api
+"${compose[@]}" stop nix-web ${optional_services[@]+"${optional_services[@]}"} nix-node nix-api
 "${compose[@]}" up -d --wait --wait-timeout 180 postgres nix-versitygw
 # One-time cleanup of services an earlier release ran: the RabbitMQ broker and the five worker
 # processes that now run inside Core. Containers only; volumes stay (the old nix-rabbitmq-data
 # volume can be removed by hand with `docker volume rm nix-rabbitmq-data` once nothing needs a rollback).
+# nix-collab, nix-companion and nix-sites-worker are now one nix-node service (the companion
+# data volume carries over).
 # Containers are removed by label because these services are no longer in the manifest, which
 # `docker compose rm` rejects as an unknown service.
-for service in rabbitmq nix-import-worker nix-export-worker nix-plugin-worker nix-calendar-worker nix-notify-worker; do
+for service in rabbitmq nix-import-worker nix-export-worker nix-plugin-worker nix-calendar-worker nix-notify-worker nix-collab nix-companion nix-sites-worker; do
   old=$(docker ps -aq --filter label=com.docker.compose.project=nix --filter "label=com.docker.compose.service=$service")
   if [ -n "$old" ]; then
     while IFS= read -r container; do docker rm -f "$container"; done <<< "$old"
@@ -110,7 +112,7 @@ fi
 "${compose[@]}" run --rm --no-deps nix-template-presets
 "${compose[@]}" run --rm --no-deps nix-api-init
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-collab-migrate
-"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-api nix-collab
-"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-companion ${optional_services[@]+"${optional_services[@]}"} nix-web cloudflared
+"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 nix-api nix-node
+"${compose[@]}" up -d --no-deps --wait --wait-timeout 180 ${optional_services[@]+"${optional_services[@]}"} nix-web cloudflared
 smoke
 echo 'Compose release passed import/export verification. Complete browser checks in the runbook.'
