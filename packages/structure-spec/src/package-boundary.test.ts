@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * `@nix/structure-spec` exists to be importable from anywhere - the web, `@nix/companion`, and
- * eventually nixctl and the Go worker's catalog generator - without pulling in a browser, React,
+ * eventually nixctl and the catalog generator - without pulling in a browser, React,
  * or `@nix/api-client`. `types.ts`'s header comment states that constraint, but nothing in the
  * type system enforces it: a later wave could add a dependency and nothing would fail until
  * someone noticed a cycle or a bundle that grew. This test is that check, reading the package's

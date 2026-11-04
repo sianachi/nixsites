@@ -23,8 +23,7 @@ interface Built {
 let built: Built | undefined;
 
 /**
- * The text the Go binary embedded as catalog/chat.txt, built from @nix/structure-spec at run time
- * the way scripts/build-catalog.ts wrote it: renderCatalog over buildCatalog plus the committed
+ * The chat catalog text, built from @nix/structure-spec at run time: renderCatalog over buildCatalog plus the committed
  * patterns text, trailing whitespace trimmed, one final newline.
  */
 function build(): Built {

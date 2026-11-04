@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc --project tsconfig.build.json",
-    "catalog": "pnpm --filter \"@nix/structure-spec...\" build && node --experimental-strip-types scripts/build-catalog.ts && prettier --write src/generated/catalog.json ../../apps/go-workers/internal/companion/catalog/tools-chat.json ../../apps/go-workers/internal/companion/catalog/tool-examples.json"
+    "catalog": "pnpm --filter \"@nix/structure-spec...\" build && node --experimental-strip-types scripts/build-catalog.ts && prettier --write src/generated/catalog.json"
   },
   "dependencies": {
     "@nix/sheet": "workspace:*",

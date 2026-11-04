@@ -313,11 +313,7 @@ export const NEVER_OPERATIONS = [
  * (`list_templates`, `read_template`, `apply_template`) - named once so the catalog text
  * (`build.ts`) states them instead of a hand-typed sentence.
  *
- * This package is the source of truth for the list; the Go worker does not read it. Its
- * `catalog_test.go` keeps its own hand-typed `structureOperations` fixture and checks that each
- * name is still a `workspaceTools()` tool and still mentioned in the embedded catalog text, so
- * that fixture drifting out of step with this list fails a test instead of going unnoticed - but
- * a structure operation added here and forgotten there is not caught either way.
+ * This package is the source of truth for the list.
  */
 export const STRUCTURE_OPERATIONS = [
   'create_structured',
@@ -335,9 +331,7 @@ export const STRUCTURE_OPERATIONS = [
  * Every operation a pet tool may name, in the order `@nix/companion`'s `workspaceToolSchema`
  * declares its flat `operation` enum. This package is the source of truth for that order:
  * `buildPetTools` (`tools.ts`) derives one typed function tool per operation from it,
- * `@nix/companion/tool-args.ts` imports it to build `workspaceToolSchema`, and the Go worker's
- * generated `tools-chat.json` (`scripts/build-catalog.ts`) is the same tools serialized for the
- * provider. Every conversation offers every operation.
+ * `@nix/companion/tool-args.ts` imports it to build `workspaceToolSchema`. Every conversation offers every operation.
  */
 export const WORKSPACE_OPERATIONS = [
   'list_items',

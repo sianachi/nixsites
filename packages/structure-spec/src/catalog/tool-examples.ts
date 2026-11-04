@@ -4,14 +4,10 @@ import type { WorkspaceOperation } from './tables.js';
 /**
  * One valid, minimal set of arguments per `WorkspaceOperation`, in the shape a typed
  * `nix_<operation>` tool call carries them (native JSON, not a flat `specJson` string).
- * `tools.test.ts` flattens each of these with a TS reference implementation of the Go worker's
- * `flattenToolCall` and checks the result against `@nix/companion`'s `workspaceToolSchema`, so
- * both languages are checked against the same fixture; `scripts/build-catalog.ts` also writes
- * these to `apps/go-workers/internal/companion/catalog/tool-examples.json` so the Go worker's own
- * `flattenToolCall` tests read the identical fixture (`catalog_test.go` / a new
- * `tools_flatten_test.go`).
+ * `tools.test.ts` flattens each of these with `flattenToolExample` and checks the result against
+ * `@nix/companion`'s `workspaceToolSchema`.
  *
- * A sample UUID that satisfies both the Go worker's `uuid` regex and Zod's `z.uuid()` (a `4` in
+ * A sample UUID that satisfies Zod's `z.uuid()` (a `4` in
  * the version nibble, an `8` in the variant nibble) stands in for every item, template and
  * parent id.
  */
@@ -130,19 +126,15 @@ export interface FlatWorkspaceToolArgs {
 }
 
 /**
- * A TS reference implementation of the Go worker's `flattenToolCall` (`apps/go-workers/internal
- * /companion/tools.go`): translates one typed `nix_<operation>` call's native-JSON arguments back
+ * Translates one typed `nix_<operation>` call's native-JSON arguments back
  * into the flat shape `workspaceToolSchema` and `@nix/companion/run.ts` have always parsed.
  * `templateId` maps to `itemId`; `heading` and `find` map to `query` and `replace` to `markdown`
  * (the body edits), and `fact` to `markdown` (remember); `properties` marshals to `propertiesJson`; `spec` and `blueprint` both
  * marshal to `specJson`; the scalar `SPEC_FIELD_PARAMETERS` gather into one `specJson` object;
  * every other flat field defaults to `""`. Used by
- * `tools.test.ts`'s and `@nix/companion`'s round-trip tests, by `scripts/build-catalog.ts` (which
- * writes its output next to `TOOL_EXAMPLES` in the generated `tool-examples.json` so the Go
- * worker's own flattening test reads the identical expectation), and at runtime as
+ * `tools.test.ts`'s and `@nix/companion`'s round-trip tests and at runtime as
  * `flattenToolCall` for a generated component's `Mutation("<operation>", {...})`, which takes the
- * same typed parameters as the pet's `nix_<operation>` tool. Pet tool calls are still flattened by
- * the worker itself.
+ * same typed parameters as the pet's `nix_<operation>` tool.
  */
 export function flattenToolExample(
   operation: WorkspaceOperation,

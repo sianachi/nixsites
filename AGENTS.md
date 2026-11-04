@@ -7,7 +7,7 @@ material and live in `docs/agent-guides/`.
 ## Always
 
 - Product direction is in `README.md` and native reference notes; accepted architecture is in
-  the ADR notes inside `docs/nix/nix-reference.nix`. Use `go -C apps/go-workers run ./cmd/nix-docs list`
+  the ADR notes inside `docs/nix/nix-reference.nix`. Use `node --experimental-strip-types scripts/nix-docs.mts list`
   and `read <original-doc-path>` to discover/read them without running Nix. Original `.md`
   paths in source comments are catalog identifiers. Preserve each decision's recorded Status.
   Reconcile a task with the tree and recent commits. Observed shipped behaviour
@@ -35,7 +35,7 @@ material and live in `docs/agent-guides/`.
 | --- | --- |
 | `backend/**`, `Nix.slnx`, `Nix.Frontend/**` | `backend.md` |
 | `apps/web/**`, `packages/**` | `frontend.md` |
-| `apps/go-workers/**` | `workers.md` |
+| `backend/src/Nix.Workers/**`, `backend/src/Nix.Api/Workers/**`, `apps/companion/**`, `apps/node-host/**` | `workers.md` |
 | `apps/sites/**` (sites build worker and serving process) | `workers.md` for job, lease and transfer rules, plus `frontend.md` for TypeScript conventions |
 | Sites publishing: eligibility, manifests, hostnames, `packages/site-render` | `architecture-and-security.md` in addition to the area guide |
 | Auth, RLS, permissions, migrations, `/internal`, tokens | `architecture-and-security.md` in addition to the area guide |
@@ -58,7 +58,7 @@ the cases that require broader proof. It does not replace CI or judgment.
 - Browser auth is Core's BFF flow. Files use capability URLs, never Core bytes.
 - Durable data is authoritative; closure, snapshots, search, links and
   embeddings are rebuildable derived state. The implemented history-retention exception is
-  documented by `go -C apps/go-workers run ./cmd/nix-docs read postgres-durability`: retained base and
+  documented by `node --experimental-strip-types scripts/nix-docs.mts read postgres-durability`: retained base and
   named-version Yjs checkpoints must survive when their covered updates have been pruned.
 - OpenAPI is a contract seam: explicitly generated `backend/openapi/nix-api.json`
   and generated API-client code are never hand-edited.
@@ -73,6 +73,6 @@ the cases that require broader proof. It does not replace CI or judgment.
   `scripts/export-site-content.sh`; edit the workspace, then re-export.
 
 The previous complete policy is preserved as a native reference note. Read it with
-`go -C apps/go-workers run ./cmd/nix-docs read docs/agent-guides/legacy-full-standards.md`. Prefer the
+`node --experimental-strip-types scripts/nix-docs.mts read docs/agent-guides/legacy-full-standards.md`. Prefer the
 focused guides above; use that historical policy only to resolve a rule not yet routed.
 The offline deployment and backup runbooks remain Markdown for recovery when Nix is down.

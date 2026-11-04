@@ -115,7 +115,7 @@ You need [Docker](https://docs.docker.com/get-docker/) and [mise](https://mise.j
 
 ```sh
 git clone https://github.com/sianachi/nixsites.git && cd nixsites
-mise install                       # Node, pnpm, .NET and Go at the pinned versions
+mise install                       # Node, pnpm and .NET at the pinned versions
 pnpm install --frozen-lockfile
 pnpm dev                           # infrastructure, database, identity, then every service
 ```

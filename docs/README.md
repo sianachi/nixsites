@@ -21,20 +21,18 @@ nixctl import docs/nix/nix-architecture.nix --workspace <workspace-id>
 nixctl import docs/nix/nix-reference.nix --workspace <workspace-id>
 ```
 
-For the offline TUI, plain reading and source recovery:
+For offline plain reading and source recovery:
 
 ```sh
-go -C apps/go-workers run ./cmd/nix-docs
-go -C apps/go-workers run ./cmd/nix-docs list
-go -C apps/go-workers run ./cmd/nix-docs read core-api
-go -C apps/go-workers run ./cmd/nix-docs read docs/adr/0048-rabbitmq-and-unified-go-workers.md
-go -C apps/go-workers run ./cmd/nix-docs source docs/plans/life-os-direction.md
-go -C apps/go-workers run ./cmd/nix-docs check
+node --experimental-strip-types scripts/nix-docs.mts list
+node --experimental-strip-types scripts/nix-docs.mts read core-api
+node --experimental-strip-types scripts/nix-docs.mts read docs/adr/0048-rabbitmq-and-unified-go-workers.md
+node --experimental-strip-types scripts/nix-docs.mts source docs/plans/life-os-direction.md
+node --experimental-strip-types scripts/nix-docs.mts check
 ```
 
-The default command opens the Go TUI with a page tree, document pane, full-text search, keyboard
-navigation and internal links. Its key hints show the controls. Mermaid diagrams appear as source
-in the terminal and render in Nix. No sign-in is needed for offline reading.
+Mermaid diagrams appear as source in the terminal and render in Nix. No sign-in is needed for
+offline reading.
 
 The source command emits exact UTF-8 bytes, including original line endings. Original Markdown paths
 in comments identify native reference notes; they no longer imply a loose Markdown file exists.

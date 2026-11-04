@@ -6,7 +6,7 @@ export const workspaceToolSchema = z
   .object({
     // Sourced from @nix/structure-spec's WORKSPACE_OPERATIONS (packages/structure-spec/src/
     // catalog/tables.ts), which is also what the pet's typed nix_<operation> tools
-    // (buildPetTools) and the Go worker's generated tools-chat.json are built from, so this flat enum cannot drift out of step with either.
+    // (buildPetTools) is built from, so this flat enum cannot drift out of step with it.
     operation: z.enum(WORKSPACE_OPERATIONS),
     itemId: optionalId,
     parentId: optionalId,

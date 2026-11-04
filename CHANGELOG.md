@@ -8,6 +8,7 @@ follows semantic versioning (`0.x` pre-1.0).
 ### Removed
 
 - **Breaking:** WebAssembly plugins. The workspace plugin routes (`/api/v1/workspaces/{workspaceId}/plugins*`), the seven `plugin_*` tables and the `plugin-events` worker role are gone; nothing was installable outside seed data and no installation existed. Objects under `plugins/components/` in storage can be purged. The `worker` image now hosts only the pet companion (`nix-companion` in Compose; the `nix-worker` Deployment in Kubernetes), which needs no broker or storage credentials.
+- The Go worker binary, the `go-workers` sources and its Dockerfile. Every role now runs in Core or in `nix-node` (ADR-0067); the Go toolchain is no longer needed to build or develop Nix.
 - **Breaking:** RabbitMQ. The broker and its `NIX_RABBITMQ_*` settings are gone from Core, Compose and Kubernetes; it only carried wake-up hints and every job is a `worker_job` row. Before upgrading, wait until no export or import is running: queued jobs are leased by Core on first start, but running exports and imports are marked failed with "try again". Remove the `rabbitmq` service and volume, the `NIX_RABBITMQ_*` variables and the retired worker services afterwards (Compose `deploy.sh` removes the containers; Kubernetes `deploy.sh` deletes the StatefulSet and keeps the volume).
 
 ### Changed

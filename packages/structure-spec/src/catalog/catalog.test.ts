@@ -83,9 +83,6 @@ describe('the capability catalog', () => {
     const catalog = buildCatalog();
     const text = renderCatalog(catalog, readPatterns());
 
-    // The Go worker's TestCatalogNamesEveryStructureOperation cross-checks this same set against
-    // workspaceTools()'s enum, so a structure operation added to one side and forgotten on the
-    // other fails a build.
     expect(catalog.structureOperations.length).toBeGreaterThan(0);
     for (const operation of catalog.structureOperations) {
       expect(text, `catalog should name structure operation '${operation}'`).toContain(operation);

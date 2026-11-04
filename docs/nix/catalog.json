@@ -67,14 +67,14 @@
         "README.md",
         "backend/src/Nix.Api/Program.cs",
         "apps/collab/src/http/server.ts",
-        "apps/go-workers/internal/role/role.go",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
         "deploy/compose.prod.yml",
         "deploy/Caddyfile.prod",
         "backend/src/Nix.Api/Persistence/NixPersistenceServiceCollectionExtensions.cs",
         "backend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs",
         "packages/export/src/index.ts",
-        "apps/go-workers/internal/exporter/exporter.go"
+        "backend/src/Nix.Workers/Export"
       ],
       "words": 580,
       "properties": {
@@ -83,7 +83,7 @@
         "runtime": "Cross-service",
         "transports": "HTTP/JSON, WebSocket/Yjs, AMQP, PostgreSQL, S3 capabilities",
         "depends_on": "Core, collaboration, workers and infrastructure",
-        "source_paths": "README.md\nbackend/src/Nix.Api/Program.cs\napps/collab/src/http/server.ts\napps/go-workers/internal/role/role.go\napps/go-workers/internal/runtime/runtime.go\ndeploy/compose.prod.yml\ndeploy/Caddyfile.prod\nbackend/src/Nix.Api/Persistence/NixPersistenceServiceCollectionExtensions.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "README.md\nbackend/src/Nix.Api/Program.cs\napps/collab/src/http/server.ts\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\ndeploy/compose.prod.yml\ndeploy/Caddyfile.prod\nbackend/src/Nix.Api/Persistence/NixPersistenceServiceCollectionExtensions.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\npackages/export/src/index.ts\nbackend/src/Nix.Workers/Export"
       },
       "localProofItemId": "01a12247-5982-774d-847c-ccbf3e8e6ad8"
     },
@@ -249,17 +249,14 @@
         "backend/src/Nix.Api/Persistence/Workers/WorkerExecutionFence.cs",
         "backend/src/Nix.Api/Persistence/Workers/WorkerStore.cs",
         "backend/src/Nix.Api/Persistence/RabbitMq/RabbitOutboxPublisher.cs",
-        "apps/go-workers/internal/broker/contracts.go",
-        "apps/go-workers/internal/brokerjob/runner.go",
-        "apps/go-workers/internal/workerapi",
-        "apps/go-workers/internal/jobrunner/runner.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerLoopbackClient.cs",
         "backend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs",
         "backend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs",
         "backend/src/Nix.Api/Authentication/WorkerExecutionMiddleware.cs",
         "backend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs",
         "backend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs",
-        "apps/go-workers/internal/role/role.go",
-        "apps/go-workers/internal/runtime/runtime.go"
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs"
       ],
       "words": 812,
       "properties": {
@@ -268,7 +265,7 @@
         "runtime": "Cross-service",
         "transports": "PostgreSQL, AMQP, HTTP/internal",
         "depends_on": "Core leases and outbox, RabbitMQ, worker execution fences",
-        "source_paths": "backend/src/Nix.Api/Persistence/Workers/WorkerExecutionFence.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerStore.cs\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitOutboxPublisher.cs\napps/go-workers/internal/broker/contracts.go\napps/go-workers/internal/brokerjob/runner.go\napps/go-workers/internal/workerapi\napps/go-workers/internal/jobrunner/runner.go\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs\nbackend/src/Nix.Api/Authentication/WorkerExecutionMiddleware.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\napps/go-workers/internal/role/role.go\napps/go-workers/internal/runtime/runtime.go"
+        "source_paths": "backend/src/Nix.Api/Persistence/Workers/WorkerExecutionFence.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerStore.cs\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitOutboxPublisher.cs\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerLoopbackClient.cs\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs\nbackend/src/Nix.Api/Authentication/WorkerExecutionMiddleware.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs"
       },
       "localProofItemId": "01a12247-5982-77f6-95f1-70b0552fb1db"
     },
@@ -280,9 +277,9 @@
       "sources": [
         "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs",
         "backend/src/Nix.Api/Features/Pets/PetWorkerClient.cs",
-        "apps/go-workers/internal/companion/manager.go",
-        "apps/go-workers/internal/companion/rpc.go",
-        "apps/go-workers/internal/companion/tools.go",
+        "apps/companion/src/manager.ts",
+        "apps/companion/src/rpc.ts",
+        "apps/companion/src/catalog.ts",
         "packages/companion/src",
         "packages/structure-spec/src",
         "apps/cli/src/commands/pets.ts",
@@ -299,7 +296,7 @@
         "runtime": "Go",
         "transports": "HTTP/RPC, HTTP/internal, Provider HTTP",
         "depends_on": "Core authorization, linked provider, worker companion runtime",
-        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/go-workers/internal/companion/manager.go\napps/go-workers/internal/companion/rpc.go\napps/go-workers/internal/companion/tools.go\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\npackages/web-pets/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\npackages/web-foundation/src/lib/device-preferences.ts"
+        "source_paths": "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs\nbackend/src/Nix.Api/Features/Pets/PetWorkerClient.cs\napps/companion/src/manager.ts\napps/companion/src/rpc.ts\napps/companion/src/catalog.ts\npackages/companion/src\npackages/structure-spec/src\napps/cli/src/commands/pets.ts\nbackend/src/Nix.Api/Features/Pets/PetContracts.cs\nbackend/src/Nix.Api/Features/Pets/PetSettingsUseCases.cs\npackages/web-pets/src/pets/pet-device-settings.tsx\napps/web/src/pets/pet-conversation.tsx\npackages/web-foundation/src/lib/device-preferences.ts"
       },
       "localProofItemId": "01a12247-5982-7cb7-ab74-946fc37792ff"
     },
@@ -313,11 +310,12 @@
         "backend/src/Nix.Api/Features/Notifications",
         "backend/src/Nix.Api/Features/CalendarSync",
         "backend/src/Nix.Api/Persistence/Scheduling",
-        "apps/go-workers/internal/calendarsync",
-        "apps/go-workers/internal/notifyjob",
+        "backend/src/Nix.Workers/Calendar",
+        "backend/src/Nix.Api/Workers/CalendarSyncHandler.cs",
+        "backend/src/Nix.Api/Workers/NotifyPushHandler.cs",
         "backend/src/Nix.Api/Features/Habits",
         "backend/src/Nix.Api/Features/Finance",
-        "apps/go-workers/internal/role/role.go",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
         "backend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs",
         "backend/src/Nix.Api/Features/Items/DeleteItem.cs",
         "backend/src/Nix.Api/Features/Items/MoveItem.cs"
@@ -329,7 +327,7 @@
         "runtime": "ASP.NET",
         "transports": "PostgreSQL, AMQP, Provider HTTP",
         "depends_on": "Core scheduling, calendar and notification workers",
-        "source_paths": "backend/src/Nix.Api/Features/Automations\nbackend/src/Nix.Api/Features/Notifications\nbackend/src/Nix.Api/Features/CalendarSync\nbackend/src/Nix.Api/Persistence/Scheduling\napps/go-workers/internal/calendarsync\napps/go-workers/internal/notifyjob\nbackend/src/Nix.Api/Features/Habits\nbackend/src/Nix.Api/Features/Finance\napps/go-workers/internal/role/role.go\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Features/Items/DeleteItem.cs\nbackend/src/Nix.Api/Features/Items/MoveItem.cs"
+        "source_paths": "backend/src/Nix.Api/Features/Automations\nbackend/src/Nix.Api/Features/Notifications\nbackend/src/Nix.Api/Features/CalendarSync\nbackend/src/Nix.Api/Persistence/Scheduling\nbackend/src/Nix.Workers/Calendar\nbackend/src/Nix.Api/Workers/CalendarSyncHandler.cs\nbackend/src/Nix.Api/Workers/NotifyPushHandler.cs\nbackend/src/Nix.Api/Features/Habits\nbackend/src/Nix.Api/Features/Finance\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Features/Items/DeleteItem.cs\nbackend/src/Nix.Api/Features/Items/MoveItem.cs"
       },
       "localProofItemId": "01a12247-5982-7149-877d-1c1f21617e42"
     },
@@ -409,7 +407,7 @@
         "backend/src/Nix.Api/Domain/Views/ViewDefinition.cs",
         "packages/view-render/src/render.ts",
         "packages/export/src/index.ts",
-        "apps/go-workers/internal/exporter/exporter.go"
+        "backend/src/Nix.Workers/Export"
       ],
       "words": 839,
       "properties": {
@@ -418,7 +416,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON",
         "depends_on": "Core schemas, view configurations and child queries",
-        "source_paths": "packages/web-views/src/core/view-kinds.tsx\npackages/web-collections/src/core/use-container.ts\npackages/web-collections/src/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "packages/web-views/src/core/view-kinds.tsx\npackages/web-collections/src/core/use-container.ts\npackages/web-collections/src/core/view-state.ts\npackages/web-foundation/src/theme/theme-store.ts\npackages/web-foundation/src/theme/use-theme.ts\napps/web/index.html\npackages/design-tokens/src/theme.css\nbackend/src/Nix.Api/Domain/Views/ViewDefinition.cs\npackages/view-render/src/render.ts\npackages/export/src/index.ts\nbackend/src/Nix.Workers/Export"
       },
       "localProofItemId": "01a12247-5982-7d31-b237-89650eca2ca2"
     },
@@ -444,7 +442,7 @@
         "apps/web/src/shell/app-shell.tsx",
         "apps/web/src/search/commands.ts",
         "packages/export/src/index.ts",
-        "apps/go-workers/internal/exporter/exporter.go"
+        "backend/src/Nix.Workers/Export"
       ],
       "words": 1023,
       "properties": {
@@ -453,7 +451,7 @@
         "runtime": "Browser",
         "transports": "HTTP/JSON, S3 capabilities, WebSocket/Yjs",
         "depends_on": "Core metadata, object storage and collaboration",
-        "source_paths": "apps/web/src/files/file-viewer.tsx\npackages/web-collections/src/items/file-facts.ts\npackages/web-editor/src/plugins/file-viewer-registry.tsx\npackages/web-editor/src/plugins/built-in-file-viewers.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx\npackages/web-editor/src/editor/nix-canvas.tsx\npackages/web-editor/src/editor/nix-canvas-model.ts\npackages/web-editor/src/editor/nix-canvas-library.ts\npackages/web-editor/src/editor/canvas-binding.ts\napps/web/package.json\npackages/web-editor/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\napps/go-workers/internal/exporter/exporter.go"
+        "source_paths": "apps/web/src/files/file-viewer.tsx\npackages/web-collections/src/items/file-facts.ts\npackages/web-editor/src/plugins/file-viewer-registry.tsx\npackages/web-editor/src/plugins/built-in-file-viewers.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx\npackages/web-editor/src/editor/nix-canvas.tsx\npackages/web-editor/src/editor/nix-canvas-model.ts\npackages/web-editor/src/editor/nix-canvas-library.ts\npackages/web-editor/src/editor/canvas-binding.ts\napps/web/package.json\npackages/web-editor/src/plugins/media-viewer.tsx\npackages/web-foundation/src/audio/audio-source.ts\npackages/web-foundation/src/audio/audio-player.tsx\napps/web/src/shell/app-shell.tsx\napps/web/src/search/commands.ts\npackages/export/src/index.ts\nbackend/src/Nix.Workers/Export"
       },
       "relatedWorktreeSources": [
         {
@@ -492,11 +490,11 @@
         "apps/cli/src/commands/document-import.ts",
         "apps/cli/src/commands/export.ts",
         "apps/cli/src/commands/templates.ts",
-        "apps/go-workers/internal/brokerjob/runner.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
         "backend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs",
         "backend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs",
         "backend/src/Nix.Api/Persistence/Search/ItemSearch.cs",
-        "apps/go-workers/internal/exporter/exporter.go",
+        "backend/src/Nix.Workers/Export",
         "packages/export/src/index.ts"
       ],
       "words": 1076,
@@ -506,7 +504,7 @@
         "runtime": "Node.js",
         "transports": "HTTP/JSON, WebSocket/Yjs, S3 capabilities, Local files",
         "depends_on": "Core browser-approved CLI sessions, collaboration and object capabilities",
-        "source_paths": "apps/cli/package.json\napps/cli/src/index.ts\napps/cli/src/config.ts\napps/cli/src/cli-auth.ts\napps/cli/src/session.ts\napps/cli/src/commands/auth.ts\napps/cli/src/body.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/document-import.ts\napps/cli/src/commands/export.ts\napps/cli/src/commands/templates.ts\napps/go-workers/internal/brokerjob/runner.go\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\napps/go-workers/internal/exporter/exporter.go\npackages/export/src/index.ts"
+        "source_paths": "apps/cli/package.json\napps/cli/src/index.ts\napps/cli/src/config.ts\napps/cli/src/cli-auth.ts\napps/cli/src/session.ts\napps/cli/src/commands/auth.ts\napps/cli/src/body.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/document-import.ts\napps/cli/src/commands/export.ts\napps/cli/src/commands/templates.ts\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\nbackend/src/Nix.Workers/Export\npackages/export/src/index.ts"
       },
       "localProofItemId": "01a12247-5982-71e2-b1f4-8759cf369381"
     },
@@ -526,7 +524,7 @@
         "apps/cli/src/commands/structure.ts",
         "apps/cli/package.json",
         "backend/src/Nix.Api/Persistence/Search/ItemSearch.cs",
-        "apps/go-workers/internal/exporter/exporter.go",
+        "backend/src/Nix.Workers/Export",
         "packages/export/src/index.ts"
       ],
       "words": 969,
@@ -536,7 +534,7 @@
         "runtime": "Node.js",
         "transports": "JSON-RPC/stdio, HTTP/JSON",
         "depends_on": "nixctl session and Core tool handlers",
-        "source_paths": "apps/cli/src/mcp.ts\napps/cli/src/index.ts\napps/cli/src/config.ts\napps/cli/src/session.ts\napps/cli/src/commands/document-import.ts\napps/cli/src/commands/templates.ts\napps/cli/src/commands/files.ts\napps/cli/src/commands/structure.ts\napps/cli/package.json\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\napps/go-workers/internal/exporter/exporter.go\npackages/export/src/index.ts"
+        "source_paths": "apps/cli/src/mcp.ts\napps/cli/src/index.ts\napps/cli/src/config.ts\napps/cli/src/session.ts\napps/cli/src/commands/document-import.ts\napps/cli/src/commands/templates.ts\napps/cli/src/commands/files.ts\napps/cli/src/commands/structure.ts\napps/cli/package.json\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\nbackend/src/Nix.Workers/Export\npackages/export/src/index.ts"
       },
       "localProofItemId": "01a12247-5982-77c0-877d-4019cff28439"
     },
@@ -630,7 +628,7 @@
         "apps/collab/src/index.ts",
         "backend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs",
         "backend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs",
-        "apps/go-workers/internal/exporter/exporter.go",
+        "backend/src/Nix.Workers/Export",
         "packages/export/src/index.ts"
       ],
       "words": 1042,
@@ -640,7 +638,7 @@
         "runtime": "Node.js",
         "transports": "HTTP/internal, S3 capabilities, PostgreSQL",
         "depends_on": "Core staged plans, worker inputs and native bodies",
-        "source_paths": "apps/collab/src/http/routes/internal-imports.ts\napps/collab/src/http/routes/templates.ts\napps/collab/src/http/routes/exports.ts\napps/collab/src/imports/bodies.ts\napps/collab/src/template-imports/bodies.ts\napps/collab/src/templates/bodies.ts\napps/collab/src/templates/service.ts\napps/collab/src/export/prepare.ts\napps/collab/src/export/assemble.ts\napps/collab/src/export/ndjson.ts\napps/collab/src/export/embedded-sections.ts\npackages/export/src/manifest.ts\npackages/export/src/archive.ts\npackages/export/src/file-portability.ts\napps/collab/src/db/worker-executions.ts\napps/collab/src/http/server.ts\napps/collab/src/index.ts\nbackend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\napps/go-workers/internal/exporter/exporter.go\npackages/export/src/index.ts"
+        "source_paths": "apps/collab/src/http/routes/internal-imports.ts\napps/collab/src/http/routes/templates.ts\napps/collab/src/http/routes/exports.ts\napps/collab/src/imports/bodies.ts\napps/collab/src/template-imports/bodies.ts\napps/collab/src/templates/bodies.ts\napps/collab/src/templates/service.ts\napps/collab/src/export/prepare.ts\napps/collab/src/export/assemble.ts\napps/collab/src/export/ndjson.ts\napps/collab/src/export/embedded-sections.ts\npackages/export/src/manifest.ts\npackages/export/src/archive.ts\npackages/export/src/file-portability.ts\napps/collab/src/db/worker-executions.ts\napps/collab/src/http/server.ts\napps/collab/src/index.ts\nbackend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\nbackend/src/Nix.Workers/Export\npackages/export/src/index.ts"
       },
       "localProofItemId": "01a12247-5982-7b16-8b7b-4c634b3e9fb7"
     },
@@ -650,12 +648,11 @@
       "itemId": "67fbf240-f837-5417-a42e-c7fd66b5efa2",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/cmd/nix-worker/main.go",
-        "apps/go-workers/internal/runtime/runtime.go",
-        "apps/go-workers/internal/config/config.go",
-        "apps/go-workers/internal/role/role.go",
-        "apps/go-workers/internal/httpserver/server.go",
-        "apps/go-workers/internal/worktemp/worktemp.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "backend/src/Nix.Api/Workers/WorkerOptions.cs",
+        "backend/src/Nix.Api/Workers/WorkerLoopbackClient.cs",
+        "backend/src/Nix.Workers/Transfer/WorkSpool.cs",
         "deploy/compose.prod.yml",
         "scripts/dev-worker.sh"
       ],
@@ -666,7 +663,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, S3 capabilities, Provider HTTP",
         "depends_on": "Core, RabbitMQ; role-specific collaboration, object storage, calendar providers and push services",
-        "source_paths": "apps/go-workers/cmd/nix-worker/main.go\napps/go-workers/internal/runtime/runtime.go\napps/go-workers/internal/config/config.go\napps/go-workers/internal/role/role.go\napps/go-workers/internal/httpserver/server.go\napps/go-workers/internal/worktemp/worktemp.go\ndeploy/compose.prod.yml\nscripts/dev-worker.sh"
+        "source_paths": "backend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Workers/WorkerOptions.cs\nbackend/src/Nix.Api/Workers/WorkerLoopbackClient.cs\nbackend/src/Nix.Workers/Transfer/WorkSpool.cs\ndeploy/compose.prod.yml\nscripts/dev-worker.sh"
       },
       "localProofItemId": "01a12247-5982-7507-9864-44d1ca26813d"
     },
@@ -676,11 +673,11 @@
       "itemId": "4fe34130-4ab3-58cd-ab6b-7967c2ebb299",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/documentimport/handler.go",
-        "apps/go-workers/internal/templateimport/handler.go",
-        "apps/go-workers/internal/importplan/nix.go",
-        "apps/go-workers/internal/importplan/docx.go",
-        "apps/go-workers/internal/importplan/parse.go",
+        "backend/src/Nix.Api/Workers/DocumentImportHandler.cs",
+        "backend/src/Nix.Api/Workers/TemplateImportHandler.cs",
+        "backend/src/Nix.Workers/Import/NixImport.cs",
+        "backend/src/Nix.Workers/Import/DocxImport.cs",
+        "backend/src/Nix.Workers/Import/ImportPlanner.cs",
         "apps/collab/src/imports/bodies.ts",
         "apps/cli/src/commands/import.ts"
       ],
@@ -691,7 +688,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, S3 capabilities",
         "depends_on": "Core staged publication, collaboration and object storage",
-        "source_paths": "apps/go-workers/internal/documentimport/handler.go\napps/go-workers/internal/templateimport/handler.go\napps/go-workers/internal/importplan/nix.go\napps/go-workers/internal/importplan/docx.go\napps/go-workers/internal/importplan/parse.go\napps/collab/src/imports/bodies.ts\napps/cli/src/commands/import.ts"
+        "source_paths": "backend/src/Nix.Api/Workers/DocumentImportHandler.cs\nbackend/src/Nix.Api/Workers/TemplateImportHandler.cs\nbackend/src/Nix.Workers/Import/NixImport.cs\nbackend/src/Nix.Workers/Import/DocxImport.cs\nbackend/src/Nix.Workers/Import/ImportPlanner.cs\napps/collab/src/imports/bodies.ts\napps/cli/src/commands/import.ts"
       },
       "localProofItemId": "01a12247-5982-7c8e-a4b4-980759592945"
     },
@@ -703,10 +700,10 @@
       "sources": [
         "backend/src/Nix.Api/Features/Files",
         "backend/src/Nix.Api/Persistence/ObjectStorage",
-        "apps/go-workers/internal/fileinspect/handler.go",
-        "apps/go-workers/internal/objectcleanup",
-        "apps/go-workers/internal/templatefilecopy",
-        "apps/go-workers/internal/objecttransfer",
+        "backend/src/Nix.Workers/Files/FileInspector.cs",
+        "backend/src/Nix.Api/Workers/ObjectCleanupHandler.cs",
+        "backend/src/Nix.Api/Workers/TemplateFileCopyHandler.cs",
+        "backend/src/Nix.Workers/Transfer",
         "packages/export/src/file-portability.ts"
       ],
       "words": 416,
@@ -716,7 +713,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, S3 capabilities",
         "depends_on": "Core file versions, inspection and immutable object bytes",
-        "source_paths": "backend/src/Nix.Api/Features/Files\nbackend/src/Nix.Api/Persistence/ObjectStorage\napps/go-workers/internal/fileinspect/handler.go\napps/go-workers/internal/objectcleanup\napps/go-workers/internal/templatefilecopy\napps/go-workers/internal/objecttransfer\npackages/export/src/file-portability.ts"
+        "source_paths": "backend/src/Nix.Api/Features/Files\nbackend/src/Nix.Api/Persistence/ObjectStorage\nbackend/src/Nix.Workers/Files/FileInspector.cs\nbackend/src/Nix.Api/Workers/ObjectCleanupHandler.cs\nbackend/src/Nix.Api/Workers/TemplateFileCopyHandler.cs\nbackend/src/Nix.Workers/Transfer\npackages/export/src/file-portability.ts"
       },
       "localProofItemId": "01a12247-5982-79c1-ba4a-35b3d0dfe001"
     },
@@ -726,16 +723,16 @@
       "itemId": "65fed74e-9bec-5360-a7a2-9ff5de85fe28",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/exportjob/handler.go",
-        "apps/go-workers/internal/exporter",
-        "apps/go-workers/internal/nixarchive",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/ExportJobHandler.cs",
+        "backend/src/Nix.Workers/Export",
+        "backend/src/Nix.Workers/Archive",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
         "apps/collab/src/export/assemble.ts",
         "apps/collab/src/export/ndjson.ts",
         "apps/cli/src/commands/export.ts",
         "packages/export/src/archive.ts",
-        "apps/go-workers/internal/brokerjob/runner.go",
-        "apps/go-workers/internal/objecttransfer/client.go",
+        "backend/src/Nix.Workers/Transfer/ObjectTransfer.cs",
         "backend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs",
         "backend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs"
       ],
@@ -746,7 +743,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, S3 capabilities",
         "depends_on": "Core export jobs, collaboration bundles and object storage",
-        "source_paths": "apps/go-workers/internal/exportjob/handler.go\napps/go-workers/internal/exporter\napps/go-workers/internal/nixarchive\napps/go-workers/internal/runtime/runtime.go\napps/collab/src/export/assemble.ts\napps/collab/src/export/ndjson.ts\napps/cli/src/commands/export.ts\npackages/export/src/archive.ts\napps/go-workers/internal/brokerjob/runner.go\napps/go-workers/internal/objecttransfer/client.go\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs"
+        "source_paths": "backend/src/Nix.Api/Workers/ExportJobHandler.cs\nbackend/src/Nix.Workers/Export\nbackend/src/Nix.Workers/Archive\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\napps/collab/src/export/assemble.ts\napps/collab/src/export/ndjson.ts\napps/cli/src/commands/export.ts\npackages/export/src/archive.ts\nbackend/src/Nix.Workers/Transfer/ObjectTransfer.cs\nbackend/src/Nix.Api/Persistence/RabbitMq/RabbitResultConsumer.cs\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs"
       },
       "localProofItemId": "01a12247-5982-7ebf-9a21-9542484cd71e"
     },
@@ -756,8 +753,8 @@
       "itemId": "6975559c-9e56-5b40-a957-fe7525dc3f34",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/role/role.go",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
         "backend/src/Nix.Api/Persistence/Search/ItemSearch.cs",
         "backend/src/Nix.Api/Persistence/Sql/Statements/SearchSql.cs",
         "backend/tests/Nix.Integration.Tests/Persistence/SearchRetirementHttpTests.cs",
@@ -772,7 +769,7 @@
         "runtime": "Offline",
         "transports": "Current search: Core HTTP and PostgreSQL SQL; retired indexer has no active transport",
         "depends_on": "Historical Go/OpenSearch projection; current Core PostgreSQL search",
-        "source_paths": "apps/go-workers/internal/role/role.go\napps/go-workers/internal/runtime/runtime.go\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\nbackend/src/Nix.Api/Persistence/Sql/Statements/SearchSql.cs\nbackend/tests/Nix.Integration.Tests/Persistence/SearchRetirementHttpTests.cs\ndeploy/rabbitmq/start.sh\ndeploy/compose/deploy.sh\ndeploy/compose.prod.yml"
+        "source_paths": "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\nbackend/src/Nix.Api/Persistence/Sql/Statements/SearchSql.cs\nbackend/tests/Nix.Integration.Tests/Persistence/SearchRetirementHttpTests.cs\ndeploy/rabbitmq/start.sh\ndeploy/compose/deploy.sh\ndeploy/compose.prod.yml"
       },
       "localProofItemId": "01a12247-5982-7314-a5f8-ea99a0d0059a"
     },
@@ -782,11 +779,12 @@
       "itemId": "2f14bf75-4919-5cc0-ad9d-ccfefb15dded",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/calendarsync",
+        "backend/src/Nix.Workers/Calendar",
+        "backend/src/Nix.Api/Workers/CalendarSyncHandler.cs",
         "backend/src/Nix.Api/Features/Internal/CalendarSyncWorkerEndpoints.cs",
         "backend/src/Nix.Api/Features/CalendarSync",
         "apps/cli/src/commands/calendar-sync.ts",
-        "apps/go-workers/internal/config/config.go"
+        "backend/src/Nix.Api/Workers/WorkerOptions.cs"
       ],
       "words": 346,
       "properties": {
@@ -795,7 +793,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, Provider HTTP",
         "depends_on": "Core calendar state, Google Calendar and Microsoft Graph",
-        "source_paths": "apps/go-workers/internal/calendarsync\nbackend/src/Nix.Api/Features/Internal/CalendarSyncWorkerEndpoints.cs\nbackend/src/Nix.Api/Features/CalendarSync\napps/cli/src/commands/calendar-sync.ts\napps/go-workers/internal/config/config.go"
+        "source_paths": "backend/src/Nix.Workers/Calendar\nbackend/src/Nix.Api/Workers/CalendarSyncHandler.cs\nbackend/src/Nix.Api/Features/Internal/CalendarSyncWorkerEndpoints.cs\nbackend/src/Nix.Api/Features/CalendarSync\napps/cli/src/commands/calendar-sync.ts\nbackend/src/Nix.Api/Workers/WorkerOptions.cs"
       },
       "localProofItemId": "01a12247-5982-725a-b276-3dda9ee5c037"
     },
@@ -805,12 +803,12 @@
       "itemId": "54a9bfc8-1665-50c5-ae55-f495803ab3cc",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/notifyjob",
-        "apps/go-workers/internal/webpush",
-        "apps/go-workers/internal/pushtransport",
+        "backend/src/Nix.Api/Workers/NotifyPushHandler.cs",
+        "backend/src/Nix.Workers/Push/WebPush.cs",
+        "backend/src/Nix.Workers/Push/PushTransport.cs",
         "backend/src/Nix.Api/Features/Notifications",
         "apps/web/public/service-worker.js",
-        "apps/go-workers/internal/config/config.go"
+        "backend/src/Nix.Api/Workers/WorkerOptions.cs"
       ],
       "words": 317,
       "properties": {
@@ -819,7 +817,7 @@
         "runtime": "Go",
         "transports": "AMQP, HTTP/internal, Web Push",
         "depends_on": "Core notification state and browser push services",
-        "source_paths": "apps/go-workers/internal/notifyjob\napps/go-workers/internal/webpush\napps/go-workers/internal/pushtransport\nbackend/src/Nix.Api/Features/Notifications\napps/web/public/service-worker.js\napps/go-workers/internal/config/config.go"
+        "source_paths": "backend/src/Nix.Api/Workers/NotifyPushHandler.cs\nbackend/src/Nix.Workers/Push/WebPush.cs\nbackend/src/Nix.Workers/Push/PushTransport.cs\nbackend/src/Nix.Api/Features/Notifications\napps/web/public/service-worker.js\nbackend/src/Nix.Api/Workers/WorkerOptions.cs"
       },
       "localProofItemId": "01a12247-5982-7429-b082-219508ffd655"
     },
@@ -829,8 +827,8 @@
       "itemId": "d51106c6-c8a9-5d50-a1de-af215276788f",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/role/role.go",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
         "backend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs",
         "backend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs",
         "backend/src/Nix.Api/Persistence/NixDbContext.cs",
@@ -847,7 +845,7 @@
         "runtime": "Offline",
         "transports": "No active speech transport; ordinary file capabilities retain historic media",
         "depends_on": "Retained recordings, transcript rows and cancelled job history",
-        "source_paths": "apps/go-workers/internal/role/role.go\napps/go-workers/internal/runtime/runtime.go\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\nbackend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs\nbackend/src/Nix.Api/Persistence/NixDbContext.cs\nbackend/tests/Nix.Integration.Tests/Persistence/SpeechRetirementMigrationTests.cs\ndeploy/compose/deploy.sh\ndeploy/rabbitmq/start.sh\ndeploy/Caddyfile.prod\n.github/workflows/ci-images.yml"
+        "source_paths": "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Persistence/Migrations/Generated/20261009200000_RetireSpeechJobs.cs\nbackend/src/Nix.Api/Domain/Transcriptions/ItemTranscription.cs\nbackend/src/Nix.Api/Persistence/NixDbContext.cs\nbackend/tests/Nix.Integration.Tests/Persistence/SpeechRetirementMigrationTests.cs\ndeploy/compose/deploy.sh\ndeploy/rabbitmq/start.sh\ndeploy/Caddyfile.prod\n.github/workflows/ci-images.yml"
       },
       "localProofItemId": "01a12247-5982-799a-9a2e-24e00dd789ac"
     },
@@ -857,10 +855,8 @@
       "itemId": "a08e89de-60f5-5c56-ade7-30e7d5be9bd9",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/broker/contracts.go",
-        "apps/go-workers/internal/broker/client.go",
-        "apps/go-workers/internal/brokerjob/runner.go",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
         "backend/src/Nix.Api/Persistence/RabbitMq",
         "backend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs",
         "deploy/rabbitmq/definitions.json",
@@ -874,7 +870,7 @@
         "runtime": "RabbitMQ",
         "transports": "AMQP",
         "depends_on": "Core durable outbox, worker consumers and result consumption",
-        "source_paths": "apps/go-workers/internal/broker/contracts.go\napps/go-workers/internal/broker/client.go\napps/go-workers/internal/brokerjob/runner.go\napps/go-workers/internal/runtime/runtime.go\nbackend/src/Nix.Api/Persistence/RabbitMq\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs\ndeploy/rabbitmq/definitions.json\ndeploy/rabbitmq/start.sh\ndeploy/compose.prod.yml"
+        "source_paths": "backend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Persistence/RabbitMq\nbackend/src/Nix.Api/Persistence/Workers/WorkerDispatchStore.cs\ndeploy/rabbitmq/definitions.json\ndeploy/rabbitmq/start.sh\ndeploy/compose.prod.yml"
       },
       "localProofItemId": "01a12247-5982-7492-89ef-7ae36f8d69c2"
     },
@@ -886,7 +882,7 @@
       "sources": [
         "backend/src/Nix.Api/Persistence/ObjectStorage/S3CapabilitySigner.cs",
         "backend/src/Nix.Api/Persistence/ObjectStorage/ObjectStorageOptions.cs",
-        "apps/go-workers/internal/objecttransfer",
+        "backend/src/Nix.Workers/Transfer",
         "packages/export/src/file-portability.ts",
         "deploy/compose.prod.yml",
         "deploy/Caddyfile.prod"
@@ -898,7 +894,7 @@
         "runtime": "S3",
         "transports": "S3 capabilities",
         "depends_on": "Core capability signer, immutable objects and allowed transfer origins",
-        "source_paths": "backend/src/Nix.Api/Persistence/ObjectStorage/S3CapabilitySigner.cs\nbackend/src/Nix.Api/Persistence/ObjectStorage/ObjectStorageOptions.cs\napps/go-workers/internal/objecttransfer\npackages/export/src/file-portability.ts\ndeploy/compose.prod.yml\ndeploy/Caddyfile.prod"
+        "source_paths": "backend/src/Nix.Api/Persistence/ObjectStorage/S3CapabilitySigner.cs\nbackend/src/Nix.Api/Persistence/ObjectStorage/ObjectStorageOptions.cs\nbackend/src/Nix.Workers/Transfer\npackages/export/src/file-portability.ts\ndeploy/compose.prod.yml\ndeploy/Caddyfile.prod"
       },
       "localProofItemId": "01a12247-5982-785e-a2ba-d220988a7ba5"
     },
@@ -939,8 +935,9 @@
         "deploy/compose/deploy.sh",
         "apps/collab/src/http/server.ts",
         "apps/collab/src/index.ts",
-        "apps/go-workers/internal/runtime/runtime.go",
-        "apps/go-workers/internal/companion/diagnostics.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "apps/companion/src/diagnostics.ts",
         "scripts/dev-worker.sh",
         "deploy/compose/nightly.sh",
         "deploy/compose/release.sh"
@@ -952,7 +949,7 @@
         "runtime": "Containers",
         "transports": "JSON process logs, Docker logs, Collab metrics, Core operation HTTP",
         "depends_on": "Application stdout/stderr and durable status; former central collectors are retired",
-        "source_paths": "deploy/compose.prod.yml\ndeploy/compose/deploy.sh\napps/collab/src/http/server.ts\napps/collab/src/index.ts\napps/go-workers/internal/runtime/runtime.go\napps/go-workers/internal/companion/diagnostics.go\nscripts/dev-worker.sh\ndeploy/compose/nightly.sh\ndeploy/compose/release.sh"
+        "source_paths": "deploy/compose.prod.yml\ndeploy/compose/deploy.sh\napps/collab/src/http/server.ts\napps/collab/src/index.ts\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\napps/companion/src/diagnostics.ts\nscripts/dev-worker.sh\ndeploy/compose/nightly.sh\ndeploy/compose/release.sh"
       },
       "localProofItemId": "01a12247-5982-781b-ba3a-43f77942b4f3"
     },
@@ -1017,9 +1014,8 @@
       "itemId": "01676903-ffd9-5944-ac74-0f4dcf3bbf5d",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/cmd/nix-docs/main.go",
-        "apps/go-workers/internal/docsbrowser",
-        "apps/go-workers/internal/importplan/parse.go",
+        "scripts/nix-docs.mts",
+        "backend/src/Nix.Workers/Import/ImportPlanner.cs",
         "packages/export/src/archive.ts",
         "packages/export/src/reader.ts",
         "apps/cli/src/commands/import.ts",
@@ -1032,15 +1028,14 @@
         "topic": "Workflow",
         "runtime": "Offline",
         "transports": "Local files, HTTP/JSON, S3 capabilities",
-        "depends_on": "Native archives, Go documentation TUI and Nix import/export",
-        "source_paths": "apps/go-workers/cmd/nix-docs/main.go\napps/go-workers/internal/docsbrowser\napps/go-workers/internal/importplan/parse.go\npackages/export/src/archive.ts\npackages/export/src/reader.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/export.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx"
+        "depends_on": "Native archives, documentation reader and Nix import/export",
+        "source_paths": "scripts/nix-docs.mts\nbackend/src/Nix.Workers/Import/ImportPlanner.cs\npackages/export/src/archive.ts\npackages/export/src/reader.ts\napps/cli/src/commands/import.ts\napps/cli/src/commands/export.ts\npackages/web-editor/src/plugins/mermaid-js-viewer.tsx"
       },
       "documentationFeatureSources": [
-        "apps/go-workers/cmd/nix-docs/main.go",
-        "apps/go-workers/internal/docsbrowser"
+        "scripts/nix-docs.mts"
       ],
       "baselineSources": [
-        "apps/go-workers/internal/importplan/parse.go",
+        "backend/src/Nix.Workers/Import/ImportPlanner.cs",
         "packages/export/src/archive.ts",
         "packages/export/src/reader.ts",
         "apps/cli/src/commands/import.ts",
@@ -1057,7 +1052,8 @@
       "sources": [
         "apps/cli/src/commands/document-import.ts",
         "apps/cli/src/commands/export.ts",
-        "apps/go-workers/internal/runtime/runtime.go",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
         "apps/collab/src/documents/limits.ts",
         "backend/src/Nix.Api/Persistence/Search/ItemSearch.cs",
         "deploy/compose/deploy.sh",
@@ -1071,7 +1067,7 @@
         "runtime": "Cross-service",
         "transports": "HTTP/JSON, AMQP, PostgreSQL, S3 capabilities",
         "depends_on": "Cross-service liveness, readiness, operations and result fences",
-        "source_paths": "apps/cli/src/commands/document-import.ts\napps/cli/src/commands/export.ts\napps/go-workers/internal/runtime/runtime.go\napps/collab/src/documents/limits.ts\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\ndeploy/compose/deploy.sh\ndeploy/compose/nightly.sh\ndeploy/README.md"
+        "source_paths": "apps/cli/src/commands/document-import.ts\napps/cli/src/commands/export.ts\nbackend/src/Nix.Api/Workers/WorkerJobHost.cs\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\napps/collab/src/documents/limits.ts\nbackend/src/Nix.Api/Persistence/Search/ItemSearch.cs\ndeploy/compose/deploy.sh\ndeploy/compose/nightly.sh\ndeploy/README.md"
       },
       "localProofItemId": "01a12247-5982-789f-b09e-9188e217f49a"
     },
@@ -1102,7 +1098,7 @@
       "itemId": "38357ada-bb7c-5362-af5a-3e59b9072a08",
       "archive": "docs/nix/nix-architecture.nix",
       "sources": [
-        "apps/go-workers/internal/config/config.go",
+        "backend/src/Nix.Api/Workers/WorkerOptions.cs",
         "apps/collab/src/config.ts",
         "apps/web/vite.config.ts",
         "deploy/compose.prod.yml",
@@ -1117,7 +1113,7 @@
         "runtime": "Cross-service",
         "transports": "Local files",
         "depends_on": "Source-owned environment/configuration contracts",
-        "source_paths": "apps/go-workers/internal/config/config.go\napps/collab/src/config.ts\napps/web/vite.config.ts\ndeploy/compose.prod.yml\nscripts/dev-worker.sh\ndeploy/compose.prod.env.example\nbackend/tests/Nix.Integration.Tests/Persistence/SearchRetirementHttpTests.cs"
+        "source_paths": "backend/src/Nix.Api/Workers/WorkerOptions.cs\napps/collab/src/config.ts\napps/web/vite.config.ts\ndeploy/compose.prod.yml\nscripts/dev-worker.sh\ndeploy/compose.prod.env.example\nbackend/tests/Nix.Integration.Tests/Persistence/SearchRetirementHttpTests.cs"
       },
       "localProofItemId": "01a12247-5982-7d3e-b07f-b8fcc95bd170"
     },
@@ -1294,9 +1290,10 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "backend/src/Nix.Api/Features/Pets/PetWorkerClient.cs",
-        "apps/go-workers/internal/companion/rpc.go",
-        "apps/go-workers/internal/runtime/runtime.go",
-        "apps/go-workers/internal/httpserver/server.go",
+        "apps/companion/src/rpc.ts",
+        "backend/src/Nix.Api/Workers/WorkerJobHost.cs",
+        "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
+        "backend/src/Nix.Api/Workers/WorkerLoopbackClient.cs",
         "packages/companion/src/ports.ts"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
@@ -1308,9 +1305,9 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "packages/web-pets/src/pets/use-pet-runtime.ts",
-        "apps/go-workers/internal/companion/manager.go",
-        "apps/go-workers/internal/companion/tools.go",
-        "apps/go-workers/internal/companion/watch.go",
+        "apps/companion/src/manager.ts",
+        "apps/companion/src/catalog.ts",
+        "apps/companion/src/server.ts",
         "apps/cli/src/commands/pets.ts"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
@@ -1322,8 +1319,7 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "packages/structure-spec/src/catalog/tables.ts",
-        "apps/go-workers/internal/companion/catalog/tools-chat.json",
-        "apps/go-workers/internal/companion/tools.go",
+        "apps/companion/src/catalog.ts",
         "packages/companion/src/tool-args.ts",
         "packages/companion/src/run.ts"
       ],
@@ -1339,7 +1335,7 @@
         "packages/web-foundation/src/lib/device-preferences.ts",
         "packages/companion/src/guards.ts",
         "packages/companion/src/run.ts",
-        "apps/go-workers/internal/companion/instructions.go"
+        "apps/companion/src/instructions.ts"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
     },
@@ -1366,10 +1362,9 @@
       "sources": [
         "packages/web-pets/src/pets/turn-context.ts",
         "packages/web-pets/src/pets/pet-history.tsx",
-        "apps/go-workers/internal/companion/history.go",
-        "apps/go-workers/internal/companion/drafts.go",
-        "apps/go-workers/internal/companion/manager.go",
-        "apps/go-workers/internal/companion/diagnostics.go"
+        "apps/companion/src/manager.ts",
+        "apps/companion/src/drafts.ts",
+        "apps/companion/src/diagnostics.ts"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
     },
@@ -1385,7 +1380,7 @@
         "packages/web-pets/src/pets/pet-avatar.tsx",
         "packages/web-foundation/src/lib/device-preferences.ts",
         "backend/src/Nix.Api/Features/Pets/PetInline.cs",
-        "apps/go-workers/internal/companion/inline.go"
+        "apps/companion/src/inline.ts"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
     },
@@ -1395,14 +1390,13 @@
       "itemId": "f176a56c-6b83-5447-a87b-6c916ca50d69",
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
-        "apps/go-workers/internal/config/config.go",
-        "apps/go-workers/internal/companion/diagnostics.go",
-        "apps/go-workers/internal/companion/manager.go",
+        "backend/src/Nix.Api/Workers/WorkerOptions.cs",
+        "apps/companion/src/diagnostics.ts",
+        "apps/companion/src/manager.ts",
         "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs",
         "apps/cli/src/commands/pets.ts",
         "deploy/compose.prod.yml",
-        "deploy/compose/backup.sh",
-        "deploy/docker/go-workers.Dockerfile"
+        "deploy/compose/backup.sh"
       ],
       "sourceRevision": "01fc66aca483748964e4b5c902e2f7511972440d"
     },
@@ -1413,8 +1407,7 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "packages/structure-spec/src/catalog/tables.ts",
-        "apps/go-workers/internal/companion/catalog/tools-chat.json",
-        "apps/go-workers/internal/companion/tools.go",
+        "apps/companion/src/catalog.ts",
         "packages/companion/src/tool-args.ts",
         "packages/companion/src/run.ts"
       ],
@@ -2364,10 +2357,8 @@
     },
     "offlineReader": {
       "status": "passed",
-      "language": "Go",
-      "command": "go -C apps/go-workers run ./cmd/nix-docs check",
-      "tests": 14,
-      "testCases": 22,
+      "language": "TypeScript",
+      "command": "node --experimental-strip-types scripts/nix-docs.mts check",
       "terminalProof": {
         "platform": "macOS",
         "checks": [
@@ -2378,8 +2369,7 @@
           "SIGTERM exits cleanly and restores cursor/alternate screen"
         ]
       },
-      "dependencies": "existing Go module and golang.org/x/sys; no new versions",
-      "testPackage": "apps/go-workers/internal/docsbrowser"
+      "dependencies": "Node built-ins only"
     },
     "checkedAt": "2026-10-09T20:11:37.753Z",
     "visualReview": {
@@ -2683,9 +2673,9 @@
   },
   "updatedAt": "2026-10-15T17:54:40.334333Z",
   "reader": {
-    "language": "Go",
-    "command": "go -C apps/go-workers run ./cmd/nix-docs",
-    "source": "apps/go-workers/cmd/nix-docs/main.go"
+    "language": "TypeScript",
+    "command": "node --experimental-strip-types scripts/nix-docs.mts",
+    "source": "scripts/nix-docs.mts"
   },
   "views": {
     "architecture": {
@@ -3169,7 +3159,7 @@
       "archive": "docs/nix/nix-pets.nix",
       "sources": [
         "apps/web/src/pets/pet-conversation.tsx",
-        "apps/go-workers/internal/companion/manager.go",
+        "apps/companion/src/manager.ts",
         "packages/companion/src/run.ts",
         "backend/src/Nix.Api/Features/Pets/PetEndpoints.cs"
       ],
@@ -3202,8 +3192,7 @@
     ],
     "updatedGuideCount": 32,
     "documentationFeatureSources": [
-      "apps/go-workers/cmd/nix-docs/main.go",
-      "apps/go-workers/internal/docsbrowser"
+      "scripts/nix-docs.mts"
     ],
     "sourceScope": "main baseline plus documentation/TUI additions from feature/native-architecture-docs"
   },

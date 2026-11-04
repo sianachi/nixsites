@@ -8,9 +8,8 @@ A Nix deployment is a handful of small services around one PostgreSQL database. 
 | --- | --- | --- |
 | Core API | api | The ASP.NET Core service on port 8080. It owns items, properties, views, permissions, sign-in, jobs and search, and signs every storage link. It is the only permission authority. |
 | Migrator | migrator | A one-shot job that applies Core's database migrations. Core never migrates its own schema at start-up. |
-| Collaboration | collab | The Node service on port 8100 that holds live document editing (Yjs), document history and version checkpoints, and assembles imports and exports. It asks Core to authorise every session. It must run as exactly one instance: a second one refuses connections rather than splitting a document's state. |
+| Collaboration | collab | The Node service (`nix-node`, which also runs the pet companion and the sites worker) on port 8100 that holds live document editing (Yjs), document history and version checkpoints, and assembles imports and exports. It asks Core to authorise every session. It must run as exactly one instance: a second one refuses connections rather than splitting a document's state. |
 | Web | web | The installed web app, served by Caddy on port 8090. Caddy also routes the API, collaboration and storage paths, so the whole product sits behind one origin. |
-| Workers | worker | One Go binary, nix-worker, with selectable roles. See below. |
 | Sites worker | sites | Optional. Builds published websites from the build manifest Core freezes, and writes them to the sites bucket. |
 | Sites serve | sites | Optional. Serves published websites to anonymous readers. It has no database and no Core secret, only a key to read the sites bucket. |
 | PostgreSQL | pgvector/pgvector:pg16 | All durable state, with row-level security, and full-text search. |
@@ -18,7 +17,7 @@ A Nix deployment is a handful of small services around one PostgreSQL database. 
 | Identity provider | ghcr.io/zitadel/zitadel | Sign-in through OpenID Connect. The Kubernetes manifests include Zitadel; with Compose you bring your own provider. |
 | Tunnel | cloudflare/cloudflared | Optional public ingress without opening ports. |
 
-The six images Nix builds itself, plus a `release-tools` image used by release scripts, are published for every commit.
+The five images Nix builds itself, plus a `release-tools` image used by release scripts, are published for every commit.
 
 ## Background jobs
 

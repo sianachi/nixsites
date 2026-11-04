@@ -275,8 +275,7 @@ if [ -n "$MCP_PUBLIC_URL" ]; then
 else
   kubectl -n nix delete ingress/nix-mcp service/nix-mcp deployment/nix-mcp --ignore-not-found
 fi
-# The broker restarted above and the Go workers' consumers do not reconnect; an unchanged template
-# would keep the cut-off pods, so restart them the way Compose restarts its writers.
+# An unchanged template would keep the old pods; restart them the way Compose restarts its writers.
 kubectl -n nix rollout restart deployment/nix-node
 
 kubectl -n nix rollout status deployment/nix-api --timeout=180s

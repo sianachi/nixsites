@@ -18,7 +18,6 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
-      - 'apps/go-workers/**'
       - 'Nix.slnx'
       - 'Nix.Frontend/**'
       - 'scripts/check-byte-array-markers.sh'
@@ -29,7 +28,6 @@ on:
   pull_request:
     paths:
       - 'backend/**'
-      - 'apps/go-workers/**'
       - 'Nix.slnx'
       - 'Nix.Frontend/**'
       - 'scripts/check-byte-array-markers.sh'
@@ -50,34 +48,6 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  go-workers:
-    name: Go workers
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: apps/go-workers/go.mod
-          cache-dependency-path: apps/go-workers/go.mod
-
-      - name: Format check
-        working-directory: apps/go-workers
-        run: test -z "$(gofmt -l .)"
-
-      - name: Vet
-        working-directory: apps/go-workers
-        run: go vet ./...
-
-      - name: Test (race detector)
-        working-directory: apps/go-workers
-        run: go test -race ./...
-
-      - name: Build unified worker
-        working-directory: apps/go-workers
-        run: go build ./cmd/nix-worker
-
   backend-static:
     name: backend static
     runs-on: ubuntu-24.04

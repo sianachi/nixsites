@@ -262,7 +262,7 @@ export class CoreClient {
 
   /**
    * Whether Core accepts this worker's credential and its dispatch store is up. Leases a job kind
-   * that cannot exist, as the Go workers do, so the probe can never consume application work.
+   * that cannot exist, so the probe can never consume application work.
    */
   async ping(owner: string, signal?: AbortSignal): Promise<boolean> {
     try {

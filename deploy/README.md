@@ -369,7 +369,7 @@ does not seed users, delete volumes, force an automatic schema rollback or resta
 Any failure exits nonzero. Migration failures leave writers stopped for inspection. Once startup
 has begun, a later failure may leave some services running; inspect state before resuming.
 
-A release succeeds only after the smoke runner imports a TXT document through the Go worker,
+A release succeeds only after the smoke runner imports a TXT document through Core's import job,
 publishes its editable note and retained attachment, exports `.nix`, PDF and DOCX, downloads and
 checks checksums through `nixctl`, checks ZIP integrity and verifies imported text in PDF/DOCX.
 It soft-deletes its temporary root on success or failure when the ID is known. Calls have a

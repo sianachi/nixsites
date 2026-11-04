@@ -1,8 +1,7 @@
 /**
- * Generates the pet's capability catalog from `buildCatalog()` and `buildPetTools()` and writes
- * it in the shapes consumers need: the machine JSON `src/generated/catalog.json`, the plain text
- * catalog (`chat.txt`) and the typed-tool JSON files (`tools-chat.json`, `tool-examples.json`) the
- * Go worker embeds. Committed outputs, never
+ * Generates the machine JSON catalog `src/generated/catalog.json` from `buildCatalog()`. The
+ * companion and `nixctl blueprint catalog --text` render the text form and typed tools from
+ * structure-spec at run time. Committed output, never
  * hand-edited - `pnpm --filter @nix/structure-spec catalog` is the only way they change. CI
  * (`.github/workflows/ci-frontend.yml`) and `scripts/changed-path-checks.sh` both re-run this and
  * diff the result against what is committed.
@@ -11,7 +10,7 @@
  * @nix/structure-spec catalog` writes the same files whether it is run from the repo root or from
  * inside the package.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,41 +20,15 @@ import { fileURLToPath } from 'node:url';
 // sibling imports against the `.ts` files actually on disk. The `catalog` script's own `tsc` step
 // builds this package immediately before this file runs, so the package's `exports` map always
 // resolves to a fresh `dist`.
-import {
-  buildCatalog,
-  buildPetTools,
-  renderCatalog,
-  WORKSPACE_OPERATIONS,
-} from '@nix/structure-spec';
-import { flattenToolExample, TOOL_EXAMPLES } from '@nix/structure-spec/testing';
+import { buildCatalog } from '@nix/structure-spec';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
-const repoRoot = resolve(packageRoot, '..', '..');
 
 const catalogJsonPath = resolve(packageRoot, 'src/generated/catalog.json');
-const patternsPath = resolve(packageRoot, 'catalog/patterns.txt');
-const companionCatalogDir = resolve(repoRoot, 'apps/go-workers/internal/companion/catalog');
-const chatTxtPath = resolve(companionCatalogDir, 'chat.txt');
-const toolsChatJsonPath = resolve(companionCatalogDir, 'tools-chat.json');
-const toolExamplesJsonPath = resolve(companionCatalogDir, 'tool-examples.json');
 
 async function main(): Promise<void> {
   const catalog = buildCatalog();
-  const patterns = await readFile(patternsPath, 'utf8');
-
-  const chat = renderCatalog(catalog, patterns);
-  const toolsChat = buildPetTools();
-
-  // The examples every WorkspaceOperation's typed tool call may look like, plus the flat
-  // {operation, itemId, ...} shape the Go worker's flattenToolCall must produce from it - written
-  // once here so apps/go-workers/internal/companion's Go test table reads the identical fixture
-  // this package's own tools.test.ts checks against @nix/companion's workspaceToolSchema.
-  const toolExamples = WORKSPACE_OPERATIONS.map((operation) => ({
-    operation,
-    arguments: TOOL_EXAMPLES[operation],
-    flat: flattenToolExample(operation, TOOL_EXAMPLES[operation]),
-  }));
 
   // Two-space indent, trailing newline: a diff-friendly, deterministic form so the drift checks
   // (CI and changed-path-checks.sh) are meaningful rather than reordering noise on every run. Key
@@ -64,20 +37,11 @@ async function main(): Promise<void> {
   // them. Piped through prettier (below) so `pnpm lint`'s format check accepts it, the same way
   // `@nix/api-client`'s `generate` script formats its own generated file.
   const catalogJson = JSON.stringify(catalog, null, 2) + '\n';
-  const toolsChatJson = JSON.stringify(toolsChat, null, 2) + '\n';
-  const toolExamplesJson = JSON.stringify(toolExamples, null, 2) + '\n';
 
   await mkdir(dirname(catalogJsonPath), { recursive: true });
-  await mkdir(companionCatalogDir, { recursive: true });
-
   await writeFile(catalogJsonPath, catalogJson, 'utf8');
-  await writeFile(chatTxtPath, chat.trimEnd() + '\n', 'utf8');
-  await writeFile(toolsChatJsonPath, toolsChatJson, 'utf8');
-  await writeFile(toolExamplesJsonPath, toolExamplesJson, 'utf8');
 
-  process.stdout.write(
-    `Wrote ${catalogJsonPath}\nWrote ${chatTxtPath} (${String(chat.length)} chars)\nWrote ${toolsChatJsonPath} (${String(toolsChat.length)} tools)\nWrote ${toolExamplesJsonPath} (${String(toolExamples.length)} examples)\n`,
-  );
+  process.stdout.write(`Wrote ${catalogJsonPath}\n`);
 }
 
 await main();

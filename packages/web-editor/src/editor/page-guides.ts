@@ -8,8 +8,8 @@
  * with the export's own fonts could say exactly which word lands first on page three.
  *
  * **How the estimate is made.** The export page is A4 with fixed margins and a fixed body size.
- * The exporter that ships is the Go one (`apps/go-workers/internal/exporter/pdf.go`); its numbers
- * are mirrored here and a test keeps them in agreement, because a browser bundle cannot read a Go
+ * The exporter that ships is the .NET one (`backend/src/Nix.Workers/Export`); its numbers
+ * are mirrored here and a test keeps them in agreement, because a browser bundle cannot read a C#
  * constant. Zoom that page until its body
  * type is the size of the editor's, and the page becomes a rectangle in editor pixels. Text is
  * roughly an area: the same words fill the same number of square pixels whether the column is

@@ -614,7 +614,7 @@ describe('exporting', () => {
     expect(response.statusCode).toBe(400);
     expect(response.json<{ code: string }>().code).toBe('unsupported_format');
     // A wrong-service call gets told which service to ask, rather than a bare 404.
-    expect(response.json<{ detail: string }>().detail).toContain('Go worker jobs');
+    expect(response.json<{ detail: string }>().detail).toContain('durable background jobs');
   });
 
   it('refuses a scope it does not serve', async () => {

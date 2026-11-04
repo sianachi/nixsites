@@ -54,15 +54,6 @@ Migrations: `dotnet run --project backend/src/Nix.Migrator` with
 **Node host** (collaboration, pet companion, sites worker): `scripts/dev-node.sh`; tests with
 `pnpm --filter @nix/node-host test`.
 
-**Go workers** (from `apps/go-workers`, retired next)
-
-```sh
-go vet ./...
-go test ./...
-go test -race ./...
-go build ./cmd/nix-worker
-```
-
 **Validation selection**
 
 Run `./scripts/changed-path-checks.sh --working-tree` first, or pass explicit changed paths.

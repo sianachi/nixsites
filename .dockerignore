@@ -21,8 +21,6 @@ deploy/.zitadel
 deploy/.dev-data-protection
 deploy/*.env
 deploy/compose.host.yml
-apps/go-workers/nix-worker
-apps/go-workers/nix-worker.exe
 
 # Fetched inside the build instead (scripts/fetch-embedding-model.sh).
 backend/models

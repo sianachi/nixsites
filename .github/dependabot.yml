@@ -19,14 +19,6 @@ updates:
       nuget-minor-patch:
         update-types: [minor, patch]
 
-  - package-ecosystem: gomod
-    directory: /apps/go-workers
-    schedule:
-      interval: weekly
-    groups:
-      gomod-minor-patch:
-        update-types: [minor, patch]
-
   - package-ecosystem: docker
     directory: /deploy/docker
     schedule:

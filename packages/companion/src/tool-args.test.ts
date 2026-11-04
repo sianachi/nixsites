@@ -6,7 +6,7 @@ import { workspaceToolSchema } from './tool-args.js';
 /**
  * The other half of the round trip `packages/structure-spec/src/catalog/tools.test.ts` checks: a
  * typed `nix_<operation>` call's example arguments, flattened by the same TS reference
- * implementation (`flattenToolExample`) the Go worker's `flattenToolCall` is checked against,
+ * implementation (`flattenToolExample`),
  * must parse as a `workspaceToolSchema` this package (and `run.ts`) has never changed. This lives
  * here rather than in `@nix/structure-spec` because `workspaceToolSchema` lives here -
  * `@nix/structure-spec` depends on nothing but `zod` and `@nix/sheet`

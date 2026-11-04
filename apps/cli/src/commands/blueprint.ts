@@ -13,7 +13,9 @@ import {
 } from '@nix/companion';
 import {
   blueprintSchema,
+  buildCatalog,
   describeBlueprint,
+  renderCatalog,
   saveSpecSchema,
   validateBlueprint,
   type Blueprint,
@@ -140,12 +142,15 @@ export async function evaluateBlueprint(
 }
 
 export async function blueprintCatalog(text: boolean, output: OutputOptions): Promise<void> {
-  const path = text
-    ? '../../../../apps/go-workers/internal/companion/catalog/chat.txt'
-    : '../../../../packages/structure-spec/src/generated/catalog.json';
-  const contents = await readFile(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
-  if (text) process.stdout.write(contents);
-  else printResult(JSON.parse(contents), output);
+  if (text) {
+    const patterns = await readFile(
+      fileURLToPath(
+        new URL('../../../../packages/structure-spec/catalog/patterns.txt', import.meta.url),
+      ),
+      'utf8',
+    );
+    process.stdout.write(`${renderCatalog(buildCatalog(), patterns).trimEnd()}\n`);
+  } else printResult(buildCatalog(), output);
 }
 
 export async function blueprintValidate(

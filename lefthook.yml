@@ -7,10 +7,6 @@ pre-commit:
     - name: prettier
       run: pnpm exec prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
-    - name: gofmt
-      glob: '*.go'
-      run: gofmt -w {staged_files}
-      stage_fixed: true
     # Whitespace only, so it needs no build; CI's full `dotnet format --verify-no-changes` covers style and analyzers.
     - name: dotnet format
       glob: '*.cs'

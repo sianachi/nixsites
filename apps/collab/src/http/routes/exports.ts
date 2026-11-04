@@ -39,7 +39,7 @@ export function registerExportRoutes(app: FastifyInstance, deps: RouteDependenci
         reply,
         400,
         'unsupported_format',
-        'This service produces the .nix archive. PDF, Word, and Markdown exports are durable Go worker jobs started through Nix.Api.',
+        'This service produces the .nix archive. PDF, Word, and Markdown exports are durable background jobs started through Nix.Api.',
       );
     }
 

@@ -1,6 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
 import { WORKSPACE_OPERATIONS } from '@nix/structure-spec';
 import { describe, expect, it } from 'vitest';
 
@@ -19,32 +16,7 @@ import {
 } from './instructions.ts';
 import { request } from './testing.ts';
 
-const goCatalog = fileURLToPath(
-  new URL('../../go-workers/internal/companion/catalog/', import.meta.url),
-);
-const whileGoCatalogExists = existsSync(goCatalog) ? it : it.skip;
-
 describe('catalog built at run time', () => {
-  // The Go binary embedded these generated files; the runtime builders must produce the same bytes.
-  whileGoCatalogExists('matches the committed chat catalog byte for byte', () => {
-    expect(chatCatalog()).toBe(readFileSync(`${goCatalog}chat.txt`, 'utf8'));
-  });
-
-  whileGoCatalogExists('matches the committed typed tools', () => {
-    const committed = JSON.parse(readFileSync(`${goCatalog}tools-chat.json`, 'utf8')) as unknown;
-    expect(
-      workspaceTools().map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-      })),
-    ).toEqual(committed);
-  });
-
-  whileGoCatalogExists('keeps the OpenUI prompt in step with the web snapshot', () => {
-    expect(openUiCatalog()).toBe(readFileSync(`${goCatalog}openui.txt`, 'utf8'));
-  });
-
   it('offers one typed function tool per operation', () => {
     const tools = workspaceTools();
     expect(tools).toHaveLength(WORKSPACE_OPERATIONS.length);

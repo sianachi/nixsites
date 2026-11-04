@@ -67,7 +67,6 @@ fi
 has_frontend=false
 has_frontend_sources=false
 has_backend=false
-has_workers=false
 has_desktop=false
 has_openapi=false
 has_shared_frontend_config=false
@@ -114,7 +113,6 @@ for path in "${paths[@]}"; do
       case "$package_name" in web-*) add_dependent_typecheck "@nix/$package_name" ;; esac
       ;;
     backend/*|Nix.slnx|Nix.Frontend/*) has_backend=true ;;
-    apps/go-workers/*) has_workers=true ;;
   esac
   case "$path" in
     *.ts|*.tsx|*.mts|*.cts) if [ -f "$path" ]; then prettier_paths+=("$path"); fi ;;
@@ -228,11 +226,6 @@ if [ "$has_compose" = true ]; then
   emit 'bash deploy/k8s/deploy.test.sh'
 fi
 
-
-if [ "$has_workers" = true ]; then
-  emit '(cd apps/go-workers && test -z "$(gofmt -l .)")'
-  emit '(cd apps/go-workers && go vet ./... && go test ./... && go test -race ./... && go build ./cmd/nix-worker)'
-fi
 
 if [ "$format" = human ] && [ "$has_frontend_guard" = true ]; then
   echo '  Note: guard edits require their fixture self-test before the guard (included above).'
