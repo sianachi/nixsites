@@ -102,7 +102,7 @@ test('production Compose gives Core, workers, and Caddy one public-origin contra
         /NIX_WORKER_OBJECT_ORIGINS: \$\{NIX_OBJECT_STORE_ENDPOINT:\?set NIX_OBJECT_STORE_ENDPOINT\},\$\{NIX_OBJECT_STORE_PUBLIC_ORIGIN:\?set NIX_OBJECT_STORE_PUBLIC_ORIGIN\}/gu,
       ),
     ].length,
-    // The import, export and plugin workers.
-    3,
+    // Every job runs inside Core now, so no worker container reads the object origins.
+    0,
   );
 });

@@ -157,7 +157,9 @@ public sealed class WorkerJobHost(
             string? result = null;
             WorkerJobException? failure = null;
             using var lost = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+#pragma warning disable CA2025 // Justification: the finally block below awaits the renew task before the source is disposed.
             var renewing = RenewAsync(execution, lost, stoppingToken);
+#pragma warning restore CA2025
             try
             {
                 result = await byKind[job.Kind].HandleAsync(execution, lost.Token).ConfigureAwait(false);

@@ -1,3 +1,4 @@
+#pragma warning disable CA2025 // Justification: a scripted response is handed to the client, which disposes it after reading.
 #pragma warning disable CA2000 // Justification: handlers and scripted clients live for one test; the scripted core is disposed by its using.
 #pragma warning disable CA1861 // Justification: inline arrays are scripted responses built once per test.
 using System.Net;
