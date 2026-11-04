@@ -1,0 +1,141 @@
+{
+  "name": "google_incremental_410_resync",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": {
+    "provider": "google",
+    "externalCalendarId": "primary",
+    "direction": "import_only",
+    "cursor": "expired-token",
+    "windowStart": "2026-10-01T00:00:00Z",
+    "windowEnd": "2026-10-31T00:00:00Z",
+    "accessToken": "parity-token",
+    "accessTokenExpiresAt": "2099-01-01T00:00:00Z"
+  },
+  "sessionStatus": 0,
+  "sessionCode": "",
+  "pull": {
+    "applied": 2,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": null
+  },
+  "provider": [
+    {
+      "status": 410,
+      "body": {
+        "error": {
+          "code": 410,
+          "message": "Sync token is no longer valid"
+        }
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "end": {
+              "date": "2026-10-07"
+            },
+            "etag": "\"e2\"",
+            "id": "evt-2",
+            "start": {
+              "date": "2026-10-05"
+            },
+            "status": "confirmed",
+            "summary": "Trip",
+            "updated": "2026-09-28T00:00:00Z"
+          }
+        ],
+        "nextSyncToken": "fresh-token"
+      }
+    }
+  ],
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/calendar/v3/calendars/primary/events?maxResults=100\u0026showDeleted=true\u0026singleEvents=true\u0026syncToken=expired-token",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/calendar/v3/calendars/primary/events?maxResults=100\u0026showDeleted=true\u0026singleEvents=true\u0026timeMax=2026-10-31T00%3A00%3A00Z\u0026timeMin=2026-10-01T00%3A00%3A00Z",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pull",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "events": [
+            {
+              "details": "",
+              "end": "2026-10-06",
+              "externalId": "evt-2",
+              "location": "",
+              "readOnly": false,
+              "start": "2026-10-05",
+              "status": "confirmed",
+              "title": "Trip",
+              "updatedAt": "2026-09-28T00:00:00Z",
+              "version": "\"e2\""
+            }
+          ],
+          "full": true
+        }
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/cursor",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "cursor": "fresh-token",
+          "full": true,
+          "windowEnd": "2026-10-31T00:00:00Z",
+          "windowStart": "2026-10-01T00:00:00Z"
+        }
+      }
+    ],
+    "result": {
+      "applied": 2,
+      "conflicts": 0,
+      "fullSync": true,
+      "provider": "google",
+      "pushed": 0
+    },
+    "error": null
+  }
+}

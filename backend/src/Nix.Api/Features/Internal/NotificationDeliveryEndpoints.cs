@@ -48,8 +48,11 @@ internal static class NotificationDeliveryEndpoints
             return Refused(context);
         }
 
-        var devices = await pushSubscriptions.ListAsync(scoped.TenantId, scoped.PrincipalId, context.RequestAborted)
-            .ConfigureAwait(false);
+        // Handed out once. A worker re-running this job after a crash gets no devices and sends
+        // nothing: one lost push beats a duplicate on every device.
+        var devices = await notifications.ClaimPushAsync(scoped.TenantId, scoped.PrincipalId, notificationId, context.RequestAborted).ConfigureAwait(false)
+            ? await pushSubscriptions.ListAsync(scoped.TenantId, scoped.PrincipalId, context.RequestAborted).ConfigureAwait(false)
+            : [];
         var response = new NotificationDeliveryResponse(
             new NotificationDeliveryPayloadDto(
                 notification.Title,

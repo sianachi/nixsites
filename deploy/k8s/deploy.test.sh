@@ -440,10 +440,7 @@ grep -Fq 'name: Nix__Sites__Cloudflare__ManagedZones__0__WorkspaceId' "$RENDERED
 grep -Fq 'name: Nix__Sites__CustomHostnameTarget' "$RENDERED_API"
 grep -A1 -F 'name: Nix__Push__VapidPublicKey' "$RENDERED_API" | grep -Fq 'name: nix-push-vapid, key: public-key, optional: true'
 grep -Fq 'automountServiceAccountToken: false' "$RENDERED_API"
-if grep -Fq 'private-key' "$RENDERED_API"; then
-  echo 'Core received the VAPID private key.' >&2
-  exit 1
-fi
+grep -A1 -F 'name: Nix__Push__VapidPrivateKey' "$RENDERED_API" | grep -Fq 'name: nix-push-vapid, key: private-key, optional: true'
 NIX_SITES_REQUIRE_OPERATOR_APPROVAL=false run_deploy
 grep -A1 -F 'name: Nix__Sites__RequireOperatorApproval' "$RENDERED_API" | grep -Fq 'value: "false"'
 if NIX_SITES_REQUIRE_OPERATOR_APPROVAL=maybe run_deploy 2>/dev/null; then

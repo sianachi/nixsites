@@ -128,6 +128,8 @@ public sealed class NotificationHandlersTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> ClaimPushAsync(TenantId tenantId, PrincipalId principalId, Guid notificationId, CancellationToken cancellationToken) => Task.FromResult(true);
+
         public Task MarkAllReadAsync(TenantId tenantId, PrincipalId principalId, CancellationToken cancellationToken)
         {
             for (var index = 0; index < _rows.Count; index++)

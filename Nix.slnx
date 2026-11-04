@@ -28,6 +28,7 @@
 
   <Folder Name="/backend/src/">
     <Project Path="backend/src/Nix.Api/Nix.Api.csproj" />
+    <Project Path="backend/src/Nix.Workers/Nix.Workers.csproj" />
     <Project Path="backend/src/Nix.Migrator/Nix.Migrator.csproj" />
   </Folder>
 

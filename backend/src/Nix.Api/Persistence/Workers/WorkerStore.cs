@@ -8,7 +8,7 @@ using Nix.Domain.Workers;
 
 namespace Nix.Persistence.Workers;
 
-public sealed class WorkerStore(NixDbContext database) : IWorkerJobStore, IWorkerOutboxStore
+public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQueue? queue = null) : IWorkerJobStore, IWorkerOutboxStore
 {
     public async ValueTask<WorkerJobRecord> CreateAsync(
         TenantId tenantId,
@@ -53,15 +53,21 @@ public sealed class WorkerStore(NixDbContext database) : IWorkerJobStore, IWorke
             UpdatedAt = now,
         };
         database.WorkerJobs.Add(job);
-        database.WorkerOutboxEvents.Add(new WorkerOutboxEvent
+        // A kind hosted in this process is woken by a hint once the row is visible; any other kind
+        // is announced to the external worker through the outbox, as before.
+        var hosted = queue?.Hint(kind) ?? false;
+        if (!hosted)
         {
-            Id = WorkerOutboxEventId.Create(),
-            TenantId = tenantId,
-            WorkspaceId = workspaceId,
-            Kind = "worker.command",
-            Payload = JsonSerializer.Serialize(new WorkerCommandReference(job.Id.Value, kind)),
-            AvailableAt = AvailableAt(kind, payload, now),
-        });
+            database.WorkerOutboxEvents.Add(new WorkerOutboxEvent
+            {
+                Id = WorkerOutboxEventId.Create(),
+                TenantId = tenantId,
+                WorkspaceId = workspaceId,
+                Kind = "worker.command",
+                Payload = JsonSerializer.Serialize(new WorkerCommandReference(job.Id.Value, kind)),
+                AvailableAt = AvailableAt(kind, payload, now),
+            });
+        }
         await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return ToRecord(job);
     }

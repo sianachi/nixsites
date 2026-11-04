@@ -15,6 +15,7 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
     private const string AuthorizeExecutionSql = "SELECT * FROM nix_authorize_worker_execution(@job_id, @owner)";
     private const string ApplyResultSql = "SELECT * FROM nix_apply_worker_result(@job_id, @owner, @succeeded, @retryable, @result, @error_code, @error_detail, @expected_attempt_id)";
     private const string ScheduleExportCleanupSql = "SELECT nix_schedule_export_result_cleanup(@job_id)";
+    private const string InterruptJobsSql = "SELECT * FROM nix_interrupt_worker_jobs(@owner_prefix, @kinds, @error_code)";
     private const string LeaseOutboxSql = "SELECT * FROM nix_lease_worker_outbox(@kind, @owner, @limit, @lease_seconds)";
     private const string FinishOutboxSql = "SELECT nix_finish_worker_outbox(@event_id, @owner, @succeeded, @error)";
 
@@ -263,6 +264,36 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
             ScheduleExportCleanupSql,
             [Uuid("job_id", jobId)],
             cancellationToken);
+
+    /// <summary>Fails this instance's own interrupted executions and returns them for per-kind cleanup.</summary>
+    public async ValueTask<IReadOnlyList<DispatchedWorkerJob>> InterruptJobsAsync(
+        string ownerPrefix,
+        IReadOnlyList<string> kinds,
+        string errorCode,
+        CancellationToken cancellationToken)
+    {
+        var results = new List<DispatchedWorkerJob>();
+        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using (connection.ConfigureAwait(false))
+        {
+            var command = new NpgsqlCommand(InterruptJobsSql, connection);
+            await using (command.ConfigureAwait(false))
+            {
+                command.Parameters.Add(Text("owner_prefix", ownerPrefix));
+                command.Parameters.Add(new NpgsqlParameter<string[]>("kinds", NpgsqlDbType.Array | NpgsqlDbType.Text) { TypedValue = [.. kinds] });
+                command.Parameters.Add(Text("error_code", errorCode));
+                var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        results.Add(await ReadJobAsync(reader, cancellationToken).ConfigureAwait(false));
+                    }
+                }
+            }
+        }
+        return results;
+    }
 
     /// <summary>Atomically leases globally queued derived-data events.</summary>
     public async ValueTask<IReadOnlyList<DispatchedOutboxEvent>> LeaseOutboxAsync(

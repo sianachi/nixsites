@@ -33,6 +33,13 @@ public interface INotificationStore
 
     /// <summary>Marks every unread notification of this owner read.</summary>
     public Task MarkAllReadAsync(TenantId tenantId, PrincipalId principalId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records that this notification's push is being handed to a worker. Returns
+    /// <see langword="false"/> when it already was: the second worker must send nothing, so a
+    /// job re-run after a crash can never push the same notification twice.
+    /// </summary>
+    public Task<bool> ClaimPushAsync(TenantId tenantId, PrincipalId principalId, Guid notificationId, CancellationToken cancellationToken);
 }
 
 /// <summary>A created or already existing notification, and which of the two it was.</summary>

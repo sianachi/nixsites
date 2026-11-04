@@ -1,0 +1,329 @@
+{
+  "name": "google_two_way_push",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": {
+    "provider": "google",
+    "externalCalendarId": "primary",
+    "direction": "two_way",
+    "cursor": "sync-1",
+    "windowStart": "2026-10-01T00:00:00Z",
+    "windowEnd": "2026-10-31T00:00:00Z",
+    "accessToken": "parity-token",
+    "accessTokenExpiresAt": "2099-01-01T00:00:00Z"
+  },
+  "sessionStatus": 0,
+  "sessionCode": "",
+  "pull": {
+    "applied": 0,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": [
+      {
+        "itemId": "11111111-1111-1111-1111-111111111111",
+        "externalId": null,
+        "version": null,
+        "op": "create",
+        "title": "New event",
+        "start": "2026-10-12",
+        "end": "2026-10-13",
+        "location": "Home",
+        "details": "Bring cake",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "22222222-2222-2222-2222-222222222222",
+        "externalId": "evt-existing",
+        "version": "\"stale\"",
+        "op": "update",
+        "title": "Renamed",
+        "start": "2026-10-14T09:00:00+02:00[Europe/Berlin]",
+        "end": "2026-10-14T10:00:00+02:00[Europe/Berlin]",
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "55555555-5555-5555-5555-555555555555",
+        "externalId": "evt-gone",
+        "version": "\"v\"",
+        "op": "delete",
+        "title": "",
+        "start": "2026-10-15",
+        "end": null,
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "55555555-5555-5555-5555-555555555555",
+        "externalId": "evt-lost",
+        "version": "\"v2\"",
+        "op": "update",
+        "title": "Lost",
+        "start": "2026-10-16",
+        "end": null,
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "11111111-1111-1111-1111-111111111111",
+        "externalId": null,
+        "version": null,
+        "op": "delete",
+        "title": "",
+        "start": "2026-10-17",
+        "end": null,
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "22222222-2222-2222-2222-222222222222",
+        "externalId": null,
+        "version": null,
+        "op": "create",
+        "title": "Bad bound",
+        "start": "not-a-date",
+        "end": null,
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      }
+    ]
+  },
+  "provider": [
+    {
+      "status": 200,
+      "body": {
+        "items": [],
+        "nextSyncToken": "sync-2"
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "etag": "\"vc\"",
+        "id": "evt-created"
+      }
+    },
+    {
+      "status": 412,
+      "body": {
+        "error": {
+          "code": 412,
+          "message": "Precondition Failed"
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "error": {
+          "code": 404,
+          "message": "Not Found"
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "error": {
+          "code": 404,
+          "message": "Not Found"
+        }
+      }
+    }
+  ],
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/calendar/v3/calendars/primary/events?maxResults=100\u0026showDeleted=true\u0026singleEvents=true\u0026syncToken=sync-1",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/cursor",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "cursor": "sync-2",
+          "full": false,
+          "windowEnd": "2026-10-31T00:00:00Z",
+          "windowStart": "2026-10-01T00:00:00Z"
+        }
+      },
+      {
+        "to": "core",
+        "method": "GET",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/changes?limit=100",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "POST",
+        "path": "/calendar/v3/calendars/primary/events",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": {
+          "description": "Bring cake",
+          "end": {
+            "date": "2026-10-14",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "id": "11111111111111111111111111111111",
+          "location": "Home",
+          "start": {
+            "date": "2026-10-12",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "summary": "New event"
+        }
+      },
+      {
+        "to": "provider",
+        "method": "PATCH",
+        "path": "/calendar/v3/calendars/primary/events/evt-existing",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "If-Match": "\"stale\""
+        },
+        "body": {
+          "description": "",
+          "end": {
+            "date": null,
+            "dateTime": "2026-10-14T10:00:00+02:00",
+            "timeZone": "Europe/Berlin"
+          },
+          "location": "",
+          "start": {
+            "date": null,
+            "dateTime": "2026-10-14T09:00:00+02:00",
+            "timeZone": "Europe/Berlin"
+          },
+          "summary": "Renamed"
+        }
+      },
+      {
+        "to": "provider",
+        "method": "DELETE",
+        "path": "/calendar/v3/calendars/primary/events/evt-gone",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "If-Match": "\"v\""
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "PATCH",
+        "path": "/calendar/v3/calendars/primary/events/evt-lost",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "If-Match": "\"v2\""
+        },
+        "body": {
+          "description": "",
+          "location": "",
+          "start": {
+            "date": "2026-10-16",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "summary": "Lost"
+        }
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pushed",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "results": [
+            {
+              "externalId": "evt-created",
+              "itemId": "11111111-1111-1111-1111-111111111111",
+              "status": "ok",
+              "version": "\"vc\""
+            },
+            {
+              "detail": "calendar provider rejected a stale version",
+              "externalId": "evt-existing",
+              "itemId": "22222222-2222-2222-2222-222222222222",
+              "status": "conflict",
+              "version": "\"stale\""
+            },
+            {
+              "externalId": "evt-gone",
+              "itemId": "55555555-5555-5555-5555-555555555555",
+              "status": "ok",
+              "version": "\"v\""
+            },
+            {
+              "detail": "calendar event no longer exists upstream",
+              "externalId": "evt-lost",
+              "itemId": "55555555-5555-5555-5555-555555555555",
+              "status": "gone",
+              "version": "\"v2\""
+            },
+            {
+              "externalId": "",
+              "itemId": "11111111-1111-1111-1111-111111111111",
+              "status": "ok",
+              "version": ""
+            },
+            {
+              "detail": "calendar bound \"not-a-date\" is neither a date nor an RFC 9557 timestamp",
+              "externalId": "",
+              "itemId": "22222222-2222-2222-2222-222222222222",
+              "status": "failed",
+              "version": ""
+            }
+          ]
+        }
+      }
+    ],
+    "result": {
+      "applied": 0,
+      "conflicts": 0,
+      "fullSync": false,
+      "provider": "google",
+      "pushed": 6
+    },
+    "error": null
+  }
+}

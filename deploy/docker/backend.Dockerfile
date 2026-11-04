@@ -7,6 +7,7 @@ WORKDIR /src
 COPY Nix.slnx ./
 COPY backend/Directory.Build.props backend/Directory.Packages.props backend/
 COPY backend/src/Nix.Api/Nix.Api.csproj backend/src/Nix.Api/
+COPY backend/src/Nix.Workers/Nix.Workers.csproj backend/src/Nix.Workers/
 COPY backend/src/Nix.Migrator/Nix.Migrator.csproj backend/src/Nix.Migrator/
 RUN dotnet restore backend/src/Nix.Api/Nix.Api.csproj \
  && dotnet restore backend/src/Nix.Migrator/Nix.Migrator.csproj

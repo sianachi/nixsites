@@ -23,7 +23,7 @@ The six images Nix builds itself, plus a `release-tools` image used by release s
 
 ## Worker roles
 
-The worker binary runs one or more of five roles, chosen with `NIX_WORKER_ROLES` as a comma-separated list:
+The worker binary runs one or more of four roles, chosen with `NIX_WORKER_ROLES` as a comma-separated list:
 
 | Role | Queue | Work |
 | --- | --- | --- |
@@ -31,7 +31,6 @@ The worker binary runs one or more of five roles, chosen with `NIX_WORKER_ROLES`
 | export | nix.worker.export.v1 | Native .nix, Markdown, PDF and Word exports |
 | plugin-events | nix.worker.plugin-events.v1 | Signed WebAssembly plugin runs |
 | calendar | nix.worker.calendar.v1 | Two-way Google and Outlook calendar sync |
-| notify | nix.worker.notify.v1 | Web Push delivery |
 
 When the variable is unset, a worker runs `import,export,plugin-events`. Listing several roles runs them in one process, which is combined mode. Docker Compose runs five containers with one role each, so a slow export cannot hold up a reminder. The Kubernetes manifests run a single combined worker with all five roles, to fit a small single node.
 

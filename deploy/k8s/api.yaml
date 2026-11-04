@@ -178,9 +178,18 @@ spec:
               valueFrom: { secretKeyRef: { name: nix-sites-cloudflare, key: managed-zone, optional: true } }
             - name: Nix__Sites__Cloudflare__ManagedZones__0__WorkspaceId
               valueFrom: { secretKeyRef: { name: nix-sites-cloudflare, key: managed-zone-workspace-id, optional: true } }
-            # Web Push: Core serves the public half; only the worker holds the private key.
+            # Web Push: Core serves the public half and, since the notify worker moved in
+            # process, signs with the private half too.
             - name: Nix__Push__VapidPublicKey
               valueFrom: { secretKeyRef: { name: nix-push-vapid, key: public-key, optional: true } }
+            - name: Nix__Push__VapidPrivateKey
+              valueFrom: { secretKeyRef: { name: nix-push-vapid, key: private-key, optional: true } }
+            - name: Nix__Push__VapidSubject
+              valueFrom: { secretKeyRef: { name: nix-push-vapid, key: subject, optional: true } }
+            # One replica: stable across rollouts, so a restart fails the jobs it interrupted.
+            # With several replicas, set it per pod; an unrecognised lease simply lapses and re-runs.
+            - name: Nix__Workers__InstanceId
+              value: nix-api
             - name: Nix__AccessTokens__Issuer
               value: "${PUBLIC_ORIGIN}"
             - name: Nix__AccessTokens__Audience

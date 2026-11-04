@@ -1,0 +1,222 @@
+{
+  "name": "microsoft_first_pull_nextlink",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": {
+    "provider": "microsoft",
+    "externalCalendarId": "primary",
+    "direction": "import_only",
+    "cursor": null,
+    "windowStart": "2026-10-01T00:00:00Z",
+    "windowEnd": "2026-10-31T00:00:00Z",
+    "accessToken": "parity-token",
+    "accessTokenExpiresAt": "2099-01-01T00:00:00Z"
+  },
+  "sessionStatus": 0,
+  "sessionCode": "",
+  "pull": {
+    "applied": 1,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": null
+  },
+  "provider": [
+    {
+      "status": 200,
+      "body": {
+        "@odata.nextLink": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$skiptoken=page2",
+        "value": [
+          {
+            "body": {
+              "content": "Notes",
+              "contentType": "text"
+            },
+            "changeKey": "ck-1",
+            "end": {
+              "dateTime": "2026-10-02T14:30:00.0000000",
+              "timeZone": "UTC"
+            },
+            "id": "AAMk-1",
+            "isAllDay": false,
+            "isOrganizer": false,
+            "lastModifiedDateTime": "2026-09-28T00:00:00Z",
+            "location": {
+              "displayName": "Teams"
+            },
+            "originalEndTimeZone": "Eastern Standard Time",
+            "originalStartTimeZone": "Eastern Standard Time",
+            "start": {
+              "dateTime": "2026-10-02T14:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "subject": "1:1"
+          }
+        ]
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "@odata.deltaLink": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=final",
+        "value": [
+          {
+            "@removed": {
+              "reason": "deleted"
+            },
+            "id": "AAMk-2",
+            "lastModifiedDateTime": "2026-09-29T00:00:00Z"
+          },
+          {
+            "@removed": {
+              "reason": "changed"
+            },
+            "id": "AAMk-4"
+          },
+          {
+            "changeKey": "ck-3",
+            "end": {
+              "dateTime": "2026-10-13T00:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "id": "AAMk-3",
+            "isAllDay": true,
+            "lastModifiedDateTime": "2026-09-28T00:00:00Z",
+            "originalStartTimeZone": "Mars Standard Time",
+            "start": {
+              "dateTime": "2026-10-10T00:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "subject": "Offsite",
+            "transactionId": "55555555-5555-5555-5555-555555555555"
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/v1.0/me/calendars/primary/calendarView/delta?endDateTime=2026-10-31T00%3A00%3A00Z\u0026startDateTime=2026-10-01T00%3A00%3A00Z",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "Prefer": "odata.maxpagesize=50, outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pull",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "events": [
+            {
+              "details": "Notes",
+              "end": "2026-10-02T10:30:00-04:00[America/New_York]",
+              "externalId": "AAMk-1",
+              "location": "Teams",
+              "readOnly": true,
+              "start": "2026-10-02T10:00:00-04:00[America/New_York]",
+              "status": "confirmed",
+              "title": "1:1",
+              "updatedAt": "2026-09-28T00:00:00Z",
+              "version": "ck-1"
+            }
+          ],
+          "full": true
+        }
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/v1.0/me/calendars/primary/calendarView/delta?$skiptoken=page2",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "Prefer": "odata.maxpagesize=50, outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pull",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "events": [
+            {
+              "details": "",
+              "externalId": "AAMk-2",
+              "location": "",
+              "readOnly": false,
+              "start": "",
+              "status": "cancelled",
+              "title": "",
+              "updatedAt": "2026-09-29T00:00:00Z",
+              "version": ""
+            },
+            {
+              "details": "",
+              "end": "2026-10-12",
+              "externalId": "AAMk-3",
+              "location": "",
+              "nixItemId": "55555555-5555-5555-5555-555555555555",
+              "readOnly": false,
+              "start": "2026-10-10",
+              "status": "confirmed",
+              "title": "Offsite",
+              "updatedAt": "2026-09-28T00:00:00Z",
+              "version": "ck-3"
+            }
+          ],
+          "full": true
+        }
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/cursor",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "cursor": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=final",
+          "full": true,
+          "windowEnd": "2026-10-31T00:00:00Z",
+          "windowStart": "2026-10-01T00:00:00Z"
+        }
+      }
+    ],
+    "result": {
+      "applied": 2,
+      "conflicts": 0,
+      "fullSync": true,
+      "provider": "microsoft",
+      "pushed": 0
+    },
+    "error": null
+  }
+}

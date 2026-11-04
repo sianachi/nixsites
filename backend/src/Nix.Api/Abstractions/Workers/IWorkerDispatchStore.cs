@@ -10,6 +10,9 @@ public interface IWorkerDispatchStore
     public ValueTask<WorkerResultApplication> ApplyResultAsync(Guid jobId, string owner, bool succeeded, bool retryable, string? result, string? errorCode, string? errorDetail, CancellationToken cancellationToken);
     public ValueTask<bool> FinishJobAsync(Guid jobId, string owner, bool succeeded, bool retryable, string? result, string? errorCode, string? errorDetail, CancellationToken cancellationToken);
     public ValueTask<bool> ScheduleExportCleanupAsync(Guid jobId, CancellationToken cancellationToken);
+
+    /// <summary>Fails every running job of the given kinds whose lease owner starts with <paramref name="ownerPrefix"/>; the startup sweep's one call.</summary>
+    public ValueTask<IReadOnlyList<DispatchedWorkerJob>> InterruptJobsAsync(string ownerPrefix, IReadOnlyList<string> kinds, string errorCode, CancellationToken cancellationToken);
     public ValueTask<IReadOnlyList<DispatchedOutboxEvent>> LeaseOutboxAsync(string? kind, string owner, int limit, int leaseSeconds, CancellationToken cancellationToken);
     public ValueTask<bool> FinishOutboxAsync(Guid eventId, string owner, bool succeeded, string? failureDetail, CancellationToken cancellationToken);
 }

@@ -16,9 +16,6 @@ export NIX_WORKER_OBJECT_ORIGINS="${NIX_WORKER_OBJECT_ORIGINS:-http://localhost:
 # Add calendar to this list (or set NIX_WORKER_ROLES=calendar for a role-only run) to exercise
 # the Go `calendar` role locally; it also needs NIX_CALENDAR_GOOGLE_ORIGIN/
 # NIX_CALENDAR_MICROSOFT_ORIGIN pointed at fakes, since it is never on by default here.
-# To exercise the notify role locally, add "notify" to NIX_WORKER_ROLES (or set
-# NIX_WORKER_ROLES=notify to run it alone) and export NIX_PUSH_VAPID_PRIVATE_KEY (32 raw bytes,
-# base64url, no padding) and NIX_PUSH_VAPID_SUBJECT (a mailto: or https: contact URI).
 export NIX_WORKER_ROLES="${NIX_WORKER_ROLES:-import,export,plugin-events}"
 export NIX_WORKER_ADDRESS="${NIX_WORKER_ADDRESS:-:8301}"
 export NIX_COMPANION_DATA_DIR="${NIX_COMPANION_DATA_DIR:-$repo_root/.local/companion}"
@@ -40,9 +37,6 @@ if [ -z "${NIX_RABBITMQ_URL:-}" ]; then
       ;;
     calendar)
       NIX_RABBITMQ_URL="${NIX_RABBITMQ_CALENDAR_URL:-amqp://nix-calendar:nix-dev-calendar-rabbit@localhost:5673/%2Fnix}"
-      ;;
-    notify)
-      NIX_RABBITMQ_URL="${NIX_RABBITMQ_NOTIFY_URL:-amqp://nix-notify:nix-dev-notify-rabbit@localhost:5673/%2Fnix}"
       ;;
     *)
       # The combined account exists only in the local stack and has worker permissions, not

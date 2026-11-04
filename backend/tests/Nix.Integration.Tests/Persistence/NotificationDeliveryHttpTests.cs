@@ -144,6 +144,39 @@ public sealed class NotificationDeliveryHttpTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_delivery_is_handed_out_once_so_a_rerun_job_pushes_to_no_device()
+    {
+        Guid notificationId;
+        await using (var work = await BeginFactoryUnitOfWorkAsync(TestTenants.AlphaContext))
+        {
+            await work.Resolve<NixDispatcher>().SendAsync<AddPushSubscription, PushSubscriptionDto>(
+                new("https://fcm.googleapis.com/fcm/send/notify-http-once", ValidP256dh(), ValidAuth(), "notify-http-agent"), Cancellation);
+            var created = await work.Resolve<INotificationWriter>().CreateAsync(
+                TestTenants.AlphaContext.PrincipalId, NotificationKind.System, "Once", "Body",
+                itemId: null, workspaceId: null, "notify-http:once", Cancellation);
+            notificationId = created.Notification.Id;
+            await work.CommitAsync(Cancellation);
+        }
+
+        var jobId = await FindJobIdAsync(notificationId);
+        Assert.NotNull(jobId);
+        const string execution = "notify-http-worker:019946d1-fbc1-7d99-9ce7-1c721b406ff4";
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var dispatch = scope.ServiceProvider.GetRequiredService<WorkerDispatchStore>();
+        Assert.NotNull(await dispatch.ClaimJobAsync(jobId!.Value, execution, 60, Cancellation));
+
+        using var first = await InternalAsync(HttpMethod.Post, $"/internal/worker-executions/notifications/{notificationId:D}/delivery", jobId.Value, execution);
+        using var firstBody = JsonDocument.Parse(await first.Content.ReadAsStringAsync(Cancellation));
+        Assert.Single(firstBody.RootElement.GetProperty("subscriptions").EnumerateArray());
+
+        // The same job, again (a crash between hand-out and send, then a re-lease): nothing to push.
+        using var second = await InternalAsync(HttpMethod.Post, $"/internal/worker-executions/notifications/{notificationId:D}/delivery", jobId.Value, execution);
+        second.EnsureSuccessStatusCode();
+        using var secondBody = JsonDocument.Parse(await second.Content.ReadAsStringAsync(Cancellation));
+        Assert.Empty(secondBody.RootElement.GetProperty("subscriptions").EnumerateArray());
+    }
+
+    [Fact]
     public async Task Gone_removes_the_subscription_and_failed_increments_until_the_fifth_removes_it()
     {
         Guid notificationId;

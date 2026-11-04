@@ -19,7 +19,6 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | nix-export-worker | Native, Markdown, PDF and Word exports |
 | nix-plugin-worker | Signed WebAssembly plugin runs |
 | nix-calendar-worker | Google and Outlook calendar sync |
-| nix-notify-worker | Web Push delivery |
 | nix-sites-worker | Builds published websites (sites profile) |
 | nix-sites-serve | Serves published websites to anonymous readers (sites profile) |
 | nix-web | The web app, served by Caddy, which also routes the API, collaboration and storage |

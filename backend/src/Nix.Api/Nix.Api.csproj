@@ -48,6 +48,11 @@
     <UserSecretsId>372c7977-a6d5-4cb6-b04e-dc79c06e28a6</UserSecretsId>
   </PropertyGroup>
 
+  <!-- The worker logic ported from apps/go-workers; hosted by Workers/ in this project. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Nix.Workers\Nix.Workers.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

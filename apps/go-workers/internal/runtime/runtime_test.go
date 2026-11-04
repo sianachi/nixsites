@@ -13,7 +13,7 @@ import (
 )
 
 func TestBrokerWorkersRequireAuthenticatedDependencies(t *testing.T) {
-	for _, service := range []role.Service{role.Import, role.Export, role.Plugin, role.Notify} {
+	for _, service := range []role.Service{role.Import, role.Export, role.Plugin} {
 		roles := role.Set{service: true}
 		if err := validateSettings(roles, config.Settings{}); err == nil {
 			t.Fatalf("%s accepted an empty internal credential", service)
@@ -31,10 +31,6 @@ func TestBrokerWorkersRequireAuthenticatedDependencies(t *testing.T) {
 		if service == role.Import || service == role.Export || service == role.Plugin {
 			valid.ObjectOrigins = []string{"https://objects.example.test"}
 		}
-		if service == role.Notify {
-			valid.PushVAPIDPrivateKey = make([]byte, 32)
-			valid.PushVAPIDSubject = "mailto:push@example.test"
-		}
 		if err := validateSettings(roles, valid); err != nil {
 			t.Fatalf("%s rejected valid API configuration: %v", service, err)
 		}
@@ -43,41 +39,6 @@ func TestBrokerWorkersRequireAuthenticatedDependencies(t *testing.T) {
 		if err := validateSettings(roles, withoutAPI); err == nil {
 			t.Fatalf("%s accepted a missing worker API URL", service)
 		}
-	}
-}
-
-func TestNotifyWorkerRequiresAVAPIDKeyAndSubject(t *testing.T) {
-	settings := config.Settings{
-		InternalAPIURL:      "http://api",
-		InternalSecret:      "secret",
-		RabbitMQURL:         "amqp://rabbit",
-		PushVAPIDPrivateKey: make([]byte, 32),
-		PushVAPIDSubject:    "mailto:push@example.test",
-	}
-	roles := role.Set{role.Notify: true}
-
-	if err := validateSettings(roles, settings); err != nil {
-		t.Fatalf("notify worker rejected valid configuration: %v", err)
-	}
-	wrongKeyLength := settings
-	wrongKeyLength.PushVAPIDPrivateKey = make([]byte, 31)
-	if err := validateSettings(roles, wrongKeyLength); err == nil {
-		t.Fatal("notify worker accepted a VAPID private key that is not 32 raw bytes")
-	}
-	missingSubject := settings
-	missingSubject.PushVAPIDSubject = ""
-	if err := validateSettings(roles, missingSubject); err == nil {
-		t.Fatal("notify worker accepted a missing VAPID subject")
-	}
-	wrongSubjectScheme := settings
-	wrongSubjectScheme.PushVAPIDSubject = "http://push.example.test"
-	if err := validateSettings(roles, wrongSubjectScheme); err == nil {
-		t.Fatal("notify worker accepted a non-https, non-mailto VAPID subject")
-	}
-	httpsSubject := settings
-	httpsSubject.PushVAPIDSubject = "https://example.test/contact"
-	if err := validateSettings(roles, httpsSubject); err != nil {
-		t.Fatalf("notify worker rejected a valid https VAPID subject: %v", err)
 	}
 }
 
@@ -196,30 +157,9 @@ func TestReadinessRequiresAnActiveConsumerForEveryEnabledRole(t *testing.T) {
 	}
 }
 
-func TestNotifyReadinessNeedsOnlyTheAPIRabbitAndItsConsumer(t *testing.T) {
-	state := newReadinessState(
-		role.Set{role.Notify: true},
-		func(queue string) bool { return queue == broker.NotifyQueue },
-	)
-	if state.RoleReady(role.Notify) {
-		t.Fatal("notify role was ready before its dependencies were marked healthy")
-	}
-	state.api.Store(true)
-	if state.RoleReady(role.Notify) {
-		t.Fatal("notify role was ready before RabbitMQ was marked healthy")
-	}
-	state.rabbit.Store(true)
-	if !state.RoleReady(role.Notify) {
-		t.Fatal("notify role was not ready with a healthy API, broker, and active consumer")
-	}
-	if !state.AllReady() {
-		t.Fatal("combined readiness did not reflect the ready notify role")
-	}
-}
-
 func TestCombinedDependencyFailureDoesNotPoisonExportAdvertisement(t *testing.T) {
 	state := newReadinessState(
-		role.Set{role.Export: true, role.Notify: true},
+		role.Set{role.Export: true, role.Calendar: true},
 		func(queue string) bool { return queue == broker.ExportQueue },
 	)
 	state.api.Store(true)
@@ -228,13 +168,13 @@ func TestCombinedDependencyFailureDoesNotPoisonExportAdvertisement(t *testing.T)
 	state.objects.Store(true)
 
 	if !state.RoleReady(role.Export) {
-		t.Fatal("an unrelated notify consumer outage poisoned export readiness")
+		t.Fatal("an unrelated calendar consumer outage poisoned export readiness")
 	}
-	if state.RoleReady(role.Notify) {
-		t.Fatal("notify role was ready without an active consumer")
+	if state.RoleReady(role.Calendar) {
+		t.Fatal("calendar role was ready without an active consumer")
 	}
 	if state.AllReady() {
-		t.Fatal("combined readiness hid the failed notify consumer")
+		t.Fatal("combined readiness hid the failed calendar consumer")
 	}
 }
 

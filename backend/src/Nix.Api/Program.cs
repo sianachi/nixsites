@@ -48,6 +48,7 @@ using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.RabbitMq;
 using Nix.Persistence.Sync;
 using Nix.Serialization;
+using Nix.Workers;
 
 const string nixConnectionStringName = "Nix";
 
@@ -114,6 +115,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Injected clock: endpoints never read DateTimeOffset.UtcNow directly, so time is
 // controllable in tests.
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Running jobs get this long to finish on a graceful stop; what is still unfinished loses its
+// lease and follows its kind's restart rule (Nix.Workers.InterruptedJobSweep).
+builder.Services.Configure<HostOptions>(static options => options.ShutdownTimeout = TimeSpan.FromSeconds(90));
 builder.Services.AddSingleton<Nix.Features.Health.ServiceVersions>();
 builder.Services.AddSingleton<PublicFormTokenService>();
 builder.Services.AddNixObjectStorage(builder.Configuration);
@@ -420,6 +425,7 @@ if (persistenceConfigured)
         SchedulingEnabled = builder.Configuration.GetValue("Nix:Scheduling:Enabled", true),
     });
     builder.Services.AddNixRabbitMq(builder.Configuration);
+    builder.Services.AddNixWorkers(builder.Configuration);
 
     // Scoped, because it resolves issuers through the request's own connection. The signing-key
     // cache inside it is static and shared, which is the part that must not be per request.

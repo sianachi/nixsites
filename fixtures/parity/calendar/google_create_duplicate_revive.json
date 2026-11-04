@@ -1,0 +1,189 @@
+{
+  "name": "google_create_duplicate_revive",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": {
+    "provider": "google",
+    "externalCalendarId": "primary",
+    "direction": "two_way",
+    "cursor": "sync-1",
+    "windowStart": "2026-10-01T00:00:00Z",
+    "windowEnd": "2026-10-31T00:00:00Z",
+    "accessToken": "parity-token",
+    "accessTokenExpiresAt": "2099-01-01T00:00:00Z"
+  },
+  "sessionStatus": 0,
+  "sessionCode": "",
+  "pull": {
+    "applied": 0,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": [
+      {
+        "itemId": "11111111-1111-1111-1111-111111111111",
+        "externalId": null,
+        "version": null,
+        "op": "create",
+        "title": "New event",
+        "start": "2026-10-12",
+        "end": "2026-10-13",
+        "location": "Home",
+        "details": "Bring cake",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      }
+    ]
+  },
+  "provider": [
+    {
+      "status": 200,
+      "body": {
+        "items": [],
+        "nextSyncToken": "sync-2"
+      }
+    },
+    {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": 409,
+          "message": "The requested identifier already exists."
+        }
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "etag": "\"revived\"",
+        "id": "11111111111111111111111111111111"
+      }
+    }
+  ],
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/calendar/v3/calendars/primary/events?maxResults=100\u0026showDeleted=true\u0026singleEvents=true\u0026syncToken=sync-1",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/cursor",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "cursor": "sync-2",
+          "full": false,
+          "windowEnd": "2026-10-31T00:00:00Z",
+          "windowStart": "2026-10-01T00:00:00Z"
+        }
+      },
+      {
+        "to": "core",
+        "method": "GET",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/changes?limit=100",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "POST",
+        "path": "/calendar/v3/calendars/primary/events",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": {
+          "description": "Bring cake",
+          "end": {
+            "date": "2026-10-14",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "id": "11111111111111111111111111111111",
+          "location": "Home",
+          "start": {
+            "date": "2026-10-12",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "summary": "New event"
+        }
+      },
+      {
+        "to": "provider",
+        "method": "PATCH",
+        "path": "/calendar/v3/calendars/primary/events/11111111111111111111111111111111",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": {
+          "description": "Bring cake",
+          "end": {
+            "date": "2026-10-14",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "location": "Home",
+          "start": {
+            "date": "2026-10-12",
+            "dateTime": null,
+            "timeZone": null
+          },
+          "status": "confirmed",
+          "summary": "New event"
+        }
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pushed",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "results": [
+            {
+              "externalId": "11111111111111111111111111111111",
+              "itemId": "11111111-1111-1111-1111-111111111111",
+              "status": "ok",
+              "version": "\"revived\""
+            }
+          ]
+        }
+      }
+    ],
+    "result": {
+      "applied": 0,
+      "conflicts": 0,
+      "fullSync": false,
+      "provider": "google",
+      "pushed": 1
+    },
+    "error": null
+  }
+}

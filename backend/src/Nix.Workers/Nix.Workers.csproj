@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The worker logic that used to live in apps/go-workers: queue primitives, web push
+    cryptography, bounded HTTP helpers, renderers, parsers and provider clients. Pure by
+    construction: no reference to Nix.Api, no database, no configuration binding, so every
+    piece here is testable on fixtures alone and the Go-to-.NET parity suites need no host.
+    The hosted services that lease jobs and call Core live in Nix.Api/Workers, which
+    references this project (ADR-0015 amendment: see docs/adr).
+  -->
+  <PropertyGroup>
+    <RootNamespace>Nix.Workers</RootNamespace>
+  </PropertyGroup>
+
+</Project>

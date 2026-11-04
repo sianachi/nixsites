@@ -216,6 +216,11 @@ services:
       Nix__RateLimits__PublicFormSubmissionsPerMinute: "20"
       Nix__RateLimits__SuggestionsPerMinute: "60"
       Nix__Push__VapidPublicKey: ${NIX_PUSH_VAPID_PUBLIC_KEY:-}
+      # Web Push is sent by Core's in-process notify worker; both halves of the key live here.
+      Nix__Push__VapidPrivateKey: ${NIX_PUSH_VAPID_PRIVATE_KEY:-}
+      Nix__Push__VapidSubject: ${NIX_PUSH_VAPID_SUBJECT:-}
+      # Stable across container recreation, so a restart recognises the jobs it interrupted.
+      Nix__Workers__InstanceId: nix-api
       Nix__GoWorkers__ExportEnabled: "true"
       Nix__GoWorkers__ImportEnabled: "true"
       Nix__Bff__Authority: ${NIX_OIDC_ISSUER:?set NIX_OIDC_ISSUER}
@@ -500,46 +505,6 @@ services:
       default:
         aliases:
           - nix-calendar-worker
-
-  nix-notify-worker:
-    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/worker:${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}}
-    user: "65532:65532"
-    restart: unless-stopped
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      nix-api:
-        condition: service_started
-    environment:
-      # The release this container runs, shown in Settings > About.
-      NIX_RELEASE_VERSION: ${NIX_RELEASE_VERSION:-}
-      NIX_RELEASE_COMMIT: ${NIX_WORKER_IMAGE_TAG:-${NIX_IMAGE_TAG}}
-      TMPDIR: /var/lib/nix-worker/spool
-      NIX_WORKER_ROLES: notify
-      NIX_WORKER_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_WORKER_API_URL: http://nix-api:8080
-      NIX_RABBITMQ_URL: ${NIX_RABBITMQ_NOTIFY_URL:-amqp://nix-notify:${NIX_RABBITMQ_NOTIFY_PASSWORD:?set NIX_RABBITMQ_NOTIFY_PASSWORD}@rabbitmq:5672/%2Fnix}
-      NIX_PUSH_VAPID_PRIVATE_KEY: ${NIX_PUSH_VAPID_PRIVATE_KEY:?set NIX_PUSH_VAPID_PRIVATE_KEY}
-      NIX_PUSH_VAPID_SUBJECT: ${NIX_PUSH_VAPID_SUBJECT:?set NIX_PUSH_VAPID_SUBJECT}
-      NIX_WORKER_MAX_CONCURRENCY: "4"
-    healthcheck:
-      test: ["CMD", "/nix-worker", "--healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-    mem_limit: 256m
-    cpus: 1
-    read_only: true
-    tmpfs:
-      - "/var/lib/nix-worker/spool:rw,noexec,nosuid,nodev,size=16m,uid=65532,gid=65532,mode=0700"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      default:
-        aliases:
-          - nix-notify-worker
 
   # Sites (ADR-0063), off unless the env file sets COMPOSE_PROFILES=sites and NIX_SITES_DOMAIN.
   nix-sites-worker:

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -39,8 +38,6 @@ type Settings struct {
 	PluginMaxHostCalls      int
 	CalendarGoogleOrigin    string
 	CalendarMicrosoftOrigin string
-	PushVAPIDPrivateKey     []byte
-	PushVAPIDSubject        string
 }
 
 func Load(getenv func(string) string) (Settings, error) {
@@ -100,10 +97,6 @@ func Load(getenv func(string) string) (Settings, error) {
 	if err != nil {
 		return Settings{}, fmt.Errorf("NIX_PLUGIN_MAX_HOST_CALLS: %w", err)
 	}
-	pushVAPIDPrivateKey, err := parseBase64URL(getenv("NIX_PUSH_VAPID_PRIVATE_KEY"))
-	if err != nil {
-		return Settings{}, fmt.Errorf("NIX_PUSH_VAPID_PRIVATE_KEY: %w", err)
-	}
 	settings := Settings{
 		CompanionDataDir:        getenv("NIX_COMPANION_DATA_DIR"),
 		CompanionBinary:         valueOr(getenv("NIX_COMPANION_BINARY"), "codex"),
@@ -132,8 +125,6 @@ func Load(getenv func(string) string) (Settings, error) {
 		PluginMaxHostCalls:      pluginMaxHostCalls,
 		CalendarGoogleOrigin:    valueOr(getenv("NIX_CALENDAR_GOOGLE_ORIGIN"), "https://www.googleapis.com"),
 		CalendarMicrosoftOrigin: valueOr(getenv("NIX_CALENDAR_MICROSOFT_ORIGIN"), "https://graph.microsoft.com"),
-		PushVAPIDPrivateKey:     pushVAPIDPrivateKey,
-		PushVAPIDSubject:        getenv("NIX_PUSH_VAPID_SUBJECT"),
 	}
 	if settings.MaxInputBytes <= 0 || settings.MaxLineBytes <= 0 || settings.MaxRecords <= 0 || settings.RequestTimeout <= 0 || settings.PollInterval <= 0 || settings.MaxConcurrency <= 0 || settings.MaxConcurrency > 100 || settings.LeaseDuration < 5*time.Second || settings.LeaseDuration > 300*time.Second || settings.RenewInterval <= 0 || settings.RenewInterval >= settings.LeaseDuration || settings.MaxMessageBytes <= 0 || settings.MaxMessageBytes > 64*1024 || settings.PluginMaxModuleBytes <= 0 || settings.PluginMaxModuleBytes > 32<<20 || settings.PluginMemoryPages <= 0 || settings.PluginMemoryPages > 4096 || settings.PluginTimeout <= 0 || settings.PluginTimeout > 5*time.Second || settings.PluginMaxHostCalls <= 0 || settings.PluginMaxHostCalls > 256 {
 		return Settings{}, fmt.Errorf("worker limits and timeout must be positive")
@@ -156,13 +147,6 @@ func parseOrigins(value string) ([]string, error) {
 		result = append(result, trimmed)
 	}
 	return result, nil
-}
-
-func parseBase64URL(value string) ([]byte, error) {
-	if value == "" {
-		return nil, nil
-	}
-	return base64.RawURLEncoding.DecodeString(strings.TrimRight(value, "="))
 }
 
 func valueOr(value, fallback string) string {

@@ -1,0 +1,252 @@
+{
+  "name": "microsoft_push_create_update_delete",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": {
+    "provider": "microsoft",
+    "externalCalendarId": "primary",
+    "direction": "two_way",
+    "cursor": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=stored",
+    "windowStart": "2026-10-01T00:00:00Z",
+    "windowEnd": "2026-10-31T00:00:00Z",
+    "accessToken": "parity-token",
+    "accessTokenExpiresAt": "2099-01-01T00:00:00Z"
+  },
+  "sessionStatus": 0,
+  "sessionCode": "",
+  "pull": {
+    "applied": 0,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": [
+      {
+        "itemId": "11111111-1111-1111-1111-111111111111",
+        "externalId": null,
+        "version": null,
+        "op": "create",
+        "title": "New event",
+        "start": "2026-10-12",
+        "end": "2026-10-13",
+        "location": "Home",
+        "details": "Bring cake",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "22222222-2222-2222-2222-222222222222",
+        "externalId": "evt-existing",
+        "version": "\"stale\"",
+        "op": "update",
+        "title": "Renamed",
+        "start": "2026-10-14T09:00:00+02:00[Europe/Berlin]",
+        "end": "2026-10-14T10:00:00+02:00[Europe/Berlin]",
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      },
+      {
+        "itemId": "55555555-5555-5555-5555-555555555555",
+        "externalId": "evt-gone",
+        "version": "\"v\"",
+        "op": "delete",
+        "title": "",
+        "start": "2026-10-15",
+        "end": null,
+        "location": "",
+        "details": "",
+        "updatedAt": "2026-09-28T00:00:00Z"
+      }
+    ]
+  },
+  "provider": [
+    {
+      "status": 200,
+      "body": {
+        "@odata.deltaLink": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=next",
+        "value": []
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "changeKey": "ck-new",
+        "id": "AAMk-new"
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "changeKey": "ck-upd",
+        "id": "evt-existing"
+      }
+    },
+    {
+      "status": 204,
+      "body": null
+    }
+  ],
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "GET",
+        "path": "/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=stored",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "Prefer": "odata.maxpagesize=50, outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/cursor",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "cursor": "{provider}/v1.0/me/calendars/primary/calendarView/delta?$deltatoken=next",
+          "full": false,
+          "windowEnd": "2026-10-31T00:00:00Z",
+          "windowStart": "2026-10-01T00:00:00Z"
+        }
+      },
+      {
+        "to": "core",
+        "method": "GET",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/changes?limit=100",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      },
+      {
+        "to": "provider",
+        "method": "POST",
+        "path": "/v1.0/me/calendars/primary/events",
+        "headers": {
+          "Authorization": "Bearer parity-token"
+        },
+        "body": {
+          "body": {
+            "content": "Bring cake",
+            "contentType": "text"
+          },
+          "end": {
+            "dateTime": "2026-10-14T00:00:00.0000000",
+            "timeZone": "UTC"
+          },
+          "isAllDay": true,
+          "location": {
+            "displayName": "Home"
+          },
+          "singleValueExtendedProperties": [
+            {
+              "id": "String {6f1c2d8e-4b7a-4e39-9c55-2a7d3e1b9f40} Name NixItemId",
+              "value": "11111111-1111-1111-1111-111111111111"
+            }
+          ],
+          "start": {
+            "dateTime": "2026-10-12T00:00:00.0000000",
+            "timeZone": "UTC"
+          },
+          "subject": "New event",
+          "transactionId": "11111111-1111-1111-1111-111111111111"
+        }
+      },
+      {
+        "to": "provider",
+        "method": "PATCH",
+        "path": "/v1.0/me/calendars/primary/events/evt-existing",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "If-Match": "\"stale\""
+        },
+        "body": {
+          "body": {
+            "content": "",
+            "contentType": "text"
+          },
+          "end": {
+            "dateTime": "2026-10-14T10:00:00.0000000",
+            "timeZone": "Europe/Berlin"
+          },
+          "isAllDay": false,
+          "location": {
+            "displayName": ""
+          },
+          "start": {
+            "dateTime": "2026-10-14T09:00:00.0000000",
+            "timeZone": "Europe/Berlin"
+          },
+          "subject": "Renamed"
+        }
+      },
+      {
+        "to": "provider",
+        "method": "DELETE",
+        "path": "/v1.0/me/calendars/primary/events/evt-gone",
+        "headers": {
+          "Authorization": "Bearer parity-token",
+          "If-Match": "\"v\""
+        },
+        "body": null
+      },
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/pushed",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": {
+          "results": [
+            {
+              "externalId": "AAMk-new",
+              "itemId": "11111111-1111-1111-1111-111111111111",
+              "status": "ok",
+              "version": "ck-new"
+            },
+            {
+              "externalId": "evt-existing",
+              "itemId": "22222222-2222-2222-2222-222222222222",
+              "status": "ok",
+              "version": "ck-upd"
+            },
+            {
+              "externalId": "evt-gone",
+              "itemId": "55555555-5555-5555-5555-555555555555",
+              "status": "ok",
+              "version": "\"v\""
+            }
+          ]
+        }
+      }
+    ],
+    "result": {
+      "applied": 0,
+      "conflicts": 0,
+      "fullSync": false,
+      "provider": "microsoft",
+      "pushed": 3
+    },
+    "error": null
+  }
+}

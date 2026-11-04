@@ -1,9 +1,6 @@
 package config
 
 import (
-	"crypto/rand"
-	"encoding/base64"
-	"reflect"
 	"testing"
 )
 
@@ -99,43 +96,6 @@ func TestLoadRejectsMalformedNumericConfiguration(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("Load() accepted malformed numeric configuration")
-	}
-}
-
-func TestLoadDecodesTheVAPIDPrivateKeyFromBase64URL(t *testing.T) {
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
-		t.Fatal(err)
-	}
-	encoded := base64.RawURLEncoding.EncodeToString(raw)
-
-	settings, err := Load(func(key string) string {
-		switch key {
-		case "NIX_PUSH_VAPID_PRIVATE_KEY":
-			return encoded
-		case "NIX_PUSH_VAPID_SUBJECT":
-			return "mailto:push@example.test"
-		default:
-			return ""
-		}
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(settings.PushVAPIDPrivateKey, raw) {
-		t.Fatalf("PushVAPIDPrivateKey = %x, want %x", settings.PushVAPIDPrivateKey, raw)
-	}
-	if settings.PushVAPIDSubject != "mailto:push@example.test" {
-		t.Fatalf("PushVAPIDSubject = %q", settings.PushVAPIDSubject)
-	}
-
-	if _, err := Load(func(key string) string {
-		if key == "NIX_PUSH_VAPID_PRIVATE_KEY" {
-			return "not-valid-base64url!!"
-		}
-		return ""
-	}); err == nil {
-		t.Fatal("Load() accepted a malformed VAPID private key")
 	}
 }
 

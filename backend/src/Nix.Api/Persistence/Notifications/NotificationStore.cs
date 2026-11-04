@@ -154,6 +154,15 @@ public sealed class NotificationStore(
         return new NotificationWriteResult(row, inserted == 1);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> ClaimPushAsync(TenantId tenantId, PrincipalId principalId, Guid notificationId, CancellationToken cancellationToken) =>
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE notification
+               SET push_attempted_at = clock_timestamp()
+             WHERE tenant_id = {tenantId.Value} AND principal_id = {principalId.Value} AND id = {notificationId}
+               AND push_attempted_at IS NULL
+            """, cancellationToken).ConfigureAwait(false) == 1;
+
     // A push is enqueued only for a newly created notification (never a deduplicated one), only
     // when the recipient has a device to push to, and only when push is configured at all - an
     // unconfigured Nix:Push:VapidPublicKey means the inbox still works and push stays unavailable

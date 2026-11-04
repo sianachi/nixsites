@@ -5,6 +5,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ## Unreleased
 
+### Changed
+
+- Web Push delivery runs inside Core: the `notify` worker role and its container are gone, and Core now needs `Nix:Push:VapidPrivateKey` and `Nix:Push:VapidSubject` (Compose: `NIX_PUSH_VAPID_PRIVATE_KEY` and `NIX_PUSH_VAPID_SUBJECT`, already in the env file; Kubernetes: the `nix-push-vapid` secret, already present). A notification's push is handed to the worker once, so a restart mid-delivery can never push the same notification twice. Jobs Core was running when it restarted are marked `failed` with `interrupted_by_restart` and can be retried.
+
 ### Added
 
 - A sign-in handoff for native apps: `/auth/login?native=<challenge>` finishes in the system sign-in

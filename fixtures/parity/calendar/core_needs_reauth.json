@@ -1,0 +1,39 @@
+{
+  "name": "core_needs_reauth",
+  "payload": {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "full": false
+  },
+  "session": null,
+  "sessionStatus": 409,
+  "sessionCode": "calendar.needs_reauth",
+  "pull": {
+    "applied": 0,
+    "conflicts": 0
+  },
+  "pullStatus": 0,
+  "pullCode": "",
+  "changes": {
+    "changes": null
+  },
+  "provider": null,
+  "expected": {
+    "requests": [
+      {
+        "to": "core",
+        "method": "POST",
+        "path": "/internal/worker-executions/calendar/links/33333333-3333-3333-3333-333333333333/session",
+        "headers": {
+          "X-Nix-Worker-Execution-Id": "nix-parity:execution",
+          "X-Nix-Worker-Job-Id": "44444444-4444-4444-4444-444444444444"
+        },
+        "body": null
+      }
+    ],
+    "result": null,
+    "error": {
+      "code": "calendar_needs_reauth",
+      "retryable": false
+    }
+  }
+}
