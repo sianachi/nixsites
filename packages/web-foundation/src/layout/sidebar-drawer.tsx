@@ -59,6 +59,9 @@ export interface SidebarDrawerProps {
   /** Cover the whole viewport instead of the positioned shell around it (the right-hand panel). */
   readonly fixed?: boolean;
 
+  /** Take the full width rather than leaving a strip of scrim beside the panel (the Explorer). */
+  readonly fill?: boolean;
+
   readonly children: ReactNode;
 }
 
@@ -77,6 +80,7 @@ export function SidebarDrawer({
   onClose,
   side = 'left',
   fixed = false,
+  fill = false,
   children,
 }: SidebarDrawerProps): ReactNode {
   const panel = useRef<HTMLDivElement>(null);
@@ -241,8 +245,8 @@ export function SidebarDrawer({
         className={`${fixed ? 'fixed z-[60]' : 'absolute z-0'} inset-0 cursor-pointer bg-neutral-900/40`}
       />
 
-      {/* design-token-exempt: the phone browser takes the available width; wider drawers cap at
-          320px with room for a dismissing scrim. This is panel geometry, not a spacing scale.
+      {/* design-token-exempt: a `fill` drawer takes the whole width; others take 85% on a phone and
+          cap at 320px wider, with room for a dismissing scrim. Panel geometry, not a spacing scale.
 
           `z-10`, not `z-20`: this panel and the scrim below it sit *beside* `<main>`, not inside
           it, so `<main>`'s own `isolate` (see `app-shell.tsx`) does nothing to keep this pair out
@@ -258,7 +262,7 @@ export function SidebarDrawer({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerEnd}
         onPointerCancel={onPointerEnd}
-        className={`${fixed ? 'fixed z-[61]' : 'absolute z-10'} inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex w-[85%] shrink-0 touch-pan-y overflow-hidden shadow-lg sm:w-[min(85%,320px)]`}
+        className={`${fixed ? 'fixed z-[61]' : 'absolute z-10'} inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex ${fill ? 'w-full' : 'w-[85%] sm:w-[min(85%,320px)]'} shrink-0 touch-pan-y overflow-hidden shadow-lg`}
       >
         {children}
       </div>

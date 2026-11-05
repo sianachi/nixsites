@@ -96,9 +96,10 @@ export function ShellSidebar({
   return (
     <>
       {!sidebar.visible ? null : narrow ? (
-        <SidebarDrawer onClose={closeDrawer}>
-          {/* One browser owns the phone's width. Occasional item and destination actions are
-              disclosed from it instead of competing in a second navigation column. */}
+        <SidebarDrawer fill onClose={closeDrawer}>
+          {/* One browser owns the whole width on phones and portrait tablets. Occasional item and
+              destination actions are disclosed from it instead of competing in a second
+              navigation column. */}
           <MobileWorkspaceBrowser
             tree={tree}
             parentId={browseParent}

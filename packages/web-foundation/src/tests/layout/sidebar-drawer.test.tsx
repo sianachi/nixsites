@@ -107,6 +107,26 @@ describe('the sidebar drawer', () => {
     expect(panel).toHaveClass('z-10');
   });
 
+  it('takes the full width when asked to fill, and a partial width otherwise', () => {
+    const { rerender } = render(
+      <SidebarDrawer fill onClose={vi.fn()}>
+        <button>First row</button>
+      </SidebarDrawer>,
+    );
+    const panel = (): HTMLElement | null =>
+      screen.getByRole('button', { name: 'First row' }).closest('div');
+    expect(panel()).toHaveClass('w-full');
+    expect(panel()).not.toHaveClass('w-[85%]');
+
+    rerender(
+      <SidebarDrawer onClose={vi.fn()}>
+        <button>First row</button>
+      </SidebarDrawer>,
+    );
+    expect(panel()).toHaveClass('w-[85%]');
+    expect(panel()).not.toHaveClass('w-full');
+  });
+
   // Real touch-target verification - that the scrim's hit area and the tree's own controls clear
   // WCAG 2.5.8's 24px floor - belongs in a browser-based pass (Storybook + axe, U10). jsdom cannot
   // compute box sizes, so there is deliberately no test here standing in for that.
