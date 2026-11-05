@@ -42,7 +42,7 @@ describe('the automations list', () => {
     stubAutomations();
     renderAt(<App />, PAGE);
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Automations' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'Automations' })).toBeVisible();
     expect(await screen.findByText('No automations yet')).toBeVisible();
   });
 

@@ -80,6 +80,6 @@ describe('reaching automations from the command palette', () => {
     await user.type(within(palette).getByRole('combobox'), 'automat');
     await user.click(within(palette).getByRole('option', { name: /^Automations/ }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Automations' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'Automations' })).toBeVisible();
   });
 });

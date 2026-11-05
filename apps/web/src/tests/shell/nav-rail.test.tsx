@@ -370,7 +370,7 @@ describe('the navigation rail', () => {
  * the same helper, `sidebar.test.tsx` uses for the drawer.
  */
 describe('the Workspaces destination', () => {
-  it('opens the workspace list and is current there', async () => {
+  it('opens the workspace list over the page the person was on', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
@@ -382,8 +382,9 @@ describe('the Workspaces destination', () => {
       ),
     );
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
-    expect(within(rail()).getByRole('link', { name: 'Workspaces' })).toHaveAttribute(
+    // A dialog over the page on desktop, so the rail still marks where the person was.
+    expect(await screen.findByRole('dialog', { name: 'Workspaces' })).toBeVisible();
+    expect(within(rail()).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'aria-current',
       'page',
     );

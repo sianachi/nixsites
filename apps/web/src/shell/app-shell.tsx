@@ -59,6 +59,8 @@ import { PhoneTopRow } from './phone/phone-top-row';
 import { TabSwitcher } from './phone/tab-switcher';
 import { usePhone } from './phone/use-phone';
 import { usePhoneTabs } from './phone/use-phone-tabs';
+import { RouteDialog } from './route-dialog';
+import { useRouteDialog } from './route-dialog-context';
 import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';
@@ -213,6 +215,7 @@ export function AppShell(): ReactNode {
   const [workspaceImportOpen, setWorkspaceImportOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const phone = usePhone();
+  const routeDialogOpen = useRouteDialog() !== null;
   const [tabsOpen, setTabsOpen] = useState(false);
   const [newTabOpen, setNewTabOpen] = useState(false);
   useEffect(() => {
@@ -794,7 +797,8 @@ export function AppShell(): ReactNode {
                 genuinely unreachable to pointer and assistive technology without a hand-rolled focus
                 trap standing in for it - see `sidebar-drawer.tsx`'s own comment on why that trade was
                 made. Scoped to the drawer being open rather than to `narrow` alone, since a narrow
-                window with the drawer closed has nothing covering this region at all.
+                window with the drawer closed has nothing covering this region at all. Never while a
+                route dialog is open: it renders in here, and the modal makes the rest inert itself.
 
                 `isolate` unconditionally, not only while the drawer is open: it creates a stacking
                 context for everything a pane renders, so nothing in here - `sheet-grid.tsx`'s own
@@ -813,7 +817,7 @@ export function AppShell(): ReactNode {
                     ref={mainRef}
                     id="main"
                     tabIndex={-1}
-                    inert={narrow && sidebar.visible && !zen}
+                    inert={narrow && sidebar.visible && !zen && !routeDialogOpen}
                     className={`isolate flex flex-1 ${paneClip}`}
                   >
                     {/* Mutable server-owned template state has its own subscribed context. Router
@@ -834,6 +838,9 @@ export function AppShell(): ReactNode {
                               } satisfies ShellContext
                             }
                           />
+                          {/* Desktop's automations, workspaces, trash and settings. Inside
+                            `<main>` for the providers; a modal dialog sits in the top layer. */}
+                          <RouteDialog />
                         </ItemDialogProvider>
                       </CapabilitiesProvider>
                     </TemplateLibraryProvider>

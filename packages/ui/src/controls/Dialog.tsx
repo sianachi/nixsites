@@ -98,6 +98,9 @@ export interface DialogProps {
    * Where focus should land instead of on the dialog itself - the one field of a rename dialog,
    * say. Ignored if the element is not there when the dialog opens, which is the safe failure: the
    * dialog keeps the focus rather than leaving it behind on the page.
+   *
+   * Without it, a descendant marked `data-autofocus` takes focus instead: the way for a body that
+   * owns its field - a screen shown either as a page or in a dialog - to name it without a ref.
    */
   readonly initialFocus?: RefObject<HTMLElement | null>;
 
@@ -222,7 +225,11 @@ export function Dialog(props: DialogProps): ReactNode {
         const active = document.activeElement;
         invokerRef.current = active instanceof HTMLElement ? active : null;
         element.showModal();
-        (initialFocus?.current ?? element).focus();
+        (
+          initialFocus?.current ??
+          element.querySelector<HTMLElement>('[data-autofocus]') ??
+          element
+        ).focus();
       }
       return;
     }

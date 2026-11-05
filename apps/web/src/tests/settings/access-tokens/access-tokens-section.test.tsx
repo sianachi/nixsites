@@ -107,7 +107,7 @@ describe('creating a token', () => {
     stubCoreApi({ accessTokens: [] });
     await renderTokens();
 
-    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await screen.findByRole('dialog', { name: 'Settings' });
     await fillAndSubmit(user);
 
     // The one showing: the secret itself, the copy control, and the sentence that says there is
@@ -129,7 +129,7 @@ describe('creating a token', () => {
     stubCoreApi({ accessTokens: [] });
     await renderTokens();
 
-    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await screen.findByRole('dialog', { name: 'Settings' });
     await user.click(screen.getByRole('button', { name: 'Create token' }));
     await user.type(screen.getByRole('textbox', { name: /^name$/i }), 'ci robot');
     await user.click(screen.getByRole('checkbox', { name: /read items and search/i }));
@@ -165,7 +165,7 @@ describe('creating a token', () => {
     });
     await renderTokens();
 
-    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await screen.findByRole('dialog', { name: 'Settings' });
     await fillAndSubmit(user);
 
     expect(
@@ -186,7 +186,7 @@ describe('creating a token', () => {
     });
     await renderTokens();
 
-    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await screen.findByRole('dialog', { name: 'Settings' });
     await fillAndSubmit(user);
 
     expect(

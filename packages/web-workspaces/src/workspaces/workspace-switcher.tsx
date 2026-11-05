@@ -409,6 +409,8 @@ function WorkspaceSearch({
           type="search"
           aria-label="Search workspaces"
           placeholder="Search workspaces"
+          // Takes focus when the workspaces screen opens as a dialog (see `<Dialog>`).
+          data-autofocus
           ref={inputRef}
           value={query}
           onChange={(event) => {

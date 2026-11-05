@@ -12,13 +12,19 @@ import {
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
+import { useInRouteDialog } from '../shell/route-dialog-context';
 
 function Frame({ children }: { readonly children: ReactNode }): ReactElement {
+  const inDialog = useInRouteDialog();
   return (
-    <div className={`${paneScroller} flex flex-col gap-4 break-words p-3 sm:p-4`}>
-      <Text variant="h3" as="h1">
-        Trash
-      </Text>
+    <div
+      className={`${paneScroller} flex flex-col gap-4 break-words ${inDialog ? '' : 'p-3 sm:p-4'}`}
+    >
+      {inDialog ? null : (
+        <Text variant="h3" as="h1">
+          Trash
+        </Text>
+      )}
       {children}
     </div>
   );

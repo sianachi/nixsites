@@ -32,7 +32,8 @@ describe('reaching the settings screen', () => {
   it('lists sections as navigation links at its own address, under a single main landmark', async () => {
     renderAt(<App />, '/settings');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    // Desktop shows the screen as a dialog over the work; the dialog's title names it.
+    expect(await screen.findByRole('dialog', { name: 'Settings' })).toBeVisible();
     const workspaceNav = screen.getByRole('navigation', { name: 'Workspace settings' });
     expect(within(workspaceNav).getByRole('link', { name: 'Workspace' })).toHaveAttribute(
       'aria-current',
@@ -190,18 +191,18 @@ describe('reaching the settings screen', () => {
       }),
     );
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'Settings' })).toBeVisible();
   });
 
-  it('is reachable from the left rail and becomes its current destination', async () => {
+  it('is reachable from the left rail, opening over the page the person was on', async () => {
     const user = userEvent.setup();
     renderAt(<App />, '/');
 
     const rail = await screen.findByRole('navigation', { name: /destinations/i });
     await user.click(within(rail).getByRole('link', { name: 'Settings' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-    expect(within(rail).getByRole('link', { name: 'Settings' })).toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'Settings' })).toBeVisible();
+    expect(within(rail).getByRole('link', { name: 'Homebase' })).toHaveAttribute(
       'aria-current',
       'page',
     );

@@ -33,7 +33,8 @@ describe('Settings > MCP', () => {
     ).toBeVisible();
 
     await user.click(within(section).getByRole('button', { name: 'Create MCP token' }));
-    const dialog = await screen.findByRole('dialog');
+    // Not the Settings screen's own dialog, which this one opens over on desktop.
+    const dialog = await screen.findByRole('dialog', { name: (name) => name !== 'Settings' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'laptop');
     await user.click(within(dialog).getByRole('checkbox', { name: /read items/i }));
     await user.click(within(dialog).getByRole('radio', { name: '365 days' }));

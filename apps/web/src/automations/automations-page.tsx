@@ -19,6 +19,7 @@ import {
   parseAutomationSelection,
 } from '@nix/web-collections/items/automation-url';
 import { useAutomations, type AutomationsState } from './use-automations';
+import { useInRouteDialog } from '../shell/route-dialog-context';
 
 /**
  * The caller's automations in this workspace (ADR-0051 section 6): the list, one rule's editor and
@@ -33,6 +34,7 @@ export function AutomationsPage(): ReactNode {
   const navigate = useNavigate();
   const selection = parseAutomationSelection(params);
   const state = useAutomations(workspaceId);
+  const inDialog = useInRouteDialog();
 
   const listHref = automationsHref(workspaceId, { kind: 'list' });
   const itemHref = (itemId: string): string =>
@@ -40,17 +42,19 @@ export function AutomationsPage(): ReactNode {
 
   return (
     <div className={`${paneScroller} flex min-w-0 flex-col`}>
-      <header className="border-b border-divider p-3 sm:p-5">
-        <Text variant="h4" as="h1">
-          Automations
-        </Text>
-        <Text variant="note" tone="muted" className="mt-2 max-w-2xl">
+      <header className={`border-b border-divider ${inDialog ? 'pb-3' : 'p-3 sm:p-5'}`}>
+        {inDialog ? null : (
+          <Text variant="h4" as="h1">
+            Automations
+          </Text>
+        )}
+        <Text variant="note" tone="muted" className={`max-w-2xl ${inDialog ? '' : 'mt-2'}`}>
           Rules that act for you on a schedule, when a date arrives, or when a property changes.
           They are yours alone: nobody else in the workspace can see or change them.
         </Text>
       </header>
 
-      <div className="flex min-w-0 max-w-4xl flex-col gap-4 p-3 sm:p-5">
+      <div className={`flex min-w-0 max-w-4xl flex-col gap-4 ${inDialog ? 'pt-4' : 'p-3 sm:p-5'}`}>
         {selection.kind === 'list' ? (
           <ListView state={state} workspaceId={workspaceId} />
         ) : (

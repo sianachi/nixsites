@@ -63,7 +63,8 @@ describe('Settings > Site approvals', () => {
     expect(within(table).getByText('garden.nixsites.com')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Approve Garden notes' }));
-    const dialog = await screen.findByRole('dialog');
+    // Not the Settings screen's own dialog, which this one opens over on desktop.
+    const dialog = await screen.findByRole('dialog', { name: (name) => name !== 'Settings' });
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
     await user.click(within(dialog).getByRole('button', { name: 'Approve and publish' }));
 
@@ -105,7 +106,8 @@ describe('Settings > Site approvals', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Reject Garden notes' }));
-    const dialog = await screen.findByRole('dialog');
+    // Not the Settings screen's own dialog, which this one opens over on desktop.
+    const dialog = await screen.findByRole('dialog', { name: (name) => name !== 'Settings' });
     await user.type(within(dialog).getByLabelText('Note (optional)'), 'Not yet');
     await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
 

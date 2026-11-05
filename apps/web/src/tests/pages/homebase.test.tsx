@@ -93,6 +93,6 @@ describe('Homebase', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Workspaces' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'Workspaces' })).toBeVisible();
   });
 });

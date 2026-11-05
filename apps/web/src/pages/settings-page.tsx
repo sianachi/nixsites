@@ -47,6 +47,7 @@ import {
   useSettingsTab,
   type SettingsTab,
 } from './settings-tab';
+import { useInRouteDialog } from '../shell/route-dialog-context';
 
 const fromState = z.object({ from: z.string() });
 const drilledState = z.object({ drilled: z.literal(true) });
@@ -149,6 +150,7 @@ function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
 export function SettingsPage(): ReactElement {
   const { requested } = useSettingsTab();
   const narrow = useNarrowViewport();
+  const inDialog = useInRouteDialog();
   const { pathname, state } = useLocation() as { pathname: string; state: unknown };
   // Display hints: Core refuses the operator, approver and administrator routes to everyone else.
   const capabilities = useCapabilities();
@@ -257,22 +259,24 @@ export function SettingsPage(): ReactElement {
 
   return (
     <div ref={scroller} className={`${paneScroller} flex flex-col ${narrow ? 'bg-surface' : ''}`}>
-      <header
-        className={`px-3 py-3 sm:px-6 sm:py-4 ${narrow ? 'relative flex items-center justify-center' : 'border-b border-divider'}`}
-      >
-        <Text variant="h2" as="h1" className={narrow && activeTab !== null ? 'sr-only' : ''}>
-          Settings
-        </Text>
-        {narrow ? (
-          <Link
-            to="/"
-            aria-label="Close settings"
-            className="absolute right-3 flex size-9 items-center justify-center rounded-full bg-surface-raised"
-          >
-            <Icon icon={X} size="sm" />
-          </Link>
-        ) : null}
-      </header>
+      {inDialog ? null : (
+        <header
+          className={`px-3 py-3 sm:px-6 sm:py-4 ${narrow ? 'relative flex items-center justify-center' : 'border-b border-divider'}`}
+        >
+          <Text variant="h2" as="h1" className={narrow && activeTab !== null ? 'sr-only' : ''}>
+            Settings
+          </Text>
+          {narrow ? (
+            <Link
+              to="/"
+              aria-label="Close settings"
+              className="absolute right-3 flex size-9 items-center justify-center rounded-full bg-surface-raised"
+            >
+              <Icon icon={X} size="sm" />
+            </Link>
+          ) : null}
+        </header>
+      )}
 
       {narrow && activeTab === null ? (
         <div className="px-3 pb-3">
@@ -308,7 +312,7 @@ export function SettingsPage(): ReactElement {
         </Link>
       ) : null}
 
-      <div className={narrow ? 'min-w-0' : 'flex min-w-0 gap-6 p-6'}>
+      <div className={narrow ? 'min-w-0' : `flex min-w-0 gap-6 ${inDialog ? 'pt-2' : 'p-6'}`}>
         {narrow && activeTab !== null ? null : navigation}
         {activeTab === null ? null : (
           <div
