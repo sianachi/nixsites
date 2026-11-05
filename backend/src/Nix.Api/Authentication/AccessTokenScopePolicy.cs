@@ -194,8 +194,8 @@ public static class AccessTokenScopePolicy
     /// </summary>
     private static bool IsWorkspaceQueryPath(string value)
     {
-        const string Prefix = "/api/v1/workspaces/";
-        if (!value.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+        const string prefix = "/api/v1/workspaces/";
+        if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -203,7 +203,7 @@ public static class AccessTokenScopePolicy
         // One segment for the workspace: the route's guid constraint is what makes it an id (any
         // other segment matches no endpoint and answers 404), and the contract walk classifies the
         // templated path, so the segment is not parsed here.
-        var rest = value[Prefix.Length..];
+        var rest = value[prefix.Length..];
         var slash = rest.IndexOf('/', StringComparison.Ordinal);
         if (slash <= 0)
         {

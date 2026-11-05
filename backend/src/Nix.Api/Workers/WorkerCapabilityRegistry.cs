@@ -6,54 +6,54 @@ namespace Nix.Workers;
 public sealed class WorkerCapabilityRegistry : IWorkerCapabilityRegistry
 {
     private const int MaximumAdvertisements = 1024;
-    private readonly Lock sync = new();
-    private readonly Dictionary<string, WorkerCapabilityAdvertisement> advertisements =
+    private readonly Lock _sync = new();
+    private readonly Dictionary<string, WorkerCapabilityAdvertisement> _advertisements =
         new(StringComparer.Ordinal);
 
     public void Replace(WorkerCapabilityAdvertisement advertisement)
     {
         ArgumentNullException.ThrowIfNull(advertisement);
-        lock (sync)
+        lock (_sync)
         {
-            if (advertisements.TryGetValue(advertisement.InstanceId, out var current))
+            if (_advertisements.TryGetValue(advertisement.InstanceId, out var current))
             {
                 if (advertisement.OccurredAt >= current.OccurredAt)
                 {
-                    advertisements[advertisement.InstanceId] = advertisement;
+                    _advertisements[advertisement.InstanceId] = advertisement;
                 }
                 return;
             }
 
-            if (advertisements.Count >= MaximumAdvertisements)
+            if (_advertisements.Count >= MaximumAdvertisements)
             {
-                foreach (var expired in advertisements
+                foreach (var expired in _advertisements
                     .Where(pair => pair.Value.ExpiresAt <= advertisement.OccurredAt)
                     .Select(pair => pair.Key)
                     .ToArray())
                 {
-                    advertisements.Remove(expired);
+                    _advertisements.Remove(expired);
                 }
             }
-            if (advertisements.Count >= MaximumAdvertisements)
+            if (_advertisements.Count >= MaximumAdvertisements)
             {
-                var oldest = advertisements.MinBy(pair => pair.Value.ExpiresAt);
-                advertisements.Remove(oldest.Key);
+                var oldest = _advertisements.MinBy(pair => pair.Value.ExpiresAt);
+                _advertisements.Remove(oldest.Key);
             }
-            advertisements.Add(advertisement.InstanceId, advertisement);
+            _advertisements.Add(advertisement.InstanceId, advertisement);
         }
     }
 
     public IReadOnlyList<ExportFormatCapability> ExportFormats(DateTimeOffset now)
     {
-        lock (sync)
+        lock (_sync)
         {
             var live = new List<WorkerCapabilityAdvertisement>();
-            foreach (var pair in advertisements.ToArray())
+            foreach (var pair in _advertisements.ToArray())
             {
                 var advertisement = pair.Value;
                 if (advertisement.ExpiresAt <= now)
                 {
-                    advertisements.Remove(pair.Key);
+                    _advertisements.Remove(pair.Key);
                     continue;
                 }
                 if (!string.Equals(advertisement.Role, "export", StringComparison.Ordinal))

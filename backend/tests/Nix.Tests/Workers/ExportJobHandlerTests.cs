@@ -104,7 +104,7 @@ public sealed class ExportJobHandlerTests
 
     private sealed class Script(string format, HttpStatusCode uploadStatus) : HttpMessageHandler
     {
-        private readonly byte[] stream = File.ReadAllBytes(Path.Combine(FixtureRoot(), "shared-render", "stream.ndjson"));
+        private readonly byte[] _stream = File.ReadAllBytes(Path.Combine(FixtureRoot(), "shared-render", "stream.ndjson"));
 
         public byte[]? Uploaded { get; private set; }
 
@@ -120,7 +120,7 @@ public sealed class ExportJobHandlerTests
             {
                 Assert.Equal("Bearer delegated-token", request.Headers.Authorization!.ToString());
                 Assert.Equal("export-secret", request.Headers.GetValues("X-Nix-Internal-Secret").Single());
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(stream) };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(_stream) };
             }
             if (uri.Host == "objects")
             {

@@ -148,11 +148,11 @@ public sealed class CalendarSyncParityTests
     /// <summary>Answers Core and provider requests from the fixture's script, recording each one the way the Go recorder did.</summary>
     private sealed class ScriptedHandler(JsonObject fixture) : HttpMessageHandler
     {
-        private readonly Queue<JsonObject> answers = new(fixture["provider"]?.AsArray().Select(node => node!.AsObject()) ?? []);
+        private readonly Queue<JsonObject> _answers = new(fixture["provider"]?.AsArray().Select(node => node!.AsObject()) ?? []);
 
         public List<JsonObject> Requests { get; } = [];
 
-        public int RemainingAnswers => answers.Count;
+        public int RemainingAnswers => _answers.Count;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -179,8 +179,8 @@ public sealed class CalendarSyncParityTests
 
             if (isProvider)
             {
-                Assert.True(answers.Count > 0, $"unscripted provider request {request.Method} {request.RequestUri}");
-                var answer = answers.Dequeue();
+                Assert.True(_answers.Count > 0, $"unscripted provider request {request.Method} {request.RequestUri}");
+                var answer = _answers.Dequeue();
                 return Json((HttpStatusCode)answer["status"]!.GetValue<int>(), answer["body"]);
             }
 

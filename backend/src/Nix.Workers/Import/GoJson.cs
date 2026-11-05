@@ -12,46 +12,46 @@ namespace Nix.Workers.Import;
 internal sealed class GoJsonWriter
 {
     private const string Hex = "0123456789abcdef";
-    private readonly StringBuilder output = new();
-    private bool comma;
+    private readonly StringBuilder _output = new();
+    private bool _comma;
 
-    public byte[] ToUtf8() => Encoding.UTF8.GetBytes(output.ToString());
+    public byte[] ToUtf8() => Encoding.UTF8.GetBytes(_output.ToString());
 
     public GoJsonWriter Begin()
     {
         Separate();
-        output.Append('{');
-        comma = false;
+        _output.Append('{');
+        _comma = false;
         return this;
     }
 
     public GoJsonWriter End()
     {
-        output.Append('}');
-        comma = true;
+        _output.Append('}');
+        _comma = true;
         return this;
     }
 
     public GoJsonWriter BeginArray()
     {
         Separate();
-        output.Append('[');
-        comma = false;
+        _output.Append('[');
+        _comma = false;
         return this;
     }
 
     public GoJsonWriter EndArray()
     {
-        output.Append(']');
-        comma = true;
+        _output.Append(']');
+        _comma = true;
         return this;
     }
 
     public GoJsonWriter Name(string name)
     {
         Separate();
-        output.Append('"').Append(name).Append("\":");
-        comma = false;
+        _output.Append('"').Append(name).Append("\":");
+        _comma = false;
         return this;
     }
 
@@ -60,37 +60,37 @@ internal sealed class GoJsonWriter
         Separate();
         if (value is null)
         {
-            output.Append("null");
+            _output.Append("null");
         }
         else
         {
-            AppendString(output, value);
+            AppendString(_output, value);
         }
-        comma = true;
+        _comma = true;
         return this;
     }
 
     public GoJsonWriter Number(long value)
     {
         Separate();
-        output.Append(value.ToString(CultureInfo.InvariantCulture));
-        comma = true;
+        _output.Append(value.ToString(CultureInfo.InvariantCulture));
+        _comma = true;
         return this;
     }
 
     public GoJsonWriter Bool(bool value)
     {
         Separate();
-        output.Append(value ? "true" : "false");
-        comma = true;
+        _output.Append(value ? "true" : "false");
+        _comma = true;
         return this;
     }
 
     public GoJsonWriter Null()
     {
         Separate();
-        output.Append("null");
-        comma = true;
+        _output.Append("null");
+        _comma = true;
         return this;
     }
 
@@ -100,13 +100,13 @@ internal sealed class GoJsonWriter
         Separate();
         if (value is null)
         {
-            output.Append("null");
+            _output.Append("null");
         }
         else
         {
-            AppendCompact(output, value.Value.GetRawText());
+            AppendCompact(_output, value.Value.GetRawText());
         }
-        comma = true;
+        _comma = true;
         return this;
     }
 
@@ -126,9 +126,9 @@ internal sealed class GoJsonWriter
 
     private void Separate()
     {
-        if (comma)
+        if (_comma)
         {
-            output.Append(',');
+            _output.Append(',');
         }
     }
 
@@ -239,7 +239,7 @@ internal sealed class GoJsonWriter
 /// </summary>
 internal sealed class GoFields
 {
-    private readonly Dictionary<string, JsonElement> values = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, JsonElement> _values = new(StringComparer.Ordinal);
 
     private GoFields()
     {
@@ -269,7 +269,7 @@ internal sealed class GoFields
                 }
                 continue;
             }
-            fields.values[name] = property.Value;
+            fields._values[name] = property.Value;
         }
         return fields;
     }
@@ -277,11 +277,11 @@ internal sealed class GoFields
     public static GoFields Require(JsonElement element, bool strict, params string[] names) =>
         Read(element, strict, names) ?? new GoFields();
 
-    public bool Has(string name) => values.ContainsKey(name);
+    public bool Has(string name) => _values.ContainsKey(name);
 
     /// <summary>The present, non-null value of a field.</summary>
     public bool TryGet(string name, out JsonElement value) =>
-        values.TryGetValue(name, out value) && value.ValueKind != JsonValueKind.Null;
+        _values.TryGetValue(name, out value) && value.ValueKind != JsonValueKind.Null;
 
     public string String(string name) => OptionalString(name) ?? string.Empty;
 
@@ -331,7 +331,7 @@ internal sealed class GoFields
     }
 
     /// <summary>A RawMessage: absent is null, a JSON null is kept as a null element.</summary>
-    public JsonElement? Raw(string name) => values.TryGetValue(name, out var value) ? value.Clone() : null;
+    public JsonElement? Raw(string name) => _values.TryGetValue(name, out var value) ? value.Clone() : null;
 
     /// <summary>A slice: absent or null is null, an array maps each element.</summary>
     public List<T>? List<T>(string name, Func<JsonElement, T> map)

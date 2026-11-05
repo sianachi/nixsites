@@ -23,36 +23,36 @@ public class NotificationWatchGate
     /// <summary>The most watches this process may hold open across every principal.</summary>
     public const int MaxConcurrentPerProcess = 40;
 
-    private readonly ConcurrentDictionary<Guid, int> active = new();
+    private readonly ConcurrentDictionary<Guid, int> _active = new();
 
     // One cell, so a gate built to share the process total counts into the same cell.
-    private readonly int[] total;
+    private readonly int[] _total;
 
     /// <summary>Creates a gate with its own process total.</summary>
-    public NotificationWatchGate() => total = new int[1];
+    public NotificationWatchGate() => _total = new int[1];
 
     /// <summary>Creates a gate whose per-principal counts are its own but whose process total is shared with <paramref name="shareTotalWith"/>.</summary>
-    protected NotificationWatchGate(NotificationWatchGate shareTotalWith) => total = (shareTotalWith ?? throw new ArgumentNullException(nameof(shareTotalWith))).total;
+    protected NotificationWatchGate(NotificationWatchGate shareTotalWith) => _total = (shareTotalWith ?? throw new ArgumentNullException(nameof(shareTotalWith)))._total;
 
     /// <summary>Claims a slot for this principal. Returns <see langword="false"/> when none is free.</summary>
     public bool TryEnter(Guid principalId)
     {
-        if (Interlocked.Increment(ref total[0]) > MaxConcurrentPerProcess)
+        if (Interlocked.Increment(ref _total[0]) > MaxConcurrentPerProcess)
         {
-            Interlocked.Decrement(ref total[0]);
+            Interlocked.Decrement(ref _total[0]);
             return false;
         }
 
         while (true)
         {
-            var current = active.GetOrAdd(principalId, 0);
+            var current = _active.GetOrAdd(principalId, 0);
             if (current >= MaxConcurrent)
             {
-                Interlocked.Decrement(ref total[0]);
+                Interlocked.Decrement(ref _total[0]);
                 return false;
             }
 
-            if (active.TryUpdate(principalId, current + 1, current))
+            if (_active.TryUpdate(principalId, current + 1, current))
             {
                 return true;
             }
@@ -64,17 +64,17 @@ public class NotificationWatchGate
     {
         while (true)
         {
-            if (!active.TryGetValue(principalId, out var current) || current <= 0)
+            if (!_active.TryGetValue(principalId, out var current) || current <= 0)
             {
                 return;
             }
 
             var released = current == 1
-                ? active.TryRemove(new KeyValuePair<Guid, int>(principalId, current))
-                : active.TryUpdate(principalId, current - 1, current);
+                ? _active.TryRemove(new KeyValuePair<Guid, int>(principalId, current))
+                : _active.TryUpdate(principalId, current - 1, current);
             if (released)
             {
-                Interlocked.Decrement(ref total[0]);
+                Interlocked.Decrement(ref _total[0]);
                 return;
             }
         }

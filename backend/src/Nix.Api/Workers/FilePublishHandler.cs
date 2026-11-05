@@ -19,8 +19,8 @@ namespace Nix.Workers;
 public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer objects, IOptions<WorkerOptions> options, TimeProvider clock, ILogger<FilePublishHandler>? logger = null) : IWorkerJobHandler, IDisposable
 {
     private const int SmallResponseLimit = 64 << 10;
-    private readonly SemaphoreSlim thumbnails = new(Thumbnails.MaxConcurrentThumbnails, Thumbnails.MaxConcurrentThumbnails);
-    private readonly ILogger<FilePublishHandler> logger = logger ?? NullLogger<FilePublishHandler>.Instance;
+    private readonly SemaphoreSlim _thumbnails = new(Thumbnails.MaxConcurrentThumbnails, Thumbnails.MaxConcurrentThumbnails);
+    private readonly ILogger<FilePublishHandler> _logger = logger ?? NullLogger<FilePublishHandler>.Instance;
 
     public IReadOnlyList<string> Kinds { get; } = ["file.publish"];
 
@@ -196,9 +196,9 @@ public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer
         {
             return inspected;
         }
-        if (!await thumbnails.WaitAsync(TimeSpan.Zero, cancellationToken).ConfigureAwait(false))
+        if (!await _thumbnails.WaitAsync(TimeSpan.Zero, cancellationToken).ConfigureAwait(false))
         {
-            await thumbnails.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await _thumbnails.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         try
         {
@@ -223,12 +223,12 @@ public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested && exception is ObjectTransferException or WorkerLoopbackException or HttpRequestException or OperationCanceledException or IOException or ThumbnailRefusedException)
         {
             // The reason names a parser or transport failure, never file content.
-            FilePublishLog.ThumbnailSkipped(logger, uploadId, exception.Message);
+            FilePublishLog.ThumbnailSkipped(_logger, uploadId, exception.Message);
             return inspected;
         }
         finally
         {
-            thumbnails.Release();
+            _thumbnails.Release();
         }
     }
 
@@ -253,7 +253,7 @@ public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer
             || (upper == "APPLICATION/ZIP" && declared == "APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.WORDPROCESSINGML.DOCUMENT");
     }
 
-    public void Dispose() => thumbnails.Dispose();
+    public void Dispose() => _thumbnails.Dispose();
 
     private static string Result(FilePublishResult result) => JsonSerializer.Serialize(result, WorkersJsonContext.Default.FilePublishResult);
 }

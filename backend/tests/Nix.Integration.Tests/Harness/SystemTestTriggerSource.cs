@@ -35,19 +35,19 @@ public sealed class SystemTestTriggerSource(INotificationWriter notifications) :
         Desired[trigger.DedupeKey] = trigger;
     }
 
-    private static volatile bool incomplete;
+    private static volatile bool _incomplete;
 
     /// <summary>
     /// Makes the next planning passes report their plan as incomplete (as a source that reached its
     /// page cap would), until <see cref="Reset"/>.
     /// </summary>
-    public static void ReportIncomplete() => incomplete = true;
+    public static void ReportIncomplete() => _incomplete = true;
 
     /// <summary>Removes every desired trigger a test previously registered, so suites do not leak into each other.</summary>
     public static void Reset()
     {
         Desired.Clear();
-        incomplete = false;
+        _incomplete = false;
     }
 
     /// <inheritdoc />
@@ -57,7 +57,7 @@ public sealed class SystemTestTriggerSource(INotificationWriter notifications) :
         IReadOnlyList<DesiredTrigger> matching = Desired.Values
             .Where(trigger => trigger.FireAt >= window.Start && trigger.FireAt < window.End)
             .ToArray();
-        return Task.FromResult(new TriggerPlan(matching, Complete: !incomplete));
+        return Task.FromResult(new TriggerPlan(matching, Complete: !_incomplete));
     }
 
     /// <inheritdoc />

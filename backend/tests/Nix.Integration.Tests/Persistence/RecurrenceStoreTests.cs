@@ -225,7 +225,7 @@ public sealed class RecurrenceStoreTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_guard_refuses_an_oversized_rule_before_the_column_s_check_ever_fires()
+    public void The_guard_refuses_an_oversized_rule_before_the_column_s_check_ever_fires()
     {
         // The CHECK is a backstop, not the guard - so the guard has to be what says no. If this
         // ever fails by throwing instead, an oversized rule has become a 500 rather than a

@@ -9,7 +9,7 @@ public sealed class SpoolSweeper(IOptions<WorkerOptions> options, TimeProvider c
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
     private static readonly TimeSpan MaximumAge = TimeSpan.FromHours(24);
-    private readonly ILogger<SpoolSweeper> logger = logger ?? NullLogger<SpoolSweeper>.Instance;
+    private readonly ILogger<SpoolSweeper> _logger = logger ?? NullLogger<SpoolSweeper>.Instance;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -21,7 +21,7 @@ public sealed class SpoolSweeper(IOptions<WorkerOptions> options, TimeProvider c
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                SpoolSweeperLog.SweepFailed(logger, exception);
+                SpoolSweeperLog.SweepFailed(_logger, exception);
             }
             try
             {

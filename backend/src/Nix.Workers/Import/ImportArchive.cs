@@ -234,8 +234,8 @@ internal static partial class ImportArchive
 /// <summary>Counts and checksums a member as it streams, failing at the end on a length or CRC that disagrees with the directory.</summary>
 internal sealed class VerifiedEntryStream(Stream inner, long expectedLength, uint expectedCrc) : Stream
 {
-    private long position;
-    private uint crc;
+    private long _position;
+    private uint _crc;
 
     public override bool CanRead => true;
 
@@ -247,7 +247,7 @@ internal sealed class VerifiedEntryStream(Stream inner, long expectedLength, uin
 
     public override long Position
     {
-        get => position;
+        get => _position;
         set => throw new NotSupportedException();
     }
 
@@ -272,20 +272,20 @@ internal sealed class VerifiedEntryStream(Stream inner, long expectedLength, uin
 
     private void Account(ReadOnlySpan<byte> read, bool emptyRequest)
     {
-        position += read.Length;
-        if (position > expectedLength)
+        _position += read.Length;
+        if (_position > expectedLength)
         {
             throw new InvalidDataException("zip: archive member is longer than declared");
         }
-        crc = Crc32.Append(crc, read);
+        _crc = Crc32.Append(_crc, read);
         // A zero-length read into a non-empty buffer is the end of the member.
         if (read.IsEmpty && !emptyRequest)
         {
-            if (position != expectedLength)
+            if (_position != expectedLength)
             {
                 throw new InvalidDataException("zip: archive member is shorter than declared");
             }
-            if (crc != expectedCrc)
+            if (_crc != expectedCrc)
             {
                 throw new InvalidDataException("zip: checksum error");
             }
@@ -315,11 +315,11 @@ internal sealed class VerifiedEntryStream(Stream inner, long expectedLength, uin
 /// <summary>A planned DOCX asset streamed out of the source for commit. Disposing closes the archive.</summary>
 public sealed class AssetReader : IDisposable
 {
-    private readonly ZipArchive archive;
+    private readonly ZipArchive _archive;
 
     private AssetReader(ZipArchive archive, Stream body, long size)
     {
-        this.archive = archive;
+        this._archive = archive;
         Body = body;
         Size = size;
     }
@@ -353,20 +353,20 @@ public sealed class AssetReader : IDisposable
     public void Dispose()
     {
         Body.Dispose();
-        archive.Dispose();
+        _archive.Dispose();
     }
 }
 
 /// <summary>Keeps a validated .nix archive open while an importer streams its declared file-version members.</summary>
 public sealed class NixArchiveFiles : IDisposable
 {
-    private readonly ZipArchive archive;
-    private readonly Dictionary<string, ZipArchiveEntry> entries;
+    private readonly ZipArchive _archive;
+    private readonly Dictionary<string, ZipArchiveEntry> _entries;
 
     private NixArchiveFiles(ZipArchive archive)
     {
-        this.archive = archive;
-        entries = archive.Entries.Where(entry => ImportArchive.IsNixFileEntry(entry.FullName)).ToDictionary(entry => entry.FullName, StringComparer.Ordinal);
+        this._archive = archive;
+        _entries = archive.Entries.Where(entry => ImportArchive.IsNixFileEntry(entry.FullName)).ToDictionary(entry => entry.FullName, StringComparer.Ordinal);
     }
 
     public static NixArchiveFiles Open(string path, ImportPlanLimits limits)
@@ -383,12 +383,12 @@ public sealed class NixArchiveFiles : IDisposable
         {
             throw new ImportPlanException("Nix archive file version request is invalid");
         }
-        if (!entries.TryGetValue(ImportArchive.NixFileVersionEntryName(itemId, version), out var entry) || entry.Length != expectedLength)
+        if (!_entries.TryGetValue(ImportArchive.NixFileVersionEntryName(itemId, version), out var entry) || entry.Length != expectedLength)
         {
             throw new ImportPlanException("Nix archive file version is missing or has a different declared length");
         }
         return ImportArchive.OpenVerified(entry);
     }
 
-    public void Dispose() => archive.Dispose();
+    public void Dispose() => _archive.Dispose();
 }

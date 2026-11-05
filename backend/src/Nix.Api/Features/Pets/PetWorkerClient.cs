@@ -21,7 +21,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
     IPetProviderCredentialStore credentials, PetProviderKeyProtector protector,
     ILogger<PetWorkerClient>? logger = null)
 {
-    private readonly ILogger log = logger ?? NullLogger<PetWorkerClient>.Instance;
+    private readonly ILogger _log = logger ?? NullLogger<PetWorkerClient>.Instance;
 
     /// <summary>
     /// The pet's provider and, for a key provider, the owner's key recovered from storage. The key
@@ -289,7 +289,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
                     HttpStatusCode.Conflict => "pets.busy",
                     _ => "pets.unavailable",
                 });
-                ApiLog.PetWorkerFailed(log, request.Operation, $"worker returned HTTP {(int)response.StatusCode}", code);
+                ApiLog.PetWorkerFailed(_log, request.Operation, $"worker returned HTTP {(int)response.StatusCode}", code);
                 if (providerFailure is { } failure)
                 {
                     return Result.Failure<PetConnectionResponse>(failure);
@@ -323,7 +323,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
                 }
                 catch (StreamCapExceededException)
                 {
-                    ApiLog.PetWorkerFailed(log, request.Operation, "response exceeded the size cap", "pets.unavailable");
+                    ApiLog.PetWorkerFailed(_log, request.Operation, "response exceeded the size cap", "pets.unavailable");
                     return Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion response exceeded the size limit."));
                 }
 
@@ -332,7 +332,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            ApiLog.PetWorkerFailed(log, request.Operation, exception.GetType().Name, "pets.unavailable");
+            ApiLog.PetWorkerFailed(_log, request.Operation, exception.GetType().Name, "pets.unavailable");
             return Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion is unreachable. Check the existing worker and try again."));
         }
     }
@@ -449,7 +449,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
             || !Uri.TryCreate(address, UriKind.Absolute, out var origin) || origin.Scheme is not ("http" or "https")
             || origin.UserInfo.Length != 0 || origin.Query.Length != 0 || origin.Fragment.Length != 0 || origin.AbsolutePath != "/")
         {
-            ApiLog.PetWorkerFailed(log, "inline", "the worker URL or internal secret is not configured", "pets.unavailable");
+            ApiLog.PetWorkerFailed(_log, "inline", "the worker URL or internal secret is not configured", "pets.unavailable");
             return Result.Failure<HttpResponseMessage>(new("pets.unavailable", "The companion is not available on this server."));
         }
 
@@ -477,12 +477,12 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
                 HttpStatusCode.TooManyRequests => new NixError("pets.inline_busy", "Too many writing requests are open. Wait for one to finish."),
                 _ => new NixError("pets.unavailable", "The companion could not complete this request. Retry or check the selected provider in Settings > Pets."),
             });
-            ApiLog.PetWorkerFailed(log, "inline", $"worker returned HTTP {(int)response.StatusCode} {response.Content.Headers.ContentType?.MediaType}", failure.Code);
+            ApiLog.PetWorkerFailed(_log, "inline", $"worker returned HTTP {(int)response.StatusCode} {response.Content.Headers.ContentType?.MediaType}", failure.Code);
             return Result.Failure<HttpResponseMessage>(failure);
         }
         catch (HttpRequestException exception)
         {
-            ApiLog.PetWorkerFailed(log, "inline", exception.GetType().Name, "pets.unavailable");
+            ApiLog.PetWorkerFailed(_log, "inline", exception.GetType().Name, "pets.unavailable");
             return Result.Failure<HttpResponseMessage>(new("pets.unavailable", "The companion is unreachable. Check the existing worker and try again."));
         }
         finally

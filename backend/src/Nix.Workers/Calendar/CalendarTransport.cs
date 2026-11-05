@@ -12,12 +12,12 @@ public sealed class CalendarTransport
     /// <summary>Provider event pages are bounded to 100 events; 1 MiB is ample.</summary>
     public const int MaxResponseBytes = 1 << 20;
 
-    private readonly HttpClient client;
+    private readonly HttpClient _client;
 
     public CalendarTransport(HttpClient client, string origin)
     {
         ArgumentNullException.ThrowIfNull(client);
-        this.client = client;
+        this._client = client;
         Origin = CanonicalOrigin(origin);
     }
 
@@ -74,7 +74,7 @@ public sealed class CalendarTransport
         HttpResponseMessage response;
         try
         {
-            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception)
         {

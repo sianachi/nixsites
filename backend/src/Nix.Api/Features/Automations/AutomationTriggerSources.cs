@@ -258,7 +258,7 @@ public sealed class AutomationDateSource(
     AutomationExecutor executor,
     ILogger<AutomationDateSource>? logger = null) : ITriggerSource
 {
-    private readonly ILogger<AutomationDateSource> logger = logger ?? NullLogger<AutomationDateSource>.Instance;
+    private readonly ILogger<AutomationDateSource> _logger = logger ?? NullLogger<AutomationDateSource>.Instance;
 
     /// <inheritdoc />
     public string Name => AutomationPlanning.DateSource;
@@ -300,7 +300,7 @@ public sealed class AutomationDateSource(
                 incomplete.UnionWith(members.Select(entry => entry.Rule.RuleId));
                 candidates = [.. candidates.Take(AutomationPlanning.MaxDateCandidatesPerRule)];
                 AutomationPlanningLog.DateGroupTruncated(
-                    logger, group.Key.TenantId.Value, group.Key.WorkspaceId.Value, group.Key.Key, members.Count,
+                    _logger, group.Key.TenantId.Value, group.Key.WorkspaceId.Value, group.Key.Key, members.Count,
                     AutomationPlanning.MaxDateCandidatesPerRule);
             }
 
@@ -334,11 +334,11 @@ internal static partial class AutomationPlanningLog
 /// </summary>
 public sealed class PlannedAutomationRules(IAutomationCandidateFinder finder)
 {
-    private Task<(List<PlannedAutomationRule> Rules, bool Complete)>? read;
+    private Task<(List<PlannedAutomationRule> Rules, bool Complete)>? _read;
 
     /// <summary>Every planned rule, up to the page cap, and whether that is all of them.</summary>
     public Task<(List<PlannedAutomationRule> Rules, bool Complete)> ReadAsync(CancellationToken cancellationToken) =>
-        read ??= AutomationPlanning.ReadPlannedRulesAsync(finder, cancellationToken);
+        _read ??= AutomationPlanning.ReadPlannedRulesAsync(finder, cancellationToken);
 }
 
 /// <summary>

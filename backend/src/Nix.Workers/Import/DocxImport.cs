@@ -304,15 +304,15 @@ internal static class DocxImport
     private sealed class DocxParser(Dictionary<string, string> links, Dictionary<string, (string SourceId, ImportFile File)> assets, Dictionary<string, string> numbering)
     {
         private static readonly string[] Marks = ["bold", "italic", "underline", "strike"];
-        private readonly HashSet<string> used = new(StringComparer.Ordinal);
-        private HashSet<string> runMarks = new(StringComparer.Ordinal);
-        private Table? table;
-        private int tableDepth;
-        private Paragraph? paragraph;
-        private string hyperlink = string.Empty;
-        private bool inRunProps;
-        private bool inParaProps;
-        private bool inText;
+        private readonly HashSet<string> _used = new(StringComparer.Ordinal);
+        private HashSet<string> _runMarks = new(StringComparer.Ordinal);
+        private Table? _table;
+        private int _tableDepth;
+        private Paragraph? _paragraph;
+        private string _hyperlink = string.Empty;
+        private bool _inRunProps;
+        private bool _inParaProps;
+        private bool _inText;
 
         public List<Block> Blocks { get; } = [];
 
@@ -362,7 +362,7 @@ internal static class DocxImport
                         case GoXml.TokenKind.End:
                             End(token.Name);
                             break;
-                        case GoXml.TokenKind.Text when inText && paragraph is not null:
+                        case GoXml.TokenKind.Text when _inText && _paragraph is not null:
                             AppendText(token.Text);
                             break;
                     }
@@ -379,10 +379,10 @@ internal static class DocxImport
             switch (token.Name)
             {
                 case "tbl":
-                    tableDepth++;
-                    if (tableDepth == 1)
+                    _tableDepth++;
+                    if (_tableDepth == 1)
                     {
-                        table = new Table();
+                        _table = new Table();
                     }
                     else
                     {
@@ -390,68 +390,68 @@ internal static class DocxImport
                     }
                     break;
                 case "tr":
-                    if (table is not null && tableDepth == 1)
+                    if (_table is not null && _tableDepth == 1)
                     {
-                        table.CurrentRow = [];
+                        _table.CurrentRow = [];
                     }
                     break;
                 case "tc":
-                    if (table is not null && tableDepth == 1)
+                    if (_table is not null && _tableDepth == 1)
                     {
-                        table.CurrentCell = [];
-                        table.InCell = true;
+                        _table.CurrentCell = [];
+                        _table.InCell = true;
                     }
                     break;
                 case "p":
-                    paragraph = new Paragraph();
+                    _paragraph = new Paragraph();
                     break;
                 case "pPr":
-                    inParaProps = true;
+                    _inParaProps = true;
                     break;
                 case "r":
-                    runMarks = new HashSet<string>(StringComparer.Ordinal);
+                    _runMarks = new HashSet<string>(StringComparer.Ordinal);
                     break;
                 case "rPr":
-                    inRunProps = true;
+                    _inRunProps = true;
                     break;
                 case "b" or "i" or "u" or "strike" or "dstrike":
-                    if (inRunProps)
+                    if (_inRunProps)
                     {
-                        runMarks.Add(token.Name switch { "b" => "bold", "i" => "italic", "u" => "underline", _ => "strike" });
+                        _runMarks.Add(token.Name switch { "b" => "bold", "i" => "italic", "u" => "underline", _ => "strike" });
                     }
                     break;
                 case "pStyle":
-                    if (inParaProps && paragraph is not null)
+                    if (_inParaProps && _paragraph is not null)
                     {
-                        paragraph.Style = token.Attribute("val");
+                        _paragraph.Style = token.Attribute("val");
                     }
                     break;
                 case "numId":
-                    if (inParaProps && paragraph is not null)
+                    if (_inParaProps && _paragraph is not null)
                     {
-                        paragraph.NumId = token.Attribute("val");
+                        _paragraph.NumId = token.Attribute("val");
                     }
                     break;
                 case "ilvl":
-                    if (inParaProps && paragraph is not null)
+                    if (_inParaProps && _paragraph is not null)
                     {
-                        paragraph.Level = Atoi(token.Attribute("val"));
+                        _paragraph.Level = Atoi(token.Attribute("val"));
                     }
                     break;
                 case "hyperlink":
-                    hyperlink = links.GetValueOrDefault(token.Attribute("id")) ?? string.Empty;
+                    _hyperlink = links.GetValueOrDefault(token.Attribute("id")) ?? string.Empty;
                     break;
                 case "t":
-                    inText = true;
+                    _inText = true;
                     break;
                 case "tab":
                     AppendText("\t");
                     break;
                 case "br":
-                    paragraph?.Runs.Add(new Run { Text = "\n" });
+                    _paragraph?.Runs.Add(new Run { Text = "\n" });
                     break;
                 case "blip":
-                    paragraph?.Images.Add(token.Attribute("embed"));
+                    _paragraph?.Images.Add(token.Attribute("embed"));
                     break;
                 case "gridSpan" or "vMerge":
                     Lose("Merged DOCX table cells are flattened into ordinary cells.");
@@ -473,47 +473,47 @@ internal static class DocxImport
             switch (name)
             {
                 case "t":
-                    inText = false;
+                    _inText = false;
                     break;
                 case "rPr":
-                    inRunProps = false;
+                    _inRunProps = false;
                     break;
                 case "pPr":
-                    inParaProps = false;
+                    _inParaProps = false;
                     break;
                 case "hyperlink":
-                    hyperlink = string.Empty;
+                    _hyperlink = string.Empty;
                     break;
                 case "p":
                     FinishParagraph();
                     break;
                 case "tc":
-                    if (table is not null && tableDepth == 1)
+                    if (_table is not null && _tableDepth == 1)
                     {
-                        if (table.CurrentCell.Count == 0)
+                        if (_table.CurrentCell.Count == 0)
                         {
-                            table.CurrentCell.Add(new Block { Kind = "paragraph" });
+                            _table.CurrentCell.Add(new Block { Kind = "paragraph" });
                         }
-                        table.CurrentRow.Add(table.CurrentCell);
-                        table.CurrentCell = [];
-                        table.InCell = false;
+                        _table.CurrentRow.Add(_table.CurrentCell);
+                        _table.CurrentCell = [];
+                        _table.InCell = false;
                     }
                     break;
                 case "tr":
-                    if (table is not null && tableDepth == 1 && table.CurrentRow.Count > 0)
+                    if (_table is not null && _tableDepth == 1 && _table.CurrentRow.Count > 0)
                     {
-                        table.Rows.Add(table.CurrentRow);
-                        table.CurrentRow = [];
+                        _table.Rows.Add(_table.CurrentRow);
+                        _table.CurrentRow = [];
                     }
                     break;
                 case "tbl":
-                    if (tableDepth == 1)
+                    if (_tableDepth == 1)
                     {
                         FinishTable();
                     }
-                    if (tableDepth > 0)
+                    if (_tableDepth > 0)
                     {
-                        tableDepth--;
+                        _tableDepth--;
                     }
                     break;
             }
@@ -521,22 +521,22 @@ internal static class DocxImport
 
         private void AppendText(string text)
         {
-            if (paragraph is null || text.Length == 0)
+            if (_paragraph is null || text.Length == 0)
             {
                 return;
             }
-            var styles = Marks.Where(runMarks.Contains).ToList();
-            paragraph.Runs.Add(new Run { Text = text, Href = hyperlink, Styles = styles.Count == 0 ? null : styles });
+            var styles = Marks.Where(_runMarks.Contains).ToList();
+            _paragraph.Runs.Add(new Run { Text = text, Href = _hyperlink, Styles = styles.Count == 0 ? null : styles });
         }
 
         private void FinishParagraph()
         {
-            if (paragraph is null)
+            if (_paragraph is null)
             {
                 return;
             }
-            var current = paragraph;
-            paragraph = null;
+            var current = _paragraph;
+            _paragraph = null;
             var node = new Block { Kind = "paragraph", Runs = current.Runs };
             var upperStyle = current.Style.ToUpperInvariant();
             if (upperStyle.StartsWith("HEADING", StringComparison.Ordinal)
@@ -565,7 +565,7 @@ internal static class DocxImport
                     Lose("An embedded DOCX image was unsupported or malformed and remains only in the retained original file.");
                     continue;
                 }
-                if (used.Add(relationId))
+                if (_used.Add(relationId))
                 {
                     UsedAssets.Add(asset);
                 }
@@ -575,9 +575,9 @@ internal static class DocxImport
 
         private void AppendBlock(Block node)
         {
-            if (table is { InCell: true })
+            if (_table is { InCell: true })
             {
-                table.CurrentCell.Add(node);
+                _table.CurrentCell.Add(node);
                 return;
             }
             Blocks.Add(node);
@@ -585,12 +585,12 @@ internal static class DocxImport
 
         private void FinishTable()
         {
-            if (table is null)
+            if (_table is null)
             {
                 return;
             }
-            var current = table;
-            table = null;
+            var current = _table;
+            _table = null;
             if (current.Rows.Count == 0)
             {
                 return;

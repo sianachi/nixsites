@@ -31,8 +31,8 @@ public sealed class NotifyPushHandler(
 
     private const int MaxConcurrentPushes = 8;
     private const int DeliveryResponseLimit = 64 * 1024;
-    private readonly ILogger<NotifyPushHandler> logger = logger ?? NullLogger<NotifyPushHandler>.Instance;
-    private readonly Lazy<ECDsa?> privateKey = new(() =>
+    private readonly ILogger<NotifyPushHandler> _logger = logger ?? NullLogger<NotifyPushHandler>.Instance;
+    private readonly Lazy<ECDsa?> _privateKey = new(() =>
         string.IsNullOrWhiteSpace(push.Value.VapidPrivateKey) ? null : WebPush.ParseVapidPrivateKey(push.Value.VapidPrivateKey));
 
     /// <inheritdoc />
@@ -55,7 +55,7 @@ public sealed class NotifyPushHandler(
         {
             throw WorkerJobException.Fail("notify_payload_invalid", "the durable notify request is invalid");
         }
-        if (privateKey.Value is not { } key || string.IsNullOrWhiteSpace(push.Value.VapidSubject))
+        if (_privateKey.Value is not { } key || string.IsNullOrWhiteSpace(push.Value.VapidSubject))
         {
             throw WorkerJobException.Fail("notify_configuration_invalid", "the notify worker is not configured");
         }
@@ -171,7 +171,7 @@ public sealed class NotifyPushHandler(
 #pragma warning disable CA1031 // Justification: every per-device failure is an outcome to report, never a job failure.
         catch (Exception exception)
         {
-            NotifyPushHandlerLog.DeviceFailed(logger, subscription.Id, exception.GetType().Name);
+            NotifyPushHandlerLog.DeviceFailed(_logger, subscription.Id, exception.GetType().Name);
             return ("failed", 0);
         }
 #pragma warning restore CA1031
@@ -179,9 +179,9 @@ public sealed class NotifyPushHandler(
 
     public void Dispose()
     {
-        if (privateKey.IsValueCreated)
+        if (_privateKey.IsValueCreated)
         {
-            privateKey.Value?.Dispose();
+            _privateKey.Value?.Dispose();
         }
     }
 }

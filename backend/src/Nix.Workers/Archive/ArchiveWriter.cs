@@ -8,7 +8,7 @@ namespace Nix.Workers.Archive;
 /// <summary>A zip output that refuses to grow past a byte ceiling.</summary>
 public sealed class LimitedStream(Stream inner, long maximum) : Stream
 {
-    private long remaining = maximum;
+    private long _remaining = maximum;
 
     public override bool CanRead => false;
 
@@ -30,23 +30,23 @@ public sealed class LimitedStream(Stream inner, long maximum) : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        if (count > remaining)
+        if (count > _remaining)
         {
-            remaining = 0;
+            _remaining = 0;
             throw new StreamLimitException();
         }
-        remaining -= count;
+        _remaining -= count;
         inner.Write(buffer, offset, count);
     }
 
     public override void Write(ReadOnlySpan<byte> buffer)
     {
-        if (buffer.Length > remaining)
+        if (buffer.Length > _remaining)
         {
-            remaining = 0;
+            _remaining = 0;
             throw new StreamLimitException();
         }
-        remaining -= buffer.Length;
+        _remaining -= buffer.Length;
         inner.Write(buffer);
     }
 }

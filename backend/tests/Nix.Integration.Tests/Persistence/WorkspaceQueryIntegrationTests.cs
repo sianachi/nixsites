@@ -438,7 +438,7 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
             + $"{actor ?? principal}, {actor ?? principal}, '{created}'::timestamptz, '{modified}'::timestamptz)";
 
         // A stored query view on Loose: open tasks, as a group and a structural rule.
-        const string OpenTasksView =
+        const string openTasksView =
             """{"views":[{"id":"open-tasks","name":"Open tasks","kind":"query","filters":[{"property":"$type","operator":"equals","value":"task"},{"property":"$done","operator":"not-equals","value":"true"},{"any":[{"property":"status","operator":"equals","value":"Doing"},{"property":"status","operator":"equals","value":"Blocked"}]}]}],"default":"open-tasks"}""";
 
         var rows = string.Join(
@@ -448,7 +448,7 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
             Row(TaskB, tenant, open, "task", Work, 3000, """{"title": "Write 50%_off copy", "status": "Todo", "points": "7", "due_date": "2026-08-20", "completion": true}""", "2026-08-14T23:30:00Z", "2026-08-14T23:30:00Z"),
             Row(Sub, tenant, open, "note", Work, 4000, """{"title": "Sub"}""", "2026-07-02T00:00:00Z", "2026-07-02T00:00:00Z"),
             Row(TaskC, tenant, open, "task", Sub, 5000, """{"title": "Review plan", "status": "Doing", "points": "lots", "notes": ""}""", "2026-08-12T12:00:00Z", "2026-08-15T09:00:00Z"),
-            Row(Loose, tenant, open, "note", null, 6000, """{"title": "Loose ends", "status": null, "points": 2.5}""", "2026-08-15T01:00:00Z", "2026-08-15T01:00:00Z", views: OpenTasksView),
+            Row(Loose, tenant, open, "note", null, 6000, """{"title": "Loose ends", "status": null, "points": 2.5}""", "2026-08-15T01:00:00Z", "2026-08-15T01:00:00Z", views: openTasksView),
             Row(Deleted, tenant, open, "task", Work, 7000, """{"title": "Gone plan 50%_off", "status": "Doing", "points": 100, "tags": ["Urgent"], "due_date": "2026-08-12"}""", "2026-08-13T00:00:00Z", "2026-08-15T00:00:00Z", lifecycle: "deleted"),
             Row(PrivateFolder, tenant, closed, "note", null, 8000, """{"title": "Private"}""", "2026-08-13T00:00:00Z", "2026-08-13T00:00:00Z"),
             Row(PrivateTask, tenant, closed, "task", PrivateFolder, 9000, """{"title": "Secret plan 50%_off", "status": "Doing", "points": 1000, "tags": ["Urgent"], "due_date": "2026-08-12"}""", "2026-08-13T00:00:00Z", "2026-08-15T00:00:00Z"),

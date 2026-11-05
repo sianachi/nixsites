@@ -9,7 +9,7 @@ namespace Nix.Workers.Queue;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "It is the job queue seam a distributed transport replaces; the name is the design's.")]
 public sealed class InProcessJobQueue(IReadOnlySet<string> hostedFamilies) : IJobQueue
 {
-    private readonly Dictionary<string, Channel<bool>> channels = JobFamilies.All.ToDictionary(
+    private readonly Dictionary<string, Channel<bool>> _channels = JobFamilies.All.ToDictionary(
         family => family,
         _ => Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
         {
@@ -28,10 +28,10 @@ public sealed class InProcessJobQueue(IReadOnlySet<string> hostedFamilies) : IJo
         {
             return false;
         }
-        channels[family].Writer.TryWrite(true);
+        _channels[family].Writer.TryWrite(true);
         return true;
     }
 
     /// <summary>The reader a family's host waits on.</summary>
-    public ChannelReader<bool> Reader(string family) => channels[family].Reader;
+    public ChannelReader<bool> Reader(string family) => _channels[family].Reader;
 }

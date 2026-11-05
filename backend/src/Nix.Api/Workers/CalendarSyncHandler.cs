@@ -24,7 +24,7 @@ public sealed class CalendarSyncHandler(
     private const int MaxPullBodyBytes = 2 << 20;
     private const int SessionResponseLimit = 16 << 10;
     private const int ChangesResponseLimit = 8 << 20;
-    private readonly ILogger<CalendarSyncHandler> logger = logger ?? NullLogger<CalendarSyncHandler>.Instance;
+    private readonly ILogger<CalendarSyncHandler> _logger = logger ?? NullLogger<CalendarSyncHandler>.Instance;
 
     public IReadOnlyList<string> Kinds { get; } = ["calendar.sync"];
 
@@ -292,7 +292,7 @@ public sealed class CalendarSyncHandler(
         }
         catch (Exception exception) when (IsCoreFailure(exception, cancellationToken))
         {
-            CalendarSyncHandlerLog.LogEntryFailed(logger, exception.GetType().Name);
+            CalendarSyncHandlerLog.LogEntryFailed(_logger, exception.GetType().Name);
         }
     }
 

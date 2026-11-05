@@ -73,7 +73,7 @@ public sealed class ThumbnailTests
             "epub href escaping the archive" => (EpubWith(OpfDoc("", """<item id="c" href="../../cover.png" media-type="image/png" properties="cover-image"/>"""), new() { ["cover.png"] = Png(5, 5) }, 0), "b.epub"),
             "epub without a cover" => (noCover, "b.epub"),
             "zip that is not declared an epub" => (noCover, "b.zip"),
-            "mp3 without art" => (Id3v23(), "a.mp3"),
+            "mp3 without art" => (Id3V23(), "a.mp3"),
             "mp3 with unsynchronisation flag" => ([.. "ID3"u8, 3, 0, 0x80, 0, 0, 0, 0, 0], "a.mp3"),
             "pdf" => ("%PDF-1.7\n"u8.ToArray(), "a.pdf"),
             "avif" => ([0, 0, 0, 24, .. "ftypavif\0\0\0\0avifmif1"u8], "a.avif"),
@@ -120,9 +120,9 @@ public sealed class ThumbnailTests
             ["a.png"] = Png(50, 50),
             ["a.jpg"] = Jpeg(50, 50),
             ["a.gif"] = Gif(50, 50),
-            ["a.mp3"] = Id3v23(Apic(cover, 3)),
+            ["a.mp3"] = Id3V23(Apic(cover, 3)),
             ["a.flac"] = FlacWith(cover, 3),
-            ["a.m4a"] = M4aWith(cover),
+            ["a.m4a"] = M4AWith(cover),
             ["b.epub"] = EpubWith(OpfDoc("", """<item id="c" href="images/cover.png" media-type="image/png" properties="cover-image"/>"""), null, 0),
         };
         var random = new Random(1);
@@ -241,10 +241,10 @@ public sealed class ThumbnailTests
             ["jpeg tall scaled"] = (Jpeg(300, 960), "a.jpg", "image/jpeg", ThumbnailKind.Image, 150, 480),
             ["gif"] = (Gif(64, 64), "a.gif", "", ThumbnailKind.Image, 64, 64),
             ["declared type is ignored"] = (Png(10, 10), "a.txt", "text/plain", ThumbnailKind.Image, 10, 10),
-            ["mp3 apic"] = (Id3v23(Apic(cover, 3)), "a.mp3", "", ThumbnailKind.AudioCover, 30, 20),
-            ["mp3 prefers front cover"] = (Id3v23(Apic(Png(8, 8), 0), Apic(cover, 3)), "a.mp3", "", ThumbnailKind.AudioCover, 30, 20),
+            ["mp3 apic"] = (Id3V23(Apic(cover, 3)), "a.mp3", "", ThumbnailKind.AudioCover, 30, 20),
+            ["mp3 prefers front cover"] = (Id3V23(Apic(Png(8, 8), 0), Apic(cover, 3)), "a.mp3", "", ThumbnailKind.AudioCover, 30, 20),
             ["flac picture"] = (FlacWith(cover, 3), "a.flac", "", ThumbnailKind.AudioCover, 30, 20),
-            ["m4a covr"] = (M4aWith(cover), "a.m4a", "", ThumbnailKind.AudioCover, 30, 20),
+            ["m4a covr"] = (M4AWith(cover), "a.m4a", "", ThumbnailKind.AudioCover, 30, 20),
             ["epub3 cover-image property"] = (EpubWith(OpfDoc("", """<item id="x" href="images/cover.png" media-type="image/png" properties="cover-image"/>"""), null, 0), "b.epub", "", ThumbnailKind.EpubCover, 40, 60),
             ["epub2 meta cover"] = (EpubWith(OpfDoc("""<meta name="cover" content="pic"/>""", """<item id="pic" href="images/cover.png" media-type="image/png"/>"""), null, 0), "b.epub", "", ThumbnailKind.EpubCover, 40, 60),
             ["epub id contains cover"] = (EpubWith(OpfDoc("", """<item id="my-cover" href="images/cover.png" media-type="image/png"/>"""), null, 0), "b.epub", "", ThumbnailKind.EpubCover, 40, 60),
@@ -355,7 +355,7 @@ public sealed class ThumbnailTests
 
     private static byte[] Syncsafe32(int value) => [(byte)((value >> 21) & 0x7f), (byte)((value >> 14) & 0x7f), (byte)((value >> 7) & 0x7f), (byte)(value & 0x7f)];
 
-    private static byte[] Id3v23(params byte[][] frames)
+    private static byte[] Id3V23(params byte[][] frames)
     {
         byte[] body = [.. frames.SelectMany(frame => frame)];
         return [.. "ID3\u0003\0\0"u8, .. Syncsafe32(body.Length), .. body];
@@ -380,7 +380,7 @@ public sealed class ThumbnailTests
         return [.. Be32(8 + body.Length), .. Encoding.ASCII.GetBytes(kind), .. body];
     }
 
-    private static byte[] M4aWith(byte[] image)
+    private static byte[] M4AWith(byte[] image)
     {
         var data = Box("data", [0, 0, 0, 14, 0, 0, 0, 0], image);
         var meta = Box("meta", [0, 0, 0, 0], Box("ilst", Box("covr", data)));

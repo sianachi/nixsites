@@ -52,10 +52,10 @@ public sealed class ScheduleDispatcher(
     /// </summary>
     internal const int MaxAttempts = 5;
 
-    private readonly ILogger<ScheduleDispatcher> logger = logger ?? NullLogger<ScheduleDispatcher>.Instance;
-    private readonly string owner = $"schedule-dispatcher:{Environment.MachineName}:{Guid.NewGuid():N}";
-    private DateTimeOffset lastRetentionAt = DateTimeOffset.MinValue;
-    private IReadOnlyList<string>? prioritySources;
+    private readonly ILogger<ScheduleDispatcher> _logger = logger ?? NullLogger<ScheduleDispatcher>.Instance;
+    private readonly string _owner = $"schedule-dispatcher:{Environment.MachineName}:{Guid.NewGuid():N}";
+    private DateTimeOffset _lastRetentionAt = DateTimeOffset.MinValue;
+    private IReadOnlyList<string>? _prioritySources;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -77,7 +77,7 @@ public sealed class ScheduleDispatcher(
 #pragma warning disable CA1031 // Justification: dispatch is durable and must retry after any transient database failure.
             catch (Exception exception)
             {
-                ScheduleDispatcherLog.Failed(logger, exception);
+                ScheduleDispatcherLog.Failed(_logger, exception);
                 await Task.Delay(FailureDelay, clock, stoppingToken).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
@@ -98,9 +98,9 @@ public sealed class ScheduleDispatcher(
         var first = await PrioritySourcesAsync().ConfigureAwait(false);
         IReadOnlyList<DueTrigger> priority = first.Count == 0
             ? []
-            : await leases.LeaseDueAsync(BatchSize, owner, LeaseSeconds, MaxAttempts, first, cancellationToken).ConfigureAwait(false);
+            : await leases.LeaseDueAsync(BatchSize, _owner, LeaseSeconds, MaxAttempts, first, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<DueTrigger> rest = priority.Count < BatchSize
-            ? await leases.LeaseDueAsync(BatchSize - priority.Count, owner, LeaseSeconds, MaxAttempts, null, cancellationToken).ConfigureAwait(false)
+            ? await leases.LeaseDueAsync(BatchSize - priority.Count, _owner, LeaseSeconds, MaxAttempts, null, cancellationToken).ConfigureAwait(false)
             : [];
         foreach (var trigger in priority.Concat(rest))
         {
@@ -113,7 +113,7 @@ public sealed class ScheduleDispatcher(
     /// <summary>The names of every registered reminder source, read once from a scope of their own.</summary>
     private async Task<IReadOnlyList<string>> PrioritySourcesAsync()
     {
-        if (prioritySources is { } known)
+        if (_prioritySources is { } known)
         {
             return known;
         }
@@ -121,13 +121,13 @@ public sealed class ScheduleDispatcher(
         var scope = scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            prioritySources = [.. scope.ServiceProvider.GetServices<ITriggerSource>()
+            _prioritySources = [.. scope.ServiceProvider.GetServices<ITriggerSource>()
                 .Where(source => source.Kind == TriggerKind.Reminder)
                 .Select(source => source.Name)
                 .Order(StringComparer.Ordinal)];
         }
 
-        return prioritySources;
+        return _prioritySources;
     }
 
     /// <summary>
@@ -145,11 +145,11 @@ public sealed class ScheduleDispatcher(
     public async Task RetentionOnceIfDueAsync(CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        if (now - lastRetentionAt < RetentionInterval)
+        if (now - _lastRetentionAt < RetentionInterval)
         {
             return;
         }
-        lastRetentionAt = now;
+        _lastRetentionAt = now;
         var started = clock.GetTimestamp();
         await DrainAsync(retention.PurgeOldNotificationsAsync, started, cancellationToken).ConfigureAwait(false);
         await DrainAsync(retention.PurgeFinishedTriggersAsync, started, cancellationToken).ConfigureAwait(false);
@@ -253,7 +253,7 @@ public sealed class ScheduleDispatcher(
         IServiceProvider provider,
         CancellationToken cancellationToken)
     {
-        ScheduleDispatcherLog.FireFailed(logger, trigger.Id, exception);
+        ScheduleDispatcherLog.FireFailed(_logger, trigger.Id, exception);
 
         // The error class only - never the message, which can carry user text (ADR-0051's
         // "never the message content" for automation guards applies equally here).
@@ -288,7 +288,7 @@ public sealed class ScheduleDispatcher(
         var statusText = TriggerStorage.ToText(status);
         var detailJson = JsonSerializer.Serialize(new { reason });
         return await database.Database.SqlQuery<bool>($"""
-            SELECT nix_finish_trigger({trigger.TenantId.Value}, {trigger.Id}, {this.owner}, {statusText}, {detailJson}::jsonb) AS "Value"
+            SELECT nix_finish_trigger({trigger.TenantId.Value}, {trigger.Id}, {this._owner}, {statusText}, {detailJson}::jsonb) AS "Value"
             """).SingleAsync(cancellationToken).ConfigureAwait(false);
     }
 

@@ -12,7 +12,7 @@ namespace Nix.Workers.Import;
 /// </summary>
 internal sealed class BoundedPdfFilters(long budget) : IFilterProvider
 {
-    private long remaining = budget;
+    private long _remaining = budget;
 
     public IReadOnlyList<IFilter> GetFilters(DictionaryToken dictionary) => Wrap(DefaultFilterProvider.Instance.GetFilters(dictionary));
 
@@ -24,7 +24,7 @@ internal sealed class BoundedPdfFilters(long budget) : IFilterProvider
 
     private void Spend(long bytes)
     {
-        if (Interlocked.Add(ref remaining, -bytes) < 0)
+        if (Interlocked.Add(ref _remaining, -bytes) < 0)
         {
             throw new ImportPlanException("PDF streams expand beyond the configured limit");
         }
@@ -42,7 +42,7 @@ internal sealed class BoundedPdfFilters(long budget) : IFilterProvider
             }
             if (inner is FlateFilter)
             {
-                CountInflated(input, Interlocked.Read(ref owner.remaining));
+                CountInflated(input, Interlocked.Read(ref owner._remaining));
             }
             var output = inner.Decode(input, streamDictionary, filterProvider, filterIndex);
             owner.Spend(output.Length);

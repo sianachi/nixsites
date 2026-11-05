@@ -20,11 +20,11 @@ internal sealed class ScriptedCore : HttpMessageHandler
 {
     public const string Secret = "worker-secret";
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
-    private readonly Func<HttpRequestMessage, byte[], Task<HttpResponseMessage?>> script;
+    private readonly Func<HttpRequestMessage, byte[], Task<HttpResponseMessage?>> _script;
 
     public ScriptedCore(Func<HttpRequestMessage, byte[], Task<HttpResponseMessage?>> script)
     {
-        this.script = script;
+        this._script = script;
     }
 
     public static Guid JobId { get; } = Guid.Parse("40000000-0000-4000-8000-000000000001");
@@ -77,7 +77,7 @@ internal sealed class ScriptedCore : HttpMessageHandler
             Assert.Equal(ExecutionId, request.Headers.GetValues("x-nix-worker-execution-id").Single());
         }
         var body = request.Content is null ? [] : await request.Content.ReadAsByteArrayAsync(cancellationToken);
-        return await script(request, body) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
+        return await _script(request, body) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 
     private sealed class SingleClientFactory(HttpMessageHandler handler) : IHttpClientFactory

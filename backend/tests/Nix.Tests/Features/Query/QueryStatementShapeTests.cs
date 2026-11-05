@@ -89,9 +89,9 @@ public sealed class QueryStatementShapeTests
         var empty = Compile(new FilterRule("owner", "is-empty", string.Empty));
         var full = Compile(new FilterRule("owner", "is-not-empty", string.Empty));
 
-        const string Bucket = "COALESCE((item.properties -> @p0_key) IN ('null'::jsonb, '\"\"'::jsonb, '[]'::jsonb), TRUE)";
-        Assert.Contains("AND " + Bucket, empty.Sql, StringComparison.Ordinal);
-        Assert.Contains("AND NOT " + Bucket, full.Sql, StringComparison.Ordinal);
+        const string bucket = "COALESCE((item.properties -> @p0_key) IN ('null'::jsonb, '\"\"'::jsonb, '[]'::jsonb), TRUE)";
+        Assert.Contains("AND " + bucket, empty.Sql, StringComparison.Ordinal);
+        Assert.Contains("AND NOT " + bucket, full.Sql, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -307,17 +307,17 @@ public sealed class QueryStatementShapeTests
     [Fact]
     public void Hostile_values_in_groups_and_aggregates_never_enter_the_statement_text()
     {
-        const string Hostile = "'; DROP TABLE item; --";
+        const string hostile = "'; DROP TABLE item; --";
         var spec = new QuerySpec(
-            [FilterRule.Group([new FilterRule(Hostile, "contains", Hostile), new FilterRule("k", "greater-than", "1e3")])],
-            new QueryOrder(Hostile, false, false),
+            [FilterRule.Group([new FilterRule(hostile, "contains", hostile), new FilterRule("k", "greater-than", "1e3")])],
+            new QueryOrder(hostile, false, false),
             Today)
         {
-            Grouping = new QueryGrouping(Hostile, [Hostile]),
+            Grouping = new QueryGrouping(hostile, [hostile]),
         };
 
         Assert.DoesNotContain("DROP TABLE", QuerySql.Compile(spec).Sql, StringComparison.Ordinal);
-        Assert.DoesNotContain("DROP TABLE", QuerySql.CompileAggregate(spec, new QueryAggregate("max", Hostile)).Sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DROP TABLE", QuerySql.CompileAggregate(spec, new QueryAggregate("max", hostile)).Sql, StringComparison.Ordinal);
     }
 
     [Fact]

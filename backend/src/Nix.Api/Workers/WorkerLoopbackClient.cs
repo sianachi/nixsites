@@ -23,7 +23,7 @@ public sealed class WorkerLoopbackClient(
     /// <summary>The named client; tests swap its primary handler for the test server's.</summary>
     public const string HttpClientName = "worker-loopback";
 
-    private Uri? baseAddress;
+    private Uri? _baseAddress;
 
     /// <summary>A strict JSON POST, with or without a body, bounded to <paramref name="responseLimit"/> bytes.</summary>
     public async Task<TResponse?> PostJsonAsync<TResponse>(
@@ -174,13 +174,13 @@ public sealed class WorkerLoopbackClient(
     {
         get
         {
-            if (baseAddress is { } known)
+            if (_baseAddress is { } known)
             {
                 return known;
             }
             if (configuration["Nix:Workers:LoopbackUrl"] is { Length: > 0 } configured)
             {
-                return baseAddress = new Uri(configured, UriKind.Absolute);
+                return _baseAddress = new Uri(configured, UriKind.Absolute);
             }
             var listening = server.Features.Get<IServerAddressesFeature>()?.Addresses
                 .Select(address => new Uri(address.Replace("://*", "://127.0.0.1", StringComparison.Ordinal)
@@ -189,7 +189,7 @@ public sealed class WorkerLoopbackClient(
                     .Replace("://[::]", "://127.0.0.1", StringComparison.Ordinal), UriKind.Absolute))
                 .OrderBy(uri => uri.Scheme == Uri.UriSchemeHttp ? 0 : 1)
                 .FirstOrDefault();
-            return baseAddress = listening
+            return _baseAddress = listening
                 ?? throw new InvalidOperationException("The server is not listening yet; worker loopback calls need a bound address.");
         }
     }

@@ -29,20 +29,20 @@ public sealed class StreamLimitException : Exception
 /// </summary>
 public sealed class BundleReader : IDisposable
 {
-    private readonly Stream source;
-    private readonly StreamLimits limits;
-    private readonly LineReader lines;
-    private long seenBytes;
-    private int index;
-    private bool ended;
+    private readonly Stream _source;
+    private readonly StreamLimits _limits;
+    private readonly LineReader _lines;
+    private long _seenBytes;
+    private int _index;
+    private bool _ended;
 
     private BundleReader(Stream source, StreamLimits limits, LineReader lines, Manifest manifest, long seenBytes)
     {
-        this.source = source;
-        this.limits = limits;
-        this.lines = lines;
+        this._source = source;
+        this._limits = limits;
+        this._lines = lines;
         Manifest = manifest;
-        this.seenBytes = seenBytes;
+        this._seenBytes = seenBytes;
     }
 
     public Manifest Manifest { get; }
@@ -79,14 +79,14 @@ public sealed class BundleReader : IDisposable
     /// <summary>The next bundle, or null at the sentinel.</summary>
     public async Task<Bundle?> NextAsync(CancellationToken cancellationToken)
     {
-        if (ended)
+        if (_ended)
         {
             return null;
         }
-        var line = await lines.ReadLineAsync(cancellationToken).ConfigureAwait(false)
+        var line = await _lines.ReadLineAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new ArchiveFormatException("bundle stream is truncated");
-        seenBytes += line.Length + 1;
-        if (seenBytes > limits.MaxBytes)
+        _seenBytes += line.Length + 1;
+        if (_seenBytes > _limits.MaxBytes)
         {
             throw new StreamLimitException();
         }
@@ -101,18 +101,18 @@ public sealed class BundleReader : IDisposable
         }
         if (end is { End: true })
         {
-            if (end.Items != index || index != Manifest.Items.Count)
+            if (end.Items != _index || _index != Manifest.Items.Count)
             {
                 throw new ArchiveFormatException("bundle stream sentinel count does not match manifest");
             }
-            if (await lines.ReadLineAsync(cancellationToken).ConfigureAwait(false) is not null)
+            if (await _lines.ReadLineAsync(cancellationToken).ConfigureAwait(false) is not null)
             {
                 throw new ArchiveFormatException("bundle stream has data after its sentinel");
             }
-            ended = true;
+            _ended = true;
             return null;
         }
-        if (index >= limits.MaxRecords || index >= Manifest.Items.Count)
+        if (_index >= _limits.MaxRecords || _index >= Manifest.Items.Count)
         {
             throw new StreamLimitException();
         }
@@ -129,66 +129,66 @@ public sealed class BundleReader : IDisposable
         {
             throw new ArchiveFormatException("bundle stream contains an invalid item");
         }
-        if (bundle.Id != Manifest.Items[index].Id)
+        if (bundle.Id != Manifest.Items[_index].Id)
         {
             throw new ArchiveFormatException("bundle stream order does not match manifest");
         }
         bundle.Raw = line;
-        index++;
+        _index++;
         return bundle;
     }
 
     public void Dispose()
     {
-        lines.Dispose();
-        source.Dispose();
+        _lines.Dispose();
+        _source.Dispose();
     }
 
     /// <summary>Reads newline-delimited lines with a ceiling, like a bufio.Scanner with a bounded buffer.</summary>
     private sealed class LineReader(Stream stream, int maxLine) : IDisposable
     {
-        private readonly byte[] buffer = new byte[Math.Min(maxLine, 64 * 1024)]; // byte[]: the scanner's read buffer
-        private readonly MemoryStream pending = new();
-        private int start;
-        private int end;
-        private bool eof;
+        private readonly byte[] _buffer = new byte[Math.Min(maxLine, 64 * 1024)]; // byte[]: the scanner's read buffer
+        private readonly MemoryStream _pending = new();
+        private int _start;
+        private int _end;
+        private bool _eof;
 
         public async Task<byte[]?> ReadLineAsync(CancellationToken cancellationToken)
         {
             while (true)
             {
-                var newline = Array.IndexOf(buffer, (byte)'\n', start, end - start);
+                var newline = Array.IndexOf(_buffer, (byte)'\n', _start, _end - _start);
                 if (newline >= 0)
                 {
-                    await pending.WriteAsync(buffer.AsMemory(start, newline - start), cancellationToken).ConfigureAwait(false);
-                    start = newline + 1;
+                    await _pending.WriteAsync(_buffer.AsMemory(_start, newline - _start), cancellationToken).ConfigureAwait(false);
+                    _start = newline + 1;
                     return Take();
                 }
-                await pending.WriteAsync(buffer.AsMemory(start, end - start), cancellationToken).ConfigureAwait(false);
-                start = end = 0;
-                if (pending.Length > maxLine)
+                await _pending.WriteAsync(_buffer.AsMemory(_start, _end - _start), cancellationToken).ConfigureAwait(false);
+                _start = _end = 0;
+                if (_pending.Length > maxLine)
                 {
                     throw new StreamLimitException();
                 }
-                if (eof)
+                if (_eof)
                 {
-                    return pending.Length == 0 ? null : Take();
+                    return _pending.Length == 0 ? null : Take();
                 }
-                var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                var read = await stream.ReadAsync(_buffer, cancellationToken).ConfigureAwait(false);
                 if (read == 0)
                 {
-                    eof = true;
+                    _eof = true;
                 }
-                end = read;
+                _end = read;
             }
         }
 
-        public void Dispose() => pending.Dispose();
+        public void Dispose() => _pending.Dispose();
 
         private byte[] Take()
         {
-            var line = pending.ToArray();
-            pending.SetLength(0);
+            var line = _pending.ToArray();
+            _pending.SetLength(0);
             if (line.Length > 0 && line[^1] == '\r')
             {
                 line = line[..^1];

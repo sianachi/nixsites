@@ -29,8 +29,8 @@ public sealed class WorkerJobHost(
     private static readonly TimeSpan HintRetryDelay = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(5);
 
-    private readonly ILogger<WorkerJobHost> logger = logger ?? NullLogger<WorkerJobHost>.Instance;
-    private readonly Dictionary<string, IWorkerJobHandler> byKind = handlers
+    private readonly ILogger<WorkerJobHost> _logger = logger ?? NullLogger<WorkerJobHost>.Instance;
+    private readonly Dictionary<string, IWorkerJobHandler> _byKind = handlers
         .SelectMany(handler => handler.Kinds.Select(kind => (kind, handler)))
         .Where(pair => JobFamilies.Of(pair.kind) == family)
         .ToDictionary(pair => pair.kind, pair => pair.handler, StringComparer.Ordinal);
@@ -52,9 +52,9 @@ public sealed class WorkerJobHost(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (byKind.Count == 0)
+        if (_byKind.Count == 0)
         {
-            WorkerJobHostLog.NoHandlers(logger, Family);
+            WorkerJobHostLog.NoHandlers(_logger, Family);
             return;
         }
         var reader = queue.Reader(Family);
@@ -88,7 +88,7 @@ public sealed class WorkerJobHost(
 #pragma warning disable CA1031 // Justification: the loop is durable and must survive any transient database failure.
             catch (Exception exception)
             {
-                WorkerJobHostLog.LoopFailed(logger, Family, exception);
+                WorkerJobHostLog.LoopFailed(_logger, Family, exception);
                 try
                 {
                     await Task.Delay(FailureDelay, clock, stoppingToken).ConfigureAwait(false);
@@ -110,7 +110,7 @@ public sealed class WorkerJobHost(
     private async Task<int> LeaseOnceAsync(SemaphoreSlim slots, HashSet<Task> running, CancellationToken stoppingToken)
     {
         var leased = 0;
-        foreach (var kind in byKind.Keys)
+        foreach (var kind in _byKind.Keys)
         {
             // Lease only what a free slot can start now: a leased row nobody runs just lapses.
             var free = slots.CurrentCount;
@@ -167,7 +167,7 @@ public sealed class WorkerJobHost(
 #pragma warning restore CA2025
             try
             {
-                result = await byKind[job.Kind].HandleAsync(execution, lost.Token).ConfigureAwait(false);
+                result = await _byKind[job.Kind].HandleAsync(execution, lost.Token).ConfigureAwait(false);
             }
             catch (WorkerJobException exception)
             {
@@ -176,7 +176,7 @@ public sealed class WorkerJobHost(
             catch (OperationCanceledException) when (lost.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
             {
                 // Lease lost or cancellation requested: the row already says so; nothing to apply.
-                WorkerJobHostLog.LeaseLost(logger, job.Id, job.Kind);
+                WorkerJobHostLog.LeaseLost(_logger, job.Id, job.Kind);
                 return;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -186,7 +186,7 @@ public sealed class WorkerJobHost(
 #pragma warning disable CA1031 // Justification: an unexpected handler fault is a retryable job failure, never a host crash.
             catch (Exception exception)
             {
-                WorkerJobHostLog.HandlerFaulted(logger, job.Id, job.Kind, exception);
+                WorkerJobHostLog.HandlerFaulted(_logger, job.Id, job.Kind, exception);
                 failure = WorkerJobException.Retry("worker_faulted", exception.GetType().Name);
             }
 #pragma warning restore CA1031
@@ -208,9 +208,9 @@ public sealed class WorkerJobHost(
             if (application.RequiresExportCleanup
                 && !await dispatch.ScheduleExportCleanupAsync(job.Id, CancellationToken.None).ConfigureAwait(false))
             {
-                WorkerJobHostLog.CleanupNotScheduled(logger, job.Id);
+                WorkerJobHostLog.CleanupNotScheduled(_logger, job.Id);
             }
-            WorkerJobHostLog.Applied(logger, job.Id, job.Kind, application.Outcome.ToString());
+            WorkerJobHostLog.Applied(_logger, job.Id, job.Kind, application.Outcome.ToString());
         }
         finally
         {
@@ -242,7 +242,7 @@ public sealed class WorkerJobHost(
 #pragma warning disable CA1031 // Justification: a lease that cannot be confirmed is a lost lease; the handler must stop rather than outlive it.
         catch (Exception exception)
         {
-            WorkerJobHostLog.RenewFailed(logger, execution.Job.Id, exception);
+            WorkerJobHostLog.RenewFailed(_logger, execution.Job.Id, exception);
             await lost.CancelAsync().ConfigureAwait(false);
         }
 #pragma warning restore CA1031

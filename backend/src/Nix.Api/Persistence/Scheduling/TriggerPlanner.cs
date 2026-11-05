@@ -22,11 +22,11 @@ public sealed class TriggerPlanner(
     private static readonly TimeSpan PlanWindowSpan = TimeSpan.FromHours(48);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(5);
 
-    private readonly ILogger<TriggerPlanner> logger = logger ?? NullLogger<TriggerPlanner>.Instance;
+    private readonly ILogger<TriggerPlanner> _logger = logger ?? NullLogger<TriggerPlanner>.Instance;
 
     // When each source last planned, for sources with a PlanInterval. Only the planner's own loop
     // touches it, one pass at a time.
-    private readonly Dictionary<string, DateTimeOffset> lastPlanned = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DateTimeOffset> _lastPlanned = new(StringComparer.Ordinal);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -44,7 +44,7 @@ public sealed class TriggerPlanner(
 #pragma warning disable CA1031 // Justification: planning is durable and must retry after any transient database failure.
             catch (Exception exception)
             {
-                TriggerPlannerLog.Failed(logger, exception);
+                TriggerPlannerLog.Failed(_logger, exception);
                 await Task.Delay(FailureDelay, clock, stoppingToken).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
@@ -71,7 +71,7 @@ public sealed class TriggerPlanner(
             foreach (var source in registered)
             {
                 if (!source.IsPlanned
-                    || (lastPlanned.TryGetValue(source.Name, out var planned) && now - planned < source.PlanInterval))
+                    || (_lastPlanned.TryGetValue(source.Name, out var planned) && now - planned < source.PlanInterval))
                 {
                     continue;
                 }
@@ -89,17 +89,17 @@ public sealed class TriggerPlanner(
 #pragma warning disable CA1031 // Justification: isolating one source's failure from every other source's planning is the point.
                 catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
-                    TriggerPlannerLog.SourceFailed(logger, source.Name, exception);
+                    TriggerPlannerLog.SourceFailed(_logger, source.Name, exception);
                     continue;
                 }
 #pragma warning restore CA1031
 
                 if (!plan.Complete)
                 {
-                    TriggerPlannerLog.SourceIncomplete(logger, source.Name, plan.Triggers.Count);
+                    TriggerPlannerLog.SourceIncomplete(_logger, source.Name, plan.Triggers.Count);
                 }
 
-                lastPlanned[source.Name] = now;
+                _lastPlanned[source.Name] = now;
                 plans.Add((source.Name, source.Kind, plan));
             }
         }
@@ -125,14 +125,14 @@ public sealed class TriggerPlanner(
                 catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
                     failedOwners++;
-                    TriggerPlannerLog.OwnerFailed(logger, name, group.Key.TenantId.Value, group.Key.PrincipalId.Value, desired.Length, exception);
+                    TriggerPlannerLog.OwnerFailed(_logger, name, group.Key.TenantId.Value, group.Key.PrincipalId.Value, desired.Length, exception);
                 }
 #pragma warning restore CA1031
             }
 
             if (failedOwners > 0)
             {
-                TriggerPlannerLog.OwnersFailed(logger, name, failedOwners, owners);
+                TriggerPlannerLog.OwnersFailed(_logger, name, failedOwners, owners);
             }
         }
     }

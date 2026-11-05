@@ -55,8 +55,8 @@ public sealed class ObjectDownload(Stream body, IncrementalHash digest) : IAsync
 public sealed class ObjectTransfer
 {
     private static readonly string[] LoopbackHosts = ["localhost", "127.0.0.1", "::1", "[::1]"];
-    private readonly HttpClient client;
-    private readonly HashSet<string> allowedOrigins;
+    private readonly HttpClient _client;
+    private readonly HashSet<string> _allowedOrigins;
 
     /// <param name="client">A client with redirects disabled.</param>
     /// <param name="origins">The exact origins capability URLs may name; empty allows loopback only.</param>
@@ -64,13 +64,13 @@ public sealed class ObjectTransfer
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(origins);
-        this.client = client;
-        allowedOrigins = new HashSet<string>(StringComparer.Ordinal);
+        this._client = client;
+        _allowedOrigins = new HashSet<string>(StringComparer.Ordinal);
         foreach (var origin in origins)
         {
             if (TryCanonicalOrigin(origin, out var canonical))
             {
-                allowedOrigins.Add(canonical);
+                _allowedOrigins.Add(canonical);
             }
         }
     }
@@ -100,7 +100,7 @@ public sealed class ObjectTransfer
         HttpResponseMessage response;
         try
         {
-            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception)
         {
@@ -177,7 +177,7 @@ public sealed class ObjectTransfer
         HttpResponseMessage response;
         try
         {
-            response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception)
         {
@@ -205,7 +205,7 @@ public sealed class ObjectTransfer
         HttpResponseMessage response;
         try
         {
-            response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception)
         {
@@ -232,7 +232,7 @@ public sealed class ObjectTransfer
             throw new ObjectTransferException("object capability URL must not contain a fragment");
         }
         var origin = OriginOf(url);
-        if (allowedOrigins.Count == 0)
+        if (_allowedOrigins.Count == 0)
         {
             if (!IsLoopback(url.Host))
             {
@@ -240,7 +240,7 @@ public sealed class ObjectTransfer
             }
             return;
         }
-        if (!allowedOrigins.Contains(origin))
+        if (!_allowedOrigins.Contains(origin))
         {
             throw new ObjectTransferException("object capability origin is not allowed");
         }
@@ -270,7 +270,7 @@ public sealed class ObjectTransfer
     /// <summary>Reads at most the allowed bytes, hashing them, and fails once more arrive.</summary>
     private sealed class BoundedDigestStream(Stream inner, HttpResponseMessage response, IncrementalHash digest, long maximum) : Stream
     {
-        private long remaining = maximum;
+        private long _remaining = maximum;
 
         public override bool CanRead => true;
 
@@ -291,12 +291,12 @@ public sealed class ObjectTransfer
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             var read = await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read > remaining)
+            if (read > _remaining)
             {
-                remaining = 0;
+                _remaining = 0;
                 throw new ObjectTransferException("source object exceeds the configured byte limit") { TooLarge = true };
             }
-            remaining -= read;
+            _remaining -= read;
             digest.AppendData(buffer.Span[..read]);
             return read;
         }

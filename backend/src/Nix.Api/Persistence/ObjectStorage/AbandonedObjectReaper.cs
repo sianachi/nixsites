@@ -25,7 +25,7 @@ public sealed class AbandonedObjectReaper(
     private const int BatchSize = 100;
     private static readonly TimeSpan EmptyDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(5);
-    private readonly ILogger<AbandonedObjectReaper> logger = logger ?? NullLogger<AbandonedObjectReaper>.Instance;
+    private readonly ILogger<AbandonedObjectReaper> _logger = logger ?? NullLogger<AbandonedObjectReaper>.Instance;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -46,7 +46,7 @@ public sealed class AbandonedObjectReaper(
 #pragma warning disable CA1031 // Justification: expiry cleanup is durable and must retry after any transient database failure.
             catch (Exception exception)
             {
-                AbandonedObjectReaperLog.Failed(logger, exception);
+                AbandonedObjectReaperLog.Failed(_logger, exception);
                 await Task.Delay(FailureDelay, clock, stoppingToken).ConfigureAwait(false);
             }
 #pragma warning restore CA1031

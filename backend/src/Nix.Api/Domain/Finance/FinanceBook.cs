@@ -79,8 +79,8 @@ public sealed class FinanceBook
                 _unassignedCountByAccountMonth[(transaction.AccountId, month)] = unassigned + 1;
                 if (transaction.Amount < 0)
                 {
-                    _unassignedOutflowByAccountMonth.TryGetValue((transaction.AccountId, month), out var out_);
-                    _unassignedOutflowByAccountMonth[(transaction.AccountId, month)] = out_ - transaction.Amount;
+                    _unassignedOutflowByAccountMonth.TryGetValue((transaction.AccountId, month), out var @out);
+                    _unassignedOutflowByAccountMonth[(transaction.AccountId, month)] = @out - transaction.Amount;
                 }
                 else if (AccountsById.TryGetValue(transaction.AccountId, out var account) && account.IsCreditCard)
                 {
@@ -91,8 +91,8 @@ public sealed class FinanceBook
                 }
                 else
                 {
-                    _unassignedInflowByAccountMonth.TryGetValue((transaction.AccountId, month), out var in_);
-                    _unassignedInflowByAccountMonth[(transaction.AccountId, month)] = in_ + transaction.Amount;
+                    _unassignedInflowByAccountMonth.TryGetValue((transaction.AccountId, month), out var @in);
+                    _unassignedInflowByAccountMonth[(transaction.AccountId, month)] = @in + transaction.Amount;
                 }
             }
         }

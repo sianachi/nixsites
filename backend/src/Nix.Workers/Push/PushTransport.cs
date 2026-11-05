@@ -17,7 +17,7 @@ public sealed class PushTransport : IDisposable
 
     private const string NotifyWindowsSuffix = ".notify.windows.com";
     private const int MaxResponseBodyBytes = 4 * 1024;
-    private readonly HttpClient httpClient;
+    private readonly HttpClient _httpClient;
 
     public PushTransport(TimeSpan timeout)
         : this(CreateClient(timeout))
@@ -28,7 +28,7 @@ public sealed class PushTransport : IDisposable
     public PushTransport(HttpClient httpClient)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
-        this.httpClient = httpClient;
+        this._httpClient = httpClient;
     }
 
     /// <summary>Whether <paramref name="endpoint"/> is an HTTPS URL on an allowed push-service host, with no userinfo or fragment.</summary>
@@ -69,7 +69,7 @@ public sealed class PushTransport : IDisposable
                 request.Content.Headers.TryAddWithoutValidation(name, value);
             }
         }
-        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await using (stream.ConfigureAwait(false))
         {
@@ -88,7 +88,7 @@ public sealed class PushTransport : IDisposable
         return (int)response.StatusCode;
     }
 
-    public void Dispose() => httpClient.Dispose();
+    public void Dispose() => _httpClient.Dispose();
 
 #pragma warning disable CA2000 // Justification: the client owns the handler (disposeHandler: true) and is disposed with this transport.
     private static HttpClient CreateClient(TimeSpan timeout) => new(new SocketsHttpHandler

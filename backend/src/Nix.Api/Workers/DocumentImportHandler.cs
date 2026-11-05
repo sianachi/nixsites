@@ -559,7 +559,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
     /// <summary>Reads at most a declared number of bytes from a longer stream.</summary>
     private sealed class LimitedReadStream(Stream inner, long limit) : Stream
     {
-        private long remaining = limit;
+        private long _remaining = limit;
 
         public override bool CanRead => true;
 
@@ -579,12 +579,12 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (remaining <= 0)
+            if (_remaining <= 0)
             {
                 return 0;
             }
-            var read = await inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, remaining)], cancellationToken).ConfigureAwait(false);
-            remaining -= read;
+            var read = await inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, _remaining)], cancellationToken).ConfigureAwait(false);
+            _remaining -= read;
             return read;
         }
 

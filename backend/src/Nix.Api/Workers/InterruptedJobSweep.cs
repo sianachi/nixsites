@@ -27,7 +27,7 @@ public sealed class InterruptedJobSweep(
     public const string ErrorCode = "interrupted_by_restart";
 
     private static readonly string[] Resumable = ["notify.push", "object.cleanup"];
-    private readonly ILogger<InterruptedJobSweep> logger = logger ?? NullLogger<InterruptedJobSweep>.Instance;
+    private readonly ILogger<InterruptedJobSweep> _logger = logger ?? NullLogger<InterruptedJobSweep>.Instance;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -43,7 +43,7 @@ public sealed class InterruptedJobSweep(
             .ConfigureAwait(false);
         foreach (var job in interrupted)
         {
-            InterruptedJobSweepLog.Interrupted(logger, job.Id, job.Kind);
+            InterruptedJobSweepLog.Interrupted(_logger, job.Id, job.Kind);
             foreach (var cleanup in cleanups.Where(candidate => candidate.Kinds.Contains(job.Kind, StringComparer.Ordinal)))
             {
                 try
@@ -53,7 +53,7 @@ public sealed class InterruptedJobSweep(
 #pragma warning disable CA1031 // Justification: one import's cleanup failing must not stop the host from starting; the reaper and retention cover the rest.
                 catch (Exception exception)
                 {
-                    InterruptedJobSweepLog.CleanupFailed(logger, job.Id, job.Kind, exception);
+                    InterruptedJobSweepLog.CleanupFailed(_logger, job.Id, job.Kind, exception);
                 }
 #pragma warning restore CA1031
             }

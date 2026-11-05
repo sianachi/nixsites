@@ -95,14 +95,14 @@ public static class PdfWriter
     /// <summary>The cursor-driven page layout, the shape fpdf gave the Go renderer.</summary>
     private sealed class Page(PdfDocument document, PdfSharp.PageSize size)
     {
-        private PdfPage? current;
-        private XGraphics? graphics;
-        private double y;
-        private double x;
+        private PdfPage? _current;
+        private XGraphics? _graphics;
+        private double _y;
+        private double _x;
 
-        private double Width => current!.Width.Point;
+        private double Width => _current!.Width.Point;
 
-        private double Height => current!.Height.Point;
+        private double Height => _current!.Height.Point;
 
         private double ContentWidth => Width - 2 * Margin;
 
@@ -114,23 +114,23 @@ public static class PdfWriter
             {
                 throw new StreamLimitException();
             }
-            graphics?.Dispose();
-            current = document.AddPage();
-            current.Size = size;
-            graphics = XGraphics.FromPdfPage(current);
-            y = Margin;
-            x = Margin;
+            _graphics?.Dispose();
+            _current = document.AddPage();
+            _current.Size = size;
+            _graphics = XGraphics.FromPdfPage(_current);
+            _y = Margin;
+            _x = Margin;
             // Footer: the page number, centred, 32 pt from the bottom in 9 pt grey, as fpdf drew it.
             var footer = new XFont(GoFonts.Family, 9);
-            graphics.DrawString(document.PageCount.ToString(CultureInfo.InvariantCulture), footer, new XSolidBrush(XColor.FromArgb(100, 100, 100)),
+            _graphics.DrawString(document.PageCount.ToString(CultureInfo.InvariantCulture), footer, new XSolidBrush(XColor.FromArgb(100, 100, 100)),
                 new XRect(Margin, Height - 32, ContentWidth, 12), XStringFormats.Center);
         }
 
-        public void Finish() => graphics?.Dispose();
+        public void Finish() => _graphics?.Dispose();
 
         private void Space(double height)
         {
-            if (y + height > Bottom)
+            if (_y + height > Bottom)
             {
                 AddPage();
             }
@@ -142,10 +142,10 @@ public static class PdfWriter
             foreach (var line in Wrap(text, font, ContentWidth))
             {
                 Space(30);
-                graphics!.DrawString(line, font, new XSolidBrush(XColor.FromArgb(25, 25, 25)), new XPoint(Margin, y + 30 * 0.78));
-                y += 30;
+                _graphics!.DrawString(line, font, new XSolidBrush(XColor.FromArgb(25, 25, 25)), new XPoint(Margin, _y + 30 * 0.78));
+                _y += 30;
             }
-            y += 12;
+            _y += 12;
         }
 
         public void Blocks(ExportRecord record, IList<Block> blocks, double indent, int recordIndex)
@@ -177,24 +177,24 @@ public static class PdfWriter
                             Image(diagram, indent);
                             break;
                         }
-                        y += 6;
+                        _y += 6;
                         foreach (var line in (block.Text ?? string.Empty).Split('\n'))
                         {
                             var font = new XFont(GoFonts.MonoFamily, 10);
                             foreach (var wrapped in Wrap(PdfText(line).Replace('\t', ' '), font, ContentWidth - indent))
                             {
                                 Space(15);
-                                graphics!.DrawRectangle(new XSolidBrush(XColor.FromArgb(243, 244, 246)), Margin + indent, y, ContentWidth - indent, 15);
-                                graphics.DrawString(wrapped, font, XBrushes.Black, new XPoint(Margin + indent, y + 15 * 0.78));
-                                y += 15;
+                                _graphics!.DrawRectangle(new XSolidBrush(XColor.FromArgb(243, 244, 246)), Margin + indent, _y, ContentWidth - indent, 15);
+                                _graphics.DrawString(wrapped, font, XBrushes.Black, new XPoint(Margin + indent, _y + 15 * 0.78));
+                                _y += 15;
                             }
                         }
-                        y += 6;
+                        _y += 6;
                         break;
                     case "rule":
                         Space(12);
-                        graphics!.DrawLine(new XPen(XColor.FromArgb(190, 190, 190), 0.2), Margin, y, Margin + ContentWidth, y);
-                        y += 8;
+                        _graphics!.DrawLine(new XPen(XColor.FromArgb(190, 190, 190), 0.2), Margin, _y, Margin + ContentWidth, _y);
+                        _y += 8;
                         break;
                     case "pageBreak":
                         AddPage();
@@ -258,14 +258,14 @@ public static class PdfWriter
             var lineHeight = size * 1.45;
             var left = Margin + indent;
             var right = Margin + ContentWidth;
-            x = left;
+            _x = left;
             Space(lineHeight);
             foreach (var run in runs)
             {
                 if (run.Text == "\n")
                 {
-                    y += lineHeight;
-                    x = left;
+                    _y += lineHeight;
+                    _x = left;
                     Space(lineHeight);
                     continue;
                 }
@@ -292,32 +292,32 @@ public static class PdfWriter
                 {
                     if (piece == "\n")
                     {
-                        y += lineHeight;
-                        x = left;
+                        _y += lineHeight;
+                        _x = left;
                         Space(lineHeight);
                         continue;
                     }
-                    var width = graphics!.MeasureString(piece, font).Width;
-                    if (x + width > right && x > left)
+                    var width = _graphics!.MeasureString(piece, font).Width;
+                    if (_x + width > right && _x > left)
                     {
-                        y += lineHeight;
-                        x = left;
+                        _y += lineHeight;
+                        _x = left;
                         Space(lineHeight);
                         if (piece.Length > 0 && piece[0] == ' ')
                         {
                             continue;
                         }
                     }
-                    graphics.DrawString(piece, font, new XSolidBrush(XColor.FromArgb(35, 35, 35)), new XPoint(x, y + lineHeight * 0.78));
+                    _graphics.DrawString(piece, font, new XSolidBrush(XColor.FromArgb(35, 35, 35)), new XPoint(_x, _y + lineHeight * 0.78));
                     if (link is not null)
                     {
-                        current!.AddWebLink(new PdfRectangle(graphics.Transformer.WorldToDefaultPage(new XRect(x, y, width, lineHeight))), link);
+                        _current!.AddWebLink(new PdfRectangle(_graphics.Transformer.WorldToDefaultPage(new XRect(_x, _y, width, lineHeight))), link);
                     }
-                    x += width;
+                    _x += width;
                 }
             }
-            y += lineHeight;
-            x = left;
+            _y += lineHeight;
+            _x = left;
         }
 
         // Words with their trailing space, and explicit line breaks, so wrapping happens at word boundaries.
@@ -358,7 +358,7 @@ public static class PdfWriter
                     line.Clear();
                     continue;
                 }
-                if (line.Length > 0 && graphics!.MeasureString(line + piece.TrimEnd(), font).Width > width)
+                if (line.Length > 0 && _graphics!.MeasureString(line + piece.TrimEnd(), font).Width > width)
                 {
                     yield return line.ToString().TrimEnd();
                     line.Clear();
@@ -395,31 +395,31 @@ public static class PdfWriter
                 for (var start = 0; start < count;)
                 {
                     Space(22);
-                    var take = Math.Min(count - start, Math.Max(1, (int)((Bottom - y - 8) / 14)));
+                    var take = Math.Min(count - start, Math.Max(1, (int)((Bottom - _y - 8) / 14)));
                     var height = take * 14 + 8;
-                    var top = y;
+                    var top = _y;
                     for (var column = 0; column < columns; column++)
                     {
                         var left = Margin + column * width;
                         var pen = new XPen(XColor.FromArgb(205, 210, 215), 0.2);
                         if (row.Header)
                         {
-                            graphics!.DrawRectangle(pen, new XSolidBrush(XColor.FromArgb(244, 246, 248)), left, top, width, height);
+                            _graphics!.DrawRectangle(pen, new XSolidBrush(XColor.FromArgb(244, 246, 248)), left, top, width, height);
                         }
                         else
                         {
-                            graphics!.DrawRectangle(pen, left, top, width, height);
+                            _graphics!.DrawRectangle(pen, left, top, width, height);
                         }
                         for (var n = 0; n < take && start + n < cells[column].Count; n++)
                         {
-                            graphics.DrawString(cells[column][start + n], font, XBrushes.Black, new XPoint(left + 6, top + 4 + n * 14 + 14 * 0.78));
+                            _graphics.DrawString(cells[column][start + n], font, XBrushes.Black, new XPoint(left + 6, top + 4 + n * 14 + 14 * 0.78));
                         }
                     }
-                    y = top + height;
+                    _y = top + height;
                     start += take;
                 }
             }
-            y += 8;
+            _y += 8;
         }
 
         private void Image(ExportImage raster, double indent)
@@ -427,8 +427,8 @@ public static class PdfWriter
             var (width, height) = ImageFiles.Size(raster, ContentWidth - indent, Bottom - Margin);
             Space(height + 8);
             using var image = XImage.FromStream(new MemoryStream(raster.Data));
-            graphics!.DrawImage(image, Margin + indent, y, width, height);
-            y += height + 8;
+            _graphics!.DrawImage(image, Margin + indent, _y, width, height);
+            _y += height + 8;
         }
     }
 

@@ -29,7 +29,7 @@ public sealed class ChunkEmbedder(
     private const int BatchSize = 4;
     private static readonly TimeSpan EmptyDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(30);
-    private readonly ILogger<ChunkEmbedder> logger = logger ?? NullLogger<ChunkEmbedder>.Instance;
+    private readonly ILogger<ChunkEmbedder> _logger = logger ?? NullLogger<ChunkEmbedder>.Instance;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -56,7 +56,7 @@ public sealed class ChunkEmbedder(
 #pragma warning disable CA1031 // Justification: embeddings are derived and retried; a transient failure must not end the loop.
             catch (Exception exception)
             {
-                ChunkEmbedderLog.Failed(logger, exception);
+                ChunkEmbedderLog.Failed(_logger, exception);
                 await Task.Delay(FailureDelay, clock, stoppingToken).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
