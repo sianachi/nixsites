@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nix</title>
+    <link rel="stylesheet" href="picker.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Nix</h1>
+      <ul id="servers" aria-label="Servers"></ul>
+      <form id="add">
+        <label for="address" hidden>Server address</label>
+        <input
+          id="address"
+          type="text"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Server address"
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+      <p id="status" role="status"></p>
+    </main>
+    <script src="picker.js"></script>
+  </body>
+</html>

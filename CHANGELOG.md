@@ -22,9 +22,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- A desktop app for macOS, Windows and Linux (`apps/desktop`, built with Electron): pick a Nix server and the app opens that server's own web app, with the same full offline copy as the iOS app (offline launch, reading, queued edits, files, conflicts). Sign-in runs in your browser, so passkeys and federated providers work. It needs a server from this version or newer, whose sign-in callback names its issuer; the iOS app needs rebuilding for the same reason. Builds are not code signed yet and do not update themselves.
 - A sign-in handoff for native apps: `/auth/login?native=<challenge>` finishes in the system sign-in
-  sheet and returns a one-time code (valid for 60 seconds) to the app, which redeems it with its
-  verifier at `/auth/native/redeem` to receive the session cookie. This lets passkeys work in the
+  sheet and returns a one-time code (valid for 60 seconds) and the server's own `iss` to the app,
+  which checks the issuer and redeems the code with its verifier at `/auth/native/redeem` to receive
+  the session cookie. This lets passkeys work in the
   iOS app. The browser sign-in is unchanged.
 - On phones, the app takes an Obsidian-like shape: a floating top row (Explorer, details, your
   profile menu) and a floating bottom bar (back, forward, find, new note, open tabs, menu); the

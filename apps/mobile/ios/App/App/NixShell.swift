@@ -120,11 +120,15 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         return URL(string: "\(origin)/auth/login?native=\(challenge)&returnTo=\(encoded)")
     }
 
-    /// The code from `app.nix.shell://auth?code=...`, only for exactly that shape.
-    static func handoffCode(_ url: URL?) -> String? {
+    /// The code from `app.nix.shell://auth?code=...&iss=...`, only for exactly that shape and only from
+    /// the server sign-in started on (RFC 9207). Otherwise a malicious saved server could redirect the
+    /// sheet to another server's login and be handed the code and the verifier for it.
+    static func handoffCode(_ url: URL?, issuer: String) -> String? {
         guard let url, url.scheme?.lowercased() == callbackScheme, url.host?.lowercased() == "auth",
-              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
-              items.count == 1, items[0].name == "code", let code = items[0].value, !code.isEmpty else { return nil }
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems, items.count == 2,
+              let code = items.first(where: { $0.name == "code" })?.value, !code.isEmpty,
+              let iss = items.first(where: { $0.name == "iss" })?.value,
+              origin(URL(string: iss)) == issuer else { return nil }
         return code
     }
 
@@ -168,7 +172,7 @@ final class NixSignInHandler: NSObject, WKScriptMessageHandlerWithReply, ASWebAu
         let finish: (URL?, Error?) -> Void = { [weak self] callback, error in
             DispatchQueue.main.async {
                 self?.authSession = nil
-                if let code = NixShellPlugin.handoffCode(callback) {
+                if let code = NixShellPlugin.handoffCode(callback, issuer: origin) {
                     replyHandler(["code": code, "verifier": pair.verifier], nil)
                 } else if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
                     replyHandler(nil, "cancelled")

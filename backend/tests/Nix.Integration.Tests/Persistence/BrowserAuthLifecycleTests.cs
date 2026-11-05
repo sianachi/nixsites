@@ -30,6 +30,7 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
     private const string ClientId = "nix-browser-test";
     private const string Subject = "browser-user-without-azp";
     private const string PublicOrigin = "https://nix.browser.test";
+    private const string IssuerParameter = "&iss=https%3A%2F%2Fnix.browser.test";
     private const string AccountPage = "https://issuer.alpha.test/ui/console/users/me?id=security";
 
     private readonly NixPostgresFixture _fixture;
@@ -174,7 +175,8 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
         var location = callback.Headers.Location?.OriginalString ?? "";
         Assert.StartsWith("app.nix.shell://auth?code=", location, StringComparison.Ordinal);
-        var code = location["app.nix.shell://auth?code=".Length..];
+        Assert.EndsWith(IssuerParameter, location, StringComparison.Ordinal);
+        var code = location["app.nix.shell://auth?code=".Length..^IssuerParameter.Length];
         Assert.Matches("^[A-Za-z0-9_-]{43}$", code);
         Assert.False(callback.Headers.TryGetValues("Set-Cookie", out var cookies)
             && cookies.Any(value => value.StartsWith("__Host-nix_session=", StringComparison.Ordinal)));
@@ -333,7 +335,7 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
     private async Task<string> NativeCodeAsync(string challenge)
     {
         var callback = await NativeCallbackAsync(challenge);
-        return callback.Headers.Location!.OriginalString["app.nix.shell://auth?code=".Length..];
+        return callback.Headers.Location!.OriginalString["app.nix.shell://auth?code=".Length..^IssuerParameter.Length];
     }
 
     private async Task<HttpResponseMessage> RedeemAsync(string code, string verifier, string origin = PublicOrigin)

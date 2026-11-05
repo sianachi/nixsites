@@ -1,0 +1,65 @@
+{
+  "name": "@nix/desktop",
+  "version": "0.5.1",
+  "private": true,
+  "description": "Electron shell for macOS, Windows and Linux: a server picker that opens a Nix server's own web app, with the iOS app's full offline sync",
+  "productName": "Nix",
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "ELECTRON_RUN_AS_NODE=1 electron --test",
+    "test:e2e": "node e2e/boundary.mjs",
+    "test:full-sync": "node e2e/full-sync.mjs",
+    "package": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "playwright": "^1.62.0"
+  },
+  "build": {
+    "appId": "app.nix.desktop",
+    "productName": "Nix",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "src/**"
+    ],
+    "protocols": [
+      {
+        "name": "Nix sign-in",
+        "schemes": [
+          "app.nix.shell"
+        ]
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true,
+      "enableEmbeddedAsarIntegrityValidation": true
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "category": "Office",
+      "target": "deb",
+      "maintainer": "Nix",
+      "executableName": "nix-desktop",
+      "artifactName": "nix-desktop_${version}_${arch}.${ext}"
+    }
+  },
+  "homepage": "https://github.com/sianachi/nixsites",
+  "author": "Nix"
+}

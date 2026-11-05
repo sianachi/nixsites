@@ -15,6 +15,13 @@ public sealed class NativeHandoffCoordinator(INativeHandoffs handoffs, IDataProt
     /// <summary>The app's callback URL; a server constant, never taken from the client.</summary>
     internal const string RedirectBase = "app.nix.shell://auth";
 
+    /// <summary>
+    /// The callback, naming this server (RFC 9207): an app that started sign-in on another server, which
+    /// redirected the browser here, must not hand that server this code.
+    /// </summary>
+    internal static string CallbackUrl(string code, Uri? publicOrigin) =>
+        RedirectBase + "?code=" + code + "&iss=" + Uri.EscapeDataString(publicOrigin?.GetLeftPart(UriPartial.Authority) ?? string.Empty);
+
     internal static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(60);
     private const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     private readonly IDataProtector _protector = dataProtection.CreateProtector("Nix.Bff.NativeHandoff.v1");

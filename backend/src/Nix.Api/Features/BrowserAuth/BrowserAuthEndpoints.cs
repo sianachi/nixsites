@@ -110,7 +110,7 @@ internal static class BrowserAuthEndpoints
                     .ConfigureAwait(false);
                 return handoff is null
                     ? Problem(httpContext, BrowserAuthFailure.HandoffBusy)
-                    : TypedResults.Redirect(NativeHandoffCoordinator.RedirectBase + "?code=" + handoff);
+                    : TypedResults.Redirect(NativeHandoffCoordinator.CallbackUrl(handoff, coordinator.PublicOrigin));
             }
 
             httpContext.Response.Cookies.Append(
