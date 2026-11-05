@@ -81,6 +81,49 @@ describe('Homebase', () => {
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
   });
 
+  it('explores the files: into a folder, back up the path, filtered, and open', async () => {
+    const user = userEvent.setup();
+    const projects = item({
+      id: '4b4b4b4b-4444-4444-8444-4b4b4b4b4b4b',
+      title: 'Projects',
+      hasChildren: true,
+    });
+    const launch = item({
+      id: '5c5c5c5c-5555-4555-8555-5c5c5c5c5c5c',
+      title: 'Launch plan',
+      parentId: projects.id,
+    });
+    const budget = item({
+      id: '6d6d6d6d-6666-4666-8666-6d6d6d6d6d6d',
+      title: 'Budget',
+      parentId: projects.id,
+    });
+    stubCoreApi({ items: [ROADMAP, projects, launch, budget] });
+    renderAt(<App />, HOME);
+
+    await user.click(await screen.findByRole('button', { name: 'Explore' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Explore' });
+    const top = within(dialog).getByRole('list', { name: 'All items' });
+    expect(await within(top).findByRole('button', { name: 'Roadmap' })).toBeVisible();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Browse Projects' }));
+    const inside = await within(dialog).findByRole('list', { name: 'Items in Projects' });
+    expect(await within(inside).findByRole('button', { name: 'Launch plan' })).toBeVisible();
+    expect(within(inside).getByRole('button', { name: 'Budget' })).toBeVisible();
+
+    await user.type(within(dialog).getByRole('searchbox', { name: 'Filter Projects' }), 'laun');
+    expect(within(inside).queryByRole('button', { name: 'Budget' })).not.toBeInTheDocument();
+
+    const path = within(dialog).getByRole('navigation', { name: 'Folder path' });
+    await user.click(within(path).getByRole('button', { name: 'All items' }));
+    expect(within(dialog).getByRole('list', { name: 'All items' })).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Browse Projects' }));
+
+    await user.click(await within(dialog).findByRole('button', { name: 'Launch plan' }));
+    expect(screen.queryByRole('dialog', { name: 'Explore' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Launch plan');
+  });
+
   it('numbers weeks the ISO way', () => {
     expect(isoWeek(new Date(2026, 9, 28))).toBe(44);
     expect(isoWeek(new Date(2027, 0, 1))).toBe(53);

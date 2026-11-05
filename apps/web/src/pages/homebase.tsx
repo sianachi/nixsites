@@ -6,6 +6,7 @@ import {
   FilePlus,
   FileText,
   FolderInput,
+  FolderTree,
   Grid3x3,
   LayoutTemplate,
   Settings,
@@ -16,6 +17,7 @@ import {
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
+import { ExploreDialog } from '../items/explore-dialog';
 import { NewItemDialog } from '../items/new-item-dialog';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
@@ -69,6 +71,7 @@ export function Homebase({
   const navigate = useNavigate();
   const templateLibrary = useTemplateLibrary();
   const [choosingStructure, setChoosingStructure] = useState(false);
+  const [exploring, setExploring] = useState(false);
   const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
 
   const now = new Date();
@@ -240,14 +243,26 @@ export function Homebase({
           <Text variant="kicker" tone="muted" truncate>
             {workspace.name}
           </Text>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void navigate(`${home}/workspaces`);
-            }}
-          >
-            Workspaces
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* A way into the files from here, which a phone otherwise only has in the drawer. */}
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setExploring(true);
+              }}
+            >
+              <Icon icon={FolderTree} size="sm" />
+              Explore
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void navigate(`${home}/workspaces`);
+              }}
+            >
+              Workspaces
+            </Button>
+          </div>
         </div>
         <Text as="h1" variant="h1" className="min-w-0">
           {greeting(now.getHours())}
@@ -272,6 +287,16 @@ export function Homebase({
         <div className="min-w-0">{start}</div>
         <div className="min-w-0 md:col-span-2">{recent}</div>
       </div>
+
+      {exploring ? (
+        <ExploreDialog
+          tree={tree}
+          onOpen={openPreview}
+          onClose={() => {
+            setExploring(false);
+          }}
+        />
+      ) : null}
 
       {choosingStructure ? (
         <NewItemDialog
