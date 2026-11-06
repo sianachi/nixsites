@@ -25,6 +25,7 @@ export type JsonObject = Readonly<Record<string, unknown>>;
 
 const lookupSchema = z.object({
   matches: z.array(z.object({ item: itemSchema, trashed: z.boolean() })),
+  truncated: z.boolean().default(false),
 });
 export type LookupResult = z.infer<typeof lookupSchema>;
 

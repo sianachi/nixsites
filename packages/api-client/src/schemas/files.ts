@@ -64,7 +64,7 @@ export const fileDownloadCapabilitySchema = z.object({
   unscanned: z.boolean(),
   noSniff: z.boolean(),
   // The version served when the request named none.
-  versionId: z.uuid().nullable().optional(),
+  versionId: z.uuid().nullable().default(null),
 });
 export const fileThumbnailCapabilitySchema = z.object({
   url: z.url(),
@@ -72,7 +72,7 @@ export const fileThumbnailCapabilitySchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   byteLength: z.number().int().positive(),
-  versionId: z.uuid().nullable().optional(),
+  versionId: z.uuid().nullable().default(null),
 });
 
 const _fileThumbnailContract = fileThumbnailSchema satisfies z.ZodType<
