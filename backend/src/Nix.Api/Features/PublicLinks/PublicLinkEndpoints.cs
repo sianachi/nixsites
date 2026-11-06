@@ -324,7 +324,7 @@ internal static class PublicLinkEndpoints
             var render = notes is null ? null : await notes.RenderAsync(link, ct).ConfigureAwait(false);
             return render is null
                 ? TypedResults.NotFound()
-                : TypedResults.Ok(new PublicLinkReadResponse("note", Title: render.Title, Html: render.Html));
+                : TypedResults.Ok(new PublicLinkReadResponse("note", Title: render.Title, Html: render.Html.Replace("__TOKEN__", Uri.EscapeDataString(token), StringComparison.Ordinal)));
         }
 
         // A revoked version, or one whose object is not published, answers like any dead link.

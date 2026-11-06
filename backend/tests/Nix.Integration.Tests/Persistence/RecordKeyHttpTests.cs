@@ -319,6 +319,63 @@ public sealed class RecordKeyHttpTests(NixPostgresFixture fixture) : IAsyncLifet
     }
 
     [Fact]
+    public async Task A_property_write_waits_out_a_field_turning_unique_so_the_backfill_cannot_miss_it()
+    {
+        var collection = await CollectionAsync(unique: false);
+        var item = await CreateAsync(collection, "A");
+
+        // Holds what SetItemSchema holds across its backfill.
+        await using var holder = await fixture.OpenMigratorConnectionAsync();
+        await using var transaction = await holder.BeginTransactionAsync(Cancellation);
+        await RawSql.ExecuteAsync(
+            holder,
+            transaction,
+            $"SELECT pg_advisory_xact_lock(hashtextextended('record-scope:{TestTenants.Alpha:D}:{collection:D}', 0))");
+
+        var write = _client.PatchAsJsonAsync($"/api/v1/items/{item}/properties", new { properties = new { url = "https://example.com/late" } }, Cancellation);
+        await Task.Delay(TimeSpan.FromSeconds(1), Cancellation);
+        Assert.False(write.IsCompleted, "The write must wait for the backfill to finish.");
+
+        await transaction.CommitAsync(Cancellation);
+        using var response = await write;
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_lookup_past_the_cap_says_it_was_truncated()
+    {
+        var collection = await CollectionAsync(unique: false);
+        await SchemaAsync(collection, Declare("ref", "text", false));
+        for (var page = 0; page < 6; page++)
+        {
+            var size = page == 5 ? 1 : 100;
+            var batch = await PostBatchAsync(new
+            {
+                rows = Enumerable.Range(0, size).Select(index => new
+                {
+                    parentId = collection,
+                    title = $"Row {page}-{index}",
+                    idempotencyKey = $"cap-{page}-{index}",
+                    properties = new { @ref = "same" },
+                }).ToArray(),
+            });
+            Assert.Equal(0, batch["failed"]!.GetValue<int>());
+        }
+
+        using var response = await _client.PostAsJsonAsync($"/api/v1/workspaces/{Workspace}/lookup", new { key = "ref", value = "same", parentId = collection }, Cancellation);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = (await response.Content.ReadFromJsonAsync<JsonObject>(Cancellation))!;
+        Assert.Equal(500, body["matches"]!.AsArray().Count);
+        Assert.True(body["truncated"]!.GetValue<bool>());
+
+        var one = await CreateAsync(collection, "Unique value", new { @ref = "only" });
+        using var single = await _client.PostAsJsonAsync($"/api/v1/workspaces/{Workspace}/lookup", new { key = "ref", value = "only", parentId = collection }, Cancellation);
+        var singleBody = (await single.Content.ReadFromJsonAsync<JsonObject>(Cancellation))!;
+        Assert.False(singleBody["truncated"]!.GetValue<bool>());
+        Assert.Equal(one, singleBody["matches"]![0]!["item"]!["id"]!.GetValue<Guid>());
+    }
+
+    [Fact]
     public async Task Recording_sent_changes_no_file_version_and_queues_no_job_and_not_equals_matches_records_missing_the_field()
     {
         var collection = await CollectionAsync();

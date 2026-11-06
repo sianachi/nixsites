@@ -17,11 +17,6 @@ namespace Nix.Features.PublicLinks.Notes;
 /// </summary>
 internal static class PublicLinkFileEndpoints
 {
-    private static readonly HashSet<string> InlineTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/png", "image/jpeg", "image/webp", "image/avif", "application/pdf",
-    };
-
     internal static IEndpointRouteBuilder MapPublicLinkFileEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -54,13 +49,13 @@ internal static class PublicLinkFileEndpoints
         var link = await resolver.ResolveAsync(token, cancellation).ConfigureAwait(false);
         if (link is null || link.FileVersionId is not null || !signer.IsConfigured)
         {
-            return DeadLink(context);
+            return DeadLink();
         }
 
         var render = await reader.RenderAsync(link, cancellation).ConfigureAwait(false);
         if (render is null || !render.ServableFileIds.Contains(fileItemId))
         {
-            return DeadLink(context);
+            return DeadLink();
         }
 
         // A servable id is an inline image or has an approved version, so the image rule is the
@@ -81,22 +76,15 @@ internal static class PublicLinkFileEndpoints
             cancellation).ConfigureAwait(false);
         if (verdict is not { Disposition: PublicFileDisposition.Servable, Choice: { } choice })
         {
-            return DeadLink(context);
+            return DeadLink();
         }
 
         return TypedResults.Redirect(SignShortLived(signer, choice));
     }
 
-    // shortcut: lane 6 adds a 60-second signer to S3CapabilitySigner; this uses the 300-second
-    // browser one until the lead points it at the new method at merge.
     private static string SignShortLived(S3CapabilitySigner signer, PublicFileChoice choice) =>
-        signer.GetForBrowser(choice.ObjectKey, choice.FileName, choice.MediaType, InlineTypes.Contains(choice.MediaType)).Url.ToString();
+        signer.GetForPublicLink(choice.ObjectKey, choice.FileName, choice.MediaType).Url.ToString();
 
-    // The same 404 the other public link routes give, with no reason (lane 6's wording to match at merge).
-    private static Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult DeadLink(HttpContext context) => TypedResults.Problem(ApiProblem.Create(
-        context,
-        StatusCodes.Status404NotFound,
-        "public_links.not_found",
-        "Not found",
-        "This link is not available."));
+    // The same 404 every other dead public link gives, with no reason.
+    private static Microsoft.AspNetCore.Http.HttpResults.NotFound DeadLink() => TypedResults.NotFound();
 }

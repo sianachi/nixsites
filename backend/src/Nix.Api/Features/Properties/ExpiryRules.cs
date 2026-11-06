@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Properties;
@@ -13,11 +14,12 @@ namespace Nix.Features.Properties;
 /// </summary>
 internal static class ExpiryRules
 {
-    private static readonly PropertySchema Schema = new()
-    {
-        Properties = [new(ItemProperties.ExpiryKey, "Expiry", PropertyType.Timestamp, [], false)],
-        Inherit = false,
-    };
+    // An instant with its offset, and optionally the zone Nix timestamps carry. Agents send plain
+    // ISO 8601; a date alone is refused because it does not say which midnight it means.
+    private static readonly Regex Instant = new(
+        @"^\d{4}-\d{2}-\d{2}T[^\[\]]+(Z|[+-]\d{2}:\d{2})(\[[^\[\]]+\])?$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Refuses a write that names <c>expiry</c> with a malformed value or an instant not after
@@ -39,16 +41,18 @@ internal static class ExpiryRules
             return null;
         }
 
-        var violations = PropertyValidator.ValidateSupplied(bag, Schema);
-        if (violations.IsEmpty
-            && ReminderInstant.Read(bag, ItemProperties.ExpiryKey) is { } instant
-            && instant > now)
+        if (document[ItemProperties.ExpiryKey] is not JsonValue value
+            || !value.TryGetValue<string>(out var text)
+            || !Instant.IsMatch(text)
+            || ReminderInstant.Read(bag, ItemProperties.ExpiryKey) is not { } instant)
         {
-            return null;
+            return PropertyErrors.InvalidProperties(
+                [new PropertyViolation(ItemProperties.ExpiryKey, "Expiry must be a time with its offset, such as 2027-04-02T17:00:00Z.")]);
         }
 
-        return PropertyErrors.InvalidProperties(violations.IsEmpty
-            ? [new PropertyViolation(ItemProperties.ExpiryKey, "Expiry must be a time in the future.")]
-            : violations);
+        return instant > now
+            ? null
+            : PropertyErrors.InvalidProperties(
+                [new PropertyViolation(ItemProperties.ExpiryKey, "Expiry must be a time in the future.")]);
     }
 }

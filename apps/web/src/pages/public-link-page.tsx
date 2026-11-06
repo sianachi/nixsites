@@ -81,6 +81,7 @@ function FileView({ link }: { readonly link: PublicLink }): ReactNode {
   const type = link.mediaType ?? '';
   const url = link.url ?? '';
   const safe = /^https?:\/\//i.test(url) ? url : '';
+  const pdf = usePdfBlob(type === 'application/pdf' ? safe : '');
   return (
     <section className="flex min-w-0 flex-col gap-3">
       <Text variant="h2" as="h1" className="wrap-anywhere">
@@ -89,11 +90,10 @@ function FileView({ link }: { readonly link: PublicLink }): ReactNode {
       {safe !== '' && type.startsWith('image/') ? (
         <img src={safe} alt={name} className="h-auto max-w-full" />
       ) : null}
-      {safe !== '' && type === 'application/pdf' ? (
+      {pdf !== null ? (
         <iframe
-          src={safe}
+          src={pdf}
           title={name}
-          sandbox=""
           className="h-[70dvh] w-full rounded-md border border-divider"
         />
       ) : null}
@@ -104,4 +104,31 @@ function FileView({ link }: { readonly link: PublicLink }): ReactNode {
       ) : null}
     </section>
   );
+}
+
+/**
+ * The page's CSP frames only itself and blobs, so a PDF is fetched and framed as a blob, the way the
+ * signed-in file viewer does. A failed fetch leaves just the download link.
+ */
+function usePdfBlob(url: string): string | null {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (url === '') return undefined;
+    const controller = new AbortController();
+    let created: string | null = null;
+    void fetch(url, { signal: controller.signal })
+      .then((response) => (response.ok ? response.blob() : null))
+      .then((blob) => {
+        if (blob === null) return;
+        created = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+        setBlobUrl(created);
+      })
+      .catch(() => undefined);
+    return () => {
+      controller.abort();
+      if (created !== null) URL.revokeObjectURL(created);
+      setBlobUrl(null);
+    };
+  }, [url]);
+  return blobUrl;
 }

@@ -1194,6 +1194,8 @@
         "tags": [
           "Attachments"
         ],
+        "summary": "File items in the workspace",
+        "description": "Newest first. Shows each file's latest approved version, else its current one. Images are left out unless includeImages is set. Files under a lock the caller has not opened are omitted.",
         "operationId": "ListAttachments",
         "parameters": [
           {
@@ -18123,6 +18125,13 @@
           },
           "noSniff": {
             "type": "boolean"
+          },
+          "versionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -18202,6 +18211,13 @@
               "string"
             ],
             "format": "int32"
+          },
+          "versionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -20906,7 +20922,8 @@
       },
       "LookupItemsResponse": {
         "required": [
-          "matches"
+          "matches",
+          "truncated"
         ],
         "type": "object",
         "properties": {
@@ -20915,6 +20932,9 @@
             "items": {
               "$ref": "#/components/schemas/LookupMatch"
             }
+          },
+          "truncated": {
+            "type": "boolean"
           }
         }
       },
@@ -21177,6 +21197,10 @@
           },
           "sha256": {
             "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "default": "draft"
           }
         }
       },
@@ -22428,6 +22452,11 @@
               }
             },
             "description": "The properties a write refused, one entry per key. Only on 'properties.invalid'."
+          },
+          "existingItemId": {
+            "type": "string",
+            "description": "The item a conflict collided with. Only on 'records.key_conflict' and 'record.trashed', and only when the caller may read it.",
+            "format": "uuid"
           }
         }
       },

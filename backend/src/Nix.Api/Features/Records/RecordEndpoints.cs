@@ -23,7 +23,8 @@ internal sealed record LookupItemsRequest(string Key, string Value, Guid? Parent
 internal sealed record LookupMatch(ItemResponse Item, bool Trashed);
 
 /// <summary>The matches of a lookup, at most 500.</summary>
-internal sealed record LookupItemsResponse(IReadOnlyList<LookupMatch> Matches);
+/// <param name="Truncated">More matches exist than were returned; only an unkeyed lookup can hit the cap.</param>
+internal sealed record LookupItemsResponse(IReadOnlyList<LookupMatch> Matches, bool Truncated);
 
 /// <summary>Creates or updates the child of the route's parent whose unique field equals <c>KeyValue</c>.</summary>
 /// <param name="KeyField">A unique field declared in the parent's schema.</param>

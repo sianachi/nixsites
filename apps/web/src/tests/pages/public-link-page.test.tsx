@@ -8,7 +8,7 @@ import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { sanitizePublicHtml } from '../../pages/public-link-html';
 import { PublicLinkPage } from '../../pages/public-link-page';
 
-const FILE = '/public/v1/links/__TOKEN__/files/66666666-6666-4666-8666-666666666661';
+const FILE = '/public/v1/links/tok%20en/files/66666666-6666-4666-8666-666666666661';
 
 function renderLink(respond: () => Response): void {
   vi.stubGlobal(
@@ -56,7 +56,14 @@ describe('public link page', () => {
     );
   });
 
-  it('shows a file as a download', async () => {
+  it('shows a file as a download and frames a PDF as a blob', async () => {
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, {
+        createObjectURL: vi.fn(() => 'blob:brief'),
+        revokeObjectURL: vi.fn(),
+      }),
+    );
     renderLink(() =>
       Response.json({
         kind: 'file',
@@ -69,7 +76,7 @@ describe('public link page', () => {
       'href',
       'https://files.test/brief',
     );
-    expect(screen.getByTitle('brief.pdf')).toBeInTheDocument();
+    expect(await screen.findByTitle('brief.pdf')).toHaveAttribute('src', 'blob:brief');
   });
 
   it('gives a dead link a plain message with no reason', async () => {

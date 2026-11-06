@@ -19,6 +19,15 @@ public sealed class RecordKeyStore(
         ?? throw new InvalidOperationException("Record keys require an authenticated unit of work.")).TenantId;
 
     /// <inheritdoc />
+    public async ValueTask LockScopeAsync(ItemId scope, bool exclusive, CancellationToken cancellationToken) =>
+        _ = await sql.ExecuteAsync(
+            exclusive
+                ? "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));"
+                : "SELECT pg_advisory_xact_lock_shared(hashtextextended(@identity, 0));",
+            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = $"record-scope:{Tenant.Value:D}:{scope.Value:D}" }],
+            cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async ValueTask LockAsync(ItemId scope, IEnumerable<(string Field, string Value)> keys, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(keys);

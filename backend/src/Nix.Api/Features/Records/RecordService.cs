@@ -93,12 +93,13 @@ internal sealed class RecordService(
             var trimmed = request.Value.Trim();
             var values = new[] { request.Value, trimmed, RecordKeyCanonical.CanonicalUrl(trimmed) }
                 .OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
-            matches = await store.FindByPropertyAsync(workspaceId, parent?.Id, request.Key, values, MaximumLookupMatches, cancellationToken).ConfigureAwait(false);
+            matches = await store.FindByPropertyAsync(workspaceId, parent?.Id, request.Key, values, MaximumLookupMatches + 1, cancellationToken).ConfigureAwait(false);
         }
 
-        var found = new List<LookupMatch>(matches.Count);
-        var items = new List<Item>(matches.Count);
-        foreach (var match in matches)
+        var truncated = matches.Count > MaximumLookupMatches;
+        var found = new List<LookupMatch>(Math.Min(matches.Count, MaximumLookupMatches));
+        var items = new List<Item>(found.Capacity);
+        foreach (var match in matches.Take(MaximumLookupMatches))
         {
             if (await tree.FindStoredAsync(match.ItemId, cancellationToken).ConfigureAwait(false) is { } item)
             {
@@ -116,7 +117,7 @@ internal sealed class RecordService(
                 matches.First(match => match.ItemId == item.Id).Trashed));
         }
 
-        return Result.Success(new LookupItemsResponse(found));
+        return Result.Success(new LookupItemsResponse(found, truncated));
     }
 
     /// <summary>Creates or updates the child of a collection whose unique field equals a value.</summary>

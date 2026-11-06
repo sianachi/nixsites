@@ -181,6 +181,12 @@ public sealed partial class TemplateStore
             {
                 return Result.Failure<TemplateApplicationPlan>(TemplateErrors.Conflict("The target does not accept new children."));
             }
+
+            // The merged children would arrive without a claim on the target's unique keys.
+            if (Nix.Features.Records.RecordKeys.DeclaresUnique(targetRoot.Schema))
+            {
+                return Result.Failure<TemplateApplicationPlan>(TemplateErrors.Conflict("The target requires unique keys; apply the template elsewhere and move the result."));
+            }
         }
         else if (parentItemId is { } parent)
         {

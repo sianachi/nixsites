@@ -1545,6 +1545,25 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task A_merge_into_a_collection_with_a_unique_field_is_refused()
+    {
+        var templateId = await ImportAndFinalizeAsync("unique-merge");
+        var targetId = await AddOrdinaryItemAsync("Unique merge target");
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var schema = """{"inherit":true,"properties":[{"key":"url","label":"Link","type":"url","required":false,"unique":true}]}""";
+            await work.DbContext.Items.Where(item => item.Id == targetId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.Schema, schema), Cancellation);
+            var begun = await work.Resolve<TemplateStore>().BeginApplicationAsync(
+                templateId, TemplateApplicationMode.Merge, targetId, null, null, "unique-merge-application", Cancellation);
+
+            Assert.True(begun.IsFailure);
+            Assert.Equal("templates.conflict", begun.Error.Code);
+        }
+    }
+
     [Theory]
     [InlineData(PropertyType.Formula, "[amount] * 3", null, null)]
     [InlineData(PropertyType.Rollup, null, RollupAggregate.Average, "amount")]

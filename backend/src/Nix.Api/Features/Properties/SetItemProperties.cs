@@ -151,6 +151,7 @@ public sealed class SetItemPropertiesHandler(
         var claims = System.Collections.Immutable.ImmutableArray<RecordClaim>.Empty;
         if (recordKeys is not null && item.ParentId is { } parentId && ParseObject(changes) is { } changeObject)
         {
+            await recordKeys.EnterScopeAsync(parentId, cancellationToken).ConfigureAwait(false);
             collection = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
             var prepared = RecordKeys.Prepare(collection, changeObject);
             if (prepared.IsFailure)

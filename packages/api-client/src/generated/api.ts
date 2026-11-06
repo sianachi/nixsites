@@ -357,6 +357,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /**
+     * File items in the workspace
+     * @description Newest first. Shows each file's latest approved version, else its current one. Images are left out unless includeImages is set. Files under a lock the caller has not opened are omitted.
+     */
     get: operations['ListAttachments'];
     put?: never;
     post?: never;
@@ -4485,6 +4489,8 @@ export interface components {
       inline: boolean;
       unscanned: boolean;
       noSniff: boolean;
+      /** Format: uuid */
+      versionId?: null | string;
     };
     FileRecord: {
       /** Format: uuid */
@@ -4507,6 +4513,8 @@ export interface components {
       height: number | string;
       /** Format: int32 */
       byteLength: number | string;
+      /** Format: uuid */
+      versionId?: null | string;
     };
     FileThumbnailRecord: {
       /** Format: int32 */
@@ -5176,6 +5184,7 @@ export interface components {
     };
     LookupItemsResponse: {
       matches: components['schemas']['LookupMatch'][];
+      truncated: boolean;
     };
     LookupMatch: {
       item: components['schemas']['ItemResponse'];
@@ -5238,6 +5247,8 @@ export interface components {
       /** Format: int64 */
       byteLength: number | string;
       sha256: string;
+      /** @default draft */
+      state: string;
     };
     NativeItemSnapshot: {
       /** Format: uuid */
@@ -5560,6 +5571,11 @@ export interface components {
         key: string;
         reason: string;
       }[];
+      /**
+       * Format: uuid
+       * @description The item a conflict collided with. Only on 'records.key_conflict' and 'record.trashed', and only when the caller may read it.
+       */
+      existingItemId?: string;
     };
     PropertyChoiceSource: {
       /** Format: uuid */

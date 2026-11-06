@@ -40,12 +40,12 @@ const PLAIN_ATTRS = new Set([
   'decoding',
   'rel',
 ]);
-const FILE_URL = /^\/public\/v1\/links\/__TOKEN__\/files\/[0-9a-f-]{36}$/i;
+const FILE_ID = /^[0-9a-f-]{36}$/i;
 
 function safeAddress(value: string, token: string, forImage: boolean): string | null {
-  if (FILE_URL.test(value)) {
-    return value.replace('__TOKEN__', encodeURIComponent(token));
-  }
+  // Only this link's own file route: another link's token must not be reachable from this body.
+  const prefix = `/public/v1/links/${encodeURIComponent(token)}/files/`;
+  if (value.startsWith(prefix) && FILE_ID.test(value.slice(prefix.length))) return value;
   if (forImage) return null;
   if (value.startsWith('#')) return value;
   return /^(https?:|mailto:)/i.test(value) ? value : null;

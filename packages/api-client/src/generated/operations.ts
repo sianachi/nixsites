@@ -1779,8 +1779,8 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     method: 'GET',
     path: '/api/v1/workspaces/{workspaceId}/attachments',
     area: 'Attachments',
-    summary: '',
-    detail: '',
+    summary: 'File items in the workspace',
+    detail: 'Newest first.',
     pathParams: ['workspaceId'],
     uuidParams: ['workspaceId'],
     queryParams: [

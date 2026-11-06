@@ -24,7 +24,7 @@ public sealed record RecordClaim(PropertyDefinition Definition, string? Value);
 /// the backstop, written with ON CONFLICT so a collision is a refusal rather than an aborted
 /// transaction. `shortcut: nested folders are separate scopes, widen if records need to live in subfolders.`
 /// </remarks>
-public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks)
+public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks, IFinanceLock topology)
 {
     /// <summary>The text and url fields the collection itself declares unique.</summary>
     /// <param name="collection">The collection, or null for a workspace root.</param>
@@ -33,6 +33,13 @@ public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks)
         collection?.Schema is { } json && json.Contains("\"unique\"", StringComparison.Ordinal)
             ? [.. PropertySchemaJson.Read(json).Properties.Where(IsKeyField)]
             : [];
+
+    /// <summary>Holds off a schema change turning a field unique until this property write commits.</summary>
+    /// <param name="collection">The parent whose schema the write is about to read.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes once the lock is held.</returns>
+    public ValueTask EnterScopeAsync(ItemId collection, CancellationToken cancellationToken) =>
+        store.LockScopeAsync(collection, exclusive: false, cancellationToken);
 
     /// <summary>Whether a stored schema declares any unique field (for paths that must refuse rather than claim).</summary>
     /// <param name="schemaJson">The stored schema.</param>
@@ -199,6 +206,14 @@ public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks)
         ArgumentNullException.ThrowIfNull(collection);
         var before = UniqueFields(collection).ToDictionary(field => field.Key, StringComparer.Ordinal);
         var after = (next?.Properties ?? []).Where(IsKeyField).ToDictionary(field => field.Key, StringComparer.Ordinal);
+
+        // Creates and moves hold the topology lock and property writes hold the scope lock shared,
+        // so nothing can write a value the backfill below would miss.
+        if (after.Keys.Any(key => !before.ContainsKey(key)))
+        {
+            await topology.AcquireWorkspaceTopologyAsync(collection.WorkspaceId, cancellationToken).ConfigureAwait(false);
+            await store.LockScopeAsync(collection.Id, exclusive: true, cancellationToken).ConfigureAwait(false);
+        }
 
         foreach (var field in before.Keys.Where(key => !after.ContainsKey(key)))
         {

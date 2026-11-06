@@ -371,9 +371,11 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
     }
   };
 
-  const saveExpiry = (value: string | null): void => {
+  const saveExpiry = (date: string | null): void => {
+    // A chosen date lasts to the end of that day where the person is.
+    const expiry = date === null ? null : new Date(`${date}T23:59:59`).toISOString();
     void act(
-      () => client.execute(structure.setItemProperties(row.itemId, { expiry: value })),
+      () => client.execute(structure.setItemProperties(row.itemId, { expiry })),
       `The expiry of ${title} could not be changed.`,
     );
   };

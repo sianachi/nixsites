@@ -95,11 +95,18 @@ public sealed class ExpiryIntegrationTests(NixPostgresFixture fixture) : IAsyncL
             Assert.True(created.IsSuccess, created.IsSuccess ? "" : created.Error.Message);
             Assert.Contains(ItemProperties.ExpirySetByKey, created.Value.Properties!, StringComparison.Ordinal);
 
-            foreach (var bad in new[] { PastText(), "soon", "2999-01-01T09:00:00+00:00" })
+            foreach (var bad in new[] { PastText(), "soon", "2999-01-01", "2999-01-01T09:00:00" })
             {
                 var refused = await dispatcher.SendAsync<SetItemProperties, Item>(
                     new SetItemProperties(created.Value.Id, new JsonObject { ["expiry"] = bad }.ToJsonString()), Cancellation);
                 Assert.True(refused.IsFailure, bad);
+            }
+
+            foreach (var good in new[] { "2999-01-01T09:00:00Z", "2999-01-01T09:00:00+01:00", "2999-01-01T09:00:00+00:00[Europe/London]" })
+            {
+                var accepted = await dispatcher.SendAsync<SetItemProperties, Item>(
+                    new SetItemProperties(created.Value.Id, new JsonObject { ["expiry"] = good }.ToJsonString()), Cancellation);
+                Assert.True(accepted.IsSuccess, good);
             }
 
             var forged = await dispatcher.SendAsync<SetItemProperties, Item>(

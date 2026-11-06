@@ -251,7 +251,7 @@ describe('the attachments page', () => {
     await user.click(screen.getByRole('button', { name: 'Set expiry' }));
     await waitFor(() => {
       expect(calls.find((call) => call.path.endsWith('/properties'))?.body).toEqual({
-        properties: { expiry: '2027-04-02' },
+        properties: { expiry: new Date('2027-04-02T23:59:59').toISOString() },
       });
     });
     await user.click(await screen.findByRole('button', { name: 'Clear expiry' }));

@@ -28,6 +28,16 @@ public interface IRecordKeyStore
     /// <param name="cancellationToken">Cancels the work.</param>
     public ValueTask LockAsync(ItemId scope, IEnumerable<(string Field, string Value)> keys, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Takes the collection's scope lock until the transaction ends. Turning a field unique holds it
+    /// exclusively across the backfill; a property write holds it shared before reading the schema,
+    /// so the write either lands before the backfill reads or sees the new flag and claims its key.
+    /// </summary>
+    /// <param name="scope">The collection.</param>
+    /// <param name="exclusive">True to wait out every write in progress.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    public ValueTask LockScopeAsync(ItemId scope, bool exclusive, CancellationToken cancellationToken);
+
     /// <summary>Who holds the value, or null. Call under <see cref="LockAsync"/>.</summary>
     /// <param name="scope">The collection.</param>
     /// <param name="field">The unique field.</param>
