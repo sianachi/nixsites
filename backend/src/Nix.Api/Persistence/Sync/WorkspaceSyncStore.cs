@@ -172,7 +172,7 @@ public sealed class WorkspaceSyncStore(
             var mediaType = Text(reader, 25);
             var bytes = Nullable<long>(reader, 26);
             var hash = Text(reader, 27);
-            var file = versionId is { } version ? new NativeFileSnapshot(version, fileName!, mediaType!, bytes!.Value, hash!) : null;
+            var file = versionId is { } version ? new NativeFileSnapshot(version, fileName!, mediaType!, bytes!.Value, hash!, Text(reader, 28)!) : null;
             return new SnapshotRow(seq, new NativeItemSnapshot(id, workspaceId, revision, parentId, type, title, siblingSeq,
                 lifecycle, properties, schema, views, recurrence, noDelete, noChildren, managedBy, createdAt, updatedAt,
                 canWrite, locked, !locked, metadataExpiresAt, bodyDocId, bodySeq is { } head ? Decimal(head) : null, file));

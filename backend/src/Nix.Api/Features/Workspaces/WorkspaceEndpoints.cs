@@ -203,7 +203,8 @@ internal static class WorkspaceEndpoints
         row.Id.Value, row.Name, row.VersionRetentionDays, row.StorageQuotaBytes, row.CreatedAt,
         row.PersonalOwnerPrincipalId is null ? "shared" : "personal",
         row.CanRename, row.CanManageMembers, row.CanLeave, row.CanUseDailyNotes,
-        row.PendingInvitationId, row.LifecycleState, row.ArchivedAt, row.MembershipLocked, row.Collaboration);
+        row.PendingInvitationId, row.LifecycleState, row.ArchivedAt, row.MembershipLocked, row.Collaboration,
+        row.AgentsMayApprove, row.AgentsMayCreatePublicLinks);
 
     internal static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(HttpContext context, NixError error)
     {

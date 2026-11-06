@@ -280,7 +280,8 @@ internal static class FileEndpoints
             result.Sha256,
             inline,
             Unscanned: true,
-            NoSniff: true));
+            NoSniff: true,
+            VersionId: result.VersionId));
     }
 
     private static async Task<IResult> AuthorizeThumbnail(
@@ -322,7 +323,8 @@ internal static class FileEndpoints
             capability.ExpiresAt,
             result.Width,
             result.Height,
-            result.ByteLength));
+            result.ByteLength,
+            result.VersionId));
     }
 
     /// <summary>

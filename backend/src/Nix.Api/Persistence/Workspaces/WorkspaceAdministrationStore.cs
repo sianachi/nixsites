@@ -26,7 +26,9 @@ public sealed record WorkspaceSnapshot(
     string LifecycleState,
     DateTimeOffset? ArchivedAt,
     bool MembershipLocked,
-    bool Collaboration);
+    bool Collaboration,
+    bool AgentsMayApprove,
+    bool AgentsMayCreatePublicLinks);
 
 /// <summary>One active human with server-decided workspace invitation eligibility.</summary>
 public sealed record WorkspaceInviteeSnapshot(
@@ -256,6 +258,27 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("workspace_id", workspaceId.Value),
                 new NpgsqlParameter("membership_locked", NpgsqlDbType.Boolean) { Value = membershipLocked is { } locked ? locked : DBNull.Value },
                 new NpgsqlParameter("collaboration", NpgsqlDbType.Boolean) { Value = collaboration is { } on ? on : DBNull.Value },
+            ],
+            cancellationToken).ConfigureAwait(false);
+        return result != Guid.Empty;
+    }
+
+    /// <summary>Sets the agent policy switches named, and audits it. False unless the caller owns the workspace.</summary>
+    public async ValueTask<bool> SetAgentPolicyAsync(
+        WorkspaceId workspaceId,
+        bool? agentsMayApprove,
+        bool? agentsMayCreatePublicLinks,
+        CancellationToken cancellationToken)
+    {
+        var context = Session;
+        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+            WorkspaceAdministrationSql.SetAgentPolicy,
+            [
+                Uuid("tenant_id", context.TenantId.Value),
+                Uuid("principal_id", context.PrincipalId.Value),
+                Uuid("workspace_id", workspaceId.Value),
+                new NpgsqlParameter("agents_may_approve", NpgsqlDbType.Boolean) { Value = agentsMayApprove is { } approve ? approve : DBNull.Value },
+                new NpgsqlParameter("agents_may_create_public_links", NpgsqlDbType.Boolean) { Value = agentsMayCreatePublicLinks is { } links ? links : DBNull.Value },
             ],
             cancellationToken).ConfigureAwait(false);
         return result != Guid.Empty;
@@ -892,7 +915,7 @@ public sealed partial class WorkspaceAdministrationStore(
             reader.GetBoolean(6), reader.GetBoolean(7), reader.GetBoolean(8),
             reader.GetBoolean(9), reader.IsDBNull(10) ? null : reader.GetGuid(10),
             reader.GetString(11), reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12),
-            reader.GetBoolean(13), reader.GetBoolean(14));
+            reader.GetBoolean(13), reader.GetBoolean(14), reader.GetBoolean(15), reader.GetBoolean(16));
     }
 
     private readonly record struct DailyNoteContextRow(
