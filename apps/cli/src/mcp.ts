@@ -16,6 +16,7 @@ import { registerAutomationTools } from './mcp-automations.ts';
 import { registerItemTools } from './mcp-items.ts';
 import { registerHistoryTools } from './mcp-history.ts';
 import { registerActionTools } from './mcp-actions.ts';
+import { registerRecordTools } from './mcp-records.ts';
 import { registerConversationMcpTools } from './mcp-conversations.ts';
 import { resolveSession, type SessionDeps } from './commands/shared.ts';
 import { toolResult } from './mcp-support.ts';
@@ -54,6 +55,7 @@ export async function createWorkspaceMcpServer(
   registerAutomationTools(server, deps);
   registerItemTools(server, deps);
   registerHistoryTools(server, deps);
+  registerRecordTools(server, deps);
   registerActionTools(server, deps);
   if (options.transport === 'http') {
     // Core permissions cannot authorize access to the MCP host's filesystem or saved profiles.

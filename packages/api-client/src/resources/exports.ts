@@ -24,6 +24,10 @@ export interface BeginExportInput {
   readonly includeComments?: boolean;
   /** Paper size for PDF exports; the server defaults to A4. */
   readonly pageSize?: 'a4' | 'letter';
+  /** Save the result as a new version of a file item instead of a download. */
+  readonly toFile?: boolean;
+  /** With `toFile`, the existing file item that receives the version. */
+  readonly targetItemId?: string;
 }
 
 export const formats = (): QueryEndpoint<ExportFormatCatalog> =>

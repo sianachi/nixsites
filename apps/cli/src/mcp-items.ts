@@ -54,21 +54,31 @@ export function registerItemTools(server: McpServer, { session }: McpToolDeps): 
     'create_item',
     {
       description:
-        'Create an item (a note by default) under a parent, or at the workspace root. An empty title is kept as given.',
+        'Create an item (a note by default) under a parent, or at the workspace root. An empty title is kept as given. ' +
+        'Pass `properties` to store field values with the create, and the persisted item comes back. Strict by default: ' +
+        'undeclared keys and missing required fields are refused with per-field violations and nothing is written; ' +
+        'pass strict:false to opt out. Pass idempotencyKey so a retry returns the same item instead of a second one. ' +
+        'To create-or-update by an external id or url, use upsert_record.',
       inputSchema: {
         workspaceId: identifier,
         title: z.string().max(500),
         type: z.string().min(1).max(40).optional(),
         parentId: identifier.optional(),
+        properties: jsonObjectInput.optional(),
+        idempotencyKey: z.string().min(1).max(200).optional(),
+        strict: z.boolean().default(true),
       },
     },
-    ({ workspaceId, title, type, parentId }) =>
+    ({ workspaceId, title, type, parentId, properties, idempotencyKey, strict }) =>
       toolResult(async () =>
         (await session()).client.execute(
           items.createItem(workspaceId, {
             type: type ?? 'note',
             title,
             parentId: parentId ?? null,
+            strict,
+            ...(properties === undefined ? {} : { properties }),
+            ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
           }),
         ),
       ),
@@ -203,12 +213,19 @@ export function registerItemTools(server: McpServer, { session }: McpToolDeps): 
   server.registerTool(
     'set_item_properties',
     {
-      description: 'Merge property values onto an item by key; a null value clears that key.',
-      inputSchema: { itemId: identifier, properties: jsonObjectInput },
+      description:
+        'Merge property values onto an item by key; a null value clears that key. Strict by default: undeclared ' +
+        'keys are refused with per-field violations and nothing is written; pass strict:false to opt out. Setting a ' +
+        'workflow field such as status="sent" only records it: it sends nothing and changes no file version or pin.',
+      inputSchema: {
+        itemId: identifier,
+        properties: jsonObjectInput,
+        strict: z.boolean().default(true),
+      },
     },
-    ({ itemId, properties }) =>
+    ({ itemId, properties, strict }) =>
       toolResult(async () =>
-        (await session()).client.execute(structure.setItemProperties(itemId, properties)),
+        (await session()).client.execute(structure.setItemProperties(itemId, properties, strict)),
       ),
   );
 }

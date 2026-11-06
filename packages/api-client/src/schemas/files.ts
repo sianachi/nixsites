@@ -50,6 +50,8 @@ export const fileUploadStatusSchema = z.object({
   expiresAt: z.iso.datetime({ offset: true }),
   itemId: z.uuid().nullable(),
   failureCode: z.string().nullable(),
+  /** The version the publish job created; set once the upload completed. */
+  publishedVersionId: z.uuid().nullable().exactOptional(),
 });
 export const fileDownloadCapabilitySchema = z.object({
   url: z.url(),

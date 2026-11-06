@@ -1,4 +1,5 @@
 import {
+  agentGate,
   automations,
   callOperation,
   findOperations,
@@ -13,6 +14,7 @@ import {
   type OperationRisk,
   sites,
   templates,
+  workspaces,
 } from '@nix/api-client';
 import type { Problem } from '@nix/structure-spec';
 import { z } from 'zod';
@@ -129,6 +131,23 @@ export async function confineActionRun(
       (await client.query(templates.templateById(path.templateId), options)).workspaceId,
   ];
   if (owners.some((owner) => owner && owner !== workspaceId)) throw elsewhere();
+
+  // The pet runs on the person's own session, so Core cannot tell it from them. This is a guard
+  // against mistakes, not a boundary: approving or revoking a file version and creating a public
+  // link are refused unless the workspace owner switched agents on. When on, `run_action` still
+  // always shows an approval card (see auto-apply.ts).
+  const gate = agentGate(run.entry.id, run.call.body);
+  if (gate !== undefined) {
+    const workspace = await client.query(workspaces.workspaceById(workspaceId), options);
+    const allowed =
+      gate === 'approve' ? workspace.agentsMayApprove : workspace.agentsMayCreatePublicLinks;
+    if (allowed !== true)
+      throw new WorkspaceToolRefusal(
+        gate === 'approve'
+          ? 'Approving or revoking a file version is off for assistants in this workspace. A person does it in Nix, or an owner turns it on in the workspace settings. Nothing was run.'
+          : 'Creating a public link is off for assistants in this workspace. A person does it in Nix, or an owner turns it on in the workspace settings. Nothing was run.',
+      );
+  }
 }
 
 export const runAction = (

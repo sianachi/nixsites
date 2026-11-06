@@ -16,6 +16,8 @@ import type {
   MvOptions,
   WorkspaceOption,
 } from './program-support.ts';
+import { collect } from './program-support.ts';
+import { parseAssignments } from './structure.ts';
 import { readStdin, type Act } from './shared.ts';
 
 export function registerItemCommands(program: Command, act: Act): void {
@@ -55,6 +57,15 @@ export function registerItemCommands(program: Command, act: Act): void {
     .requiredOption('--title <title>', 'the item title')
     .option('--type <type>', 'the body kind', 'note')
     .option('--parent <id>', 'the parent container (default: workspace root)')
+    .option(
+      '--prop <key=value...>',
+      'a property value (JSON when it parses, else text); repeatable',
+      collect,
+      [],
+    )
+    .option('--idempotency-key <key>', 'a retry with the same key returns the same item')
+    .option('--strict', 'refuse undeclared properties and missing required ones (the default)')
+    .option('--no-strict', 'accept properties the schema does not declare')
     .action((options: CreateItemOptions, command: Command) =>
       act(command, (profile, output) =>
         createItem(
@@ -64,6 +75,9 @@ export function registerItemCommands(program: Command, act: Act): void {
             type: options.type,
             title: options.title,
             parentId: options.parent,
+            properties: options.prop.length === 0 ? undefined : parseAssignments(options.prop),
+            idempotencyKey: options.idempotencyKey,
+            strict: options.strict ?? true,
           },
           output,
         ),

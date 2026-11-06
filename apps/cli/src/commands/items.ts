@@ -93,6 +93,9 @@ export interface CreateOptions {
   readonly type: string;
   readonly title: string;
   readonly parentId?: string | null | undefined;
+  readonly properties?: Readonly<Record<string, unknown>> | undefined;
+  readonly idempotencyKey?: string | undefined;
+  readonly strict?: boolean | undefined;
 }
 
 /** Creates an item under a parent, or at the workspace root when no parent is named. */
@@ -108,9 +111,13 @@ export async function createItem(
       type: options.type,
       title: options.title,
       parentId: options.parentId ?? null,
+      ...(options.properties === undefined ? {} : { properties: options.properties }),
+      ...(options.idempotencyKey === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
+      ...(options.strict === undefined ? {} : { strict: options.strict }),
     }),
   );
-  printResult(view(item), output);
+  // The persisted properties come back with the item, so a script sees what was actually stored.
+  printResult(options.properties === undefined ? view(item) : detailView(item), output);
 }
 
 export interface MoveOptions {

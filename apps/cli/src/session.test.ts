@@ -302,3 +302,18 @@ describe('whoami', () => {
     );
   });
 });
+
+describe('authKind', () => {
+  it('tells a browser-approved login from a token or an external bearer', () => {
+    const login: Profile = {
+      apiUrl: 'http://nix.test',
+      token: '',
+      interactiveSession: { refreshToken: 'nixcli_x', expiresAt: '2099-01-01T00:00:00.000Z' },
+    };
+    expect(openSession({ profile: login }).authKind).toBe('interactive');
+    expect(
+      openSession({ profile: { apiUrl: 'http://nix.test', token: 'nixpat_x' } }).authKind,
+    ).toBe('token');
+    expect(openSession({ profile: login, bearerToken: 'jwt' }).authKind).toBe('token');
+  });
+});

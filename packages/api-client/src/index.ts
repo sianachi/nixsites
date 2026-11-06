@@ -209,6 +209,9 @@ export type {
   PublicLink,
   ReferencedBy,
 } from './schemas/attachments.js';
+export * as agentRecords from './resources/agent-records.js';
+export { agentGate } from './resources/agent-records.js';
+export type { AgentGate } from './resources/agent-records.js';
 export * as suggestions from './resources/suggestions.js';
 export {
   MAXIMUM_MENTION_EXCLUSIONS,

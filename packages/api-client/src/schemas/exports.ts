@@ -45,6 +45,8 @@ export const exportSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   completedAt: z.iso.datetime({ offset: true }).nullable(),
   expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  /** The file upload an export-to-file produced. */
+  uploadId: z.uuid().nullable().exactOptional(),
 });
 
 export const exportDownloadCapabilitySchema = z.object({

@@ -96,6 +96,8 @@ export interface CreateItemInput {
    * which is what every create did before this field existed.
    */
   readonly properties?: Readonly<Record<string, unknown>> | undefined;
+  /** Refuse undeclared keys and enforce required fields; left out, Core keeps its lenient default. */
+  readonly strict?: boolean | undefined;
 }
 
 /** Creates an item under a parent, or at the workspace root when the parent is null. */
@@ -111,6 +113,7 @@ export const createItem = (workspaceId: string, input: CreateItemInput): Command
       parentId: input.parentId ?? null,
       properties: input.properties ?? null,
       ...(input.idempotencyKey === undefined ? {} : { idempotencyKey: input.idempotencyKey }),
+      ...(input.strict === undefined ? {} : { strict: input.strict }),
     } satisfies CreateItemRequestContract,
     invalidates: [workspaceTreeKey(workspaceId)],
   });
