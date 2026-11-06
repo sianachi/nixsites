@@ -43,7 +43,7 @@ public sealed partial class TemplateStore
             // and finance content is captured; set-by stamps, calendar sync keys and any other $
             // key are dropped (ReservedPropertyContent).
             Properties = ReservedPropertyContent.Strip(source.Properties, ReservedPropertyContent.ContentPrefixes),
-            Schema = isRoot && rootSchema is not null ? rootSchema : source.Schema,
+            Schema = PropertySchemaJson.StripUnique(isRoot && rootSchema is not null ? rootSchema : source.Schema),
             Views = source.Views,
             Recurrence = source.Recurrence,
             TemplateId = templateId,
@@ -80,7 +80,7 @@ public sealed partial class TemplateStore
                         : ItemProperties.WithTitle(initialized.Properties, initialized.Title),
                     ReservedPropertyContent.ContentPrefixes),
                 Context.PrincipalId.ToString()),
-            Schema = source.Schema,
+            Schema = PropertySchemaJson.StripUnique(source.Schema),
             Views = source.Views,
             Recurrence = initialized?.Recurrence ?? source.Recurrence,
             LifecycleState = ItemLifecycleState.Provisioning,

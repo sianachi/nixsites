@@ -195,6 +195,12 @@ public sealed partial class TemplateStore
             {
                 return Result.Failure<TemplateApplicationPlan>(TemplateErrors.Conflict("The destination does not accept new children."));
             }
+
+            // The applied root would arrive without a claim on the destination's unique keys.
+            if (Nix.Features.Records.RecordKeys.DeclaresUnique(parentItem.Schema))
+            {
+                return Result.Failure<TemplateApplicationPlan>(TemplateErrors.Conflict("The destination requires unique keys; apply the template elsewhere and move the result."));
+            }
         }
 
         TemplateMergePlan? mergePlan = null;

@@ -30,6 +30,12 @@ namespace Nix.Domain.Primitives;
 /// </remarks>
 public readonly record struct NixError(string Code, string Message)
 {
+    /// <summary>Per-field reasons, for a refusal that is about named properties.</summary>
+    public IReadOnlyList<Nix.Domain.Properties.PropertyViolation>? Violations { get; init; }
+
+    /// <summary>The item a conflict collided with, when the caller may be told.</summary>
+    public Guid? ExistingItemId { get; init; }
+
     /// <summary>The value an uninitialised error would carry. Never returned from a failure.</summary>
     public static NixError None => new(string.Empty, string.Empty);
 

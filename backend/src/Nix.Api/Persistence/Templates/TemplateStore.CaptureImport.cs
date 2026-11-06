@@ -464,7 +464,7 @@ public sealed partial class TemplateStore
                 Properties = ReservedPropertyContent.Strip(
                     ItemProperties.WithTitle(item.Properties, item.Title),
                     ReservedPropertyContent.ContentPrefixes),
-                Schema = item.Schema,
+                Schema = PropertySchemaJson.StripUnique(item.Schema),
                 Views = item.Views,
                 Recurrence = item.Recurrence,
                 TemplateId = catalog.Id,

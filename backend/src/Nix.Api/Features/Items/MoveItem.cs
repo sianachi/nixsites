@@ -52,7 +52,8 @@ public sealed class MoveItemHandler(
     TimeProvider clock,
     IItemLocks locks,
     IFinanceMutationGuard? financeGuard = null,
-    IFinanceLock? topology = null)
+    IFinanceLock? topology = null,
+    Nix.Features.Records.RecordKeys? recordKeys = null)
     : ICommandHandler<MoveItem, Item>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -115,9 +116,11 @@ public sealed class MoveItemHandler(
                 "This event belongs to a linked calendar and cannot be moved out of it."));
         }
 
+        Item? destinationParent = null;
         if (newParentId is { } destination)
         {
             var parent = await tree.FindAsync(destination, cancellationToken).ConfigureAwait(false);
+            destinationParent = parent;
             if (parent is null || parent.WorkspaceId != item.WorkspaceId)
             {
                 return Result.Failure<Item>(
@@ -185,6 +188,12 @@ public sealed class MoveItemHandler(
             }
         }
 
+        // The item's unique-field keys move with it; a value the destination already holds refuses the move.
+        if (recordKeys is not null && await recordKeys.MoveAsync(item, destinationParent, cancellationToken).ConfigureAwait(false) is { } keyConflict)
+        {
+            return Result.Failure<Item>(keyConflict);
+        }
+
         var seq = await tree
             .AllocateSiblingSequenceAsync(item.WorkspaceId, newParentId, itemId, afterId, cancellationToken)
             .ConfigureAwait(false);
@@ -230,9 +239,11 @@ public sealed class MoveItemHandler(
         {
             return Result.Failure<Item>(ItemErrors.Locked("Unlock the current parent before moving this item to another workspace."));
         }
+        Item? transferParent = null;
         if (command.NewParentId is { } parentId)
         {
             var parent = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
+            transferParent = parent;
             if (parent is null || parent.WorkspaceId != destination)
             {
                 return Result.Failure<Item>(ItemErrors.ParentNotFound("The destination parent is not visible in the selected workspace."));
@@ -276,6 +287,11 @@ public sealed class MoveItemHandler(
         }
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context was established.");
+        if (recordKeys is not null && await recordKeys.MoveAsync(item, transferParent, cancellationToken).ConfigureAwait(false) is { } keyConflict)
+        {
+            return Result.Failure<Item>(keyConflict);
+        }
+
         var refusal = await tree.TransferWorkspaceAsync(
             item.Id, item.WorkspaceId, destination, command.NewParentId, command.AfterId,
             context.PrincipalId, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);

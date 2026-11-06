@@ -1,7 +1,13 @@
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http.HttpResults;
+using Nix.Domain.Properties;
+using Nix.Domain.Items;
+using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Errors;
+using Nix.Features.Properties;
+using Nix.Messaging;
 using Nix.Features.Items;
 using Nix.Http;
 
@@ -18,9 +24,6 @@ internal sealed record LookupMatch(ItemResponse Item, bool Trashed);
 
 /// <summary>The matches of a lookup, at most 500.</summary>
 internal sealed record LookupItemsResponse(IReadOnlyList<LookupMatch> Matches);
-
-/// <summary>One refused property: its key and why.</summary>
-internal sealed record PropertyViolation(string Key, string Reason);
 
 /// <summary>Creates or updates the child of the route's parent whose unique field equals <c>KeyValue</c>.</summary>
 /// <param name="KeyField">A unique field declared in the parent's schema.</param>
@@ -79,7 +82,7 @@ internal sealed record BatchRecordsResponse(
     int Unchanged,
     int Failed);
 
-/// <summary>Lane 5 stubs: lookup, upsert and batch. Replace the handlers; keep the routes and types.</summary>
+/// <summary>Lookup, upsert and batch of records by unique key.</summary>
 internal static class RecordEndpoints
 {
     internal static IEndpointRouteBuilder MapRecordEndpoints(this IEndpointRouteBuilder endpoints)
@@ -88,7 +91,8 @@ internal static class RecordEndpoints
 
         endpoints.MapPost(
                 "/api/v1/workspaces/{workspaceId:guid}/lookup",
-                (Guid workspaceId, LookupItemsRequest request, HttpContext context) => NotImplemented(context))
+                async (Guid workspaceId, LookupItemsRequest request, HttpContext context, [FromServices] RecordService records) =>
+                    Respond(context, await records.LookupAsync(WorkspaceId.From(workspaceId), request, context.RequestAborted).ConfigureAwait(false), value => value))
             .WithTags("Records")
             .WithName("LookupItemsByProperty")
             .Produces<LookupItemsResponse>()
@@ -97,7 +101,15 @@ internal static class RecordEndpoints
             .RequireRateLimiting(RateLimitRefusal.QueriesPolicyName);
         endpoints.MapPost(
                 "/api/v1/items/{parentId:guid}/records/upsert",
-                (Guid parentId, UpsertRecordRequest request, HttpContext context) => NotImplemented(context))
+                async (Guid parentId, UpsertRecordRequest request, HttpContext context, [FromServices] RecordService records, [FromServices] NixDispatcher dispatcher) =>
+                {
+                    var result = await records.UpsertAsync(ItemId.From(parentId), request, context.RequestAborted).ConfigureAwait(false);
+                    return result.IsFailure
+                        ? Results.Problem(StructureEndpoints.Problem(context, result.Error))
+                        : Results.Ok(new UpsertRecordResponse(
+                            result.Value.Outcome,
+                            await ItemMapping.RespondAsync(result.Value.Item, dispatcher, context.RequestAborted).ConfigureAwait(false)));
+                })
             .WithTags("Records")
             .WithName("UpsertRecord")
             .Produces<UpsertRecordResponse>()
@@ -107,7 +119,8 @@ internal static class RecordEndpoints
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         endpoints.MapPost(
                 "/api/v1/workspaces/{workspaceId:guid}/records/batch",
-                (Guid workspaceId, BatchRecordsRequest request, HttpContext context) => NotImplemented(context))
+                async (Guid workspaceId, BatchRecordsRequest request, HttpContext context, [FromServices] RecordService records) =>
+                    Respond(context, await records.BatchAsync(WorkspaceId.From(workspaceId), request, context.RequestAborted).ConfigureAwait(false), value => value))
             .WithTags("Records")
             .WithName("BatchRecords")
             .Produces<BatchRecordsResponse>()
@@ -117,12 +130,10 @@ internal static class RecordEndpoints
         return endpoints;
     }
 
-    private static ProblemHttpResult NotImplemented(HttpContext context) => TypedResults.Problem(ApiProblem.Create(
-        context,
-        StatusCodes.Status501NotImplemented,
-        "records.not_implemented",
-        "Not implemented",
-        "This route is not implemented yet."));
+    private static IResult Respond<T>(HttpContext context, Result<T> result, Func<T, T> map) =>
+        result.IsFailure
+            ? Results.Problem(StructureEndpoints.Problem(context, result.Error))
+            : Results.Ok(map(result.Value));
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

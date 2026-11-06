@@ -18,7 +18,8 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
     private readonly IItemLocks _locks;
     private readonly IFinanceMutationGuard? _financeGuard;
     private readonly ISiteStore? _sites;
-    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites) = (tree, permissions, session, clock, locks, financeGuard, sites);
+    private readonly IRecordKeyStore? _recordKeys;
+    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null, IRecordKeyStore? recordKeys = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites, _recordKeys) = (tree, permissions, session, clock, locks, financeGuard, sites, recordKeys);
 
     public async ValueTask<Result<ItemId>> HandleAsync(PurgeItem command, CancellationToken cancellationToken)
     {
@@ -60,10 +61,23 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
         {
             return Result.Failure<ItemId>(ItemErrors.Locked($"Item {item.Id} is locked. Unlock it before deleting it permanently."));
         }
+        // Children move up to the parent. Into a collection with a unique field they would arrive
+        // unclaimed, so a record that has children cannot be purged until they are moved or deleted.
+        // shortcut: only live children are counted; trashed ones would still move up unclaimed.
+        if (_recordKeys is not null && item.ParentId is { } keyedParent
+            && Nix.Features.Records.RecordKeys.DeclaresUnique((await _tree.FindStoredAsync(keyedParent, cancellationToken).ConfigureAwait(false))?.Schema)
+            && (await _tree.WithChildrenAsync(item.WorkspaceId, [item.Id], cancellationToken).ConfigureAwait(false)).Contains(item.Id))
+        {
+            return Result.Failure<ItemId>(ItemErrors.LifecycleConflict("This record has children and its collection requires unique keys. Move or delete the children first."));
+        }
         var context = _session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var now = _clock.GetUtcNow();
         await _tree.ReparentChildrenAsync(item.WorkspaceId, item.Id, item.ParentId, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
         await _tree.SetLifecycleAsync(item.Id, ItemLifecycleState.Purged, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
+        if (_recordKeys is not null)
+        {
+            await _recordKeys.ReleaseForPurgeAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        }
         return Result.Success(item.Id);
     }
 }

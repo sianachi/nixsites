@@ -38,17 +38,21 @@ public static class PropertyErrors
     /// <param name="violations">Every violation, so a form reports them all at once.</param>
     /// <returns>The error.</returns>
     /// <remarks>
-    /// The violations are joined into the message rather than carried as structured data, because
-    /// <see cref="NixError"/> is a code and a sentence. When the interface needs to put each one
-    /// against its own field, this is the place that grows a typed payload - and the code stays the
-    /// same, so nothing branching on it has to change.
+    /// The violations are joined into the message for callers that read only that, and also carried
+    /// as <see cref="NixError.Violations"/>, which the problem document publishes as
+    /// <c>violations</c>. The code stays the same, so nothing branching on it has to change.
     /// </remarks>
     public static NixError InvalidProperties(ImmutableArray<PropertyViolation> violations) =>
         new(
             InvalidPropertiesCode,
             violations.IsDefaultOrEmpty
                 ? "The properties do not fit this item's schema."
-                : string.Join(" ", violations.Select(violation => violation.Reason)));
+                : string.Join(" ", violations.Select(violation => violation.Reason)))
+        {
+            // The sentence above stays for callers that read only the message; this is the same
+            // information per key.
+            Violations = violations.IsDefaultOrEmpty ? null : violations,
+        };
 
     /// <summary>The schema document was refused.</summary>
     /// <param name="detail">Why.</param>

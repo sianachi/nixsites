@@ -370,7 +370,9 @@ public sealed partial class DocumentImportStore(
             return true;
         }
         var parent = await tree.FindAsync(parentId.Value, cancellationToken).ConfigureAwait(false);
-        return parent is not null && parent.WorkspaceId == workspaceId && !parent.NoChildren;
+        // Imported items arrive unclaimed, so a collection with unique keys is refused as a destination.
+        return parent is not null && parent.WorkspaceId == workspaceId && !parent.NoChildren
+            && !Nix.Features.Records.RecordKeys.DeclaresUnique(parent.Schema);
     }
 
     private async ValueTask<DocumentImport?> OwnedTrackingAsync(

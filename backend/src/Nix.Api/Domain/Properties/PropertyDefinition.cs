@@ -28,6 +28,10 @@ namespace Nix.Domain.Properties;
 /// For a <see cref="PropertyType.Rollup"/>: the children's property key being folded, or null for a
 /// count of the children themselves. Null for every other type.
 /// </param>
+/// <param name="Unique">
+/// For a text or url field: no two direct children of the declaring collection may hold the same
+/// canonical value. Scope is the declaring item's own children, not its descendants.
+/// </param>
 /// <remarks>
 /// <para>
 /// <b><see cref="Key"/> and <see cref="Label"/> are separate on purpose.</b> A property bag is keyed
@@ -55,7 +59,8 @@ public sealed record PropertyDefinition(
     string? Expression = null,
     RollupAggregate? Aggregate = null,
     string? Source = null,
-    PropertyChoiceSource? ChoiceSource = null)
+    PropertyChoiceSource? ChoiceSource = null,
+    bool Unique = false)
 {
     /// <summary>Whether a value is declared or this field allows new choices.</summary>
     /// <param name="value">The value to look for.</param>

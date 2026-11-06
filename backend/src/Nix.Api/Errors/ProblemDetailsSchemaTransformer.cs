@@ -59,6 +59,13 @@ internal sealed class ProblemDetailsSchemaTransformer : IOpenApiSchemaTransforme
             },
         };
 
+        schema.Properties["existingItemId"] = new OpenApiSchema
+        {
+            Type = JsonSchemaType.String,
+            Format = "uuid",
+            Description = "The item a conflict collided with. Only on 'records.key_conflict' and 'record.trashed', and only when the caller may read it.",
+        };
+
         schema.Required ??= new HashSet<string>(StringComparer.Ordinal);
         schema.Required.Add(ApiProblem.CodeExtension);
 

@@ -161,6 +161,11 @@ public static class PropertySchemaJson
                 };
             }
 
+            if (property.Unique)
+            {
+                entry["unique"] = true;
+            }
+
             properties.Add(entry);
         }
 
@@ -171,6 +176,39 @@ public static class PropertySchemaJson
         };
 
         return document.ToJsonString();
+    }
+
+    /// <summary>
+    /// A stored schema without any <c>unique</c> flag, for copies (templates, captures): the flag
+    /// is a promise about one collection's records, and a copy starts with none of them.
+    /// </summary>
+    /// <param name="json">The stored schema JSON.</param>
+    /// <returns>The same JSON with every <c>unique</c> member removed.</returns>
+    public static string? StripUnique(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json) || !json.Contains("\"unique\"", StringComparison.Ordinal))
+        {
+            return json;
+        }
+
+        try
+        {
+            if (JsonNode.Parse(json) is JsonObject { } document && document[PropertiesKey] is JsonArray declared)
+            {
+                foreach (var entry in declared.OfType<JsonObject>())
+                {
+                    entry.Remove("unique");
+                }
+
+                return document.ToJsonString();
+            }
+        }
+        catch (JsonException)
+        {
+            // An unreadable schema carries no flag the reader would honour either.
+        }
+
+        return json;
     }
 
     private static PropertyDefinition? ReadDefinition(JsonNode? entry)
@@ -258,7 +296,8 @@ public static class PropertySchemaJson
             expression,
             aggregate,
             source,
-            ReadChoiceSource(property["choiceSource"]));
+            ReadChoiceSource(property["choiceSource"]),
+            property["unique"] is JsonValue unique && unique.TryGetValue(out bool isUnique) && isUnique);
     }
 
     private static PropertyChoiceSource? ReadChoiceSource(JsonNode? node)
