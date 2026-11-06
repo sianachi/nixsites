@@ -65,6 +65,7 @@ describe('the navigation rail', () => {
       'Smart lists',
       'Workspaces',
       'Automations',
+      'Attachments',
       'Trash',
       'Import',
       'Settings',
@@ -146,6 +147,7 @@ describe('the navigation rail', () => {
     const templates = within(rail()).getByRole('link', { name: 'Templates' });
     const queries = within(rail()).getByRole('button', { name: 'Smart lists' });
     const automations = within(rail()).getByRole('link', { name: 'Automations' });
+    const attachments = within(rail()).getByRole('link', { name: 'Attachments' });
     const trash = within(rail()).getByRole('link', { name: 'Trash' });
     const importControl = within(rail()).getByRole('button', { name: 'Import' });
     const settings = within(rail()).getByRole('link', { name: 'Settings' });
@@ -158,6 +160,7 @@ describe('the navigation rail', () => {
     expect(templates).toHaveAttribute('tabindex', '-1');
     expect(queries).toHaveAttribute('tabindex', '-1');
     expect(automations).toHaveAttribute('tabindex', '-1');
+    expect(attachments).toHaveAttribute('tabindex', '-1');
     expect(trash).toHaveAttribute('tabindex', '-1');
     expect(importControl).toHaveAttribute('tabindex', '-1');
     expect(settings).toHaveAttribute('tabindex', '-1');
@@ -186,6 +189,7 @@ describe('the navigation rail', () => {
     const queries = within(rail()).getByRole('button', { name: 'Smart lists' });
     const workspaces = within(rail()).getByRole('link', { name: 'Workspaces' });
     const automations = within(rail()).getByRole('link', { name: 'Automations' });
+    const attachments = within(rail()).getByRole('link', { name: 'Attachments' });
     const trash = within(rail()).getByRole('link', { name: 'Trash' });
     const importControl = within(rail()).getByRole('button', { name: 'Import' });
     const settings = within(rail()).getByRole('link', { name: 'Settings' });
@@ -221,6 +225,9 @@ describe('the navigation rail', () => {
 
     await user.keyboard('{ArrowDown}');
     expect(automations).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}');
+    expect(attachments).toHaveFocus();
 
     await user.keyboard('{ArrowDown}');
     expect(trash).toHaveFocus();
@@ -303,6 +310,7 @@ describe('the navigation rail', () => {
       'Bookmarks',
       'Templates',
       'Automations',
+      'Attachments',
       'Trash',
       'Settings',
     ]) {
@@ -410,7 +418,7 @@ describe('the navigation rail on a narrow screen', () => {
     // Ten destinations and "New smart list", which the Smart lists section folds into this one menu.
     expect(
       screen.getByRole('menu', { name: 'Workspace pages' }).querySelectorAll('a'),
-    ).toHaveLength(11);
+    ).toHaveLength(12);
     expect(screen.getByRole('menuitem', { name: 'New smart list' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001/new/query',

@@ -202,6 +202,13 @@ export * as views from './resources/views.js';
 export * as structure from './resources/structure.js';
 export * as search from './resources/search.js';
 export * as references from './resources/references.js';
+export * as attachments from './resources/attachments.js';
+export type {
+  AttachmentRow,
+  FileVersionState,
+  PublicLink,
+  ReferencedBy,
+} from './schemas/attachments.js';
 export * as suggestions from './resources/suggestions.js';
 export {
   MAXIMUM_MENTION_EXCLUSIONS,

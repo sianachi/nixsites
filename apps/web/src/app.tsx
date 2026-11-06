@@ -22,6 +22,7 @@ import { TemplateLibraryPage } from '@nix/web-templates/templates/library/templa
 import { TemplateImportPage } from '@nix/web-templates/templates/import/template-import-page';
 import { TemplateStudioPage } from './pages/template-studio-page';
 import { TrashPage } from './pages/trash-page';
+import { AttachmentsPage } from './pages/attachments-page';
 import { WorkspacesPage } from './pages/workspaces-page';
 import { CreationStudioPage } from './pages/creation-studio-page';
 import { RequireSession } from './shell/require-session';
@@ -175,6 +176,7 @@ export function AppRoutes(): ReactElement {
               <Route path="pet" element={<PetPage />} />
               <Route path="bookmarks" element={<BookmarksPage />} />
               <Route path="trash" element={<TrashPage />} />
+              <Route path="attachments" element={<AttachmentsPage />} />
               <Route path="workspaces" element={<WorkspacesPage />} />
               <Route path="templates" element={<TemplateLibraryPage />} />
               <Route path="templates/new" element={<TemplateStudioPage />} />
