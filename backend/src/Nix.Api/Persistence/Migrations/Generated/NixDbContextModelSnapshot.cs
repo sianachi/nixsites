@@ -1169,6 +1169,10 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("uuid")
                         .HasColumnName("published_item_id");
 
+                    b.Property<Guid?>("PublishedVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_version_id");
+
                     b.Property<string>("Purpose")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1176,6 +1180,14 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("character varying(32)")
                         .HasDefaultValue("file")
                         .HasColumnName("purpose");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_item_id");
+
+                    b.Property<long?>("SourceSeq")
+                        .HasColumnType("bigint")
+                        .HasColumnName("source_seq");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1277,6 +1289,29 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("character varying(64)")
                         .HasColumnName("sha256");
 
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_item_id");
+
+                    b.Property<long?>("SourceSeq")
+                        .HasColumnType("bigint")
+                        .HasColumnName("source_seq");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("draft")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset?>("StateChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("state_changed_at");
+
+                    b.Property<Guid?>("StateChangedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("state_changed_by");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -1309,7 +1344,10 @@ namespace Nix.Persistence.Migrations.Generated
                     b.HasIndex("TenantId", "ItemId", "Version")
                         .IsUnique();
 
-                    b.ToTable("file_version", (string)null);
+                    b.ToTable("file_version", null, t =>
+                        {
+                            t.HasCheckConstraint("file_version_state_valid", "state IN ('draft', 'in_review', 'approved', 'revoked')");
+                        });
                 });
 
             modelBuilder.Entity("Nix.Domain.Identity.BrowserSession", b =>
@@ -2260,6 +2298,40 @@ namespace Nix.Persistence.Migrations.Generated
                     b.ToTable("item_closure", (string)null);
                 });
 
+            modelBuilder.Entity("Nix.Domain.Items.RecordKey", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ScopeItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scope_item_id");
+
+                    b.Property<string>("Field")
+                        .HasColumnType("text")
+                        .HasColumnName("field");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.HasKey("TenantId", "ScopeItemId", "Field", "Value")
+                        .HasName("ux_record_key_value");
+
+                    b.HasIndex("TenantId", "ItemId")
+                        .HasDatabaseName("ix_record_key_item");
+
+                    b.ToTable("record_key", null, t =>
+                        {
+                            t.HasCheckConstraint("record_key_bounded", "char_length(value) BETWEEN 1 AND 2048 AND octet_length(value) <= 2400 AND char_length(field) BETWEEN 1 AND 128");
+                        });
+                });
+
             modelBuilder.Entity("Nix.Domain.Links.ItemLink", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -2623,6 +2695,131 @@ namespace Nix.Persistence.Migrations.Generated
                     b.ToTable("pet_provider_credential", null, t =>
                         {
                             t.HasCheckConstraint("pet_provider_credential_bounded", "provider IN ('anthropic', 'openrouter') AND octet_length(protected_key) <= 4096 AND char_length(key_hint) <= 8");
+                        });
+                });
+
+            modelBuilder.Entity("Nix.Domain.PublicLinks.PublicLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("FileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_version_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<string>("Nonce")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("nonce");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("ServicePrincipalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_principal_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nonce")
+                        .HasDatabaseName("ix_public_link_nonce");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "ItemId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_public_link_active_item")
+                        .HasFilter("revoked_at IS NULL");
+
+                    b.HasIndex("TenantId", "ServicePrincipalId");
+
+                    b.HasIndex("TenantId", "WorkspaceId");
+
+                    b.HasIndex("TenantId", "ItemId", "FileVersionId");
+
+                    b.ToTable("public_link", (string)null);
+                });
+
+            modelBuilder.Entity("Nix.Domain.References.ItemReference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("HolderItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("holder_item_id");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("text")
+                        .HasColumnName("role");
+
+                    b.Property<Guid?>("TargetFileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_file_version_id");
+
+                    b.Property<Guid>("TargetItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_item_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "TargetFileVersionId")
+                        .HasDatabaseName("ix_item_reference_pin")
+                        .HasFilter("target_file_version_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "WorkspaceId");
+
+                    b.HasIndex("TenantId", "TargetItemId", "TargetFileVersionId");
+
+                    b.HasIndex("TenantId", "HolderItemId", "TargetItemId", "TargetFileVersionId", "Role")
+                        .IsUnique()
+                        .HasDatabaseName("ux_item_reference_edge");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("TenantId", "HolderItemId", "TargetItemId", "TargetFileVersionId", "Role"), false);
+
+                    b.ToTable("item_reference", null, t =>
+                        {
+                            t.HasCheckConstraint("item_reference_role_bounded", "role IS NULL OR char_length(role) BETWEEN 1 AND 80");
                         });
                 });
 
@@ -4048,6 +4245,18 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("uuid")
                         .HasColumnName("workspace_id");
 
+                    b.Property<bool>("AgentsMayApprove")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("agents_may_approve");
+
+                    b.Property<bool>("AgentsMayCreatePublicLinks")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("agents_may_create_public_links");
+
                     b.Property<DateTimeOffset?>("ArchivedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("archived_at");
@@ -4869,6 +5078,23 @@ namespace Nix.Persistence.Migrations.Generated
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Nix.Domain.Items.RecordKey", b =>
+                {
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ScopeItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Nix.Domain.Links.ItemLink", b =>
                 {
                     b.HasOne("Nix.Domain.Items.Item", null)
@@ -4964,6 +5190,79 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Nix.Domain.PublicLinks.PublicLink", b =>
+                {
+                    b.HasOne("Nix.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Identity.Principal", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Identity.Principal", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServicePrincipalId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Tenancy.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WorkspaceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Files.FileVersion", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ItemId", "FileVersionId")
+                        .HasPrincipalKey("TenantId", "ItemId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Nix.Domain.References.ItemReference", b =>
+                {
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "HolderItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TargetItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Tenancy.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WorkspaceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nix.Domain.Files.FileVersion", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TargetItemId", "TargetFileVersionId")
+                        .HasPrincipalKey("TenantId", "ItemId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Nix.Domain.Scheduling.ScheduledTrigger", b =>

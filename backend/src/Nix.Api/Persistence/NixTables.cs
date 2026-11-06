@@ -194,6 +194,15 @@ public static class NixTables
     /// <summary>One revocable capability per published item view.</summary>
     public const string PublicFormLink = "public_form_link";
 
+    /// <summary>A holder item's reference to a target item, optionally pinned to one file version.</summary>
+    public const string ItemReference = "item_reference";
+
+    /// <summary>One revocable anonymous-read capability per note or file item.</summary>
+    public const string PublicLink = "public_link";
+
+    /// <summary>The claim on one canonical value of a unique field within a collection.</summary>
+    public const string RecordKey = "record_key";
+
     /// <summary>One credential a principal issued for a non-browser client.</summary>
     public const string PersonalAccessToken = "personal_access_token";
 
@@ -318,6 +327,9 @@ public static class NixTables
         ItemUnlock,
         ItemTranscription,
         PublicFormLink,
+        ItemReference,
+        PublicLink,
+        RecordKey,
         PersonalAccessToken,
         WorkspaceTemplate,
         TemplateOperation,
@@ -431,6 +443,9 @@ public static class NixTables
             // Preserve the historical table's grants; its rows still cascade with audio items.
             [ItemTranscription] = FullDml,
             [PublicFormLink] = FullDml,
+            [ItemReference] = FullDml,
+            [PublicLink] = FullDml,
+            [RecordKey] = FullDml,
             [WorkspaceTemplate] = FullDml,
             [TemplateOperation] = FullDml,
             [TemplateOperationItem] = FullDml,

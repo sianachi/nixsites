@@ -11,6 +11,8 @@ using Nix.Domain.Items;
 using Nix.Domain.Links;
 using Nix.Domain.Locks;
 using Nix.Domain.Notifications;
+using Nix.Domain.PublicLinks;
+using Nix.Domain.References;
 using Nix.Domain.Scheduling;
 using Nix.Domain.Sites;
 using Nix.Domain.Templates;
@@ -177,6 +179,15 @@ public sealed class NixDbContext : DbContext
 
     /// <summary>Gets the revocable capabilities for published interactive forms.</summary>
     public DbSet<PublicFormLink> PublicFormLinks => Set<PublicFormLink>();
+
+    /// <summary>Gets the item-to-item references and file-version pins.</summary>
+    public DbSet<ItemReference> ItemReferences => Set<ItemReference>();
+
+    /// <summary>Gets the anonymous-read links for notes and files.</summary>
+    public DbSet<PublicLink> PublicLinks => Set<PublicLink>();
+
+    /// <summary>Gets the unique-field claims of collection records.</summary>
+    public DbSet<RecordKey> RecordKeys => Set<RecordKey>();
 
     /// <summary>Gets the credentials principals issued for non-browser clients.</summary>
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
@@ -361,6 +372,9 @@ public sealed class NixDbContext : DbContext
         modelBuilder.ApplyConfiguration(new ItemUnlockConfiguration());
         modelBuilder.ApplyConfiguration(new ItemTranscriptionConfiguration());
         modelBuilder.ApplyConfiguration(new PublicFormLinkConfiguration());
+        modelBuilder.ApplyConfiguration(new ItemReferenceConfiguration());
+        modelBuilder.ApplyConfiguration(new PublicLinkConfiguration());
+        modelBuilder.ApplyConfiguration(new RecordKeyConfiguration());
         modelBuilder.ApplyConfiguration(new PersonalAccessTokenConfiguration());
         modelBuilder.ApplyConfiguration(new BrowserSessionConfiguration());
         modelBuilder.ApplyConfiguration(new WorkspaceTemplateConfiguration());

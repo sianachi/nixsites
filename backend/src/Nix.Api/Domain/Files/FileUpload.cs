@@ -25,4 +25,13 @@ public sealed class FileUpload
     public required DateTimeOffset ExpiresAt { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public required DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>The note an export upload was produced from, or null.</summary>
+    public ItemId? SourceItemId { get; set; }
+
+    /// <summary>The revision of <see cref="SourceItemId"/> the export captured.</summary>
+    public long? SourceSeq { get; set; }
+
+    /// <summary>The file version this upload published, set when publication completes.</summary>
+    public FileVersionId? PublishedVersionId { get; set; }
 }

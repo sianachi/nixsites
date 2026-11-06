@@ -9,7 +9,8 @@ internal sealed class FileVersionConfiguration : IEntityTypeConfiguration<FileVe
 {
     public void Configure(EntityTypeBuilder<FileVersion> builder)
     {
-        builder.ToTable(NixTables.FileVersion);
+        builder.ToTable(NixTables.FileVersion, table => table.HasCheckConstraint(
+            "file_version_state_valid", "state IN ('draft', 'in_review', 'approved', 'revoked')"));
         builder.HasKey(version => version.Id);
         builder.Property(version => version.Id).HasColumnName("file_version_id");
         builder.Property(version => version.TenantId).HasColumnName(NixTables.TenantIdColumn);
@@ -30,6 +31,11 @@ internal sealed class FileVersionConfiguration : IEntityTypeConfiguration<FileVe
         builder.Property(version => version.Previewable).HasColumnName("previewable");
         builder.Property(version => version.CreatedBy).HasColumnName("created_by");
         builder.Property(version => version.CreatedAt).HasColumnName("created_at");
+        builder.Property(version => version.State).HasColumnName("state").HasDefaultValue("draft");
+        builder.Property(version => version.StateChangedBy).HasColumnName("state_changed_by");
+        builder.Property(version => version.StateChangedAt).HasColumnName("state_changed_at");
+        builder.Property(version => version.SourceItemId).HasColumnName("source_item_id");
+        builder.Property(version => version.SourceSeq).HasColumnName("source_seq");
         builder.HasAlternateKey(version => new { version.TenantId, version.Id });
         builder.HasAlternateKey(version => new { version.TenantId, version.ItemId, version.Id });
         builder.HasIndex(version => new { version.TenantId, version.ItemId, version.Version }).IsUnique();

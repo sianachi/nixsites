@@ -30,6 +30,9 @@ internal sealed class FileUploadConfiguration : IEntityTypeConfiguration<FileUpl
         builder.Property(upload => upload.ExpiresAt).HasColumnName("expires_at");
         builder.Property(upload => upload.CreatedAt).HasColumnName("created_at");
         builder.Property(upload => upload.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(upload => upload.SourceItemId).HasColumnName("source_item_id");
+        builder.Property(upload => upload.SourceSeq).HasColumnName("source_seq");
+        builder.Property(upload => upload.PublishedVersionId).HasColumnName("published_version_id");
         builder.HasAlternateKey(upload => new { upload.TenantId, upload.Id });
         builder.HasIndex(upload => new { upload.TenantId, upload.ActorId, upload.IdempotencyKey }).IsUnique();
         builder.HasIndex(upload => new { upload.Status, upload.ExpiresAt });

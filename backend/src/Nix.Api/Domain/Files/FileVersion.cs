@@ -32,4 +32,19 @@ public sealed class FileVersion
     public required bool Previewable { get; init; }
     public required PrincipalId CreatedBy { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>Lifecycle state: <c>draft</c> (default), <c>in_review</c>, <c>approved</c> or <c>revoked</c>.</summary>
+    public string State { get; set; } = "draft";
+
+    /// <summary>Who last changed <see cref="State"/>, or null while it has never changed.</summary>
+    public PrincipalId? StateChangedBy { get; set; }
+
+    /// <summary>When <see cref="State"/> last changed, or null while it has never changed.</summary>
+    public DateTimeOffset? StateChangedAt { get; set; }
+
+    /// <summary>The note this version was exported from, or null for an ordinary upload.</summary>
+    public ItemId? SourceItemId { get; set; }
+
+    /// <summary>The revision of <see cref="SourceItemId"/> this version was exported from.</summary>
+    public long? SourceSeq { get; set; }
 }

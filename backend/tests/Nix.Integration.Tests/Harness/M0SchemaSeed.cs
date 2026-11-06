@@ -546,6 +546,26 @@ internal static class M0SchemaSeed
             VALUES ({auditEvent}, {tenant}, {workspace}, {item}, 'form', '{slug}-nonce',
                     {principal}, {principal}, now(), NULL);
 
+            -- Upgrade tests also seed schemas from before agent records existed. One row per
+            -- table, each tenant, so the isolation theories have something to see.
+            DO $agentrecords$
+            BEGIN
+                IF to_regclass('public.record_key') IS NOT NULL THEN
+                    INSERT INTO item_reference
+                        (id, tenant_id, workspace_id, holder_item_id, target_item_id,
+                         target_file_version_id, role, created_by, created_at)
+                    VALUES (gen_random_uuid(), {tenant}, {workspace}, {item}, {item}, NULL,
+                            'seed', {principal}, now());
+                    INSERT INTO public_link
+                        (id, tenant_id, workspace_id, item_id, nonce, file_version_id,
+                         service_principal_id, created_by, created_at, revoked_at)
+                    VALUES (gen_random_uuid(), {tenant}, {workspace}, {item}, '{slug}-link-nonce',
+                            NULL, {principal}, {principal}, now(), NULL);
+                    INSERT INTO record_key (tenant_id, scope_item_id, field, value, item_id)
+                    VALUES ({tenant}, {item}, 'seed', '{slug}-key', {item});
+                END IF;
+            END $agentrecords$;
+
             -- One credential the seeded principal issued, so the isolation theories exercise the
             -- token table exactly as they do every other tenant-scoped table. The hash is an
             -- arbitrary constant: no test exchanges this row, and a secret that never existed

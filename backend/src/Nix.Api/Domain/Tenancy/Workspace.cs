@@ -58,4 +58,10 @@ public sealed class Workspace
 
     /// <summary>Gets whether several people may edit a file at once; when off, one editor at a time.</summary>
     public bool Collaboration { get; init; } = true;
+
+    /// <summary>Gets whether access tokens and external bearers may approve or revoke file versions.</summary>
+    public bool AgentsMayApprove { get; set; }
+
+    /// <summary>Gets whether access tokens and external bearers may create public links.</summary>
+    public bool AgentsMayCreatePublicLinks { get; set; }
 }
