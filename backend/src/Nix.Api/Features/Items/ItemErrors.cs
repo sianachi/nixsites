@@ -56,6 +56,9 @@ public static class ItemErrors
     /// <remarks>Not a disclosure, for the reason <see cref="Locked"/> is not one.</remarks>
     public static NixError DeleteProtected(string detail) => new("items.delete_protected", detail);
 
+    /// <summary>The item, or a file beneath it, is pinned by a reference and must be unpinned before it is trashed.</summary>
+    public static NixError Pinned(string detail) => new("items.pinned", detail);
+
     /// <summary>The destination refuses new children.</summary>
     public static NixError ChildrenProtected(string detail) => new("items.children_protected", detail);
 

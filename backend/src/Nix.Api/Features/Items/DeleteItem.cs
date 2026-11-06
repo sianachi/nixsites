@@ -53,6 +53,7 @@ public sealed class DeleteItemHandler(
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
     TimeProvider clock,
+    IFinanceLock topology,
     IFinanceMutationGuard? financeGuard = null,
     IItemProtections? protections = null)
     : ICommandHandler<DeleteItem, ItemId>
@@ -103,20 +104,23 @@ public sealed class DeleteItemHandler(
             return Result.Success(itemId);
         }
 
+        // Taken whether or not a finance guard is wired: a pin is created under this same lock, so
+        // the pin check below can neither miss a pin being added nor be skipped by a missing guard.
+        var workspaceId = item.WorkspaceId;
+        await topology.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);
         if (financeGuard is not null)
         {
-            var workspaceId = item.WorkspaceId;
             var blocked = await financeGuard.CheckAsync(workspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
             if (blocked is not null)
             {
                 return Result.Failure<ItemId>(blocked.Value);
             }
-            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
-                || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
-            {
-                return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
-            }
+        }
+        item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
+            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
 
         if (item.NoDelete && !(command.CalendarWrite && item.ManagedBy is not null))
@@ -136,6 +140,14 @@ public sealed class DeleteItemHandler(
         {
             return Result.Failure<ItemId>(ItemErrors.DeleteProtected(
                 "An item inside this one is protected from deletion."));
+        }
+
+        // Pins protect from everyone, calendar writes included, and are read under the lock above.
+        if (protections is not null
+            && await protections.AnyPinnedAtOrBelowAsync(itemId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<ItemId>(ItemErrors.Pinned(
+                "This item, or an item inside it, is pinned by a reference. Remove the pin first."));
         }
 
         await tree

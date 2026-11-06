@@ -18,7 +18,8 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
     private readonly IItemLocks _locks;
     private readonly IFinanceMutationGuard? _financeGuard;
     private readonly ISiteStore? _sites;
-    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites) = (tree, permissions, session, clock, locks, financeGuard, sites);
+    private readonly IItemProtections? _protections;
+    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null, IItemProtections? protections = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites, _protections) = (tree, permissions, session, clock, locks, financeGuard, sites, protections);
 
     public async ValueTask<Result<ItemId>> HandleAsync(PurgeItem command, CancellationToken cancellationToken)
     {
@@ -63,6 +64,11 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
         var context = _session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var now = _clock.GetUtcNow();
         await _tree.ReparentChildrenAsync(item.WorkspaceId, item.Id, item.ParentId, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
+        // Purge is a lifecycle flag, so the foreign key cascade never fires: drop what the item holds.
+        if (_protections is not null)
+        {
+            await _protections.ReleaseHeldReferencesAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        }
         await _tree.SetLifecycleAsync(item.Id, ItemLifecycleState.Purged, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
         return Result.Success(item.Id);
     }

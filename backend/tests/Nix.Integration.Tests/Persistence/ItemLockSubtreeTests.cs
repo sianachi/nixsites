@@ -394,7 +394,7 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
         await using var deleter = await BeginAsync(OtherBrowser);
         var gate = new PausedFinanceGuard(deleter.Resolve<IFinanceMutationGuard>());
         var handler = new DeleteItemHandler(deleter.Resolve<IItemTree>(), deleter.Resolve<IPermissionResolver>(),
-            deleter.Resolve<INixSessionContextAccessor>(), TimeProvider.System, gate, deleter.Resolve<IItemProtections>());
+            deleter.Resolve<INixSessionContextAccessor>(), TimeProvider.System, deleter.Resolve<IFinanceLock>(), gate, deleter.Resolve<IItemProtections>());
         var pending = handler.HandleAsync(new DeleteItem(Folder), Cancellation).AsTask();
         await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancellation);
         await protector.CommitAsync(Cancellation);
