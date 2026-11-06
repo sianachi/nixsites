@@ -232,7 +232,8 @@ internal static class FileEndpoints
                 upload.Status,
                 upload.ExpiresAt,
                 upload.ItemId,
-                upload.FailureCode));
+                upload.FailureCode,
+                upload.PublishedVersionId));
     }
 
     private static async Task<Results<Ok<FileRecord>, ProblemHttpResult>> Get(

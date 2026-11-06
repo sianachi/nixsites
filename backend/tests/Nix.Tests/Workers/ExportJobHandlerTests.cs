@@ -59,6 +59,24 @@ public sealed class ExportJobHandlerTests
     }
 
     [Fact]
+    public async Task An_export_to_a_file_publishes_the_upload_it_opened_and_a_plain_export_does_not()
+    {
+        using var script = new Script("pdf", uploadStatus: HttpStatusCode.OK);
+        var handler = Handler(script);
+        var job = new DispatchedWorkerJob(JobId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "export.pdf", Payload("pdf", toFile: true), 1, false);
+
+        var result = await handler.HandleAsync(new WorkerExecution(job, "nix-api:test:export:1"), TestContext.Current.CancellationToken);
+
+        var expected = $"byteLength={script.Uploaded!.Length}&sha256={Convert.ToHexStringLower(SHA256.HashData(script.Uploaded))}";
+        Assert.Equal(expected, script.PublishQuery);
+        Assert.NotNull(result);
+
+        using var plain = new Script("pdf", uploadStatus: HttpStatusCode.OK);
+        await Handler(plain).HandleAsync(Execution("pdf"), TestContext.Current.CancellationToken);
+        Assert.Null(plain.PublishQuery);
+    }
+
+    [Fact]
     public async Task A_kind_that_does_not_match_the_payload_fails_permanently()
     {
         using var script = new Script("markdown", uploadStatus: HttpStatusCode.OK);
@@ -88,7 +106,7 @@ public sealed class ExportJobHandlerTests
     private static WorkerExecution Execution(string format) =>
         new(new DispatchedWorkerJob(JobId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "export." + format, Payload(format), 1, false), "nix-api:test:export:1");
 
-    private static string Payload(string format) => JsonSerializer.Serialize(new
+    private static string Payload(string format, bool toFile = false) => JsonSerializer.Serialize(new
     {
         itemId = "0a000000-0000-4000-8000-000000000001",
         workspaceId = "0c000000-0000-4000-8000-000000000001",
@@ -100,6 +118,7 @@ public sealed class ExportJobHandlerTests
         declaredLoss = Array.Empty<string>(),
         includeComments = false,
         pageSize = "a4",
+        toFile,
     });
 
     private sealed class Script(string format, HttpStatusCode uploadStatus) : HttpMessageHandler
@@ -111,6 +130,8 @@ public sealed class ExportJobHandlerTests
         public Dictionary<string, string>? UploadHeaders { get; private set; }
 
         public bool ReadVerified { get; private set; }
+
+        public string? PublishQuery { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -141,6 +162,12 @@ public sealed class ExportJobHandlerTests
             if (path == $"/internal/worker-executions/exports/{JobId:D}")
             {
                 return Json(new { exportId = JobId, format, sourceUrl = "http://collab/documents/x/bundles?shape=render", bearerToken = "delegated-token", delegationExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10) });
+            }
+            if (path == $"/internal/worker-executions/exports/{JobId:D}/publish")
+            {
+                Assert.Equal(HttpMethod.Post, request.Method);
+                PublishQuery = uri.Query.TrimStart('?');
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
             }
             if (path == $"/internal/worker-executions/exports/{JobId:D}/destination")
             {

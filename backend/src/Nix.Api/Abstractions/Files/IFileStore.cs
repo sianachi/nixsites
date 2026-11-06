@@ -12,7 +12,9 @@ public sealed record BeginFileUpload(
     string DeclaredMediaType,
     long DeclaredByteLength,
     string IdempotencyKey,
-    string Purpose = FileUploadPurposes.File);
+    string Purpose = FileUploadPurposes.File,
+    Guid? SourceItemId = null,
+    long? SourceSeq = null);
 
 public static class FileUploadPurposes
 {
@@ -33,7 +35,7 @@ public sealed record CompleteFileUpload(
     int? ThumbnailHeight = null,
     int? ThumbnailBytes = null);
 
-public sealed record FileUploadRecord(Guid Id, Guid WorkspaceId, string Purpose, string Status, string ObjectKey, DateTimeOffset ExpiresAt, Guid? ItemId, string? FailureCode);
+public sealed record FileUploadRecord(Guid Id, Guid WorkspaceId, string Purpose, string Status, string ObjectKey, DateTimeOffset ExpiresAt, Guid? ItemId, string? FailureCode, Guid? PublishedVersionId = null);
 public sealed record FileUploadInspectionRecord(Guid Id, Guid WorkspaceId, string Purpose, string Status, string ObjectKey, string FileName, string DeclaredMediaType, long DeclaredByteLength, DateTimeOffset ExpiresAt, Guid? ItemId);
 public sealed record FileVersionRecord(Guid Id, int Version, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, int? PixelWidth, int? PixelHeight, DateTimeOffset CreatedAt, bool Current, FileThumbnailRecord? Thumbnail = null, string? State = null, Guid? StateChangedBy = null, DateTimeOffset? StateChangedAt = null, Guid? SourceItemId = null, long? SourceSeq = null);
 /// <summary>The pixel size of a stored thumbnail; a version without one carries null instead.</summary>

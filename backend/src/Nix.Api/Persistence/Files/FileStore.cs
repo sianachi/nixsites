@@ -78,6 +78,8 @@ public sealed class FileStore(
             DeclaredMediaType = request.DeclaredMediaType,
             DeclaredByteLength = request.DeclaredByteLength,
             ObjectKey = ObjectStorageKeys.FileUpload(context.TenantId, id),
+            SourceItemId = request.SourceItemId is { } source ? ItemId.From(source) : null,
+            SourceSeq = request.SourceSeq,
             Status = "pending_upload",
             ExpiresAt = now.AddMinutes(15),
             CreatedAt = now,
@@ -265,6 +267,8 @@ public sealed class FileStore(
             ThumbnailWidth = request.ThumbnailWidth,
             ThumbnailHeight = request.ThumbnailHeight,
             ThumbnailBytes = request.ThumbnailBytes,
+            SourceItemId = upload.SourceItemId,
+            SourceSeq = upload.SourceSeq,
             CreatedBy = context.PrincipalId,
             CreatedAt = clock.GetUtcNow(),
         };
@@ -279,6 +283,7 @@ public sealed class FileStore(
             fileBody.CurrentVersionId = version.Id;
         }
         upload.PublishedItemId = itemId;
+        upload.PublishedVersionId = version.Id;
         upload.Status = "completed";
         upload.UpdatedAt = clock.GetUtcNow();
         await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -607,7 +612,7 @@ public sealed class FileStore(
             cancellationToken);
     }
 
-    private static FileUploadRecord ToUpload(FileUpload value) => new(value.Id.Value, value.WorkspaceId.Value, value.Purpose, value.Status, value.ObjectKey, value.ExpiresAt, value.PublishedItemId?.Value, value.FailureCode);
+    private static FileUploadRecord ToUpload(FileUpload value) => new(value.Id.Value, value.WorkspaceId.Value, value.Purpose, value.Status, value.ObjectKey, value.ExpiresAt, value.PublishedItemId?.Value, value.FailureCode, value.PublishedVersionId?.Value);
     private static FileVersionRecord ToVersion(FileVersion value, bool current) => new(
         value.Id.Value,
         value.Version,

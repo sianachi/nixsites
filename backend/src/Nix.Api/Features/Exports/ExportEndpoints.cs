@@ -2,15 +2,18 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Abstractions.Files;
 using Nix.Abstractions.Workers;
 using Nix.Authentication;
+using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
 using Nix.Features.Files;
 using Nix.Http;
+using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Features.Exports;
@@ -20,6 +23,7 @@ internal static class ExportEndpoints
     internal const string CollaborationBaseUrlConfigurationKey = "Nix:Collaboration:BaseUrl";
 
     private const long MaximumExportBytes = 256L * 1024 * 1024;
+    private const long MaximumFileBytes = 100L * 1024 * 1024;
     private static readonly TimeSpan ResultRetention = TimeSpan.FromHours(24);
     private static readonly TimeSpan AttemptCleanupDelay = TimeSpan.FromHours(48);
 
@@ -63,6 +67,7 @@ internal static class ExportEndpoints
         var exports = group.MapGroup("/exports/{jobId:guid}");
         exports.MapGet("", GetWorkerSource);
         exports.MapGet("/destination", GetWorkerDestination);
+        exports.MapPost("/publish", PublishWorkerFile);
         exports.MapGet("/images/{itemId:guid}", GetWorkerImage);
         ExportFileEndpoints.MapWorkerExecutions(exports);
     }
@@ -89,7 +94,9 @@ internal static class ExportEndpoints
         [FromServices] S3CapabilitySigner signer,
         [FromServices] SelfIssuedTokenService tokens,
         [FromServices] IConfiguration configuration,
-        [FromServices] TimeProvider clock)
+        [FromServices] TimeProvider clock,
+        [FromServices] IExportRevisionNamer namer,
+        [FromServices] NixDbContext database)
     {
         var format = NormalizeFormat(request.Format);
         var scope = NormalizeScope(request.Scope);
@@ -102,6 +109,19 @@ internal static class ExportEndpoints
             || request.ItemId == Guid.Empty)
         {
             return Problem(context, 400, "exports.request_invalid", "Export request invalid", "The item, format, scope, page size, and idempotency key must be valid.");
+        }
+        var toFile = request.ToFile == true;
+        if (!toFile && request.TargetItemId is not null)
+        {
+            return Problem(context, 400, "exports.request_invalid", "Export request invalid", "A target file needs toFile.");
+        }
+        if (toFile && format == "nix")
+        {
+            return Problem(context, 400, "exports.format_not_file", "Export format not allowed", "A .nix archive cannot be saved as a file item. Choose PDF, DOCX or Markdown.");
+        }
+        if (toFile && scope != "item")
+        {
+            return Problem(context, 400, "exports.request_invalid", "Export request invalid", "Saving to a file exports one note: use scope item.");
         }
         if (!signer.IsConfigured
             || !tokens.IsConfigured
@@ -150,6 +170,18 @@ internal static class ExportEndpoints
                     : "A locked item cannot be exported. Remove its lock first.");
         }
 
+        long? sourceSeq = null;
+        if (toFile)
+        {
+            var prepared = await PrepareToFileAsync(
+                request, item, descriptor, context, permissions, locks, tree, namer, database, clock).ConfigureAwait(false);
+            if (prepared.Refusal is not null)
+            {
+                return prepared.Refusal;
+            }
+            sourceSeq = prepared.SourceSeq;
+        }
+
         var scoped = session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var payload = new ExportJobPayload(
@@ -162,7 +194,10 @@ internal static class ExportEndpoints
             descriptor.MediaType,
             descriptor.DeclaredLoss.ToArray(),
             request.IncludeComments,
-            pageSize);
+            pageSize,
+            toFile,
+            request.TargetItemId,
+            sourceSeq);
         WorkerJobRecord job;
         try
         {
@@ -190,13 +225,88 @@ internal static class ExportEndpoints
             ToResponse(job, storedPayload, storedResult, scoped.TenantId, clock.GetUtcNow()));
     }
 
+    /// <summary>
+    /// The checks only an export to a file item needs, then the revision it will be cut from. The
+    /// revision is the log head Collab has flushed: edits younger than its flush window are not in
+    /// the log yet, so they are in neither the export nor the recorded revision, and the two agree.
+    /// </summary>
+    private static async Task<(IResult? Refusal, long? SourceSeq)> PrepareToFileAsync(
+        BeginExportRequest request,
+        Item item,
+        ExportFormatCapability descriptor,
+        HttpContext context,
+        IPermissionResolver permissions,
+        IItemLocks locks,
+        IItemTree tree,
+        IExportRevisionNamer namer,
+        NixDbContext database,
+        TimeProvider clock)
+    {
+        if (item.Type != "note")
+        {
+            return (Problem(context, 400, "exports.source_not_note", "Export source not a note", "Only a note can be saved as a file."), null);
+        }
+        if (!await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, context.RequestAborted).ConfigureAwait(false))
+        {
+            return (Problem(context, 403, "exports.write_required", "Export needs write access", "Saving an export adds a file, which needs write access to the workspace."), null);
+        }
+        if (request.TargetItemId is { } targetId)
+        {
+            var target = await tree.FindAsync(ItemId.From(targetId), context.RequestAborted).ConfigureAwait(false);
+            if (target is not { Type: "file" } || target.WorkspaceId != item.WorkspaceId)
+            {
+                return (Problem(context, 400, "exports.target_invalid", "Export target invalid", "The target must be a file in the same workspace as the note."), null);
+            }
+            if (!await locks.MayReadBodyAsync(target.Id, context.RequestAborted).ConfigureAwait(false))
+            {
+                return (Problem(context, 409, "exports.item_locked", "Export target is locked", "Unlock the target file before adding a version."), null);
+            }
+        }
+        else if (item.NoChildren)
+        {
+            return (Problem(context, 409, "exports.no_children", "Note refuses new children", "This note does not accept new files under it. Name a target file, or lift the protection."), null);
+        }
+        var bearer = Bearer(context);
+        if (bearer is null)
+        {
+            return (Problem(context, 401, "auth.unauthenticated", "Not authenticated", "Saving an export needs a bearer token."), null);
+        }
+
+        // No row when nobody has opened the note yet: nothing to pin, and the export reads the empty body.
+        var head = await database.ContentDocs.AsNoTracking()
+            .Where(document => document.ItemId == item.Id)
+            .Select(document => (long?)document.HeadSeq)
+            .SingleOrDefaultAsync(context.RequestAborted).ConfigureAwait(false);
+        if (head is { } seq
+            && !await namer.EnsureNamedAsync(
+                item.Id.Value,
+                seq,
+                $"Exported to {descriptor.Label} {clock.GetUtcNow():yyyy-MM-dd}",
+                bearer,
+                context.RequestAborted).ConfigureAwait(false))
+        {
+            return (Problem(context, 503, "exports.revision_unavailable", "Export revision unavailable", "The revision to export could not be recorded. Retry."), null);
+        }
+        return (null, head);
+    }
+
+    private static string? Bearer(HttpContext context)
+    {
+        const string prefix = "Bearer ";
+        var header = context.Request.Headers.Authorization.ToString();
+        return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && header[prefix.Length..].Trim() is { Length: > 0 } token
+            ? token
+            : null;
+    }
+
     private static async Task<IResult> Get(
         Guid exportId,
         HttpContext context,
         [FromServices] IWorkerJobStore jobs,
         [FromServices] INixSessionContextAccessor session,
         [FromServices] IPermissionResolver permissions,
-        [FromServices] TimeProvider clock)
+        [FromServices] TimeProvider clock,
+        [FromServices] NixDbContext database)
     {
         var state = await FindState(exportId, jobs, session, permissions, context.RequestAborted).ConfigureAwait(false);
         if (state is null)
@@ -222,7 +332,22 @@ internal static class ExportEndpoints
             payload,
             result,
             state.Value.Context.TenantId,
-            clock.GetUtcNow()));
+            clock.GetUtcNow(),
+            payload.ToFile ? await FindUploadAsync(database, exportId, context.RequestAborted).ConfigureAwait(false) : null));
+    }
+
+    // The upload is found by the idempotency key its destination call opened it with; the stored
+    // result cannot carry its id (the database fixes that shape). A retry that produced different
+    // bytes opens a second upload, and the newest is the one that counts.
+    private static async Task<Guid?> FindUploadAsync(NixDbContext database, Guid exportId, CancellationToken cancellationToken)
+    {
+        var prefix = $"export-file:{exportId:D}:";
+        return (await database.FileUploads.AsNoTracking()
+            .Where(upload => upload.IdempotencyKey.StartsWith(prefix))
+            .OrderByDescending(upload => upload.CreatedAt)
+            .Select(upload => upload.Id)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false))
+            is { } id && id != default ? id.Value : null;
     }
 
     private static async Task<IResult> Cancel(
@@ -269,6 +394,10 @@ internal static class ExportEndpoints
         if (state is null || !TryReadState(state.Value.Job, out var payload, out var result))
         {
             return Problem(context, 404, "exports.not_found", "Export not found", "No such export is visible.");
+        }
+        if (payload.ToFile)
+        {
+            return Problem(context, 409, "exports.saved_as_file", "Export saved as a file", "This export was saved as a file item; download that file instead.");
         }
         if (state.Value.Job.Status != "completed" || state.Value.Job.CompletedAt is null || result is null)
         {
@@ -326,7 +455,8 @@ internal static class ExportEndpoints
             + $"&exportedAt={Uri.EscapeDataString(job.CreatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}"
             + (payload.Format is "pdf" or "docx" ? "&expandEmbeds=true" : string.Empty)
             + (payload.Format is "pdf" or "docx" or "markdown" ? "&shape=render" : string.Empty)
-            + (payload.IncludeComments ? "&includeComments=true" : string.Empty));
+            + (payload.IncludeComments ? "&includeComments=true" : string.Empty)
+            + (payload.SourceSeq is { } atSeq ? "&atSeq=" + atSeq.ToString(CultureInfo.InvariantCulture) : string.Empty));
         var bearer = tokens.MintWorkerExecution(
             scoped.PrincipalId,
             scoped.TenantId,
@@ -394,7 +524,8 @@ internal static class ExportEndpoints
         [FromServices] INixSessionContextAccessor session,
         [FromServices] IWorkerDispatchStore dispatch,
         [FromServices] S3CapabilitySigner signer,
-        [FromServices] TimeProvider clock)
+        [FromServices] TimeProvider clock,
+        [FromServices] IFileStore files)
     {
         var execution = await ExactExecution(jobId, context, dispatch).ConfigureAwait(false);
         if (execution is null
@@ -410,6 +541,31 @@ internal static class ExportEndpoints
         if (job is null || !TryReadState(job, out var payload, out _) || job.Status != "running")
         {
             return Problem(context, 409, "exports.execution_refused", "Export execution refused", "The durable export is not running under this execution.");
+        }
+        if (payload.ToFile)
+        {
+            // The bytes go to the upload's own key and are then published by file.publish, so the
+            // file store, not the 24-hour result prefix, owns them from here.
+            var pending = byteLength > MaximumFileBytes
+                ? null
+                : await BeginExportFileAsync(files, payload, jobId, byteLength, sha256, context.RequestAborted).ConfigureAwait(false);
+            if (pending is null)
+            {
+                return Problem(context, 409, "exports.file_refused", "Export file refused", "The export cannot be saved as a file: it is over the 100 MiB file limit, or the target is no longer usable.");
+            }
+            var fileUpload = signer.PutImmutableVerified(pending.ObjectKey, byteLength, sha256);
+            var fileRead = signer.Get(pending.ObjectKey);
+            var fileDelete = signer.Delete(pending.ObjectKey);
+            var fileAttempt = ObjectStorageKeys.ExportAttempt(jobId, execution);
+            return TypedResults.Ok(new WorkerExportDestinationResponse(
+                jobId,
+                fileAttempt,
+                payload.Format,
+                ObjectStorageKeys.ExportResult(scoped.TenantId, jobId, fileAttempt, payload.Extension),
+                fileUpload.Url,
+                fileRead.Url,
+                fileDelete.Url,
+                new[] { fileUpload.ExpiresAt, fileRead.ExpiresAt, fileDelete.ExpiresAt }.Min()));
         }
         var attemptId = ObjectStorageKeys.ExportAttempt(jobId, execution);
         var key = ObjectStorageKeys.ExportResult(
@@ -441,6 +597,72 @@ internal static class ExportEndpoints
             delete.Url,
             expiresAt));
     }
+
+    /// <summary>
+    /// Queues file.publish for the uploaded export. The upload is re-derived from the bytes the
+    /// worker reports, through the same idempotency key as the destination call, so the worker never
+    /// names an upload id and cannot publish one this export did not open.
+    /// </summary>
+    private static async Task<IResult> PublishWorkerFile(
+        Guid jobId,
+        long byteLength,
+        string sha256,
+        HttpContext context,
+        [FromServices] IWorkerJobStore jobs,
+        [FromServices] INixSessionContextAccessor session,
+        [FromServices] IWorkerDispatchStore dispatch,
+        [FromServices] IFileStore files)
+    {
+        var execution = await ExactExecution(jobId, context, dispatch).ConfigureAwait(false);
+        var scoped = session.Current
+            ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
+        var job = execution is null || byteLength is <= 0 or > MaximumFileBytes || !ValidSha256(sha256)
+            ? null
+            : await jobs.GetAsync(scoped.TenantId, scoped.PrincipalId, jobId, context.RequestAborted).ConfigureAwait(false);
+        if (job is null || !TryReadState(job, out var payload, out _) || job.Status != "running" || !payload.ToFile)
+        {
+            return Problem(context, 409, "exports.execution_refused", "Export execution refused", "The durable export is not running under this execution.");
+        }
+        var pending = await BeginExportFileAsync(files, payload, jobId, byteLength, sha256, context.RequestAborted).ConfigureAwait(false);
+        var queued = pending is null
+            ? null
+            : await files.QueueInspectionAsync(FileUploadId.From(pending.Id), context.RequestAborted).ConfigureAwait(false);
+        if (queued is null)
+        {
+            return Problem(context, 409, "exports.file_refused", "Export file refused", "The uploaded export can no longer be published.");
+        }
+        await jobs.CreateAsync(
+            scoped.TenantId,
+            scoped.PrincipalId,
+            WorkspaceId.From(payload.WorkspaceId),
+            "file.publish",
+            $"file.publish:{queued.Id:D}",
+            JsonSerializer.Serialize(new FileInspectPayload(queued.Id), FilesJsonContext.Default.FileInspectPayload),
+            context.RequestAborted).ConfigureAwait(false);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>Opens (or replays) the export's upload; keyed by the bytes, so a retry that produced different bytes gets its own.</summary>
+    private static ValueTask<FileUploadRecord?> BeginExportFileAsync(
+        IFileStore files,
+        ExportJobPayload payload,
+        Guid jobId,
+        long byteLength,
+        string sha256,
+        CancellationToken cancellationToken) =>
+        files.BeginAsync(
+            new BeginFileUpload(
+                WorkspaceId.From(payload.WorkspaceId),
+                payload.TargetItemId is null ? ItemId.From(payload.ItemId) : null,
+                payload.TargetItemId is { } target ? ItemId.From(target) : null,
+                FileName(payload.Title, payload.Extension),
+                payload.MediaType,
+                byteLength,
+                $"export-file:{jobId:D}:{sha256}",
+                FileUploadPurposes.File,
+                payload.ItemId,
+                payload.SourceSeq),
+            cancellationToken);
 
     internal static async ValueTask<string?> ExactExecution(
         Guid routeJobId,
@@ -530,7 +752,8 @@ internal static class ExportEndpoints
         ExportJobPayload payload,
         WorkerExportResult? result,
         TenantId tenantId,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        Guid? uploadId = null)
     {
         DateTimeOffset? expiresAt = job.Status == "completed" && job.CompletedAt is { } completed
             ? completed.Add(ResultRetention)
@@ -558,10 +781,11 @@ internal static class ExportEndpoints
             job.ErrorCode,
             job.ErrorDetail,
             job.CancellationRequested,
-            validResult && expiresAt > now,
+            validResult && expiresAt > now && !payload.ToFile,
             job.CreatedAt,
             job.CompletedAt,
-            expiresAt);
+            payload.ToFile ? null : expiresAt,
+            uploadId);
     }
 
     private static bool ValidResult(
@@ -571,11 +795,14 @@ internal static class ExportEndpoints
         Guid exportId) =>
         result.AttemptId != Guid.Empty
         && result.Format == payload.Format
+        // The database validates the result key and attempt before it is stored, so a file export
+        // reports the same attempt-shaped key as any other; its bytes are in the upload, not there.
         && result.ObjectKey == ObjectStorageKeys.ExportResult(
             tenantId,
             exportId,
             result.AttemptId,
             payload.Extension)
+        && (!payload.ToFile || result.ByteLength <= MaximumFileBytes)
         && result.ItemCount is > 0 and <= 100_000
         && result.OmittedCount is >= 0 and <= 100_000
         && result.ByteLength is > 0 and <= MaximumExportBytes

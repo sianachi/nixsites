@@ -24,6 +24,7 @@ using Nix.Features.Canvas;
 using Nix.Features.Charts;
 using Nix.Features.Comments;
 using Nix.Features.Conversations;
+using Nix.Features.Exports;
 using Nix.Features.CurrentUser;
 using Nix.Features.Finance;
 using Nix.Features.Graph;
@@ -443,6 +444,13 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<RestoreItem, Item>, RestoreItemHandler>();
         services.AddScoped<IQueryHandler<GetItem, Result<Item>>, GetItemHandler>();
         services.AddHttpClient<ItemBodyClient>(static client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        }).ConfigurePrimaryHttpMessageHandler(static () => new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+        });
+        services.AddHttpClient<IExportRevisionNamer, ExportRevisionNamer>(static client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         }).ConfigurePrimaryHttpMessageHandler(static () => new HttpClientHandler
