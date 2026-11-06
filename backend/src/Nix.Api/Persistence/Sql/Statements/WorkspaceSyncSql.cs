@@ -61,9 +61,15 @@ public static class WorkspaceSyncSql
           ON body.tenant_id = item.tenant_id AND body.item_id = item.id AND NOT lock_state.locked
         LEFT JOIN file_body AS file_body
           ON file_body.tenant_id = item.tenant_id AND file_body.item_id = item.id AND NOT lock_state.locked
-        LEFT JOIN file_version AS file
-          ON file.tenant_id = file_body.tenant_id AND file.item_id = file_body.item_id
-         AND file.file_version_id = file_body.current_version_id AND file.object_ready
+        LEFT JOIN LATERAL (
+            -- The shown version: latest approved, else the current upload.
+            SELECT shown.file_version_id, shown.file_name, shown.media_type, shown.byte_length, shown.sha256, shown.state
+            FROM file_version AS shown
+            WHERE shown.tenant_id = file_body.tenant_id AND shown.item_id = file_body.item_id AND shown.object_ready
+              AND (shown.file_version_id = file_body.current_version_id OR shown.state = 'approved')
+            ORDER BY (shown.state = 'approved') DESC, shown.version DESC
+            LIMIT 1
+        ) AS file ON true
         """;
 
     private const string Visible = """
@@ -93,7 +99,7 @@ public static class WorkspaceSyncSql
         CASE WHEN lock_state.locked THEN NULL ELSE item.last_modified_at END,
         allowed_workspace.can_write, lock_state.locked, lock_state.metadata_expires_at,
         body.doc_id, body.head_seq,
-        file.file_version_id, file.file_name, file.media_type, file.byte_length, file.sha256
+        file.file_version_id, file.file_name, file.media_type, file.byte_length, file.sha256, file.state
         """;
 
     /// <summary>Lists every currently visible durable item, independently of marker history.</summary>

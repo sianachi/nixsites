@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Abstractions.Files;
+using Nix.Domain.Audit;
 using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Properties;
 using Nix.Domain.Workers;
+using Nix.Features.Workspaces;
 using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Persistence.Files;
@@ -16,6 +18,7 @@ public sealed class FileStore(
     INixSessionContextAccessor session,
     IItemLocks locks,
     TimeProvider clock,
+    AccessTokenSessionContext credential,
     IFinanceLock? topology = null) : IFileStore
 {
     private const long MaxFileBytes = 100L * 1024 * 1024;
@@ -351,7 +354,9 @@ public sealed class FileStore(
         var versions = await database.FileVersions.AsNoTracking().Where(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId && candidate.WorkspaceId == body.WorkspaceId && candidate.ObjectReady).OrderByDescending(candidate => candidate.Version).ToListAsync(cancellationToken).ConfigureAwait(false);
         var mapped = versions.Select(version => ToVersion(version, version.Id == body.CurrentVersionId)).ToArray();
         var current = mapped.SingleOrDefault(version => version.Current);
-        return current is null ? null : new FileRecord(itemId.Value, body.WorkspaceId.Value, current, mapped);
+        // mapped is newest first, so the first approved one is the latest approved.
+        var shown = mapped.FirstOrDefault(version => version.State == "approved") ?? current;
+        return current is null ? null : new FileRecord(itemId.Value, body.WorkspaceId.Value, current, mapped, shown?.Id);
     }
 
     public async ValueTask<IReadOnlyList<FileVersionSourceRecord>?> AuthorizeVersionHistoryAsync(
@@ -410,7 +415,8 @@ public sealed class FileStore(
                 PreviewMediaType(version.FileName, version.MediaType, version.ByteLength) ?? version.MediaType,
                 version.ByteLength,
                 version.Sha256,
-                Previewable(version.FileName, version.MediaType, version.ByteLength, version.Previewable));
+                Previewable(version.FileName, version.MediaType, version.ByteLength, version.Previewable),
+                version.Id.Value);
     }
 
     public async ValueTask<FileThumbnailDownloadRecord?> AuthorizeThumbnailAsync(ItemId itemId, FileVersionId? versionId, CancellationToken cancellationToken)
@@ -419,7 +425,7 @@ public sealed class FileStore(
         // withholds the body (no read access, a hidden item, a closed lock) withholds it too.
         var version = await FindReadableVersionAsync(itemId, versionId, cancellationToken).ConfigureAwait(false);
         return version is { ThumbnailWidth: { } width, ThumbnailHeight: { } height, ThumbnailBytes: { } bytes }
-            ? new FileThumbnailDownloadRecord(version.ObjectKey, width, height, bytes)
+            ? new FileThumbnailDownloadRecord(version.ObjectKey, width, height, bytes, version.Id.Value)
             : null;
     }
 
@@ -441,8 +447,18 @@ public sealed class FileStore(
         {
             return null;
         }
-        var wanted = versionId ?? body.CurrentVersionId;
-        return await database.FileVersions.AsNoTracking().SingleOrDefaultAsync(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId && candidate.WorkspaceId == body.WorkspaceId && candidate.Id == wanted && candidate.ObjectReady, cancellationToken).ConfigureAwait(false);
+        var versions = database.FileVersions.AsNoTracking().Where(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId && candidate.WorkspaceId == body.WorkspaceId && candidate.ObjectReady);
+        if (versionId is { } named)
+        {
+            // Any state is served by name, so a revoked version stays reachable to members.
+            return await versions.SingleOrDefaultAsync(candidate => candidate.Id == named, cancellationToken).ConfigureAwait(false);
+        }
+        // No version named: the shown one, the latest approved, else the current upload.
+        return await versions
+            .Where(candidate => candidate.State == "approved" || candidate.Id == body.CurrentVersionId)
+            .OrderByDescending(candidate => candidate.State == "approved")
+            .ThenByDescending(candidate => candidate.Version)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private Task<int> LockDownloadContainmentAsync(ItemId itemId, CancellationToken cancellationToken) =>
@@ -465,8 +481,9 @@ public sealed class FileStore(
             return;
         }
 
+        // Only a draft follows its item's title: an approved or revoked version keeps its exact name.
         var currentFileName = await database.FileVersions.AsNoTracking()
-            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId)
+            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == "draft")
             .Select(version => version.FileName)
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (currentFileName is null)
@@ -484,11 +501,92 @@ public sealed class FileStore(
         // load-and-save, so this runs as one statement inside the request's ambient transaction
         // and lands in the same unit of work as the title write that triggered it.
         await database.FileVersions
-            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId)
+            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == "draft")
             .ExecuteUpdateAsync(
                 update => update.SetProperty(version => version.FileName, renamed),
                 cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    private static readonly (string From, string To)[] Transitions =
+    [
+        ("draft", "in_review"), ("draft", "approved"), ("in_review", "approved"),
+        ("in_review", "draft"), ("approved", "revoked"),
+    ];
+
+    public async ValueTask<FileVersionStateResult> SetVersionStateAsync(
+        ItemId itemId,
+        FileVersionId versionId,
+        string state,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var context = Context;
+        await LockDownloadContainmentAsync(itemId, cancellationToken).ConfigureAwait(false);
+        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
+        if (item is not { Type: "file" }
+            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || !await locks.MayReadBodyAsync(itemId, cancellationToken).ConfigureAwait(false))
+        {
+            return new(FileVersionStateOutcome.NotFound);
+        }
+
+        // Concurrent changes to one version queue here; the row is re-read after the wait.
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT file_version_id FROM file_version WHERE tenant_id = {context.TenantId.Value} AND file_version_id = {versionId.Value} FOR UPDATE",
+            cancellationToken).ConfigureAwait(false);
+        var version = await database.FileVersions.AsTracking().SingleOrDefaultAsync(
+            candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId
+                && candidate.WorkspaceId == item.WorkspaceId && candidate.Id == versionId && candidate.ObjectReady,
+            cancellationToken).ConfigureAwait(false);
+        if (version is null)
+        {
+            return new(FileVersionStateOutcome.NotFound);
+        }
+        if (!await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        {
+            return new(FileVersionStateOutcome.NotPermitted);
+        }
+        if (!Transitions.Contains((version.State, state)))
+        {
+            return new(FileVersionStateOutcome.InvalidTransition, From: version.State);
+        }
+        if (state is "approved" or "revoked")
+        {
+            var workspace = await database.Workspaces.AsNoTracking().SingleAsync(
+                candidate => candidate.TenantId == context.TenantId && candidate.Id == item.WorkspaceId,
+                cancellationToken).ConfigureAwait(false);
+            if (!AgentPolicyGate.MayChangeVersionState(credential, workspace))
+            {
+                return new(FileVersionStateOutcome.NotPermitted);
+            }
+        }
+
+        var now = clock.GetUtcNow();
+        var before = version.State;
+        version.State = state;
+        version.StateChangedBy = context.PrincipalId;
+        version.StateChangedAt = now;
+        database.AuditEvents.Add(new AuditEvent
+        {
+            Id = AuditEventId.Create(),
+            TenantId = context.TenantId,
+            WorkspaceId = item.WorkspaceId,
+            ActorId = context.PrincipalId,
+            Action = "file_version.state_changed",
+            SubjectId = version.Id.Value,
+            SubjectType = "file_version",
+            Before = $$"""{"state":"{{before}}","itemId":"{{itemId.Value}}"}""",
+            After = $$"""{"state":"{{state}}","itemId":"{{itemId.Value}}"}""",
+            OccurredAt = now,
+        });
+        await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var currentId = await database.FileBodies.AsNoTracking()
+            .Where(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId)
+            .Select(candidate => candidate.CurrentVersionId)
+            .SingleAsync(cancellationToken).ConfigureAwait(false);
+        return new(FileVersionStateOutcome.Changed, ToVersion(version, version.Id == currentId));
     }
 
     private NixSessionContext Context => session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
@@ -522,7 +620,12 @@ public sealed class FileStore(
         value.PixelHeight,
         value.CreatedAt,
         current,
-        value is { ThumbnailWidth: { } width, ThumbnailHeight: { } height } ? new FileThumbnailRecord(width, height) : null);
+        value is { ThumbnailWidth: { } width, ThumbnailHeight: { } height } ? new FileThumbnailRecord(width, height) : null,
+        value.State,
+        value.StateChangedBy?.Value,
+        value.StateChangedAt,
+        value.SourceItemId?.Value,
+        value.SourceSeq);
 
     private static bool Previewable(string fileName, string mediaType, long byteLength, bool storedPreviewable) =>
         storedPreviewable

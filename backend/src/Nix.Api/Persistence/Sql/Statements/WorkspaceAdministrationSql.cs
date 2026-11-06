@@ -15,7 +15,8 @@ public static class WorkspaceAdministrationSql
         ), candidates AS MATERIALIZED (
             SELECT w.workspace_id, w.name, w.version_retention_days,
                    w.storage_quota_bytes, w.created_at, w.personal_owner_principal_id,
-                   w.lifecycle_state, w.archived_at, w.daily_notes, w.membership_locked, w.collaboration
+                   w.lifecycle_state, w.archived_at, w.daily_notes, w.membership_locked, w.collaboration,
+                   w.agents_may_approve, w.agents_may_create_public_links
             FROM workspace w
             CROSS JOIN caller c
             WHERE w.tenant_id = @tenant_id
@@ -83,7 +84,7 @@ public static class WorkspaceAdministrationSql
                        r.personal_owner_principal_id IS NOT NULL)
                ) AS can_use_daily_notes,
                pending.invitation_id, r.lifecycle_state, r.archived_at,
-               r.membership_locked, r.collaboration
+               r.membership_locked, r.collaboration, r.agents_may_approve, r.agents_may_create_public_links
         FROM reachable r CROSS JOIN caller c
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -148,7 +149,7 @@ public static class WorkspaceAdministrationSql
                             THEN (w.daily_notes ->> 'enabled')::boolean END,
                        w.personal_owner_principal_id IS NOT NULL)),
                pending.invitation_id, w.lifecycle_state, w.archived_at,
-               w.membership_locked, w.collaboration
+               w.membership_locked, w.collaboration, w.agents_may_approve, w.agents_may_create_public_links
         FROM workspace w CROSS JOIN caller c CROSS JOIN held h
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -216,6 +217,35 @@ public static class WorkspaceAdministrationSql
                                WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
                                  AND gm.principal_id = @principal_id)))))
         RETURNING workspace_id
+        """;
+
+    /// <summary>Sets the agent policy switches named, only for an owner.</summary>
+    public const string SetAgentPolicy = """
+        WITH updated AS (
+            UPDATE workspace w
+            SET agents_may_approve = COALESCE(@agents_may_approve, w.agents_may_approve),
+                agents_may_create_public_links = COALESCE(@agents_may_create_public_links, w.agents_may_create_public_links)
+            WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+              AND (EXISTS (SELECT 1 FROM workspace_member wm
+                           WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
+                             AND wm.role = 'owner'
+                             AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)
+                               OR (wm.subject_type = 'group' AND EXISTS (
+                                   SELECT 1 FROM group_membership gm
+                                   WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
+                                     AND gm.principal_id = @principal_id)))))
+            RETURNING w.workspace_id, w.agents_may_approve, w.agents_may_create_public_links
+        ), audited AS (
+            INSERT INTO audit_event
+                (event_id, tenant_id, workspace_id, actor_id, action, subject_id, subject_type, after, occurred_at)
+            SELECT gen_random_uuid(), @tenant_id, workspace_id, @principal_id, 'workspace.agent_policy_changed',
+                   workspace_id, 'workspace',
+                   jsonb_build_object('agentsMayApprove', agents_may_approve,
+                                      'agentsMayCreatePublicLinks', agents_may_create_public_links),
+                   now()
+            FROM updated
+        )
+        SELECT workspace_id FROM updated
         """;
 
     /// <summary>Archives a workspace only for an owner.</summary>

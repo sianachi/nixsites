@@ -29,8 +29,8 @@ public sealed record NativeItemSnapshot(
     string? BodyHeadSeq,
     NativeFileSnapshot? File);
 
-/// <summary>The current file's metadata, without an object key or capability.</summary>
-public sealed record NativeFileSnapshot(Guid VersionId, string FileName, string MediaType, long ByteLength, string Sha256);
+/// <summary>The shown version's metadata (latest approved, else current), without an object key or capability.</summary>
+public sealed record NativeFileSnapshot(Guid VersionId, string FileName, string MediaType, long ByteLength, string Sha256, string State = "draft");
 
 /// <summary>A paged enumeration with a feed boundary captured before the first page.</summary>
 public sealed record WorkspaceSyncSnapshot(

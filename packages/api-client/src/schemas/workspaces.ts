@@ -30,6 +30,10 @@ export const workspaceSchema = z.object({
   membershipLocked: z.boolean().default(false),
   /** Whether several people may edit a file at once; off means one editor at a time. */
   collaboration: z.boolean().default(true),
+  /** Whether access tokens and external bearers may approve or revoke file versions. */
+  agentsMayApprove: z.boolean().default(false),
+  /** Whether they may create public links. */
+  agentsMayCreatePublicLinks: z.boolean().default(false),
 });
 
 export type Workspace = z.infer<typeof workspaceSchema>;

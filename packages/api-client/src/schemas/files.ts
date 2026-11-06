@@ -20,12 +20,20 @@ const fileVersionSchema = z.object({
   current: z.boolean(),
   // Null when the version has no thumbnail, and the default when an older server omits the field.
   thumbnail: fileThumbnailSchema.nullable().default(null),
+  // Optional: an older server omits the lifecycle fields, and the version is then a draft.
+  state: z.enum(['draft', 'in_review', 'approved', 'revoked']).optional(),
+  stateChangedBy: z.uuid().nullable().optional(),
+  stateChangedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  sourceItemId: z.uuid().nullable().optional(),
+  sourceSeq: z.number().int().nonnegative().nullable().optional(),
 });
 export const fileRecordSchema = z.object({
   itemId: z.uuid(),
   workspaceId: z.uuid(),
   current: fileVersionSchema,
   versions: z.array(fileVersionSchema),
+  // The version the file shows: latest approved, else the current upload.
+  shownVersionId: z.uuid().nullable().optional(),
 });
 export const fileUploadSchema = z.object({
   id: z.uuid(),
@@ -53,6 +61,8 @@ export const fileDownloadCapabilitySchema = z.object({
   inline: z.boolean(),
   unscanned: z.boolean(),
   noSniff: z.boolean(),
+  // The version served when the request named none.
+  versionId: z.uuid().nullable().optional(),
 });
 export const fileThumbnailCapabilitySchema = z.object({
   url: z.url(),
@@ -60,6 +70,7 @@ export const fileThumbnailCapabilitySchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   byteLength: z.number().int().positive(),
+  versionId: z.uuid().nullable().optional(),
 });
 
 const _fileThumbnailContract = fileThumbnailSchema satisfies z.ZodType<
