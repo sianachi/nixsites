@@ -38,6 +38,33 @@ public interface IItemProtections
     /// <returns>The blockers, shallowest first; empty when nothing blocks.</returns>
     public ValueTask<IReadOnlyList<DeleteBlocker>> FindDeleteBlockersAsync(ItemId itemId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether a file at or below <paramref name="itemId"/> is pinned by a reference whose holder is
+    /// in use (neither it nor any ancestor is in the trash).
+    /// </summary>
+    /// <param name="itemId">The root of the subtree.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns><see langword="true"/> when trashing the root would hide a pinned file.</returns>
+    public ValueTask<bool> AnyPinnedAtOrBelowAsync(ItemId itemId, CancellationToken cancellationToken);
+
+    /// <summary>Whether any reference, whatever its holder's state, pins a version of this file. Stops a permanent delete.</summary>
+    /// <param name="itemId">The file item.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns><see langword="true"/> when a pin still names it.</returns>
+    public ValueTask<bool> IsPinTargetAsync(ItemId itemId, CancellationToken cancellationToken);
+
+    /// <summary>Whether <paramref name="itemId"/> or anything below it holds or is the target of a reference.</summary>
+    /// <param name="itemId">The root of the subtree.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns><see langword="true"/> when a reference touches the subtree, in either direction and whatever its state.</returns>
+    public ValueTask<bool> AnyReferencedAtOrBelowAsync(ItemId itemId, CancellationToken cancellationToken);
+
+    /// <summary>Deletes every reference the item holds. Purge is a lifecycle flag, so no foreign key does this.</summary>
+    /// <param name="itemId">The holder.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when the rows are gone.</returns>
+    public ValueTask ReleaseHeldReferencesAsync(ItemId itemId, CancellationToken cancellationToken);
+
     /// <summary>Writes the protections named, leaving a null one as it stands.</summary>
     /// <param name="itemId">The item.</param>
     /// <param name="noDelete">Whether it is protected from deletion, or null to leave it.</param>

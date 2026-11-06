@@ -34,6 +34,9 @@ public sealed class WorkspaceItemMoveTests(NixPostgresFixture fixture) : IAsyncL
         {
             await RawSql.ExecuteAsync(connection, transaction: null, $"""
                 DELETE FROM tenant_role WHERE tenant_id = '{alpha.TenantId}'::uuid;
+                -- The isolation seed gives the root a reference to itself; a transfer is refused while
+                -- any reference touches the subtree, and these tests are not about references.
+                DELETE FROM item_reference WHERE tenant_id = '{alpha.TenantId}'::uuid;
                 -- M0's isolation corpus includes live template operations over its root.
                 -- These move tests start after those operations have finished.
                 UPDATE template_operation SET state = 'aborted' WHERE tenant_id = '{alpha.TenantId}'::uuid;

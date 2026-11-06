@@ -10,6 +10,7 @@ using Nix.Abstractions;
 using Nix.Authentication;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
+using Nix.Features.Items;
 using Nix.Features.PublicLinks;
 using Nix.Features.Tokens;
 using Nix.Integration.Tests.Harness;
@@ -184,7 +185,7 @@ public sealed class PublicLinkTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Ending_the_subtree_is_permanent_so_trash_then_restore_does_not_revive_a_link()
+    public async Task Trashing_an_ancestor_ends_the_link_and_restoring_does_not_revive_it()
     {
         var file = await NewFileAsync();
         await AddVersionAsync(file, 1, "approved");
@@ -192,12 +193,17 @@ public sealed class PublicLinkTests : IAsyncLifetime
 
         await using (var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
         {
-            await work.Resolve<IPublicLinkLifecycle>().EndForSubtreeAsync(ItemId.From(Alpha.ItemId), Cancellation);
+            var deleted = await work.Resolve<NixDispatcher>().SendAsync<DeleteItem, ItemId>(new DeleteItem(ItemId.From(Alpha.ItemId)), Cancellation);
+            Assert.True(deleted.IsSuccess);
             await work.CommitAsync(Cancellation);
         }
 
-        await Sql($"UPDATE item SET lifecycle_state = 'deleted', purge_after = now() + interval '30 days' WHERE id = '{Alpha.ItemId}'");
-        await Sql($"UPDATE item SET lifecycle_state = 'active', purge_after = NULL WHERE id = '{Alpha.ItemId}'");
+        await using (var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
+        {
+            var restored = await work.Resolve<NixDispatcher>().SendAsync<RestoreItem, Item>(new RestoreItem(ItemId.From(Alpha.ItemId)), Cancellation);
+            Assert.True(restored.IsSuccess);
+            await work.CommitAsync(Cancellation);
+        }
 
         Assert.Equal(HttpStatusCode.NotFound, await ReadStatusAsync(link.Token));
         Assert.Equal("1", await Scalar($"SELECT count(*) FROM public_link WHERE item_id = '{file}' AND revoked_at IS NOT NULL"));

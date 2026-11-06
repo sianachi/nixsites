@@ -47,8 +47,8 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
     {
         var tenantId = TenantId;
 
-        // The closure includes the item itself at depth 0. A pin counts only while its holder is
-        // active: a trashed record no longer needs the version it pinned.
+        // The closure includes the item itself at depth 0. A pin counts on the same terms as
+        // AnyPinnedAtOrBelowAsync, so the notice names exactly what refused the delete.
         var rows = await database.Database.SqlQuery<BlockerRow>($"""
             SELECT d.id AS "Id",
                    COALESCE(d.properties ->> 'title', '') AS "Title",
@@ -64,12 +64,16 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
                     OR EXISTS (
                         SELECT 1
                           FROM item_reference pin
-                          JOIN item holder
-                            ON holder.tenant_id = pin.tenant_id AND holder.id = pin.holder_item_id
                          WHERE pin.tenant_id = d.tenant_id
                            AND pin.target_item_id = d.id
                            AND pin.target_file_version_id IS NOT NULL
-                           AND holder.lifecycle_state = 'active'))
+                           AND NOT EXISTS (
+                                SELECT 1
+                                  FROM item_closure up
+                                  JOIN item holder ON holder.tenant_id = up.tenant_id AND holder.id = up.ancestor_id
+                                 WHERE up.tenant_id = pin.tenant_id
+                                   AND up.descendant_id = pin.holder_item_id
+                                   AND holder.lifecycle_state <> 'active')))
              ORDER BY edge.depth, d.id
              LIMIT 5
             """).ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -78,6 +82,78 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "EF Core materialises SqlQuery rows through reflection.")]
     private sealed record BlockerRow(Guid Id, string Title, string Reason);
+
+    /// <inheritdoc />
+    public async ValueTask<bool> AnyPinnedAtOrBelowAsync(ItemId itemId, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+
+        // A pin protects while its holder is in use: neither the holder nor any ancestor of it is
+        // trashed (closure depth 0 is the holder itself). Only an active target counts, so nothing
+        // already hidden blocks anything; IsPinTargetAsync still stops the permanent delete.
+        return await database.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1
+                  FROM item_closure edge
+                  JOIN item_reference pin
+                    ON pin.tenant_id = edge.tenant_id
+                   AND pin.target_item_id = edge.descendant_id
+                   AND pin.target_file_version_id IS NOT NULL
+                  JOIN item target
+                    ON target.tenant_id = pin.tenant_id
+                   AND target.id = pin.target_item_id
+                   AND target.lifecycle_state = 'active'
+                 WHERE edge.tenant_id = {tenantId}
+                   AND edge.ancestor_id = {itemId.Value}
+                   AND NOT EXISTS (
+                        SELECT 1
+                          FROM item_closure up
+                          JOIN item holder ON holder.tenant_id = up.tenant_id AND holder.id = up.ancestor_id
+                         WHERE up.tenant_id = pin.tenant_id
+                           AND up.descendant_id = pin.holder_item_id
+                           AND holder.lifecycle_state <> 'active')) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> IsPinTargetAsync(ItemId itemId, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+        return await database.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1 FROM item_reference pin
+                 WHERE pin.tenant_id = {tenantId}
+                   AND pin.target_item_id = {itemId.Value}
+                   AND pin.target_file_version_id IS NOT NULL) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> AnyReferencedAtOrBelowAsync(ItemId itemId, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+        return await database.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1 FROM item_closure edge
+                  JOIN item_reference ref
+                    ON ref.tenant_id = edge.tenant_id AND ref.holder_item_id = edge.descendant_id
+                 WHERE edge.tenant_id = {tenantId} AND edge.ancestor_id = {itemId.Value})
+                OR EXISTS (
+                SELECT 1 FROM item_closure edge
+                  JOIN item_reference ref
+                    ON ref.tenant_id = edge.tenant_id AND ref.target_item_id = edge.descendant_id
+                 WHERE edge.tenant_id = {tenantId} AND edge.ancestor_id = {itemId.Value}) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask ReleaseHeldReferencesAsync(ItemId itemId, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM item_reference WHERE tenant_id = {tenantId} AND holder_item_id = {itemId.Value}",
+            cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     public async ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, bool? collaboration, CancellationToken cancellationToken)

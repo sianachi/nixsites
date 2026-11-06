@@ -377,6 +377,11 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IBookmarkShelf, BookmarkShelfStore>();
         services.AddScoped<IItemLocks, ItemLockStore>();
         services.AddScoped<IItemProtections, Nix.Persistence.Items.ItemProtectionStore>();
+        services.AddScoped<Nix.Features.References.IItemReferenceStore, Nix.Persistence.References.ItemReferenceStore>();
+        services.AddScoped<ICommandHandler<Nix.Features.References.AddReference, Nix.Features.References.ItemReferenceResponse>, Nix.Features.References.ReferenceHandler>();
+        services.AddScoped<ICommandHandler<Nix.Features.References.RemoveReference, Guid>, Nix.Features.References.ReferenceHandler>();
+        services.AddScoped<IQueryHandler<Nix.Features.References.ListReferences, Result<Nix.Features.References.ReferencePage<Nix.Features.References.ItemReferenceResponse>>>, Nix.Features.References.ReferenceHandler>();
+        services.AddScoped<IQueryHandler<Nix.Features.References.ListReferencedBy, Result<Nix.Features.References.ReferencePage<Nix.Features.References.ItemReferencedByResponse>>>, Nix.Features.References.ReferenceHandler>();
 
         // One per process: the backoff it keeps and the derivation ceiling it enforces are only
         // meaningful if every request shares them.

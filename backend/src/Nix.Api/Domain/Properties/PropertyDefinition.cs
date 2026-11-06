@@ -29,7 +29,7 @@ namespace Nix.Domain.Properties;
 /// count of the children themselves. Null for every other type.
 /// </param>
 /// <param name="Unique">
-/// For a text or url field: no two direct children of the declaring collection may hold the same
+/// For a field that can be a key: no two direct children of the declaring collection may hold the same
 /// canonical value. Scope is the declaring item's own children, not its descendants.
 /// </param>
 /// <remarks>

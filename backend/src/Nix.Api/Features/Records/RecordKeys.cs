@@ -26,7 +26,7 @@ public sealed record RecordClaim(PropertyDefinition Definition, string? Value);
 /// </remarks>
 public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks, IFinanceLock topology)
 {
-    /// <summary>The text and url fields the collection itself declares unique.</summary>
+    /// <summary>The key fields the collection itself declares unique.</summary>
     /// <param name="collection">The collection, or null for a workspace root.</param>
     /// <returns>The unique declarations, usually none.</returns>
     public static ImmutableArray<PropertyDefinition> UniqueFields(Item? collection) =>
@@ -43,7 +43,7 @@ public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks, IFinance
 
     /// <summary>Whether a stored schema declares any unique field (for paths that must refuse rather than claim).</summary>
     /// <param name="schemaJson">The stored schema.</param>
-    /// <returns>True when at least one text or url field is unique.</returns>
+    /// <returns>True when at least one key field is unique.</returns>
     public static bool DeclaresUnique(string? schemaJson) =>
         schemaJson is not null && PropertySchemaJson.Read(schemaJson).Properties.Any(IsKeyField);
 

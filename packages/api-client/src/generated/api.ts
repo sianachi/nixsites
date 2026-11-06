@@ -779,7 +779,7 @@ export interface paths {
     post?: never;
     /**
      * Soft-delete an item
-     * @description Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion.
+     * @description Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion, and 'items.pinned' (409) when a file at or below it is pinned by a reference.
      */
     delete: operations['DeleteItem'];
     options?: never;

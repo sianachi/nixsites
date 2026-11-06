@@ -54,7 +54,7 @@ public sealed record CreateItem(
     internal bool CalendarWrite { get; init; }
 
     /// <summary>
-    /// Refuse undeclared keys (built-in keys such as <c>reminder</c> and <c>due_date</c> aside) and
+    /// Refuse undeclared keys (built-in keys aside) and
     /// enforce required fields. Off for plain REST so existing callers keep working.
     /// </summary>
     public bool Strict { get; init; }

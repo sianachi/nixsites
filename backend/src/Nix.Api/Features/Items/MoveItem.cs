@@ -53,7 +53,8 @@ public sealed class MoveItemHandler(
     IItemLocks locks,
     IFinanceMutationGuard? financeGuard = null,
     IFinanceLock? topology = null,
-    Nix.Features.Records.RecordKeys? recordKeys = null)
+    Nix.Features.Records.RecordKeys? recordKeys = null,
+    IItemProtections? protections = null)
     : ICommandHandler<MoveItem, Item>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -239,6 +240,14 @@ public sealed class MoveItemHandler(
         {
             return Result.Failure<Item>(ItemErrors.Locked("Unlock the current parent before moving this item to another workspace."));
         }
+        // A reference stays inside one workspace, so one that touches the subtree would cross over.
+        if (protections is not null
+            && await protections.AnyReferencedAtOrBelowAsync(item.Id, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<Item>(ItemErrors.TransferConflict(
+                "This item, or an item inside it, holds or is the target of a reference. Remove the references before moving it to another workspace."));
+        }
+
         Item? transferParent = null;
         if (command.NewParentId is { } parentId)
         {

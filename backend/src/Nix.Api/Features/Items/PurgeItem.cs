@@ -19,7 +19,8 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
     private readonly IFinanceMutationGuard? _financeGuard;
     private readonly ISiteStore? _sites;
     private readonly IRecordKeyStore? _recordKeys;
-    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null, IRecordKeyStore? recordKeys = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites, _recordKeys) = (tree, permissions, session, clock, locks, financeGuard, sites, recordKeys);
+    private readonly IItemProtections? _protections;
+    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null, IRecordKeyStore? recordKeys = null, IItemProtections? protections = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites, _recordKeys, _protections) = (tree, permissions, session, clock, locks, financeGuard, sites, recordKeys, protections);
 
     public async ValueTask<Result<ItemId>> HandleAsync(PurgeItem command, CancellationToken cancellationToken)
     {
@@ -70,9 +71,21 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
         {
             return Result.Failure<ItemId>(ItemErrors.LifecycleConflict("This record has children and its collection requires unique keys. Move or delete the children first."));
         }
+        // A file can reach the trash while the record pinning it is itself in the trash; that record
+        // may come back, so the exact version it names stays until the pin goes.
+        if (_protections is not null && await _protections.IsPinTargetAsync(item.Id, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<ItemId>(ItemErrors.Pinned("A record still pins this file. Remove the pin before deleting it permanently."));
+        }
+
         var context = _session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var now = _clock.GetUtcNow();
         await _tree.ReparentChildrenAsync(item.WorkspaceId, item.Id, item.ParentId, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
+        // Purge is a lifecycle flag, so the foreign key cascade never fires: drop what the item holds.
+        if (_protections is not null)
+        {
+            await _protections.ReleaseHeldReferencesAsync(item.Id, cancellationToken).ConfigureAwait(false);
+        }
         await _tree.SetLifecycleAsync(item.Id, ItemLifecycleState.Purged, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
         if (_recordKeys is not null)
         {

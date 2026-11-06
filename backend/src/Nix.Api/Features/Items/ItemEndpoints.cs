@@ -178,7 +178,8 @@ internal static class ItemEndpoints
                 + "invisible by derivation rather than being rewritten, so restoring is a single "
                 + "flag flip. Purging is a separate, retention-driven operation. Fails with "
                 + "'items.delete_protected' (409) when the item, or an item beneath it, is "
-                + "protected from deletion.")
+                + "protected from deletion, and 'items.pinned' (409) when a file at or below it is "
+                + "pinned by a reference.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -298,7 +299,7 @@ internal static class ItemEndpoints
         {
             Properties.PropertyErrors.InvalidPropertiesCode => StatusCodes.Status422UnprocessableEntity,
             CycleCode or LifecycleConflictCode or SiblingNotInDestinationCode
-                or DeleteProtectedCode or ChildrenProtectedCode or ProtectionManagedCode or ReadOnlyCode
+                or DeleteProtectedCode or "items.pinned" or ChildrenProtectedCode or ProtectionManagedCode or ReadOnlyCode
                 or BodyConflictCode
                 or "items.transfer_conflict" or "items.idempotency_conflict" =>
                 StatusCodes.Status409Conflict,
