@@ -110,6 +110,43 @@ public sealed class S3CapabilitySigner
         return Sign("GET", key, parameters);
     }
 
+    /// <summary>The longest an anonymous public-link download URL lives.</summary>
+    public const int PublicLinkSeconds = 60;
+
+    // Presigned responses cannot carry nosniff, so only types a browser renders without sniffing
+    // into script are served inline; SVG and everything else is forced to download.
+    private static readonly HashSet<string> PublicInlineTypes = new(StringComparer.Ordinal)
+    {
+        "application/pdf", "image/png", "image/jpeg", "image/webp", "image/avif",
+    };
+
+    /// <summary>
+    /// Signs a read for an anonymous public link: at most 60 seconds, never cached, and inline only
+    /// for the exact stored types in the narrow list above (the public route is the only caller;
+    /// private downloads use <see cref="GetForBrowser"/>).
+    /// </summary>
+    public ObjectCapability GetForPublicLink(string key, string fileName, string mediaType)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
+        var inline = PublicInlineTypes.Contains(mediaType);
+        var asciiName = new string(fileName.Select(character =>
+            character is >= (char)0x20 and <= (char)0x7e && character is not '"' and not '\\'
+                ? character
+                : '_').ToArray());
+        var disposition = inline ? "inline" : "attachment";
+        var parameters = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["response-content-disposition"] = $"{disposition}; filename=\"{asciiName}\"; filename*=UTF-8''{Encode(fileName)}",
+            ["response-content-type"] = inline ? mediaType : "application/octet-stream",
+            ["response-cache-control"] = "no-store",
+        };
+        return Sign("GET", key, parameters, lifetimeSeconds: Math.Min(PublicLinkSeconds, _options.CapabilitySeconds));
+    }
+
+    /// <summary>Whether a public link serves this exact stored media type inline.</summary>
+    public static bool ServesInlineOnPublicLink(string mediaType) => PublicInlineTypes.Contains(mediaType);
+
     /// <summary>Signs a cleanup capability.</summary>
     public ObjectCapability Delete(string key) => Sign("DELETE", key, null);
 
@@ -136,8 +173,10 @@ public sealed class S3CapabilitySigner
         string method,
         string key,
         IReadOnlyDictionary<string, string>? responseParameters = null,
-        IReadOnlyDictionary<string, string>? requestHeaders = null)
+        IReadOnlyDictionary<string, string>? requestHeaders = null,
+        int? lifetimeSeconds = null)
     {
+        var lifetime = lifetimeSeconds ?? _options.CapabilitySeconds;
         if (_options.Endpoint is null)
         {
             throw new InvalidOperationException("Private object storage is not configured.");
@@ -174,7 +213,7 @@ public sealed class S3CapabilitySigner
             ["X-Amz-Algorithm"] = "AWS4-HMAC-SHA256",
             ["X-Amz-Credential"] = $"{_options.AccessKey}/{scope}",
             ["X-Amz-Date"] = timestamp,
-            ["X-Amz-Expires"] = _options.CapabilitySeconds.ToString(CultureInfo.InvariantCulture),
+            ["X-Amz-Expires"] = lifetime.ToString(CultureInfo.InvariantCulture),
             ["X-Amz-SignedHeaders"] = signedHeaders,
         };
         if (responseParameters is not null)
@@ -213,7 +252,7 @@ public sealed class S3CapabilitySigner
         var baseUri = publicOrigin.GetLeftPart(UriPartial.Authority).TrimEnd('/');
         var endpointPath = _options.Endpoint.AbsolutePath.TrimEnd('/');
         var url = $"{baseUri}{endpointPath}{canonicalPath[(endpointPath.Length == 0 ? 0 : endpointPath.Length)..]}?{CanonicalQuery(parameters)}";
-        return new ObjectCapability(new Uri(url, UriKind.Absolute), now.AddSeconds(_options.CapabilitySeconds));
+        return new ObjectCapability(new Uri(url, UriKind.Absolute), now.AddSeconds(lifetime));
     }
 
     private static string CanonicalPath(Uri endpoint, string bucket, string key)
