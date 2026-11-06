@@ -273,7 +273,7 @@ export function registerRecordExtensions(program: Command, act: Act): void {
   sub('item')
     .command('expire <itemId>')
     .description('Set when an item moves to the trash, or clear it. Restoring clears the date.')
-    .option('--at <iso>', 'a future ISO 8601 date or instant')
+    .option('--at <iso>', 'a future time with its offset, such as 2027-04-02T17:00:00Z')
     .option('--clear', 'remove the expiry', false)
     .action((itemId: string, options: { at?: string; clear?: boolean }, command: Command) =>
       act(command, (profile, output) =>

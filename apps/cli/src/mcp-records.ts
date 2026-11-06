@@ -366,10 +366,18 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
     'set_item_expiry',
     {
       description:
-        'Set or clear (null) when an item moves to the trash, as an ISO 8601 date or instant in the future. You are ' +
+        'Set or clear (null) when an item moves to the trash, as a future time with its offset. You are ' +
         'notified 7 days before and at expiry. Protected items and folders holding protected or pinned items are ' +
         'skipped with a notice. Restoring an item clears its date. Trash does not empty itself.',
-      inputSchema: { itemId: identifier, expiresAt: z.string().min(1).max(64).nullable() },
+      inputSchema: {
+        itemId: identifier,
+        expiresAt: z
+          .string()
+          .min(1)
+          .max(64)
+          .nullable()
+          .describe('A future time with its offset, such as 2027-04-02T17:00:00Z. Null clears it.'),
+      },
     },
     ({ itemId, expiresAt }) =>
       toolResult(async () =>
