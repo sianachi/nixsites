@@ -28,7 +28,9 @@ internal sealed record WorkspaceResponse(
     string LifecycleState,
     DateTimeOffset? ArchivedAt,
     bool MembershipLocked,
-    bool Collaboration);
+    bool Collaboration,
+    bool? AgentsMayApprove = null,
+    bool? AgentsMayCreatePublicLinks = null);
 
 /// <summary>A request to create a shared workspace.</summary>
 internal sealed record CreateWorkspaceRequest(string Name);

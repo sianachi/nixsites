@@ -88,6 +88,15 @@ public static class AccessTokenScopePolicy
             return Requirement.InteractiveOnly;
         }
 
+        // The agent policy decides what access tokens and external bearers may approve or publish;
+        // a credential it governs must not be able to change it, so no scope admits a token here.
+        // Compared with trailing slashes removed, like every rule below.
+        if (!IsRead(method)
+            && (path.Value ?? string.Empty).TrimEnd('/').EndsWith("/agent-policy", StringComparison.OrdinalIgnoreCase))
+        {
+            return Requirement.InteractiveOnly;
+        }
+
         // Connecting or disconnecting a calendar account hands a third party an OAuth grant, or
         // takes it away: an interactive-user boundary, like managing tokens. Listing accounts and
         // their calendars remains Read through the shortcut below.
@@ -213,7 +222,8 @@ public static class AccessTokenScopePolicy
         var tail = rest[(slash + 1)..];
         return string.Equals(tail, "query", StringComparison.OrdinalIgnoreCase)
             || string.Equals(tail, "query/aggregate", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(tail, "sync/reconcile", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(tail, "sync/reconcile", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(tail, "lookup", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

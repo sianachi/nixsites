@@ -57,7 +57,8 @@ internal sealed record PropertyDefinitionResponse(
     string? Expression,
     string? Aggregate,
     string? Source,
-    PropertyChoiceSource? ChoiceSource = null);
+    PropertyChoiceSource? ChoiceSource = null,
+    bool? Unique = null);
 
 /// <summary>
 /// The property schema in force at an item.
@@ -120,7 +121,8 @@ internal sealed record PropertyDefinitionRequest(
     string? Expression = null,
     string? Aggregate = null,
     string? Source = null,
-    PropertyChoiceSource? ChoiceSource = null);
+    PropertyChoiceSource? ChoiceSource = null,
+    bool? Unique = null);
 
 /// <summary>
 /// Writes property values onto an item.
@@ -133,4 +135,4 @@ internal sealed record PropertyDefinitionRequest(
 /// <b>A merge, not a replacement.</b> A board dragging a card between columns sends one property;
 /// replacing the bag would drop every other property the item carries, which is most of them.
 /// </remarks>
-internal sealed record SetPropertiesRequest(JsonObject Properties);
+internal sealed record SetPropertiesRequest(JsonObject Properties, bool? Strict = null);

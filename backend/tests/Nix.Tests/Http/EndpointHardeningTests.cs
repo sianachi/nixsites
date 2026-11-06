@@ -168,7 +168,11 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
         // dashboard's tiles or an assistant's lookups never spend a person's saves.
         "/api/v1/workspaces/{workspaceId:guid}/query"
             or "/api/v1/workspaces/{workspaceId:guid}/query/aggregate"
-            or "/api/v1/workspaces/{workspaceId:guid}/sync/reconcile" => RateLimitRefusal.QueriesPolicyName,
+            or "/api/v1/workspaces/{workspaceId:guid}/sync/reconcile"
+            or "/api/v1/workspaces/{workspaceId:guid}/lookup" => RateLimitRefusal.QueriesPolicyName,
+
+        // Up to 100 rows a call: a window of its own, far smaller than the writes policy.
+        "/api/v1/workspaces/{workspaceId:guid}/records/batch" => RateLimitRefusal.BulkWritesPolicyName,
         _ => RateLimitRefusal.WritesPolicyName,
     };
 

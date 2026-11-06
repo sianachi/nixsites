@@ -24,6 +24,7 @@ namespace Nix.Serialization;
 [JsonSerializable(typeof(CreateWorkspaceRequest))]
 [JsonSerializable(typeof(RenameWorkspaceRequest))]
 [JsonSerializable(typeof(SetWorkspaceSharingRequest))]
+[JsonSerializable(typeof(SetAgentPolicyRequest))]
 [JsonSerializable(typeof(WorkspaceMemberResponse))]
 [JsonSerializable(typeof(CursorPage<WorkspaceMemberResponse>))]
 [JsonSerializable(typeof(WorkspacePrincipalResponse))]

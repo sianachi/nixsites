@@ -27,4 +27,5 @@ internal sealed record CreateItemRequest(
     string Title,
     Guid? ParentId,
     System.Text.Json.Nodes.JsonObject? Properties,
-    Guid? IdempotencyKey = null);
+    Guid? IdempotencyKey = null,
+    bool? Strict = null);

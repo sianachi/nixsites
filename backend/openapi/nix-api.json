@@ -763,6 +763,526 @@
         }
       }
     },
+    "/api/v1/items/{itemId}/file/versions/{versionId}/state": {
+      "put": {
+        "tags": [
+          "Files"
+        ],
+        "operationId": "SetFileVersionState",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetFileVersionStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileVersionRecord"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/agent-policy": {
+      "put": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "SetWorkspaceAgentPolicy",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/lookup": {
+      "post": {
+        "tags": [
+          "Records"
+        ],
+        "operationId": "LookupItemsByProperty",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupItemsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{parentId}/records/upsert": {
+      "post": {
+        "tags": [
+          "Records"
+        ],
+        "operationId": "UpsertRecord",
+        "parameters": [
+          {
+            "name": "parentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertRecordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpsertRecordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/records/batch": {
+      "post": {
+        "tags": [
+          "Records"
+        ],
+        "operationId": "BatchRecords",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRecordsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchRecordsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/v1/links/{token}": {
+      "get": {
+        "tags": [
+          "PublicLinks"
+        ],
+        "operationId": "ReadPublicLink",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicLinkReadResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/v1/links/{token}/files/{fileItemId}": {
+      "get": {
+        "tags": [
+          "PublicLinks"
+        ],
+        "operationId": "GetPublicLinkFile",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/attachments": {
+      "get": {
+        "tags": [
+          "Attachments"
+        ],
+        "operationId": "ListAttachments",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeImages",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "expiring",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfAttachmentRow"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health/status": {
       "get": {
         "tags": [
@@ -13040,6 +13560,392 @@
           }
         }
       }
+    },
+    "/api/v1/items/{itemId}/references": {
+      "get": {
+        "tags": [
+          "References"
+        ],
+        "operationId": "ListItemReferences",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfItemReferenceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "References"
+        ],
+        "operationId": "AddItemReference",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddItemReferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemReferenceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/references/{referenceId}": {
+      "delete": {
+        "tags": [
+          "References"
+        ],
+        "operationId": "RemoveItemReference",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "referenceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/referenced-by": {
+      "get": {
+        "tags": [
+          "References"
+        ],
+        "operationId": "ListReferencedBy",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfItemReferencedByResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/public-link": {
+      "get": {
+        "tags": [
+          "PublicLinks"
+        ],
+        "operationId": "GetPublicLink",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PublicLinks"
+        ],
+        "operationId": "CreatePublicLink",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPublicLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicLinkResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "PublicLinks"
+        ],
+        "operationId": "RevokePublicLink",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -13136,6 +14042,31 @@
               {
                 "$ref": "#/components/schemas/CommentAnchorRequest"
               }
+            ]
+          }
+        }
+      },
+      "AddItemReferenceRequest": {
+        "required": [
+          "targetItemId"
+        ],
+        "type": "object",
+        "properties": {
+          "targetItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetFileVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -13255,6 +14186,64 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AttachmentRow": {
+        "required": [
+          "itemId",
+          "title",
+          "mediaType",
+          "shownVersionId",
+          "shownVersionState",
+          "expiresAt",
+          "sourceItemId",
+          "pinCount",
+          "hasPublicLink"
+        ],
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "shownVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shownVersionState": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sourceItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "pinCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hasPublicLink": {
+            "type": "boolean"
           }
         }
       },
@@ -13706,6 +14695,206 @@
           }
         }
       },
+      "BatchRecordError": {
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "violations": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PropertyViolation"
+            }
+          },
+          "existingItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "BatchRecordResult": {
+        "required": [
+          "index",
+          "status",
+          "item",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "item": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ItemResponse"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BatchRecordError"
+              }
+            ]
+          }
+        }
+      },
+      "BatchRecordRow": {
+        "required": [
+          "parentId"
+        ],
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keyField": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "keyValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "itemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "properties": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BatchRecordsRequest": {
+        "required": [
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchRecordRow"
+            }
+          },
+          "strict": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "BatchRecordsResponse": {
+        "required": [
+          "rows",
+          "created",
+          "updated",
+          "unchanged",
+          "failed"
+        ],
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchRecordResult"
+            }
+          },
+          "created": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unchanged": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "BeginDocumentImportRequest": {
         "required": [
           "workspaceId",
@@ -13786,6 +14975,19 @@
               "null",
               "string"
             ]
+          },
+          "toFile": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "targetItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -15937,6 +17139,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "strict": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -16101,6 +17309,69 @@
           },
           "features": {
             "$ref": "#/components/schemas/CurrentPrincipalFeatures"
+          }
+        }
+      },
+      "CursorPageOfAttachmentRow": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentRow"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CursorPageOfItemReferencedByResponse": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemReferencedByResponse"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CursorPageOfItemReferenceResponse": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemReferenceResponse"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -16758,6 +18029,13 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "uploadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -16873,6 +18151,13 @@
             "items": {
               "$ref": "#/components/schemas/FileVersionRecord"
             }
+          },
+          "shownVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -17030,6 +18315,13 @@
               "null",
               "string"
             ]
+          },
+          "publishedVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -17115,6 +18407,42 @@
                 "$ref": "#/components/schemas/FileThumbnailRecord"
               }
             ]
+          },
+          "state": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stateChangedBy": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "stateChangedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sourceItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "sourceSeq": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -18991,6 +20319,129 @@
           }
         }
       },
+      "ItemReferencedByResponse": {
+        "required": [
+          "id",
+          "holderItemId",
+          "holderTitle",
+          "holderAvailable",
+          "targetItemId",
+          "targetFileVersionId",
+          "role",
+          "createdBy",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holderTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "holderAvailable": {
+            "type": "boolean"
+          },
+          "targetItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetFileVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ItemReferenceResponse": {
+        "required": [
+          "id",
+          "holderItemId",
+          "targetItemId",
+          "targetTitle",
+          "targetAvailable",
+          "targetFileVersionId",
+          "targetVersionState",
+          "role",
+          "createdBy",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetAvailable": {
+            "type": "boolean"
+          },
+          "targetFileVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "targetVersionState": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ItemResponse": {
         "required": [
           "id",
@@ -19428,6 +20879,57 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "LookupItemsRequest": {
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "LookupItemsResponse": {
+        "required": [
+          "matches"
+        ],
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LookupMatch"
+            }
+          }
+        }
+      },
+      "LookupMatch": {
+        "required": [
+          "item",
+          "trashed"
+        ],
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ItemResponse"
+          },
+          "trashed": {
+            "type": "boolean"
           }
         }
       },
@@ -20907,6 +22409,25 @@
           "traceId": {
             "type": "string",
             "description": "Identifier of the server-side trace that produced this failure."
+          },
+          "violations": {
+            "type": "array",
+            "items": {
+              "required": [
+                "key",
+                "reason"
+              ],
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The properties a write refused, one entry per key. Only on 'properties.invalid'."
           }
         }
       },
@@ -20987,6 +22508,12 @@
                 "$ref": "#/components/schemas/PropertyChoiceSource"
               }
             ]
+          },
+          "unique": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -21048,6 +22575,27 @@
                 "$ref": "#/components/schemas/PropertyChoiceSource"
               }
             ]
+          },
+          "unique": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "PropertyViolation": {
+        "required": [
+          "key",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -21231,6 +22779,104 @@
           }
         }
       },
+      "PublicLinkReadResponse": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uri"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mediaType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PublicLinkResponse": {
+        "required": [
+          "url",
+          "itemId",
+          "versionId",
+          "versionState",
+          "createdBy",
+          "createdAt",
+          "withheldFiles"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "versionState": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "withheldFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WithheldFileResponse"
+            }
+          }
+        }
+      },
       "PublishSiteRequest": {
         "required": [
           "idempotencyKey",
@@ -21291,6 +22937,18 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "PutPublicLinkRequest": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -22070,6 +23728,38 @@
           }
         }
       },
+      "SetAgentPolicyRequest": {
+        "required": [
+          "agentsMayApprove",
+          "agentsMayCreatePublicLinks"
+        ],
+        "type": "object",
+        "properties": {
+          "agentsMayApprove": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "agentsMayCreatePublicLinks": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "SetFileVersionStateRequest": {
+        "required": [
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        }
+      },
       "SetItemLockRequest": {
         "required": [
           "password",
@@ -22123,6 +23813,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/JsonObject"
+          },
+          "strict": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -24727,6 +26423,68 @@
           }
         }
       },
+      "UpsertRecordRequest": {
+        "required": [
+          "keyField",
+          "keyValue"
+        ],
+        "type": "object",
+        "properties": {
+          "keyField": {
+            "type": "string"
+          },
+          "keyValue": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "properties": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "strict": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "UpsertRecordResponse": {
+        "required": [
+          "outcome",
+          "item"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/ItemResponse"
+          }
+        }
+      },
       "ViewAggregateContract": {
         "required": [
           "property",
@@ -25257,6 +27015,22 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "WithheldFileResponse": {
+        "required": [
+          "fileItemId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "fileItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -26079,6 +27853,18 @@
           },
           "collaboration": {
             "type": "boolean"
+          },
+          "agentsMayApprove": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "agentsMayCreatePublicLinks": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -26223,13 +28009,22 @@
       "name": "NativeSync"
     },
     {
+      "name": "Files"
+    },
+    {
       "name": "Workspaces"
     },
     {
-      "name": "Items"
+      "name": "Records"
     },
     {
-      "name": "Files"
+      "name": "PublicLinks"
+    },
+    {
+      "name": "Attachments"
+    },
+    {
+      "name": "Items"
     },
     {
       "name": "Imports"
@@ -26299,6 +28094,9 @@
     },
     {
       "name": "Sync"
+    },
+    {
+      "name": "References"
     }
   ]
 }

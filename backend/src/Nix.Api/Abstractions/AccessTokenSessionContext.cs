@@ -47,6 +47,20 @@ public sealed class AccessTokenSessionContext
     public bool MayAdminister { get; private set; } = true;
 
     /// <summary>
+    /// Whether the acting credential is a person's browser session. Fail-closed: <see langword="false"/>
+    /// unless the middleware validated a browser-session token, so an access token, an external
+    /// bearer, a worker delegation and in-process work are all <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Not the inverse of <see cref="IsTokenSession"/>: that is also <see langword="false"/> for an
+    /// external bearer, which is not a person at a keyboard.
+    /// </remarks>
+    public bool IsInteractive { get; private set; }
+
+    /// <summary>Marks the unit of work as a person's browser session. Called only for a validated browser-session token.</summary>
+    public void SetInteractive() => IsInteractive = true;
+
+    /// <summary>
     /// Records the ceiling a token session was admitted under.
     /// </summary>
     /// <param name="mayWrite">Whether the token holds the write scope.</param>

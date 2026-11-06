@@ -48,11 +48,14 @@ describe('operation catalog', () => {
       'ApproveSitePublish',
       'SendConversation',
       'SavePreferences',
+      'SetWorkspaceAgentPolicy',
     ])
       expect(isHumanOnlyOperation(entry(id)), id).toBe(true);
     expect(isHumanOnlyOperation(entry('GetPreferences'))).toBe(false);
     expect(isHumanOnlyOperation(entry('MoveItem'))).toBe(false);
     expect(isHumanOnlyOperation(entry('KeepItem'))).toBe(false);
+    // Approving a version is gated by Core and the workspace setting, not by the catalog.
+    expect(isHumanOnlyOperation(entry('SetFileVersionState'))).toBe(false);
   });
 
   it('warns about final, access and public changes, not about trashing', () => {
@@ -65,6 +68,11 @@ describe('operation catalog', () => {
     for (const id of ['CreateAutomation', 'ArchiveWorkspace', 'MoveItem'])
       expect(operationRisk(entry(id)), id).toBe('access');
     expect(operationRisk(entry('UpdateSite'))).toBe('public');
+    expect(operationRisk(entry('CreatePublicLink'))).toBe('public');
+    // Both undo cleanly: a link can be created again, a reference added again.
+    expect(operationRisk(entry('RevokePublicLink'))).toBe('public');
+    expect(operationRisk(entry('RemoveItemReference'))).toBeUndefined();
+    expect(operationRisk(entry('SetFileVersionState'))).toBeUndefined();
   });
 
   it('builds the request from the template and refuses anything outside it', () => {

@@ -49,6 +49,8 @@ const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/tenant\/admins(\/|$)/, 'any'],
   [/^\/api\/v1\/sites\/operators(\/|$)/, 'any'],
   [/\/approval\/(approve|reject)$/, 'any'],
+  // Core refuses tokens here too; the policy governs what assistants may approve or publish.
+  [/^\/api\/v1\/workspaces\/[^/]+\/agent-policy$/, 'any'],
 ];
 
 export function isHumanOnlyOperation(entry: OperationEntry): boolean {

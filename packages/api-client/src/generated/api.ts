@@ -238,6 +238,134 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/items/{itemId}/file/versions/{versionId}/state': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['SetFileVersionState'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/agent-policy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['SetWorkspaceAgentPolicy'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/lookup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['LookupItemsByProperty'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{parentId}/records/upsert': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['UpsertRecord'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/records/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['BatchRecords'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/v1/links/{token}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ReadPublicLink'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/v1/links/{token}/files/{fileItemId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetPublicLinkFile'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/attachments': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListAttachments'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/health/status': {
     parameters: {
       query?: never;
@@ -3298,6 +3426,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/items/{itemId}/references': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListItemReferences'];
+    put?: never;
+    post: operations['AddItemReference'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/references/{referenceId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['RemoveItemReference'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/referenced-by': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListReferencedBy'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/public-link': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetPublicLink'];
+    put: operations['CreatePublicLink'];
+    post?: never;
+    delete: operations['RevokePublicLink'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3324,6 +3516,13 @@ export interface components {
       mentionIds: null | string[];
       anchor: null | components['schemas']['CommentAnchorRequest'];
     };
+    AddItemReferenceRequest: {
+      /** Format: uuid */
+      targetItemId: string;
+      /** Format: uuid */
+      targetFileVersionId?: null | string;
+      role?: null | string;
+    };
     AddPushSubscriptionRequest: {
       endpoint: string;
       p256dh: string;
@@ -3348,6 +3547,22 @@ export interface components {
       views: components['schemas']['ViewRequest'][];
       makeDefault: boolean;
       publishInteractiveFormViewId: null | string;
+    };
+    AttachmentRow: {
+      /** Format: uuid */
+      itemId: string;
+      title: string;
+      mediaType: string;
+      /** Format: uuid */
+      shownVersionId: string;
+      shownVersionState: string;
+      /** Format: date-time */
+      expiresAt: null | string;
+      /** Format: uuid */
+      sourceItemId: null | string;
+      /** Format: int32 */
+      pinCount: number | string;
+      hasPublicLink: boolean;
     };
     AuthorizeCalendarRequest: {
       returnTo: null | string;
@@ -3457,6 +3672,48 @@ export interface components {
       bytes: null | number | string;
       error: null | string;
     };
+    BatchRecordError: {
+      code: string;
+      message: string;
+      violations?: null | components['schemas']['PropertyViolation'][];
+      /** Format: uuid */
+      existingItemId?: null | string;
+    };
+    BatchRecordResult: {
+      /** Format: int32 */
+      index: number | string;
+      status: string;
+      item: null | components['schemas']['ItemResponse'];
+      error: null | components['schemas']['BatchRecordError'];
+    };
+    BatchRecordRow: {
+      /** Format: uuid */
+      parentId: string;
+      keyField?: null | string;
+      keyValue?: null | string;
+      /** Format: uuid */
+      itemId?: null | string;
+      title?: null | string;
+      properties?: null | components['schemas']['JsonObject'];
+      type?: null | string;
+      idempotencyKey?: null | string;
+    };
+    BatchRecordsRequest: {
+      rows: components['schemas']['BatchRecordRow'][];
+      /** @default true */
+      strict: boolean;
+    };
+    BatchRecordsResponse: {
+      rows: components['schemas']['BatchRecordResult'][];
+      /** Format: int32 */
+      created: number | string;
+      /** Format: int32 */
+      updated: number | string;
+      /** Format: int32 */
+      unchanged: number | string;
+      /** Format: int32 */
+      failed: number | string;
+    };
     BeginDocumentImportRequest: {
       /** Format: uuid */
       workspaceId: string;
@@ -3479,6 +3736,9 @@ export interface components {
       /** @default false */
       includeComments: boolean;
       pageSize?: null | string;
+      toFile?: null | boolean;
+      /** Format: uuid */
+      targetItemId?: null | string;
     };
     BeginFileUploadRequest: {
       /** Format: uuid */
@@ -3990,6 +4250,7 @@ export interface components {
       properties: null | components['schemas']['JsonObject'];
       /** Format: uuid */
       idempotencyKey?: null | string;
+      strict?: null | boolean;
     };
     CreateSiteRequest: {
       /** Format: uuid */
@@ -4031,6 +4292,18 @@ export interface components {
       email: null | string;
       isTenantAdministrator: boolean;
       features: components['schemas']['CurrentPrincipalFeatures'];
+    };
+    CursorPageOfAttachmentRow: {
+      items: components['schemas']['AttachmentRow'][];
+      nextCursor: null | string;
+    };
+    CursorPageOfItemReferencedByResponse: {
+      items: components['schemas']['ItemReferencedByResponse'][];
+      nextCursor: null | string;
+    };
+    CursorPageOfItemReferenceResponse: {
+      items: components['schemas']['ItemReferenceResponse'][];
+      nextCursor: null | string;
     };
     CursorPageOfItemResponse: {
       items: components['schemas']['ItemResponse'][];
@@ -4187,6 +4460,8 @@ export interface components {
       completedAt: null | string;
       /** Format: date-time */
       expiresAt: null | string;
+      /** Format: uuid */
+      uploadId?: null | string;
     };
     ExternalCalendarResponse: {
       id: string;
@@ -4218,6 +4493,8 @@ export interface components {
       workspaceId: string;
       current: components['schemas']['FileVersionRecord'];
       versions: components['schemas']['FileVersionRecord'][];
+      /** Format: uuid */
+      shownVersionId?: null | string;
     };
     FileThumbnailCapabilityResponse: {
       /** Format: uri */
@@ -4260,6 +4537,8 @@ export interface components {
       /** Format: uuid */
       itemId: null | string;
       failureCode: null | string;
+      /** Format: uuid */
+      publishedVersionId?: null | string;
     };
     FileVersionRecord: {
       /** Format: uuid */
@@ -4280,6 +4559,15 @@ export interface components {
       createdAt: string;
       current: boolean;
       thumbnail?: null | components['schemas']['FileThumbnailRecord'];
+      state?: null | string;
+      /** Format: uuid */
+      stateChangedBy?: null | string;
+      /** Format: date-time */
+      stateChangedAt?: null | string;
+      /** Format: uuid */
+      sourceItemId?: null | string;
+      /** Format: int64 */
+      sourceSeq?: null | number | string;
     };
     FilterRuleContract: {
       property: null | string;
@@ -4734,6 +5022,41 @@ export interface components {
       items: components['schemas']['ItemMoveWorkspace'][];
       nextCursor: null | string;
     };
+    ItemReferencedByResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      holderItemId: string;
+      holderTitle: null | string;
+      holderAvailable: boolean;
+      /** Format: uuid */
+      targetItemId: string;
+      /** Format: uuid */
+      targetFileVersionId: null | string;
+      role: null | string;
+      /** Format: uuid */
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ItemReferenceResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      holderItemId: string;
+      /** Format: uuid */
+      targetItemId: string;
+      targetTitle: null | string;
+      targetAvailable: boolean;
+      /** Format: uuid */
+      targetFileVersionId: null | string;
+      targetVersionState: null | string;
+      role: null | string;
+      /** Format: uuid */
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
     ItemResponse: {
       /** Format: uuid */
       id: string;
@@ -4844,6 +5167,19 @@ export interface components {
       clearedIn: null | string;
       /** Format: double */
       balanceAfterMonth: number | string;
+    };
+    LookupItemsRequest: {
+      key: string;
+      value: string;
+      /** Format: uuid */
+      parentId?: null | string;
+    };
+    LookupItemsResponse: {
+      matches: components['schemas']['LookupMatch'][];
+    };
+    LookupMatch: {
+      item: components['schemas']['ItemResponse'];
+      trashed: boolean;
     };
     MentionResponse: {
       item: components['schemas']['SearchHitResponse'];
@@ -5219,6 +5555,11 @@ export interface components {
       code: string;
       /** @description Identifier of the server-side trace that produced this failure. */
       traceId?: string;
+      /** @description The properties a write refused, one entry per key. Only on 'properties.invalid'. */
+      violations?: {
+        key: string;
+        reason: string;
+      }[];
     };
     PropertyChoiceSource: {
       /** Format: uuid */
@@ -5235,6 +5576,7 @@ export interface components {
       aggregate?: null | string;
       source?: null | string;
       choiceSource?: null | components['schemas']['PropertyChoiceSource'];
+      unique?: null | boolean;
     };
     PropertyDefinitionResponse: {
       key: string;
@@ -5246,6 +5588,11 @@ export interface components {
       aggregate: null | string;
       source: null | string;
       choiceSource?: null | components['schemas']['PropertyChoiceSource'];
+      unique?: null | boolean;
+    };
+    PropertyViolation: {
+      key: string;
+      reason: string;
     };
     PublicFormBlockResponse: {
       id: string;
@@ -5286,6 +5633,31 @@ export interface components {
       form: components['schemas']['PublicFormDefinitionResponse'];
       fields: components['schemas']['PublicFormPropertyResponse'][];
     };
+    PublicLinkReadResponse: {
+      kind: string;
+      title?: null | string;
+      html?: null | string;
+      /** Format: uri */
+      url?: null | string;
+      name?: null | string;
+      mediaType?: null | string;
+      /** Format: date-time */
+      expiresAt?: null | string;
+    };
+    PublicLinkResponse: {
+      /** Format: uri */
+      url: string;
+      /** Format: uuid */
+      itemId: string;
+      /** Format: uuid */
+      versionId: null | string;
+      versionState: null | string;
+      /** Format: uuid */
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+      withheldFiles: components['schemas']['WithheldFileResponse'][];
+    };
     PublishSiteRequest: {
       idempotencyKey: string;
       refreshPaths: boolean;
@@ -5303,6 +5675,10 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       lastSuccessAt: null | string;
+    };
+    PutPublicLinkRequest: {
+      /** Format: uuid */
+      versionId?: null | string;
     };
     QueryAggregateContract: {
       function: null | string;
@@ -5490,6 +5866,13 @@ export interface components {
       /** Format: date-time */
       reportedAt: string;
     };
+    SetAgentPolicyRequest: {
+      agentsMayApprove: null | boolean;
+      agentsMayCreatePublicLinks: null | boolean;
+    };
+    SetFileVersionStateRequest: {
+      state: string;
+    };
     SetItemLockRequest: {
       password: string;
       currentPassword: null | string;
@@ -5501,6 +5884,7 @@ export interface components {
     };
     SetPropertiesRequest: {
       properties: components['schemas']['JsonObject'];
+      strict?: null | boolean;
     };
     SetRecurrenceRequest: {
       freq: string;
@@ -6091,6 +6475,20 @@ export interface components {
       excludedItemIds: null | string[];
       datedCollections: null | components['schemas']['SiteDatedCollectionDto'][];
     };
+    UpsertRecordRequest: {
+      keyField: string;
+      keyValue: string;
+      title?: null | string;
+      properties?: null | components['schemas']['JsonObject'];
+      type?: null | string;
+      idempotencyKey?: null | string;
+      /** @default true */
+      strict: boolean;
+    };
+    UpsertRecordResponse: {
+      outcome: string;
+      item: components['schemas']['ItemResponse'];
+    };
     ViewAggregateContract: {
       property: string;
       function: string;
@@ -6179,6 +6577,11 @@ export interface components {
       actual: number | string;
       /** Format: double */
       variance: number | string;
+    };
+    WithheldFileResponse: {
+      /** Format: uuid */
+      fileItemId: string;
+      name: string;
     };
     WorkspaceAggregateRequest: {
       scope: null | components['schemas']['QueryScopeContract'];
@@ -6361,6 +6764,8 @@ export interface components {
       archivedAt: null | string;
       membershipLocked: boolean;
       collaboration: boolean;
+      agentsMayApprove?: null | boolean;
+      agentsMayCreatePublicLinks?: null | boolean;
     };
     WorkspaceSyncChanges: {
       cursor: string;
@@ -6959,6 +7364,361 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetFileVersionState: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        versionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetFileVersionStateRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FileVersionRecord'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetWorkspaceAgentPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetAgentPolicyRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  LookupItemsByProperty: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LookupItemsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LookupItemsResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpsertRecord: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        parentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertRecordRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['UpsertRecordResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  BatchRecords: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BatchRecordsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BatchRecordsResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReadPublicLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicLinkReadResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetPublicLinkFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+        fileItemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Found */
+      302: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListAttachments: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        state?: string;
+        includeImages?: boolean;
+        expiring?: boolean;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CursorPageOfAttachmentRow'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };
@@ -15864,6 +16624,279 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListItemReferences: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CursorPageOfItemReferenceResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  AddItemReference: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AddItemReferenceRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemReferenceResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RemoveItemReference: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        referenceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListReferencedBy: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CursorPageOfItemReferencedByResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetPublicLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicLinkResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CreatePublicLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PutPublicLinkRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicLinkResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RevokePublicLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

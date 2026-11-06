@@ -337,6 +337,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         {
             case ValidatedBrowserSessionToken browserCredential:
                 credentialContext.Set(browserCredential.BrowserSessionId.Value);
+                scopeContext.SetInteractive();
                 break;
             case ValidatedCoreToken tokenCredential:
                 credentialContext.Set(tokenCredential.AccessTokenId.Value);

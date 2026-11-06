@@ -24,7 +24,12 @@ using Nix.Features.Graph;
 using Nix.Features.Habits;
 using Nix.Features.Health;
 using Nix.Features.Internal;
+using Nix.Features.Attachments;
 using Nix.Features.Items;
+using Nix.Features.PublicLinks;
+using Nix.Features.PublicLinks.Notes;
+using Nix.Features.Records;
+using Nix.Features.References;
 using Nix.Features.Locks;
 using Nix.Features.Notifications;
 using Nix.Features.Operations;
@@ -107,6 +112,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.Sites.SitesJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(WorkspaceSyncJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(NativeReplayJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.References.ReferencesJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.Records.RecordsJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.PublicLinks.PublicLinksJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.Attachments.AttachmentsJsonContext.Default);
 });
 
 // Injected clock: endpoints never read DateTimeOffset.UtcNow directly, so time is
@@ -229,6 +238,12 @@ var suggestionsPerMinute = builder.Configuration.GetValue(
 var queriesPerMinute = builder.Configuration.GetValue(
     "Nix:RateLimits:QueriesPerMinute",
     120);
+var bulkWritesPerMinute = builder.Configuration.GetValue(
+    "Nix:RateLimits:BulkWritesPerMinute",
+    10);
+var publicLinkReadsPerMinute = builder.Configuration.GetValue(
+    "Nix:RateLimits:PublicLinkReadsPerMinute",
+    120);
 
 // One window, named once: the limiter's window and the fallback the rejection reports are the same
 // interval by definition, and two literals would eventually disagree.
@@ -346,6 +361,28 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = queriesPerMinute,
+                Window = writesWindow,
+                QueueLimit = 0,
+            }));
+
+    // The batch-records write takes up to 100 rows a call. Per address, like the writes policy.
+    options.AddPolicy<IPAddress>(RateLimitRefusal.BulkWritesPolicyName, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientKey.For(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = bulkWritesPerMinute,
+                Window = writesWindow,
+                QueueLimit = 0,
+            }));
+
+    // Anonymous public-link reads: per address, since nobody is authenticated.
+    options.AddPolicy<IPAddress>(RateLimitRefusal.PublicLinksPolicyName, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientKey.For(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = publicLinkReadsPerMinute,
                 Window = writesWindow,
                 QueueLimit = 0,
             }));
@@ -645,6 +682,16 @@ app.MapTokenExchangeEndpoints();
 app.MapSiteEndpoints();
 app.MapWorkspaceSyncEndpoints();
 app.MapNativeReplayEndpoints();
+
+// Agent records, document lifecycle, attachments and public links. Each lane replaces the handlers
+// in its own file and leaves these registrations alone.
+app.MapFileVersionStateEndpoints();
+app.MapAgentPolicyEndpoints();
+app.MapReferenceEndpoints();
+app.MapRecordEndpoints();
+app.MapPublicLinkEndpoints();
+app.MapPublicLinkFileEndpoints();
+app.MapAttachmentEndpoints();
 
 app.Run();
 

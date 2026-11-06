@@ -42,6 +42,23 @@ internal sealed class ProblemDetailsSchemaTransformer : IOpenApiSchemaTransforme
             Description = "Identifier of the server-side trace that produced this failure.",
         };
 
+        // Optional: present on 'properties.invalid' once per-field errors are reported.
+        schema.Properties["violations"] = new OpenApiSchema
+        {
+            Type = JsonSchemaType.Array,
+            Description = "The properties a write refused, one entry per key. Only on 'properties.invalid'.",
+            Items = new OpenApiSchema
+            {
+                Type = JsonSchemaType.Object,
+                Properties = new Dictionary<string, IOpenApiSchema>(StringComparer.Ordinal)
+                {
+                    ["key"] = new OpenApiSchema { Type = JsonSchemaType.String },
+                    ["reason"] = new OpenApiSchema { Type = JsonSchemaType.String },
+                },
+                Required = new HashSet<string>(StringComparer.Ordinal) { "key", "reason" },
+            },
+        };
+
         schema.Required ??= new HashSet<string>(StringComparer.Ordinal);
         schema.Required.Add(ApiProblem.CodeExtension);
 

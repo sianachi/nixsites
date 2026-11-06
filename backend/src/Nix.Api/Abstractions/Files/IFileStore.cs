@@ -35,14 +35,14 @@ public sealed record CompleteFileUpload(
 
 public sealed record FileUploadRecord(Guid Id, Guid WorkspaceId, string Purpose, string Status, string ObjectKey, DateTimeOffset ExpiresAt, Guid? ItemId, string? FailureCode);
 public sealed record FileUploadInspectionRecord(Guid Id, Guid WorkspaceId, string Purpose, string Status, string ObjectKey, string FileName, string DeclaredMediaType, long DeclaredByteLength, DateTimeOffset ExpiresAt, Guid? ItemId);
-public sealed record FileVersionRecord(Guid Id, int Version, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, int? PixelWidth, int? PixelHeight, DateTimeOffset CreatedAt, bool Current, FileThumbnailRecord? Thumbnail = null);
+public sealed record FileVersionRecord(Guid Id, int Version, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, int? PixelWidth, int? PixelHeight, DateTimeOffset CreatedAt, bool Current, FileThumbnailRecord? Thumbnail = null, string? State = null, Guid? StateChangedBy = null, DateTimeOffset? StateChangedAt = null, Guid? SourceItemId = null, long? SourceSeq = null);
 /// <summary>The pixel size of a stored thumbnail; a version without one carries null instead.</summary>
 public sealed record FileThumbnailRecord(int Width, int Height);
 /// <summary>What the thumbnail capability is signed from: the version's own key plus the thumbnail's facts.</summary>
 public sealed record FileThumbnailDownloadRecord(string VersionObjectKey, int Width, int Height, int ByteLength);
 /// <summary>Exact immutable source metadata used to authorize a streamed archive or template copy.</summary>
 public sealed record FileVersionSourceRecord(Guid Id, int Version, string ObjectKey, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, int? PixelWidth, int? PixelHeight, bool Current);
-public sealed record FileRecord(Guid ItemId, Guid WorkspaceId, FileVersionRecord Current, IReadOnlyList<FileVersionRecord> Versions);
+public sealed record FileRecord(Guid ItemId, Guid WorkspaceId, FileVersionRecord Current, IReadOnlyList<FileVersionRecord> Versions, Guid? ShownVersionId = null);
 public sealed record FileDownloadRecord(string ObjectKey, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable);
 
 public interface IFileStore

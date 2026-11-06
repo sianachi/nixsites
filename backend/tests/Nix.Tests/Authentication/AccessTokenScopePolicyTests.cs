@@ -311,6 +311,26 @@ public sealed class AccessTokenScopePolicyTests
         ["UnlinkWorkspaceCalendar"] = Requirement.Admin,
         ["SyncCalendarLink"] = Requirement.Write,
 
+        // Agent records, document lifecycle, attachments and public links. The agent policy governs
+        // tokens, so none may change it; a public link is admin whichever method reaches it (the
+        // shape rule above); lookup is a read sent as a POST; the anonymous routes sit outside
+        // /api/v1 like the public form routes and are classified by shape only.
+        ["SetFileVersionState"] = Requirement.Write,
+        ["SetWorkspaceAgentPolicy"] = Requirement.InteractiveOnly,
+        ["ListItemReferences"] = Requirement.Read,
+        ["AddItemReference"] = Requirement.Write,
+        ["RemoveItemReference"] = Requirement.Write,
+        ["ListReferencedBy"] = Requirement.Read,
+        ["LookupItemsByProperty"] = Requirement.Read,
+        ["UpsertRecord"] = Requirement.Write,
+        ["BatchRecords"] = Requirement.Write,
+        ["GetPublicLink"] = Requirement.Admin,
+        ["CreatePublicLink"] = Requirement.Admin,
+        ["RevokePublicLink"] = Requirement.Admin,
+        ["ReadPublicLink"] = Requirement.Read,
+        ["GetPublicLinkFile"] = Requirement.Read,
+        ["ListAttachments"] = Requirement.Read,
+
         // A token never manages tokens, whatever it holds.
         ["ListAccessTokens"] = Requirement.InteractiveOnly,
         ["CreateAccessToken"] = Requirement.InteractiveOnly,
@@ -429,6 +449,31 @@ public sealed class AccessTokenScopePolicyTests
     [InlineData("PUT", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/query")]
     public void Only_the_exact_query_posts_are_relaxed_to_a_read(string method, string path) =>
         Assert.Equal(Requirement.Write, Classify(method, path));
+
+    [Theory]
+    [InlineData("/api/v1/workspaces/11111111-1111-4111-8111-111111111111/lookup")]
+    [InlineData("/api/v1/workspaces/11111111-1111-4111-8111-111111111111/lookup/")]
+    public void The_property_lookup_is_a_read_even_though_it_is_a_post(string path) =>
+        Assert.Equal(Requirement.Read, Classify("POST", path));
+
+    [Theory]
+    [InlineData("POST", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/lookup/extra")]
+    [InlineData("POST", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/items/lookup")]
+    [InlineData("PUT", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/lookup")]
+    public void Only_the_exact_lookup_post_is_relaxed_to_a_read(string method, string path) =>
+        Assert.Equal(Requirement.Write, Classify(method, path));
+
+    [Theory]
+    [InlineData("PUT", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/agent-policy")]
+    [InlineData("PUT", "/api/v1/workspaces/11111111-1111-4111-8111-111111111111/agent-policy/")]
+    [InlineData("PATCH", "/API/V1/WORKSPACES/11111111-1111-4111-8111-111111111111/AGENT-POLICY")]
+    public void No_scope_admits_a_token_to_change_the_agent_policy(string method, string path)
+    {
+        var requirement = Classify(method, path);
+
+        Assert.Equal(Requirement.InteractiveOnly, requirement);
+        Assert.False(Satisfies([AccessTokenScopes.Read, AccessTokenScopes.Write, AccessTokenScopes.Admin], requirement));
+    }
 
     [Fact]
     public void A_write_only_token_cannot_match_mentions()

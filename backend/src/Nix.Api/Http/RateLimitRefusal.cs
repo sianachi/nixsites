@@ -53,6 +53,15 @@ public static class RateLimitRefusal
     /// </summary>
     public const string QueriesPolicyName = "queries";
 
+    /// <summary>
+    /// Name of the limiter on the workspace batch-records write: up to 100 rows a call, so its window
+    /// is far smaller than <see cref="WritesPolicyName"/>.
+    /// </summary>
+    public const string BulkWritesPolicyName = "bulk-writes";
+
+    /// <summary>Name of the limiter on the anonymous public-link reads, partitioned by client address.</summary>
+    public const string PublicLinksPolicyName = "public-links";
+
     /// <summary>Writes the 429 problem-details refusal with a <c>Retry-After</c> header, and logs it.</summary>
     /// <param name="context">The request being refused.</param>
     /// <param name="logger">Where the refusal is recorded.</param>

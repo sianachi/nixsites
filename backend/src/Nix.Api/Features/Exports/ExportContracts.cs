@@ -20,7 +20,9 @@ public sealed record BeginExportRequest(
     string Scope,
     string IdempotencyKey,
     bool IncludeComments = false,
-    string? PageSize = null);
+    string? PageSize = null,
+    bool? ToFile = null,
+    Guid? TargetItemId = null);
 
 public sealed record ExportResponse(
     Guid Id,
@@ -43,7 +45,8 @@ public sealed record ExportResponse(
     bool DownloadReady,
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    Guid? UploadId = null);
 
 public sealed record ExportDownloadCapabilityResponse(
     Uri Url,
