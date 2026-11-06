@@ -396,9 +396,11 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
         var handler = new DeleteItemHandler(deleter.Resolve<IItemTree>(), deleter.Resolve<IPermissionResolver>(),
             deleter.Resolve<INixSessionContextAccessor>(), TimeProvider.System, deleter.Resolve<IFinanceLock>(), gate, deleter.Resolve<IItemProtections>());
         var pending = handler.HandleAsync(new DeleteItem(Folder), Cancellation).AsTask();
-        await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancellation);
-        await protector.CommitAsync(Cancellation);
+        // The delete now takes the topology lock before the finance guard, so it waits on the
+        // protector's lock without ever reaching the guard; releasing the lock lets it through.
         gate.Resume.SetResult();
+        Assert.NotSame(pending, await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(1), Cancellation)));
+        await protector.CommitAsync(Cancellation);
 
         var refused = await pending;
         Assert.True(refused.IsFailure);
