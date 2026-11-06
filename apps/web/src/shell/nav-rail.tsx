@@ -1,6 +1,7 @@
 import { Button, Icon, Menu, Text, chromeSurface, focusRing, type MenuEntry } from '@nix/ui';
 import {
   Bookmark,
+  Paperclip,
   CalendarClock,
   CalendarDays,
   ChevronDown,
@@ -177,6 +178,7 @@ const ITEMS: readonly RailItem[] = [
   QUERIES_ITEM,
   page('utility', '/workspaces', 'Workspaces', Layers),
   page('utility', '/automations', 'Automations', Zap),
+  page('utility', '/attachments', 'Attachments', Paperclip),
   page('utility', '/trash', 'Trash', Trash2),
   { kind: 'action', action: 'import', label: 'Import', icon: FolderInput, group: 'utility' },
   page('utility', '/settings', 'Settings', Settings),

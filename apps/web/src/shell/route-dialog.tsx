@@ -12,6 +12,7 @@ import {
 
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
 import { AutomationsPage } from '../automations/automations-page';
+import { AttachmentsPage } from '../pages/attachments-page';
 import { SettingsPage } from '../pages/settings-page';
 import { TrashPage } from '../pages/trash-page';
 import { WorkspacesPage } from '../pages/workspaces-page';
@@ -38,6 +39,7 @@ import {
  */
 
 const KINDS: ReadonlySet<string> = new Set<RouteDialogKind>([
+  'attachments',
   'automations',
   'settings',
   'trash',
@@ -148,6 +150,7 @@ const SCREENS: Record<
   RouteDialogKind,
   { readonly title: string; readonly width: string; readonly Screen: () => ReactNode }
 > = {
+  attachments: { title: 'Attachments', width: 'sm:max-w-4xl', Screen: AttachmentsPage },
   automations: { title: 'Automations', width: 'sm:max-w-5xl', Screen: AutomationsPage },
   settings: { title: 'Settings', width: 'sm:max-w-5xl', Screen: SettingsPage },
   trash: { title: 'Trash', width: 'sm:max-w-3xl', Screen: TrashPage },
