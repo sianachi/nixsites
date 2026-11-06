@@ -66,7 +66,10 @@ public sealed record ExportJobPayload(
     string MediaType,
     IReadOnlyList<string> DeclaredLoss,
     bool IncludeComments = false,
-    string PageSize = "a4");
+    string PageSize = "a4",
+    bool ToFile = false,
+    Guid? TargetItemId = null,
+    long? SourceSeq = null);
 
 public sealed record WorkerExportSourceResponse(
     Guid ExportId,

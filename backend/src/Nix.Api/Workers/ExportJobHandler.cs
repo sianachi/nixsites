@@ -26,6 +26,7 @@ public sealed class ExportJobHandler(
     private const int MaximumResultReportEntries = 16;
     private const int MaximumResultReportBytes = 500;
     private const int SmallResponseLimit = 64 << 10;
+    private const long MaximumFileBytes = 100L << 20;
 
     public IReadOnlyList<string> Kinds { get; } = ["export.nix", "export.markdown", "export.docx", "export.pdf"];
 
@@ -149,6 +150,11 @@ public sealed class ExportJobHandler(
             await file.FlushAsync(cancellationToken).ConfigureAwait(false);
             var size = file.Length;
             var checksum = Convert.ToHexStringLower(digest.GetHashAndReset());
+            if (payload.ToFile && size > MaximumFileBytes)
+            {
+                // Exports may reach 256 MiB, files only 100 MiB: say so before uploading anything.
+                throw WorkerJobException.Fail("export_too_large_for_file", $"the {format} export is {size} bytes; a file item holds at most {MaximumFileBytes} bytes");
+            }
 
             WorkerExportDestinationResponse destination;
             try
@@ -177,6 +183,17 @@ public sealed class ExportJobHandler(
             {
                 await DeleteBestEffortAsync(destination.DeleteUrl).ConfigureAwait(false);
                 throw WorkerJobException.Retry("export_upload_failed", exception.Message);
+            }
+            if (payload.ToFile)
+            {
+                try
+                {
+                    await core.PostJsonAsync<object>(job, $"{basePath}/publish?byteLength={size.ToString(CultureInfo.InvariantCulture)}&sha256={checksum}", null, null, 0, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsTransient(exception, cancellationToken))
+                {
+                    throw WorkerJobException.Retry("export_publish_unavailable", exception.Message);
+                }
             }
             return JsonSerializer.Serialize(
                 new WorkerExportResult(destination.AttemptId, format, destination.ObjectKey, manifest.Items.Count, manifest.Omitted.Count, size, checksum,
