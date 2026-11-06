@@ -147,6 +147,19 @@ public static class ItemProperties
     /// </summary>
     public const string ReminderSetByKey = "$reminder_set_by";
 
+    /// <summary>
+    /// The built-in key holding the instant an item moves itself to the trash. Undeclared in
+    /// schemas, like <see cref="ReminderKey"/>; checked on write by <c>ExpiryRules</c>.
+    /// </summary>
+    public const string ExpiryKey = "expiry";
+
+    /// <summary>
+    /// The system property recording which principal set an item's <see cref="ExpiryKey"/>. The
+    /// expiry finder requires it, so an <c>expiry</c> value written before this feature existed is
+    /// never acted on.
+    /// </summary>
+    public const string ExpirySetByKey = "$expiry_set_by";
+
     /// <summary>The reserved key of the completion task type.</summary>
     public const string CompletionKey = "completion";
 
@@ -175,6 +188,7 @@ public static class ItemProperties
     [
         (DueDateKey, DueSetByKey),
         (ReminderKey, ReminderSetByKey),
+        (ExpiryKey, ExpirySetByKey),
     ];
 
     /// <summary>
@@ -192,6 +206,7 @@ public static class ItemProperties
         ArgumentNullException.ThrowIfNull(key);
         return string.Equals(key, DueSetByKey, StringComparison.Ordinal)
             || string.Equals(key, ReminderSetByKey, StringComparison.Ordinal)
+            || string.Equals(key, ExpirySetByKey, StringComparison.Ordinal)
             || key.StartsWith(HabitPrefix, StringComparison.Ordinal)
             || key.StartsWith(CalendarPrefix, StringComparison.Ordinal);
     }
@@ -301,7 +316,11 @@ public static class ItemProperties
                 return bag;
             }
 
-            foreach (var (key, setByKey) in SetByPairs)
+            // A copy never inherits an expiry: stamping it would let an import or template trash
+            // itself on arrival, so both keys are dropped instead.
+            document.Remove(ExpiryKey);
+            document.Remove(ExpirySetByKey);
+            foreach (var (key, setByKey) in SetByPairs.Where(pair => pair.Key != ExpiryKey))
             {
                 Attribute(document, key, setByKey, principalId);
             }
@@ -324,6 +343,33 @@ public static class ItemProperties
             // A member named twice parses, then throws on first use of the object. Returned
             // unchanged so the caller's envelope validation refuses it as a 4xx, as Merge does.
             return bag;
+        }
+    }
+
+    /// <summary>
+    /// Drops <see cref="ExpiryKey"/> and <see cref="ExpirySetByKey"/> from a stored bag, or returns
+    /// <see langword="null"/> when it carries neither (so a caller writes nothing).
+    /// </summary>
+    public static string? WithoutExpiry(string? bag)
+    {
+        if (bag is null || !bag.Contains(ExpiryKey, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (JsonNode.Parse(bag) is not JsonObject document)
+            {
+                return null;
+            }
+
+            var removed = document.Remove(ExpiryKey) | document.Remove(ExpirySetByKey);
+            return removed ? document.ToJsonString() : null;
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 

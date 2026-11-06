@@ -216,6 +216,10 @@ public sealed class CreateItemHandler(
         // otherwise be able to make the stored title disagree with the one it named, and every
         // listing reads the promoted field.
         var bag = ItemProperties.WithTitle(properties?.ToJsonString(), title);
+        if (ExpiryRules.Check(bag, properties?.Select(pair => pair.Key) ?? [], clock.GetUtcNow()) is { } badExpiry)
+        {
+            return Result.Failure<Item>(badExpiry);
+        }
 
         // The schema the item is about to fall under, resolved from the parent because the item has
         // no row yet to resolve from - which is the question ResolveForChildrenAsync exists to

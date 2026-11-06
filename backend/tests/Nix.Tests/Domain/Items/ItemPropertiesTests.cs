@@ -273,6 +273,41 @@ public sealed class ItemPropertiesStampSetByTests
     }
 
     [Fact]
+    public void A_copy_never_inherits_an_expiry_or_who_set_it()
+    {
+        // Stamping the copier would let an import or template application trash itself on arrival.
+        var copied = ItemProperties.RestampCopiedSetBy(
+            $$"""{"title":"Copy","reminder":"2026-10-01T09:00:00+00:00[Etc/UTC]","expiry":"2026-10-01T09:00:00+00:00[Etc/UTC]","{{ItemProperties.ExpirySetByKey}}":"00000000-0000-0000-0000-00000000000f"}""",
+            "00000000-0000-0000-0000-000000000002");
+
+        var parsed = Assert.IsType<JsonObject>(JsonNode.Parse(copied!));
+        Assert.False(parsed.ContainsKey(ItemProperties.ExpiryKey));
+        Assert.False(parsed.ContainsKey(ItemProperties.ExpirySetByKey));
+        Assert.Equal("00000000-0000-0000-0000-000000000002", (string?)parsed[ItemProperties.ReminderSetByKey]);
+    }
+
+    [Fact]
+    public void Writing_an_expiry_stamps_the_setter_and_clearing_it_removes_the_stamp()
+    {
+        var set = ItemProperties.StampSetBy(
+            """{"expiry":"2026-10-01T09:00:00+00:00[Etc/UTC]"}""", ["expiry"], "00000000-0000-0000-0000-000000000002");
+        Assert.Equal("00000000-0000-0000-0000-000000000002", (string?)Assert.IsType<JsonObject>(JsonNode.Parse(set))[ItemProperties.ExpirySetByKey]);
+
+        var cleared = ItemProperties.StampSetBy(
+            $$"""{"{{ItemProperties.ExpirySetByKey}}":"00000000-0000-0000-0000-000000000002"}""", ["expiry"], "00000000-0000-0000-0000-000000000003");
+        Assert.False(Assert.IsType<JsonObject>(JsonNode.Parse(cleared)).ContainsKey(ItemProperties.ExpirySetByKey));
+    }
+
+    [Fact]
+    public void Without_expiry_drops_both_keys_and_reports_nothing_to_write_when_absent()
+    {
+        var bag = ItemProperties.WithoutExpiry(
+            $$"""{"title":"X","expiry":"2026-10-01T09:00:00+00:00[Etc/UTC]","{{ItemProperties.ExpirySetByKey}}":"00000000-0000-0000-0000-000000000002"}""");
+        Assert.Equal("""{"title":"X"}""", bag);
+        Assert.Null(ItemProperties.WithoutExpiry("""{"title":"X"}"""));
+    }
+
+    [Fact]
     public void A_copied_set_by_without_its_value_is_dropped_rather_than_kept()
     {
         var copied = ItemProperties.RestampCopiedSetBy(
@@ -338,6 +373,8 @@ public sealed class ItemPropertiesStampSetByTests
     [Theory]
     [InlineData("$due_set_by", true)]
     [InlineData("$reminder_set_by", true)]
+    [InlineData("$expiry_set_by", true)]
+    [InlineData("expiry", false)]
     [InlineData("$habit_reminder_time", true)]
     [InlineData("$habit_check_in_date", true)]
     [InlineData("$cal_source", true)]

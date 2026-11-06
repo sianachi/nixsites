@@ -2,6 +2,12 @@ using Nix.Domain.Items;
 
 namespace Nix.Abstractions;
 
+/// <summary>An item that stops a deletion: <c>no_delete</c>, or <c>pinned</c> by an active record.</summary>
+/// <param name="Id">The blocking item.</param>
+/// <param name="Title">Its stored title; the caller withholds it where a lock covers the item.</param>
+/// <param name="Reason"><c>no_delete</c> or <c>pinned</c>.</param>
+public sealed record DeleteBlocker(ItemId Id, string Title, string Reason);
+
 /// <summary>
 /// Reads and writes the protections an item carries: against deletion and against new children.
 /// </summary>
@@ -22,6 +28,15 @@ public interface IItemProtections
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns><see langword="true"/> when trashing the root would hide a protected item.</returns>
     public ValueTask<bool> AnyDeleteProtectedBelowAsync(ItemId itemId, bool userOnly, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The first five active items at or below <paramref name="itemId"/> that stop it being trashed:
+    /// protected from deletion, or holding a file version an active item pins.
+    /// </summary>
+    /// <param name="itemId">The root of the subtree.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The blockers, shallowest first; empty when nothing blocks.</returns>
+    public ValueTask<IReadOnlyList<DeleteBlocker>> FindDeleteBlockersAsync(ItemId itemId, CancellationToken cancellationToken);
 
     /// <summary>Writes the protections named, leaving a null one as it stands.</summary>
     /// <param name="itemId">The item.</param>

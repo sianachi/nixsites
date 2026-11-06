@@ -57,6 +57,44 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         return results;
     }
 
+    public async Task<IReadOnlyList<ExpiryCandidate>> FindExpiringAsync(
+        DateTimeOffset until,
+        int limit,
+        DateTimeOffset afterInstant,
+        Guid afterId,
+        CancellationToken cancellationToken)
+    {
+        if (limit is < 1 or > 500)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        }
+
+        var results = new List<ExpiryCandidate>(limit);
+        var command = dataSource.CreateCommand(
+            "SELECT * FROM nix_find_expiry_candidates(@to, @limit, @after_at, @after_id)");
+        await using (command.ConfigureAwait(false))
+        {
+            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("to", NpgsqlDbType.TimestampTz) { TypedValue = until });
+            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
+            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("after_at", NpgsqlDbType.TimestampTz) { TypedValue = afterInstant });
+            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
+            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            await using (reader.ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    results.Add(new ExpiryCandidate(
+                        TenantId.From(reader.GetGuid(0)),
+                        reader.GetGuid(1),
+                        WorkspaceId.From(reader.GetGuid(2)),
+                        PrincipalId.From(reader.GetGuid(3)),
+                        await reader.GetFieldValueAsync<DateTimeOffset>(4, cancellationToken).ConfigureAwait(false)));
+                }
+            }
+        }
+        return results;
+    }
+
     public async Task<IReadOnlyList<DueReminderCandidate>> FindDueAsync(
         DateOnly from,
         DateOnly until,
