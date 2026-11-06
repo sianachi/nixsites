@@ -11,6 +11,9 @@ export interface CreateItemOptions {
   readonly title: string;
   readonly type: string;
   readonly parent?: string;
+  readonly prop: string[];
+  readonly idempotencyKey?: string;
+  readonly strict?: boolean;
 }
 
 export interface MvOptions {
@@ -159,3 +162,6 @@ export interface LoginOptions {
   /** commander sets this false when `--no-default` is passed. */
   readonly default?: boolean;
 }
+
+/** Commander accumulator for a repeatable option. */
+export const collect = (value: string, previous: string[]): string[] => [...previous, value];

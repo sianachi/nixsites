@@ -62,7 +62,11 @@ export function createMcpHttpHandler(
       },
       ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
     });
-    sessions.set(key, { tokens: session.tokens, endpoints: session.endpoints });
+    sessions.set(key, {
+      tokens: session.tokens,
+      endpoints: session.endpoints,
+      authKind: session.authKind,
+    });
     if (sessions.size > cacheSize) {
       const oldest = sessions.keys().next().value;
       if (oldest !== undefined) sessions.delete(oldest);

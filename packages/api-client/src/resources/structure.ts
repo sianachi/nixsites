@@ -64,12 +64,13 @@ export const setItemSchema = (
 export const setItemProperties = (
   itemId: string,
   properties: Readonly<Record<string, unknown>>,
+  strict?: boolean,
 ): CommandEndpoint<Item> =>
   defineCommand<Item>({
     operation: 'properties.set',
     method: 'PATCH',
     path: `/api/v1/items/${itemId}/properties`,
     schema: itemSchema,
-    body: { properties },
+    body: strict === undefined ? { properties } : { properties, strict },
     invalidates: [itemKey(itemId)],
   });

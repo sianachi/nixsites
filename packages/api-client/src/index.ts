@@ -202,6 +202,9 @@ export * as views from './resources/views.js';
 export * as structure from './resources/structure.js';
 export * as search from './resources/search.js';
 export * as references from './resources/references.js';
+export * as agentRecords from './resources/agent-records.js';
+export { agentGate } from './resources/agent-records.js';
+export type { AgentGate } from './resources/agent-records.js';
 export * as suggestions from './resources/suggestions.js';
 export {
   MAXIMUM_MENTION_EXCLUSIONS,

@@ -7,6 +7,7 @@ import {
   operationById,
   operationRisk,
 } from '@nix/api-client';
+import { assertGenericGate } from './commands/agent-records.ts';
 import { toolResult } from './mcp-support.ts';
 import type { McpToolDeps } from './mcp-support.ts';
 
@@ -73,7 +74,10 @@ export function registerActionTools(server: McpServer, { session }: McpToolDeps)
           throw new Error(
             `${operationId} is ${risk === 'irreversible' ? 'irreversible' : risk === 'access' ? 'an access change' : 'a public change'}; confirm with the user, then call again with confirm: true.`,
           );
-        const result = await callOperation((await session()).client, operationId, {
+        const current = await session();
+        // Mistake guard only: nixctl api and raw REST are not covered; Core enforces the workspace switches.
+        assertGenericGate(current, operationId, body);
+        const result = await callOperation(current.client, operationId, {
           path,
           query,
           body,

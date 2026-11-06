@@ -6,7 +6,8 @@ import { READ_ONLY_OPERATIONS, type WorkspaceToolArgs } from './tool-args.js';
  * Trash hides an item from everyone until restored; a move changes which ancestors an
  * item inherits its permissions from, so it can widen the audience; a template capture copies
  * a subtree into the workspace-visible library. A generic action (publish, permanent delete,
- * sharing) can do all of that, so it never applies unattended. */
+ * sharing, approving or revoking a file version, creating a public link) can do all of that, so it
+ * never applies unattended: those operations are only reachable through `run_action`. */
 const ALWAYS_ASK_OPERATIONS: ReadonlySet<WorkspaceToolArgs['operation']> = new Set<
   WorkspaceToolArgs['operation']
 >(['trash_item', 'move_item', 'save_as_template', 'update_view', 'edit_fields', 'run_action']);

@@ -9,8 +9,9 @@ import {
   showHistory,
 } from './history.ts';
 import { runQuery } from './query.ts';
+import { runFilterQuery } from './register-records.ts';
 import { getViews, inspectViews, setViews } from './views.ts';
-import { parseInteger, parseSeqArg } from './program-support.ts';
+import { collect, parseInteger, parseSeqArg } from './program-support.ts';
 import type { ConfirmCliOptions } from './program-support.ts';
 import { type Act } from './shared.ts';
 
@@ -147,13 +148,48 @@ export function registerNoteCommands(program: Command, act: Act): void {
     );
 
   program
-    .command('query <itemId>')
-    .description("Run one of a container's views and print the children it shows.")
-    .requiredOption('--view <viewId>', "which of the container's views to run")
-    .requiredOption('--today <yyyy-mm-dd>', "the caller's own day, for relative rules")
-    .action((itemId: string, options: { view: string; today: string }, command: Command) =>
-      act(command, (profile, output) =>
-        runQuery(profile, itemId, { view: options.view, today: options.today }, output),
-      ),
+    .command('query [itemId]')
+    .description(
+      "With an item: run one of a container's views and print the children it shows (--view, --today). " +
+        'With --workspace: filter items by property across a workspace; rules are ANDed.',
+    )
+    .option('--view <viewId>', "which of the container's views to run")
+    .option('--today <yyyy-mm-dd>', "the caller's own day, for relative rules")
+    .option('--workspace <id>', 'filter across this workspace instead of running a view')
+    .option('--parent <id>', 'with --workspace: only within this collection (its whole subtree)')
+    .option(
+      '--filter <property:operator[:value]>',
+      'with --workspace, e.g. status:not-equals:retired (not-equals also matches records missing the field); repeatable',
+      collect,
+      [],
+    )
+    .option(
+      '--sort <property[:desc]>',
+      'with --workspace: order by a property, $created or $modified',
+    )
+    .option('--limit <n>', 'with --workspace: maximum rows (default 100, at most 500)', Number)
+    .action(
+      (
+        itemId: string | undefined,
+        options: {
+          view?: string;
+          today?: string;
+          workspace?: string;
+          parent?: string;
+          filter: string[];
+          sort?: string;
+          limit?: number;
+        },
+        command: Command,
+      ) =>
+        act(command, (profile, output) => {
+          if (options.workspace !== undefined)
+            return runFilterQuery(profile, { ...options, workspace: options.workspace }, output);
+          if (itemId === undefined || options.view === undefined || options.today === undefined)
+            throw new Error(
+              'Give an item with --view and --today, or use --workspace with --filter.',
+            );
+          return runQuery(profile, itemId, { view: options.view, today: options.today }, output);
+        }),
     );
 }

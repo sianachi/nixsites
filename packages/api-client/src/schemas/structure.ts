@@ -33,6 +33,9 @@ export const propertyDefinitionSchema = z.object({
   // never the parse of the whole schema.
   aggregate: z.string().nullable().default(null),
   source: z.string().nullable().default(null),
+
+  // Whether children of this collection must hold distinct values here. Left absent unless set.
+  unique: z.boolean().nullable().exactOptional(),
 });
 
 export type PropertyDefinition = Omit<z.infer<typeof propertyDefinitionSchema>, 'choiceSource'> & {

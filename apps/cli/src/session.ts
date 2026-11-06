@@ -181,6 +181,11 @@ export interface Session {
   readonly client: NixClient;
   readonly tokens: TokenProvider;
   readonly endpoints: SessionEndpoints;
+  /**
+   * 'interactive' for a `nixctl auth login` session, which Core treats as a person; 'token' for a
+   * personal access token or an external bearer. Only 'token' identifies an unattended agent.
+   */
+  readonly authKind: 'interactive' | 'token';
 }
 
 /**
@@ -200,7 +205,11 @@ export function openSession(options: SessionOptions): Session {
   const endpoints = endpointsFor(options.profile);
   // The resource descriptors carry the full `/api/v1/...` path, so the base is Core's origin.
   const client = createNixClient({ baseUrl: endpoints.apiUrl, tokens });
-  return { client, tokens, endpoints };
+  const authKind =
+    bearer === undefined && options.profile.interactiveSession !== undefined
+      ? 'interactive'
+      : 'token';
+  return { client, tokens, endpoints, authKind };
 }
 
 /** The acting principal, as `/api/v1/me` reports them. */

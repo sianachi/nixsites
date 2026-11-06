@@ -436,6 +436,76 @@ describe('workspace-scoped companion tools', () => {
       expect(outcome.lockedContent).toBe(true);
     });
 
+    describe('the workspace switches for agents', () => {
+      const versionId = '44444444-4444-4444-8444-444444444444';
+      const gated = {
+        approve: action('SetFileVersionState', {
+          path: { itemId, versionId },
+          body: { state: 'approved' },
+        }),
+        revoke: action('SetFileVersionState', {
+          path: { itemId, versionId },
+          body: { state: 'revoked' },
+        }),
+        link: action('CreatePublicLink', { path: { itemId }, body: {} }),
+      };
+      const withWorkspace = (flags: Record<string, unknown>) => {
+        const fake = setup();
+        fake.query.mockImplementation((endpoint: { operation: string }) =>
+          Promise.resolve(
+            endpoint.operation === 'workspaces.get'
+              ? { id: workspace, ...flags }
+              : { id: itemId, workspaceId: workspace, parentId: null, title: 'Plan', type: 'note' },
+          ),
+        );
+        fake.execute.mockResolvedValue({ ok: true });
+        return fake;
+      };
+
+      it.each(['approve', 'revoke', 'link'] as const)(
+        'refuses %s while the switch is off, and sends nothing',
+        async (name) => {
+          const { ports, execute, signal } = withWorkspace({
+            agentsMayApprove: false,
+            agentsMayCreatePublicLinks: null,
+          });
+          await expect(runWorkspaceTool(ports, workspace, gated[name], signal)).rejects.toThrow(
+            'off for assistants',
+          );
+          expect(execute).not.toHaveBeenCalled();
+        },
+      );
+
+      it('runs them once the owner switched them on, and still lets draft and review through when off', async () => {
+        const on = withWorkspace({ agentsMayApprove: true, agentsMayCreatePublicLinks: true });
+        for (const name of ['approve', 'revoke', 'link'] as const)
+          await runWorkspaceTool(on.ports, workspace, gated[name], on.signal);
+        expect(on.execute).toHaveBeenCalledTimes(3);
+        const off = withWorkspace({});
+        await runWorkspaceTool(
+          off.ports,
+          workspace,
+          action('SetFileVersionState', {
+            path: { itemId, versionId },
+            body: { state: 'in_review' },
+          }),
+          off.signal,
+        );
+        expect(off.execute).toHaveBeenCalledOnce();
+      });
+
+      it('has the preview report the refusal instead of a card', async () => {
+        const { ports, signal } = withWorkspace({});
+        const context = await loadPreviewContext(
+          ports,
+          workspace,
+          workspaceToolSchema.parse(JSON.parse(gated.approve)),
+          signal,
+        );
+        expect(context.problems[0]?.message).toContain('off for assistants');
+      });
+    });
+
     it('treats a read through an action as locked content', async () => {
       const { ports, query, signal } = setup();
       query.mockResolvedValue({ id: itemId, workspaceId: workspace, parentId: null });
