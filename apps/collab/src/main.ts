@@ -14,6 +14,7 @@ import { createDocumentRegistry, type DocumentHub } from './documents/registry.t
 import { startChunkBackfill } from './documents/chunk-backfill.ts';
 import { startRetentionSweep } from './documents/retention.ts';
 import { createConversationBodyAuthorizer } from './http/routes/conversation-bodies.ts';
+import { createPublicLinkCore } from './http/routes/public-links.ts';
 import { createServer } from './http/server.ts';
 import { createImportBodyService } from './imports/bodies.ts';
 import { createCoreImportClient } from './imports/core.ts';
@@ -128,6 +129,7 @@ export async function startCollab(): Promise<{ stop: () => Promise<void> }> {
 
   const app = createServer({
     conversationBodyAuthorizer: createConversationBodyAuthorizer(config),
+    publicLinkCore: createPublicLinkCore(config),
     pool,
     sessions,
     core: createCoreClient({ coreBaseUrl: config.coreBaseUrl }),

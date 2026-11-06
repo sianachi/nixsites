@@ -9,6 +9,7 @@ import { CLOSE_CODES } from '../ws/protocol.ts';
 import { attachWebSocketServer } from '../ws/server.ts';
 import type { RouteDependencies, ServerDependencies } from './context.ts';
 import { registerConversationBodyRoutes } from './routes/conversation-bodies.ts';
+import { registerPublicLinkRoutes } from './routes/public-links.ts';
 import { registerExportRoutes } from './routes/exports.ts';
 import { registerHistoryRoutes } from './routes/history.ts';
 import { registerInternalImportRoutes } from './routes/internal-imports.ts';
@@ -108,6 +109,7 @@ export function createServer(deps: ServerDependencies): FastifyInstance {
   }
 
   registerConversationBodyRoutes(app, routes);
+  registerPublicLinkRoutes(app, routes);
   registerExportRoutes(app, routes);
   registerUpdateRoutes(app, routes);
   registerMarkdownRoutes(app, routes);

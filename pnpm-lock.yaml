@@ -113,6 +113,9 @@ importers:
       '@nix/sheet':
         specifier: workspace:*
         version: link:../../packages/sheet
+      '@nix/site-render':
+        specifier: workspace:*
+        version: link:../../packages/site-render
       '@prometheus-io/client':
         specifier: ^0.16.1
         version: 0.16.1

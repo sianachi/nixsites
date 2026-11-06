@@ -11,6 +11,7 @@ import type { TemplateService } from '../templates/service.ts';
 import type { SessionHub } from '../ws/server.ts';
 import type { SessionAuthenticator } from '../ws/session-auth.ts';
 import type { ConversationBodyAuthorizer } from './routes/conversation-bodies.ts';
+import type { PublicLinkCore } from './routes/public-links.ts';
 import { requestToken } from './auth.ts';
 import { isUuid } from './params.ts';
 import { problem } from './replies.ts';
@@ -41,6 +42,7 @@ export interface ServerDependencies {
    */
   readonly internalSecret: string;
   readonly conversationBodyAuthorizer?: ConversationBodyAuthorizer;
+  readonly publicLinkCore?: PublicLinkCore;
 
   /** Injected so an export of unchanged content is byte-identical to the last one. */
   readonly now?: (() => Date) | undefined;

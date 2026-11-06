@@ -18,6 +18,7 @@
     "@nix/export": "workspace:*",
     "@nix/markdown": "workspace:*",
     "@nix/sheet": "workspace:*",
+    "@nix/site-render": "workspace:*",
     "@prometheus-io/client": "^0.16.1",
     "@tiptap/pm": "^3.32.2",
     "fastify": "^5.12.7",
