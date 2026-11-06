@@ -161,6 +161,7 @@ builder.Services.AddSingleton<NotificationWatchGate>();
 builder.Services.AddSingleton<Nix.Features.Comments.CommentWatchGate>();  // takes the NotificationWatchGate singleton: one shared process total
 builder.Services.AddSingleton<Nix.Features.Pets.PetInlineLimiter>();
 builder.Services.AddHttpClient<ConversationBodyReader>();
+builder.Services.AddHttpClient<Nix.Abstractions.IPublicNoteReader, PublicNoteReader>();
 builder.Services.AddHttpClient<PetWorkerClient>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(static () => new HttpClientHandler { AllowAutoRedirect = false });
 
@@ -622,6 +623,9 @@ app.UseWhen(
                 static context =>
                     !context.Request.Path.StartsWithSegments(
                         "/internal/conversations",
+                        StringComparison.OrdinalIgnoreCase)
+                    && !context.Request.Path.StartsWithSegments(
+                        "/internal/public-links",
                         StringComparison.OrdinalIgnoreCase)
                     && !context.Request.Path.StartsWithSegments(
                         "/internal/worker-dispatch",

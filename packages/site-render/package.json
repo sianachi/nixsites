@@ -13,6 +13,10 @@
       "types": "./dist/svg.d.ts",
       "default": "./dist/svg.js"
     },
+    "./prose": {
+      "types": "./dist/html/prose.d.ts",
+      "default": "./dist/html/prose.js"
+    },
     "./highlight": {
       "types": "./dist/html/highlight.d.ts",
       "default": "./dist/html/highlight.js"

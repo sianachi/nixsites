@@ -16,6 +16,7 @@ import { GraphPage } from './pages/graph-page';
 import { PetPage } from './pages/pet-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { PublicFormPage } from './pages/public-form-page';
+import { PublicLinkPage } from './pages/public-link-page';
 import { SettingsPage } from './pages/settings-page';
 import { TemplateLibraryPage } from '@nix/web-templates/templates/library/template-library-page';
 import { TemplateImportPage } from '@nix/web-templates/templates/import/template-import-page';
@@ -129,6 +130,7 @@ export function AppRoutes(): ReactElement {
     <RouteDialogContext.Provider value={dialog}>
       <Routes location={mainLocation}>
         <Route path="/forms/:token" element={<PublicFormPage />} />
+        <Route path="/links/:token" element={<PublicLinkPage />} />
 
         <Route element={<RequireSession />}>
           <Route element={<AccessibleWorkspacesProvider />}>
