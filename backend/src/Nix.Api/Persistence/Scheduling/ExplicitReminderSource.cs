@@ -103,7 +103,7 @@ public sealed class ExplicitReminderSource(
             return TriggerOutcome.Skipped("item_gone");
         }
 
-        var currentInstant = ReminderInstant.Read(item.Properties);
+        var currentInstant = ReminderInstant.Read(item.Properties, ItemProperties.ReminderKey);
         if (currentInstant is not { } instant)
         {
             return TriggerOutcome.Skipped("reminder_removed");

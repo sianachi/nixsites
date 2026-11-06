@@ -43,6 +43,43 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
     }
 
     /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<DeleteBlocker>> FindDeleteBlockersAsync(ItemId itemId, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+
+        // The closure includes the item itself at depth 0. A pin counts only while its holder is
+        // active: a trashed record no longer needs the version it pinned.
+        var rows = await database.Database.SqlQuery<BlockerRow>($"""
+            SELECT d.id AS "Id",
+                   COALESCE(d.properties ->> 'title', '') AS "Title",
+                   CASE WHEN d.no_delete THEN 'no_delete' ELSE 'pinned' END AS "Reason"
+              FROM item d
+              JOIN item_closure edge
+                ON edge.tenant_id = d.tenant_id
+               AND edge.descendant_id = d.id
+               AND edge.ancestor_id = {itemId.Value}
+             WHERE d.tenant_id = {tenantId}
+               AND d.lifecycle_state = 'active'
+               AND (d.no_delete
+                    OR EXISTS (
+                        SELECT 1
+                          FROM item_reference pin
+                          JOIN item holder
+                            ON holder.tenant_id = pin.tenant_id AND holder.id = pin.holder_item_id
+                         WHERE pin.tenant_id = d.tenant_id
+                           AND pin.target_item_id = d.id
+                           AND pin.target_file_version_id IS NOT NULL
+                           AND holder.lifecycle_state = 'active'))
+             ORDER BY edge.depth, d.id
+             LIMIT 5
+            """).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return [.. rows.Select(row => new DeleteBlocker(ItemId.From(row.Id), row.Title, row.Reason))];
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "EF Core materialises SqlQuery rows through reflection.")]
+    private sealed record BlockerRow(Guid Id, string Title, string Reason);
+
+    /// <inheritdoc />
     public async ValueTask<bool> SetAsync(ItemId itemId, bool? noDelete, bool? noChildren, bool? collaboration, CancellationToken cancellationToken)
     {
         var tenantId = TenantId;

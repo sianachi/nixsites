@@ -15,6 +15,15 @@ public sealed record ExplicitReminderCandidate(
     PrincipalId PrincipalId,
     DateTimeOffset ReminderAt);
 
+/// <summary>An active item whose <c>expiry</c>, set through the write path, falls before a plan window's end.</summary>
+/// <param name="PrincipalId">The setter while active in the item's tenant, else the item's creator.</param>
+public sealed record ExpiryCandidate(
+    TenantId TenantId,
+    Guid ItemId,
+    WorkspaceId WorkspaceId,
+    PrincipalId PrincipalId,
+    DateTimeOffset ExpiryAt);
+
 /// <summary>A plain (non-recurring), not-complete item whose due day falls in a plan window.</summary>
 /// <param name="PrincipalId">
 /// The recipient: the active principal of the item's tenant named by <c>$due_set_by</c>, or the
@@ -100,6 +109,18 @@ public interface IReminderCandidateFinder
     /// </remarks>
     public Task<IReadOnlyList<ExplicitReminderCandidate>> FindExplicitAsync(
         DateTimeOffset from,
+        DateTimeOffset until,
+        int limit,
+        DateTimeOffset afterInstant,
+        Guid afterId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Active items with an <c>expiry</c> and an <c>$expiry_set_by</c> stamp whose instant is before
+    /// <paramref name="until"/> - with no lower bound, so an overdue item that could not be trashed
+    /// stays a candidate - in <c>(instant, id)</c> order, one keyset page at a time.
+    /// </summary>
+    public Task<IReadOnlyList<ExpiryCandidate>> FindExpiringAsync(
         DateTimeOffset until,
         int limit,
         DateTimeOffset afterInstant,

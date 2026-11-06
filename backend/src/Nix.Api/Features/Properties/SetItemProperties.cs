@@ -155,6 +155,8 @@ public sealed class SetItemPropertiesHandler(
         // The merge carries the keys this write named as well as its result, and required-ness is
         // enforced on those keys alone: clearing a required value is refused, leaving one alone is
         // not.
+        if (ExpiryRules.Check(merged.Merged, merged.Touched, clock.GetUtcNow()) is { } badExpiry) { return Result.Failure<Item>(badExpiry); }
+
         var violations = PropertyValidator.ValidateWrite(merged, schema);
         if (!violations.IsEmpty)
         {

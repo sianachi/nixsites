@@ -110,6 +110,12 @@ public sealed class RestoreItemHandler(
             .SetLifecycleAsync(itemId, ItemLifecycleState.Active, context.PrincipalId, now, cancellationToken)
             .ConfigureAwait(false);
 
+        // A restored item must not trash itself again on the next pass, so its expiry goes.
+        if (ItemProperties.WithoutExpiry(item.Properties) is { } withoutExpiry)
+        {
+            await tree.UpdatePropertiesAsync(itemId, withoutExpiry, context.PrincipalId, now, cancellationToken).ConfigureAwait(false);
+        }
+
         // A restored child can deliberately remain hidden below a deleted parent. Read the stored
         // row here so that successful lifecycle transition is not misreported as disappearance.
         var restored = await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);

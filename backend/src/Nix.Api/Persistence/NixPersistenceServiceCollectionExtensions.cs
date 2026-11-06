@@ -324,6 +324,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<Nix.Abstractions.Scheduling.IMutedContainerChecker, Nix.Persistence.Scheduling.MutedContainerChecker>();
         services.AddScoped<Nix.Abstractions.Scheduling.IPrincipalStatusChecker, Nix.Persistence.Scheduling.PrincipalStatusChecker>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.ExplicitReminderSource>();
+        services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.ExpirySource>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.DueTaskReminderSource>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.HabitReminderSource>();
 
