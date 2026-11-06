@@ -30,7 +30,8 @@ internal static class PropertyMapping
             definition.Expression,
             definition.Aggregate is { } aggregate ? RollupAggregates.ToText(aggregate) : null,
             definition.Source,
-            definition.ChoiceSource);
+            definition.ChoiceSource,
+            definition.Unique ? true : null);
     }
 
     /// <summary>Maps a resolved schema onto the published shape.</summary>
@@ -92,7 +93,8 @@ internal static class PropertyMapping
                     // that omits it - otherwise a count would be refused for naming a property
                     // called nothing.
                     string.IsNullOrWhiteSpace(property.Source) ? null : property.Source,
-                    property.ChoiceSource));
+                    property.ChoiceSource,
+                    property.Unique == true));
         }
 
         schema = new PropertySchema { Properties = properties.ToImmutable(), Inherit = request.Inherit };

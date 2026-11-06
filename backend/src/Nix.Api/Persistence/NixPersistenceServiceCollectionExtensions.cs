@@ -286,6 +286,9 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IWorkspaceArrangementStore, WorkspaceArrangementStore>();
         services.AddScoped<IWorkspaceSync, WorkspaceSyncStore>();
         services.AddScoped<INativeReplayStore, NativeReplayStore>();
+        services.AddScoped<IRecordKeyStore, Nix.Persistence.Records.RecordKeyStore>();
+        services.AddScoped<Nix.Features.Records.RecordKeys>();
+        services.AddScoped<Nix.Features.Records.RecordService>();
         services.AddScoped<ICommandHandler<NativeReplay, NativeReplayResponse>, NativeReplayHandler>();
         services.AddScoped<IQueryHandler<GetWorkspaceSyncSnapshot, WorkspaceSyncSnapshot?>, WorkspaceSyncQueries>();
         services.AddScoped<IQueryHandler<GetWorkspaceSyncChanges, WorkspaceSyncChanges?>, WorkspaceSyncQueries>();

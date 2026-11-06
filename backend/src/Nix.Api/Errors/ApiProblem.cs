@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Nix.Domain.Primitives;
 using Nix.Http;
 
 namespace Nix.Errors;
@@ -92,6 +93,32 @@ public static class ApiProblem
 
         problem.Extensions[CodeExtension] = code;
         Enrich(problem, httpContext);
+        return problem;
+    }
+
+    /// <summary>Builds a problem for a use-case failure, carrying its per-field violations and conflicting item.</summary>
+    /// <param name="httpContext">Request context.</param>
+    /// <param name="status">HTTP status code of the failure.</param>
+    /// <param name="error">The failure.</param>
+    internal static ProblemDetails Create(HttpContext httpContext, int status, NixError error)
+    {
+        var problem = Create(httpContext, status, error.Code, "Request refused", error.Message);
+        if (error.Violations is { Count: > 0 } violations)
+        {
+            // JSON nodes rather than anonymous objects: they serialise without reflection.
+            problem.Extensions["violations"] = new System.Text.Json.Nodes.JsonArray(
+                [.. violations.Select(violation => (System.Text.Json.Nodes.JsonNode)new System.Text.Json.Nodes.JsonObject
+                {
+                    ["key"] = violation.Key,
+                    ["reason"] = violation.Reason,
+                })]);
+        }
+
+        if (error.ExistingItemId is { } existing)
+        {
+            problem.Extensions["existingItemId"] = existing;
+        }
+
         return problem;
     }
 

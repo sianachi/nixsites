@@ -8,6 +8,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Features.Properties;
+using Nix.Features.Records;
 using Nix.Messaging;
 
 namespace Nix.Features.Items;
@@ -51,6 +52,12 @@ public sealed record CreateItem(
     /// request-bound, and never a way to write a scheduler set-by key.
     /// </summary>
     internal bool CalendarWrite { get; init; }
+
+    /// <summary>
+    /// Refuse undeclared keys (built-in keys such as <c>reminder</c> and <c>due_date</c> aside) and
+    /// enforce required fields. Off for plain REST so existing callers keep working.
+    /// </summary>
+    public bool Strict { get; init; }
 }
 
 /// <summary>
@@ -67,7 +74,8 @@ public sealed class CreateItemHandler(
     ISchemaResolver schemas,
     INixSessionContextAccessor session,
     TimeProvider clock,
-    IFinanceLock? topology = null)
+    IFinanceLock? topology = null,
+    RecordKeys? recordKeys = null)
     : ICommandHandler<CreateItem, Item>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -170,9 +178,11 @@ public sealed class CreateItemHandler(
             }
         }
 
+        Item? collection = null;
         if (parentId is { } parent)
         {
             var existing = await tree.FindAsync(parent, cancellationToken).ConfigureAwait(false);
+            collection = existing;
             if (existing is null || existing.WorkspaceId != workspaceId)
             {
                 return Result.Failure<Item>(
@@ -186,6 +196,20 @@ public sealed class CreateItemHandler(
                 return Result.Failure<Item>(
                     ItemErrors.ChildrenProtected("This item does not accept new children."));
             }
+        }
+
+        // The parent as the unique-field scope: canonical values go into the bag, so what is stored
+        // is what a lookup matches. Only a parent that declares a unique field costs anything here.
+        var claims = ImmutableArray<RecordClaim>.Empty;
+        if (recordKeys is not null && properties is not null)
+        {
+            var prepared = RecordKeys.Prepare(collection, properties);
+            if (prepared.IsFailure)
+            {
+                return Result.Failure<Item>(prepared.Error);
+            }
+
+            (properties, claims) = prepared.Value;
         }
 
         // The title is written last so it wins. A caller that also passed `title` in the bag would
@@ -204,7 +228,9 @@ public sealed class CreateItemHandler(
         // finished item, and demanding one here would make an item impossible to create inside any
         // container that requires anything. Everything actually supplied faces its declaration
         // exactly as a later write would.
-        var violations = PropertyValidator.ValidateSupplied(bag, schema);
+        var violations = command.Strict
+            ? PropertyValidator.ValidateSuppliedStrict(bag, schema)
+            : PropertyValidator.ValidateSupplied(bag, schema);
         if (!violations.IsEmpty)
         {
             return Result.Failure<Item>(PropertyErrors.InvalidProperties(violations));
@@ -237,7 +263,17 @@ public sealed class CreateItemHandler(
             LastModifiedAt = now,
         };
 
+        if (recordKeys is not null && await recordKeys.CheckAsync(collection, null, claims, cancellationToken).ConfigureAwait(false) is { } conflict)
+        {
+            return Result.Failure<Item>(conflict);
+        }
+
         await tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
+        if (recordKeys is not null && await recordKeys.ApplyAsync(collection, item.Id, claims, cancellationToken).ConfigureAwait(false) is { } backstop)
+        {
+            return Result.Failure<Item>(backstop);
+        }
+
         if (command.IdempotencyKey is { } key)
         {
             await tree.RecordCreationReceiptAsync(key, creationRequest!, item.Id, cancellationToken).ConfigureAwait(false);
@@ -276,7 +312,7 @@ internal static class CreateItemEndpoint
                     request.Title,
                     request.ParentId is { } parent ? ItemId.From(parent) : null,
                     request.Properties)
-                { IdempotencyKey = request.IdempotencyKey },
+                { IdempotencyKey = request.IdempotencyKey, Strict = request.Strict == true },
                 httpContext.RequestAborted)
             .ConfigureAwait(false);
 

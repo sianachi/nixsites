@@ -51,6 +51,11 @@ public static class PropertySchemaRules
                 return "'title' is managed by the item itself and cannot be redeclared.";
             }
 
+            if (property.Unique && property.Type is not (PropertyType.Text or PropertyType.Url))
+            {
+                return $"'{property.Label}' cannot be unique: only text and url fields can.";
+            }
+
             if (property.Type.HasOptions() && property.Options.IsEmpty && property.ChoiceSource is null)
             {
                 return $"'{property.Label}' is a select and needs at least one option.";

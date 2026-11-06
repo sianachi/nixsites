@@ -153,7 +153,7 @@ internal static class StructureEndpoints
     /// </remarks>
     internal static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(HttpContext httpContext, NixError error)
     {
-        var status = error.Code switch
+        var status = Records.RecordErrors.StatusOf(error.Code) ?? error.Code switch
         {
             PropertyErrors.InvalidPropertiesCode
                 or PropertyErrors.InvalidSchemaCode
@@ -164,6 +164,6 @@ internal static class StructureEndpoints
             _ => StatusCodes.Status404NotFound,
         };
 
-        return ApiProblem.Create(httpContext, status, error.Code, "Request refused", error.Message);
+        return ApiProblem.Create(httpContext, status, error);
     }
 }

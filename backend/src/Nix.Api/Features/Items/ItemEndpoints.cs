@@ -294,8 +294,9 @@ internal static class ItemEndpoints
     /// </remarks>
     internal static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(HttpContext httpContext, NixError error)
     {
-        var status = error.Code switch
+        var status = Records.RecordErrors.StatusOf(error.Code) ?? error.Code switch
         {
+            Properties.PropertyErrors.InvalidPropertiesCode => StatusCodes.Status422UnprocessableEntity,
             CycleCode or LifecycleConflictCode or SiblingNotInDestinationCode
                 or DeleteProtectedCode or ChildrenProtectedCode or ProtectionManagedCode or ReadOnlyCode
                 or BodyConflictCode
@@ -311,6 +312,6 @@ internal static class ItemEndpoints
             _ => StatusCodes.Status404NotFound,
         };
 
-        return ApiProblem.Create(httpContext, status, error.Code, "Request refused", error.Message);
+        return ApiProblem.Create(httpContext, status, error);
     }
 }

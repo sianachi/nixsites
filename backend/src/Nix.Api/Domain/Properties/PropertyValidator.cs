@@ -131,6 +131,84 @@ public static class PropertyValidator
         PropertySchema schema) =>
         Validate(properties, schema, NothingRequired);
 
+    /// <summary>
+    /// Keys a write may carry without declaring them, in strict mode: the title, and the keys the
+    /// server's own features (due dates, reminders, completion, expiry) read by name.
+    /// shortcut: spelled out here, so a new built-in key must be added to this list, until the
+    /// features that own these keys publish one shared list.
+    /// </summary>
+    private static readonly HashSet<string> BuiltInKeys =
+        new(["title", "due_date", "reminder", "completion", "expiry"], StringComparer.Ordinal);
+
+    /// <summary>
+    /// A create under strict mode: undeclared keys are refused and every required field is owed,
+    /// unlike <see cref="ValidateSupplied"/>, which owes none.
+    /// </summary>
+    /// <param name="properties">The values being supplied, as JSON.</param>
+    /// <param name="schema">The schema in force.</param>
+    /// <returns>Every violation, empty when the values are acceptable.</returns>
+    public static ImmutableArray<PropertyViolation> ValidateSuppliedStrict(string? properties, PropertySchema schema)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        var required = schema.Properties.Where(definition => definition.Required).Select(definition => definition.Key).ToImmutableArray();
+        return [.. Undeclared(properties, schema, null), .. Validate(properties, schema, required)];
+    }
+
+    /// <summary>
+    /// A write under strict mode: undeclared keys among the ones it set are refused, then the usual
+    /// write checks apply (required-ness only for the keys it named).
+    /// </summary>
+    /// <param name="write">The merged bag and the keys the write named.</param>
+    /// <param name="schema">The schema in force.</param>
+    /// <returns>Every violation, empty when the write is acceptable.</returns>
+    public static ImmutableArray<PropertyViolation> ValidateWriteStrict(PropertyWrite write, PropertySchema schema)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        return [.. Undeclared(write.Merged, schema, write.Touched), .. Validate(write.Merged, schema, write.Touched)];
+    }
+
+    private static ImmutableArray<PropertyViolation> Undeclared(
+        string? properties,
+        PropertySchema schema,
+        ImmutableArray<string>? onlyKeys)
+    {
+        JsonObject? bag;
+        try
+        {
+            bag = properties is null ? null : JsonNode.Parse(properties) as JsonObject;
+        }
+        catch (JsonException)
+        {
+            return []; // The ordinary check reports malformed JSON.
+        }
+
+        if (bag is null)
+        {
+            return [];
+        }
+
+        var violations = ImmutableArray.CreateBuilder<PropertyViolation>();
+        foreach (var (key, value) in bag)
+        {
+            // A null clears a key, which is always allowed: it is how an undeclared leftover is removed.
+            if (value is null
+                || BuiltInKeys.Contains(key)
+                || schema.Find(key) is not null
+                || (onlyKeys is { } only && !only.Contains(key, StringComparer.Ordinal)))
+            {
+                continue;
+            }
+
+            violations.Add(new PropertyViolation(
+                key,
+                schema.Properties.IsEmpty
+                    ? $"No fields are declared here, so '{key}' cannot be written in strict mode. Declare fields on the collection first."
+                    : $"'{key}' is not a declared field. Declare it on the collection first, or write without strict."));
+        }
+
+        return violations.ToImmutable();
+    }
+
     /// <summary>A create owes no required value, so nothing is enforced.</summary>
     /// <remarks>
     /// An empty <see cref="ImmutableArray{T}"/> rather than an empty set: immutable by

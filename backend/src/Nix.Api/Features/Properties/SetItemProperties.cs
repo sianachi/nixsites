@@ -5,6 +5,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Properties;
 using Nix.Features.Items;
+using Nix.Features.Records;
 using Nix.Messaging;
 
 namespace Nix.Features.Properties;
@@ -46,6 +47,9 @@ public sealed record SetItemProperties(ItemId ItemId, string Changes) : ICommand
 
     // And for the calendar sync pull, which alone may write $cal_ keys.
     internal bool CalendarWrite { get; init; }
+
+    /// <summary>Refuse undeclared keys (built-ins aside) among the ones this write sets.</summary>
+    public bool Strict { get; init; }
 }
 
 /// <summary>Handles <see cref="SetItemProperties"/>.</summary>
@@ -55,7 +59,8 @@ public sealed class SetItemPropertiesHandler(
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
     TimeProvider clock,
-    IFinanceMutationGuard? financeGuard = null)
+    IFinanceMutationGuard? financeGuard = null,
+    RecordKeys? recordKeys = null)
     : ICommandHandler<SetItemProperties, Item>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -140,6 +145,23 @@ public sealed class SetItemPropertiesHandler(
             }
         }
 
+        // A unique field's value is stored in canonical form and claimed under a lock; a collision
+        // is a refusal (the offline replay surfaces it as a refused operation, never a 500).
+        Item? collection = null;
+        var claims = System.Collections.Immutable.ImmutableArray<RecordClaim>.Empty;
+        if (recordKeys is not null && item.ParentId is { } parentId && ParseObject(changes) is { } changeObject)
+        {
+            collection = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
+            var prepared = RecordKeys.Prepare(collection, changeObject);
+            if (prepared.IsFailure)
+            {
+                return Result.Failure<Item>(prepared.Error);
+            }
+
+            changes = prepared.Value.Canonical.ToJsonString();
+            claims = prepared.Value.Claims;
+        }
+
         var write = ItemProperties.Merge(item.Properties, changes);
         if (write is not { } merged)
         {
@@ -155,10 +177,17 @@ public sealed class SetItemPropertiesHandler(
         // The merge carries the keys this write named as well as its result, and required-ness is
         // enforced on those keys alone: clearing a required value is refused, leaving one alone is
         // not.
-        var violations = PropertyValidator.ValidateWrite(merged, schema);
+        var violations = command.Strict
+            ? PropertyValidator.ValidateWriteStrict(merged, schema)
+            : PropertyValidator.ValidateWrite(merged, schema);
         if (!violations.IsEmpty)
         {
             return Result.Failure<Item>(PropertyErrors.InvalidProperties(violations));
+        }
+
+        if (recordKeys is not null && await recordKeys.CheckAsync(collection, itemId, claims, cancellationToken).ConfigureAwait(false) is { } conflict)
+        {
+            return Result.Failure<Item>(conflict);
         }
 
         // The one point this write's scheduled values, if any, are attributed - see
@@ -177,11 +206,28 @@ public sealed class SetItemPropertiesHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
+        if (recordKeys is not null && await recordKeys.ApplyAsync(collection, itemId, claims, cancellationToken).ConfigureAwait(false) is { } backstop)
+        {
+            return Result.Failure<Item>(backstop);
+        }
+
         var written = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
 
         return written is null
             ? Result.Failure<Item>(ItemErrors.NotFound($"Item {itemId} disappeared during the write."))
             : Result.Success(written);
+    }
+
+    private static System.Text.Json.Nodes.JsonObject? ParseObject(string changes)
+    {
+        try
+        {
+            return System.Text.Json.Nodes.JsonNode.Parse(changes) as System.Text.Json.Nodes.JsonObject;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null; // The merge below returns the established error.
+        }
     }
 
     private static bool ContainsReservedFinanceKey(string changes) =>
@@ -253,7 +299,7 @@ internal static class SetItemPropertiesEndpoint
     {
         var result = await dispatcher
             .SendAsync<SetItemProperties, Item>(
-                new SetItemProperties(ItemId.From(itemId), request.Properties.ToJsonString()),
+                new SetItemProperties(ItemId.From(itemId), request.Properties.ToJsonString()) { Strict = request.Strict == true },
                 httpContext.RequestAborted)
             .ConfigureAwait(false);
 

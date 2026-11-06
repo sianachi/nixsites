@@ -34,7 +34,8 @@ public sealed class SetItemSchemaHandler(
     IItemTree tree,
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
-    TimeProvider clock)
+    TimeProvider clock,
+    Nix.Features.Records.RecordKeys? recordKeys = null)
     : ICommandHandler<SetItemSchema, PropertySchema>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -70,6 +71,11 @@ public sealed class SetItemSchemaHandler(
 
         if (schema is null || schema.IsEmpty)
         {
+            if (recordKeys is not null)
+            {
+                _ = await recordKeys.ApplySchemaAsync(item, null, cancellationToken).ConfigureAwait(false);
+            }
+
             await tree
                 .UpdateSchemaAsync(itemId, null, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
                 .ConfigureAwait(false);
@@ -91,6 +97,16 @@ public sealed class SetItemSchemaHandler(
             return Result.Failure<PropertySchema>(
                 PropertyErrors.InvalidSchema(
                     $"A schema may be at most {PropertyValidator.MaximumBytes} bytes."));
+        }
+
+        // Turning a field unique claims its existing values in this transaction, or refuses listing
+        // the duplicates; turning it off drops the keys.
+        // shortcut: a create racing this transaction can slip a duplicate past the backfill, turn
+        // the flag off and on to list it; close it if records are created while schemas change.
+        if (recordKeys is not null
+            && await recordKeys.ApplySchemaAsync(item, schema, cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return Result.Failure<PropertySchema>(refused);
         }
 
         await tree
