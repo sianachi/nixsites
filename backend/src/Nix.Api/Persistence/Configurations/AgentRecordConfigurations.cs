@@ -47,7 +47,7 @@ internal sealed class ItemReferenceConfiguration : IEntityTypeConfiguration<Item
         builder.HasOne<FileVersion>().WithMany()
             .HasForeignKey(reference => new { reference.TenantId, reference.TargetItemId, reference.TargetFileVersionId })
             .HasPrincipalKey(version => new { version.TenantId, version.ItemId, version.Id })
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         // One row per (holder, target, version, role); NULLs compare equal so two unpinned,
         // role-less references cannot coexist.
@@ -105,7 +105,7 @@ internal sealed class PublicLinkConfiguration : IEntityTypeConfiguration<PublicL
         builder.HasOne<FileVersion>().WithMany()
             .HasForeignKey(link => new { link.TenantId, link.ItemId, link.FileVersionId })
             .HasPrincipalKey(version => new { version.TenantId, version.ItemId, version.Id })
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Principal>().WithMany()
             .HasForeignKey(link => new { link.TenantId, link.ServicePrincipalId })
             .HasPrincipalKey(principal => new { principal.TenantId, principal.Id })

@@ -5232,7 +5232,7 @@ namespace Nix.Persistence.Migrations.Generated
                         .WithMany()
                         .HasForeignKey("TenantId", "ItemId", "FileVersionId")
                         .HasPrincipalKey("TenantId", "ItemId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Nix.Domain.References.ItemReference", b =>
@@ -5262,7 +5262,7 @@ namespace Nix.Persistence.Migrations.Generated
                         .WithMany()
                         .HasForeignKey("TenantId", "TargetItemId", "TargetFileVersionId")
                         .HasPrincipalKey("TenantId", "ItemId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Nix.Domain.Scheduling.ScheduledTrigger", b =>

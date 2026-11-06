@@ -125,6 +125,29 @@ public sealed class AgentRecordsSchemaTests : IAsyncLifetime
             $"INSERT INTO record_key (tenant_id, scope_item_id, field, value, item_id) VALUES ('{Alpha.TenantId}', '{Beta.ItemId}', 'cross', 'x', '{Beta.ItemId}')",
             ForeignKeyViolation);
 
+    [Fact]
+    public async Task Deleting_a_workspace_removes_pins_and_version_bound_links_with_it()
+    {
+        var version = M0SchemaSeed.Alpha.TemplateSourceId;
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            await Exec(work, $"INSERT INTO item_reference (id, tenant_id, workspace_id, holder_item_id, target_item_id, target_file_version_id, role, created_by, created_at) VALUES (gen_random_uuid(), '{Alpha.TenantId}', '{Alpha.WorkspaceId}', '{Alpha.ItemId}', '{Alpha.ItemId}', '{version}', 'pin', '{Alpha.PrincipalId}', now())");
+            await Exec(work, $"UPDATE public_link SET file_version_id = '{version}' WHERE item_id = '{Alpha.ItemId}'");
+
+            // The statement shape of WorkspaceAdministrationSql.FinalizePurge, minus its job gate.
+            var deleted = await Exec(work, $"DELETE FROM workspace w WHERE w.tenant_id = '{Alpha.TenantId}' AND w.workspace_id = '{Alpha.WorkspaceId}'");
+
+            Assert.Equal(1, deleted);
+            var connection = (NpgsqlConnection)work.DbContext.Database.GetDbConnection();
+            var transaction = (NpgsqlTransaction)work.Transaction.GetDbTransaction();
+            foreach (var table in new[] { "item_reference", "public_link", "record_key", "file_version" })
+            {
+                Assert.Equal(0, await RawSql.CountAsync(connection, transaction, $"SELECT count(*) FROM {table}"));
+            }
+        }
+    }
+
     private static Task<int> Exec(NixUnitOfWork work, string sql) => RawSql.ExecuteAsync(
         (NpgsqlConnection)work.DbContext.Database.GetDbConnection(),
         (NpgsqlTransaction)work.Transaction.GetDbTransaction(),

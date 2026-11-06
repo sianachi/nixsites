@@ -97,7 +97,7 @@ namespace Nix.Persistence.Migrations.Generated
                         columns: x => new { x.tenant_id, x.target_item_id, x.target_file_version_id },
                         principalTable: "file_version",
                         principalColumns: new[] { "tenant_id", "item_id", "file_version_id" },
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_item_reference_item_tenant_id_holder_item_id",
                         columns: x => new { x.tenant_id, x.holder_item_id },
@@ -141,7 +141,7 @@ namespace Nix.Persistence.Migrations.Generated
                         columns: x => new { x.tenant_id, x.item_id, x.file_version_id },
                         principalTable: "file_version",
                         principalColumns: new[] { "tenant_id", "item_id", "file_version_id" },
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_public_link_item_tenant_id_item_id",
                         columns: x => new { x.tenant_id, x.item_id },
