@@ -39,6 +39,15 @@
 		}
 	}
 
+	# Anonymous public links and public forms. Core throttles these per client address, so the
+	# real client address must be the sole X-Forwarded-For hop here as well.
+	@public_anonymous path /public/v1/links/* /public/v1/forms/*
+	handle @public_anonymous {
+		reverse_proxy nix-api:8080 {
+			header_up X-Forwarded-For {$NIX_CLIENT_IP}
+		}
+	}
+
 	handle /auth/* {
 		reverse_proxy nix-api:8080 {
 			header_up X-Forwarded-For {$NIX_CLIENT_IP}

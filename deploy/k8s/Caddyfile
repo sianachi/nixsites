@@ -53,6 +53,14 @@
 		}
 	}
 
+	# Anonymous public links and public forms, throttled per client address by Core.
+	@public_anonymous path /public/v1/links/* /public/v1/forms/*
+	handle @public_anonymous {
+		reverse_proxy nix-api:8080 {
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+
 	handle /auth/* {
 		reverse_proxy nix-api:8080 {
 			header_up X-Forwarded-For {client_ip}

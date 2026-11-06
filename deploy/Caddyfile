@@ -32,6 +32,12 @@
 		}
 	}
 
+	# Anonymous public links and public forms.
+	@public_anonymous path /public/v1/links/* /public/v1/forms/*
+	handle @public_anonymous {
+		reverse_proxy localhost:5014
+	}
+
 	# Core owns the OIDC redirect, callback and HttpOnly browser session.
 	handle /auth/* {
 		reverse_proxy localhost:5014
