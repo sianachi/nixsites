@@ -13,6 +13,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- A file download with no version named now returns the latest approved version, or the latest upload when none is approved, and says which it served. Renaming a file only renames a draft version, so an approved file name stays exact.
 - One `nix-node` service runs collaboration, the pet companion and the sites worker, replacing `nix-collab`, `nix-companion` and `nix-sites-worker` (Compose) and the `nix-collab`, `nix-worker` and `nix-sites-worker` Deployments (Kubernetes). The companion is now Node (`NIX_COMPANION_IDLE_SECONDS`, default 300) and the `worker` image is no longer published. `deploy.sh` removes the old services; the companion data volume carries over. See Upgrading in the docs.
 - The sites worker no longer uses RabbitMQ: it leases `site.build`, `site.activate` and `site.purge` jobs from Core every few seconds (`NIX_SITES_POLL_SECONDS`, default 5) and completes them over the internal dispatch route. `NIX_SITES_RABBITMQ_URL` is no longer read.
 - Imports run inside Core: the `import` worker role and its container are gone. Document imports (`.nix`, Markdown, text, Word, PDF), template imports, file publication with thumbnails, template file copies and object cleanup run as Core background jobs. Import plans for `.nix`, Markdown, text, Word and template archives are byte-identical to the worker's (recorded scenarios replay); PDF text is extracted in process instead of by `pdftotext`, so PDF imports split lines differently. An import commit interrupted by a restart is failed and its staged items removed, so a retry imports once. The pet companion now runs in the `nix-plugin-worker` container (Compose: `Nix__Pets__WorkerUrl` points at it).
@@ -22,6 +23,17 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- File versions now have a state: draft, in review, approved or revoked, with who changed it and when. Approving and revoking need an Editor or Owner; each workspace has a switch, off by default, that lets access tokens do it too. `PUT /api/v1/items/{id}/file/versions/{versionId}/state`, `set_file_version_state`, `nixctl file state`.
+- Export a note to a file item: `POST /api/v1/exports` with `toFile`, `export_note_to_file`, `nixctl note export --to-file`. The output is a new draft version that records its source note and exact revision, and that revision is named so history pruning keeps it. PDF, DOCX and Markdown.
+- Items can reference other items, and pin an exact approved file version, with `/api/v1/items/{id}/references` and `/referenced-by`, `add_item_reference` and friends, `nixctl ref`. A pinned file, or a folder holding one, cannot be trashed or permanently deleted until it is unpinned, so a record keeps the same bytes after newer versions are uploaded.
+- Items can expire: set the built-in `expiry` property, `set_item_expiry` or `nixctl item expire`. Whoever set it is notified 7 days before and at expiry, and the item moves to the trash. Anything protected or pinned leaves a folder and everything below it untouched, with a notice naming what blocked it, and it is retried daily. Restoring clears the date.
+- Public links for notes and files: `/api/v1/items/{id}/public-link`, `create_public_link`, `nixctl link`, and a read-only page at `/links/{token}`. Off until the install sets `Nix:PublicLinks:Enabled`, and agents need a second workspace switch. A file link stays on one fixed version. A note link is live; its attachments serve only from an approved version, and its inline images from the current one. Trashing an item ends its links for good. After a revoke, no new download can start more than 60 seconds later.
+- Unique fields and record upsert: a collection can mark a text or address field `unique` across its direct children, and `POST /api/v1/items/{parentId}/records/upsert`, `upsert_record` and `nixctl record upsert` create or update by that value atomically, with optional idempotency keys. Retries and concurrent requests cannot make duplicates.
+- Exact lookup by property (`POST /api/v1/workspaces/{id}/lookup`, `find_items_by_property`, `nixctl item find`) and filtered queries on MCP and the CLI (`query_items`, `nixctl query --filter`).
+- Bulk writes: `POST /api/v1/workspaces/{id}/records/batch`, `batch_records`, `nixctl record batch`, up to 100 rows with a result per row. Good rows persist when others fail, and retrying is safe.
+- A `strict` option on item create and property writes refuses undeclared keys and enforces required fields. `create_item` on MCP and `nixctl item create` now take properties and an idempotency key, and are strict by default. Property errors now list `violations` per field.
+- An Attachments page lists a workspace's files with state, expiry, source note, pins and public link, and acts on them. `GET /api/v1/workspaces/{id}/attachments`, `list_attachments`, `nixctl file list`.
+- MCP tools for uploading and downloading through short-lived URLs, on both the local and the remote transport, and `list_backlinks` and `set_item_schema`.
 - A desktop app for macOS, Windows and Linux (`apps/desktop`, built with Electron): pick a Nix server and the app opens that server's own web app, with the same full offline copy as the iOS app (offline launch, reading, queued edits, files, conflicts). Sign-in runs in your browser, so passkeys and federated providers work. It needs a server from this version or newer, whose sign-in callback names its issuer; the iOS app needs rebuilding for the same reason. Builds are not code signed yet and do not update themselves.
 - A sign-in handoff for native apps: `/auth/login?native=<challenge>` finishes in the system sign-in
   sheet and returns a one-time code (valid for 60 seconds) and the server's own `iss` to the app,
@@ -118,6 +130,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Public forms were not reachable behind the bundled reverse proxy configurations: `/public/v1/forms/*` fell through to the web app.
+- Creating an item with invalid properties answered 404; it now answers 422 with the reason.
 - The iOS app's offline copy could never be created, so the app had nothing to open offline and
   showed "Nix is offline". The on-device store refused the search index's own setup. It now opens,
   syncs, and a copy that cannot be opened is reported instead of failing silently.

@@ -73,7 +73,7 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
             var unchangedJobs = jobs.Where(job => job.Kind != "transcribe.audio"
                 || job.Status is "completed" or "failed" or "cancelled")
                 .ToDictionary(job => job.Id, job => JsonSerializer.Serialize(job));
-            var files = await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).ToListAsync(Cancellation);
+            var files = await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).Select(file => new { file.Id, file.ItemId, file.ObjectKey, file.FileName, file.MediaType, file.ByteLength, file.Sha256 }).ToListAsync(Cancellation);
             var transcripts = await context.ItemTranscriptions.AsNoTracking().OrderBy(row => row.AudioItemId).ToListAsync(Cancellation);
             Assert.NotEmpty(files);
             Assert.NotEmpty(transcripts);
@@ -102,7 +102,7 @@ public sealed class SpeechRetirementMigrationTests(NixPostgresFixture fixture) :
                     Assert.True(job.UpdatedAt > before);
                 }
             }
-            Assert.Equal(filesBefore, JsonSerializer.Serialize(await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).ToListAsync(Cancellation)));
+            Assert.Equal(filesBefore, JsonSerializer.Serialize(await context.FileVersions.AsNoTracking().OrderBy(file => file.Id).Select(file => new { file.Id, file.ItemId, file.ObjectKey, file.FileName, file.MediaType, file.ByteLength, file.Sha256 }).ToListAsync(Cancellation)));
             Assert.Equal(transcriptsBefore, JsonSerializer.Serialize(await context.ItemTranscriptions.AsNoTracking().OrderBy(row => row.AudioItemId).ToListAsync(Cancellation)));
 
             await using var scope = fixture.Application.CreateUnscopedScope();

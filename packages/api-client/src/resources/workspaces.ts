@@ -111,6 +111,22 @@ export const setWorkspaceSharing = (
     schema: workspaceSchema,
     invalidates: [workspaceListKey, ['workspaces', workspaceId]],
   });
+/** Whether agents may approve file versions and create public links. Owners, in a browser session, only. */
+export const setWorkspaceAgentPolicy = (
+  workspaceId: string,
+  input: { readonly agentsMayApprove?: boolean; readonly agentsMayCreatePublicLinks?: boolean },
+): CommandEndpoint<Workspace> =>
+  defineCommand({
+    operation: 'workspaces.setAgentPolicy',
+    method: 'PUT',
+    path: `/api/v1/workspaces/${workspaceId}/agent-policy`,
+    body: {
+      agentsMayApprove: input.agentsMayApprove ?? null,
+      agentsMayCreatePublicLinks: input.agentsMayCreatePublicLinks ?? null,
+    },
+    schema: workspaceSchema,
+    invalidates: [workspaceListKey, ['workspaces', workspaceId]],
+  });
 export const archiveWorkspace = (workspaceId: string): CommandEndpoint<Workspace> =>
   defineCommand({
     operation: 'workspaces.archive',

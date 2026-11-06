@@ -16,12 +16,18 @@ export function SharingSwitches(): ReactElement {
   const canManage = workspace.canRename;
 
   async function save(
-    input: { membershipLocked?: boolean; collaboration?: boolean },
+    input:
+      | { membershipLocked?: boolean; collaboration?: boolean }
+      | { agentsMayApprove?: boolean; agentsMayCreatePublicLinks?: boolean },
     done: string,
   ): Promise<void> {
     setSaving(true);
     try {
-      const updated = await client.execute(coreWorkspaces.setWorkspaceSharing(workspace.id, input));
+      const updated = await client.execute(
+        'agentsMayApprove' in input || 'agentsMayCreatePublicLinks' in input
+          ? coreWorkspaces.setWorkspaceAgentPolicy(workspace.id, input)
+          : coreWorkspaces.setWorkspaceSharing(workspace.id, input),
+      );
       context.workspaceUpdated(updated);
       publishNotice({ key: 'workspace-sharing', message: done });
     } catch (reason) {
@@ -72,6 +78,41 @@ export function SharingSwitches(): ReactElement {
         />
         <Text variant="note" tone="muted">
           Off means one editor at a time.
+        </Text>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3">
+        <Checkbox
+          label="Agents may approve file versions"
+          checked={workspace.agentsMayApprove === true}
+          disabled={!canManage || saving}
+          onChange={(event) => {
+            const on = event.currentTarget.checked;
+            void save(
+              { agentsMayApprove: on },
+              on
+                ? 'Access tokens can now approve and revoke file versions.'
+                : 'Only people can approve and revoke file versions.',
+            );
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3">
+        <Checkbox
+          label="Agents may create public links"
+          checked={workspace.agentsMayCreatePublicLinks === true}
+          disabled={!canManage || saving}
+          onChange={(event) => {
+            const on = event.currentTarget.checked;
+            void save(
+              { agentsMayCreatePublicLinks: on },
+              on
+                ? 'Access tokens with admin scope can now make items public.'
+                : 'Only people can make items public.',
+            );
+          }}
+        />
+        <Text variant="note" tone="muted">
+          Agents signed in as you count as you. Run them on access tokens for these to apply.
         </Text>
       </div>
     </>
