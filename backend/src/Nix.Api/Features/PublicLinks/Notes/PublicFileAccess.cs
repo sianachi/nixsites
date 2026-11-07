@@ -5,6 +5,7 @@ using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
 using Nix.Persistence;
+using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Features.PublicLinks.Notes;
 
@@ -31,11 +32,6 @@ public sealed record PublicFileVerdict(PublicFileDisposition Disposition, string
 /// </summary>
 public static class PublicFileAccess
 {
-    private static readonly HashSet<string> InlineImageTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/png", "image/jpeg", "image/webp", "image/avif",
-    };
-
     private static readonly PublicFileVerdict Hidden = new(PublicFileDisposition.Hidden, null, null, null);
 
     public static async Task<PublicFileVerdict> ResolveAsync(
@@ -74,7 +70,7 @@ public static class PublicFileAccess
 
         var approved = await db.FileVersions.AsNoTracking()
             .Where(version => version.TenantId == tenant && version.ItemId == itemId && version.WorkspaceId == workspace
-                && version.State == "approved" && version.ObjectReady)
+                && version.State == FileVersionStates.Approved && version.ObjectReady)
             .OrderByDescending(version => version.Version)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (approved is not null)
@@ -90,7 +86,7 @@ public static class PublicFileAccess
             return Hidden;
         }
 
-        return asImage && current.ObjectReady && InlineImageTypes.Contains(current.MediaType)
+        return asImage && current.ObjectReady && S3CapabilitySigner.IsPublicInlineImage(current.MediaType)
             ? Serve(current)
             : new(PublicFileDisposition.Withheld, current.FileName, null, null);
     }

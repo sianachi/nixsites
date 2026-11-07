@@ -42,7 +42,6 @@ public sealed class ReferenceHandler(
     IQueryHandler<ListReferencedBy, Result<ReferencePage<ItemReferencedByResponse>>>
 {
     private const int MaxRole = 80;
-    private const string Approved = "approved";
 
     /// <inheritdoc />
     public async ValueTask<Result<ItemReferenceResponse>> HandleAsync(AddReference command, CancellationToken cancellationToken)
@@ -99,7 +98,7 @@ public sealed class ReferenceHandler(
                 return Invalid<ItemReferenceResponse>("references.version_not_found", "That version does not belong to the target file.");
             }
 
-            if (state != Approved)
+            if (state != FileVersionStates.Approved)
             {
                 return Invalid<ItemReferenceResponse>("references.version_not_approved", "Only an approved version can be pinned.");
             }

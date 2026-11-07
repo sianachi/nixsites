@@ -273,7 +273,8 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         await using var beta = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.BetaContext, Cancellation);
         beta.Resolve<AccessTokenSessionContext>().SetInteractive();
         var result = await beta.Resolve<IFileStore>().SetVersionStateAsync(
-            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[0]), "approved", Cancellation);
+            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[0]), "approved",
+            MayChangeApproval(beta.Resolve<AccessTokenSessionContext>()), Cancellation);
         Assert.Equal(FileVersionStateOutcome.NotFound, result.Outcome);
         Assert.Null(await beta.Resolve<IFileStore>().GetAsync(ItemId.From(file.ItemId), Cancellation));
     }
@@ -302,6 +303,10 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Equal(file.Versions[0], item.File!.VersionId);
         Assert.Equal("approved", item.File.State);
     }
+
+    // The endpoint supplies AgentPolicyGate.MayChangeVersionState (internal, so restated here).
+    private static Func<Workspace, bool> MayChangeApproval(AccessTokenSessionContext session) =>
+        workspace => session.IsInteractive || (workspace.AgentsMayApprove && session.MayWrite);
 
     private sealed record Uploaded(Guid ItemId, Guid[] Versions);
 
@@ -342,7 +347,8 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
             work.Resolve<AccessTokenSessionContext>().SetInteractive();
         }
         var result = await work.Resolve<IFileStore>().SetVersionStateAsync(
-            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[index]), state, Cancellation);
+            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[index]), state,
+            MayChangeApproval(work.Resolve<AccessTokenSessionContext>()), Cancellation);
         await work.CommitAsync(Cancellation);
         return result;
     }

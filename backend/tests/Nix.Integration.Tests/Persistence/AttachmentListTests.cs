@@ -9,6 +9,7 @@ using Nix.Features.Items;
 using Nix.Features.Locks;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
+using Nix.Persistence.Files;
 using Npgsql;
 
 namespace Nix.Integration.Tests.Persistence;
@@ -94,6 +95,42 @@ public sealed class AttachmentListTests(NixPostgresFixture fixture) : IAsyncLife
 
         // A revoked link is not a link.
         Assert.False(Assert.Single(rows, row => row.Title == "delta.pdf").HasPublicLink);
+    }
+
+    [Fact]
+    public async Task The_sql_shown_version_agrees_with_the_file_stores_rule_on_the_same_data()
+    {
+        var rows = await ListAsync(Locker, new ListAttachments(Workspace, null, true, false, null, 200));
+        Assert.NotEmpty(rows);
+
+        var work = await BeginAsync(Locker);
+        await using (work.ConfigureAwait(false))
+        {
+            foreach (var row in rows)
+            {
+                var item = ItemId.From(row.ItemId);
+                var current = await work.DbContext.FileBodies.Where(body => body.ItemId == item)
+                    .Select(body => body.CurrentVersionId).SingleAsync(Cancellation);
+                var shown = await FileStore.ShownFirst(work.DbContext.FileVersions.Where(version => version.ItemId == item), current)
+                    .FirstAsync(Cancellation);
+                Assert.Equal(shown.Id.Value, row.ShownVersionId);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task A_pin_held_from_the_trash_is_not_counted()
+    {
+        var trashedHolder = await CreateAsync("Trashed holder", null);
+        var tenant = M0SchemaSeed.Alpha.TenantId;
+        var principal = M0SchemaSeed.Alpha.PrincipalId;
+        await ExecAsync(
+            $"INSERT INTO item_reference (id, tenant_id, workspace_id, holder_item_id, target_item_id, target_file_version_id, role, created_by, created_at) VALUES (gen_random_uuid(), '{tenant}', '{Workspace.Value}', '{trashedHolder}', '{_alpha}', '{_alphaV1}', 'pin', '{principal}', now())",
+            $"UPDATE item SET lifecycle_state = 'deleted' WHERE id = '{trashedHolder}'");
+
+        var rows = await ListAsync(Locker, new ListAttachments(Workspace, null, true, false, null, 200));
+
+        Assert.Equal(1, Assert.Single(rows, row => row.Title == "alpha.pdf").PinCount);
     }
 
     [Fact]

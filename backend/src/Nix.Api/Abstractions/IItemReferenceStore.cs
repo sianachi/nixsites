@@ -2,7 +2,7 @@ using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.References;
 
-namespace Nix.Features.References;
+namespace Nix.Abstractions;
 
 /// <summary>Reads and writes <c>item_reference</c> rows for the current tenant.</summary>
 public interface IItemReferenceStore

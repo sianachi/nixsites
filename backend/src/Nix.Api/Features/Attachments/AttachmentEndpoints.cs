@@ -3,12 +3,15 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
 using Nix.Contracts;
+using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Scheduling;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
 using Nix.Features.Items;
 using Nix.Messaging;
+using Nix.Persistence.Items;
 using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
@@ -50,8 +53,8 @@ public sealed record ListAttachments(
 
 /// <summary>Reads the attachments page: one statement, keyset by item id.</summary>
 /// <remarks>
-/// <b>Shown version rule</b> (the same one <c>FileStore</c> uses): the highest-numbered approved
-/// version, else the current version. <b>Locks:</b> a file under a lock the credential has not
+/// <b>Shown version rule</b> (the same one <c>FileStore.ShownFirst</c> expresses in LINQ; a test
+/// asserts they agree): the highest-numbered approved version, else the current version. <b>Locks:</b> a file under a lock the credential has not
 /// opened, or locked itself, is left out of the page entirely, so no title or property of it can
 /// leak; hidden and trashed ancestors hide a file as they do in every other list.
 /// </remarks>
@@ -66,10 +69,10 @@ public sealed class ListAttachmentsHandler(
 {
     public const string Statement = $"""
         SELECT item.id, item.properties ->> 'title', shown.media_type, shown.file_version_id, shown.state,
-               item.properties ->> 'expiry', shown.source_item_id,
+               item.properties::text, shown.source_item_id,
                (SELECT count(*) FROM item_reference AS pin
                  WHERE pin.tenant_id = @tenant_id AND pin.target_item_id = item.id
-                   AND pin.target_file_version_id IS NOT NULL)::int,
+                   AND {ItemProtectionSql.LivePin})::int,
                EXISTS (SELECT 1 FROM public_link AS link
                  WHERE link.tenant_id = @tenant_id AND link.item_id = item.id AND link.revoked_at IS NULL)
         FROM file_body AS body
@@ -155,13 +158,12 @@ public sealed class ListAttachmentsHandler(
             var mediaType = reader.GetString(2);
             var versionId = reader.GetGuid(3);
             var state = reader.GetString(4);
-            var expiry = reader.IsDBNull(5) ? null : reader.GetString(5);
+            var properties = reader.IsDBNull(5) ? null : reader.GetString(5);
             Guid? source = reader.IsDBNull(6) ? null : reader.GetGuid(6);
             var pins = reader.GetInt32(7);
             var link = reader.GetBoolean(8);
 
-            // shortcut: an unparseable expiry shows as none, tighten when the expiry lane fixes its format.
-            DateTimeOffset? expiresAt = DateTimeOffset.TryParse(expiry, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var at) ? at : null;
+            var expiresAt = ReminderInstant.Read(properties, ItemProperties.ExpiryKey);
             return new AttachmentRow(id, title, mediaType, versionId, state, expiresAt, source, pins, link);
         }
     }
@@ -169,8 +171,6 @@ public sealed class ListAttachmentsHandler(
 
 internal static class AttachmentEndpoints
 {
-    private static readonly string[] States = ["draft", "in_review", "approved", "revoked"];
-
     internal static IEndpointRouteBuilder MapAttachmentEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -190,7 +190,7 @@ internal static class AttachmentEndpoints
                         after = parsed;
                     }
 
-                    if (state is not null && !States.Contains(state, StringComparer.Ordinal))
+                    if (state is not null && !FileVersionStates.IsValid(state))
                     {
                         return Invalid(context, "attachments.invalid_state", "state must be draft, in_review, approved or revoked.");
                     }

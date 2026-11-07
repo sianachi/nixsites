@@ -46,7 +46,7 @@ public sealed class PublicLinkSignerTests
     [InlineData("image/gif", false)]
     [InlineData("application/octet-stream", false)]
     [InlineData("application/pdf; charset=utf-8", false)]
-    [InlineData("IMAGE/PNG", false)]
+    [InlineData("IMAGE/PNG", true)]
     public void Only_the_narrow_list_is_served_inline_and_everything_else_downloads(string mediaType, bool inline)
     {
         var query = HttpUtility.ParseQueryString(
