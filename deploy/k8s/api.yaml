@@ -91,6 +91,9 @@ spec:
               value: "true"
             - name: Nix__PublicForms__SigningKey
               valueFrom: { secretKeyRef: { name: nix-internal, key: public-forms-signing-key } }
+            # Public links for notes and files; they sign with the public forms key above.
+            - name: Nix__PublicLinks__Enabled
+              value: "${PUBLIC_LINKS_ENABLED}"
             # Core sits behind Caddy and Traefik. Without this every request appears
             # to come from the proxy and both rate limiters collapse into one global
             # bucket: ten bad tokens from anyone would 429 everyone. Caddy (a pod-network

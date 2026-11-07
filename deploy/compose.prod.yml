@@ -174,6 +174,8 @@ services:
       Nix__ObjectStorage__AccessKey: ${NIX_OBJECT_STORE_ACCESS_KEY:?set NIX_OBJECT_STORE_ACCESS_KEY}
       Nix__ObjectStorage__SecretKey: ${NIX_OBJECT_STORE_SECRET_KEY:?set NIX_OBJECT_STORE_SECRET_KEY}
       Nix__PublicForms__SigningKey: ${NIX_PUBLIC_FORMS_SIGNING_KEY:?set NIX_PUBLIC_FORMS_SIGNING_KEY}
+      # Public links for notes and files, signed with the key above. Off unless set to true.
+      Nix__PublicLinks__Enabled: ${NIX_PUBLIC_LINKS_ENABLED:-false}
       Nix__ForwardedHeaders__KnownNetworks: 172.30.0.0/24
       Nix__ForwardedHeaders__ForwardLimit: "2"
       Nix__RateLimits__WritesPerMinute: "120"
