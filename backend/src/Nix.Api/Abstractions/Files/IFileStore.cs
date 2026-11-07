@@ -41,12 +41,14 @@ public sealed record FileVersionRecord(Guid Id, int Version, string FileName, st
 /// <summary>The pixel size of a stored thumbnail; a version without one carries null instead.</summary>
 public sealed record FileThumbnailRecord(int Width, int Height);
 /// <summary>What the thumbnail capability is signed from: the version's own key plus the thumbnail's facts.</summary>
-public sealed record FileThumbnailDownloadRecord(string VersionObjectKey, int Width, int Height, int ByteLength, Guid? VersionId = null);
+public sealed record FileThumbnailDownloadRecord(string VersionObjectKey, int Width, int Height, int ByteLength, string State, DateTimeOffset? StateChangedAt, Guid? VersionId = null);
 /// <summary>Exact immutable source metadata used to authorize a streamed archive or template copy.</summary>
 public sealed record FileVersionSourceRecord(Guid Id, int Version, string ObjectKey, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, int? PixelWidth, int? PixelHeight, bool Current);
 public sealed record FileRecord(Guid ItemId, Guid WorkspaceId, FileVersionRecord Current, IReadOnlyList<FileVersionRecord> Versions, Guid? ShownVersionId = null);
-/// <param name="VersionId">The version served: the one asked for, else the latest approved, else the current upload.</param>
-public sealed record FileDownloadRecord(string ObjectKey, string FileName, string MediaType, long ByteLength, string Sha256, bool Previewable, Guid? VersionId = null);
+/// <param name="StoredMediaType">The media type the version was stored with; <c>MediaType</c> may be resolved from the file name.</param>
+/// <param name="State">The version's state. A named version comes back in any state so the endpoint can answer a revoked one with 410.</param>
+/// <param name="VersionId">The version served: the one asked for, else the shown one (never a revoked one).</param>
+public sealed record FileDownloadRecord(string ObjectKey, string FileName, string MediaType, string StoredMediaType, long ByteLength, string Sha256, bool Previewable, Guid WorkspaceId, string State, DateTimeOffset? StateChangedAt, Guid? VersionId = null);
 
 public enum FileVersionStateOutcome
 {
@@ -81,6 +83,12 @@ public interface IFileStore
     /// </summary>
     /// <returns>Null when the file is not visible or readable, or when the version has no thumbnail.</returns>
     public ValueTask<FileThumbnailDownloadRecord?> AuthorizeThumbnailAsync(ItemId itemId, FileVersionId? versionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Audits one privileged issuance of a link to a revoked version. The caller has already checked
+    /// the Owner and credential rules; the event holds actor and credential kind, never the URL.
+    /// </summary>
+    public ValueTask RecordRevokedDownloadAsync(ItemId itemId, FileDownloadRecord download, string credentialKind, CancellationToken cancellationToken);
 
     /// <summary>
     /// Carries an item rename onto its file body: the current version's stored file name follows

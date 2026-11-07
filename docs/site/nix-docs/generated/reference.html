@@ -759,17 +759,17 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
-<article id="authorizefiledownload" data-search="get /api/v1/items/{itemid}/file/download authorizefiledownload   files">
+<article id="authorizefiledownload" data-search="get /api/v1/items/{itemid}/file/download authorizefiledownload get a short-lived signed url to download a file version without versionid, signs the shown version: the latest approved, else the current upload if it is not revoked, else the newest non-revoked version; 404 files.no_servable_version when none is servable. naming a revoked version answers 410 files.version_revoked. mediatype is the content-type the url will be served with: application/octet-stream for a download, the stored type for preview=true. storedmediatype is the version's own media type. unscanned=true means nix does not malware-scan uploads. includerevoked=true (diagnostics) is honoured only for a workspace owner using a browser session or an admin-scope access token, is audited, and marks the response revoked=true; anyone else gets 403 files.revoked_download_forbidden. a url cannot be revoked at the object store: a url issued before a version was revoked keeps working until expiresat, at most nix:objectstorage:capabilityseconds (default 300, maximum 900) after issue. files">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/file/download</code></h3>
-<p></p>
+<p>Get a short-lived signed URL to download a file version</p>
 <p class="id">Operation id: <code>AuthorizeFileDownload</code></p>
 <p><strong>Can.</strong> Read the resource named in the summary.</p>
 <p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
 <p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Without versionId, signs the shown version: the latest approved, else the current upload if it is not revoked, else the newest non-revoked version; 404 files.no_servable_version when none is servable. Naming a revoked version answers 410 files.version_revoked. mediaType is the Content-Type the URL will be served with: application/octet-stream for a download, the stored type for preview=true. storedMediaType is the version's own media type. unscanned=true means Nix does not malware-scan uploads. includeRevoked=true (diagnostics) is honoured only for a workspace Owner using a browser session or an admin-scope access token, is audited, and marks the response revoked=true; anyone else gets 403 files.revoked_download_forbidden. A URL cannot be revoked at the object store: a URL issued before a version was revoked keeps working until expiresAt, at most Nix:ObjectStorage:CapabilitySeconds (default 300, maximum 900) after issue.</p>
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>versionId</code> in query (optional, string (uuid))</li><li><code>preview</code> in query (required, boolean)</li><li><code>includeRevoked</code> in query (optional, boolean)</li></ul>
 
-<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>versionId</code> in query (optional, string (uuid))</li><li><code>preview</code> in query (required, boolean)</li></ul>
-
-<p>Responses: <code>200</code>, <code>404</code>, <code>503</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>410</code>, <code>503</code>.</p>
 </article>
 <article id="authorizefilethumbnail" data-search="get /api/v1/items/{itemid}/file/thumbnail authorizefilethumbnail   files">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/file/thumbnail</code></h3>
@@ -781,7 +781,7 @@
 
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>versionId</code> in query (optional, string (uuid))</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>503</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>410</code>, <code>503</code>.</p>
 </article>
 <article id="setfileversionstate" data-search="put /api/v1/items/{itemid}/file/versions/{versionid}/state setfileversionstate   files">
 <h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/file/versions/{versionId}/state</code></h3>

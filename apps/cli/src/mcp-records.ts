@@ -10,6 +10,7 @@ import {
   agentRecords,
   attachments,
   files,
+  isNixApiError,
   references,
   structure,
   type PropertyDefinition,
@@ -351,16 +352,31 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
     {
       description:
         'Get a short-lived url to download a file (GET it yourself; the bytes do not pass through this tool). ' +
-        'Without versionId you get the latest approved version, else the latest upload; the answer says which. ' +
-        'Pass versionId for an exact version.',
+        'Without versionId you get the latest approved version, else the current upload if it is not revoked, ' +
+        'else the newest non-revoked one; the answer says which. A revoked version has no link (it answers revoked). ' +
+        'Pass versionId for an exact version. The answer carries mediaType (the Content-Type the url is served ' +
+        "with, application/octet-stream for a download), storedMediaType (the file's own type), sha256, byteLength " +
+        'and unscanned: true, which means Nix does not malware-scan uploads. The url expires at expiresAt ' +
+        '(five minutes by default). Send a non-default User-Agent when you fetch it: the edge in front of some ' +
+        'installs blocks Python\'s default Python-urllib agent with "error code: 1010"; python-requests, node, ' +
+        'curl and browsers pass.',
       inputSchema: { itemId: identifier, versionId: identifier.optional() },
     },
     ({ itemId, versionId }) =>
-      toolResult(async () =>
-        (await session()).client.query(files.downloadFile(itemId, versionId), {
-          forceRefresh: true,
-        }),
-      ),
+      toolResult(async () => {
+        try {
+          return await (
+            await session()
+          ).client.query(files.downloadFile(itemId, versionId), {
+            forceRefresh: true,
+          });
+        } catch (error) {
+          if (isNixApiError(error) && error.status === 410) {
+            throw new Error('This file version was revoked, so it has no download link.');
+          }
+          throw error;
+        }
+      }),
   );
 
   server.registerTool(

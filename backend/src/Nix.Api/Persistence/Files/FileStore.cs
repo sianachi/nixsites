@@ -416,10 +416,33 @@ public sealed class FileStore(
                 version.ObjectKey,
                 version.FileName,
                 PreviewMediaType(version.FileName, version.MediaType, version.ByteLength) ?? version.MediaType,
+                version.MediaType,
                 version.ByteLength,
                 version.Sha256,
                 Previewable(version.FileName, version.MediaType, version.ByteLength, version.Previewable),
+                version.WorkspaceId.Value,
+                version.State,
+                version.StateChangedAt,
                 version.Id.Value);
+    }
+
+    public async ValueTask RecordRevokedDownloadAsync(ItemId itemId, FileDownloadRecord download, string credentialKind, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(download);
+        var context = Context;
+        database.AuditEvents.Add(new AuditEvent
+        {
+            Id = AuditEventId.Create(),
+            TenantId = context.TenantId,
+            WorkspaceId = WorkspaceId.From(download.WorkspaceId),
+            ActorId = context.PrincipalId,
+            Action = "file_version.revoked_download_authorized",
+            SubjectId = download.VersionId!.Value,
+            SubjectType = "file_version",
+            After = $$"""{"itemId":"{{itemId.Value}}","credential":"{{credentialKind}}"}""",
+            OccurredAt = clock.GetUtcNow(),
+        });
+        await database.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async ValueTask<FileThumbnailDownloadRecord?> AuthorizeThumbnailAsync(ItemId itemId, FileVersionId? versionId, CancellationToken cancellationToken)
@@ -428,7 +451,7 @@ public sealed class FileStore(
         // withholds the body (no read access, a hidden item, a closed lock) withholds it too.
         var version = await FindReadableVersionAsync(itemId, versionId, cancellationToken).ConfigureAwait(false);
         return version is { ThumbnailWidth: { } width, ThumbnailHeight: { } height, ThumbnailBytes: { } bytes }
-            ? new FileThumbnailDownloadRecord(version.ObjectKey, width, height, bytes, version.Id.Value)
+            ? new FileThumbnailDownloadRecord(version.ObjectKey, width, height, bytes, version.State, version.StateChangedAt, version.Id.Value)
             : null;
     }
 
@@ -453,22 +476,27 @@ public sealed class FileStore(
         var versions = database.FileVersions.AsNoTracking().Where(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId && candidate.WorkspaceId == body.WorkspaceId && candidate.ObjectReady);
         if (versionId is { } named)
         {
-            // Any state is served by name, so a revoked version stays reachable to members.
+            // Any state is returned by name: the endpoint answers a revoked one with 410, or signs it
+            // for an Owner's audited diagnostic request.
             return await versions.SingleOrDefaultAsync(candidate => candidate.Id == named, cancellationToken).ConfigureAwait(false);
         }
-        // No version named: the shown one, the latest approved, else the current upload.
+        // No version named: the shown one, which is never a revoked version.
         return await ShownFirst(versions, body.CurrentVersionId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// The one shown-version rule: the highest-numbered approved version, else the current upload.
-    /// The first element is the shown one. <c>ListAttachmentsHandler.Statement</c> restates it in SQL
-    /// and a test holds the two to the same answer.
+    /// The one shown-version rule: the highest-numbered approved version, else the current upload
+    /// unless it is revoked, else the newest non-revoked version. A revoked version is never shown,
+    /// so the sequence is empty when every version is revoked. The first element is the shown one.
+    /// <c>ListAttachmentsHandler.Statement</c> restates it in SQL and a test holds the two to the
+    /// same answer.
     /// </summary>
     public static IOrderedQueryable<FileVersion> ShownFirst(IQueryable<FileVersion> versions, FileVersionId currentVersionId) =>
         versions
-            .Where(candidate => candidate.State == FileVersionStates.Approved || candidate.Id == currentVersionId)
+            .Where(candidate => candidate.State != FileVersionStates.Revoked)
             .OrderByDescending(candidate => candidate.State == FileVersionStates.Approved)
+            .ThenByDescending(candidate => candidate.State == FileVersionStates.Approved ? candidate.Version : 0)
+            .ThenByDescending(candidate => candidate.Id == currentVersionId)
             .ThenByDescending(candidate => candidate.Version);
 
     private Task<int> LockDownloadContainmentAsync(ItemId itemId, CancellationToken cancellationToken) =>

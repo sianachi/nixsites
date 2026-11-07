@@ -218,7 +218,7 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
     }
 
     [Fact]
-    public async Task With_nothing_approved_the_current_upload_is_shown_and_a_revoked_version_stays_downloadable_by_name()
+    public async Task With_nothing_approved_the_current_upload_is_shown_and_a_revoked_version_is_still_found_by_name_for_the_endpoint_to_refuse()
     {
         var file = await UploadAsync("fallback", 2);
         await using (var read = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
@@ -236,9 +236,11 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         var afterFiles = after.Resolve<IFileStore>();
         // Revoked is no longer approved, so the default falls back to the current upload ...
         Assert.Equal(file.Versions[1], (await afterFiles.AuthorizeDownloadAsync(ItemId.From(file.ItemId), null, Cancellation))!.VersionId);
-        // ... but a member can still fetch the revoked bytes by naming the version.
-        Assert.Equal(file.Versions[0], (await afterFiles.AuthorizeDownloadAsync(
-            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[0]), Cancellation))!.VersionId);
+        // ... and the store still resolves the named revoked version (state revoked) so the endpoint can answer 410.
+        var named = (await afterFiles.AuthorizeDownloadAsync(
+            ItemId.From(file.ItemId), FileVersionId.From(file.Versions[0]), Cancellation))!;
+        Assert.Equal(file.Versions[0], named.VersionId);
+        Assert.Equal("revoked", named.State);
     }
 
     [Fact]

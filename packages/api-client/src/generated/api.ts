@@ -984,6 +984,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /**
+     * Get a short-lived signed URL to download a file version
+     * @description Without versionId, signs the shown version: the latest approved, else the current upload if it is not revoked, else the newest non-revoked version; 404 files.no_servable_version when none is servable. Naming a revoked version answers 410 files.version_revoked. mediaType is the Content-Type the URL will be served with: application/octet-stream for a download, the stored type for preview=true. storedMediaType is the version's own media type. unscanned=true means Nix does not malware-scan uploads. includeRevoked=true (diagnostics) is honoured only for a workspace Owner using a browser session or an admin-scope access token, is audited, and marks the response revoked=true; anyone else gets 403 files.revoked_download_forbidden. A URL cannot be revoked at the object store: a URL issued before a version was revoked keeps working until expiresAt, at most Nix:ObjectStorage:CapabilitySeconds (default 300, maximum 900) after issue.
+     */
     get: operations['AuthorizeFileDownload'];
     put?: never;
     post?: never;
@@ -4517,6 +4521,8 @@ export interface components {
       noSniff: boolean;
       /** Format: uuid */
       versionId?: null | string;
+      storedMediaType?: null | string;
+      revoked?: null | boolean;
     };
     FileRecord: {
       /** Format: uuid */
@@ -9725,6 +9731,7 @@ export interface operations {
       query: {
         versionId?: string;
         preview: boolean;
+        includeRevoked?: boolean;
       };
       header?: never;
       path: {
@@ -9743,8 +9750,26 @@ export interface operations {
           'application/json': components['schemas']['FileDownloadCapabilityResponse'];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Gone */
+      410: {
         headers: {
           [name: string]: unknown;
         };
@@ -9787,6 +9812,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Gone */
+      410: {
         headers: {
           [name: string]: unknown;
         };

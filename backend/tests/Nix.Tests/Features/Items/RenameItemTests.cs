@@ -258,6 +258,9 @@ public sealed class RenameItemTests
         public ValueTask<FileThumbnailDownloadRecord?> AuthorizeThumbnailAsync(ItemId itemId, FileVersionId? versionId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public ValueTask RecordRevokedDownloadAsync(ItemId itemId, FileDownloadRecord download, string credentialKind, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public ValueTask<FileVersionStateResult> SetVersionStateAsync(ItemId itemId, FileVersionId versionId, string state, Func<Workspace, bool> mayChangeApproval, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

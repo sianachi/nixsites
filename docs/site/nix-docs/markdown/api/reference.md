@@ -1284,6 +1284,8 @@ Responses: `200`, `404`.
 
 <a id="authorizefiledownload"></a>
 
+Get a short-lived signed URL to download a file version
+
 Operation id: `AuthorizeFileDownload`.
 
 **Can.** Read the resource named in the summary.
@@ -1292,13 +1294,16 @@ Operation id: `AuthorizeFileDownload`.
 
 **Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
 
+Without versionId, signs the shown version: the latest approved, else the current upload if it is not revoked, else the newest non-revoked version; 404 files.no_servable_version when none is servable. Naming a revoked version answers 410 files.version_revoked. mediaType is the Content-Type the URL will be served with: application/octet-stream for a download, the stored type for preview=true. storedMediaType is the version's own media type. unscanned=true means Nix does not malware-scan uploads. includeRevoked=true (diagnostics) is honoured only for a workspace Owner using a browser session or an admin-scope access token, is audited, and marks the response revoked=true; anyone else gets 403 files.revoked_download_forbidden. A URL cannot be revoked at the object store: a URL issued before a version was revoked keeps working until expiresAt, at most Nix:ObjectStorage:CapabilitySeconds (default 300, maximum 900) after issue.
+
 Parameters:
 
 - `itemId` in path (required, string (uuid))
 - `versionId` in query (optional, string (uuid))
 - `preview` in query (required, boolean)
+- `includeRevoked` in query (optional, boolean)
 
-Responses: `200`, `404`, `503`.
+Responses: `200`, `403`, `404`, `410`, `503`.
 
 ### GET /api/v1/items/{itemId}/file/thumbnail
 
@@ -1317,7 +1322,7 @@ Parameters:
 - `itemId` in path (required, string (uuid))
 - `versionId` in query (optional, string (uuid))
 
-Responses: `200`, `404`, `503`.
+Responses: `200`, `404`, `410`, `503`.
 
 ### PUT /api/v1/items/{itemId}/file/versions/{versionId}/state
 

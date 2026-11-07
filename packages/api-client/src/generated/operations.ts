@@ -263,13 +263,15 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     method: 'GET',
     path: '/api/v1/items/{itemId}/file/download',
     area: 'Files',
-    summary: '',
-    detail: '',
+    summary: 'Get a short-lived signed URL to download a file version',
+    detail:
+      'Without versionId, signs the shown version: the latest approved, else the current upload if it is not revoked, else the newest non-revoked version; 404 files.no_servable_version when none is servable.',
     pathParams: ['itemId'],
     uuidParams: ['itemId'],
     queryParams: [
       { name: 'versionId', required: false, type: 'string' },
       { name: 'preview', required: true, type: 'boolean' },
+      { name: 'includeRevoked', required: false, type: 'boolean' },
     ],
   },
   {

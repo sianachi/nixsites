@@ -54,7 +54,10 @@ public sealed record ListAttachments(
 /// <summary>Reads the attachments page: one statement, keyset by item id.</summary>
 /// <remarks>
 /// <b>Shown version rule</b> (the same one <c>FileStore.ShownFirst</c> expresses in LINQ; a test
-/// asserts they agree): the highest-numbered approved version, else the current version. <b>Locks:</b> a file under a lock the credential has not
+/// asserts they agree): the highest-numbered approved version, else the current version unless it
+/// is revoked, else the newest non-revoked version. One difference, on purpose: a file whose every
+/// version is revoked stays on the page showing a revoked version (the store shows none, and
+/// serves none). <b>Locks:</b> a file under a lock the credential has not
 /// opened, or locked itself, is left out of the page entirely, so no title or property of it can
 /// leak; hidden and trashed ancestors hide a file as they do in every other list.
 /// </remarks>
@@ -81,9 +84,11 @@ public sealed class ListAttachmentsHandler(
             SELECT version.file_version_id, version.media_type, version.state, version.source_item_id
             FROM file_version AS version
             WHERE version.tenant_id = @tenant_id AND version.item_id = item.id
-            ORDER BY (version.state = 'approved') DESC,
+            ORDER BY (version.state <> 'revoked') DESC,
+                     (version.state = 'approved') DESC,
                      CASE WHEN version.state = 'approved' THEN version.version END DESC NULLS LAST,
-                     (version.file_version_id = body.current_version_id) DESC
+                     (version.file_version_id = body.current_version_id) DESC,
+                     version.version DESC
             LIMIT 1
         ) AS shown ON TRUE
         WHERE body.tenant_id = @tenant_id

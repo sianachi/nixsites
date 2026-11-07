@@ -65,6 +65,10 @@ export const fileDownloadCapabilitySchema = z.object({
   noSniff: z.boolean(),
   // The version served when the request named none.
   versionId: z.uuid().nullable().default(null),
+  // The media type the version was stored with; mediaType is the Content-Type the URL is served with.
+  storedMediaType: z.string().nullable().default(null),
+  // True only for an Owner's audited diagnostic download of a revoked version.
+  revoked: z.boolean().nullable().exactOptional(),
 });
 export const fileThumbnailCapabilitySchema = z.object({
   url: z.url(),

@@ -37,6 +37,7 @@ public sealed class AttachmentListTests(NixPostgresFixture fixture) : IAsyncLife
     private Guid _delta;
     private Guid _vaultFile;
     private Guid _lockedFile;
+    private Guid _revokedCurrentFallback;
 
     public async ValueTask InitializeAsync()
     {
@@ -55,6 +56,9 @@ public sealed class AttachmentListTests(NixPostgresFixture fixture) : IAsyncLife
         (_delta, _) = await AddFileAsync("delta.pdf", null, ("application/pdf", "in_review"));
         (_vaultFile, _) = await AddFileAsync("inside-vault.pdf", vault, ("application/pdf", "draft"));
         (_lockedFile, _) = await AddFileAsync("itself-locked.pdf", null, ("application/pdf", "draft"));
+        (_, var revokedCurrentVersions) = await AddFileAsync("revoked-current.pdf", null, ("application/pdf", "draft"), ("application/pdf", "revoked"));
+        _revokedCurrentFallback = revokedCurrentVersions[0];
+        await AddFileAsync("all-revoked.pdf", null, ("application/pdf", "revoked"));
         var (hidden, _) = await AddFileAsync("under-trash.pdf", trashedFolder, ("application/pdf", "draft"));
 
         var tenant = M0SchemaSeed.Alpha.TenantId;
@@ -112,10 +116,28 @@ public sealed class AttachmentListTests(NixPostgresFixture fixture) : IAsyncLife
                 var current = await work.DbContext.FileBodies.Where(body => body.ItemId == item)
                     .Select(body => body.CurrentVersionId).SingleAsync(Cancellation);
                 var shown = await FileStore.ShownFirst(work.DbContext.FileVersions.Where(version => version.ItemId == item), current)
-                    .FirstAsync(Cancellation);
+                    .FirstOrDefaultAsync(Cancellation);
+                if (shown is null)
+                {
+                    // The one difference: a file with every version revoked stays listed, as revoked.
+                    Assert.Equal("all-revoked.pdf", row.Title);
+                    Assert.Equal("revoked", row.ShownVersionState);
+                    continue;
+                }
+
                 Assert.Equal(shown.Id.Value, row.ShownVersionId);
             }
         }
+    }
+
+    [Fact]
+    public async Task A_revoked_current_version_is_never_shown_while_another_can_be()
+    {
+        var rows = await ListAsync(Locker, new ListAttachments(Workspace, null, true, false, null, 200));
+
+        var row = Assert.Single(rows, candidate => candidate.Title == "revoked-current.pdf");
+        Assert.Equal(_revokedCurrentFallback, row.ShownVersionId);
+        Assert.Equal("draft", row.ShownVersionState);
     }
 
     [Fact]

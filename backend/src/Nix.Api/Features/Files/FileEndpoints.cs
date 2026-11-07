@@ -60,13 +60,27 @@ internal static class FileEndpoints
         files.MapGet("/", Get).WithName("GetFile").Produces<FileRecord>().ProducesProblem(404);
         files.MapGet("/download", AuthorizePublicDownload)
             .WithName("AuthorizeFileDownload")
+            .WithSummary("Get a short-lived signed URL to download a file version")
+            .WithDescription(
+                "Without versionId, signs the shown version: the latest approved, else the current upload if it is not revoked, "
+                + "else the newest non-revoked version; 404 files.no_servable_version when none is servable. "
+                + "Naming a revoked version answers 410 files.version_revoked. "
+                + "mediaType is the Content-Type the URL will be served with: application/octet-stream for a download, the stored type for preview=true. "
+                + "storedMediaType is the version's own media type. unscanned=true means Nix does not malware-scan uploads. "
+                + "includeRevoked=true (diagnostics) is honoured only for a workspace Owner using a browser session or an admin-scope access token, "
+                + "is audited, and marks the response revoked=true; anyone else gets 403 files.revoked_download_forbidden. "
+                + "A URL cannot be revoked at the object store: a URL issued before a version was revoked keeps working until expiresAt, "
+                + "at most Nix:ObjectStorage:CapabilitySeconds (default 300, maximum 900) after issue.")
             .Produces<FileDownloadCapabilityResponse>()
+            .ProducesProblem(403)
             .ProducesProblem(404)
+            .ProducesProblem(410)
             .ProducesProblem(503);
         files.MapGet("/thumbnail", AuthorizeThumbnail)
             .WithName("AuthorizeFileThumbnail")
             .Produces<FileThumbnailCapabilityResponse>()
             .ProducesProblem(404)
+            .ProducesProblem(410)
             .ProducesProblem(503);
         return endpoints;
     }
@@ -249,8 +263,11 @@ internal static class FileEndpoints
         Guid itemId,
         Guid? versionId,
         bool preview,
+        bool? includeRevoked,
         HttpContext context,
         [FromServices] IFileStore files,
+        [FromServices] IPermissionResolver permissions,
+        [FromServices] AccessTokenSessionContext credential,
         [FromServices] S3CapabilitySigner signer)
     {
         if (!signer.IsConfigured)
@@ -263,14 +280,50 @@ internal static class FileEndpoints
             context.RequestAborted).ConfigureAwait(false);
         if (result is null)
         {
-            return TypedResults.Problem(NotFound(context));
+            // Only a caller who can read the file learns that nothing is servable; everyone else gets the plain 404.
+            return versionId is null
+                && await files.GetAsync(ItemId.From(itemId), context.RequestAborted).ConfigureAwait(false) is { ShownVersionId: null }
+                ? TypedResults.Problem(ApiProblem.Create(
+                    context, 404, "files.no_servable_version", "No servable version", "Every version of this file is revoked."))
+                : TypedResults.Problem(NotFound(context));
+        }
+        var revoked = result.State == FileVersionStates.Revoked;
+        var diagnostic = false;
+        if (includeRevoked is true)
+        {
+            diagnostic = (credential.IsInteractive || (credential.IsTokenSession && credential.MayAdminister))
+                && await permissions.CanManageWorkspaceAsync(WorkspaceId.From(result.WorkspaceId), context.RequestAborted).ConfigureAwait(false);
+            if (!diagnostic)
+            {
+                return TypedResults.Problem(ApiProblem.Create(
+                    context,
+                    403,
+                    "files.revoked_download_forbidden",
+                    "Revoked download forbidden",
+                    "Only a workspace Owner using a browser session or an admin-scope access token may request a revoked version."));
+            }
+        }
+        else if (revoked)
+        {
+            return Revoked(context, result.StateChangedAt);
         }
         var inline = preview && (result.Previewable || ServedAudio.IsServed(result.MediaType));
+        // A signed URL cannot be revoked at the object store: one issued before this version was
+        // revoked stays valid until it expires, at most CapabilitySeconds (default 300, maximum 900).
         var capability = signer.GetForBrowser(
             result.ObjectKey,
             result.FileName,
             result.MediaType,
             inline);
+        if (diagnostic && revoked)
+        {
+            // Never the URL: the event names the actor, the version and the kind of credential.
+            await files.RecordRevokedDownloadAsync(
+                ItemId.From(itemId),
+                result,
+                credential.IsInteractive ? "browser_session" : "access_token",
+                context.RequestAborted).ConfigureAwait(false);
+        }
         context.Response.Headers.XContentTypeOptions = "nosniff";
         return TypedResults.Ok(new FileDownloadCapabilityResponse(
             capability.Url,
@@ -282,7 +335,9 @@ internal static class FileEndpoints
             inline,
             Unscanned: true,
             NoSniff: true,
-            VersionId: result.VersionId));
+            VersionId: result.VersionId,
+            StoredMediaType: result.StoredMediaType,
+            Revoked: diagnostic && revoked ? true : null));
     }
 
     private static async Task<IResult> AuthorizeThumbnail(
@@ -312,6 +367,10 @@ internal static class FileEndpoints
                 "files.thumbnail_not_found",
                 "Thumbnail not found",
                 "No such thumbnail is visible."));
+        }
+        if (result.State == FileVersionStates.Revoked)
+        {
+            return Revoked(context, result.StateChangedAt);
         }
         var capability = signer.GetForBrowser(
             ObjectStorageKeys.FileThumbnail(result.VersionObjectKey),
@@ -659,6 +718,14 @@ internal static class FileEndpoints
 
     private static Microsoft.AspNetCore.Mvc.ProblemDetails NotFound(HttpContext context) =>
         ApiProblem.Create(context, 404, "files.not_found", "File not found", "No such file is visible.");
+
+    private static ProblemHttpResult Revoked(HttpContext context, DateTimeOffset? at) =>
+        TypedResults.Problem(ApiProblem.Create(
+            context,
+            410,
+            "files.version_revoked",
+            "Version revoked",
+            at is { } when ? $"This version was revoked at {when:O}." : "This version was revoked."));
 
     private static Microsoft.AspNetCore.Mvc.ProblemDetails Invalid(
         HttpContext context,
