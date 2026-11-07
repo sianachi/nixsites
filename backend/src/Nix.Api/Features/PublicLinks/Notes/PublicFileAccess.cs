@@ -52,14 +52,15 @@ public static class PublicFileAccess
             return Hidden;
         }
 
-        // The store's single read path: permission, trash, lock and the body's existence.
-        if (await files.AuthorizeDownloadAsync(itemId, null, cancellationToken).ConfigureAwait(false) is null)
+        var body = await versions.FindBodyAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
+        if (body is null)
         {
             return Hidden;
         }
 
-        var body = await versions.FindBodyAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
-        if (body is null)
+        // The store's single read path for permission, trash and lock. Named by id so a file whose
+        // versions are all revoked still counts as readable here and is withheld by name below.
+        if (await files.AuthorizeDownloadAsync(itemId, body.CurrentVersionId, cancellationToken).ConfigureAwait(false) is null)
         {
             return Hidden;
         }
@@ -76,7 +77,9 @@ public static class PublicFileAccess
             return Hidden;
         }
 
-        return asImage && current.ObjectReady && S3CapabilitySigner.IsPublicInlineImage(current.MediaType)
+        // A revoked version is never served, not even inline.
+        return asImage && current.ObjectReady && current.State != FileVersionStates.Revoked
+            && S3CapabilitySigner.IsPublicInlineImage(current.MediaType)
             ? Serve(current)
             : new(PublicFileDisposition.Withheld, current.FileName, null, null);
     }

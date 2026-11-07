@@ -114,6 +114,18 @@ public sealed class PublicFileAccessTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Null(verdict.Choice);
     }
 
+    [Fact]
+    public async Task A_revoked_current_image_is_never_served_inline()
+    {
+        // The first version stays a draft, so the file is still readable; its current image is revoked.
+        await AddCurrentVersionAsync("image/png", "revoked");
+
+        var verdict = await ResolveAsync(Alpha.ItemId, asImage: true);
+
+        Assert.Equal(PublicFileDisposition.Withheld, verdict.Disposition);
+        Assert.Null(verdict.Choice);
+    }
+
     [Theory]
     [InlineData("image/png", true)]
     [InlineData("image/jpeg", true)]
