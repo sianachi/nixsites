@@ -23,6 +23,7 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { selectedItemSearch } from '@nix/web-platform/routing/selected-item';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 
@@ -313,6 +314,7 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
   const [pinsError, setPinsError] = useState<string | null>(null);
   const [link, setLink] = useState<PublicLink | null>(null);
   const [linkOff, setLinkOff] = useState(false);
+  const { publicLinks } = useCapabilities();
   const [copied, setCopied] = useState(false);
   const title = row.title === '' ? 'Untitled' : row.title;
 
@@ -353,7 +355,7 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
     setOpen(next);
     if (next) {
       if (pins === null) void loadPins();
-      if (row.hasPublicLink && link === null) void loadLink();
+      if (publicLinks && row.hasPublicLink && link === null) void loadLink();
     }
   };
 
@@ -539,7 +541,7 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
             )}
           </div>
 
-          {linkOff ? (
+          {linkOff || !publicLinks ? (
             <Text variant="note" as="p">
               Public links are turned off for this workspace or server, so this file cannot be
               shared by link.

@@ -76,7 +76,7 @@ export const createPublicLink = (itemId: string, versionId?: string): CommandEnd
     method: 'PUT',
     path: `/api/v1/items/${itemId}/public-link`,
     schema: publicLinkSchema,
-    body: { versionId: versionId ?? null },
+    body: versionId === undefined ? {} : { versionId },
     invalidates: [['items', itemId, 'public-link'], ['attachments']],
   });
 

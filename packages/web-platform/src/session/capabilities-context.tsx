@@ -5,6 +5,8 @@ export interface Capabilities {
   readonly sites: boolean;
   /** The remote MCP endpoint, or null when only stdio through nixctl is available. */
   readonly mcpUrl: string | null;
+  /** Public links are usable here: the deployment allows them and the tenant has them on. */
+  readonly publicLinks: boolean;
   /** Listed as a deployment operator: may read instance-wide data such as backup status. */
   readonly operator: boolean;
   /** May decide first publishes of sites. */
@@ -17,6 +19,7 @@ export interface Capabilities {
 export const NO_CAPABILITIES: Capabilities = {
   sites: false,
   mcpUrl: null,
+  publicLinks: false,
   operator: false,
   siteApprover: false,
   tenantAdministrator: false,

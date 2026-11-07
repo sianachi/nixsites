@@ -23,6 +23,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Tenant administrators can switch MCP and public links on or off in Settings > Administrators, taking effect at once (`GET`/`PUT /api/v1/tenant/settings`, `nixctl tenant settings`). The deployment setting stays the ceiling. Turning public links off stops existing links from serving without revoking them, and turning them back on restores them. With MCP off, the remote MCP endpoint refuses requests for that organisation.
+- "Share public link" on a note's menu in the sidebar creates, copies and revokes the note's public link, and lists attachments held back for lack of an approved version.
 - File versions now have a state: draft, in review, approved or revoked, with who changed it and when. Approving and revoking need an Editor or Owner; each workspace has a switch, off by default, that lets access tokens do it too. `PUT /api/v1/items/{id}/file/versions/{versionId}/state`, `set_file_version_state`, `nixctl file state`.
 - Export a note to a file item: `POST /api/v1/exports` with `toFile`, `export_note_to_file`, `nixctl note export --to-file`. The output is a new draft version that records its source note and exact revision, and that revision is named so history pruning keeps it. PDF, DOCX and Markdown.
 - Items can reference other items, and pin an exact approved file version, with `/api/v1/items/{id}/references` and `/referenced-by`, `add_item_reference` and friends, `nixctl ref`. A pinned file, or a folder holding one, cannot be trashed or permanently deleted until it is unpinned, so a record keeps the same bytes after newer versions are uploaded.

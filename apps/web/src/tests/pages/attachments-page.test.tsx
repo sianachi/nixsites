@@ -304,6 +304,19 @@ describe('the attachments page', () => {
     expect(screen.queryByRole('button', { name: 'Create public link' })).toBeNull();
   });
 
+  it('hides the link controls, and never asks for a link, when public links are off', async () => {
+    stubCoreApi({ publicLinks: false });
+    const calls = stubAttachments({ rows: [row({ hasPublicLink: true })] });
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+    await manage(user);
+
+    expect(await screen.findByText(/Public links are turned off/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Create public link' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Revoke public link' })).toBeNull();
+    expect(calls.some((call) => call.path.endsWith('/public-link'))).toBe(false);
+  });
+
   it('lists who points at the file and unpins through the holder', async () => {
     const calls = stubAttachments();
     renderAt(<App />, PAGE);
