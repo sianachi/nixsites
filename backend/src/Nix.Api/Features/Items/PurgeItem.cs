@@ -64,7 +64,8 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
         }
         // Children move up to the parent. Into a collection with a unique field they would arrive
         // unclaimed, so a record that has children cannot be purged until they are moved or deleted.
-        // shortcut: only live children are counted; trashed ones would still move up unclaimed.
+        // shortcut: only live children are counted, so a trashed child can move up unclaimed; count every
+        // unpurged child if a restored one ever duplicates a key.
         if (_recordKeys is not null && item.ParentId is { } keyedParent
             && Nix.Features.Records.RecordKeys.DeclaresUnique((await _tree.FindStoredAsync(keyedParent, cancellationToken).ConfigureAwait(false))?.Schema)
             && (await _tree.WithChildrenAsync(item.WorkspaceId, [item.Id], cancellationToken).ConfigureAwait(false)).Contains(item.Id))

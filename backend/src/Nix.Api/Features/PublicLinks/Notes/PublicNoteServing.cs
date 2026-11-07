@@ -12,7 +12,7 @@ public static class PublicNoteServing
     /// </summary>
     public static readonly TimeSpan ServableIdsLifetime = TimeSpan.FromSeconds(10);
 
-    // shortcut: per-process cache, so each replica renders once per window; share it if replicas multiply.
+    // shortcut: per-process cache, so each replica renders once per body revision; share it if replicas multiply.
     private static readonly MemoryCache ServableIds = new(new MemoryCacheOptions { SizeLimit = 2048 });
 
     /// <summary>Remembers the ids a render allows, keyed by link and body revision, for <see cref="ServableIdsLifetime"/>.</summary>
