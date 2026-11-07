@@ -273,7 +273,7 @@ public sealed class ReferenceHandler(
             return true;
         }
 
-        var bytes = new byte[16];
+        Span<byte> bytes = stackalloc byte[16];
         if (!Base64Url.IsValid(cursor) || !Base64Url.TryDecodeFromChars(cursor, bytes, out var written) || written != 16)
         {
             return false;
