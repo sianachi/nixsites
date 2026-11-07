@@ -322,9 +322,14 @@ internal static class PublicLinkEndpoints
         if (link.FileVersionId is not { } versionId)
         {
             var render = notes is null ? null : await notes.RenderAsync(link, ct).ConfigureAwait(false);
-            return render is null
-                ? TypedResults.NotFound()
-                : TypedResults.Ok(new PublicLinkReadResponse("note", Title: render.Title, Html: render.Html.Replace("__TOKEN__", Uri.EscapeDataString(token), StringComparison.Ordinal)));
+            if (render is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            // The page's own file requests then reuse this render instead of repeating it.
+            Notes.PublicNoteServing.Remember(link.LinkId, render.ServableFileIds);
+            return TypedResults.Ok(new PublicLinkReadResponse("note", Title: render.Title, Html: Notes.PublicNoteServing.BindToken(render.Html, token)));
         }
 
         // A revoked version, or one whose object is not published, answers like any dead link.

@@ -14,6 +14,7 @@ using Nix.Abstractions;
 using Nix.Abstractions.Workers;
 using Nix.Authentication;
 using Nix.Domain.Identity;
+using Nix.Features.Workspaces;
 using Nix.Domain.Tenancy;
 using Nix.Messaging;
 using Nix.Persistence;
@@ -113,7 +114,55 @@ public sealed class InteractiveSessionTests
         var scope = await RunAsync(jwt, new NixTokenValidator(new Directory(registration), selfIssued, keyClient));
 
         Assert.False(scope.IsInteractive);
+        Assert.True(scope.IsExternalBearer);
     }
+
+    [Fact]
+    public void Agent_gate_refuses_in_process_and_worker_work_even_with_the_switches_on()
+    {
+        var workspace = Switched(approve: true, publicLinks: true);
+
+        var inProcess = new AccessTokenSessionContext();
+        // What the middleware records for a worker delegation.
+        var worker = new AccessTokenSessionContext();
+        worker.SetTokenCeiling(mayWrite: false, mayAdminister: false);
+
+        foreach (var session in new[] { inProcess, worker })
+        {
+            Assert.False(AgentPolicyGate.MayChangeVersionState(session, workspace));
+            Assert.False(AgentPolicyGate.MayCreatePublicLink(session, workspace));
+        }
+    }
+
+    [Fact]
+    public void Agent_gate_allows_an_access_token_and_an_external_bearer_only_with_the_switch_on()
+    {
+        var accessToken = new AccessTokenSessionContext();
+        accessToken.SetTokenCeiling(mayWrite: true, mayAdminister: true);
+        var bearer = new AccessTokenSessionContext();
+        bearer.SetExternalBearer();
+
+        foreach (var session in new[] { accessToken, bearer })
+        {
+            Assert.False(AgentPolicyGate.MayChangeVersionState(session, Switched(approve: false, publicLinks: false)));
+            Assert.True(AgentPolicyGate.MayChangeVersionState(session, Switched(approve: true, publicLinks: false)));
+            Assert.True(AgentPolicyGate.MayCreatePublicLink(session, Switched(approve: false, publicLinks: true)));
+        }
+    }
+
+    private static Workspace Switched(bool approve, bool publicLinks) => new()
+    {
+        Id = WorkspaceId.Create(),
+        TenantId = Tenant,
+        Name = "w",
+        VersionRetentionDays = 30,
+        CoalesceWindowMinutes = 5,
+        StorageQuotaBytes = 1,
+        CreatedAt = DateTimeOffset.UtcNow,
+        LifecycleState = WorkspaceLifecycleState.Active,
+        AgentsMayApprove = approve,
+        AgentsMayCreatePublicLinks = publicLinks,
+    };
 
     private sealed class TestIssuer : IDisposable
     {

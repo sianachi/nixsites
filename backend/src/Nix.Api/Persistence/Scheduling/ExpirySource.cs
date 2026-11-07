@@ -193,6 +193,15 @@ public sealed class ExpirySource(
             }
         }
 
+        // [SEC] The trash step acts only as the stamped setter (the trigger's session). When the setter
+        // is gone the finder fell back to the creator for the notice; the creator's authority is not
+        // the setter's, so the item stays and the creator hears why.
+        if (ReminderSourceSupport.ReadPrincipal(item.Properties, ItemProperties.ExpirySetByKey) != trigger.PrincipalId)
+        {
+            await BlockedAsync("Not moved to trash: the person who set the expiry is no longer active.").ConfigureAwait(false);
+            return TriggerOutcome.Skipped("setter_not_active");
+        }
+
         if (!await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             await BlockedAsync("Not moved to trash: you no longer have write access to this workspace.").ConfigureAwait(false);
