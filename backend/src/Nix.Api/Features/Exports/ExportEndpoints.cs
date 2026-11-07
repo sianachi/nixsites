@@ -96,7 +96,7 @@ internal static class ExportEndpoints
         [FromServices] IConfiguration configuration,
         [FromServices] TimeProvider clock,
         [FromServices] IExportRevisionNamer namer,
-        [FromServices] NixDbContext database)
+        [FromServices] IExportSources sources)
     {
         var format = NormalizeFormat(request.Format);
         var scope = NormalizeScope(request.Scope);
@@ -174,7 +174,7 @@ internal static class ExportEndpoints
         if (toFile)
         {
             var prepared = await PrepareToFileAsync(
-                request, item, descriptor, context, permissions, locks, tree, namer, database, clock).ConfigureAwait(false);
+                request, item, descriptor, context, permissions, locks, tree, namer, sources, clock).ConfigureAwait(false);
             if (prepared.Refusal is not null)
             {
                 return prepared.Refusal;
@@ -239,7 +239,7 @@ internal static class ExportEndpoints
         IItemLocks locks,
         IItemTree tree,
         IExportRevisionNamer namer,
-        NixDbContext database,
+        IExportSources sources,
         TimeProvider clock)
     {
         if (item.Type != "note")
@@ -273,10 +273,7 @@ internal static class ExportEndpoints
         }
 
         // No row when nobody has opened the note yet: nothing to pin, and the export reads the empty body.
-        var head = await database.ContentDocs.AsNoTracking()
-            .Where(document => document.ItemId == item.Id)
-            .Select(document => (long?)document.HeadSeq)
-            .SingleOrDefaultAsync(context.RequestAborted).ConfigureAwait(false);
+        var head = await sources.HeadSeqAsync(item.Id, context.RequestAborted).ConfigureAwait(false);
         if (head is { } seq
             && !await namer.EnsureNamedAsync(
                 item.Id.Value,
@@ -306,7 +303,7 @@ internal static class ExportEndpoints
         [FromServices] INixSessionContextAccessor session,
         [FromServices] IPermissionResolver permissions,
         [FromServices] TimeProvider clock,
-        [FromServices] NixDbContext database)
+        [FromServices] IExportSources sources)
     {
         var state = await FindState(exportId, jobs, session, permissions, context.RequestAborted).ConfigureAwait(false);
         if (state is null)
@@ -333,21 +330,7 @@ internal static class ExportEndpoints
             result,
             state.Value.Context.TenantId,
             clock.GetUtcNow(),
-            payload.ToFile ? await FindUploadAsync(database, exportId, context.RequestAborted).ConfigureAwait(false) : null));
-    }
-
-    // The upload is found by the idempotency key its destination call opened it with; the stored
-    // result cannot carry its id (the database fixes that shape). A retry that produced different
-    // bytes opens a second upload, and the newest is the one that counts.
-    private static async Task<Guid?> FindUploadAsync(NixDbContext database, Guid exportId, CancellationToken cancellationToken)
-    {
-        var prefix = $"export-file:{exportId:D}:";
-        return (await database.FileUploads.AsNoTracking()
-            .Where(upload => upload.IdempotencyKey.StartsWith(prefix))
-            .OrderByDescending(upload => upload.CreatedAt)
-            .Select(upload => upload.Id)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false))
-            is { } id && id != default ? id.Value : null;
+            payload.ToFile ? await sources.FindExportUploadAsync(exportId, context.RequestAborted).ConfigureAwait(false) : null));
     }
 
     private static async Task<IResult> Cancel(

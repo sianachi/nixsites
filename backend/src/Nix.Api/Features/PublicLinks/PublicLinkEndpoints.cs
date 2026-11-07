@@ -103,7 +103,7 @@ internal static class PublicLinkEndpoints
         [FromServices] IItemTree tree,
         [FromServices] IPermissionResolver permissions,
         [FromServices] IConfiguration configuration,
-        [FromServices] PublicLinkStore store,
+        [FromServices] IPublicLinkStore store,
         [FromServices] PublicLinkTokenService tokens,
         [FromServices] IPublicNoteReader? notes)
     {
@@ -132,7 +132,7 @@ internal static class PublicLinkEndpoints
         [FromServices] IItemTree tree,
         [FromServices] IPermissionResolver permissions,
         [FromServices] IConfiguration configuration,
-        [FromServices] PublicLinkStore store,
+        [FromServices] IPublicLinkStore store,
         [FromServices] PublicLinkTokenService tokens,
         [FromServices] S3CapabilitySigner signer,
         [FromServices] INixSessionContextAccessor sessions,
@@ -267,7 +267,7 @@ internal static class PublicLinkEndpoints
         [FromServices] IItemTree tree,
         [FromServices] IPermissionResolver permissions,
         [FromServices] IConfiguration configuration,
-        [FromServices] PublicLinkStore store,
+        [FromServices] IPublicLinkStore store,
         [FromServices] INixSessionContextAccessor sessions,
         [FromServices] TimeProvider clock)
     {
@@ -304,7 +304,7 @@ internal static class PublicLinkEndpoints
         string token,
         HttpContext context,
         [FromServices] IPublicLinkResolver resolver,
-        [FromServices] PublicLinkStore store,
+        [FromServices] IPublicLinkStore store,
         [FromServices] S3CapabilitySigner signer,
         [FromServices] IPublicNoteReader? notes)
     {
@@ -355,7 +355,7 @@ internal static class PublicLinkEndpoints
     private static async Task<PublicLinkResponse> ToResponseAsync(
         PublicLink link,
         HttpContext context,
-        PublicLinkStore store,
+        IPublicLinkStore store,
         PublicLinkTokenService tokens,
         IPublicNoteReader? notes)
     {

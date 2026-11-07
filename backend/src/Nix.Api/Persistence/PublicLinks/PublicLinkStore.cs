@@ -8,9 +8,9 @@ using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.PublicLinks;
 using Nix.Domain.Tenancy;
-using Nix.Persistence;
+using Nix.Features.PublicLinks;
 
-namespace Nix.Features.PublicLinks;
+namespace Nix.Persistence.PublicLinks;
 
 /// <summary>
 /// [SEC] Storage and the anonymous resolver for public links. Resolving establishes the link's tenant
@@ -25,7 +25,7 @@ internal sealed class PublicLinkStore(
     PublicLinkTokenService tokens,
     IConfiguration configuration,
     TimeProvider clock)
-    : IPublicLinkResolver, IPublicLinkLifecycle
+    : IPublicLinkStore, IPublicLinkResolver, IPublicLinkLifecycle
 {
     /// <inheritdoc />
     public async ValueTask<ResolvedPublicLink?> ResolveAsync(string token, CancellationToken cancellationToken)
@@ -111,6 +111,20 @@ internal sealed class PublicLinkStore(
         await database.ItemLocks.AnyAsync(
             candidate => database.ItemClosure.Any(
                 edge => edge.DescendantId == itemId && edge.AncestorId == candidate.ItemId),
+            cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async ValueTask<bool> IsLiveNoteLinkAsync(
+        TenantId tenant,
+        Guid linkId,
+        ItemId itemId,
+        WorkspaceId workspace,
+        PrincipalId principal,
+        CancellationToken cancellationToken) =>
+        await database.PublicLinks.AsNoTracking().AnyAsync(
+            link => link.TenantId == tenant && link.Id == linkId && link.RevokedAt == null
+                && link.ItemId == itemId && link.WorkspaceId == workspace
+                && link.ServicePrincipalId == principal && link.FileVersionId == null,
             cancellationToken).ConfigureAwait(false);
 
     public async ValueTask<Workspace?> FindWorkspaceAsync(WorkspaceId id, CancellationToken cancellationToken) =>

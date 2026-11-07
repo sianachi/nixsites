@@ -1,10 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Abstractions.Files;
 using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
-using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Features.PublicLinks.Notes;
@@ -37,7 +35,7 @@ public static class PublicFileAccess
     public static async Task<PublicFileVerdict> ResolveAsync(
         IItemTree tree,
         IFileStore files,
-        NixDbContext db,
+        IPublicFileVersions versions,
         TenantId tenant,
         WorkspaceId workspace,
         Guid fileId,
@@ -46,7 +44,7 @@ public static class PublicFileAccess
     {
         ArgumentNullException.ThrowIfNull(tree);
         ArgumentNullException.ThrowIfNull(files);
-        ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(versions);
         var itemId = ItemId.From(fileId);
         var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (item is null || item.WorkspaceId != workspace)
@@ -60,27 +58,19 @@ public static class PublicFileAccess
             return Hidden;
         }
 
-        var body = await db.FileBodies.AsNoTracking().SingleOrDefaultAsync(
-            candidate => candidate.TenantId == tenant && candidate.ItemId == itemId,
-            cancellationToken).ConfigureAwait(false);
+        var body = await versions.FindBodyAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (body is null)
         {
             return Hidden;
         }
 
-        var approved = await db.FileVersions.AsNoTracking()
-            .Where(version => version.TenantId == tenant && version.ItemId == itemId && version.WorkspaceId == workspace
-                && version.State == FileVersionStates.Approved && version.ObjectReady)
-            .OrderByDescending(version => version.Version)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var approved = await versions.FindLatestApprovedAsync(tenant, workspace, itemId, cancellationToken).ConfigureAwait(false);
         if (approved is not null)
         {
             return Serve(approved);
         }
 
-        var current = await db.FileVersions.AsNoTracking().SingleOrDefaultAsync(
-            version => version.TenantId == tenant && version.ItemId == itemId && version.Id == body.CurrentVersionId,
-            cancellationToken).ConfigureAwait(false);
+        var current = await versions.FindVersionAsync(tenant, itemId, body.CurrentVersionId, cancellationToken).ConfigureAwait(false);
         if (current is null)
         {
             return Hidden;

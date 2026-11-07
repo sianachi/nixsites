@@ -389,9 +389,12 @@ public static class NixPersistenceServiceCollectionExtensions
             new LockPasswordGuard(provider.GetRequiredService<TimeProvider>()));
         services.AddScoped<IPublicFormStore, PublicFormStore>();
         services.AddSingleton<Nix.Features.PublicLinks.PublicLinkTokenService>();
-        services.AddScoped<Nix.Features.PublicLinks.PublicLinkStore>();
-        services.AddScoped<IPublicLinkResolver>(static provider => provider.GetRequiredService<Nix.Features.PublicLinks.PublicLinkStore>());
-        services.AddScoped<IPublicLinkLifecycle>(static provider => provider.GetRequiredService<Nix.Features.PublicLinks.PublicLinkStore>());
+        services.AddScoped<Nix.Persistence.PublicLinks.PublicLinkStore>();
+        services.AddScoped<IPublicLinkStore>(static provider => provider.GetRequiredService<Nix.Persistence.PublicLinks.PublicLinkStore>());
+        services.AddScoped<IPublicLinkResolver>(static provider => provider.GetRequiredService<Nix.Persistence.PublicLinks.PublicLinkStore>());
+        services.AddScoped<IPublicLinkLifecycle>(static provider => provider.GetRequiredService<Nix.Persistence.PublicLinks.PublicLinkStore>());
+        services.AddScoped<IPublicFileVersions, Nix.Persistence.PublicLinks.PublicFileVersions>();
+        services.AddScoped<IExportSources, Nix.Persistence.Exports.ExportSources>();
         services.AddScoped<IPersonalAccessTokens, PersonalAccessTokenStore>();
         services.AddScoped<WorkspaceAdministrationStore>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Features.Workspaces.InvitationNoticeSource>();

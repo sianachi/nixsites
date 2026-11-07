@@ -70,7 +70,7 @@ public static class PublicNoteInternalEndpoints
 
                 var tree = services.GetRequiredService<IItemTree>();
                 var store = services.GetRequiredService<IFileStore>();
-                var db = services.GetRequiredService<NixDbContext>();
+                var versions = services.GetRequiredService<IPublicFileVersions>();
                 var tenant = new TenantId(scope.TenantId);
                 var workspace = new WorkspaceId(scope.WorkspaceId);
 
@@ -79,7 +79,7 @@ public static class PublicNoteInternalEndpoints
                     var verdicts = new List<PublicFileVerdictResponse>();
                     foreach (var id in ids.Distinct())
                     {
-                        var verdict = await PublicFileAccess.ResolveAsync(tree, store, db, tenant, workspace, id, image, token).ConfigureAwait(false);
+                        var verdict = await PublicFileAccess.ResolveAsync(tree, store, versions, tenant, workspace, id, image, token).ConfigureAwait(false);
                         verdicts.Add(new(
                             id,
                             verdict.Disposition switch
@@ -124,14 +124,10 @@ public static class PublicNoteInternalEndpoints
 
         var tenant = new TenantId(scope.TenantId);
         var principal = new PrincipalId(scope.PrincipalId);
-        var db = services.GetRequiredService<NixDbContext>();
         var itemId = new ItemId(scope.ItemId);
         var workspace = new WorkspaceId(scope.WorkspaceId);
-        var live = await db.PublicLinks.AsNoTracking().AnyAsync(
-            link => link.TenantId == tenant && link.Id == linkId && link.RevokedAt == null
-                && link.ItemId == itemId && link.WorkspaceId == workspace
-                && link.ServicePrincipalId == principal && link.FileVersionId == null,
-            cancellationToken).ConfigureAwait(false);
+        var live = await services.GetRequiredService<IPublicLinkStore>()
+            .IsLiveNoteLinkAsync(tenant, linkId, itemId, workspace, principal, cancellationToken).ConfigureAwait(false);
         if (!live)
         {
             return null;

@@ -63,7 +63,7 @@ public sealed class PublicFileAccessTests(NixPostgresFixture fixture) : IAsyncLi
         return await PublicFileAccess.ResolveAsync(
             work.Resolve<IItemTree>(),
             work.Resolve<IFileStore>(),
-            work.Resolve<NixDbContext>(),
+            work.Resolve<IPublicFileVersions>(),
             new TenantId(Alpha.TenantId),
             new WorkspaceId(workspace ?? Alpha.WorkspaceId),
             fileId,

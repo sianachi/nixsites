@@ -5,7 +5,6 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
 using Nix.Http;
-using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Features.PublicLinks.Notes;
@@ -67,7 +66,7 @@ internal static class PublicLinkFileEndpoints
                 await PublicFileAccess.ResolveAsync(
                     services.GetRequiredService<IItemTree>(),
                     services.GetRequiredService<IFileStore>(),
-                    services.GetRequiredService<NixDbContext>(),
+                    services.GetRequiredService<IPublicFileVersions>(),
                     link.TenantId,
                     link.WorkspaceId,
                     fileItemId,
