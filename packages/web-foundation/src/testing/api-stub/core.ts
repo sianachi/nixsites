@@ -142,6 +142,8 @@ export interface StubOptions {
   readonly siteFeature?: boolean;
   /** The remote MCP endpoint `/me` advertises, or null. */
   readonly mcpUrl?: string | null;
+  /** Whether `/me` says public links are usable (default true, so tests of them need no setup). */
+  readonly publicLinks?: boolean;
   /** Whether `/me` says the caller is a deployment operator (may read backup status). */
   readonly operator?: boolean;
   /** Whether `/me` says the caller may decide first publishes of sites. */
@@ -587,6 +589,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
     isTenantAdministrator = false,
     siteFeature = false,
     mcpUrl = null,
+    publicLinks = true,
     operator = false,
     siteApprover = false,
     backupRuns = [],
@@ -1744,7 +1747,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
                 displayName,
                 email,
                 isTenantAdministrator,
-                features: { sites: siteFeature, mcpUrl, operator, siteApprover },
+                features: { sites: siteFeature, mcpUrl, publicLinks, operator, siteApprover },
               }),
         );
       }

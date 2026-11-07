@@ -254,6 +254,8 @@ export * as backups from './resources/backups.js';
 export type { BackupRun, BackupStep } from './schemas/backups.js';
 export * as sites from './resources/sites.js';
 export * as tenantRoles from './resources/tenant-roles.js';
+export * as tenantSettings from './resources/tenant-settings.js';
+export type { TenantSettings } from './schemas/tenant-settings.js';
 export type { UpdateSiteInput } from './resources/sites.js';
 export type {
   Site,

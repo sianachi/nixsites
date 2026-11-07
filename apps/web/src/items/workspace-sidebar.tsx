@@ -35,6 +35,7 @@ import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
+import { SharePublicLinkDialog } from './share-public-link-dialog';
 import type { ItemLandmarks } from '@nix/web-foundation/lib/item-landmarks';
 
 const NO_ROWS: readonly string[] = [];
@@ -166,6 +167,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     readonly id: string;
     readonly title: string;
   } | null>(null);
+  const [sharing, setSharing] = useState<{ readonly id: string; readonly title: string } | null>(
+    null,
+  );
 
   /** Drops queue behind each other: two pools at once would double the concurrency cap. */
   const uploadQueue = useRef<Promise<void>>(Promise.resolve());
@@ -386,6 +390,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
             }}
             onDeleteItem={onDeleteItem}
             landmarks={landmarks.landmarks}
+            onSharePublicLink={(item) => {
+              setSharing({ id: item.id, title: item.title || 'Untitled' });
+            }}
             onChooseIcon={
               landmarks.enabled
                 ? (item, invoker) => {
@@ -412,6 +419,16 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
             {tree.error}
           </Text>
         </div>
+      )}
+      {sharing === null ? null : (
+        <SharePublicLinkDialog
+          key={sharing.id}
+          itemId={sharing.id}
+          title={sharing.title}
+          onClose={() => {
+            setSharing(null);
+          }}
+        />
       )}
       {iconItem?.scope !== landmarks.scope ? null : (
         <ItemLandmarkDialog
@@ -547,6 +564,7 @@ interface TreeBodyProps {
   readonly onDeleteItem: (item: TreeItem) => void;
   readonly landmarks: ItemLandmarks;
   readonly onChooseIcon: ((item: TreeItem, invoker: HTMLElement | null) => void) | undefined;
+  readonly onSharePublicLink: (item: TreeItem) => void;
 }
 
 /** A loading tree's rows: ragged, like titles, rather than a ruled table of equal bars. */
@@ -690,6 +708,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     onOpenBeside,
     onDeleteItem,
     onChooseIcon: props.onChooseIcon,
+    onSharePublicLink: props.onSharePublicLink,
     openButtonRef,
     moveToRoot,
   });

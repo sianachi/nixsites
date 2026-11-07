@@ -21,6 +21,10 @@
       "types": "./src/settings/administrators/administrators-section.tsx",
       "default": "./src/settings/administrators/administrators-section.tsx"
     },
+    "./settings/administrators/tenant-switches": {
+      "types": "./src/settings/administrators/tenant-switches.tsx",
+      "default": "./src/settings/administrators/tenant-switches.tsx"
+    },
     "./settings/api/api-section": {
       "types": "./src/settings/api/api-section.tsx",
       "default": "./src/settings/api/api-section.tsx"

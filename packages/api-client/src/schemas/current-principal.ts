@@ -14,12 +14,20 @@ export const currentPrincipalSchema = z.object({
     .object({
       sites: z.boolean().default(false),
       mcpUrl: z.string().nullable().default(null),
+      /** Public links are usable: allowed by the deployment and switched on by the tenant. */
+      publicLinks: z.boolean().default(false),
       /** Listed in `Nix:Sites:Operators`: may read instance-wide data such as backup status. */
       operator: z.boolean().default(false),
       /** May decide first publishes: configured, granted in Settings, or an administrator when none is configured. */
       siteApprover: z.boolean().default(false),
     })
-    .default({ sites: false, mcpUrl: null, operator: false, siteApprover: false }),
+    .default({
+      sites: false,
+      mcpUrl: null,
+      publicLinks: false,
+      operator: false,
+      siteApprover: false,
+    }),
 });
 
 export type CurrentPrincipal = z.infer<typeof currentPrincipalSchema>;

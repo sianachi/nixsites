@@ -7,6 +7,7 @@ import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels'
 import { useWorkspaceAssignablePrincipals } from '@nix/web-workspaces/workspaces/use-workspace-assignable-principals';
 import { formatDay } from '../access-tokens/token-facts';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
+import { TenantSwitches } from './tenant-switches';
 import {
   SITE_APPROVERS,
   TENANT_ADMINS,
@@ -21,12 +22,15 @@ export function AdministratorsSection(): ReactElement {
   return (
     <div className="flex min-w-0 flex-col gap-8">
       {tenantAdministrator ? (
-        <PeopleBlock
-          title="Tenant administrators"
-          summary="Manage roles and groups across the whole tenant"
-          more="There is always at least one tenant administrator."
-          source={TENANT_ADMINS}
-        />
+        <>
+          <PeopleBlock
+            title="Tenant administrators"
+            summary="Manage roles and groups across the whole tenant"
+            more="There is always at least one tenant administrator."
+            source={TENANT_ADMINS}
+          />
+          <TenantSwitches />
+        </>
       ) : null}
       {siteApprover ? (
         <PeopleBlock

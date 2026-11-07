@@ -9,6 +9,7 @@ import {
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
+import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
 import type { MenuEntry } from '@nix/ui';
 import {
@@ -18,6 +19,7 @@ import {
   FolderLock,
   FolderPlus,
   FolderUp,
+  Link2,
   Shapes,
   Shield,
   ShieldOff,
@@ -43,6 +45,7 @@ interface RowMenuArgs {
   readonly onOpenBeside: (itemId: string) => void;
   readonly onDeleteItem: (item: TreeItem) => void;
   readonly onChooseIcon: ((item: TreeItem, invoker: HTMLElement | null) => void) | undefined;
+  readonly onSharePublicLink: (item: TreeItem) => void;
   readonly openButtonRef: RefObject<HTMLButtonElement | null>;
   readonly moveToRoot: () => void;
 }
@@ -64,10 +67,12 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
     onOpenBeside,
     onDeleteItem,
     onChooseIcon,
+    onSharePublicLink,
     openButtonRef,
     moveToRoot,
   } = args;
   const { workspaceId } = useWorkspace();
+  const { publicLinks } = useCapabilities();
   const automateEntry = useAutomateEntry(workspaceId);
   const muteRemindersEntry = useMuteRemindersEntry();
   const treeChildren = useHiddenItems('tree-children');
@@ -151,6 +156,18 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
             },
           ]),
       copyLinkEntry(workspaceId, item.id, title),
+      ...(publicLinks && item.type === 'note'
+        ? [
+            {
+              kind: 'action' as const,
+              label: 'Share public link…',
+              icon: Link2,
+              onSelect: () => {
+                onSharePublicLink(item);
+              },
+            },
+          ]
+        : []),
       ...(automateEntry === null ? [] : [automateEntry(item.id)]),
       ...(muteRemindersEntry === null ? [] : [muteRemindersEntry(item.id, title)]),
       ...(item.parentId === null

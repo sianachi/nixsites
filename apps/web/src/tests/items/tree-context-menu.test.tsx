@@ -12,6 +12,10 @@ import { itemLandmarksKey } from '@nix/web-foundation/lib/item-landmarks';
 import { WorkspaceSidebar } from '../../items/workspace-sidebar';
 import { MobileWorkspaceBrowser } from '../../items/mobile-workspace-browser';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
+import {
+  CapabilitiesProvider,
+  NO_CAPABILITIES,
+} from '@nix/web-platform/session/capabilities-context';
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { STUB_WORKSPACE } from '@nix/web-foundation/testing/api-stub';
 import { memoryStorage } from '@nix/web-foundation/testing/memory-storage';
@@ -84,55 +88,58 @@ function renderSidebar(
   selectedId: string | null = null,
   callbacks: Callbacks = {},
   view: 'desktop' | 'mobile' = 'desktop',
+  publicLinks = false,
 ): void {
   render(
-    <MemoryRouter initialEntries={[`/w/${STUB_WORKSPACE.id}`]}>
-      <AuthProvider>
-        <ApiClientProvider>
-          <Routes>
-            <Route
-              path="/w/:workspaceId"
-              element={
-                <WorkspaceProvider
-                  state={{
-                    status: 'ready',
-                    workspaces: [STUB_WORKSPACE],
-                    error: null,
-                    reload: () => undefined,
-                    workspaceCreated: () => undefined,
-                    workspaceUpdated: () => undefined,
-                    workspaceRemoved: () => undefined,
-                  }}
-                >
-                  {view === 'mobile' ? (
-                    <MobileWorkspaceBrowser
-                      tree={tree}
-                      parentId={null}
-                      onParent={vi.fn()}
-                      onOpen={callbacks.onSelect ?? vi.fn()}
-                      onClose={vi.fn()}
-                      destinations={null}
-                    />
-                  ) : (
-                    <WorkspaceSidebar
-                      tree={tree}
-                      selectedId={selectedId}
-                      onSelect={callbacks.onSelect ?? vi.fn()}
-                      onOpenBeside={callbacks.onOpenBeside ?? (() => undefined)}
-                      onOpenPinned={callbacks.onOpenPinned ?? (() => undefined)}
-                      besideRefusal={null}
-                      canOpenBeside
-                      onDeleteItem={callbacks.onDeleteItem ?? vi.fn()}
-                      treeRegionRef={{ current: null }}
-                    />
-                  )}
-                </WorkspaceProvider>
-              }
-            />
-          </Routes>
-        </ApiClientProvider>
-      </AuthProvider>
-    </MemoryRouter>,
+    <CapabilitiesProvider value={{ ...NO_CAPABILITIES, publicLinks }}>
+      <MemoryRouter initialEntries={[`/w/${STUB_WORKSPACE.id}`]}>
+        <AuthProvider>
+          <ApiClientProvider>
+            <Routes>
+              <Route
+                path="/w/:workspaceId"
+                element={
+                  <WorkspaceProvider
+                    state={{
+                      status: 'ready',
+                      workspaces: [STUB_WORKSPACE],
+                      error: null,
+                      reload: () => undefined,
+                      workspaceCreated: () => undefined,
+                      workspaceUpdated: () => undefined,
+                      workspaceRemoved: () => undefined,
+                    }}
+                  >
+                    {view === 'mobile' ? (
+                      <MobileWorkspaceBrowser
+                        tree={tree}
+                        parentId={null}
+                        onParent={vi.fn()}
+                        onOpen={callbacks.onSelect ?? vi.fn()}
+                        onClose={vi.fn()}
+                        destinations={null}
+                      />
+                    ) : (
+                      <WorkspaceSidebar
+                        tree={tree}
+                        selectedId={selectedId}
+                        onSelect={callbacks.onSelect ?? vi.fn()}
+                        onOpenBeside={callbacks.onOpenBeside ?? (() => undefined)}
+                        onOpenPinned={callbacks.onOpenPinned ?? (() => undefined)}
+                        besideRefusal={null}
+                        canOpenBeside
+                        onDeleteItem={callbacks.onDeleteItem ?? vi.fn()}
+                        treeRegionRef={{ current: null }}
+                      />
+                    )}
+                  </WorkspaceProvider>
+                }
+              />
+            </Routes>
+          </ApiClientProvider>
+        </AuthProvider>
+      </MemoryRouter>
+    </CapabilitiesProvider>,
   );
 }
 
@@ -185,6 +192,28 @@ describe('the sidebar row context menu', () => {
     });
     expect(browserStorage()?.getItem(key)).toBeNull();
     expect(move).not.toHaveBeenCalled();
+  });
+
+  it('offers Share public link on a note only when public links are on', () => {
+    renderSidebar(treeOf(vi.fn()));
+    rightClick('First');
+    expect(screen.queryByRole('menuitem', { name: 'Share public link…' })).toBeNull();
+  });
+
+  it('leaves Share public link off a non-note even when public links are on', () => {
+    const folder: TreeItem = { ...ROOT_A, type: 'folder' };
+    renderSidebar(treeOf(vi.fn(), [folder]), null, {}, 'desktop', true);
+    rightClick('First');
+    expect(screen.queryByRole('menuitem', { name: 'Share public link…' })).toBeNull();
+  });
+
+  it('opens the share dialog from a note row when public links are on', async () => {
+    const user = userEvent.setup();
+    signedIn();
+    renderSidebar(treeOf(vi.fn()), null, {}, 'desktop', true);
+    rightClick('First');
+    await user.click(screen.getByRole('menuitem', { name: 'Share public link…' }));
+    expect(await screen.findByRole('dialog', { name: 'Share “First”' })).toBeInTheDocument();
   });
 
   it('replaces the browser menu with the row actions', () => {
