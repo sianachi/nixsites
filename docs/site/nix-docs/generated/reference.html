@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#query">Query</a><a href="#recurrence">Recurrence</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#finance">Finance</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -98,6 +98,18 @@
 <ul><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
 <p>Responses: <code>200</code>, <code>400</code>, <code>403</code>.</p>
+</article></section>
+<section id="attachments"><h2>Attachments</h2><article id="listattachments" data-search="get /api/v1/workspaces/{workspaceid}/attachments listattachments file items in the workspace newest first. shows each file's latest approved version, else its current one. images are left out unless includeimages is set. files under a lock the caller has not opened are omitted. attachments">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/attachments</code></h3>
+<p>File items in the workspace</p>
+<p class="id">Operation id: <code>ListAttachments</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Newest first. Shows each file's latest approved version, else its current one. Images are left out unless includeImages is set. Files under a lock the caller has not opened are omitted.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>state</code> in query (optional, string)</li><li><code>includeImages</code> in query (optional, boolean)</li><li><code>expiring</code> in query (optional, boolean)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
 </article></section>
 <section id="automations"><h2>Automations</h2><article id="getautomation" data-search="get /api/v1/automations/{ruleid} getautomation   automations">
 <h3><span class="verb">GET</span> <code>/api/v1/automations/{ruleId}</code></h3>
@@ -770,6 +782,18 @@
 <ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>versionId</code> in query (optional, string (uuid))</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>, <code>503</code>.</p>
+</article>
+<article id="setfileversionstate" data-search="put /api/v1/items/{itemid}/file/versions/{versionid}/state setfileversionstate   files">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/file/versions/{versionId}/state</code></h3>
+<p></p>
+<p class="id">Operation id: <code>SetFileVersionState</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>versionId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetFileVersionStateRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
 </article></section>
 <section id="finance"><h2>Finance</h2><article id="getfinance" data-search="get /api/v1/items/{itemid}/finance getfinance read a finance root's settings, accounts, budget lines and closed months  finance">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/finance</code></h3>
@@ -1347,14 +1371,14 @@
 <p>Request body: <code>UpdateItemRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
-<article id="deleteitem" data-search="delete /api/v1/items/{itemid} deleteitem soft-delete an item marks the item deleted. the subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. purging is a separate, retention-driven operation. fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion. items">
+<article id="deleteitem" data-search="delete /api/v1/items/{itemid} deleteitem soft-delete an item marks the item deleted. the subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. purging is a separate, retention-driven operation. fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion, and 'items.pinned' (409) when a file at or below it is pinned by a reference. items">
 <h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}</code></h3>
 <p>Soft-delete an item</p>
 <p class="id">Operation id: <code>DeleteItem</code></p>
 <p><strong>Can.</strong> Soft-delete the item. The subtree stays recoverable until it is purged.</p>
 <p><strong>Cannot.</strong> Edit the body, and it does not permanently remove the item. Purge is a separate route.</p>
 <p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
-<p>Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion.</p>
+<p>Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion, and 'items.pinned' (409) when a file at or below it is pinned by a reference.</p>
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>204</code>, <code>404</code>, <code>409</code>.</p>
@@ -1803,6 +1827,66 @@
 <p>Request body: <code>SavePetSettingsRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
 </article></section>
+<section id="publiclinks"><h2>PublicLinks</h2><article id="getpubliclink" data-search="get /api/v1/items/{itemid}/public-link getpubliclink   publiclinks">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/public-link</code></h3>
+<p></p>
+<p class="id">Operation id: <code>GetPublicLink</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="createpubliclink" data-search="put /api/v1/items/{itemid}/public-link createpubliclink   publiclinks">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/public-link</code></h3>
+<p></p>
+<p class="id">Operation id: <code>CreatePublicLink</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>PutPublicLinkRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
+</article>
+<article id="revokepubliclink" data-search="delete /api/v1/items/{itemid}/public-link revokepubliclink   publiclinks">
+<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/public-link</code></h3>
+<p></p>
+<p class="id">Operation id: <code>RevokePublicLink</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>, <code>404</code>.</p>
+</article>
+<article id="readpubliclink" data-search="get /public/v1/links/{token} readpubliclink   publiclinks">
+<h3><span class="verb">GET</span> <code>/public/v1/links/{token}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ReadPublicLink</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>token</code> in path (required, string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="getpubliclinkfile" data-search="get /public/v1/links/{token}/files/{fileitemid} getpubliclinkfile   publiclinks">
+<h3><span class="verb">GET</span> <code>/public/v1/links/{token}/files/{fileItemId}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>GetPublicLinkFile</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>token</code> in path (required, string)</li><li><code>fileItemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>302</code>, <code>404</code>.</p>
+</article></section>
 <section id="query"><h2>Query</h2><article id="runitemquery" data-search="get /api/v1/items/{itemid}/query runitemquery run one of an item's query views runs the saved query the named view stores: every active item the caller may read, in any container, whose properties satisfy the view's filters. the client names the view and never sends rules - the stored view is the whole query, and rules are edited through put /items/{itemid}/views like any other view configuration. 'today' is required, as yyyy-mm-dd in the caller's own zone, because a stored rule may say 'today' and only the caller knows which day that is. rows the caller may not read are excluded while the query runs, never filtered from its results, so the ceiling is spent only on rows that are actually returned. results are ordered by the first date-shaped filter's property soonest-first, else by the view's own sort compared as text, else most recently modified first, and always tie-broken by id so the same read returns the same rows twice. at most 500 rows are returned; 'truncated' says when more matched, which a list cannot convey on its own. each row carries its container's title so a cross-container list can say where a row lives. items under a lock the caller has not opened are left out, and a view stored on a locked item is refused with 'items.locked' (423) until it is unlocked. a query that runs past its time limit answers 'query.timed_out' (503). query">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/query</code></h3>
 <p>Run one of an item's query views</p>
@@ -1839,6 +1923,42 @@
 <p>Request body: <code>WorkspaceAggregateRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>400</code>, <code>404</code>, <code>413</code>, <code>423</code>, <code>429</code>, <code>503</code>.</p>
 </article></section>
+<section id="records"><h2>Records</h2><article id="upsertrecord" data-search="post /api/v1/items/{parentid}/records/upsert upsertrecord   records">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{parentId}/records/upsert</code></h3>
+<p></p>
+<p class="id">Operation id: <code>UpsertRecord</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>parentId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>UpsertRecordRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
+</article>
+<article id="lookupitemsbyproperty" data-search="post /api/v1/workspaces/{workspaceid}/lookup lookupitemsbyproperty   records">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/lookup</code></h3>
+<p></p>
+<p class="id">Operation id: <code>LookupItemsByProperty</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>LookupItemsRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
+</article>
+<article id="batchrecords" data-search="post /api/v1/workspaces/{workspaceid}/records/batch batchrecords   records">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/records/batch</code></h3>
+<p></p>
+<p class="id">Operation id: <code>BatchRecords</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>BatchRecordsRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
+</article></section>
 <section id="recurrence"><h2>Recurrence</h2><article id="setitemrecurrence" data-search="put /api/v1/items/{itemid}/recurrence setitemrecurrence set or clear an item's repeating rule a null request body clears the rule and the item stops repeating. editing an existing rule preserves its completion state: the watermark carries over untouched and each individually completed day is kept only when the new rule still lands on it. fails with 'recurrence.invalid_frequency', 'recurrence.invalid_interval', 'recurrence.weekdays_require_weekly', 'recurrence.invalid_weekday' or 'recurrence.invalid_until' when the request is malformed, and with 'recurrence.rule_too_large' when the resulting rule does not fit. recurrence">
 <h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/recurrence</code></h3>
 <p>Set or clear an item's repeating rule</p>
@@ -1862,6 +1982,54 @@
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>CompleteOccurrenceRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
+</article></section>
+<section id="references"><h2>References</h2><article id="listreferencedby" data-search="get /api/v1/items/{itemid}/referenced-by listreferencedby   references">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/referenced-by</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ListReferencedBy</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="listitemreferences" data-search="get /api/v1/items/{itemid}/references listitemreferences   references">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/references</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ListItemReferences</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="additemreference" data-search="post /api/v1/items/{itemid}/references additemreference   references">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/references</code></h3>
+<p></p>
+<p class="id">Operation id: <code>AddItemReference</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>AddItemReferenceRequest</code>.</p>
+<p>Responses: <code>201</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
+</article>
+<article id="removeitemreference" data-search="delete /api/v1/items/{itemid}/references/{referenceid} removeitemreference   references">
+<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/references/{referenceId}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>RemoveItemReference</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>referenceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>, <code>404</code>.</p>
 </article></section>
 <section id="roles"><h2>Roles</h2><article id="granttenantadmin" data-search="put /api/v1/tenant/admins/{principalid} granttenantadmin make a person a tenant administrator idempotent; audited. the person must belong to the caller's organization. needs a tenant administrator. roles">
 <h3><span class="verb">PUT</span> <code>/api/v1/tenant/admins/{principalId}</code></h3>
@@ -2630,6 +2798,18 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>202</code>, <code>404</code>, <code>409</code>.</p>
+</article>
+<article id="setworkspaceagentpolicy" data-search="put /api/v1/workspaces/{workspaceid}/agent-policy setworkspaceagentpolicy   workspaces">
+<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/agent-policy</code></h3>
+<p></p>
+<p class="id">Operation id: <code>SetWorkspaceAgentPolicy</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetAgentPolicyRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>.</p>
 </article>
 <article id="archiveworkspace" data-search="post /api/v1/workspaces/{workspaceid}/archive archiveworkspace   workspaces">
 <h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/archive</code></h3>

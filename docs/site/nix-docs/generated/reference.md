@@ -10,6 +10,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 
 - [AccessTokens](#accesstokens)
 - [Admin](#admin)
+- [Attachments](#attachments)
 - [Automations](#automations)
 - [Bookmarks](#bookmarks)
 - [Calendar](#calendar)
@@ -33,8 +34,11 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Notifications](#notifications)
 - [Operations](#operations)
 - [Pets](#pets)
+- [PublicLinks](#publiclinks)
 - [Query](#query)
+- [Records](#records)
 - [Recurrence](#recurrence)
+- [References](#references)
 - [Roles](#roles)
 - [Search](#search)
 - [Sites](#sites)
@@ -171,6 +175,37 @@ Parameters:
 - `limit` in query (optional, integer | string)
 
 Responses: `200`, `400`, `403`.
+
+## Attachments
+
+<a id="attachments"></a>
+
+### GET /api/v1/workspaces/{workspaceId}/attachments
+
+<a id="listattachments"></a>
+
+File items in the workspace
+
+Operation id: `ListAttachments`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Newest first. Shows each file's latest approved version, else its current one. Images are left out unless includeImages is set. Files under a lock the caller has not opened are omitted.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `cursor` in query (optional, string)
+- `state` in query (optional, string)
+- `includeImages` in query (optional, boolean)
+- `expiring` in query (optional, boolean)
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`, `422`.
 
 ## Automations
 
@@ -1284,6 +1319,27 @@ Parameters:
 
 Responses: `200`, `404`, `503`.
 
+### PUT /api/v1/items/{itemId}/file/versions/{versionId}/state
+
+<a id="setfileversionstate"></a>
+
+Operation id: `SetFileVersionState`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `versionId` in path (required, string (uuid))
+
+Request body: `SetFileVersionStateRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`.
+
 ## Finance
 
 <a id="finance"></a>
@@ -2336,7 +2392,7 @@ Operation id: `DeleteItem`.
 
 **Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
 
-Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion.
+Marks the item deleted. The subtree stays intact and its descendants become invisible by derivation rather than being rewritten, so restoring is a single flag flip. Purging is a separate, retention-driven operation. Fails with 'items.delete_protected' (409) when the item, or an item beneath it, is protected from deletion, and 'items.pinned' (409) when a file at or below it is pinned by a reference.
 
 Parameters:
 
@@ -3065,6 +3121,103 @@ Request body: `SavePetSettingsRequest`.
 
 Responses: `200`.
 
+## PublicLinks
+
+<a id="publiclinks"></a>
+
+### GET /api/v1/items/{itemId}/public-link
+
+<a id="getpubliclink"></a>
+
+Operation id: `GetPublicLink`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`, `404`.
+
+### PUT /api/v1/items/{itemId}/public-link
+
+<a id="createpubliclink"></a>
+
+Operation id: `CreatePublicLink`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `PutPublicLinkRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `422`.
+
+### DELETE /api/v1/items/{itemId}/public-link
+
+<a id="revokepubliclink"></a>
+
+Operation id: `RevokePublicLink`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `204`, `404`.
+
+### GET /public/v1/links/{token}
+
+<a id="readpubliclink"></a>
+
+Operation id: `ReadPublicLink`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `token` in path (required, string)
+
+Responses: `200`, `404`.
+
+### GET /public/v1/links/{token}/files/{fileItemId}
+
+<a id="getpubliclinkfile"></a>
+
+Operation id: `GetPublicLinkFile`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `token` in path (required, string)
+- `fileItemId` in path (required, string (uuid))
+
+Responses: `302`, `404`.
+
 ## Query
 
 <a id="query"></a>
@@ -3141,6 +3294,70 @@ Request body: `WorkspaceAggregateRequest`.
 
 Responses: `200`, `400`, `404`, `413`, `423`, `429`, `503`.
 
+## Records
+
+<a id="records"></a>
+
+### POST /api/v1/items/{parentId}/records/upsert
+
+<a id="upsertrecord"></a>
+
+Operation id: `UpsertRecord`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `parentId` in path (required, string (uuid))
+
+Request body: `UpsertRecordRequest`.
+
+Responses: `200`, `404`, `409`, `422`.
+
+### POST /api/v1/workspaces/{workspaceId}/lookup
+
+<a id="lookupitemsbyproperty"></a>
+
+Operation id: `LookupItemsByProperty`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `LookupItemsRequest`.
+
+Responses: `200`, `404`, `422`.
+
+### POST /api/v1/workspaces/{workspaceId}/records/batch
+
+<a id="batchrecords"></a>
+
+Operation id: `BatchRecords`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `BatchRecordsRequest`.
+
+Responses: `200`, `404`, `422`.
+
 ## Recurrence
 
 <a id="recurrence"></a>
@@ -3192,6 +3409,89 @@ Parameters:
 Request body: `CompleteOccurrenceRequest`.
 
 Responses: `200`, `404`, `409`, `422`.
+
+## References
+
+<a id="references"></a>
+
+### GET /api/v1/items/{itemId}/referenced-by
+
+<a id="listreferencedby"></a>
+
+Operation id: `ListReferencedBy`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `cursor` in query (optional, string)
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`.
+
+### GET /api/v1/items/{itemId}/references
+
+<a id="listitemreferences"></a>
+
+Operation id: `ListItemReferences`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `cursor` in query (optional, string)
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `404`.
+
+### POST /api/v1/items/{itemId}/references
+
+<a id="additemreference"></a>
+
+Operation id: `AddItemReference`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `AddItemReferenceRequest`.
+
+Responses: `201`, `404`, `409`, `422`.
+
+### DELETE /api/v1/items/{itemId}/references/{referenceId}
+
+<a id="removeitemreference"></a>
+
+Operation id: `RemoveItemReference`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `referenceId` in path (required, string (uuid))
+
+Responses: `204`, `404`.
 
 ## Roles
 
@@ -4586,6 +4886,26 @@ Parameters:
 - `workspaceId` in path (required, string (uuid))
 
 Responses: `202`, `404`, `409`.
+
+### PUT /api/v1/workspaces/{workspaceId}/agent-policy
+
+<a id="setworkspaceagentpolicy"></a>
+
+Operation id: `SetWorkspaceAgentPolicy`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `SetAgentPolicyRequest`.
+
+Responses: `200`, `403`, `404`.
 
 ### POST /api/v1/workspaces/{workspaceId}/archive
 

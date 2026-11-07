@@ -98,6 +98,10 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 - POST /api/v1/items/{itemId}/move
 - POST /api/v1/workspaces/{workspaceId}/items
 
+### `items.pinned`
+
+- DELETE /api/v1/items/{itemId}
+
 ### `items.protection_managed`
 
 - PUT /api/v1/items/{itemId}/protection
@@ -316,10 +320,18 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `query.invalid_rules`
 - `query.invalid_today`
 - `query.view_not_found`
+- `record.trashed`
+- `records.batch_invalid`
+- `records.idempotency_conflict`
+- `records.key_conflict`
+- `records.key_invalid`
+- `records.not_unique_field`
 - `recurrence.invalid_occurred_on`
 - `recurrence.too_many_completions`
+- `references.not_found`
 - `roles.administrator_required`
 - `roles.last_administrator`
+- `schema.unique_duplicates`
 - `search.malformed_references`
 - `search.timed_out`
 - `search.too_many_references`
