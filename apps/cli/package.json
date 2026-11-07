@@ -1,6 +1,6 @@
 {
   "name": "@nix/cli",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Nix CLI (nixctl): the scriptable, machine-readable way into a workspace without a browser",

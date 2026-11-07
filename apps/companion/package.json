@@ -1,6 +1,6 @@
 {
   "name": "@nix/companion-service",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Nix pet companion service: the Codex app-server and API-key providers behind Core's /v1/companion contract",
