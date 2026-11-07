@@ -304,9 +304,9 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Equal("approved", item.File.State);
     }
 
-    // The endpoint supplies AgentPolicyGate.MayChangeVersionState (internal, so restated here).
+    // The same gate the endpoint supplies.
     private static Func<Workspace, bool> MayChangeApproval(AccessTokenSessionContext session) =>
-        workspace => session.IsInteractive || (workspace.AgentsMayApprove && session.MayWrite);
+        workspace => Nix.Features.Workspaces.AgentPolicyGate.MayChangeVersionState(session, workspace);
 
     private sealed record Uploaded(Guid ItemId, Guid[] Versions);
 

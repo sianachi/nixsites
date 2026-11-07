@@ -188,7 +188,7 @@ internal static class PublicLinkEndpoints
             }
 
             version = await store.FindVersionAsync(item.Id, request.VersionId, ct).ConfigureAwait(false);
-            if (version is null || version.State == "revoked")
+            if (version is null || version.State == FileVersionStates.Revoked)
             {
                 return Refuse(
                     context,
@@ -336,7 +336,7 @@ internal static class PublicLinkEndpoints
         var version = signer.IsConfigured
             ? await store.FindVersionAsync(link.ItemId, versionId, ct).ConfigureAwait(false)
             : null;
-        if (version is null || version.State == "revoked")
+        if (version is null || version.State == FileVersionStates.Revoked)
         {
             return TypedResults.NotFound();
         }
