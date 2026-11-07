@@ -55,6 +55,9 @@ metadata:
   namespace: nix
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: "${INGRESS_MIDDLEWARES}"
+    # Traefik ranks routers by rule length, and Path(/mcp) is shorter than the web ingress's
+    # PathPrefix(/), so without this the web app answers /mcp (405 on POST).
+    traefik.ingress.kubernetes.io/router.priority: "1000"
     nginx.ingress.kubernetes.io/ssl-redirect: "${INGRESS_SSL_REDIRECT}"
 spec:
   ingressClassName: ${INGRESS_CLASS}
