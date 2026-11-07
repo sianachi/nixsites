@@ -371,6 +371,46 @@ public sealed class PublicLinkTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_file_stops_serving_through_a_note_link_once_the_body_no_longer_references_it()
+    {
+        var file = await NewFileAsync();
+        await AddVersionAsync(file, 1, "approved", "image/png");
+        var note = Guid.NewGuid();
+        await Sql(
+            $"""
+            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
+            VALUES ('{note}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 'note', '{Alpha.ItemId}', 2100, NULL, 'active', NULL, '{Alpha.PrincipalId}', '{Alpha.PrincipalId}', now(), now());
+            INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
+            VALUES ('{note}', '{note}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 0), ('{note}', '{Alpha.ItemId}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 1);
+            """);
+        var token = (await PutAsync(note)).Token;
+
+        // The collab render is faked: the first body references the file, the second omits it.
+        var reader = new SwitchableNoteReader([file]);
+        using var factory = _factory.WithWebHostBuilder(host =>
+            host.ConfigureServices(services => services.AddSingleton<IPublicNoteReader>(reader)));
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var path = new Uri($"/public/v1/links/{token}/files/{file}", UriKind.Relative);
+
+        using (var served = await client.GetAsync(path, Cancellation))
+        {
+            Assert.Equal(HttpStatusCode.Redirect, served.StatusCode);
+        }
+
+        reader.Servable = [];
+        using var dead = await client.GetAsync(path, Cancellation);
+        Assert.Equal(HttpStatusCode.NotFound, dead.StatusCode);
+    }
+
+    private sealed class SwitchableNoteReader(IReadOnlyList<Guid> servable) : IPublicNoteReader
+    {
+        public IReadOnlyList<Guid> Servable { get; set; } = servable;
+
+        public ValueTask<PublicNoteRender?> RenderAsync(ResolvedPublicLink link, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<PublicNoteRender?>(new PublicNoteRender("Note", "<p></p>", Servable, []));
+    }
+
+    [Fact]
     public async Task A_token_for_one_tenant_cannot_reach_another_tenants_link()
     {
         var tokens = _factory.Services.GetRequiredService<PublicLinkTokenService>();

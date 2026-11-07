@@ -231,6 +231,25 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
     }
 
     [Fact]
+    public async Task A_no_delete_protection_added_while_a_delete_waits_for_the_topology_lock_is_seen_by_the_delete()
+    {
+        var item = await CreateAsync("Protected note", Folder);
+
+        await using var protector = await BeginAsync(Locker);
+        Assert.True((await protector.Resolve<NixDispatcher>().SendAsync<SetItemProtection, Item>(
+            new SetItemProtection(item, true, null), Cancellation)).IsSuccess);
+
+        var pending = Task.Run(() => DeleteAsync(item), Cancellation);
+        Assert.NotSame(pending, await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(1), Cancellation)));
+
+        await protector.CommitAsync(Cancellation);
+        var refused = await pending.WaitAsync(TimeSpan.FromSeconds(15), Cancellation);
+        Assert.True(refused.IsFailure);
+        Assert.Equal("items.delete_protected", refused.Error.Code);
+        Assert.Equal(ItemLifecycleState.Active, await StateOfAsync(item));
+    }
+
+    [Fact]
     public async Task Delete_takes_the_topology_lock_even_with_no_finance_guard()
     {
         var item = await CreateAsync("Loose note", Folder);

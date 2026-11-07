@@ -474,6 +474,60 @@ describe.skipIf(!DB_TESTS_ENABLED)('the history data layer, against Postgres', (
       expect(head?.getXmlFragment(FRAGMENT_NAME).toJSON()).toContain('five');
     });
 
+    it('keeps an export-named revision reconstructable after the history around it is pruned', async () => {
+      const tenant = TENANTS.alpha;
+      const doc = await open(tenant);
+      const ed = editor();
+
+      const seqs: bigint[] = [];
+      for (const text of ['one', 'two', 'three', 'four']) {
+        seqs.push(await write(tenant, ed.rewriteTo(text), tenant.principalId, 1));
+      }
+      const [seq1, seq2, seq3] = seqs;
+      if (seq1 === undefined || seq2 === undefined || seq3 === undefined) {
+        throw new Error('Expected four sequences.');
+      }
+
+      // Core's ExportRevisionNamer names the revision an export was cut from (POST .../versions).
+      await withTenantScope(pool, scopeOf(tenant), (sql) =>
+        nameVersion(
+          sql,
+          tenant.tenantId,
+          doc.doc_id,
+          Number(seq1),
+          'Exported to PDF',
+          tenant.principalId,
+        ),
+      );
+
+      const longAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+      const admin = adminPool();
+      try {
+        for (const seq of [seq1, seq2, seq3]) {
+          await admin.query(
+            'UPDATE content_update SET created_at = $1 WHERE doc_id = $2 AND seq = $3',
+            [longAgo, doc.doc_id, seq.toString()],
+          );
+          await admin.query(
+            'UPDATE content_snapshot SET created_at = $1 WHERE doc_id = $2 AND seq = $3',
+            [longAgo, doc.doc_id, seq.toString()],
+          );
+        }
+      } finally {
+        await admin.end();
+      }
+
+      const result = await withTenantScope(pool, scopeOf(tenant), (sql) =>
+        pruneHistory(sql, tenant.tenantId, doc.doc_id, 30),
+      );
+      expect(result.updatesDeleted).toBeGreaterThan(0);
+
+      const exported = await withTenantScope(pool, scopeOf(tenant), (sql) =>
+        stateAt(sql, tenant.tenantId, doc.doc_id, Number(seq1)),
+      );
+      expect(exported?.getXmlFragment(FRAGMENT_NAME).toJSON()).toContain('one');
+    });
+
     it('is a no-op when no snapshot is old enough to be a base', async () => {
       const tenant = TENANTS.alpha;
       const doc = await open(tenant);
