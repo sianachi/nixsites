@@ -3866,9 +3866,22 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
             await work.CommitAsync(Cancellation);
         }
 
-        var statements = (await _fixture.ServerLogLinesSinceAsync(since))
-            .Select(line => line.Replace("\"", string.Empty, StringComparison.Ordinal).ToUpperInvariant())
-            .ToArray();
+        // Docker's log snapshot can lag the completed transaction under load (as SetLocalScopingTests
+        // waits for its COMMIT line), so wait for the application's own statements to arrive.
+        string[] statements = [];
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            statements = [.. (await _fixture.ServerLogLinesSinceAsync(since))
+                .Select(line => line.Replace("\"", string.Empty, StringComparison.Ordinal).ToUpperInvariant())];
+            if (statements.Count(line => line.Contains("SELECT ANCESTOR.SCHEMA, EDGE.DEPTH", StringComparison.Ordinal)) >= 2
+                && statements.Any(line => line.Contains("FROM TEMPLATE_APPLICATION AS", StringComparison.Ordinal)))
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(200), Cancellation);
+        }
+
         Assert.Contains(statements, line => line.Contains(
             "FROM TEMPLATE_APPLICATION AS",
             StringComparison.Ordinal));
