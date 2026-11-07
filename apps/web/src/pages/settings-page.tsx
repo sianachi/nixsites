@@ -47,7 +47,7 @@ import {
   useSettingsTab,
   type SettingsTab,
 } from './settings-tab';
-import { useInRouteDialog } from '../shell/route-dialog-context';
+import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 
 const fromState = z.object({ from: z.string() });
 const drilledState = z.object({ drilled: z.literal(true) });

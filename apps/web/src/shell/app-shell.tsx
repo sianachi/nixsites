@@ -60,7 +60,7 @@ import { TabSwitcher } from './phone/tab-switcher';
 import { usePhone } from './phone/use-phone';
 import { usePhoneTabs } from './phone/use-phone-tabs';
 import { RouteDialog } from './route-dialog';
-import { useRouteDialog } from './route-dialog-context';
+import { useRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';

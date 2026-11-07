@@ -5,12 +5,12 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Npgsql;
 using Nix.Authentication;
 using Nix.Domain.Identity;
 using Nix.Features.Tokens;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
+using Npgsql;
 
 namespace Nix.Integration.Tests.Persistence;
 

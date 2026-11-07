@@ -12,7 +12,7 @@ import {
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
-import { useInRouteDialog } from '../shell/route-dialog-context';
+import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 
 function Frame({ children }: { readonly children: ReactNode }): ReactElement {
   const inDialog = useInRouteDialog();

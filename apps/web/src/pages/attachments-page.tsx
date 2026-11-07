@@ -24,7 +24,7 @@ import {
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { selectedItemSearch } from '@nix/web-platform/routing/selected-item';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { useInRouteDialog } from '../shell/route-dialog-context';
+import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 
 const PAGE = 50;
 const STATE_LABEL: Record<FileVersionState, string> = {

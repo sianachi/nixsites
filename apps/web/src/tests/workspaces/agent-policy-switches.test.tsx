@@ -22,7 +22,10 @@ describe('agent policy switches', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = input instanceof Request ? input.url : input.toString();
-        requests.push({ url, body: JSON.parse(String(init?.body)) as unknown });
+        requests.push({
+          url,
+          body: JSON.parse(typeof init?.body === 'string' ? init.body : 'null') as unknown,
+        });
         return Promise.resolve(
           Response.json({ ...STUB_WORKSPACE, agentsMayCreatePublicLinks: true }),
         );

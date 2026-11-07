@@ -19,7 +19,7 @@ import {
   parseAutomationSelection,
 } from '@nix/web-collections/items/automation-url';
 import { useAutomations, type AutomationsState } from './use-automations';
-import { useInRouteDialog } from '../shell/route-dialog-context';
+import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 
 /**
  * The caller's automations in this workspace (ADR-0051 section 6): the list, one rule's editor and

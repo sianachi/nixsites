@@ -27,7 +27,7 @@ import { WorkspacesPage } from './pages/workspaces-page';
 import { CreationStudioPage } from './pages/creation-studio-page';
 import { RequireSession } from './shell/require-session';
 import { AppShell } from './shell/app-shell';
-import { RouteDialogContext } from './shell/route-dialog-context';
+import { RouteDialogContext } from '@nix/web-foundation/layout/route-dialog-context';
 import { useRouteDialogRouting } from './shell/route-dialog';
 import {
   LegacyWorkspaceRedirect,

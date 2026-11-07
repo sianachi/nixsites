@@ -21,7 +21,7 @@ import {
   useRouteDialog,
   type RouteDialogKind,
   type RouteDialogState,
-} from './route-dialog-context';
+} from '@nix/web-foundation/layout/route-dialog-context';
 
 /**
  * Automations, workspaces, trash and settings: dialogs over the work on desktop, pages on phones
