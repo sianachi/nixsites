@@ -1,11 +1,13 @@
 import { Button, Checkbox, Dialog, Icon, Input, Select, Tag, Text } from '@nix/ui';
 import { Paperclip } from 'lucide-react';
 import {
+  agentRecords,
   attachments as attachmentsApi,
   files as filesApi,
   isNixApiError,
   structure,
   type AttachmentRow,
+  type CursorPage,
   type FileVersionState,
   type PublicLink,
   type ReferencedBy,
@@ -39,13 +41,25 @@ function Frame({ children }: { readonly children: ReactNode }): ReactElement {
       className={`${paneScroller} flex flex-col gap-4 break-words ${inDialog ? '' : 'p-3 sm:p-4'}`}
     >
       {inDialog ? null : (
-        <Text variant="h3" as="h1">
+        <Text variant="h3" as="h2">
           Attachments
         </Text>
       )}
       {children}
     </div>
   );
+}
+
+/** Walks a cursor-paginated list one item at a time, fetching each page when the last runs out. */
+async function* walk<T>(
+  fetchPage: (cursor: string | undefined) => Promise<CursorPage<T>>,
+): AsyncGenerator<T, void, undefined> {
+  let cursor: string | undefined;
+  do {
+    const page = await fetchPage(cursor);
+    yield* page.items;
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor !== undefined);
 }
 
 function reasonOf(error: unknown, fallback: string): string {
@@ -93,11 +107,16 @@ export function AttachmentsPage(): ReactElement {
     setLoading(true);
     setError(null);
     try {
-      const pages = client.paginate(
-        attachmentsApi.listAttachments(
-          workspaceId,
-          { state: state === '' ? undefined : state, includeImages, expiring },
-          PAGE,
+      const pages = walk((cursor) =>
+        client.query(
+          attachmentsApi.listAttachments(workspaceId, {
+            state: state === '' ? undefined : state,
+            includeImages,
+            expiring,
+            limit: PAGE,
+            cursor,
+          }),
+          { forceRefresh: true },
         ),
       );
       iterator.current = pages[Symbol.asyncIterator]();
@@ -308,9 +327,11 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
     setPinsError(null);
     try {
       const found: ReferencedBy[] = [];
-      for await (const pin of client.paginate(attachmentsApi.listReferencedBy(row.itemId, 100))) {
-        found.push(pin);
-      }
+      const fetchPins = (cursor?: string): Promise<CursorPage<ReferencedBy>> =>
+        client.query(agentRecords.listReferencedBy(row.itemId, 100, cursor), {
+          forceRefresh: true,
+        });
+      for await (const pin of walk(fetchPins)) found.push(pin);
       setPins(found);
     } catch (reason) {
       setPinsError(reasonOf(reason, 'Pins could not be loaded.'));
@@ -611,7 +632,7 @@ function AttachmentItem({ row, workspaceId, act, ask, notify }: ItemProps): Reac
                             run: () =>
                               act(async () => {
                                 await client.execute(
-                                  attachmentsApi.removeReference(pin.holderItemId, pin.id),
+                                  agentRecords.removeReference(pin.holderItemId, pin.id),
                                 );
                                 await loadPins();
                               }, 'The reference could not be removed.'),

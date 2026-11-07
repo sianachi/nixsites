@@ -8,6 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   agentRecords,
+  attachments,
   files,
   references,
   structure,
@@ -290,7 +291,7 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
         const current = await session();
         if (state === 'approved' || state === 'revoked')
           assertTokenSession(current, 'Approving or revoking a file version');
-        return current.client.execute(agentRecords.setFileVersionState(itemId, versionId, state));
+        return current.client.execute(attachments.setVersionState(itemId, versionId, state));
       }),
   );
 
@@ -395,7 +396,7 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
       inputSchema: { itemId: identifier },
     },
     ({ itemId }) =>
-      toolResult(async () => (await session()).client.query(agentRecords.getPublicLink(itemId))),
+      toolResult(async () => (await session()).client.query(attachments.getPublicLink(itemId))),
   );
 
   server.registerTool(
@@ -418,7 +419,7 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
       toolResult(async () => {
         const current = await session();
         assertTokenSession(current, 'Creating a public link');
-        return current.client.execute(agentRecords.createPublicLink(itemId, versionId));
+        return current.client.execute(attachments.createPublicLink(itemId, versionId));
       }),
   );
 
@@ -432,7 +433,7 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
     },
     ({ itemId }) =>
       toolResult(async () => {
-        await (await session()).client.execute(agentRecords.revokePublicLink(itemId));
+        await (await session()).client.execute(attachments.revokePublicLink(itemId));
         return { itemId, revoked: true };
       }),
   );
@@ -454,7 +455,7 @@ export function registerRecordTools(server: McpServer, { session }: McpToolDeps)
     },
     ({ workspaceId, ...filter }) =>
       toolResult(async () =>
-        (await session()).client.query(agentRecords.listAttachments(workspaceId, filter)),
+        (await session()).client.query(attachments.listAttachments(workspaceId, filter)),
       ),
   );
 }

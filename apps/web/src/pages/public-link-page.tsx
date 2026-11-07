@@ -6,7 +6,7 @@ import { isCanceledError } from '@nix/api-client';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
-import { sanitizePublicHtml } from './public-link-html';
+import { sanitizePublicHtml } from '@nix/web-foundation/lib/public-link-html';
 import { publicLinkByToken, type PublicLink } from './public-link-api';
 
 const NOTE_STYLE =
