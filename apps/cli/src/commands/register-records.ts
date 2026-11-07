@@ -5,7 +5,13 @@
  */
 
 import type { Command } from 'commander';
-import { agentRecords, references, structure } from '@nix/api-client';
+import {
+  agentRecords,
+  attachments,
+  references,
+  structure,
+  type FileVersionState,
+} from '@nix/api-client';
 import type { Session } from '../session.ts';
 import { printResult, type OutputOptions } from '../output.ts';
 import {
@@ -201,7 +207,7 @@ export function registerRecordCommands(program: Command, act: Act): void {
     .action((itemId: string, _options: unknown, command: Command) =>
       act(command, (profile, output) =>
         withSession(profile, output, {}, (session) =>
-          session.client.query(agentRecords.getPublicLink(itemId)),
+          session.client.query(attachments.getPublicLink(itemId)),
         ),
       ),
     );
@@ -215,7 +221,7 @@ export function registerRecordCommands(program: Command, act: Act): void {
         withSession(profile, output, {}, (session) => {
           if (options.yes !== true) throw new Error('Pass --yes to confirm making this public.');
           assertTokenSession(session, 'Creating a public link');
-          return session.client.execute(agentRecords.createPublicLink(itemId, options.version));
+          return session.client.execute(attachments.createPublicLink(itemId, options.version));
         }),
       ),
     );
@@ -225,7 +231,7 @@ export function registerRecordCommands(program: Command, act: Act): void {
     .action((itemId: string, _options: unknown, command: Command) =>
       act(command, (profile, output) =>
         withSession(profile, output, {}, async (session) => {
-          await session.client.execute(agentRecords.revokePublicLink(itemId));
+          await session.client.execute(attachments.revokePublicLink(itemId));
           return { itemId, revoked: true };
         }),
       ),
@@ -304,11 +310,7 @@ export function registerRecordExtensions(program: Command, act: Act): void {
             if (state === 'approved' || state === 'revoked')
               assertTokenSession(session, 'Approving or revoking a file version');
             return session.client.execute(
-              agentRecords.setFileVersionState(
-                itemId,
-                versionId,
-                state as agentRecords.FileVersionStateName,
-              ),
+              attachments.setVersionState(itemId, versionId, state as FileVersionState),
             );
           }),
         ),
@@ -337,8 +339,8 @@ export function registerRecordExtensions(program: Command, act: Act): void {
         act(command, (profile, output) =>
           withSession(profile, output, {}, (session) =>
             session.client.query(
-              agentRecords.listAttachments(options.workspace, {
-                state: options.state,
+              attachments.listAttachments(options.workspace, {
+                state: options.state as FileVersionState | undefined,
                 includeImages: options.images === true ? true : undefined,
                 expiring: options.expiring === true ? true : undefined,
                 limit: options.limit,

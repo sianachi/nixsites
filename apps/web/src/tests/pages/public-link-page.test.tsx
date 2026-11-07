@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
-import { sanitizePublicHtml } from '../../pages/public-link-html';
+import { sanitizePublicHtml } from '@nix/web-foundation/lib/public-link-html';
 import { PublicLinkPage } from '../../pages/public-link-page';
 
 const FILE = '/public/v1/links/tok%20en/files/66666666-6666-4666-8666-666666666661';

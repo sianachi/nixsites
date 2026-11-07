@@ -1,47 +1,47 @@
-/** The workspace attachments list and the per-file actions its page offers. */
+/** The workspace attachments list, per-file version state and public links, for the page and for agents alike. */
 
 import {
   defineCommand,
-  definePagedQuery,
   defineQuery,
   type CommandEndpoint,
-  type PagedQueryEndpoint,
   type QueryEndpoint,
 } from '../endpoints.js';
 import {
   attachmentRowSchema,
   publicLinkSchema,
-  referencedBySchema,
   type AttachmentRow,
   type FileVersionState,
   type PublicLink,
-  type ReferencedBy,
 } from '../schemas/attachments.js';
-import { noContentSchema } from '../schemas/index.js';
+import { cursorPageSchema, noContentSchema, type CursorPage } from '../schemas/index.js';
 import { z } from 'zod';
 
 export interface AttachmentFilter {
   readonly state?: FileVersionState | undefined;
   readonly includeImages?: boolean | undefined;
   readonly expiring?: boolean | undefined;
+  readonly limit?: number | undefined;
+  readonly cursor?: string | undefined;
 }
 
-/** File items, newest first. Images only when asked for. */
+/** One page of file items, newest first. Images only when asked for. */
 export const listAttachments = (
   workspaceId: string,
   filter: AttachmentFilter = {},
-  pageSize?: number,
-): PagedQueryEndpoint<AttachmentRow> =>
-  definePagedQuery<AttachmentRow>({
+): QueryEndpoint<CursorPage<AttachmentRow>> =>
+  defineQuery<CursorPage<AttachmentRow>>({
     operation: 'attachments.list',
     path: `/api/v1/workspaces/${workspaceId}/attachments`,
     query: {
       state: filter.state,
       includeImages: filter.includeImages === true ? true : undefined,
       expiring: filter.expiring === true ? true : undefined,
+      limit: filter.limit,
+      cursor: filter.cursor,
     },
-    itemSchema: attachmentRowSchema,
-    pageSize,
+    schema: cursorPageSchema(attachmentRowSchema),
+    cacheKey: ['attachments', workspaceId, JSON.stringify(filter)],
+    staleAfterMs: 0,
   });
 
 /** Moves a file version between draft, in review, approved and revoked. */
@@ -56,7 +56,7 @@ export const setVersionState = (
     path: `/api/v1/items/${itemId}/file/versions/${versionId}/state`,
     schema: z.unknown(),
     body: { state },
-    invalidates: [['files', itemId]],
+    invalidates: [['files', itemId], ['items', itemId], ['attachments']],
   });
 
 /** The active public link of a file, or a 404 when there is none (or links are off). */
@@ -65,6 +65,7 @@ export const getPublicLink = (itemId: string): QueryEndpoint<PublicLink> =>
     operation: 'publicLinks.get',
     path: `/api/v1/items/${itemId}/public-link`,
     schema: publicLinkSchema,
+    cacheKey: ['items', itemId, 'public-link'],
     staleAfterMs: 0,
   });
 
@@ -76,6 +77,7 @@ export const createPublicLink = (itemId: string, versionId?: string): CommandEnd
     path: `/api/v1/items/${itemId}/public-link`,
     schema: publicLinkSchema,
     body: { versionId: versionId ?? null },
+    invalidates: [['items', itemId, 'public-link'], ['attachments']],
   });
 
 export const revokePublicLink = (itemId: string): CommandEndpoint<undefined> =>
@@ -84,28 +86,5 @@ export const revokePublicLink = (itemId: string): CommandEndpoint<undefined> =>
     method: 'DELETE',
     path: `/api/v1/items/${itemId}/public-link`,
     schema: noContentSchema,
-  });
-
-/** Who points at a file: pins name a version, mentions do not. */
-export const listReferencedBy = (
-  itemId: string,
-  pageSize?: number,
-): PagedQueryEndpoint<ReferencedBy> =>
-  definePagedQuery<ReferencedBy>({
-    operation: 'references.referencedBy',
-    path: `/api/v1/items/${itemId}/referenced-by`,
-    itemSchema: referencedBySchema,
-    pageSize,
-  });
-
-/** Removes a reference from its holder, which is how a pin is undone. */
-export const removeReference = (
-  holderItemId: string,
-  referenceId: string,
-): CommandEndpoint<undefined> =>
-  defineCommand<undefined>({
-    operation: 'references.remove',
-    method: 'DELETE',
-    path: `/api/v1/items/${holderItemId}/references/${referenceId}`,
-    schema: noContentSchema,
+    invalidates: [['items', itemId, 'public-link'], ['attachments']],
   });

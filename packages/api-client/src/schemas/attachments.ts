@@ -47,6 +47,8 @@ export const publicLinkSchema = z.object({
   versionState: z.string().nullable(),
   createdBy: z.uuid(),
   createdAt: z.iso.datetime({ offset: true }),
-}) satisfies z.ZodType<Omit<PublicLinkContract, 'withheldFiles'>>;
+  /** Files a note links to that the link withholds because no version is approved. */
+  withheldFiles: z.array(z.object({ fileItemId: z.uuid(), name: z.string() })).default([]),
+}) satisfies z.ZodType<PublicLinkContract>;
 
 export type PublicLink = z.infer<typeof publicLinkSchema>;
