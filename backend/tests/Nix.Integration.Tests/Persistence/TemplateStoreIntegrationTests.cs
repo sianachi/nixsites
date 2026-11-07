@@ -1564,6 +1564,37 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task A_template_copy_of_a_unique_field_carries_no_flag_and_creates_no_record_keys()
+    {
+        const string uniqueSchema = """{"inherit":false,"properties":[{"key":"url","label":"Link","type":"url","required":false,"unique":true}]}""";
+        var templateId = await ImportAndFinalizeAsync("unique-copy", rootSchema: uniqueSchema);
+        ItemId copyId;
+        var apply = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (apply.ConfigureAwait(false))
+        {
+            var store = apply.Resolve<TemplateStore>();
+            var begun = await store.BeginApplicationAsync(
+                templateId, TemplateApplicationMode.Create, null, null, null, "unique-copy-application", Cancellation);
+            Assert.True(begun.IsSuccess, begun.IsFailure ? begun.Error.ToString() : null);
+            copyId = begun.Value.TargetItemId;
+            var finalized = await store.FinalizeApplicationAsync(begun.Value.ApplicationId, [], Cancellation);
+            Assert.True(finalized.IsSuccess, finalized.IsFailure ? finalized.Error.ToString() : null);
+            await apply.CommitAsync(Cancellation);
+        }
+
+        var verify = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (verify.ConfigureAwait(false))
+        {
+            var copy = await verify.DbContext.Items.AsNoTracking().SingleAsync(item => item.Id == copyId, Cancellation);
+            Assert.Contains("\"url\"", copy.Schema, StringComparison.Ordinal);
+            Assert.DoesNotContain("unique", copy.Schema, StringComparison.Ordinal);
+            var keys = await verify.DbContext.Database.SqlQuery<int>(
+                $"SELECT count(*)::int AS \"Value\" FROM record_key WHERE item_id = {copyId.Value}").SingleAsync(Cancellation);
+            Assert.Equal(0, keys);
+        }
+    }
+
     [Theory]
     [InlineData(PropertyType.Formula, "[amount] * 3", null, null)]
     [InlineData(PropertyType.Rollup, null, RollupAggregate.Average, "amount")]

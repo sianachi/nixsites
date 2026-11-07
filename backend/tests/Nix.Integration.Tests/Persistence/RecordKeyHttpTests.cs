@@ -151,6 +151,55 @@ public sealed class RecordKeyHttpTests(NixPostgresFixture fixture) : IAsyncLifet
     }
 
     [Fact]
+    public async Task A_plain_create_racing_an_upsert_of_one_url_never_makes_a_second_item()
+    {
+        var collection = await CollectionAsync();
+        for (var round = 0; round < 8; round++)
+        {
+            var url = $"https://example.com/race-{round}";
+            var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var create = Task.Run(async () =>
+            {
+                await gate.Task;
+                return await _client.PostAsJsonAsync($"/api/v1/workspaces/{Workspace}/items", new
+                {
+                    type = "note",
+                    title = "Racer",
+                    parentId = collection,
+                    properties = new { url },
+                }, Cancellation);
+            }, Cancellation);
+            var upsert = Task.Run(async () =>
+            {
+                await gate.Task;
+                return await _client.PostAsJsonAsync(
+                    $"/api/v1/items/{collection}/records/upsert", new { keyField = "url", keyValue = url }, Cancellation);
+            }, Cancellation);
+            gate.SetResult();
+            using var createResponse = await create.WaitAsync(TimeSpan.FromSeconds(60), Cancellation);
+            using var upsertResponse = await upsert.WaitAsync(TimeSpan.FromSeconds(60), Cancellation);
+
+            Assert.Equal(HttpStatusCode.OK, upsertResponse.StatusCode);
+            var outcome = (await upsertResponse.Content.ReadFromJsonAsync<JsonObject>(Cancellation))!;
+            var upsertId = outcome["item"]!["id"]!.GetValue<Guid>();
+            if (createResponse.StatusCode == HttpStatusCode.Conflict)
+            {
+                // The upsert won; the create reports the item it lost to.
+                Assert.Equal("created", outcome["outcome"]!.GetValue<string>());
+                var problem = (await createResponse.Content.ReadFromJsonAsync<JsonObject>(Cancellation))!;
+                Assert.Equal(upsertId, problem["existingItemId"]!.GetValue<Guid>());
+            }
+            else
+            {
+                Assert.True(createResponse.IsSuccessStatusCode, createResponse.StatusCode.ToString());
+                Assert.Contains(outcome["outcome"]!.GetValue<string>(), Followers);
+            }
+
+            Assert.Equal(round + 1, await CountChildrenAsync(collection));
+        }
+    }
+
+    [Fact]
     public async Task Repeated_upserts_replay_refuse_a_changed_body_and_never_overwrite_a_newer_write()
     {
         var collection = await CollectionAsync();
