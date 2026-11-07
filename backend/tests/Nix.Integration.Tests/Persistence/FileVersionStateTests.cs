@@ -346,6 +346,12 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         {
             work.Resolve<AccessTokenSessionContext>().SetInteractive();
         }
+        else
+        {
+            // The non-interactive caller here is an external bearer, as the middleware would mark it.
+            work.Resolve<AccessTokenSessionContext>().SetExternalBearer();
+        }
+
         var result = await work.Resolve<IFileStore>().SetVersionStateAsync(
             ItemId.From(file.ItemId), FileVersionId.From(file.Versions[index]), state,
             MayChangeApproval(work.Resolve<AccessTokenSessionContext>()), Cancellation);

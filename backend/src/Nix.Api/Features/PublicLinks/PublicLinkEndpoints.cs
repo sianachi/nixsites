@@ -328,7 +328,7 @@ internal static class PublicLinkEndpoints
             }
 
             // The page's own file requests then reuse this render instead of repeating it.
-            Notes.PublicNoteServing.Remember(link.LinkId, render.ServableFileIds);
+            Notes.PublicNoteServing.Remember(link, render.ServableFileIds);
             return TypedResults.Ok(new PublicLinkReadResponse("note", Title: render.Title, Html: Notes.PublicNoteServing.BindToken(render.Html, token)));
         }
 

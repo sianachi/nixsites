@@ -383,6 +383,7 @@ public sealed class PublicLinkTests : IAsyncLifetime
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES ('{note}', '{note}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 0), ('{note}', '{Alpha.ItemId}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 1);
             """);
+        await Sql($"INSERT INTO content_doc (doc_id, tenant_id, item_id, workspace_id, schema_version, head_seq, created_at) VALUES ('{Guid.NewGuid()}', '{Alpha.TenantId}', '{note}', '{Alpha.WorkspaceId}', 7, 1, now())");
         var token = (await PutAsync(note)).Token;
 
         // The collab render is faked: the first body references the file, the second omits it.
@@ -397,7 +398,9 @@ public sealed class PublicLinkTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.Redirect, served.StatusCode);
         }
 
+        // An edit removes the reference: the body moves to a new revision.
         reader.Servable = [];
+        await Sql($"UPDATE content_doc SET head_seq = head_seq + 1 WHERE item_id = '{note}'");
         using var dead = await client.GetAsync(path, Cancellation);
         Assert.Equal(HttpStatusCode.NotFound, dead.StatusCode);
     }

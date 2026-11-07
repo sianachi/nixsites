@@ -5,13 +5,15 @@ namespace Nix.Abstractions;
 
 /// <summary>A public link token that resolved to a live, servable link.</summary>
 /// <param name="FileVersionId">The fixed version a file link serves, or null for a note link.</param>
+/// <param name="NoteHeadSeq">For a note link, the body's current revision (null before anyone opened it).</param>
 public sealed record ResolvedPublicLink(
     Guid LinkId,
     TenantId TenantId,
     WorkspaceId WorkspaceId,
     ItemId ItemId,
     Guid? FileVersionId,
-    Guid ServicePrincipalId);
+    Guid ServicePrincipalId,
+    long? NoteHeadSeq = null);
 
 /// <summary>
 /// [SEC] Turns an anonymous token into a live link, in a session bound to the link's tenant and

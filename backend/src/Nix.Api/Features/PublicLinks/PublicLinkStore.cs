@@ -69,13 +69,22 @@ internal sealed class PublicLinkStore(
             return null;
         }
 
+        // A note link carries its body's revision, so anything cached about the body goes stale on edit.
+        var headSeq = link.FileVersionId is null
+            ? await database.ContentDocs.AsNoTracking()
+                .Where(document => document.ItemId == link.ItemId)
+                .Select(document => (long?)document.HeadSeq)
+                .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            : null;
+
         return new ResolvedPublicLink(
             link.Id,
             tenantId,
             link.WorkspaceId,
             link.ItemId,
             link.FileVersionId?.Value,
-            link.ServicePrincipalId.Value);
+            link.ServicePrincipalId.Value,
+            headSeq);
     }
 
     /// <inheritdoc />

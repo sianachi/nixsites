@@ -14,7 +14,7 @@ namespace Nix.Features.PublicLinks.Notes;
 /// [SEC] A file named by a note's public link: 302 to a short-lived signed URL, <c>no-store</c>.
 /// Authorization (link, revocation, lock, trash, file approval) is re-checked on every request. Only
 /// the body-derived set of servable file ids is cached, briefly, so one page view renders the note
-/// once: a reference removed from the body stops serving within <see cref="PublicNoteServing.ServableIdsLifetime"/>.
+/// once per body revision: an edit that removes a reference takes effect at once.
 /// </summary>
 internal static class PublicLinkFileEndpoints
 {
