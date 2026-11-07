@@ -6,7 +6,12 @@
  */
 
 import { z } from 'zod';
-import { defineCommand, defineQuery, type CommandEndpoint } from '../endpoints.js';
+import {
+  defineCommand,
+  defineQuery,
+  type CommandEndpoint,
+  type QueryEndpoint,
+} from '../endpoints.js';
 import { referencedBySchema } from '../schemas/attachments.js';
 import { itemSchema, noContentSchema } from '../schemas/index.js';
 import { operationSchema, type Operation } from '../schemas/operations.js';
@@ -153,7 +158,11 @@ export const removeReference = (
     invalidates: [['items'], ['attachments']],
   });
 
-export const listReferences = (itemId: string, limit?: number, cursor?: string) =>
+export const listReferences = (
+  itemId: string,
+  limit?: number,
+  cursor?: string,
+): QueryEndpoint<z.infer<ReturnType<typeof page<typeof referenceSchema>>>> =>
   defineQuery({
     operation: 'references.list',
     path: `/api/v1/items/${itemId}/references`,
@@ -163,7 +172,11 @@ export const listReferences = (itemId: string, limit?: number, cursor?: string) 
     staleAfterMs: 0,
   });
 
-export const listReferencedBy = (itemId: string, limit?: number, cursor?: string) =>
+export const listReferencedBy = (
+  itemId: string,
+  limit?: number,
+  cursor?: string,
+): QueryEndpoint<z.infer<ReturnType<typeof page<typeof referencedBySchema>>>> =>
   defineQuery({
     operation: 'references.referencedBy',
     path: `/api/v1/items/${itemId}/referenced-by`,

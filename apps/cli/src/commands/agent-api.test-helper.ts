@@ -63,7 +63,15 @@ export function exportRow(overrides: Record<string, unknown> = {}): Record<strin
 
 /** Answers each route with a plausible body and records the request. */
 export function fakeApi(calls: Call[]): FetchImpl {
-  return async (input, init) => {
+  return (input, init) => Promise.resolve(answer(calls, input, init));
+}
+
+function answer(
+  calls: Call[],
+  input: Parameters<FetchImpl>[0],
+  init: Parameters<FetchImpl>[1],
+): Response {
+  {
     const url = new URL(input);
     if (url.pathname.endsWith('/public/v1/auth/token'))
       return Response.json({ accessToken: 'jwt', tokenType: 'Bearer', expiresInSeconds: 600 });
@@ -184,5 +192,5 @@ export function fakeApi(calls: Call[]): FetchImpl {
     if (path.endsWith('/properties')) return Response.json(item());
     if (path === '/api/v1/items' || path.endsWith('/items')) return Response.json(item());
     return Response.json({ title: 'unexpected', status: 404 }, { status: 404 });
-  };
+  }
 }

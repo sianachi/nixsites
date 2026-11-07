@@ -15,19 +15,27 @@ export function SharingSwitches(): ReactElement {
   // `canRename` is the server's "owner or tenant administrator" flag, as for daily notes.
   const canManage = workspace.canRename;
 
-  async function save(
-    input:
-      | { membershipLocked?: boolean; collaboration?: boolean }
-      | { agentsMayApprove?: boolean; agentsMayCreatePublicLinks?: boolean },
+  function save(
+    input: { membershipLocked?: boolean; collaboration?: boolean },
+    done: string,
+  ): Promise<void> {
+    return run(coreWorkspaces.setWorkspaceSharing(workspace.id, input), done);
+  }
+
+  function saveAgentPolicy(
+    input: { agentsMayApprove?: boolean; agentsMayCreatePublicLinks?: boolean },
+    done: string,
+  ): Promise<void> {
+    return run(coreWorkspaces.setWorkspaceAgentPolicy(workspace.id, input), done);
+  }
+
+  async function run(
+    command: ReturnType<typeof coreWorkspaces.setWorkspaceSharing>,
     done: string,
   ): Promise<void> {
     setSaving(true);
     try {
-      const updated = await client.execute(
-        'agentsMayApprove' in input || 'agentsMayCreatePublicLinks' in input
-          ? coreWorkspaces.setWorkspaceAgentPolicy(workspace.id, input)
-          : coreWorkspaces.setWorkspaceSharing(workspace.id, input),
-      );
+      const updated = await client.execute(command);
       context.workspaceUpdated(updated);
       publishNotice({ key: 'workspace-sharing', message: done });
     } catch (reason) {
@@ -87,7 +95,7 @@ export function SharingSwitches(): ReactElement {
           disabled={!canManage || saving}
           onChange={(event) => {
             const on = event.currentTarget.checked;
-            void save(
+            void saveAgentPolicy(
               { agentsMayApprove: on },
               on
                 ? 'Access tokens can now approve and revoke file versions.'
@@ -103,7 +111,7 @@ export function SharingSwitches(): ReactElement {
           disabled={!canManage || saving}
           onChange={(event) => {
             const on = event.currentTarget.checked;
-            void save(
+            void saveAgentPolicy(
               { agentsMayCreatePublicLinks: on },
               on
                 ? 'Access tokens with admin scope can now make items public.'
