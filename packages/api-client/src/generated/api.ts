@@ -1411,6 +1411,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/tenant/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The organization's MCP and public link switches
+     * @description Whether administrators allow remote MCP and public links (the stored switches), and whether the deployment offers each at all. Needs a tenant administrator and an interactive session.
+     */
+    get: operations['GetTenantSettings'];
+    /**
+     * Turn remote MCP or public links on or off for the organization
+     * @description An omitted field is unchanged. Audited. Turning public links off stops live links serving without revoking them; turning MCP off makes the remote MCP endpoint refuse this organization's tokens. Needs a tenant administrator and an interactive session.
+     */
+    put: operations['UpdateTenantSettings'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/search': {
     parameters: {
       query?: never;
@@ -4286,6 +4310,8 @@ export interface components {
       mcpUrl: null | string;
       operator: boolean;
       siteApprover: boolean;
+      publicLinks: boolean;
+      mcpEnabled: boolean;
     };
     CurrentPrincipalResponse: {
       /** Format: uuid */
@@ -6419,6 +6445,12 @@ export interface components {
       aggregates?: null | components['schemas']['ViewAggregateContract'][];
       open?: null | string;
     };
+    TenantSettingsResponse: {
+      mcpEnabled: boolean;
+      publicLinksEnabled: boolean;
+      mcpAvailable: boolean;
+      publicLinksAvailable: boolean;
+    };
     TokenExchangeRequest: {
       token: null | string;
     };
@@ -6490,6 +6522,10 @@ export interface components {
       debounceSeconds: null | number | string;
       excludedItemIds: null | string[];
       datedCollections: null | components['schemas']['SiteDatedCollectionDto'][];
+    };
+    UpdateTenantSettingsRequest: {
+      mcpEnabled?: null | boolean;
+      publicLinksEnabled?: null | boolean;
     };
     UpsertRecordRequest: {
       keyField: string;
@@ -10969,6 +11005,68 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetTenantSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TenantSettingsResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdateTenantSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateTenantSettingsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TenantSettingsResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };

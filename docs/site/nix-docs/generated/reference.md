@@ -3564,6 +3564,44 @@ Parameters:
 
 Responses: `200`.
 
+### GET /api/v1/tenant/settings
+
+<a id="gettenantsettings"></a>
+
+The organization's MCP and public link switches
+
+Operation id: `GetTenantSettings`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Whether administrators allow remote MCP and public links (the stored switches), and whether the deployment offers each at all. Needs a tenant administrator and an interactive session.
+
+Responses: `200`, `403`.
+
+### PUT /api/v1/tenant/settings
+
+<a id="updatetenantsettings"></a>
+
+Turn remote MCP or public links on or off for the organization
+
+Operation id: `UpdateTenantSettings`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+An omitted field is unchanged. Audited. Turning public links off stops live links serving without revoking them; turning MCP off makes the remote MCP endpoint refuse this organization's tokens. Needs a tenant administrator and an interactive session.
+
+Request body: `UpdateTenantSettingsRequest`.
+
+Responses: `200`, `403`.
+
 ## Search
 
 <a id="search"></a>

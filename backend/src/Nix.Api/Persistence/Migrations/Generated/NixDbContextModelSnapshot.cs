@@ -4229,10 +4229,18 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("text")
                         .HasColumnName("isolation_mode");
 
+                    b.Property<bool>("McpEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("mcp_enabled");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
+
+                    b.Property<bool>("PublicLinksEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("public_links_enabled");
 
                     b.HasKey("Id");
 

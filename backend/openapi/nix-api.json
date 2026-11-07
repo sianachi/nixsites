@@ -5625,6 +5625,78 @@
         }
       }
     },
+    "/api/v1/tenant/settings": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "The organization's MCP and public link switches",
+        "description": "Whether administrators allow remote MCP and public links (the stored switches), and whether the deployment offers each at all. Needs a tenant administrator and an interactive session.",
+        "operationId": "GetTenantSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Turn remote MCP or public links on or off for the organization",
+        "description": "An omitted field is unchanged. Audited. Turning public links off stops live links serving without revoking them; turning MCP off makes the remote MCP endpoint refuse this organization's tokens. Needs a tenant administrator and an interactive session.",
+        "operationId": "UpdateTenantSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/search": {
       "get": {
         "tags": [
@@ -17257,7 +17329,9 @@
           "sites",
           "mcpUrl",
           "operator",
-          "siteApprover"
+          "siteApprover",
+          "publicLinks",
+          "mcpEnabled"
         ],
         "type": "object",
         "properties": {
@@ -17274,6 +17348,12 @@
             "type": "boolean"
           },
           "siteApprover": {
+            "type": "boolean"
+          },
+          "publicLinks": {
+            "type": "boolean"
+          },
+          "mcpEnabled": {
             "type": "boolean"
           }
         }
@@ -26123,6 +26203,29 @@
           }
         }
       },
+      "TenantSettingsResponse": {
+        "required": [
+          "mcpEnabled",
+          "publicLinksEnabled",
+          "mcpAvailable",
+          "publicLinksAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "mcpEnabled": {
+            "type": "boolean"
+          },
+          "publicLinksEnabled": {
+            "type": "boolean"
+          },
+          "mcpAvailable": {
+            "type": "boolean"
+          },
+          "publicLinksAvailable": {
+            "type": "boolean"
+          }
+        }
+      },
       "TokenExchangeRequest": {
         "required": [
           "token"
@@ -26449,6 +26552,23 @@
             "items": {
               "$ref": "#/components/schemas/SiteDatedCollectionDto"
             }
+          }
+        }
+      },
+      "UpdateTenantSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "mcpEnabled": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "publicLinksEnabled": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

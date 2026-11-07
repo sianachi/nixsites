@@ -17,4 +17,6 @@ namespace Nix.Serialization;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(RoleGrantResponse))]
 [JsonSerializable(typeof(CursorPage<RoleGrantResponse>))]
+[JsonSerializable(typeof(TenantSettingsResponse))]
+[JsonSerializable(typeof(UpdateTenantSettingsRequest))]
 internal sealed partial class RolesJsonContext : JsonSerializerContext;

@@ -13,6 +13,9 @@ public interface IPublicLinkStore
     /// <summary>Whether the item, or any ancestor, carries a lock (a lock covers its subtree).</summary>
     public ValueTask<bool> IsUnderLockAsync(ItemId itemId, CancellationToken cancellationToken);
 
+    /// <summary>Whether the tenant's administrators allow public links (the tenant switch; the install flag is separate).</summary>
+    public ValueTask<bool> TenantAllowsAsync(TenantId tenant, CancellationToken cancellationToken);
+
     /// <summary>Whether this note link is unrevoked and matches the scope it was resolved under.</summary>
     public ValueTask<bool> IsLiveNoteLinkAsync(
         TenantId tenant,

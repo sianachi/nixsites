@@ -241,6 +241,30 @@ public sealed class PublicLinkTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_tenant_switch_stops_every_link_route_at_once_and_the_link_works_again_when_it_comes_back()
+    {
+        var file = await NewFileAsync();
+        await AddVersionAsync(file, 1, "approved");
+        var link = await PutAsync(file);
+        Assert.Equal(HttpStatusCode.OK, await ReadStatusAsync(link.Token));
+
+        await Sql($"UPDATE tenant SET public_links_enabled = false WHERE tenant_id = '{Alpha.TenantId}'");
+        Assert.Equal(HttpStatusCode.NotFound, await ReadStatusAsync(link.Token));
+        foreach (var method in new[] { HttpMethod.Get, HttpMethod.Put, HttpMethod.Delete })
+        {
+            using var response = await Send(method, $"/api/v1/items/{file}/public-link", method == HttpMethod.Put ? new { } : null);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal("public_links.disabled", await ProblemCodeAsync(response));
+        }
+
+        // Another tenant's switch is not this one's.
+        await Sql($"UPDATE tenant SET public_links_enabled = false WHERE tenant_id = '{Beta.TenantId}'");
+        await Sql($"UPDATE tenant SET public_links_enabled = true WHERE tenant_id = '{Alpha.TenantId}'");
+        Assert.Equal(HttpStatusCode.OK, await ReadStatusAsync(link.Token));
+        Assert.Equal("1", await Scalar($"SELECT count(*) FROM public_link WHERE item_id = '{file}' AND revoked_at IS NULL"));
+    }
+
+    [Fact]
     public async Task Only_notes_and_files_can_have_a_link()
     {
         using var response = await Send(HttpMethod.Put, $"/api/v1/items/{Alpha.ItemId}/public-link", new { });

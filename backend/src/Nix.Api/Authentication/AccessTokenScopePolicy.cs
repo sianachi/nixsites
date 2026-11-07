@@ -69,6 +69,13 @@ public static class AccessTokenScopePolicy
             return Requirement.InteractiveOnly;
         }
 
+        // The organization's MCP and public link switches govern what tokens may do at all (turning
+        // MCP off exists to stop them), so no token scope reaches them, reads included.
+        if (path.StartsWithSegments("/api/v1/tenant/settings", StringComparison.OrdinalIgnoreCase))
+        {
+            return Requirement.InteractiveOnly;
+        }
+
         // ASP.NET routing matches a path with a trailing slash to the same endpoint, so every
         // suffix and exact-path rule below compares the path with trailing slashes removed;
         // otherwise "/move/" or "/api/v1/me/preferences/" would slip past the rule meant for it.

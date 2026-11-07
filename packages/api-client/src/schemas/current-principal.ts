@@ -18,8 +18,19 @@ export const currentPrincipalSchema = z.object({
       operator: z.boolean().default(false),
       /** May decide first publishes: configured, granted in Settings, or an administrator when none is configured. */
       siteApprover: z.boolean().default(false),
+      /** Public links work here: the install allows them and the organization has not turned them off. */
+      publicLinks: z.boolean().default(false),
+      /** The organization's own MCP switch (a null `mcpUrl` alone cannot tell off from not offered). */
+      mcpEnabled: z.boolean().default(true),
     })
-    .default({ sites: false, mcpUrl: null, operator: false, siteApprover: false }),
+    .default({
+      sites: false,
+      mcpUrl: null,
+      operator: false,
+      siteApprover: false,
+      publicLinks: false,
+      mcpEnabled: true,
+    }),
 });
 
 export type CurrentPrincipal = z.infer<typeof currentPrincipalSchema>;

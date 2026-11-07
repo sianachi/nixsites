@@ -104,10 +104,11 @@ internal static class PublicLinkEndpoints
         [FromServices] IPermissionResolver permissions,
         [FromServices] IConfiguration configuration,
         [FromServices] IPublicLinkStore store,
+        [FromServices] INixSessionContextAccessor sessions,
         [FromServices] PublicLinkTokenService tokens,
         [FromServices] IPublicNoteReader? notes)
     {
-        if (Disabled(configuration, context) is { } disabled)
+        if (await DisabledAsync(configuration, store, sessions, context).ConfigureAwait(false) is { } disabled)
         {
             return disabled;
         }
@@ -140,7 +141,7 @@ internal static class PublicLinkEndpoints
         [FromServices] TimeProvider clock,
         [FromServices] IPublicNoteReader? notes)
     {
-        if (Disabled(configuration, context) is { } disabled)
+        if (await DisabledAsync(configuration, store, sessions, context).ConfigureAwait(false) is { } disabled)
         {
             return disabled;
         }
@@ -271,7 +272,7 @@ internal static class PublicLinkEndpoints
         [FromServices] INixSessionContextAccessor sessions,
         [FromServices] TimeProvider clock)
     {
-        if (Disabled(configuration, context) is { } disabled)
+        if (await DisabledAsync(configuration, store, sessions, context).ConfigureAwait(false) is { } disabled)
         {
             return disabled;
         }
@@ -389,8 +390,15 @@ internal static class PublicLinkEndpoints
             withheld);
     }
 
-    private static Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult? Disabled(IConfiguration configuration, HttpContext context) =>
+    /// <summary>The refusal when the install flag or the caller's tenant switch has public links off.</summary>
+    private static async Task<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult?> DisabledAsync(
+        IConfiguration configuration,
+        IPublicLinkStore store,
+        INixSessionContextAccessor sessions,
+        HttpContext context) =>
         PublicLinkSettings.IsEnabled(configuration)
+            && sessions.Current is { } current
+            && await store.TenantAllowsAsync(current.TenantId, context.RequestAborted).ConfigureAwait(false)
             ? null
             : Refuse(context, 404, "public_links.disabled", "Public links are not enabled on this install.");
 

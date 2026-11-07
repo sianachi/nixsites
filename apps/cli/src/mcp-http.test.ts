@@ -14,6 +14,11 @@ const localMarkdown = fileURLToPath(
 const seen: { authorization: string | null; path: string }[] = [];
 let revoked = false;
 let mintedBearer = 'jwt-for-owner';
+let mcpEnabled = true;
+
+/** Calls to Core other than the organisation-switch lookup. */
+const toolCalls = () => seen.filter((call) => call.path !== '/api/v1/me');
+const meCalls = () => seen.filter((call) => call.path === '/api/v1/me');
 
 const fetchImpl: FetchImpl = (input, init) => {
   const url = new URL(input);
@@ -25,6 +30,25 @@ const fetchImpl: FetchImpl = (input, init) => {
   if (url.pathname.endsWith('/public/v1/auth/token')) {
     return Promise.resolve(
       Response.json({ accessToken: mintedBearer, tokenType: 'Bearer', expiresInSeconds: 600 }),
+    );
+  }
+  if (url.pathname === '/api/v1/me') {
+    return Promise.resolve(
+      Response.json({
+        id: '33333333-3333-4333-8333-333333333333',
+        tenantId: '44444444-4444-4444-8444-444444444444',
+        displayName: 'Owner',
+        email: null,
+        isTenantAdministrator: false,
+        features: {
+          sites: false,
+          mcpUrl: mcpEnabled ? 'https://core.test/mcp' : null,
+          operator: false,
+          siteApprover: false,
+          publicLinks: true,
+          mcpEnabled,
+        },
+      }),
     );
   }
   if (url.pathname.endsWith('/api/v1/items/11111111-1111-4111-8111-111111111111')) {
@@ -76,6 +100,7 @@ async function listen(): Promise<URL> {
 afterEach(async () => {
   seen.length = 0;
   revoked = false;
+  mcpEnabled = true;
   mintedBearer = 'jwt-for-owner';
   vi.unstubAllEnvs();
   const current = server;
@@ -199,7 +224,7 @@ describe('nixctl mcp over HTTP', () => {
         },
       });
     }
-    expect(seen).toEqual([]);
+    expect(toolCalls().filter((call) => call.path.startsWith('/api/'))).toEqual([]);
   });
 
   it('checks Core again for a repeated read after the personal access token is revoked', async () => {
@@ -219,7 +244,7 @@ describe('nixctl mcp over HTTP', () => {
       const result = await client.callTool(input);
       expect(result.isError).toBe(true);
       expect(JSON.stringify(result)).toContain('Access token revoked');
-      expect(seen.filter((call) => call.path.startsWith('/api/'))).toHaveLength(2);
+      expect(toolCalls().filter((call) => call.path.startsWith('/api/'))).toHaveLength(2);
     } finally {
       await client.close();
     }
@@ -248,6 +273,7 @@ describe('nixctl mcp over HTTP', () => {
     expect(await response.json()).toMatchObject({ result: { isError: true } });
     expect(seen).toEqual([
       { authorization: null, path: '/public/v1/auth/token' },
+      { authorization: 'Bearer jwt-for-owner', path: '/api/v1/me' },
       { authorization: 'Bearer jwt-for-owner', path: '/api/v1/me/pets/settings' },
     ]);
   });
@@ -281,7 +307,62 @@ describe('nixctl mcp over HTTP', () => {
     }
     expect(seen.filter((call) => call.path.endsWith('/public/v1/auth/token'))).toHaveLength(2);
     expect(
-      seen.filter((call) => call.path.startsWith('/api/')).map((call) => call.authorization),
+      toolCalls()
+        .filter((call) => call.path.startsWith('/api/'))
+        .map((call) => call.authorization),
     ).toEqual(['Bearer jwt-for-owner', 'Bearer jwt-for-other', 'Bearer jwt-for-owner']);
+  });
+
+  const toolsList = (url: URL, token = 'nixpat_remote_owner') =>
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    });
+
+  it('refuses with 403 when an administrator turned MCP off, and reaches no tool', async () => {
+    mcpEnabled = false;
+    const url = await listen();
+    const response = await toolsList(url);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      code: 'mcp.disabled',
+      error: 'MCP is turned off for this organisation by an administrator.',
+    });
+    expect(toolCalls().filter((call) => call.path.startsWith('/api/'))).toEqual([]);
+  });
+
+  it('asks Core about the switch once per token per 30 seconds and then again', async () => {
+    let clock = 1_000_000;
+    const handler = createMcpHttpHandler({ apiUrl: API, fetchImpl, now: () => clock });
+    const created = createServer((request, response) => {
+      void handler(request, response);
+    });
+    server = created;
+    await new Promise<void>((resolve) => {
+      created.listen(0, '127.0.0.1', resolve);
+    });
+    const address = created.address();
+    if (address === null || typeof address === 'string') throw new Error('no address');
+    const url = new URL(`http://127.0.0.1:${String(address.port)}/mcp`);
+
+    expect((await toolsList(url)).status).toBe(200);
+    expect((await toolsList(url)).status).toBe(200);
+    expect(meCalls()).toHaveLength(1);
+    // A second token has its own answer.
+    expect((await toolsList(url, 'nixpat_remote_other')).status).toBe(200);
+    expect(meCalls()).toHaveLength(2);
+
+    // Turned off, but the cached "on" holds until it expires.
+    mcpEnabled = false;
+    clock += 29_000;
+    expect((await toolsList(url)).status).toBe(200);
+    clock += 2_000;
+    expect((await toolsList(url)).status).toBe(403);
+    expect(meCalls()).toHaveLength(3);
   });
 });

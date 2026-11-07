@@ -42,7 +42,9 @@ internal sealed class PublicLinkStore(
         var link = await database.PublicLinks.AsNoTracking()
             .SingleOrDefaultAsync(candidate => candidate.Id == payload.LinkId, cancellationToken)
             .ConfigureAwait(false);
-        if (link is null
+        // Off per tenant: the link stays unrevoked and serves again when the switch comes back on.
+        if (!await TenantAllowsAsync(tenantId, cancellationToken).ConfigureAwait(false)
+            || link is null
             || link.RevokedAt is not null
             || link.TenantId != tenantId
             || link.ServicePrincipalId.Value != payload.PrincipalId
@@ -114,6 +116,11 @@ internal sealed class PublicLinkStore(
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async ValueTask<bool> TenantAllowsAsync(TenantId tenant, CancellationToken cancellationToken) =>
+        await database.Tenants.AsNoTracking()
+            .AnyAsync(row => row.Id == tenant && row.PublicLinksEnabled, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async ValueTask<bool> IsLiveNoteLinkAsync(
         TenantId tenant,
         Guid linkId,
@@ -122,7 +129,8 @@ internal sealed class PublicLinkStore(
         PrincipalId principal,
         CancellationToken cancellationToken) =>
         await database.PublicLinks.AsNoTracking().AnyAsync(
-            link => link.TenantId == tenant && link.Id == linkId && link.RevokedAt == null
+            link => database.Tenants.Any(row => row.Id == tenant && row.PublicLinksEnabled)
+                && link.TenantId == tenant && link.Id == linkId && link.RevokedAt == null
                 && link.ItemId == itemId && link.WorkspaceId == workspace
                 && link.ServicePrincipalId == principal && link.FileVersionId == null,
             cancellationToken).ConfigureAwait(false);

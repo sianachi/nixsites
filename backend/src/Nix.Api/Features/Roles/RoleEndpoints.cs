@@ -48,9 +48,46 @@ internal static class RoleEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+        tenant.MapGet("/settings", GetSettings)
+            .WithName("GetTenantSettings")
+            .WithSummary("The organization's MCP and public link switches")
+            .WithDescription(
+                "Whether administrators allow remote MCP and public links (the stored switches), and whether "
+                + "the deployment offers each at all. Needs a tenant administrator and an interactive session.")
+            .Produces<TenantSettingsResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+        tenant.MapPut("/settings", PutSettings)
+            .WithName("UpdateTenantSettings")
+            .WithSummary("Turn remote MCP or public links on or off for the organization")
+            .WithDescription(
+                "An omitted field is unchanged. Audited. Turning public links off stops live links serving without "
+                + "revoking them; turning MCP off makes the remote MCP endpoint refuse this organization's tokens. "
+                + "Needs a tenant administrator and an interactive session.")
+            .Produces<TenantSettingsResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
         return endpoints;
     }
+
+    private static async Task<IResult> GetSettings(HttpContext context, [FromServices] NixDispatcher dispatcher) =>
+        Settings(context, await dispatcher.QueryAsync<GetTenantSettings, Result<TenantSettingsResponse>>(new(), context.RequestAborted).ConfigureAwait(false));
+
+    private static async Task<IResult> PutSettings(
+        UpdateTenantSettingsRequest request,
+        HttpContext context,
+        [FromServices] NixDispatcher dispatcher) =>
+        Settings(context, await dispatcher.SendAsync<UpdateTenantSettings, TenantSettingsResponse>(new(request), context.RequestAborted).ConfigureAwait(false));
+
+    private static IResult Settings(HttpContext context, Result<TenantSettingsResponse> result) =>
+        result.IsSuccess
+            ? TypedResults.Ok(result.Value)
+            : TypedResults.Problem(ApiProblem.Create(
+                context,
+                StatusCodes.Status403Forbidden,
+                result.Error.Code,
+                "Request refused",
+                result.Error.Message));
 
     private static async Task<Ok<CursorPage<RoleGrantResponse>>> ListTenantRoles(
         HttpContext httpContext,

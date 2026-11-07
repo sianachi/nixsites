@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Nix.Abstractions;
 using Nix.Authentication;
 using Nix.Domain.Identity;
@@ -90,6 +91,35 @@ internal sealed class SiteHttpHost : IAsyncDisposable
         exchange.EnsureSuccessStatusCode();
         using var body = JsonDocument.Parse(await exchange.Content.ReadAsStringAsync(Cancellation));
         return body.RootElement.GetProperty("accessToken").GetString()!;
+    }
+
+    /// <summary>
+    /// Signs <paramref name="who"/> in with a browser session and returns its interactive bearer, the
+    /// kind no access token scope reaches interactive-only routes with.
+    /// </summary>
+    public async Task<string> InteractiveTokenAsync(NixSessionContext who)
+    {
+        var sessionId = BrowserSessionId.Create();
+        await using (var work = await NixUnitOfWork.StartAsync(
+            _factory.Services.CreateAsyncScope(),
+            NixSessionContext.ForTenant(who.TenantId, who.PrincipalId),
+            System.Data.IsolationLevel.ReadCommitted,
+            Cancellation))
+        {
+            await work.Resolve<IBrowserSessions>().AddAsync(new BrowserSession
+            {
+                Id = sessionId,
+                TenantId = who.TenantId,
+                PrincipalId = who.PrincipalId,
+                TokenHash = BrowserSessionSecret.Mint().Hash,
+                CreatedAt = DateTimeOffset.UtcNow,
+                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            }, Cancellation);
+            await work.CommitAsync(Cancellation);
+        }
+
+        return _factory.Services.GetRequiredService<SelfIssuedTokenService>()
+            .MintBrowserSession(who.PrincipalId, who.TenantId, sessionId);
     }
 
     /// <summary>Sends a public API request with a bearer.</summary>

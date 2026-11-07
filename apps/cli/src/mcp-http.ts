@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { createNixClient } from '@nix/api-client';
+import { createNixClient, NixApiError, principal } from '@nix/api-client';
 import { createWorkspaceMcpServer } from './mcp.ts';
 import { openSession, type FetchImpl, type Session } from './session.ts';
 
@@ -17,6 +17,13 @@ import { openSession, type FetchImpl, type Session } from './session.ts';
  * is not repeated on every call. A missing bearer is refused before any server is built. The token
  * itself is never logged or echoed.
  *
+ * An administrator can turn MCP off for the organisation (Settings). After the token exchange the
+ * caller's `/me` says whether it is on (`features.mcpEnabled`; a Core that does not say is treated
+ * as on), and an organisation that turned it off is refused with 403. The answer is cached per
+ * token for {@link MCP_SWITCH_TTL_MS}, so tool calls do not each add a round trip and a change
+ * takes at most that long to bite. Stdio MCP (`nixctl mcp`) runs on the person's own machine with
+ * their own login, is not served by this endpoint and is deliberately not covered by the switch.
+ *
  * shortcut: header-bearer clients only (Claude Code, Cursor, Claude Desktop via mcp-remote); the
  * OAuth discovery that hosted claude.ai connectors require is deferred and documented.
  */
@@ -28,11 +35,19 @@ export interface McpHttpOptions {
   readonly fetchImpl?: FetchImpl | undefined;
   /** How many distinct tokens keep a warm session; the least recently used is dropped past it. */
   readonly sessionCacheSize?: number;
+  /** Test seam: the clock the organisation-switch cache uses. */
+  readonly now?: () => number;
   /** Test seam: builds the tool server for a session. */
   readonly createServer?: (session: () => Promise<Session>) => Promise<McpServer>;
 }
 
+/** How long a token's organisation MCP switch is remembered. */
+export const MCP_SWITCH_TTL_MS = 30_000;
+export const MCP_OFF_MESSAGE = 'MCP is turned off for this organisation by an administrator.';
+
 const BEARER = /^Bearer\s+(nixpat_[A-Za-z0-9._~+/=-]+)$/i;
+
+const tokenKey = (token: string): string => createHash('sha256').update(token).digest('hex');
 
 export function createMcpHttpHandler(
   options: McpHttpOptions,
@@ -41,8 +56,26 @@ export function createMcpHttpHandler(
   const cacheSize = options.sessionCacheSize ?? 64;
   const sessions = new Map<string, Omit<Session, 'client'>>();
 
+  const now = options.now ?? Date.now;
+  const switches = new Map<string, { readonly enabled: boolean; readonly until: number }>();
+
+  /** Whether the caller's organisation allows MCP; throws only when Core cannot say. */
+  const mcpEnabled = async (key: string, session: Session): Promise<boolean> => {
+    const known = switches.get(key);
+    if (known !== undefined && known.until > now()) return known.enabled;
+    const me = await session.client.query(principal.currentPrincipal(), { forceRefresh: true });
+    const enabled = me.features.mcpEnabled;
+    switches.delete(key);
+    switches.set(key, { enabled, until: now() + MCP_SWITCH_TTL_MS });
+    if (switches.size > cacheSize) {
+      const oldest = switches.keys().next().value;
+      if (oldest !== undefined) switches.delete(oldest);
+    }
+    return enabled;
+  };
+
   const sessionFor = (token: string): Session => {
-    const key = createHash('sha256').update(token).digest('hex');
+    const key = tokenKey(token);
     const cached = sessions.get(key);
     if (cached !== undefined) {
       // Re-insert to mark it most recently used.
@@ -104,6 +137,33 @@ export function createMcpHttpHandler(
       return;
     }
     const session = sessionFor(match[1]);
+    try {
+      if (!(await mcpEnabled(tokenKey(match[1]), session))) {
+        response
+          .writeHead(403, { 'content-type': 'application/json' })
+          .end(JSON.stringify({ code: 'mcp.disabled', error: MCP_OFF_MESSAGE }));
+        return;
+      }
+    } catch (error) {
+      // A refused token is the caller's to fix; anything else fails closed, because serving tools
+      // without knowing the switch could outlast an administrator's "off".
+      const unauthorised = error instanceof NixApiError && error.status === 401;
+      response
+        .writeHead(unauthorised ? 401 : 503, {
+          'content-type': 'application/json',
+          ...(unauthorised
+            ? { 'www-authenticate': 'Bearer realm="nix", error="invalid_token"' }
+            : {}),
+        })
+        .end(
+          JSON.stringify({
+            error: unauthorised
+              ? 'The personal access token was refused.'
+              : 'Could not check whether MCP is allowed for this organisation.',
+          }),
+        );
+      return;
+    }
     const { StreamableHTTPServerTransport } =
       await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
     // Stateless: no session ids, so nothing lives between requests but the token's warm session,

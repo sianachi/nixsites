@@ -28,5 +28,7 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(tenant => tenant.Name).HasColumnName("name").IsRequired();
         builder.Property(tenant => tenant.IsolationMode).HasColumnName("isolation_mode").IsRequired();
         builder.Property(tenant => tenant.CreatedAt).HasColumnName("created_at").IsRequired();
+        builder.Property(tenant => tenant.McpEnabled).HasColumnName("mcp_enabled").IsRequired();
+        builder.Property(tenant => tenant.PublicLinksEnabled).HasColumnName("public_links_enabled").IsRequired();
     }
 }

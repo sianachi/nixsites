@@ -36,4 +36,10 @@ public sealed class Tenant
 
     /// <summary>Gets when the tenant was created.</summary>
     public required DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>Gets whether the organisation's administrators allow remote MCP access (the install must also offer it).</summary>
+    public bool McpEnabled { get; set; } = true;
+
+    /// <summary>Gets whether the organisation's administrators allow public links (the install must also enable them).</summary>
+    public bool PublicLinksEnabled { get; set; } = true;
 }

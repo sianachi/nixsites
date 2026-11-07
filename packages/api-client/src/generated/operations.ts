@@ -1584,6 +1584,18 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     queryParams: [],
   },
   {
+    id: 'GetTenantSettings',
+    method: 'GET',
+    path: '/api/v1/tenant/settings',
+    area: 'Roles',
+    summary: "The organization's MCP and public link switches",
+    detail:
+      'Whether administrators allow remote MCP and public links (the stored switches), and whether the deployment offers each at all.',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+  },
+  {
     id: 'GetUiSettings',
     method: 'GET',
     path: '/api/v1/me/ui-settings',
@@ -3854,6 +3866,24 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
       properties: {
         serveMode: { type: ['null', 'string'] },
         primary: { type: ['null', 'boolean'] },
+      },
+    },
+  },
+  {
+    id: 'UpdateTenantSettings',
+    method: 'PUT',
+    path: '/api/v1/tenant/settings',
+    area: 'Roles',
+    summary: 'Turn remote MCP or public links on or off for the organization',
+    detail: 'An omitted field is unchanged.',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      type: 'object',
+      properties: {
+        mcpEnabled: { type: ['null', 'boolean'] },
+        publicLinksEnabled: { type: ['null', 'boolean'] },
       },
     },
   },

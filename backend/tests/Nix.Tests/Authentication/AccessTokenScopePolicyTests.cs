@@ -279,6 +279,8 @@ public sealed class AccessTokenScopePolicyTests
         ["RevokeSiteOperator"] = Requirement.Admin,
         ["GrantTenantAdmin"] = Requirement.Admin,
         ["RevokeTenantAdmin"] = Requirement.Admin,
+        ["GetTenantSettings"] = Requirement.InteractiveOnly,
+        ["UpdateTenantSettings"] = Requirement.InteractiveOnly,
         ["ApproveSitePublish"] = Requirement.Admin,
         ["RejectSitePublish"] = Requirement.Admin,
 
@@ -381,6 +383,9 @@ public sealed class AccessTokenScopePolicyTests
     [InlineData("PUT", "/api/v1/me/preferences/")]
     [InlineData("POST", "/api/v1/me/push-subscriptions/")]
     [InlineData("DELETE", "/api/v1/me/push-subscriptions//")]
+    [InlineData("GET", "/api/v1/tenant/settings")]
+    [InlineData("GET", "/api/v1/tenant/settings/")]
+    [InlineData("PUT", "/api/v1/tenant/settings")]
     public void A_trailing_slash_does_not_turn_an_interactive_only_write_into_a_token_write(string method, string path)
     {
         // ASP.NET routing treats "/x/" as "/x", so the classifier must too.

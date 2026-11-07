@@ -4,6 +4,7 @@ using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
+using Nix.Features.PublicLinks;
 using Nix.Features.Sites;
 using Nix.Messaging;
 
@@ -111,7 +112,8 @@ internal static class GetCurrentPrincipalEndpoint
         [FromServices] NixDispatcher dispatcher,
         [FromServices] SiteOptions sites,
         [FromServices] SiteOperators operators,
-        [FromServices] IConfiguration configuration)
+        [FromServices] IConfiguration configuration,
+        [FromServices] ITenantSettingsStore tenantSettings)
     {
         var result = await dispatcher
             .QueryAsync<GetCurrentPrincipal, Result<CurrentPrincipal>>(
@@ -122,6 +124,7 @@ internal static class GetCurrentPrincipalEndpoint
         // Display only; the backups route checks the same list for itself.
         var isOperator = operators.IsInstanceOperator();
         var isApprover = await operators.IsOperatorAsync(httpContext.RequestAborted).ConfigureAwait(false);
+        var tenant = await tenantSettings.GetAsync(httpContext.RequestAborted).ConfigureAwait(false);
         return result.Match<Results<Ok<CurrentPrincipalResponse>, ProblemHttpResult>>(
             principal => TypedResults.Ok(
                 new CurrentPrincipalResponse(
@@ -134,9 +137,11 @@ internal static class GetCurrentPrincipalEndpoint
                         sites.IsEnabled,
                         // Display only: the address people paste into an MCP client. Absent means
                         // the deployment serves MCP on stdio through nixctl alone.
-                        Uri.TryCreate(configuration["Nix:Mcp:PublicUrl"], UriKind.Absolute, out var mcp) ? mcp.ToString() : null,
+                        tenant.McpEnabled && Uri.TryCreate(configuration["Nix:Mcp:PublicUrl"], UriKind.Absolute, out var mcp) ? mcp.ToString() : null,
                         isOperator,
-                        isApprover))),
+                        isApprover,
+                        tenant.PublicLinksEnabled && PublicLinkSettings.IsEnabled(configuration),
+                        tenant.McpEnabled))),
             error => TypedResults.Problem(MeEndpoints.Problem(httpContext, error)));
     }
 }

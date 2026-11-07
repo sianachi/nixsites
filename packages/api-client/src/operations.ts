@@ -47,6 +47,7 @@ const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],
   [/^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, 'write'],
   [/^\/api\/v1\/tenant\/admins(\/|$)/, 'any'],
+  [/^\/api\/v1\/tenant\/settings(\/|$)/, 'any'],
   [/^\/api\/v1\/sites\/operators(\/|$)/, 'any'],
   [/\/approval\/(approve|reject)$/, 'any'],
   // Core refuses tokens here too; the policy governs what assistants may approve or publish.

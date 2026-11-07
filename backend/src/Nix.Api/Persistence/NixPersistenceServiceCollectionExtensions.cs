@@ -590,6 +590,10 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IQueryHandler<Nix.Features.Roles.ListTenantAdmins, IReadOnlyList<AccessGrantRow>>>(static provider => provider.GetRequiredService<Nix.Features.Roles.TenantAdminHandlers>());
         services.AddScoped<ICommandHandler<Nix.Features.Roles.GrantTenantAdmin, Guid>>(static provider => provider.GetRequiredService<Nix.Features.Roles.TenantAdminHandlers>());
         services.AddScoped<ICommandHandler<Nix.Features.Roles.RevokeTenantAdmin, Guid>>(static provider => provider.GetRequiredService<Nix.Features.Roles.TenantAdminHandlers>());
+        services.AddScoped<ITenantSettingsStore, Nix.Persistence.Identity.TenantSettingsStore>();
+        services.AddScoped<Nix.Features.Roles.TenantSettingsHandlers>();
+        services.AddScoped<IQueryHandler<Nix.Features.Roles.GetTenantSettings, Result<Nix.Features.Roles.TenantSettingsResponse>>>(static provider => provider.GetRequiredService<Nix.Features.Roles.TenantSettingsHandlers>());
+        services.AddScoped<ICommandHandler<Nix.Features.Roles.UpdateTenantSettings, Nix.Features.Roles.TenantSettingsResponse>>(static provider => provider.GetRequiredService<Nix.Features.Roles.TenantSettingsHandlers>());
         services.AddScoped<SiteAccess>();
         services.AddScoped<SiteAudit>();
         services.AddScoped<SiteViews>();

@@ -2066,6 +2066,30 @@
 <ul><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
 <p>Responses: <code>200</code>.</p>
+</article>
+<article id="gettenantsettings" data-search="get /api/v1/tenant/settings gettenantsettings the organization's mcp and public link switches whether administrators allow remote mcp and public links (the stored switches), and whether the deployment offers each at all. needs a tenant administrator and an interactive session. roles">
+<h3><span class="verb">GET</span> <code>/api/v1/tenant/settings</code></h3>
+<p>The organization's MCP and public link switches</p>
+<p class="id">Operation id: <code>GetTenantSettings</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Whether administrators allow remote MCP and public links (the stored switches), and whether the deployment offers each at all. Needs a tenant administrator and an interactive session.</p>
+
+
+<p>Responses: <code>200</code>, <code>403</code>.</p>
+</article>
+<article id="updatetenantsettings" data-search="put /api/v1/tenant/settings updatetenantsettings turn remote mcp or public links on or off for the organization an omitted field is unchanged. audited. turning public links off stops live links serving without revoking them; turning mcp off makes the remote mcp endpoint refuse this organization's tokens. needs a tenant administrator and an interactive session. roles">
+<h3><span class="verb">PUT</span> <code>/api/v1/tenant/settings</code></h3>
+<p>Turn remote MCP or public links on or off for the organization</p>
+<p class="id">Operation id: <code>UpdateTenantSettings</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>An omitted field is unchanged. Audited. Turning public links off stops live links serving without revoking them; turning MCP off makes the remote MCP endpoint refuse this organization's tokens. Needs a tenant administrator and an interactive session.</p>
+
+<p>Request body: <code>UpdateTenantSettingsRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>.</p>
 </article></section>
 <section id="search"><h2>Search</h2><article id="getbacklinks" data-search="get /api/v1/items/{itemid}/backlinks getbacklinks the documents that refer to an item returns the items whose documents link to this one, most-referring first. only referring documents the caller may read are included, and they are excluded from the count as well as from the list: being able to read an item does not entitle you to know that a document elsewhere mentions it. backlinks are derived from documents when they are snapshotted, so a link made moments ago may not have been published yet. search">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/backlinks</code></h3>
