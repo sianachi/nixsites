@@ -5,8 +5,8 @@ using Nix.Domain.Audit;
 using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.Properties;
+using Nix.Domain.Tenancy;
 using Nix.Domain.Workers;
-using Nix.Features.Workspaces;
 using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Persistence.Files;
@@ -18,7 +18,6 @@ public sealed class FileStore(
     INixSessionContextAccessor session,
     IItemLocks locks,
     TimeProvider clock,
-    AccessTokenSessionContext credential,
     IFinanceLock? topology = null) : IFileStore
 {
     private const long MaxFileBytes = 100L * 1024 * 1024;
@@ -359,9 +358,8 @@ public sealed class FileStore(
         var versions = await database.FileVersions.AsNoTracking().Where(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == itemId && candidate.WorkspaceId == body.WorkspaceId && candidate.ObjectReady).OrderByDescending(candidate => candidate.Version).ToListAsync(cancellationToken).ConfigureAwait(false);
         var mapped = versions.Select(version => ToVersion(version, version.Id == body.CurrentVersionId)).ToArray();
         var current = mapped.SingleOrDefault(version => version.Current);
-        // mapped is newest first, so the first approved one is the latest approved.
-        var shown = mapped.FirstOrDefault(version => version.State == "approved") ?? current;
-        return current is null ? null : new FileRecord(itemId.Value, body.WorkspaceId.Value, current, mapped, shown?.Id);
+        var shown = ShownFirst(versions.AsQueryable(), body.CurrentVersionId).FirstOrDefault();
+        return current is null ? null : new FileRecord(itemId.Value, body.WorkspaceId.Value, current, mapped, shown?.Id.Value);
     }
 
     public async ValueTask<IReadOnlyList<FileVersionSourceRecord>?> AuthorizeVersionHistoryAsync(
@@ -459,12 +457,19 @@ public sealed class FileStore(
             return await versions.SingleOrDefaultAsync(candidate => candidate.Id == named, cancellationToken).ConfigureAwait(false);
         }
         // No version named: the shown one, the latest approved, else the current upload.
-        return await versions
-            .Where(candidate => candidate.State == "approved" || candidate.Id == body.CurrentVersionId)
-            .OrderByDescending(candidate => candidate.State == "approved")
-            .ThenByDescending(candidate => candidate.Version)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return await ShownFirst(versions, body.CurrentVersionId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The one shown-version rule: the highest-numbered approved version, else the current upload.
+    /// The first element is the shown one. <c>ListAttachmentsHandler.Statement</c> restates it in SQL
+    /// and a test holds the two to the same answer.
+    /// </summary>
+    public static IOrderedQueryable<FileVersion> ShownFirst(IQueryable<FileVersion> versions, FileVersionId currentVersionId) =>
+        versions
+            .Where(candidate => candidate.State == FileVersionStates.Approved || candidate.Id == currentVersionId)
+            .OrderByDescending(candidate => candidate.State == FileVersionStates.Approved)
+            .ThenByDescending(candidate => candidate.Version);
 
     private Task<int> LockDownloadContainmentAsync(ItemId itemId, CancellationToken cancellationToken) =>
         database.Database.ExecuteSqlInterpolatedAsync(
@@ -488,7 +493,7 @@ public sealed class FileStore(
 
         // Only a draft follows its item's title: an approved or revoked version keeps its exact name.
         var currentFileName = await database.FileVersions.AsNoTracking()
-            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == "draft")
+            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == FileVersionStates.Draft)
             .Select(version => version.FileName)
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (currentFileName is null)
@@ -506,7 +511,7 @@ public sealed class FileStore(
         // load-and-save, so this runs as one statement inside the request's ambient transaction
         // and lands in the same unit of work as the title write that triggered it.
         await database.FileVersions
-            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == "draft")
+            .Where(version => version.TenantId == context.TenantId && version.Id == body.CurrentVersionId && version.State == FileVersionStates.Draft)
             .ExecuteUpdateAsync(
                 update => update.SetProperty(version => version.FileName, renamed),
                 cancellationToken)
@@ -515,17 +520,20 @@ public sealed class FileStore(
 
     private static readonly (string From, string To)[] Transitions =
     [
-        ("draft", "in_review"), ("draft", "approved"), ("in_review", "approved"),
-        ("in_review", "draft"), ("approved", "revoked"),
+        (FileVersionStates.Draft, FileVersionStates.InReview), (FileVersionStates.Draft, FileVersionStates.Approved),
+        (FileVersionStates.InReview, FileVersionStates.Approved), (FileVersionStates.InReview, FileVersionStates.Draft),
+        (FileVersionStates.Approved, FileVersionStates.Revoked),
     ];
 
     public async ValueTask<FileVersionStateResult> SetVersionStateAsync(
         ItemId itemId,
         FileVersionId versionId,
         string state,
+        Func<Workspace, bool> mayChangeApproval,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(mayChangeApproval);
         var context = Context;
         await LockDownloadContainmentAsync(itemId, cancellationToken).ConfigureAwait(false);
         var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
@@ -556,12 +564,12 @@ public sealed class FileStore(
         {
             return new(FileVersionStateOutcome.InvalidTransition, From: version.State);
         }
-        if (state is "approved" or "revoked")
+        if (state is FileVersionStates.Approved or FileVersionStates.Revoked)
         {
             var workspace = await database.Workspaces.AsNoTracking().SingleAsync(
                 candidate => candidate.TenantId == context.TenantId && candidate.Id == item.WorkspaceId,
                 cancellationToken).ConfigureAwait(false);
-            if (!AgentPolicyGate.MayChangeVersionState(credential, workspace))
+            if (!mayChangeApproval(workspace))
             {
                 return new(FileVersionStateOutcome.NotPermitted);
             }

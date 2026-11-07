@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Nix.Abstractions;
 using Nix.Abstractions.Files;
 using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Errors;
+using Nix.Features.Workspaces;
 using Nix.Http;
 
 namespace Nix.Features.Files;
@@ -16,8 +18,6 @@ public sealed record SetFileVersionStateRequest(string State);
 /// </summary>
 internal static class FileVersionStateEndpoints
 {
-    private static readonly string[] States = ["draft", "in_review", "approved", "revoked"];
-
     internal static IEndpointRouteBuilder MapFileVersionStateEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -39,16 +39,18 @@ internal static class FileVersionStateEndpoints
         Guid versionId,
         SetFileVersionStateRequest request,
         HttpContext context,
-        [FromServices] IFileStore files)
+        [FromServices] IFileStore files,
+        [FromServices] AccessTokenSessionContext credential)
     {
-        if (request.State is null || !States.Contains(request.State))
+        if (!FileVersionStates.IsValid(request.State))
         {
             return TypedResults.Problem(ApiProblem.Create(
                 context, 422, "files.invalid_state", "Invalid state", "State must be draft, in_review, approved or revoked."));
         }
 
         var result = await files.SetVersionStateAsync(
-            ItemId.From(itemId), FileVersionId.From(versionId), request.State, context.RequestAborted).ConfigureAwait(false);
+            ItemId.From(itemId), FileVersionId.From(versionId), request.State,
+            workspace => AgentPolicyGate.MayChangeVersionState(credential, workspace), context.RequestAborted).ConfigureAwait(false);
         return result.Outcome switch
         {
             FileVersionStateOutcome.Changed => TypedResults.Ok(result.Version),

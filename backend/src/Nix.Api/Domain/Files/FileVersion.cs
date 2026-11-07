@@ -34,7 +34,7 @@ public sealed class FileVersion
     public required DateTimeOffset CreatedAt { get; init; }
 
     /// <summary>Lifecycle state: <c>draft</c> (default), <c>in_review</c>, <c>approved</c> or <c>revoked</c>.</summary>
-    public string State { get; set; } = "draft";
+    public string State { get; set; } = FileVersionStates.Draft;
 
     /// <summary>Who last changed <see cref="State"/>, or null while it has never changed.</summary>
     public PrincipalId? StateChangedBy { get; set; }

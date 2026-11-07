@@ -98,7 +98,8 @@ public interface IFileStore
 
     /// <summary>
     /// Moves one version through draft, in_review, approved and revoked. Serialized on the version row.
-    /// Approving or revoking is held to the workspace's agent policy.
+    /// Approving or revoking is held to the workspace's agent policy,
+    /// which the caller supplies as <paramref name="mayChangeApproval"/> (the store has no view of the credential).
     /// </summary>
-    public ValueTask<FileVersionStateResult> SetVersionStateAsync(ItemId itemId, FileVersionId versionId, string state, CancellationToken cancellationToken);
+    public ValueTask<FileVersionStateResult> SetVersionStateAsync(ItemId itemId, FileVersionId versionId, string state, Func<Workspace, bool> mayChangeApproval, CancellationToken cancellationToken);
 }

@@ -97,13 +97,9 @@ public sealed class S3CapabilitySigner
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
         var disposition = inline ? "inline" : "attachment";
-        var asciiName = new string(fileName.Select(character =>
-            character is >= (char)0x20 and <= (char)0x7e && character is not '"' and not '\\'
-                ? character
-                : '_').ToArray());
         var parameters = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["response-content-disposition"] = $"{disposition}; filename=\"{asciiName}\"; filename*=UTF-8''{Encode(fileName)}",
+            ["response-content-disposition"] = ContentDisposition(disposition, fileName),
             ["response-content-type"] = inline ? mediaType : "application/octet-stream",
             ["response-cache-control"] = "private, max-age=300",
         };
@@ -115,29 +111,39 @@ public sealed class S3CapabilitySigner
 
     // Presigned responses cannot carry nosniff, so only types a browser renders without sniffing
     // into script are served inline; SVG and everything else is forced to download.
-    private static readonly HashSet<string> PublicInlineTypes = new(StringComparer.Ordinal)
+    // Media types compare case-insensitively. The images are also the only types a draft file may
+    // serve on a public note (PublicFileAccess), so the list is shared rather than copied.
+    private static readonly HashSet<string> PublicInlineImageTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "application/pdf", "image/png", "image/jpeg", "image/webp", "image/avif",
+        "image/png", "image/jpeg", "image/webp", "image/avif",
     };
+
+    private static string ContentDisposition(string disposition, string fileName)
+    {
+        var asciiName = new string(fileName.Select(character =>
+            character is >= (char)0x20 and <= (char)0x7e && character is not '"' and not '\\'
+                ? character
+                : '_').ToArray());
+        return $"{disposition}; filename=\"{asciiName}\"; filename*=UTF-8''{Encode(fileName)}";
+    }
+
+    /// <summary>Whether this is an inline-safe image type for a public link (PNG, JPEG, WebP, AVIF).</summary>
+    public static bool IsPublicInlineImage(string mediaType) => PublicInlineImageTypes.Contains(mediaType);
 
     /// <summary>
     /// Signs a read for an anonymous public link: at most 60 seconds, never cached, and inline only
-    /// for the exact stored types in the narrow list above (the public route is the only caller;
+    /// for the narrow list of types above (the public route is the only caller;
     /// private downloads use <see cref="GetForBrowser"/>).
     /// </summary>
     public ObjectCapability GetForPublicLink(string key, string fileName, string mediaType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
-        var inline = PublicInlineTypes.Contains(mediaType);
-        var asciiName = new string(fileName.Select(character =>
-            character is >= (char)0x20 and <= (char)0x7e && character is not '"' and not '\\'
-                ? character
-                : '_').ToArray());
+        var inline = ServesInlineOnPublicLink(mediaType);
         var disposition = inline ? "inline" : "attachment";
         var parameters = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["response-content-disposition"] = $"{disposition}; filename=\"{asciiName}\"; filename*=UTF-8''{Encode(fileName)}",
+            ["response-content-disposition"] = ContentDisposition(disposition, fileName),
             ["response-content-type"] = inline ? mediaType : "application/octet-stream",
             ["response-cache-control"] = "no-store",
         };
@@ -145,7 +151,8 @@ public sealed class S3CapabilitySigner
     }
 
     /// <summary>Whether a public link serves this exact stored media type inline.</summary>
-    public static bool ServesInlineOnPublicLink(string mediaType) => PublicInlineTypes.Contains(mediaType);
+    public static bool ServesInlineOnPublicLink(string mediaType) =>
+        string.Equals(mediaType, "application/pdf", StringComparison.OrdinalIgnoreCase) || IsPublicInlineImage(mediaType);
 
     /// <summary>Signs a cleanup capability.</summary>
     public ObjectCapability Delete(string key) => Sign("DELETE", key, null);

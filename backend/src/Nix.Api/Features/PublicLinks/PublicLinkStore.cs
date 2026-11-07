@@ -140,7 +140,7 @@ internal sealed class PublicLinkStore(
         return versionId is { } named
             ? await versions.SingleOrDefaultAsync(version => version.Id == FileVersionId.From(named), cancellationToken)
                 .ConfigureAwait(false)
-            : await versions.Where(version => version.State == "approved")
+            : await versions.Where(version => version.State == FileVersionStates.Approved)
                 .OrderByDescending(version => version.Version)
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -31,7 +31,7 @@ internal sealed class FileVersionConfiguration : IEntityTypeConfiguration<FileVe
         builder.Property(version => version.Previewable).HasColumnName("previewable");
         builder.Property(version => version.CreatedBy).HasColumnName("created_by");
         builder.Property(version => version.CreatedAt).HasColumnName("created_at");
-        builder.Property(version => version.State).HasColumnName("state").HasDefaultValue("draft");
+        builder.Property(version => version.State).HasColumnName("state").HasDefaultValue(FileVersionStates.Draft);
         builder.Property(version => version.StateChangedBy).HasColumnName("state_changed_by");
         builder.Property(version => version.StateChangedAt).HasColumnName("state_changed_at");
         builder.Property(version => version.SourceItemId).HasColumnName("source_item_id");

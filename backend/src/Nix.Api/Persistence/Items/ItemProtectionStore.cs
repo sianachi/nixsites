@@ -49,7 +49,8 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
 
         // The closure includes the item itself at depth 0. A pin counts on the same terms as
         // AnyPinnedAtOrBelowAsync, so the notice names exactly what refused the delete.
-        var rows = await database.Database.SqlQuery<BlockerRow>($"""
+        // {0} is the tenant and {1} the item; the pin rule is spliced in as a constant, never as a value.
+        var rows = await database.Database.SqlQueryRaw<BlockerRow>($$"""
             SELECT d.id AS "Id",
                    COALESCE(d.properties ->> 'title', '') AS "Title",
                    CASE WHEN d.no_delete THEN 'no_delete' ELSE 'pinned' END AS "Reason"
@@ -57,8 +58,8 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
               JOIN item_closure edge
                 ON edge.tenant_id = d.tenant_id
                AND edge.descendant_id = d.id
-               AND edge.ancestor_id = {itemId.Value}
-             WHERE d.tenant_id = {tenantId}
+               AND edge.ancestor_id = {1}
+             WHERE d.tenant_id = {0}
                AND d.lifecycle_state = 'active'
                AND (d.no_delete
                     OR EXISTS (
@@ -66,17 +67,10 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
                           FROM item_reference pin
                          WHERE pin.tenant_id = d.tenant_id
                            AND pin.target_item_id = d.id
-                           AND pin.target_file_version_id IS NOT NULL
-                           AND NOT EXISTS (
-                                SELECT 1
-                                  FROM item_closure up
-                                  JOIN item holder ON holder.tenant_id = up.tenant_id AND holder.id = up.ancestor_id
-                                 WHERE up.tenant_id = pin.tenant_id
-                                   AND up.descendant_id = pin.holder_item_id
-                                   AND holder.lifecycle_state <> 'active')))
+                           AND {{ItemProtectionSql.LivePin}}))
              ORDER BY edge.depth, d.id
              LIMIT 5
-            """).ToListAsync(cancellationToken).ConfigureAwait(false);
+            """, tenantId, itemId.Value).ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. rows.Select(row => new DeleteBlocker(ItemId.From(row.Id), row.Title, row.Reason))];
     }
 
@@ -91,33 +85,27 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
         // A pin protects while its holder is in use: neither the holder nor any ancestor of it is
         // trashed (closure depth 0 is the holder itself). Only an active target counts, so nothing
         // already hidden blocks anything; IsPinTargetAsync still stops the permanent delete.
-        return await database.Database.SqlQuery<bool>($"""
+        return await database.Database.SqlQueryRaw<bool>($$"""
             SELECT EXISTS (
                 SELECT 1
                   FROM item_closure edge
                   JOIN item_reference pin
                     ON pin.tenant_id = edge.tenant_id
                    AND pin.target_item_id = edge.descendant_id
-                   AND pin.target_file_version_id IS NOT NULL
                   JOIN item target
                     ON target.tenant_id = pin.tenant_id
                    AND target.id = pin.target_item_id
                    AND target.lifecycle_state = 'active'
-                 WHERE edge.tenant_id = {tenantId}
-                   AND edge.ancestor_id = {itemId.Value}
-                   AND NOT EXISTS (
-                        SELECT 1
-                          FROM item_closure up
-                          JOIN item holder ON holder.tenant_id = up.tenant_id AND holder.id = up.ancestor_id
-                         WHERE up.tenant_id = pin.tenant_id
-                           AND up.descendant_id = pin.holder_item_id
-                           AND holder.lifecycle_state <> 'active')) AS "Value"
-            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+                 WHERE edge.tenant_id = {0}
+                   AND edge.ancestor_id = {1}
+                   AND {{ItemProtectionSql.LivePin}}) AS "Value"
+            """, tenantId, itemId.Value).SingleAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async ValueTask<bool> IsPinTargetAsync(ItemId itemId, CancellationToken cancellationToken)
     {
+        // Deliberately not the live-pin rule: the permanent delete is guarded against any pin, even one held from the trash.
         var tenantId = TenantId;
         return await database.Database.SqlQuery<bool>($"""
             SELECT EXISTS (

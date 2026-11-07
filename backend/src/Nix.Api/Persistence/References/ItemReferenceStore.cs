@@ -4,7 +4,6 @@ using Nix.Domain.Files;
 using Nix.Domain.Items;
 using Nix.Domain.References;
 using Nix.Domain.Tenancy;
-using Nix.Features.References;
 
 namespace Nix.Persistence.References;
 
