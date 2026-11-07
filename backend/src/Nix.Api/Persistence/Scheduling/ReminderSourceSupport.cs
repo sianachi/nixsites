@@ -107,7 +107,7 @@ internal static class ReminderSourceSupport
         return item.CreatedBy;
     }
 
-    private static PrincipalId? ReadPrincipal(string? properties, string key)
+    internal static PrincipalId? ReadPrincipal(string? properties, string key)
     {
         if (string.IsNullOrWhiteSpace(properties))
         {

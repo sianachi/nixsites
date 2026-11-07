@@ -245,6 +245,9 @@ var bulkWritesPerMinute = builder.Configuration.GetValue(
 var publicLinkReadsPerMinute = builder.Configuration.GetValue(
     "Nix:RateLimits:PublicLinkReadsPerMinute",
     120);
+var publicLinkFilesPerMinute = builder.Configuration.GetValue(
+    "Nix:RateLimits:PublicLinkFilesPerMinute",
+    600);
 
 // One window, named once: the limiter's window and the fallback the rejection reports are the same
 // interval by definition, and two literals would eventually disagree.
@@ -384,6 +387,17 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = publicLinkReadsPerMinute,
+                Window = writesWindow,
+                QueueLimit = 0,
+            }));
+
+    // A note page fetches each of its images through here, so the budget is far above page reads.
+    options.AddPolicy<IPAddress>(RateLimitRefusal.PublicLinkFilesPolicyName, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientKey.For(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = publicLinkFilesPerMinute,
                 Window = writesWindow,
                 QueueLimit = 0,
             }));

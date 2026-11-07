@@ -57,6 +57,15 @@ public sealed class AccessTokenSessionContext
     /// </remarks>
     public bool IsInteractive { get; private set; }
 
+    /// <summary>
+    /// Whether a validated external-IdP bearer authenticated this unit of work. Fail-closed:
+    /// <see langword="false"/> for in-process work and worker delegations, which the agent gate refuses.
+    /// </summary>
+    public bool IsExternalBearer { get; private set; }
+
+    /// <summary>Marks the unit of work as an external bearer. Called only for a validated external token.</summary>
+    public void SetExternalBearer() => IsExternalBearer = true;
+
     /// <summary>Marks the unit of work as a person's browser session. Called only for a validated browser-session token.</summary>
     public void SetInteractive() => IsInteractive = true;
 

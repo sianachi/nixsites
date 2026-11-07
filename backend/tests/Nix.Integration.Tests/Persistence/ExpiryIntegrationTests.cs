@@ -287,6 +287,29 @@ public sealed class ExpiryIntegrationTests(NixPostgresFixture fixture) : IAsyncL
     }
 
     [Fact]
+    public async Task A_deprovisioned_setter_does_not_lend_the_creator_authority_and_the_creator_is_told()
+    {
+        await Sql($"""
+            INSERT INTO principal (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
+            VALUES ('{Colleague}', '{TestTenants.Alpha}', 'alpha-expiry-setter', 'user', 'Setter', 'expiry-setter@example.test', 'active', NULL);
+            INSERT INTO workspace_member (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
+            VALUES ('{TestTenants.AlphaWorkspace}', 'principal', '{Colleague}', '{TestTenants.Alpha}', 'editor', '{TestTenants.AlphaPrincipal}', now());
+            """);
+        var creator = TestTenants.AlphaContext;
+        var itemId = await CreateAsync(creator, "Creator note");
+        var setter = TestTenants.ContextFor(TestTenants.Alpha, TestTenants.AlphaWorkspace, Colleague);
+        await SetExpiryAsync(setter, itemId, DaysFromNow(30));
+        await Sql($"UPDATE principal SET status = 'deprovisioned', deprovisioned_at = now() WHERE principal_id = '{Colleague}'");
+        await ForgeExpiryAsync(itemId, DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        await PlanAndDispatchAsync();
+
+        Assert.Equal(1, await CountAsync($"SELECT count(*) FROM item WHERE id = '{itemId}' AND lifecycle_state = 'active'"));
+        var notice = Assert.Single(await NotificationsAsync(creator, itemId));
+        Assert.Contains("no longer active", notice.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Expiry_runs_per_tenant_and_notices_stay_in_their_tenant()
     {
         var alpha = TestTenants.AlphaContext;

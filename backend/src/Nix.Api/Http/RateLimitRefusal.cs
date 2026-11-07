@@ -62,6 +62,9 @@ public static class RateLimitRefusal
     /// <summary>Name of the limiter on the anonymous public-link reads, partitioned by client address.</summary>
     public const string PublicLinksPolicyName = "public-links";
 
+    /// <summary>Name of the limiter on a public note's file GETs, kept apart so a note full of images never throttles its own reader.</summary>
+    public const string PublicLinkFilesPolicyName = "public-link-files";
+
     /// <summary>Writes the 429 problem-details refusal with a <c>Retry-After</c> header, and logs it.</summary>
     /// <param name="context">The request being refused.</param>
     /// <param name="logger">Where the refusal is recorded.</param>

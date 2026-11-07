@@ -342,6 +342,9 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
             case ValidatedCoreToken tokenCredential:
                 credentialContext.Set(tokenCredential.AccessTokenId.Value);
                 break;
+            case ValidatedExternalToken:
+                scopeContext.SetExternalBearer();
+                break;
         }
 
         var captureSnapshot = context.Request.Path.Value is { } requestPath

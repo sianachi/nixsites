@@ -12,8 +12,9 @@ namespace Nix.Features.PublicLinks.Notes;
 
 /// <summary>
 /// [SEC] A file named by a note's public link: 302 to a short-lived signed URL, <c>no-store</c>.
-/// The note is re-rendered on every request on purpose, so a reference removed from the body, or a
-/// file that lost its approval, stops serving at once.
+/// Authorization (link, revocation, lock, trash, file approval) is re-checked on every request. Only
+/// the body-derived set of servable file ids is cached, briefly, so one page view renders the note
+/// once: a reference removed from the body stops serving within <see cref="PublicNoteServing.ServableIdsLifetime"/>.
 /// </summary>
 internal static class PublicLinkFileEndpoints
 {
@@ -27,7 +28,7 @@ internal static class PublicLinkFileEndpoints
             .WithName("GetPublicLinkFile")
             .Produces(StatusCodes.Status302Found)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequireRateLimiting(RateLimitRefusal.PublicLinksPolicyName);
+            .RequireRateLimiting(RateLimitRefusal.PublicLinkFilesPolicyName);
         return endpoints;
     }
 
@@ -52,8 +53,8 @@ internal static class PublicLinkFileEndpoints
             return DeadLink();
         }
 
-        var render = await reader.RenderAsync(link, cancellation).ConfigureAwait(false);
-        if (render is null || !render.ServableFileIds.Contains(fileItemId))
+        var servable = await PublicNoteServing.ServableIdsAsync(reader, link, cancellation).ConfigureAwait(false);
+        if (servable is null || !servable.Contains(fileItemId))
         {
             return DeadLink();
         }
