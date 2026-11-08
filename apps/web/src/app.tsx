@@ -1,4 +1,4 @@
-import { Text } from '@nix/ui';
+import { Text, UndoProvider } from '@nix/ui';
 import { Suspense, lazy, type ReactElement } from 'react';
 import { Route, Routes } from 'react-router';
 
@@ -128,107 +128,112 @@ export function AppRoutes(): ReactElement {
   // Always passed, so the tree keeps one shape and nothing remounts when a dialog opens.
   const { mainLocation, dialog } = useRouteDialogRouting();
   return (
-    <RouteDialogContext.Provider value={dialog}>
-      <Routes location={mainLocation}>
-        <Route path="/forms/:token" element={<PublicFormPage />} />
-        <Route path="/links/:token" element={<PublicLinkPage />} />
+    <UndoProvider>
+      <RouteDialogContext.Provider value={dialog}>
+        <Routes location={mainLocation}>
+          <Route path="/forms/:token" element={<PublicFormPage />} />
+          <Route path="/links/:token" element={<PublicLinkPage />} />
 
-        <Route element={<RequireSession />}>
-          <Route element={<AccessibleWorkspacesProvider />}>
-            <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
-            <Route
-              path="/workspaces/groups/:groupId"
-              element={<WorkspaceGroupPage NewChatNote={NewChatNote} />}
-            />
-            <Route path="/workspaces/archived" element={<ArchivedWorkspacesPage />} />
-            <Route
-              path="/w/:workspaceId"
-              element={
-                <WorkspaceGate>
-                  <>
-                    <AppShell />
-                    <PetCompanion />
-                  </>
-                </WorkspaceGate>
-              }
-            >
-              {/* One workspace, one place to be. The board is a view of a container rather
+          <Route element={<RequireSession />}>
+            <Route element={<AccessibleWorkspacesProvider />}>
+              <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
+              <Route
+                path="/workspaces/groups/:groupId"
+                element={<WorkspaceGroupPage NewChatNote={NewChatNote} />}
+              />
+              <Route path="/workspaces/archived" element={<ArchivedWorkspacesPage />} />
+              <Route
+                path="/w/:workspaceId"
+                element={
+                  <WorkspaceGate>
+                    <>
+                      <AppShell />
+                      <PetCompanion />
+                    </>
+                  </WorkspaceGate>
+                }
+              >
+                {/* One workspace, one place to be. The board is a view of a container rather
             than a destination, and search opens over whatever is on screen, so neither
             has a route of its own. */}
-              <Route index element={<EditorPage />} />
-              <Route path="new/:recipe" element={<CreationStudioPage />} />
-              <Route path="items/:itemId/views/new/:recipe" element={<CreationStudioPage />} />
-              <Route
-                path="items/:itemId/views/:viewId/edit/:recipe"
-                element={<CreationStudioPage />}
-              />
+                <Route index element={<EditorPage />} />
+                <Route path="new/:recipe" element={<CreationStudioPage />} />
+                <Route path="items/:itemId/views/new/:recipe" element={<CreationStudioPage />} />
+                <Route
+                  path="items/:itemId/views/:viewId/edit/:recipe"
+                  element={<CreationStudioPage />}
+                />
 
-              {/* The rail's workspace-view destinations. These *are* places, unlike a board
+                {/* The rail's workspace-view destinations. These *are* places, unlike a board
             or a search: each is a way of looking at the whole workspace rather than at
             one container, so none of them has an item to hang off and each needs an
             address of its own. Not lazy-loaded, unlike the token specimens: the screens
             are small, and a Suspense boundary around nothing is a fallback that can only
             ever flash. */}
-              <Route path="calendar" element={<CalendarPage />} />
-              <Route path="daily" element={<DailyNotePage />} />
-              <Route path="daily/:date" element={<DailyNotePage />} />
-              <Route path="graph" element={<GraphPage />} />
-              <Route path="pet" element={<PetPage />} />
-              <Route path="bookmarks" element={<BookmarksPage />} />
-              <Route path="trash" element={<TrashPage />} />
-              <Route path="attachments" element={<AttachmentsPage />} />
-              <Route path="workspaces" element={<WorkspacesPage />} />
-              <Route path="templates" element={<TemplateLibraryPage />} />
-              <Route path="templates/new" element={<TemplateStudioPage />} />
-              <Route path="templates/import" element={<TemplateImportPage />} />
-              <Route path="templates/:templateId/create" element={<TemplateStudioPage />} />
-              <Route path="templates/:templateId/edit" element={<TemplateStudioPage />} />
-              <Route
-                path="items/:itemId/templates/apply/:templateId"
-                element={<TemplateStudioPage />}
-              />
+                <Route path="calendar" element={<CalendarPage />} />
+                <Route path="daily" element={<DailyNotePage />} />
+                <Route path="daily/:date" element={<DailyNotePage />} />
+                <Route path="graph" element={<GraphPage />} />
+                <Route path="pet" element={<PetPage />} />
+                <Route path="bookmarks" element={<BookmarksPage />} />
+                <Route path="trash" element={<TrashPage />} />
+                <Route path="attachments" element={<AttachmentsPage />} />
+                <Route path="workspaces" element={<WorkspacesPage />} />
+                <Route path="templates" element={<TemplateLibraryPage />} />
+                <Route path="templates/new" element={<TemplateStudioPage />} />
+                <Route path="templates/import" element={<TemplateImportPage />} />
+                <Route path="templates/:templateId/create" element={<TemplateStudioPage />} />
+                <Route path="templates/:templateId/edit" element={<TemplateStudioPage />} />
+                <Route
+                  path="items/:itemId/templates/apply/:templateId"
+                  element={<TemplateStudioPage />}
+                />
 
-              {/* Reached from both the persistent rail and the profile menu: the rail makes
+                {/* Reached from both the persistent rail and the profile menu: the rail makes
             workspace administration findable, while the profile menu keeps personal
             access tokens where somebody already expects account-level controls. Not
             lazy-loaded, for the rail destinations' reason - the screen is small, and a
             Suspense boundary around nothing is a fallback that can only ever flash. */}
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="workspace-groups/:groupId" element={<LegacyWorkspaceGroupRedirect />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route
+                  path="workspace-groups/:groupId"
+                  element={<LegacyWorkspaceGroupRedirect />}
+                />
 
-              {/* The caller's own rules in this workspace (ADR-0051 section 6). A place of its
+                {/* The caller's own rules in this workspace (ADR-0051 section 6). A place of its
             own rather than a settings tab: a rule has an editor and a run log, and the
             address names the open rule so a link to it survives a refresh. */}
-              <Route path="automations" element={<AutomationsPage />} />
+                <Route path="automations" element={<AutomationsPage />} />
 
-              {/* Where the installed app lands from a shortcut, the share sheet or an opened
+                {/* Where the installed app lands from a shortcut, the share sheet or an opened
             file. `/launch/...` outside a workspace is routed here by
             `LegacyWorkspaceRedirect`, which picks the workspace exactly as for `/`. */}
-              <Route path="launch/:action" element={<LaunchPage />} />
+                <Route path="launch/:action" element={<LaunchPage />} />
 
-              {/* The boundary is per-route rather than around the whole tree: a fallback over
+                {/* The boundary is per-route rather than around the whole tree: a fallback over
             `Routes` would blank the shell while a chunk arrives. The wording matches the
             canvas's - what is loading, named, rather than a spinner claiming nothing. */}
-              <Route
-                path="tokens"
-                element={
-                  <Suspense
-                    fallback={
-                      <Text variant="note" as="div" tone="muted" className="p-8">
-                        Loading the token specimens…
-                      </Text>
-                    }
-                  >
-                    <TokensPage />
-                  </Suspense>
-                }
-              />
-              <Route path="*" element={<NotFoundPage />} />
+                <Route
+                  path="tokens"
+                  element={
+                    <Suspense
+                      fallback={
+                        <Text variant="note" as="div" tone="muted" className="p-8">
+                          Loading the token specimens…
+                        </Text>
+                      }
+                    >
+                      <TokensPage />
+                    </Suspense>
+                  }
+                />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+              <Route path="*" element={<LegacyWorkspaceRedirect />} />
             </Route>
-            <Route path="*" element={<LegacyWorkspaceRedirect />} />
           </Route>
-        </Route>
-      </Routes>
-    </RouteDialogContext.Provider>
+        </Routes>
+      </RouteDialogContext.Provider>
+    </UndoProvider>
   );
 }

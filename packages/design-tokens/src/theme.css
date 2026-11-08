@@ -491,3 +491,83 @@
   --control-md: 44px;
   --rail-control: 44px;
 }
+
+/* ══ "This just happened here" confirmation ═══════════════════════════
+   data-flash="a|b" tints the changed element once (accent wash that fades out);
+   useFlash() in @nix/ui toggles a/b so a repeat restarts the animation. The tint is an
+   overlay's opacity, so no layout or paint of the element itself moves. data-enter / data-leave
+   are the enter and leave motion for things that appear or go away: opacity and a small
+   translateY only. Under prefers-reduced-motion the tint stays and the movement goes.
+   The flashed element needs a positioned box; the rule below sets relative, so an element that
+   is already absolute/fixed must wrap its content instead. */
+[data-flash] {
+  position: relative;
+}
+[data-flash]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-accent);
+  opacity: 0;
+  pointer-events: none;
+}
+[data-flash='a']::after {
+  animation: nix-flash-a 900ms ease-out;
+}
+[data-flash='b']::after {
+  animation: nix-flash-b 900ms ease-out;
+}
+@keyframes nix-flash-a {
+  0% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes nix-flash-b {
+  0% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+[data-enter] {
+  animation: nix-enter 180ms ease-out;
+}
+[data-leave] {
+  animation: nix-leave 140ms ease-in forwards;
+  pointer-events: none;
+}
+@keyframes nix-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes nix-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-enter] {
+    animation-name: nix-fade-in;
+  }
+  [data-leave] {
+    animation-name: nix-fade-out;
+  }
+  @keyframes nix-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes nix-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+}

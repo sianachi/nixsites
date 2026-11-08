@@ -27,3 +27,5 @@ export { Textarea, type TextareaProps } from './Textarea';
 export { Tag, type TagTone } from './Tag';
 export { Tabs, type TabItem, type TabsOrientation } from './Tabs';
 export { Toast } from './Toast';
+export { UndoBar, UndoProvider, useUndo, type UndoApi } from './undo';
+export { useFlash } from './use-flash';

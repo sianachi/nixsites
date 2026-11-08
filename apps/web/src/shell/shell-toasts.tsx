@@ -1,4 +1,4 @@
-import { Toast } from '@nix/ui';
+import { Toast, UndoBar } from '@nix/ui';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useState, type ReactNode, type RefObject } from 'react';
 
@@ -52,10 +52,6 @@ export function ShellToasts({
   readonly onViewReminders: () => void;
 }): ReactNode {
   const narrow = useNarrowViewport();
-  if (toasts.length === 0) {
-    return null;
-  }
-
   // One visible on a phone, two elsewhere; reminders beyond that collapse into one summary.
   const limit = narrow ? 1 : 2;
   const reminders = toasts.filter((toast) => toast.persistent === true);
@@ -98,6 +94,7 @@ export function ShellToasts({
           returnFocusRef={treeRegionRef}
         />
       ))}
+      <UndoBar />
     </div>
   );
 }

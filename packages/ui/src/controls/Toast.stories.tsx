@@ -4,6 +4,7 @@ import { expect, fn, userEvent, within } from 'storybook/test';
 
 import { Button } from './Button';
 import { Toast } from './Toast';
+import { UndoBar, UndoProvider, useUndo } from './undo';
 
 /**
  * A transient notice with room for one way to undo it - built for the workspace tree's delete
@@ -161,5 +162,39 @@ export const DeleteAndUndo: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Undo' }));
     await expect(canvas.getByRole('button', { name: 'Delete "Q3 roadmap"' })).toBeInTheDocument();
     await expect(canvas.queryByRole('status')).toBeNull();
+  },
+};
+
+/** The shared undo history: two actions, Cmd/Ctrl+Z or the button reverses the newest first. */
+function UndoHarness(): ReactNode {
+  const undo = useUndo();
+  return (
+    <div className="flex flex-col gap-3 p-8">
+      <Button
+        variant="secondary"
+        onClick={() => {
+          undo.push('Removed "Q3 roadmap"', () => undefined);
+        }}
+      >
+        Remove "Q3 roadmap"
+      </Button>
+      <UndoBar />
+    </div>
+  );
+}
+
+export const UndoHistory: Story = {
+  render: () => (
+    <UndoProvider>
+      <UndoHarness />
+    </UndoProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove "Q3 roadmap"' }));
+    await expect(canvas.getByRole('status')).toHaveTextContent('Removed "Q3 roadmap"');
+    await userEvent.click(canvas.getByRole('button', { name: 'Undo' }));
+    await expect(canvas.queryByRole('button', { name: 'Undo' })).toBeNull();
   },
 };
