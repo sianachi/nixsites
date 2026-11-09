@@ -22,7 +22,7 @@ import {
   weekOf,
   type CalendarDay,
 } from '@nix/web-collections/core/calendar-dates';
-import { readTimestampValue, readerZone } from '@nix/web-collections/core/timestamps';
+import { readerZone } from '@nix/web-collections/core/timestamps';
 import type { CalendarGrain } from './calendar-window';
 import {
   bucketByDay,
@@ -33,7 +33,8 @@ import {
   toGridItem,
   toGridItems,
 } from './collated-entries';
-import { CreateEntryButton } from './create-entry-button';
+import { AgendaView, timeOf } from './agenda-view';
+import { QuickAdd } from './quick-add';
 import { shiftedEnd, valueForDay } from './reschedule';
 
 /** How many entries a month cell shows before it collapses the rest, matching `DayCell`'s own. */
@@ -124,9 +125,10 @@ export interface CollatedCalendarProps {
 }
 
 const GRAINS = [
-  { value: 'month', label: 'Month' },
-  { value: 'week', label: 'Week' },
+  { value: 'agenda', label: 'Agenda' },
   { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
 ] as const satisfies readonly { value: CalendarGrain; label: string }[];
 
 export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
@@ -227,10 +229,19 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // Which entry's reschedule dialog is open, or null. Tap-and-keyboard's own counterpart to
   // `dragged` above: the month cell used to answer only to a drag, which a keyboard and a touch
   // screen alike cannot perform.
+  // A day chosen with an agenda "+ Add": a new object each time, so choosing the same day twice
+  // still moves focus to the bar.
+  const [pick, setPick] = useState<{ readonly day: string } | null>(null);
+
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const reschedulingEntry = entries.find((entry) => entry.itemId === rescheduling) ?? null;
 
   const step = (delta: number): void => {
+    if (grain === 'agenda') {
+      onAnchor(addDays(anchor, delta * 7));
+      return;
+    }
+
     if (grain === 'month') {
       const moved = shiftMonth({ year: anchor.year, month: anchor.month }, delta);
       // Clamped, so stepping from the 31st into a shorter month does not roll into the next one.
@@ -242,11 +253,13 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   };
 
   const label =
-    grain === 'month'
-      ? monthLabel({ year: anchor.year, month: anchor.month })
-      : grain === 'week'
-        ? weekLabel(anchor)
-        : dayLabel(anchor);
+    grain === 'agenda'
+      ? `${dayLabel(anchor)} to ${dayLabel(addDays(anchor, 6))}`
+      : grain === 'month'
+        ? monthLabel({ year: anchor.year, month: anchor.month })
+        : grain === 'week'
+          ? weekLabel(anchor)
+          : dayLabel(anchor);
 
   return (
     <div className="flex flex-col gap-3">
@@ -262,7 +275,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
 
         <Button
           variant="icon"
-          aria-label={`Previous ${grain}`}
+          aria-label={`Previous ${grain === 'agenda' ? '7 days' : grain}`}
           onClick={() => {
             step(-1);
           }}
@@ -272,7 +285,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
 
         <Button
           variant="icon"
-          aria-label={`Next ${grain}`}
+          aria-label={`Next ${grain === 'agenda' ? '7 days' : grain}`}
           onClick={() => {
             step(1);
           }}
@@ -294,20 +307,36 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
         <Text as="span" variant="note" tone="muted" aria-live="polite">
           {label}
         </Text>
-
-        {/* Absent entirely when the caller has not wired a way to create - see this component's own
-            docblock and the grids' own optional `onCreate` for why silence is the right answer
-            rather than a button with nothing to do. */}
-        {onCreate !== undefined && (
-          <CreateEntryButton
-            destinations={destinations}
-            day={dayText(anchor)}
-            onCreate={onCreate}
-          />
-        )}
       </div>
 
-      {grain === 'month' ? (
+      {/* Absent entirely when the caller has not wired a way to create: a bar with nothing to do
+          would be worse than none. */}
+      {onCreate === undefined ? null : (
+        <QuickAdd
+          destinations={destinations}
+          day={dayText(anchor)}
+          pick={pick}
+          onCreate={onCreate}
+        />
+      )}
+
+      {grain === 'agenda' ? (
+        <AgendaView
+          byDay={byDay}
+          anchor={anchor}
+          today={today}
+          onOpen={onOpen}
+          onReschedule={setRescheduling}
+          onAdd={
+            onCreate === undefined
+              ? undefined
+              : (day) => {
+                  setPick({ day });
+                }
+          }
+          onComplete={onComplete}
+        />
+      ) : grain === 'month' ? (
         <MonthGrid
           month={{ year: anchor.year, month: anchor.month }}
           todayText={todayText}
@@ -434,6 +463,14 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           }
           placesByTime={reschedulingEntry.kind === 'timestamp'}
           zone={zone}
+          todayText={todayText}
+          onDay={(day) => {
+            const value = valueForDay(reschedulingEntry, day, zone);
+            setRescheduling(null);
+            if (value !== null && value !== reschedulingEntry.value) {
+              moveStart(reschedulingEntry, value);
+            }
+          }}
           canRemove={false}
           onCancel={() => {
             setRescheduling(null);
@@ -500,12 +537,6 @@ interface CollatedDayCellProps {
  * single cell, and a flag held anywhere else would either re-render every cell in the month for one
  * of them opening or have nowhere honest to live.
  */
-/** The time of day a timed entry is at, in the reader's zone, or nothing if it cannot be read. */
-function timeOf(entry: CalendarEntry): string {
-  const moment = readTimestampValue({ value: entry.value }, 'value');
-  return moment === null ? '' : moment.at.setZone(readerZone()).toFormat('HH:mm');
-}
-
 function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
   const {
     cell,

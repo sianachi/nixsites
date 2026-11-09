@@ -19,16 +19,22 @@ describe('reading the grain from the address', () => {
     expect(grainOf('month')).toBe('month');
   });
 
-  it('falls back to a month when the address says nothing', () => {
-    expect(grainOf(null)).toBe('month');
+  it('falls back to the agenda when the address says nothing', () => {
+    expect(grainOf(null)).toBe('agenda');
   });
 
   /**
    * Fails soft rather than throwing, matching the container calendar's own `readMode`: a token from
    * a newer build should draw a month, not refuse to draw anything.
    */
-  it('falls back to a month for a grain this build does not know', () => {
-    expect(grainOf('fortnight')).toBe('month');
+  it('falls back to the agenda for a grain this build does not know', () => {
+    expect(grainOf('fortnight')).toBe('agenda');
+  });
+});
+
+describe('the agenda window', () => {
+  it('covers the seven days from the anchor plus a day either side for zones', () => {
+    expect(windowFor('agenda', TODAY)).toEqual({ from: '2026-03-16', to: '2026-03-24' });
   });
 });
 

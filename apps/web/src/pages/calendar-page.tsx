@@ -1,7 +1,7 @@
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
-import { Button, Text } from '@nix/ui';
+import { Button, Text, useUndo } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 
@@ -25,7 +25,8 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
-import type { CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import type { CalendarEntry } from '@nix/api-client';
+import { dayFromText, dayLabel, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
@@ -91,12 +92,42 @@ export function CalendarPage(): ReactElement {
     calendar,
     error,
     reload,
-    reschedule,
     write: writeEntry,
     addEndTimes,
     create,
+    remove,
     complete,
   } = useWorkspaceCalendar(window.from, window.to);
+
+  const undo = useUndo();
+
+  /**
+   * Writes an entry's own properties and offers to put them back. The previous values are read off
+   * the entry as it is now, and the undo re-issues only those keys, so later edits survive it.
+   */
+  const moveEntry = (entry: CalendarEntry, values: Record<string, string | null>): void => {
+    const before: Record<string, string | null> = {};
+    for (const key of Object.keys(values)) {
+      before[key] =
+        key === entry.dateProperty
+          ? entry.value
+          : key === entry.endProperty
+            ? entry.endValue
+            : null;
+    }
+    const start = values[entry.dateProperty];
+    const target = start === undefined || start === null ? null : dayFromText(start.slice(0, 10));
+    const title = entry.title ?? 'Untitled';
+    const label =
+      target === null ? `Changed length of ${title}` : `Moved ${title} to ${dayLabel(target)}`;
+    void writeEntry(entry.itemId, values).then((ok) => {
+      if (ok) {
+        undo.push(label, async () => {
+          await writeEntry(entry.itemId, before);
+        });
+      }
+    });
+  };
 
   // Both replace rather than push: moving through a calendar is not a navigation, and a reader who
   // stepped through six weeks should not have to press Back six times to leave.
@@ -214,11 +245,9 @@ export function CalendarPage(): ReactElement {
         today={today}
         onOpen={openDialog ?? openPreview}
         onReschedule={(entry, value) => {
-          void reschedule(entry.itemId, entry.dateProperty, value);
+          moveEntry(entry, { [entry.dateProperty]: value });
         }}
-        onWrite={(entry, values) => {
-          void writeEntry(entry.itemId, values);
-        }}
+        onWrite={moveEntry}
         onAddEndTimes={(entry) => {
           void addEndTimes(entry.containerId).then((refusal) => {
             publishNotice({
@@ -229,7 +258,14 @@ export function CalendarPage(): ReactElement {
             });
           });
         }}
-        onCreate={create}
+        onCreate={(containerId, title, day) =>
+          create(containerId, title, day, (itemId) => {
+            const when = dayFromText(day);
+            undo.push(`Added ${title}${when === null ? '' : ` on ${dayLabel(when)}`}`, async () => {
+              await remove(itemId);
+            });
+          })
+        }
         onComplete={(entry, occurredOn) => {
           void complete(entry.itemId, occurredOn);
         }}

@@ -32,7 +32,16 @@ export interface WorkspaceCalendarState {
    * or null when it did.
    */
   readonly addEndTimes: (containerId: string) => Promise<string | null>;
-  readonly create: (containerId: string, title: string, day: string) => Promise<string | null>;
+  /** `onCreated` hears the new item's id once it exists, so the caller can offer to take it back. */
+  readonly create: (
+    containerId: string,
+    title: string,
+    day: string,
+    onCreated?: (itemId: string) => void,
+  ) => Promise<string | null>;
+
+  /** Soft-deletes an item (the undo of a create), then reloads. */
+  readonly remove: (itemId: string) => Promise<boolean>;
 
   /** Marks one day of a repeating item's series done, then reloads the window it changed. */
   readonly complete: (itemId: string, occurredOn: string) => Promise<boolean>;
@@ -148,7 +157,12 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
   );
 
   const create = useCallback(
-    async (containerId: string, title: string, day: string): Promise<string | null> => {
+    async (
+      containerId: string,
+      title: string,
+      day: string,
+      onCreated?: (itemId: string) => void,
+    ): Promise<string | null> => {
       const controller = new AbortController();
       operations.current.add(controller);
       try {
@@ -165,7 +179,7 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
           return "This note's calendar no longer names a date property, so nothing can be placed there.";
         }
 
-        await client.execute(
+        const created = await client.execute(
           coreItems.createItem(workspaceId, {
             type: 'note',
             title,
@@ -175,6 +189,7 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
           { signal: controller.signal },
         );
         if (controller.signal.aborted) return 'The entry could not be created.';
+        onCreated?.(created.id);
         await load();
         return null;
       } catch (reason) {
@@ -182,6 +197,19 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
         return requestReason(reason, 'The entry could not be created.');
       } finally {
         operations.current.delete(controller);
+      }
+    },
+    [client, load, workspaceId],
+  );
+
+  const remove = useCallback(
+    async (itemId: string): Promise<boolean> => {
+      try {
+        await client.execute(coreItems.deleteItem(workspaceId, itemId));
+        await load();
+        return true;
+      } catch {
+        return false;
       }
     },
     [client, load, workspaceId],
@@ -241,6 +269,7 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
     write,
     addEndTimes,
     create,
+    remove,
     complete,
   };
 }

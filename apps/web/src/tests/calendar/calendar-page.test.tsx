@@ -63,7 +63,7 @@ afterEach(() => {
 describe('the calendar destination', () => {
   it('draws a date wherever it was set, from every container at once', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     expect(await screen.findByRole('heading', { name: 'Calendar' })).toBeInTheDocument();
 
@@ -78,7 +78,7 @@ describe('the calendar destination', () => {
    */
   it('says which container an entry came from', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     expect(
       await screen.findByRole('button', { name: /Filing deadline, in Deadlines/i }),
@@ -87,33 +87,33 @@ describe('the calendar destination', () => {
 
   it('names itself while it is still loading, so a reader knows where they landed', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     // The heading is outside the state fork, so it is on screen before the first entry is.
     expect(await screen.findByRole('heading', { name: 'Calendar' })).toBeInTheDocument();
   });
 
-  it('offers the three grains and lets the address choose one', async () => {
+  it('offers the four grains and lets the address choose one', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
     renderAt(<App />, '/calendar?grain=week');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     const grains = await screen.findByRole('group', { name: /calendar grain/i });
-    expect(within(grains).getAllByRole('button')).toHaveLength(3);
+    expect(within(grains).getAllByRole('button')).toHaveLength(4);
     expect(within(grains).getByRole('button', { name: 'Week' })).toHaveAttribute(
       'aria-current',
       'true',
     );
   });
 
-  it('falls back to a month for a grain this build does not know', async () => {
+  it('falls back to the agenda for a grain this build does not know', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
     renderAt(<App />, '/calendar?grain=fortnight');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
     const grains = await screen.findByRole('group', { name: /calendar grain/i });
-    expect(within(grains).getByRole('button', { name: 'Month' })).toHaveAttribute(
+    expect(within(grains).getByRole('button', { name: 'Agenda' })).toHaveAttribute(
       'aria-current',
       'true',
     );
@@ -121,7 +121,7 @@ describe('the calendar destination', () => {
 
   it('opens the anchor the address names rather than today', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar?on=2026-07-04');
+    renderAt(<App />, '/calendar?grain=month&on=2026-07-04');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -133,7 +133,7 @@ describe('the calendar destination', () => {
 
   it('steps through time and says where it got to', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     expect(await screen.findByRole('region', { name: /March 2026/i })).toBeInTheDocument();
@@ -150,7 +150,7 @@ describe('the calendar destination', () => {
       items: [item({ id: ONE, title: 'Filing deadline' })],
       calendarEntries: ENTRIES,
     });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await userEvent.click(
@@ -186,7 +186,7 @@ describe('the calendar destination', () => {
 describe('what the calendar admits to', () => {
   it('says so when the entry ceiling was reached', async () => {
     stubCoreApi({ calendarEntries: ENTRIES, calendarTruncated: true });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -205,7 +205,7 @@ describe('what the calendar admits to', () => {
         { containerId: CONTAINER_ONE, containerTitle: 'Roadmap', reason: 'no_date_property' },
       ],
     });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -214,7 +214,7 @@ describe('what the calendar admits to', () => {
 
   it('claims nothing when the calendar is complete', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -223,7 +223,7 @@ describe('what the calendar admits to', () => {
 
   it('offers a way out when the read fails, and does not call it empty', async () => {
     stubCoreApi({ calendarFails: true });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     const alert = await screen.findByRole('alert');
 
@@ -233,7 +233,7 @@ describe('what the calendar admits to', () => {
 
   it('says a workspace with nothing scheduled is empty, not broken', async () => {
     stubCoreApi({ calendarEntries: [] });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     expect(await screen.findByText(/nothing scheduled/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -254,7 +254,7 @@ describe('what the calendar admits to', () => {
         { containerId: CONTAINER_ONE, containerTitle: 'Roadmap', reason: 'no_date_property' },
       ],
     });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -273,7 +273,7 @@ describe('what the calendar admits to', () => {
 describe('filtering the calendar by note', () => {
   it('offers the notes that actually placed something, not every note in the workspace', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -283,7 +283,7 @@ describe('filtering the calendar by note', () => {
 
   it('shows every note until one is chosen', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -294,7 +294,7 @@ describe('filtering the calendar by note', () => {
 
   it('narrows to the notes that are checked', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Deadlines' }));
@@ -305,7 +305,7 @@ describe('filtering the calendar by note', () => {
 
   it('overlays several notes at once, which is the point of checkboxes', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Deadlines' }));
@@ -318,7 +318,7 @@ describe('filtering the calendar by note', () => {
 
   it('takes its selection from the address, so a filtered calendar is a link', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, `/calendar?notes=${CONTAINER_TWO}`);
+    renderAt(<App />, `/calendar?grain=month&notes=${CONTAINER_TWO}`);
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -328,7 +328,7 @@ describe('filtering the calendar by note', () => {
 
   it('goes back to everything', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, `/calendar?notes=${CONTAINER_TWO}`);
+    renderAt(<App />, `/calendar?grain=month&notes=${CONTAINER_TWO}`);
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await userEvent.click(await screen.findByRole('button', { name: /show all/i }));
@@ -344,7 +344,10 @@ describe('filtering the calendar by note', () => {
    */
   it('keeps an unknown note in the selection rather than silently rewriting the link', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, `/calendar?notes=${CONTAINER_TWO},99999999-9999-4999-8999-999999999999`);
+    renderAt(
+      <App />,
+      `/calendar?grain=month&notes=${CONTAINER_TWO},99999999-9999-4999-8999-999999999999`,
+    );
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -359,7 +362,7 @@ describe('filtering the calendar by note', () => {
         { containerId: CONTAINER_ONE, containerTitle: 'Roadmap', reason: 'no_date_property' },
       ],
     });
-    renderAt(<App />, '/calendar');
+    renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
@@ -391,7 +394,7 @@ describe('rescheduling by dragging', () => {
 
   it('writes the entry own date property, not some property of the calendar', async () => {
     const writes = stubCoreApi({ calendarEntries: ENTRIES });
-    const { container } = renderAt(<App />, '/calendar');
+    const { container } = renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Filing deadline/i });
@@ -411,7 +414,7 @@ describe('rescheduling by dragging', () => {
 
   it('keeps a moment at its time when it moves day', async () => {
     const writes = stubCoreApi({ calendarEntries: ENTRIES });
-    const { container } = renderAt(<App />, '/calendar');
+    const { container } = renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Standup/i });
@@ -434,7 +437,7 @@ describe('rescheduling by dragging', () => {
 
   it('writes nothing when an entry is dropped back where it already was', async () => {
     const writes = stubCoreApi({ calendarEntries: ENTRIES });
-    const { container } = renderAt(<App />, '/calendar');
+    const { container } = renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Filing deadline/i });
@@ -449,7 +452,7 @@ describe('rescheduling by dragging', () => {
 
   it('writes nothing when a cell is dropped on with nothing in the air', async () => {
     const writes = stubCoreApi({ calendarEntries: ENTRIES });
-    const { container } = renderAt(<App />, '/calendar');
+    const { container } = renderAt(<App />, '/calendar?grain=month');
 
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Filing deadline/i });

@@ -18,10 +18,10 @@ import {
  * Nothing here reads a clock. The anchor is given.
  */
 
-/** The three grains a calendar is read at. */
-export type CalendarGrain = 'month' | 'week' | 'day';
+/** The grains a calendar is read at; the agenda is the next seven days as a list. */
+export type CalendarGrain = 'agenda' | 'month' | 'week' | 'day';
 
-const GRAINS: readonly CalendarGrain[] = ['month', 'week', 'day'];
+const GRAINS: readonly CalendarGrain[] = ['agenda', 'month', 'week', 'day'];
 
 /**
  * The grain the address names, or the default.
@@ -31,7 +31,7 @@ const GRAINS: readonly CalendarGrain[] = ['month', 'week', 'day'];
  * anything.
  */
 export function grainOf(raw: string | null): CalendarGrain {
-  return GRAINS.find((grain) => grain === raw) ?? 'month';
+  return GRAINS.find((grain) => grain === raw) ?? 'agenda';
 }
 
 /**
@@ -67,6 +67,10 @@ export function windowFor(
   grain: CalendarGrain,
   anchor: CalendarDay,
 ): { readonly from: string; readonly to: string } {
+  if (grain === 'agenda') {
+    return { from: dayText(addDays(anchor, -1)), to: dayText(addDays(anchor, 7)) };
+  }
+
   if (grain === 'month') {
     const first: CalendarDay = { year: anchor.year, month: anchor.month, day: 1 };
     const last: CalendarDay = {
