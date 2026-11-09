@@ -1,7 +1,7 @@
 import { Button, Checkbox, Select, Text } from '@nix/ui';
 import type { Finance } from '@nix/api-client';
 import type { ReactNode } from 'react';
-import { linesBySection } from './transaction-dialog';
+import { LineOptions } from './transaction-dialog';
 
 /** Select-all plus the assign-to-line controls for the selected rows. */
 export function TransactionBulkBar({
@@ -15,7 +15,7 @@ export function TransactionBulkBar({
   assignLineId,
   onToggleAll,
   onAssignLine,
-  onPreview,
+  onApply,
   onClear,
 }: {
   readonly lines: Finance['lines'];
@@ -28,11 +28,11 @@ export function TransactionBulkBar({
   readonly assignLineId: string;
   readonly onToggleAll: (checked: boolean) => void;
   readonly onAssignLine: (id: string) => void;
-  readonly onPreview: () => void;
+  readonly onApply: () => void;
   readonly onClear: () => void;
 }): ReactNode {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-raised p-3">
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg bg-surface-raised p-3">
       <Checkbox
         label={`Select all ${String(visibleCount)} visible`}
         checked={allVisibleSelected}
@@ -57,23 +57,15 @@ export function TransactionBulkBar({
             }}
           >
             <option value="">Choose a line</option>
-            {linesBySection(lines).map(([section, sectionLines]) => (
-              <optgroup key={section} label={section}>
-                {sectionLines.map((sectionLine) => (
-                  <option key={sectionLine.id} value={sectionLine.id}>
-                    {sectionLine.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            <LineOptions lines={lines} />
           </Select>
           <Button
             disabled={assignLineId === '' || assigning || !ready}
             onClick={() => {
-              onPreview();
+              onApply();
             }}
           >
-            Preview change
+            {`Apply to ${String(selectedCount)}`}
           </Button>
           <Button
             variant="secondary"

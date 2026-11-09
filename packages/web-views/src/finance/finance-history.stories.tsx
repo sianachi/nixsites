@@ -2,6 +2,7 @@ import {
   createNixClient,
   type Finance,
   type FinanceTransaction,
+  type FinanceTransactionInput,
   type FinanceTransactions,
   type QueryEndpoint,
 } from '@nix/api-client';
@@ -130,6 +131,14 @@ function InteractiveHistory(): ReactElement {
     },
   }));
   const noop = (): Promise<null> => Promise.resolve(null);
+  const newRow = (input: FinanceTransactionInput): FinanceTransaction => ({
+    ...input,
+    cleared: input.cleared ?? false,
+    id: crypto.randomUUID(),
+    source: 'manual',
+    postedFor: null,
+    importKey: null,
+  });
   const state: FinanceState = {
     status: 'ready',
     finance,
@@ -146,16 +155,15 @@ function InteractiveHistory(): ReactElement {
     createLine: noop,
     setLine: noop,
     createTransaction: (input) => {
-      rows.current.push({
-        ...input,
-        cleared: input.cleared ?? false,
-        id: crypto.randomUUID(),
-        source: 'manual',
-        postedFor: null,
-        importKey: null,
-      });
+      rows.current.push(newRow(input));
       setGeneration((value) => value + 1);
       return Promise.resolve(null);
+    },
+    addTransaction: (input) => {
+      const row = newRow(input);
+      rows.current.push(row);
+      setGeneration((value) => value + 1);
+      return Promise.resolve(row);
     },
     setTransaction: (id, input) => {
       rows.current = rows.current.map((row) => (row.id === id ? { ...row, ...input } : row));

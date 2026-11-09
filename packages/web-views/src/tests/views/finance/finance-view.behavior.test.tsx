@@ -158,6 +158,7 @@ vi.mock('../../../finance/use-finance', async () => {
       refreshing,
       refreshError,
       generation: 0,
+      addTransaction: () => Promise.resolve('Not available in this test.'),
       reload,
       setSettings: vi.fn(),
       createAccount: vi.fn(),

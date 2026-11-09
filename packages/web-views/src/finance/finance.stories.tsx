@@ -188,6 +188,7 @@ const state: FinanceState = {
   createLine: noop,
   setLine: noop,
   createTransaction: noop,
+  addTransaction: () => Promise.resolve('Not available in this story.'),
   setTransaction: noop,
   deleteTransaction: noop,
   setActual: () => Promise.resolve('Recording is unavailable in this example.'),

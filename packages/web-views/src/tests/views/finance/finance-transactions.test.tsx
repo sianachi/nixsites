@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createNixClient,
@@ -7,6 +7,7 @@ import {
   type FinanceTransaction,
   type QueryEndpoint,
 } from '@nix/api-client';
+import { UndoBar, UndoProvider } from '@nix/ui';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
 import type * as UseFinanceModule from '../../../finance/use-finance';
 
@@ -230,9 +231,7 @@ describe('bulk-assigning a selection of transactions to a budget line', () => {
     fireEvent.click(screen.getByLabelText(`Select ${transactionA.description}`));
     fireEvent.click(screen.getByLabelText(`Select ${transactionB.description}`));
     fireEvent.change(screen.getByLabelText('Assign to line'), { target: { value: line.id } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview change' }));
-    expect(setTransaction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply category change' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Apply to \d+$/ }));
 
     await waitFor(() => {
       expect(setTransaction).toHaveBeenCalledTimes(2);
@@ -258,9 +257,7 @@ describe('bulk-assigning a selection of transactions to a budget line', () => {
     fireEvent.click(screen.getByLabelText(`Select ${transactionA.description}`));
     fireEvent.click(screen.getByLabelText(`Select ${transactionB.description}`));
     fireEvent.change(screen.getByLabelText('Assign to line'), { target: { value: line.id } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview change' }));
-    expect(setTransaction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply category change' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Apply to \d+$/ }));
 
     await waitFor(() => {
       expect(
@@ -297,9 +294,7 @@ describe('bulk-assigning a selection of transactions to a budget line', () => {
     fireEvent.click(screen.getByLabelText(`Select ${transactionB.description}`));
     fireEvent.click(screen.getByLabelText(`Select ${transactionC.description}`));
     fireEvent.change(screen.getByLabelText('Assign to line'), { target: { value: line.id } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview change' }));
-    expect(setTransaction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply category change' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Apply to \d+$/ }));
 
     await waitFor(() => {
       expect(
@@ -335,8 +330,10 @@ describe('searchable transaction history', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit transaction' }));
 
     expect(screen.getByRole('dialog', { name: 'Edit Corner shop' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Description')).toHaveValue(transactionA.description);
-    expect(screen.getByLabelText('Amount')).toHaveValue('12.4');
+    expect(within(screen.getByRole('dialog')).getByLabelText('Description')).toHaveValue(
+      transactionA.description,
+    );
+    expect(within(screen.getByRole('dialog')).getByLabelText('Amount')).toHaveValue('12.4');
   });
   it('searches all history on Core and paginates the result while retaining full totals', () => {
     render(<FinanceTransactions state={state} finance={finance} month="2026-09" />);
@@ -473,7 +470,9 @@ describe('restoring changes from this visit', () => {
       </ApiClientOverrideProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Corner shop' }));
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '17.40' } });
+    fireEvent.change(within(screen.getByRole('dialog')).getByLabelText('Amount'), {
+      target: { value: '17.40' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByText('Changes in this visit (1)'));
@@ -516,12 +515,14 @@ describe('restoring changes from this visit', () => {
       </ApiClientOverrideProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Corner shop' }));
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '17.40' } });
+    fireEvent.change(within(screen.getByRole('dialog')).getByLabelText('Amount'), {
+      target: { value: '17.40' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByText('Changes in this visit (1)'));
     fireEvent.click(screen.getByRole('button', { name: 'Review undo' }));
-    expect(screen.getByLabelText('Amount')).toHaveValue('12.4');
+    expect(within(screen.getByRole('dialog')).getByLabelText('Amount')).toHaveValue('12.4');
     fireEvent.click(screen.getByRole('button', { name: 'Restore previous values' }));
     await waitFor(() => {
       expect(setTransaction).toHaveBeenLastCalledWith(
@@ -579,5 +580,162 @@ describe('historical edit safety', () => {
     expect(screen.getByRole('option', { name: 'Everyday card (archived)' })).toBeInTheDocument();
     expect(screen.getByLabelText('Budget line')).toHaveValue(line.id);
     expect(screen.getByRole('option', { name: 'Groceries (archived)' })).toBeInTheDocument();
+  });
+});
+
+describe('categorising in place, with undo', () => {
+  const setTransaction = vi.fn<FinanceViewState['setTransaction']>();
+  const setMonth = vi.fn<FinanceViewState['setMonth']>();
+  const addTransaction = vi.fn<FinanceViewState['addTransaction']>();
+  const deleteTransaction = vi.fn<FinanceViewState['deleteTransaction']>();
+  const inPlaceState = {
+    generation: 0,
+    createTransaction: vi.fn(),
+    addTransaction,
+    setTransaction,
+    setMonth,
+    deleteTransaction,
+  } as unknown as FinanceViewState;
+
+  const client = {
+    ...createNixClient({
+      baseUrl: 'http://nix.invalid',
+      tokens: {
+        getAccessToken: () => Promise.resolve(null),
+        refreshAccessToken: () => Promise.resolve(null),
+      },
+    }),
+    // The row as it is now: categorised, and renamed since the change being undone.
+    query: vi.fn().mockResolvedValue({
+      transactions: [{ ...transactionA, lineId: line.id, description: 'Corner shop (renamed)' }],
+      total: 1,
+      truncated: false,
+    }),
+  };
+  const mountScreen = (closedMonths: string[] = []) =>
+    render(
+      <ApiClientOverrideProvider client={client}>
+        <UndoProvider>
+          <UndoBar />
+          <FinanceTransactions
+            state={inPlaceState}
+            finance={{ ...finance, lines: [line, otherLine], closedMonths }}
+            month="2026-09"
+          />
+        </UndoProvider>
+      </ApiClientOverrideProvider>,
+    );
+
+  beforeEach(() => {
+    setTransaction.mockReset().mockResolvedValue(null);
+    setMonth.mockReset().mockResolvedValue(null);
+    addTransaction.mockReset();
+    deleteTransaction.mockReset().mockResolvedValue(null);
+    queries.transactions = {
+      transactions: [transactionA, { ...transactionB, lineId: line.id }],
+      total: 2,
+      truncated: false,
+    };
+  });
+
+  it('categorises one row from its own select, then undoes it', async () => {
+    mountScreen();
+    fireEvent.change(screen.getByLabelText('Category for Corner shop'), {
+      target: { value: line.id },
+    });
+    await waitFor(() => {
+      expect(setTransaction).toHaveBeenCalledWith(
+        transactionA.id,
+        expect.objectContaining({ lineId: line.id, amount: -12.4 }),
+      );
+    });
+    expect(await screen.findByText("Categorised 'Corner shop' as Groceries")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(setTransaction).toHaveBeenLastCalledWith(
+        transactionA.id,
+        expect.objectContaining({ lineId: null, description: 'Corner shop (renamed)' }),
+      );
+    });
+  });
+
+  it('offers the category an earlier row with the same description used', () => {
+    queries.transactions = {
+      transactions: [
+        transactionA,
+        { ...transactionA, id: 'c8888888-8888-4888-8888-888888888888', lineId: line.id },
+      ],
+      total: 2,
+      truncated: false,
+    };
+    mountScreen();
+    expect(
+      screen.getByRole('button', { name: 'Use Groceries for Corner shop' }),
+    ).toBeInTheDocument();
+  });
+
+  it('marks a closed month, refuses the change and offers to reopen it', async () => {
+    mountScreen(['2026-09']);
+    expect(screen.getAllByText('Closed month').length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText('Category for Corner shop'), {
+      target: { value: line.id },
+    });
+    expect(setTransaction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen it' }));
+    await waitFor(() => {
+      expect(setMonth).toHaveBeenCalledWith('2026-09', false);
+    });
+  });
+
+  it('shows how many are categorised, with no stray boolean text', () => {
+    mountScreen();
+    expect(screen.getByRole('button', { name: /^Unassigned \d+$/ })).toBeInTheDocument();
+    expect(screen.getByText(/ of \d+ categorised$/)).toBeInTheDocument();
+    expect(screen.queryByText('false')).not.toBeInTheDocument();
+    expect(screen.queryByText('true')).not.toBeInTheDocument();
+  });
+
+  it('adds from the inline form with the exact amount, returns focus to Amount, and undoes by deleting', async () => {
+    const created: FinanceTransaction = {
+      ...transactionA,
+      id: 'c9999999-9999-4999-8999-999999999999',
+      description: 'Market',
+      amount: -9.99,
+    };
+    addTransaction.mockResolvedValue(created);
+    mountScreen();
+    const form = within(screen.getByRole('form', { name: 'Add a transaction' }));
+    fireEvent.change(form.getByLabelText('Amount'), { target: { value: '9.99' } });
+    fireEvent.change(form.getByLabelText('Description'), { target: { value: 'Market' } });
+    fireEvent.click(form.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => {
+      expect(addTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'Market', amount: -9.99, lineId: null }),
+      );
+    });
+    await waitFor(() => {
+      expect(form.getByLabelText('Amount')).toHaveValue('');
+    });
+    expect(form.getByLabelText('Amount')).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(deleteTransaction).toHaveBeenCalledWith(created.id);
+    });
+  });
+
+  it('refuses an amount that is not a number and a date in a closed month', async () => {
+    mountScreen(['2026-09']);
+    const form = within(screen.getByRole('form', { name: 'Add a transaction' }));
+    fireEvent.change(form.getByLabelText('Amount'), { target: { value: 'abc' } });
+    fireEvent.click(form.getByRole('button', { name: 'Add' }));
+    expect(await form.findByText('Enter the amount that moved.')).toBeInTheDocument();
+    fireEvent.change(form.getByLabelText('Amount'), { target: { value: '5' } });
+    fireEvent.change(form.getByLabelText('Date'), { target: { value: '2026-09-02' } });
+    fireEvent.click(form.getByRole('button', { name: 'Add' }));
+    expect(await form.findByText(/is closed/)).toBeInTheDocument();
+    expect(addTransaction).not.toHaveBeenCalled();
   });
 });

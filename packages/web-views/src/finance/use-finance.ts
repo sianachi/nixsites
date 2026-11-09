@@ -10,6 +10,7 @@ import {
   type FinanceImport,
   type FinanceImportInput,
   type FinanceSettingsInput,
+  type FinanceTransaction,
   type FinanceTransactionInput,
   type CommandEndpoint,
   type PostScheduled,
@@ -51,6 +52,8 @@ export interface FinanceState {
   readonly createLine: (input: BudgetLineInput) => Promise<WriteOutcome>;
   readonly setLine: (lineId: string, input: BudgetLineInput) => Promise<WriteOutcome>;
   readonly createTransaction: (input: FinanceTransactionInput) => Promise<WriteOutcome>;
+  /** Like `createTransaction`, but hands back the stored row so a caller can undo by its id. */
+  readonly addTransaction: (input: FinanceTransactionInput) => Promise<FinanceTransaction | string>;
   readonly setTransaction: (
     transactionId: string,
     input: FinanceTransactionInput,
@@ -212,6 +215,8 @@ export function useFinance(itemId: string | null): FinanceState {
           'The transaction could not be recorded.',
         ),
       ),
+    addTransaction: (input) =>
+      write((id) => finance.createTransaction(id, input), 'The transaction could not be recorded.'),
     setTransaction: (transactionId, input) =>
       outcome(
         write(
