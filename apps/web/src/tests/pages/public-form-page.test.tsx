@@ -38,7 +38,10 @@ const FORM: PublicForm = {
   fields: [{ blockId: 'answer', type: 'text', options: [] }],
 };
 
-function renderForm(submit: () => Promise<Response>, definition: PublicForm = FORM): void {
+function renderForm(
+  submit: () => Promise<Response>,
+  definition: PublicForm = FORM,
+): ReturnType<typeof renderAt> {
   vi.stubGlobal(
     'fetch',
     vi.fn((_url: string | URL, init?: RequestInit) =>
@@ -58,7 +61,7 @@ function renderForm(submit: () => Promise<Response>, definition: PublicForm = FO
       refreshAccessToken: () => Promise.resolve(null),
     },
   });
-  renderAt(
+  return renderAt(
     <ApiClientOverrideProvider client={client}>
       <Routes>
         <Route path="/forms/:token" element={<PublicFormPage />} />
@@ -76,6 +79,7 @@ async function fillAnswer(): Promise<void> {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   setZenMode(false);
 });
 
@@ -145,9 +149,12 @@ describe('public form responses', () => {
     await user.click(screen.getByRole('button', { name: 'Send response' }));
     expect(await screen.findByText('Connection interrupted')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'How was today?' })).toHaveValue('A good day');
-    await user.click(screen.getByRole('button', { name: 'Send response' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { name: 'Response received' })).toBeInTheDocument();
     expect(submit).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('What you sent')).toBeInTheDocument();
+    expect(screen.getByText('A good day')).toBeInTheDocument();
+    expect(localStorage.getItem('nix.public-form.public-token')).toBeNull();
   });
 
   it('sends only once when a respondent taps again while waiting', async () => {
@@ -168,5 +175,37 @@ describe('public form responses', () => {
     });
     pending.finish?.(new Response(null, { status: 204 }));
     expect(await screen.findByRole('heading', { name: 'Response received' })).toBeInTheDocument();
+  });
+
+  it('keeps a draft of typed answers on this device and restores only known fields', async () => {
+    const submit = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    const { unmount } = renderForm(submit);
+    await fillAnswer();
+    const stored = JSON.parse(localStorage.getItem('nix.public-form.public-token') ?? 'null') as {
+      answers: Record<string, unknown>;
+    };
+    expect(stored.answers).toEqual({ answer: 'A good day' });
+    unmount();
+
+    localStorage.setItem(
+      'nix.public-form.public-token',
+      JSON.stringify({ answers: { answer: 'Restored', other: 'x' }, page: 0 }),
+    );
+    renderForm(submit);
+    expect(await screen.findByRole('textbox', { name: 'How was today?' })).toHaveValue('Restored');
+    expect(screen.getByText('We kept your earlier answers on this device.')).toBeInTheDocument();
+  });
+
+  it('lists missing answers with a link that focuses the field', async () => {
+    const submit = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    const user = userEvent.setup();
+    renderForm(submit);
+    await screen.findByRole('textbox', { name: 'How was today?' });
+    await user.click(screen.getByRole('button', { name: 'Send response' }));
+    expect(screen.getByText('1 answer needs your attention')).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'How was today?: This answer is required.' }),
+    );
+    expect(screen.getByRole('textbox', { name: 'How was today?' })).toHaveFocus();
   });
 });
