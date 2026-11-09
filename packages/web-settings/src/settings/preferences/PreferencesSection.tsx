@@ -5,6 +5,7 @@ import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-prefe
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
 import { PreferenceToggle } from '../shared/preference-toggle';
+import { ScopeNote } from '../shared/saved-mark';
 import { SettingsSection } from '../shared/settings-section';
 
 export function PreferencesSection(): ReactElement {
@@ -18,7 +19,14 @@ export function PreferencesSection(): ReactElement {
 
   return (
     <>
-      <SettingsSection title="Appearance">
+      <SettingsSection
+        title="Appearance"
+        scope={
+          <ScopeNote>
+            Switches save as you flip them to your account, so every device follows.
+          </ScopeNote>
+        }
+      >
         <PreferenceToggle
           label="Show icon strip"
           checked={iconStrip}
@@ -35,7 +43,10 @@ export function PreferencesSection(): ReactElement {
         />
       </SettingsSection>
       {sites ? (
-        <SettingsSection title="General">
+        <SettingsSection
+          title="General"
+          scope={<ScopeNote>Saved to your account, all devices</ScopeNote>}
+        >
           <PreferenceToggle
             label="Show publishing on pages"
             checked={publishing}

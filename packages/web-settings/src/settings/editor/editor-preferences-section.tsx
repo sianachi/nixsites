@@ -2,11 +2,12 @@ import { useGhostTextPreference } from '@nix/web-editor/editor/ghost-text-prefer
 import { useMentionPreference } from '@nix/web-editor/editor/mention-preference';
 import { useMobileToolbarPreference } from '@nix/web-editor/editor/mobile-toolbar-preference';
 import { usePageGuidePreference } from '@nix/web-editor/editor/page-guide-preference';
-import { Button, Field, Select, Text } from '@nix/ui';
+import { Button, Field, Select, Text, useUndo } from '@nix/ui';
 import { useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { PreferenceToggle } from '../shared/preference-toggle';
+import { ScopeNote, useSavedMark } from '../shared/saved-mark';
 import { SettingsSection } from '../shared/settings-section';
 import {
   KeyboardModeSchema,
@@ -20,6 +21,8 @@ import {
   useViewSuggestionPreference,
 } from '@nix/web-foundation/lib/suggestion-preferences';
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
+
+const modeName = { standard: 'Standard', vim: 'Vim basics', emacs: 'Emacs basics' } as const;
 
 const modeHint = {
   standard: 'The editor and platform shortcuts shown throughout Nix',
@@ -58,17 +61,35 @@ export function EditorPreferencesSection(): ReactElement {
   const persistence = useKeyboardModeStore((state) => state.persistence);
   const keyboardModeSelected = useKeyboardModeStore((state) => state.keyboardModeSelected);
 
+  const undo = useUndo();
+  const modeSaved = useSavedMark();
+
   function onModeChange(event: ChangeEvent<HTMLSelectElement>): void {
     const parsed = KeyboardModeSchema.safeParse(event.currentTarget.value);
     if (!parsed.success) {
       console.warn('Ignoring an unrecognised editor keyboard mode selection.');
       return;
     }
+    const previous = mode;
     keyboardModeSelected(parsed.data);
+    modeSaved.show();
+    undo.push(`Keyboard mode set to ${modeName[parsed.data]}`, () => {
+      keyboardModeSelected(previous);
+      modeSaved.show();
+    });
   }
 
   return (
-    <SettingsSection title="Editor" summary="How writing in a note behaves for you">
+    <SettingsSection
+      title="Editor"
+      summary="How writing in a note behaves for you"
+      scope={
+        <ScopeNote>
+          Switches save as you flip them to your account, so every device follows. Marked rows stay
+          on this device.
+        </ScopeNote>
+      }
+    >
       <Text
         variant="note"
         role="status"
@@ -86,15 +107,18 @@ export function EditorPreferencesSection(): ReactElement {
       {/* Vim and Emacs are desktop-only; a phone or tablet always edits as standard. */}
       {desktop ? (
         <>
-          <Field label="Keyboard mode" hint={modeHint[mode]} className="max-w-lg">
-            {(control) => (
-              <Select {...control} value={mode} onChange={onModeChange}>
-                <option value="standard">Standard</option>
-                <option value="vim">Vim basics</option>
-                <option value="emacs">Emacs basics</option>
-              </Select>
-            )}
-          </Field>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Keyboard mode" hint={modeHint[mode]} className="max-w-lg">
+              {(control) => (
+                <Select {...control} value={mode} onChange={onModeChange}>
+                  <option value="standard">Standard</option>
+                  <option value="vim">Vim basics</option>
+                  <option value="emacs">Emacs basics</option>
+                </Select>
+              )}
+            </Field>
+            {modeSaved.mark}
+          </div>
           {mode === 'standard' ? null : <More about="keyboard mode">{modeGuidance[mode]}</More>}
         </>
       ) : null}

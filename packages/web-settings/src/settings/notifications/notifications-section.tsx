@@ -1,6 +1,6 @@
 import { type PreferencesInput, type PrincipalPreferencesResponse } from '@nix/api-client';
-import { Button, Checkbox, Field, Input, Text, cn } from '@nix/ui';
-import { useEffect, useState, type ReactElement } from 'react';
+import { Button, Checkbox, Field, Input, Text, cn, useUndo } from '@nix/ui';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import {
@@ -10,7 +10,9 @@ import {
   pushSupported,
   type PushUnavailableReason,
 } from '@nix/web-platform/pwa/push-subscription';
+import { ScopeNote } from '../shared/saved-mark';
 import { SettingsSection } from '../shared/settings-section';
+import { SaveBar, revertChanged, useLeaveGuard } from '../shared/unsaved';
 import { preferencesInputFrom } from '../shared/preference-defaults';
 import { useMutedContainerTitles } from './use-muted-container-titles';
 import { useNotificationPreferences } from './use-notification-preferences';
@@ -18,7 +20,16 @@ import { useNotificationPreferences } from './use-notification-preferences';
 export function NotificationsSection(): ReactElement {
   const state = useNotificationPreferences();
   return (
-    <SettingsSection title="Notifications" summary="Reminders, quiet hours and push alerts">
+    <SettingsSection
+      title="Notifications"
+      summary="Reminders, quiet hours and push alerts"
+      scope={
+        <ScopeNote>
+          Saved to your account, all devices. Press Save to apply the reminder settings; push is per
+          device.
+        </ScopeNote>
+      }
+    >
       {state.loading ? <Text role="status">Loading your notification settings…</Text> : null}
       {state.error !== null ? (
         <Text role="alert" variant="note">
@@ -37,6 +48,15 @@ export function NotificationsSection(): ReactElement {
   );
 }
 
+/** The zone's current time, or null when the name is not a real time zone. */
+function timeInZone(timeZone: string, now: Date): string | null {
+  try {
+    return new Intl.DateTimeFormat(undefined, { timeZone, timeStyle: 'short' }).format(now);
+  } catch {
+    return null;
+  }
+}
+
 interface FormProps {
   readonly initial: PrincipalPreferencesResponse;
   readonly saving: boolean;
@@ -50,6 +70,19 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(
     initial.quietStart !== null || initial.quietEnd !== null,
   );
+  const undo = useUndo();
+  // Undo runs later, so it reads the newest saved document and save function from these.
+  const latest = useRef({ initial, onSave });
+  useEffect(() => {
+    latest.current = { initial, onSave };
+  });
+  const effective: PreferencesInput = quietHoursEnabled
+    ? draft
+    : { ...draft, quietStart: null, quietEnd: null };
+  const dirty = JSON.stringify(effective) !== JSON.stringify(preferencesInputFrom(initial));
+  useLeaveGuard(dirty);
+  const now = new Date();
+  const zoneTime = timeInZone(draft.timeZone, now);
 
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
@@ -73,14 +106,24 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
     setMessage(null);
   }
 
-  function removeMutedContainer(itemId: string): void {
+  function removeMutedContainer(itemId: string, title: string): void {
+    const index = draft.mutedContainerIds.indexOf(itemId);
     const next = {
       ...draft,
       mutedContainerIds: draft.mutedContainerIds.filter((id) => id !== itemId),
     };
     change(next);
     void onSave(next).then((ok) => {
-      if (ok) setMessage('Notification settings saved.');
+      if (!ok) return;
+      setMessage(`“${title}” unmuted, saved to your account.`);
+      undo.push(`Unmuted “${title}”`, async () => {
+        const current = preferencesInputFrom(latest.current.initial);
+        if (current.mutedContainerIds.includes(itemId)) return;
+        const ids = [...current.mutedContainerIds];
+        ids.splice(Math.min(index, ids.length), 0, itemId);
+        const ok = await latest.current.onSave({ ...current, mutedContainerIds: ids });
+        if (ok) setDraft((d) => ({ ...d, mutedContainerIds: ids }));
+      });
     });
   }
 
@@ -89,21 +132,40 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
       className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        const toSave: PreferencesInput = quietHoursEnabled
-          ? draft
-          : { ...draft, quietStart: null, quietEnd: null };
+        if (!dirty || zoneTime === null) return;
+        const before = preferencesInputFrom(initial);
+        const toSave = effective;
         void onSave(toSave).then((ok) => {
-          if (ok) {
-            setDraft(toSave);
-            setMessage('Notification settings saved.');
-          }
+          if (!ok) return;
+          setDraft(toSave);
+          setMessage('Notification settings saved to your account.');
+          undo.push('Saved notification settings', async () => {
+            const reverted = revertChanged(
+              before,
+              toSave,
+              preferencesInputFrom(latest.current.initial),
+            );
+            if (await latest.current.onSave(reverted)) {
+              setDraft(reverted);
+              setQuietHoursEnabled(reverted.quietStart !== null || reverted.quietEnd !== null);
+            }
+          });
         });
       }}
     >
       <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
         <legend className="sr-only">Reminders and quiet hours</legend>
 
-        <Field label="Time zone" hint="Times reminders and quiet hours" className="max-w-sm">
+        <Field
+          label="Time zone"
+          {...(zoneTime === null
+            ? {}
+            : { hint: `Times reminders and quiet hours. It is ${zoneTime} there now.` })}
+          error={
+            zoneTime === null ? 'Not a time zone Nix knows. Try a name like Europe/London.' : null
+          }
+          className="max-w-sm"
+        >
           {(control) => (
             <Input
               {...control}
@@ -201,7 +263,7 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
                     type="button"
                     variant="subtle"
                     onClick={() => {
-                      removeMutedContainer(container.id);
+                      removeMutedContainer(container.id, container.title ?? 'Unknown item');
                     }}
                   >
                     Remove
@@ -212,16 +274,22 @@ function NotificationPreferencesForm({ initial, saving, onSave }: FormProps): Re
           )}
         </div>
 
-        <div>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        </div>
-        {message !== null ? (
-          <Text role="status" variant="note">
-            {message}
-          </Text>
-        ) : null}
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          disabled={zoneTime === null}
+          saved={message}
+          onDiscard={() => {
+            const was = { draft, quietHoursEnabled };
+            setDraft(preferencesInputFrom(initial));
+            setQuietHoursEnabled(initial.quietStart !== null || initial.quietEnd !== null);
+            setMessage('Unsaved changes discarded.');
+            undo.push('Discarded unsaved notification changes', () => {
+              setDraft(was.draft);
+              setQuietHoursEnabled(was.quietHoursEnabled);
+            });
+          }}
+        />
       </fieldset>
     </form>
   );
@@ -245,6 +313,7 @@ function PushDeviceSettings(): ReactElement {
   const client = useApiClient();
   const [state, setState] = useState<PushState>({ status: 'checking' });
   const [busy, setBusy] = useState(false);
+  const undo = useUndo();
 
   useEffect(() => {
     let cancelled = false;
@@ -268,18 +337,22 @@ function PushDeviceSettings(): ReactElement {
     };
   }, []);
 
-  async function enable(): Promise<void> {
+  async function enable(record = true): Promise<void> {
     setBusy(true);
     const result = await enablePushOnThisDevice(client);
     setState(result.ok ? { status: 'enabled' } : { status: result.reason ?? 'error' });
     setBusy(false);
+    if (result.ok && record) {
+      undo.push('Turned on push for this device', () => disable(false));
+    }
   }
 
-  async function disable(): Promise<void> {
+  async function disable(record = true): Promise<void> {
     setBusy(true);
     const ok = await disablePushOnThisDevice(client);
     setState({ status: ok ? 'disabled' : 'error' });
     setBusy(false);
+    if (ok && record) undo.push('Turned off push for this device', () => enable(false));
   }
 
   return (
@@ -291,6 +364,7 @@ function PushDeviceSettings(): ReactElement {
       <Text variant="h5" as="h3">
         Push notifications on this device
       </Text>
+      <ScopeNote>This device only</ScopeNote>
       {state.status === 'checking' ? <Text variant="note">Checking…</Text> : null}
       {state.status === 'enabled' ? (
         <>

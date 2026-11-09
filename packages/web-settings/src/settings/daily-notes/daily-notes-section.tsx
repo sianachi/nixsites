@@ -1,13 +1,15 @@
 import { type DailyNoteSettings } from '@nix/api-client';
-import { Button, Field, Select, Text, Textarea, cn } from '@nix/ui';
-import { useState, type ReactElement } from 'react';
+import { Field, Select, Text, Textarea, cn, useUndo } from '@nix/ui';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import {
   readOpenDailyOnLaunch,
   writeOpenDailyOnLaunch,
 } from '@nix/web-foundation/lib/daily-note-device-preferences';
 import { PreferenceToggle } from '../shared/preference-toggle';
+import { ScopeNote } from '../shared/saved-mark';
 import { SettingsSection } from '../shared/settings-section';
+import { SaveBar, revertChanged, useLeaveGuard } from '../shared/unsaved';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useDailyNoteSettings } from './use-daily-note-settings';
 
@@ -43,6 +45,13 @@ export function DailyNotesSection(): ReactElement {
     <SettingsSection
       title="Daily notes"
       summary="One note per day, created the first time you open it"
+      scope={
+        <ScopeNote>
+          {canManage
+            ? 'The settings below are shared with everyone in this workspace; press Save to apply them. Your own preference at the bottom saves as you flip it.'
+            : 'The settings below are shared with everyone in this workspace and only an owner or administrator can change them.'}
+        </ScopeNote>
+      }
     >
       {state.loading ? <Text role="status">Loading daily note settings…</Text> : null}
       {state.error !== null ? (
@@ -77,6 +86,12 @@ function DailyNotesForm({ initial, saving, canManage, onSave }: FormProps): Reac
   const [draft, setDraft] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const examples = titleExamples(new Date());
+  const undo = useUndo();
+  // Undo runs later, so it reads the newest saved document and save function from this.
+  const latest = useRef({ initial, onSave });
+  useEffect(() => {
+    latest.current = { initial, onSave };
+  });
 
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
@@ -90,7 +105,8 @@ function DailyNotesForm({ initial, saving, canManage, onSave }: FormProps): Reac
     }
   }
 
-  const unchanged = JSON.stringify(draft) === JSON.stringify(initial);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  useLeaveGuard(dirty);
 
   function change(next: DailyNoteSettings): void {
     setDraft(next);
@@ -102,8 +118,18 @@ function DailyNotesForm({ initial, saving, canManage, onSave }: FormProps): Reac
       className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        void onSave(draft).then((ok) => {
-          if (ok) setMessage('Daily note settings saved.');
+        if (!dirty) return;
+        const before = initial;
+        const toSave = draft;
+        void onSave(toSave).then((ok) => {
+          if (!ok) return;
+          setMessage(
+            'Daily note settings saved for this workspace. They apply to notes created from now on.',
+          );
+          undo.push('Saved daily note settings', async () => {
+            const reverted = revertChanged(before, toSave, latest.current.initial);
+            if (await latest.current.onSave(reverted)) setDraft(reverted);
+          });
         });
       }}
     >
@@ -123,6 +149,7 @@ function DailyNotesForm({ initial, saving, canManage, onSave }: FormProps): Reac
           }}
           description="Everyone who can edit a shared workspace shares the day’s note"
           unsaved={null}
+          draft
           more="Shared workspaces start with daily notes off until someone switches them on; a personal workspace starts with them on."
         />
 
@@ -213,23 +240,26 @@ function DailyNotesForm({ initial, saving, canManage, onSave }: FormProps): Reac
           }}
           description="Each note appears on its date in the calendar"
           unsaved={null}
+          draft
         />
 
-        <div className="flex flex-col gap-1">
-          <div>
-            <Button type="submit" disabled={saving || unchanged || !canManage}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-          <Text variant="note" tone="muted">
-            Applies to notes created after you save; existing notes keep their place and title
-          </Text>
-        </div>
-        {message !== null ? (
-          <Text role="status" variant="note">
-            {message}
-          </Text>
-        ) : null}
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          disabled={!canManage}
+          saved={message}
+          onDiscard={() => {
+            const was = draft;
+            setDraft(initial);
+            setMessage('Unsaved changes discarded.');
+            undo.push('Discarded unsaved daily note changes', () => {
+              setDraft(was);
+            });
+          }}
+        />
+        <Text variant="note" tone="muted">
+          Applies to notes created after you save; existing notes keep their place and title
+        </Text>
       </fieldset>
     </form>
   );

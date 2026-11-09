@@ -57,7 +57,12 @@ describe('the notifications settings tab', () => {
     expect(writes.preferencesWrites[0]?.preferences).toMatchObject({
       timeZone: 'America/Chicago',
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('Notification settings saved.');
+    expect(await screen.findByText('Notification settings saved to your account.')).toBeVisible();
+    // Undo reverts only the fields the save changed, as a second write.
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(writes.preferencesWrites).toHaveLength(2);
+    });
   });
 
   it('reloads and tells the user about a revision conflict', async () => {
@@ -65,7 +70,9 @@ describe('the notifications settings tab', () => {
     renderAt(<App />, '/settings?tab=notifications');
 
     const user = userEvent.setup();
-    await screen.findByLabelText('Time zone');
+    const zone = await screen.findByLabelText('Time zone');
+    await user.clear(zone);
+    await user.type(zone, 'America/Chicago');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/changed on another device/i);
@@ -98,6 +105,14 @@ describe('the notifications settings tab', () => {
     });
     expect(writes.preferencesWrites[0]?.preferences).toMatchObject({ mutedContainerIds: [] });
     expect(within(mutedSection).queryByText('Archive')).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(writes.preferencesWrites).toHaveLength(2);
+    });
+    expect(writes.preferencesWrites[1]?.preferences).toMatchObject({
+      mutedContainerIds: [mutedItem.id],
+    });
   });
 
   it('shows push as unsupported in this browser without breaking the rest of the tab', async () => {
@@ -108,5 +123,44 @@ describe('the notifications settings tab', () => {
 
     expect(await screen.findByText(/does not support push notifications/i)).toBeVisible();
     expect(screen.getByLabelText('Time zone')).toBeVisible();
+  });
+
+  it('shows the local time of a valid zone and refuses to save a name that is not a zone', async () => {
+    const writes = stubCoreApi({ preferences: STUB_DEFAULT_PREFERENCES });
+    renderAt(<App />, '/settings?tab=notifications');
+
+    const user = userEvent.setup();
+    const zoneInput = await screen.findByLabelText('Time zone');
+    // A zone other than the one on screen, so the edit counts as a change whatever this machine's zone is.
+    const other =
+      (zoneInput as HTMLInputElement).value === 'Europe/London' ? 'Asia/Tokyo' : 'Europe/London';
+    await user.clear(zoneInput);
+    await user.type(zoneInput, 'Mars/Nowhere');
+
+    expect(screen.getByText(/Not a time zone Nix knows/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+    await user.clear(zoneInput);
+    await user.type(zoneInput, other);
+    expect(screen.getByText(/It is .+ there now/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(writes.preferencesWrites).toHaveLength(0);
+  });
+
+  it('marks unsaved edits, and Discard puts the saved values back', async () => {
+    stubCoreApi({ preferences: STUB_DEFAULT_PREFERENCES });
+    renderAt(<App />, '/settings?tab=notifications');
+
+    const user = userEvent.setup();
+    expect(await screen.findByText('No unsaved changes')).toBeVisible();
+    const saved = await screen.findByLabelText<HTMLInputElement>('Time zone');
+    const before = saved.value;
+    await user.clear(saved);
+    await user.type(saved, 'Asia/Tokyo');
+    expect(screen.getByText(/Unsaved changes, not applied yet/)).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(screen.getByLabelText('Time zone')).toHaveValue(before);
+    expect(screen.getByText('Unsaved changes discarded.')).toBeVisible();
   });
 });
