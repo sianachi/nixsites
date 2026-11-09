@@ -1,10 +1,13 @@
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
-import { Field, Select, Icon, Text, cn } from '@nix/ui';
+import { Button, Field, Menu, Select, Icon, Text, cn, useUndo } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
-import { ShownItems } from '@nix/web-collections/core/item-selection-context';
+import {
+  ShownItems,
+  useOptionalItemSelection,
+} from '@nix/web-collections/core/item-selection-context';
 import {
   UNSET_LABEL,
   UNSET_VALUE,
@@ -34,10 +37,12 @@ import {
 /**
  * The board: a container's children as cards, in columns, grouped by one select property.
  *
- * **Where a card sits *is* its property value.** The board holds no position of its own - no
- * per-view ordering, no "which column is this card in" stored anywhere. Dropping a card into
- * "Done" writes `status = "Done"` and nothing else, so the same fact is true in the list view, in
- * search, and in whatever reads the property next. A board that kept its own copy of the placement
+ * **Where a card sits *is* its property value.** The board holds no column of its own - no
+ * "which column is this card in" stored anywhere. Dropping a card into "Done" writes
+ * `status = "Done"`, so the same fact is true in the list view, in search, and in whatever reads
+ * the property next. The order *within* a column is the item's sibling order (`placeAfter`), the
+ * order every view already falls back to, so there is still no per-view ordering to disagree.
+ * It applies only while the view is not sorted by a property. A board that kept its own copy of the placement
  * would have two answers to one question, and the day they disagreed the person would be right to
  * trust neither.
  *
@@ -69,6 +74,12 @@ export function BoardView(props: BoardViewProps): ReactNode {
   const narrow = useLayoutKind() === 'phone';
   const [mobileColumn, setMobileColumn] = useState<string | null>(null);
   const [dragged, setDragged] = useState<string | null>(null);
+  const selection = useOptionalItemSelection();
+  const undo = useUndo();
+  const latest = useRef(container);
+  useEffect(() => {
+    latest.current = container;
+  });
 
   // The banner below is specifically about a column move, so its sentence has to be true only of
   // one: `container.writeError` is set by every failed `setProperties` call, including a field
@@ -173,30 +184,114 @@ export function BoardView(props: BoardViewProps): ReactNode {
   const placed = new Set<string | null>([...chosen, null]);
   const hidden = [...buckets].filter(([value]) => !placed.has(value)).flatMap(([, items]) => items);
 
-  function move(item: Item, value: string | null): void {
-    if (readSelectValue(item, key) === value) {
+  // Grabbing a selected card carries the whole selection; any other card goes alone.
+  const draggedIds: ReadonlySet<string> =
+    dragged !== null &&
+    selection !== null &&
+    selection.selected.has(dragged) &&
+    selection.selected.size > 1
+      ? selection.selected
+      : new Set(dragged === null ? [] : [dragged]);
+  const reorderable = (viewState.sortBy ?? view.sortBy) === null;
+
+  /**
+   * Moves cards to a column and, when `afterId` is given (null: first), to that place in it.
+   * The column is the grouping write; the place is the sibling order. One undo entry reverses
+   * both from the current state.
+   */
+  async function place(
+    moving: readonly Item[],
+    value: string | null,
+    afterId?: string | null,
+  ): Promise<void> {
+    const all = container.children;
+    const was = all.flatMap((item, index) =>
+      moving.some((m) => m.id === item.id)
+        ? [{ item, value: readSelectValue(item, key), after: all[index - 1]?.id ?? null }]
+        : [],
+    );
+    const changed = was.filter((w) => w.value !== value);
+    const ordered = afterId !== undefined && reorderable;
+    if (changed.length === 0 && !ordered) {
       return;
     }
 
     setMoveError(null);
+    let failure: string | null = null;
+    const only = changed[0];
+    if (changed.length === 1 && only !== undefined) {
+      failure = await container.setProperties(only.item.id, { [key]: value });
+    } else if (changed.length > 1) {
+      const outcome = await container.setPropertiesMany(
+        changed.map((w) => ({
+          itemId: w.item.id,
+          label: w.item.title || 'Untitled',
+          properties: { [key]: value },
+        })),
+      );
+      const refused = outcome.refused[0];
+      failure = refused === undefined ? null : `${refused.label}: ${refused.reason}`;
+    }
+    let anchor = afterId ?? null;
+    for (const w of ordered && failure === null ? was : []) {
+      failure = await container.placeAfter(w.item.id, anchor);
+      if (failure !== null) break;
+      anchor = w.item.id;
+    }
+    setMoveError(failure);
+    if (failure !== null) return;
 
-    // Null clears the property. The board writes the grouping property and only the grouping
-    // property: there is nothing view-local to keep in step. The gesture that fired this is a drag
-    // or a select's onChange - nobody here awaits it - so the refusal is caught and kept local
-    // rather than left to reject into the void.
-    void container.setProperties(item.id, { [key]: value }).then((failure) => {
-      setMoveError(failure);
+    const what = was.length === 1 ? titleOf(was[0]?.item) : `${String(was.length)} cards`;
+    const column = columns.find((c) => c.value === value)?.label ?? UNSET_LABEL;
+    undo.push(changed.length > 0 ? `Moved ${what} to ${column}` : `Reordered ${what}`, async () => {
+      const current = latest.current;
+      await current.setPropertiesMany(
+        changed.map((w) => ({
+          itemId: w.item.id,
+          label: w.item.title || 'Untitled',
+          properties: { [key]: w.value },
+        })),
+      );
+      for (const w of ordered ? was : []) await current.placeAfter(w.item.id, w.after);
     });
+  }
+
+  function move(item: Item, value: string | null): void {
+    void place([item], value);
+  }
+
+  function dropCards(value: string | null, afterId: string | null): void {
+    void place(
+      container.children.filter((child) => draggedIds.has(child.id)),
+      value,
+      afterId,
+    );
+  }
+
+  function reorder(item: Item, direction: 'up' | 'down'): void {
+    const cards = columns.find((c) => c.items.some((i) => i.id === item.id))?.items ?? [];
+    const at = cards.findIndex((i) => i.id === item.id);
+    const afterId = direction === 'up' ? (cards[at - 2]?.id ?? null) : (cards[at + 1]?.id ?? null);
+    if (at >= 0) void place([item], readSelectValue(item, key), afterId);
   }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-3">
       <ShownItems ids={visibleColumns.flatMap((column) => column.items.map((card) => card.id))} />
+      <MoveSelectedTray
+        columns={columns}
+        onMove={(ids, value) => {
+          void place(
+            container.children.filter((child) => ids.has(child.id)),
+            value,
+          );
+        }}
+      />
       {moveError === null ? null : (
         <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
           <Icon icon={CircleAlert} size="sm" className="text-accent-text" />
           <Text variant="bodySmall" as="span" tone="accent">
-            {moveError} The card has returned to the column it was in; nothing was changed.
+            {moveError} Anything refused has returned to where it was.
           </Text>
         </div>
       )}
@@ -249,6 +344,10 @@ export function BoardView(props: BoardViewProps): ReactNode {
             cardProperties={view.columns.filter((candidate) => candidate !== key)}
             schema={container.schema?.properties ?? []}
             dragged={dragged}
+            draggedIds={draggedIds}
+            reorderable={reorderable}
+            onReorder={reorder}
+            onDropCards={dropCards}
             setDragged={setDragged}
             onMove={move}
             onWrite={(itemId, propertyKey, value) =>
@@ -267,4 +366,54 @@ export function BoardView(props: BoardViewProps): ReactNode {
       </div>
     </div>
   );
+}
+
+/**
+ * Adds "Move to column" to the selection tray: send every selected card to one column at once.
+ * Renders nothing itself. The tray node is rebuilt only when the selection's size or the columns
+ * change, so a fresh `columns` array each render does not loop through the parent's state.
+ */
+function MoveSelectedTray(props: {
+  readonly columns: readonly BoardColumn[];
+  readonly onMove: (ids: ReadonlySet<string>, value: string | null) => void;
+}): ReactNode {
+  const selection = useOptionalItemSelection();
+  const setTray = selection?.setTrayActions;
+  const size = selection?.selected.size ?? 0;
+  const latest = useRef({ ...props, selected: selection?.selected });
+  useEffect(() => {
+    latest.current = { ...props, selected: selection?.selected };
+  });
+  const columnsKey = JSON.stringify(props.columns.map((c) => [c.value, c.label]));
+
+  useEffect(() => {
+    if (setTray === undefined || size === 0) return;
+    setTray(
+      <Menu
+        label="Move selected cards to column"
+        items={latest.current.columns.map((column) => ({
+          kind: 'action' as const,
+          label: column.label,
+          onSelect: () => {
+            const { selected, onMove } = latest.current;
+            if (selected !== undefined) onMove(selected, column.value);
+          },
+        }))}
+      >
+        {(trigger) => (
+          <Button {...trigger} variant="secondary">
+            Move to column
+          </Button>
+        )}
+      </Menu>,
+    );
+    return () => {
+      setTray(null);
+    };
+  }, [setTray, size, columnsKey]);
+  return null;
+}
+
+function titleOf(item: Item | undefined): string {
+  return item?.title === undefined || item.title === '' ? 'Untitled' : item.title;
 }

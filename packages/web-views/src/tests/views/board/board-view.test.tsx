@@ -75,6 +75,8 @@ function boardWith(options: {
   readonly refuse?: string;
   readonly onOpen?: (itemId: string) => void;
   readonly onWrite?: (itemId: string, properties: Record<string, unknown>) => void;
+  readonly onPlace?: (itemId: string, afterId: string | null) => void;
+  readonly onMany?: (writes: readonly { itemId: string }[]) => void;
 }): ReactElement {
   function Harness(): ReactNode {
     const [children, setChildren] = useState<readonly Item[]>(options.items);
@@ -84,6 +86,14 @@ function boardWith(options: {
       schema: options.schema === undefined ? schemaOf(STATUS, OWNER) : options.schema,
       children,
       writeError,
+      placeAfter: (itemId, afterId) => {
+        options.onPlace?.(itemId, afterId);
+        return Promise.resolve(null);
+      },
+      setPropertiesMany: (writes) => {
+        options.onMany?.(writes);
+        return Promise.resolve({ saved: writes.length, refused: [] });
+      },
       setProperties: (itemId, properties) => {
         options.onWrite?.(itemId, properties);
         setWriteError(null);
@@ -328,6 +338,105 @@ describe('the board view', () => {
     fireEvent.drop(done);
 
     expect(onWrite).toHaveBeenCalledWith('i1', { status: 'Done' });
+  });
+
+  it('reorders a card within its column from the menu and persists the sibling order', async () => {
+    const user = userEvent.setup();
+    const onPlace = vi.fn();
+    const a = itemOf({ id: 'a', title: 'Alpha', properties: { status: 'Doing' }, seq: 1000 });
+    const b = itemOf({ id: 'b', title: 'Beta', properties: { status: 'Doing' }, seq: 2000 });
+    const c = itemOf({ id: 'c', title: 'Gamma', properties: { status: 'Doing' }, seq: 3000 });
+
+    renderAt(boardWith({ items: [a, b, c], view: viewOf({ groupOrder: ['Doing'] }), onPlace }));
+
+    await user.click(screen.getByRole('button', { name: 'Move Gamma to column' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Move up' }));
+    // Up from third: after the first card.
+    expect(onPlace).toHaveBeenCalledWith('c', 'a');
+  });
+
+  it('drops a card between two others in another column', async () => {
+    const onPlace = vi.fn();
+    const onWrite = vi.fn();
+    const a = itemOf({ id: 'a', title: 'Alpha', properties: { status: 'Done' }, seq: 1000 });
+    const b = itemOf({ id: 'b', title: 'Beta', properties: { status: 'Done' }, seq: 2000 });
+
+    renderAt(
+      boardWith({
+        items: [DOING, a, b],
+        view: viewOf({ groupOrder: ['Doing', 'Done'] }),
+        onPlace,
+        onWrite,
+      }),
+    );
+
+    const card = screen
+      .getByRole('button', { name: /^search ranking$/i })
+      .closest('[draggable="true"]');
+    if (card === null) throw new Error('The card is not draggable.');
+    fireEvent.dragStart(card, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    // jsdom has no layout and gives drag events no pointer position, so a drop reads as landing on
+    // the upper half of the card it is over: on Beta, that is between Alpha and Beta.
+    const beta = screen.getByRole('button', { name: /^beta$/i });
+    fireEvent.dragOver(beta);
+    fireEvent.drop(beta);
+
+    expect(onWrite).toHaveBeenCalledWith('i1', { status: 'Done' });
+    // The sibling order is written after the column write settles.
+    await waitFor(() => {
+      expect(onPlace).toHaveBeenCalledWith('i1', 'a');
+    });
+  });
+
+  it('moves every selected card to a column from the selection tray', async () => {
+    const user = userEvent.setup();
+    const onMany = vi.fn();
+    let tray: ReactNode = null;
+    const spare = itemOf({ id: 'i4', title: 'Spare', properties: { status: 'Doing' }, seq: 4000 });
+
+    // Built once: calling `boardWith` inside `Tray` would mint a new `Harness` type per render and
+    // remount the board every time the tray is set, which sets the tray again, forever.
+    const board = boardWith({
+      items: [DOING, spare],
+      view: viewOf({ groupOrder: ['Doing', 'Done'] }),
+      onMany,
+    });
+
+    function Tray(): ReactNode {
+      const [node, setNode] = useState<ReactNode>(null);
+      tray = node;
+      return (
+        <ItemSelectionContext.Provider
+          value={{
+            selected: new Set(['i1', 'i4']),
+            toggle: vi.fn(),
+            capabilities: {
+              select: true,
+              move: true,
+              rename: true,
+              delete: true,
+              drag: 'group-value',
+            },
+            shown: ['i1', 'i4'],
+            show: vi.fn(),
+            setTrayActions: setNode,
+          }}
+        >
+          {board}
+          {node}
+        </ItemSelectionContext.Provider>
+      );
+    }
+    renderAt(<Tray />);
+    expect(tray).not.toBeNull();
+
+    await user.click(await screen.findByRole('button', { name: 'Move to column' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Done' }));
+
+    expect(onMany).toHaveBeenCalledWith([
+      expect.objectContaining({ itemId: 'i1' }),
+      expect.objectContaining({ itemId: 'i4' }),
+    ]);
   });
 
   it('opens the item when its card is clicked', async () => {

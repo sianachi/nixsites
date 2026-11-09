@@ -210,6 +210,7 @@ const container: ContainerData = {
   create: saved,
   setProperties: saved,
   setPropertiesMany: () => Promise.resolve({ saved: 0, refused: [] }),
+  placeAfter: () => Promise.resolve(null),
   setSchema: saved,
   setViews: saved,
   appendViewSetup: saved,

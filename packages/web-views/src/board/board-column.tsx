@@ -19,6 +19,9 @@ interface BoardColumnPanelProps extends Pick<
   | 'cardProperties'
   | 'schema'
   | 'dragged'
+  | 'draggedIds'
+  | 'reorderable'
+  | 'onReorder'
   | 'setDragged'
   | 'onMove'
   | 'onWrite'
@@ -28,6 +31,8 @@ interface BoardColumnPanelProps extends Pick<
   | 'onDismissStale'
 > {
   readonly compact: boolean;
+  /** A drop: the dragged cards go to this column's value, after the given card (null: first). */
+  readonly onDropCards: (value: string | null, afterId: string | null) => void;
   readonly column: BoardColumn;
   readonly onCreate: (
     title: string,
@@ -48,6 +53,10 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
     cardProperties,
     schema,
     dragged,
+    draggedIds,
+    reorderable,
+    onReorder,
+    onDropCards,
     setDragged,
     onMove,
     onWrite,
@@ -61,26 +70,32 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
   } = props;
 
   const [dropTarget, setDropTarget] = useState(false);
+  const [insertAfter, setInsertAfter] = useState<string | null | undefined>(undefined);
+
+  // Where a drop at the pointer would land: after the last card above the pointer that is not
+  // itself being dragged (null: first). Over empty space it is the end of the column.
+  function insertionAt(event: DragEvent<HTMLElement>): string | null {
+    const card = (event.target as HTMLElement).closest<HTMLElement>('[data-board-card]');
+    const at =
+      card === null
+        ? column.items.length
+        : column.items.findIndex((c) => c.id === card.dataset.boardCard);
+    const rect = card?.getBoundingClientRect();
+    const below = rect === undefined || event.clientY >= rect.top + rect.height / 2;
+    const above = column.items.slice(0, at + (below ? 1 : 0)).filter((c) => !draggedIds.has(c.id));
+    return above.at(-1)?.id ?? null;
+  }
 
   function onDrop(event: DragEvent<HTMLElement>): void {
     event.preventDefault();
+    const after = insertionAt(event);
     setDropTarget(false);
+    setInsertAfter(undefined);
     setDragged(null);
 
-    if (dragged === null) {
-      return;
-    }
-
-    // The dragged id is read from state rather than from `dataTransfer`, which the drag start
-    // fills only so Firefox will begin the gesture at all. State is the same fact and is available
-    // during dragover, where the payload deliberately is not.
-    const item = columns
-      .flatMap((candidate) => candidate.items)
-      .find((candidate) => candidate.id === dragged);
-
-    if (item !== undefined) {
+    if (dragged !== null) {
       tap('medium');
-      onMove(item, column.value);
+      onDropCards(column.value, after);
     }
   }
 
@@ -92,9 +107,12 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
         // the browser refuses the drop and the gesture silently does nothing.
         event.preventDefault();
         setDropTarget(true);
+        // Only a column that shows sibling order has a position to indicate.
+        if (reorderable) setInsertAfter(insertionAt(event));
       }}
       onDragLeave={() => {
         setDropTarget(false);
+        setInsertAfter(undefined);
       }}
       onDrop={onDrop}
       className={cn(
@@ -132,6 +150,10 @@ export function BoardColumnPanel(props: BoardColumnPanelProps): ReactNode {
           cardProperties={cardProperties}
           schema={schema}
           dragged={dragged}
+          draggedIds={draggedIds}
+          reorderable={reorderable}
+          onReorder={onReorder}
+          insertAfter={dropTarget && dragged !== null ? insertAfter : undefined}
           setDragged={setDragged}
           onMove={onMove}
           onWrite={onWrite}

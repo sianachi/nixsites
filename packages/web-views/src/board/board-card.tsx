@@ -1,5 +1,5 @@
 import { ArrowRightLeft } from 'lucide-react';
-import { Button, ContextMenu, Blueprint, Icon, Menu, Text, cn, focusRing } from '@nix/ui';
+import { Button, ContextMenu, Blueprint, Icon, Menu, Text, cn, focusRing, useFlash } from '@nix/ui';
 import { useRef, type ReactNode } from 'react';
 
 import type { StaleMember } from '@nix/web-foundation/lib/suggest/staleness';
@@ -26,6 +26,13 @@ export interface BoardCardListProps {
   readonly cardProperties: readonly string[];
   readonly schema: readonly PropertyDefinition[];
   readonly dragged: string | null;
+  /** Everything the current drag carries: the card, or the whole selection when it is in it. */
+  readonly draggedIds: ReadonlySet<string>;
+  /** False when the view sorts by a property: sibling order is then not what the column shows. */
+  readonly reorderable: boolean;
+  readonly onReorder: (item: Item, direction: 'up' | 'down') => void;
+  /** Where a drop would land: after this card, or first when null. Undefined: no drag over here. */
+  readonly insertAfter?: string | null | undefined;
   readonly setDragged: (itemId: string | null) => void;
   readonly onMove: (item: Item, value: string | null) => void;
   readonly onWrite: (
@@ -53,7 +60,16 @@ export function boardCard(
       property={props.property}
       cardProperties={props.cardProperties}
       schema={props.schema}
-      dragging={props.dragged === item.id}
+      dragging={props.draggedIds.has(item.id)}
+      reorderable={props.reorderable}
+      onReorder={props.onReorder}
+      marker={
+        props.insertAfter === item.id
+          ? 'after'
+          : props.insertAfter === null && index === 0
+            ? 'before'
+            : undefined
+      }
       setDragged={props.setDragged}
       onMove={props.onMove}
       onWrite={props.onWrite}
@@ -81,7 +97,10 @@ interface BoardCardProps extends Pick<
   | 'onWrite'
   | 'onOpen'
   | 'onDismissStale'
+  | 'onReorder'
 > {
+  readonly reorderable: boolean;
+  readonly marker: 'before' | 'after' | undefined;
   readonly item: Item;
   readonly dragging: boolean;
   readonly position: number;
@@ -113,7 +132,11 @@ function BoardCard(props: BoardCardProps): ReactNode {
     columnLabel,
     stale,
     onDismissStale,
+    reorderable,
+    onReorder,
+    marker,
   } = props;
+  const flash = useFlash(item.updatedAt);
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
   const selection = useOptionalItemSelection();
@@ -149,20 +172,56 @@ function BoardCard(props: BoardCardProps): ReactNode {
       },
     }));
 
+  // Keyboard and touch path for reordering; drag is the pointer path.
+  const orderItems = reorderable
+    ? [
+        ...(position > 1
+          ? [
+              {
+                kind: 'action' as const,
+                label: 'Move up',
+                onSelect: () => {
+                  onReorder(item, 'up');
+                },
+              },
+            ]
+          : []),
+        ...(position < setSize
+          ? [
+              {
+                kind: 'action' as const,
+                label: 'Move down',
+                onSelect: () => {
+                  onReorder(item, 'down');
+                },
+              },
+            ]
+          : []),
+      ]
+    : [];
+  const menuItems = [...moveItems, ...orderItems];
+
   return (
     <ContextMenu
       label={`${item.title || 'Untitled'} actions`}
-      items={() => itemActions(item.id, item.title, moveItems)}
+      items={() => itemActions(item.id, item.title, menuItems)}
     >
       {(contextTarget) => (
         <li
           {...contextTarget}
+          {...flash}
           {...(virtualIndex === undefined ? {} : { role: 'listitem' })}
           aria-posinset={position}
           aria-setsize={setSize}
           data-board-card={item.id}
           data-virtual-index={virtualIndex}
-          className="group min-w-0"
+          className={cn(
+            'group relative min-w-0',
+            marker === 'before' &&
+              'before:absolute before:inset-x-0 before:-top-1.5 before:h-0.5 before:bg-accent',
+            marker === 'after' &&
+              'after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:bg-accent',
+          )}
         >
           <Blueprint
             className={cn(
@@ -206,8 +265,8 @@ function BoardCard(props: BoardCardProps): ReactNode {
                   </Text>
                 </button>
               </div>
-              {moveItems.length === 0 ? null : (
-                <Menu label={`Move ${item.title || 'Untitled'} to column`} items={moveItems}>
+              {menuItems.length === 0 ? null : (
+                <Menu label={`Move ${item.title || 'Untitled'} to column`} items={menuItems}>
                   {(trigger) => (
                     <Button
                       {...trigger}

@@ -131,6 +131,13 @@ export interface ContainerData {
   readonly setPropertiesMany: (writes: readonly PlanWrite[]) => Promise<PlanOutcome>;
 
   /**
+   * Puts one child straight after a sibling (null: first) in the container's own sibling order,
+   * the order every view falls back to. Reordering is the tree move within the same parent, so
+   * nothing new is stored. Optimistic; resolves to the refusal sentence or null.
+   */
+  readonly placeAfter: (itemId: string, afterId: string | null) => Promise<string | null>;
+
+  /**
    * Replaces the schema this container declares.
    *
    * Returns the reason it was refused, or null when it was stored. A caller needs the reason
@@ -202,6 +209,25 @@ export interface ContainerData {
   readonly truncated: boolean;
 
   readonly reload: () => Promise<void>;
+}
+
+/** The children with one moved straight after `afterId` (null: first); its `seq` follows so a sort by it agrees. */
+function reposition(children: readonly Item[], itemId: string, afterId: string | null): Item[] {
+  const rest = children.filter((item) => item.id !== itemId);
+  const moving = children.find((item) => item.id === itemId);
+  if (moving === undefined) return [...children];
+  const at = afterId === null ? -1 : rest.findIndex((item) => item.id === afterId);
+  const anchor = rest[at];
+  // shortcut: the temporary position is the anchor's +1 (siblings sit a thousand apart), the
+  // server's answer replaces it; upgrade if gaps can close up.
+  const seq =
+    anchor === undefined
+      ? rest[0] === undefined
+        ? moving.seq
+        : String(BigInt(rest[0].seq) - 1n)
+      : String(BigInt(anchor.seq) + 1n);
+  rest.splice(at + 1, 0, { ...moving, seq });
+  return rest;
 }
 
 /** One row's worth of a bulk write: the item, and the property changes going to it together. */
@@ -635,6 +661,37 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
     [children, client],
   );
 
+  const placeAfter = useCallback(
+    async (itemId: string, afterId: string | null): Promise<string | null> => {
+      const index = children.findIndex((item) => item.id === itemId);
+      const original = children[index];
+      if (original === undefined) return 'That item is no longer here.';
+      const originalAfter = children[index - 1]?.id ?? null;
+      setChildren((current) => reposition(current, itemId, afterId));
+      try {
+        const moved = ItemSchema.parse(
+          await client.execute(
+            coreItems.moveItem(workspaceId, itemId, { parentId: containerId, afterId }),
+          ),
+        );
+        setChildren((current) =>
+          current.map((item) => (item.id === itemId ? keepComputed(item, moved) : item)),
+        );
+        return null;
+      } catch (reason) {
+        setChildren((current) =>
+          reposition(current, itemId, originalAfter).map((item) =>
+            item.id === itemId ? { ...item, seq: original.seq } : item,
+          ),
+        );
+        return isNixApiError(reason)
+          ? (reason.detail ?? 'That could not be moved.')
+          : 'That could not be sent. Check the connection and try again.';
+      }
+    },
+    [children, client, workspaceId, containerId],
+  );
+
   /**
    * Sends one structure write, then reloads unless asked not to. Resolves to null on success or to
    * the sentence to show: Core's own detail when it refused, `offline` when nothing got through.
@@ -935,6 +992,7 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
     children: computedChildren,
     setProperties,
     setPropertiesMany,
+    placeAfter,
     setSchema,
     setDefaultView,
     setDocumentHidden,

@@ -36,6 +36,7 @@ export function storyContainer(
     create: () => resolved,
     setProperties: () => resolved,
     setPropertiesMany: () => Promise.resolve({ saved: 0, refused: [] }),
+    placeAfter: () => Promise.resolve(null),
     setSchema: () => resolved,
     setViews: () => resolved,
     appendViewSetup: () => resolved,
