@@ -1,5 +1,5 @@
-import { Blueprint, Button, ContextMenu, Icon, Menu, Text, cn, focusRing } from '@nix/ui';
-import { ArrowRightLeft } from 'lucide-react';
+import { Blueprint, Button, ContextMenu, Icon, Menu, Text, cn, focusRing, useFlash } from '@nix/ui';
+import { ArrowRightLeft, GripVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type {
@@ -24,6 +24,10 @@ export interface MatrixCardProps {
   readonly cells: readonly CellChoice[];
   readonly fields: readonly PropertyDefinition[];
   readonly dragging: boolean;
+  /** Draws the card in with a short entrance: it has just landed here. */
+  readonly entering: boolean;
+  /** The card's left rule, the tint of the quadrant it sits in. */
+  readonly tint: string;
   readonly titleRef: (element: HTMLButtonElement | null) => void;
   readonly onDragStart: () => void;
   readonly onDragEnd: () => void;
@@ -43,6 +47,8 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
     cells,
     fields,
     dragging,
+    entering,
+    tint,
     titleRef,
     onDragStart,
     onDragEnd,
@@ -50,6 +56,7 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
     onWrite,
     onOpen,
   } = props;
+  const flash = useFlash(item.updatedAt);
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
   const title = item.title.length > 0 ? item.title : 'Untitled';
@@ -57,13 +64,22 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
   return (
     <ContextMenu label={`${title} actions`} items={() => itemActions(item.id, item.title)}>
       {(contextTarget) => (
-        <li {...contextTarget} className="min-w-0">
+        <li
+          {...contextTarget}
+          {...flash}
+          data-enter={entering ? '' : undefined}
+          className="min-w-0"
+        >
           <Blueprint
-            className={cn('flex flex-col gap-1.5 bg-background p-3', dragging ? 'opacity-45' : '')}
+            className={cn(
+              'group flex flex-col gap-1.5 bg-background p-3',
+              tint,
+              dragging ? 'opacity-45' : '',
+            )}
           >
             <div className="flex items-start gap-1">
               <div
-                className="min-w-0 flex-1"
+                className="flex min-w-0 flex-1 cursor-grab items-start gap-0.5 active:cursor-grabbing"
                 draggable
                 onDragStart={(event) => {
                   onDragStart();
@@ -73,6 +89,13 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
                 }}
                 onDragEnd={onDragEnd}
               >
+                {/* The grip: seen on hover or focus, always on touch. The whole row drags. */}
+                <Icon
+                  icon={GripVertical}
+                  size="sm"
+                  aria-hidden
+                  className="mt-0.5 shrink-0 text-muted opacity-0 group-hover:opacity-80 group-focus-within:opacity-80 any-pointer-coarse:opacity-60"
+                />
                 <button
                   ref={titleRef}
                   type="button"

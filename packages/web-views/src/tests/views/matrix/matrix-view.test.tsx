@@ -13,6 +13,7 @@ import type {
   View,
 } from '@nix/web-collections/core/container-model';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
+import { UndoBar, UndoProvider } from '@nix/ui';
 import { MatrixView } from '../../../matrix/matrix-view';
 
 const URGENCY: PropertyDefinition = {
@@ -195,5 +196,37 @@ describe('MatrixView', () => {
     renderMatrix({ columns: ['notes'] });
 
     expect(screen.getByRole('button', { name: 'Notes for Answer mail' })).toBeInTheDocument();
+  });
+
+  it('undoes a move from the undo bar by writing the old cell back', async () => {
+    const user = userEvent.setup();
+    const setProperties = vi.fn(() => Promise.resolve(null));
+    renderAt(
+      <UndoProvider>
+        <MatrixView
+          container={aContainer({ schema: SCHEMA, children: CARDS, setProperties })}
+          view={aView({ kind: 'matrix', groupBy: 'urgency', rowBy: 'important', columns: [] })}
+          onOpen={vi.fn()}
+        />
+        <UndoBar />
+      </UndoProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Move Answer mail to' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Important, Later' }));
+    await user.click(await screen.findByRole('button', { name: /undo/i }));
+
+    await waitFor(() => {
+      expect(setProperties).toHaveBeenLastCalledWith('mail', {
+        important: false,
+        urgency: 'Urgent',
+      });
+    });
+  });
+
+  it('counts the cards in each non-empty cell', () => {
+    renderMatrix();
+
+    expect(screen.getAllByText('1 item').length).toBeGreaterThan(0);
   });
 });

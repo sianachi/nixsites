@@ -56,3 +56,40 @@ export interface Message {
 export function cellValue(address: CellAddress): string {
   return `${address.row}\u0000${address.column}`;
 }
+
+/**
+ * A quadrant's tint, by its position among the axes' groups: row 1 / column 1 red, row 1 /
+ * column 2 blue, row 2 / column 1 amber, row 2 / column 2 grey, anything further out untinted.
+ * Class names are written out whole so the stylesheet scan finds them. `cell` washes a grid cell
+ * and rules its top edge; `card` rules a card's left edge.
+ */
+const TINTS = [
+  [
+    {
+      cell: 'bg-[rgb(214_48_49/0.07)] shadow-[inset_0_3px_0_rgb(214_48_49/0.75)]',
+      card: 'border-l-[3px] border-l-[rgb(214_48_49)]',
+    },
+    {
+      cell: 'bg-[rgb(0_102_204/0.07)] shadow-[inset_0_3px_0_rgb(0_102_204/0.75)]',
+      card: 'border-l-[3px] border-l-[rgb(0_102_204)]',
+    },
+  ],
+  [
+    {
+      cell: 'bg-[rgb(217_119_6/0.07)] shadow-[inset_0_3px_0_rgb(217_119_6/0.75)]',
+      card: 'border-l-[3px] border-l-[rgb(217_119_6)]',
+    },
+    {
+      cell: 'bg-[rgb(120_120_130/0.07)] shadow-[inset_0_3px_0_rgb(120_120_130/0.75)]',
+      card: 'border-l-[3px] border-l-[rgb(120_120_130)]',
+    },
+  ],
+] as const;
+const NO_TINT = { cell: '', card: '' };
+
+export function quadrantTint(
+  rowIndex: number,
+  columnIndex: number,
+): { readonly cell: string; readonly card: string } {
+  return TINTS[rowIndex]?.[columnIndex] ?? NO_TINT;
+}

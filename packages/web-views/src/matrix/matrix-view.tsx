@@ -1,4 +1,4 @@
-import { ScrollRegion, Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Button, Icon, Text, cn, focusRing, useUndo } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
@@ -9,7 +9,13 @@ import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { groupItems, type AxisGroup } from '@nix/web-collections/core/view-axis';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import { useViewState } from '@nix/web-collections/core/view-state';
-import { cellValue, resolveAxes, type CellAddress, type MatrixAxes } from './matrix-axes';
+import {
+  cellValue,
+  quadrantTint,
+  resolveAxes,
+  type CellAddress,
+  type MatrixAxes,
+} from './matrix-axes';
 import { MatrixCard, type CellChoice } from './matrix-card';
 import { CellCards, ColumnHeader } from './matrix-cells';
 
@@ -47,6 +53,13 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
   const [dropCell, setDropCell] = useState<string | null>(null);
   // After a move the card is drawn in its new cell as a new element, so focus is put back on its
   // title once that render lands - the way the outline keeps focus on a moved row.
+  const undo = useUndo();
+  // The cards that just landed in a cell, drawn in with an entrance.
+  const [landed, setLanded] = useState<ReadonlySet<string>>(new Set());
+  const latest = useRef(container);
+  useEffect(() => {
+    latest.current = container;
+  });
   const titleRefs = useRef(new Map<string, HTMLButtonElement>());
   const pendingFocus = useRef<string | null>(null);
   useEffect(() => {
@@ -100,8 +113,19 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
     return definition === undefined ? [] : [definition];
   });
 
+  const rowAll = groupItems(rows, chrome.items, [], true);
+  const columnAll = groupItems(columns, chrome.items, view.groupOrder, true);
+  const labelOf = (address: CellAddress): string =>
+    `${rowAll.find((g) => g.group === address.row)?.label ?? ''}, ${columnAll.find((g) => g.group === address.column)?.label ?? ''}`;
+  const tintOf = (address: CellAddress): ReturnType<typeof quadrantTint> =>
+    quadrantTint(
+      rowAll.findIndex((g) => g.group === address.row),
+      columnAll.findIndex((g) => g.group === address.column),
+    );
+
   function move(item: Item, to: CellAddress): void {
-    if (rows.groupOf(item) === to.row && columns.groupOf(item) === to.column) return;
+    const from = { row: rows.groupOf(item), column: columns.groupOf(item) };
+    if (from.row === to.row && from.column === to.column) return;
     const writeRow = rows.valueFor;
     const writeColumn = columns.valueFor;
     if (writeRow === undefined || writeColumn === undefined) return;
@@ -113,45 +137,62 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
         [rows.key]: writeRow(to.row),
         [columns.key]: writeColumn(to.column),
       })
-      .then(setMoveError);
+      .then((failure) => {
+        setMoveError(failure);
+        if (failure !== null) return;
+        setLanded(new Set([item.id]));
+        undo.push(`Moved ${item.title || 'Untitled'} to ${labelOf(to)}`, async () => {
+          pendingFocus.current = item.id;
+          setLanded(new Set([item.id]));
+          await latest.current.setProperties(item.id, {
+            [rows.key]: writeRow(from.row),
+            [columns.key]: writeColumn(from.column),
+          });
+        });
+      });
   }
 
   // Every cell a card can be moved to, empty or not: the "Move to" choice must reach a cell the
   // grid is currently folding away, or the keyboard could not do what a drag onto it can.
-  const cells: readonly CellChoice[] = groupItems(rows, chrome.items, [], true).flatMap((row) =>
-    groupItems(columns, chrome.items, view.groupOrder, true).map((column) => ({
+  const cells: readonly CellChoice[] = rowAll.flatMap((row) =>
+    columnAll.map((column) => ({
       address: { row: row.group, column: column.group },
       label: `${row.label}, ${column.label}`,
     })),
   );
 
-  const cardFor = (item: Item): ReactNode => (
-    <MatrixCard
-      key={item.id}
-      item={item}
-      current={{ row: rows.groupOf(item), column: columns.groupOf(item) }}
-      cells={cells}
-      fields={cardFields}
-      dragging={dragged === item.id}
-      titleRef={(element) => {
-        if (element === null) titleRefs.current.delete(item.id);
-        else titleRefs.current.set(item.id, element);
-      }}
-      onDragStart={() => {
-        setDragged(item.id);
-      }}
-      onDragEnd={() => {
-        setDragged(null);
-      }}
-      onMove={(to) => {
-        move(item, to);
-      }}
-      onWrite={(itemId, propertyKey, value) =>
-        container.setProperties(itemId, { [propertyKey]: value })
-      }
-      onOpen={onOpen}
-    />
-  );
+  const cardFor = (item: Item): ReactNode => {
+    const current = { row: rows.groupOf(item), column: columns.groupOf(item) };
+    return (
+      <MatrixCard
+        key={item.id}
+        item={item}
+        current={current}
+        entering={landed.has(item.id)}
+        tint={tintOf(current).card}
+        cells={cells}
+        fields={cardFields}
+        dragging={dragged === item.id}
+        titleRef={(element) => {
+          if (element === null) titleRefs.current.delete(item.id);
+          else titleRefs.current.set(item.id, element);
+        }}
+        onDragStart={() => {
+          setDragged(item.id);
+        }}
+        onDragEnd={() => {
+          setDragged(null);
+        }}
+        onMove={(to) => {
+          move(item, to);
+        }}
+        onWrite={(itemId, propertyKey, value) =>
+          container.setProperties(itemId, { [propertyKey]: value })
+        }
+        onOpen={onOpen}
+      />
+    );
+  };
 
   const dropTarget = (address: CellAddress) => ({
     onDragOver: (event: DragEvent<HTMLElement>) => {
@@ -225,11 +266,20 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
                 {row.label}
               </Text>
               {columnGroups.map((column) => {
-                const items = cellItems({ row: row.group, column: column.group });
+                const address = { row: row.group, column: column.group };
+                const items = cellItems(address);
                 return items.length === 0 && !showEmpty ? null : (
-                  <div key={column.group} className="flex flex-col gap-1.5">
+                  <div
+                    key={column.group}
+                    {...dropTarget(address)}
+                    className={cn(
+                      'flex flex-col gap-1.5 rounded-md p-2.5',
+                      tintOf(address).cell,
+                      dropOutline(address),
+                    )}
+                  >
                     <Text as="h4" variant="caption" tone="muted">
-                      {column.label}
+                      {`${column.label} · ${String(items.length)}`}
                     </Text>
                     <CellCards
                       items={items}
@@ -270,18 +320,25 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
                   </th>
                   {columnGroups.map((column) => {
                     const address = { row: row.group, column: column.group };
+                    const items = cellItems(address);
                     return (
                       <td
                         key={column.group}
                         {...dropTarget(address)}
                         className={cn(
                           'min-w-48 border border-divider p-3 align-top',
+                          tintOf(address).cell,
                           dropOutline(address),
                         )}
                       >
                         <div className="flex flex-col gap-2">
+                          {items.length === 0 ? null : (
+                            <Text as="span" variant="caption" tone="muted">
+                              {`${String(items.length)} ${items.length === 1 ? 'item' : 'items'}`}
+                            </Text>
+                          )}
                           <CellCards
-                            items={cellItems(address)}
+                            items={items}
                             label={`${row.label}, ${column.label}`}
                             render={cardFor}
                           />
