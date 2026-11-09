@@ -51,6 +51,8 @@ public sealed class NotificationDeliveryHttpTests : IAsyncLifetime
             ["ConnectionStrings:Nix"] = _fixture.ApplicationConnectionString,
             [InternalBoundaryMiddleware.SecretConfigurationKey] = InternalSecret,
             ["Nix:Push:VapidPublicKey"] = "test-vapid-public-key",
+            // The tests play the push worker themselves, so the in-process host must not lease its jobs first.
+            ["Nix:Workers:Families:0"] = "calendar",
         });
         _client = _factory.CreateClient();
     }

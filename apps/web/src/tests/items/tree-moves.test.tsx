@@ -228,7 +228,9 @@ describe('moving an item without dragging or keys', () => {
     renderSidebar(treeOf(vi.fn(() => Promise.resolve({ refusal: null }))));
     expect(screen.queryByText('Drop here to move to the top level')).not.toBeInTheDocument();
 
-    fireEvent.dragStart(screen.getByRole('button', { name: 'Second' }));
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Second' }), {
+      dataTransfer: { setData: vi.fn() },
+    });
 
     expect(screen.getByText('Drop here to move to the top level')).toBeInTheDocument();
   });
