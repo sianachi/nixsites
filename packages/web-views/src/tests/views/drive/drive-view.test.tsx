@@ -1,5 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import type * as apiClient from '@nix/api-client';
+import { UndoBar, UndoProvider } from '@nix/ui';
 import { createNixClient, type NixClient } from '@nix/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -295,29 +296,36 @@ describe('the drive view', () => {
     });
   });
 
-  it('draws a row for every child, naming its kind and icon by its body kind', async () => {
+  it('draws a row for every child with a type icon, keeping kind and size out of the row', async () => {
     render(driveOf({ items: [NOTE, FOLDER, FILE_A] }));
 
     expect(await screen.findByRole('button', { name: 'Bravo note' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Alpha folder' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Charlie file' })).toBeInTheDocument();
 
-    // The row's own <tr> carries the kind and size cells; find it from the name button.
     const row = screen.getByRole('button', { name: 'Alpha folder' }).closest('tr');
     if (row === null) throw new Error('The row did not render inside a <tr>.');
-    // Twice: the Kind column, and the one-line detail a phone row shows in its place.
-    expect(within(row).getAllByText('Note')).toHaveLength(2);
+    expect(row.querySelector('.lucide-folder')).not.toBeNull();
+    expect(within(row).queryByText('Note')).toBeNull();
   });
 
-  it('fetches file facts lazily and shows the size once it resolves', async () => {
-    render(driveOf({ items: [FILE_A] }));
+  it('picks a file icon from the file type and shows details only on request', async () => {
+    render(driveOf({ items: [FILE_A, FILE_B] }));
 
-    const row = screen.getByRole('button', { name: 'Charlie file' }).closest('tr');
-    if (row === null) throw new Error('The row did not render inside a <tr>.');
-    expect(within(row).getByText('—')).toBeInTheDocument();
+    const rowOf = (name: string): HTMLElement => {
+      const row = screen.getByRole('button', { name }).closest('tr');
+      if (row === null) throw new Error('The row did not render inside a <tr>.');
+      return row;
+    };
+    await vi.waitFor(() => {
+      expect(rowOf('Charlie file').querySelector('.lucide-file-text')).not.toBeNull();
+    });
+    expect(rowOf('Delta file').querySelector('.lucide-sheet')).not.toBeNull();
+    expect(within(rowOf('Charlie file')).queryByText('128 B')).toBeNull();
 
-    expect(await within(row).findByText('128 B')).toBeInTheDocument();
-    expect(within(row).getByText('TXT')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: `Actions for ${FILE_A.title}` }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Details' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/TXT · 128 B/);
   });
 
   it('sorts by name ascending by default and reverses on a second click', () => {
@@ -485,6 +493,55 @@ describe('the drive view', () => {
     expect(uploadAndCompleteFileMock).toHaveBeenCalled();
     await vi.waitFor(() => {
       expect(reloadMock).toHaveBeenCalled();
+    });
+  });
+
+  it('lists each upload with its own outcome and retries only the failed one', async () => {
+    uploadAndCompleteFileMock.mockImplementationOnce(() => Promise.reject(new Error('boom')));
+    render(driveOf({ items: [NOTE] }));
+
+    const files = [
+      new File(['x'], 'bad.txt', { type: 'text/plain' }),
+      new File(['y'], 'good.txt', { type: 'text/plain' }),
+    ];
+    const input = screen.getByLabelText('Files to upload', { selector: 'input' });
+    fireEvent.change(input, { target: { files } });
+
+    const retry = await screen.findByRole('button', { name: 'Retry bad.txt' });
+    expect(screen.getByText('1 of 2 uploaded')).toBeInTheDocument();
+    expect(screen.getByText(/Failed: the upload was refused/)).toBeInTheDocument();
+    expect(uploadAndCompleteFileMock).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(retry);
+    await vi.waitFor(() => {
+      expect(screen.getByText('2 of 2 uploaded')).toBeInTheDocument();
+    });
+    expect(uploadAndCompleteFileMock).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('button', { name: /^Retry/ })).toBeNull();
+  });
+
+  it('undoes a move by moving the items back to where they were', async () => {
+    render(
+      <UndoProvider>
+        <UndoBar />
+        {selectableDriveOf({ items: [FOLDER, NOTE] })}
+      </UndoProvider>,
+    );
+
+    const source = screen.getByRole('button', { name: NOTE.title }).closest('tr');
+    const target = screen.getByRole('button', { name: FOLDER.title }).closest('tr');
+    if (source === null || target === null) throw new Error('Drive rows must be table rows.');
+    const dataTransfer = { effectAllowed: '', setData: vi.fn() };
+    fireEvent.dragStart(source, { dataTransfer });
+    fireEvent.dragOver(target, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+
+    await vi.waitFor(() => {
+      expect(moveMock).toHaveBeenCalledWith(NOTE.id, FOLDER.id, null);
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Undo/ }));
+    await vi.waitFor(() => {
+      expect(moveMock).toHaveBeenCalledWith(NOTE.id, CONTAINER, null);
     });
   });
 });

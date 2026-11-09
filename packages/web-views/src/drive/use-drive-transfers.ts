@@ -1,5 +1,6 @@
 import { files as fileResources, isNixApiError } from '@nix/api-client';
-import { useCallback } from 'react';
+import { useUndo } from '@nix/ui';
+import { useCallback, useState } from 'react';
 
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -12,6 +13,14 @@ import type { ContainerData } from '@nix/web-collections/core/use-container';
  * saturating the connection or losing per-file failure attribution. */
 const MAX_CONCURRENT_UPLOADS = 3;
 
+/** One picked file's own upload, kept so a failed one can be retried without re-picking the rest. */
+export interface DriveUpload {
+  readonly id: string;
+  readonly file: File;
+  readonly status: 'uploading' | 'done' | 'failed';
+  readonly reason?: string | undefined;
+}
+
 /** The drive's three bulk operations: download, upload and move, reporting through `setStatus`. */
 export function useDriveTransfers(
   container: ContainerData,
@@ -20,10 +29,15 @@ export function useDriveTransfers(
   readonly downloadItems: (items: readonly Item[]) => Promise<void>;
   readonly uploadFiles: (files: FileList) => Promise<void>;
   readonly moveItems: (ids: readonly string[], targetParentId: string | null) => Promise<void>;
+  readonly uploads: readonly DriveUpload[];
+  readonly retryUpload: (id: string) => Promise<void>;
+  readonly dismissUploads: () => void;
 } {
   const client = useApiClient();
   const { workspaceId } = useWorkspace();
   const tree = useWorkspaceTree();
+  const undo = useUndo();
+  const [uploads, setUploads] = useState<readonly DriveUpload[]>([]);
 
   // The tray-registration effect needs a stable callback to avoid updating on every render.
   const downloadItems = useCallback(
@@ -76,84 +90,113 @@ export function useDriveTransfers(
    */
   async function moveItems(ids: readonly string[], targetParentId: string | null): Promise<void> {
     const refusals = new Map<string, string>();
+    const moved: { readonly id: string; readonly from: string | null }[] = [];
     for (const id of ids) {
+      const from = container.children.find((child) => child.id === id)?.parentId ?? null;
       const outcome = await tree.move(id, targetParentId, null);
       if (outcome.refusal !== null) refusals.set(id, outcome.refusal);
+      else moved.push({ id, from });
     }
     await container.reload();
+    if (moved.length > 0) {
+      const titleOf = (id: string | null, fallback: string): string => {
+        const title = container.children.find((child) => child.id === id)?.title;
+        return title === undefined || title === '' ? fallback : title;
+      };
+      const first = moved[0];
+      const what =
+        moved.length === 1 && first !== undefined
+          ? `“${titleOf(first.id, 'Untitled')}”`
+          : `${String(moved.length)} items`;
+      const where = titleOf(targetParentId, 'the parent');
+      undo.push(`Moved ${what} to ${where}`, async () => {
+        for (const { id, from } of moved) await tree.move(id, from, null);
+        await container.reload();
+      });
+    }
     if (refusals.size === 0) {
       announce(`${String(ids.length)} ${ids.length === 1 ? 'item' : 'items'} moved.`);
       return;
     }
-    const moved = ids.length - refusals.size;
-    const firstRefusal = refusals.values().next().value ?? 'the move was refused';
-    const message = `${String(moved)} of ${String(ids.length)} ${
+    const message = `${String(moved.length)} of ${String(ids.length)} ${
       ids.length === 1 ? 'item' : 'items'
-    } moved; ${String(refusals.size)} refused: ${firstRefusal}`;
+    } moved; ${String(refusals.size)} refused: ${
+      refusals.values().next().value ?? 'the move was refused'
+    }`;
     setStatus(message);
     announce(message);
+  }
+
+  /** One file's upload; its outcome lands on its own entry so a failure names itself. */
+  async function uploadOne(entry: DriveUpload): Promise<void> {
+    const mark = (patch: Pick<DriveUpload, 'status' | 'reason'>): void => {
+      setUploads((current) =>
+        current.map((u) => (u.id === entry.id ? { ...u, reason: undefined, ...patch } : u)),
+      );
+    };
+    try {
+      const upload = await client.execute(
+        fileResources.beginUpload({
+          workspaceId,
+          parentId: container.itemId,
+          fileName: entry.file.name,
+          mediaType: entry.file.type || 'application/octet-stream',
+          byteLength: entry.file.size,
+          idempotencyKey: `web-drive-upload:${crypto.randomUUID()}`,
+        }),
+      );
+      await fileResources.uploadAndCompleteFile(client, upload, entry.file);
+      mark({ status: 'done' });
+    } catch (error) {
+      const reason = isNixApiError(error)
+        ? (error.detail ?? 'the upload was refused')
+        : 'the upload was refused';
+      mark({ status: 'failed', reason });
+      announce(`${entry.file.name} could not be uploaded: ${reason}`);
+    }
   }
 
   /**
-   * Uploads every file in turn, one failure at a time, rather than stopping the whole batch and
-   * skipping the reload the moment one file refuses: the files that did make it need to show up,
-   * and the person needs to be told, in the status line as well as to a screen reader, exactly
-   * which one did not and why.
-   *
-   * Uploads run through a bounded pool rather than the whole batch at once or strictly one file
-   * at a time: `MAX_CONCURRENT_UPLOADS` workers each pull the next file off a shared cursor,
-   * mirroring the pool in `use-habits.ts`'s `readAll`. Failures are recorded by each file's
-   * original index so the reported "first" failure is the earliest file in the picked order, not
-   * whichever request happens to lose the race.
+   * Uploads through a bounded pool (`MAX_CONCURRENT_UPLOADS` workers pulling off a shared cursor),
+   * each file reporting its own uploading / done / failed state in `uploads`. A failure never stops
+   * the batch: the files that made it still show up after the reload, and the failed one stays
+   * listed with a retry. The upload API has no byte progress, so a file is "uploading" until done.
    */
   async function uploadFiles(files: FileList): Promise<void> {
-    const list = Array.from(files);
-    setStatus(list.length === 1 ? 'Uploading 1 file…' : `Uploading ${String(list.length)} files…`);
-    const failures: (string | undefined)[] = new Array<string | undefined>(list.length);
+    const entries: DriveUpload[] = Array.from(files, (file) => ({
+      id: crypto.randomUUID(),
+      file,
+      status: 'uploading',
+    }));
+    setUploads((current) => [...current.filter((u) => u.status === 'failed'), ...entries]);
     let cursor = 0;
     const worker = async (): Promise<void> => {
       for (;;) {
-        const index = cursor++;
-        const file = list[index];
-        if (file === undefined) return;
-        try {
-          const upload = await client.execute(
-            fileResources.beginUpload({
-              workspaceId,
-              parentId: container.itemId,
-              fileName: file.name,
-              mediaType: file.type || 'application/octet-stream',
-              byteLength: file.size,
-              idempotencyKey: `web-drive-upload:${crypto.randomUUID()}`,
-            }),
-          );
-          await fileResources.uploadAndCompleteFile(client, upload, file);
-        } catch (error) {
-          failures[index] = isNixApiError(error)
-            ? (error.detail ?? 'the upload was refused')
-            : 'the upload was refused';
-        }
+        const entry = entries[cursor++];
+        if (entry === undefined) return;
+        await uploadOne(entry);
       }
     };
     await Promise.all(
-      Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, list.length) }, worker),
+      Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, entries.length) }, worker),
     );
     await container.reload();
-    const failedIndex = failures.findIndex((reason) => reason !== undefined);
-    if (failedIndex === -1) {
-      setStatus(null);
-      announce(list.length === 1 ? 'File uploaded.' : `${String(list.length)} files uploaded.`);
-      return;
-    }
-    const uploaded = list.length - failures.filter((reason) => reason !== undefined).length;
-    const failedFile = list[failedIndex];
-    const failureReason = failures[failedIndex];
-    const message = `${String(uploaded)} of ${String(list.length)} uploaded; ${
-      failedFile?.name ?? 'a file'
-    } could not be uploaded: ${failureReason ?? 'the upload was refused'}`;
-    setStatus(message);
-    announce(message);
+    announce(`${String(entries.length)} ${entries.length === 1 ? 'file' : 'files'} processed.`);
   }
 
-  return { downloadItems, uploadFiles, moveItems };
+  async function retryUpload(id: string): Promise<void> {
+    const entry = uploads.find((u) => u.id === id);
+    if (entry === undefined) return;
+    setUploads((current) =>
+      current.map((u) => (u.id === id ? { ...u, status: 'uploading', reason: undefined } : u)),
+    );
+    await uploadOne(entry);
+    await container.reload();
+  }
+
+  function dismissUploads(): void {
+    setUploads((current) => current.filter((u) => u.status === 'uploading'));
+  }
+
+  return { downloadItems, uploadFiles, moveItems, uploads, retryUpload, dismissUploads };
 }

@@ -1,5 +1,5 @@
 import { Button, Icon, Text, cn, type MenuEntry } from '@nix/ui';
-import { Download, Upload } from 'lucide-react';
+import { Download, Info, Upload } from 'lucide-react';
 import {
   useEffect,
   useMemo,
@@ -26,6 +26,8 @@ import type { ViewRendererProps } from '../core/view-kinds';
 import { isDriveContainerCandidate } from './drive-icons';
 import { DriveDownloadAction } from './drive-download-action';
 import { DriveGrid } from './drive-grid';
+import { rowDetail } from './drive-rows';
+import { DriveUploads } from './drive-uploads';
 import { resolveLayout } from './drive-layout';
 import { compareRows, savedSort, type SortKey, type SortState } from './drive-sort';
 import { DriveTable } from './drive-table';
@@ -78,7 +80,8 @@ export function DriveView(props: ViewRendererProps): ReactNode {
         : { key, direction: 'ascending' },
     );
   }
-  const { downloadItems, uploadFiles, moveItems } = useDriveTransfers(container, setStatus);
+  const { downloadItems, uploadFiles, moveItems, uploads, retryUpload, dismissUploads } =
+    useDriveTransfers(container, setStatus);
 
   useEffect(() => {
     if (setTrayActions === undefined) return;
@@ -143,6 +146,13 @@ export function DriveView(props: ViewRendererProps): ReactNode {
 
   function rowContextMenu(item: Item): MenuEntry[] {
     return itemActions(item.id, item.title, [
+      {
+        label: 'Details',
+        icon: Info,
+        onSelect: () => {
+          setStatus(`${item.title || 'Untitled'}: ${rowDetail(item, fileInfo.get(item.id))}`);
+        },
+      },
       ...(item.type === 'file'
         ? [
             {
@@ -207,6 +217,14 @@ export function DriveView(props: ViewRendererProps): ReactNode {
           {status}
         </Text>
       ) : null}
+
+      <DriveUploads
+        uploads={uploads}
+        onRetry={(id) => {
+          void retryUpload(id);
+        }}
+        onDismiss={dismissUploads}
+      />
 
       {rows.length === 0 ? (
         <EmptyPanel

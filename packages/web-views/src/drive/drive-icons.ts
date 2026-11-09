@@ -1,6 +1,20 @@
-import { Blocks, File, FileText, Folder, PenTool, Sheet, type LucideIcon } from 'lucide-react';
+import {
+  Blocks,
+  File,
+  FileArchive,
+  FileAudio,
+  FileCode,
+  FileImage,
+  FileText,
+  FileVideo,
+  Folder,
+  PenTool,
+  Sheet,
+  type LucideIcon,
+} from 'lucide-react';
 
 import type { Item } from '@nix/web-collections/core/container-model';
+import type { DriveFileInfo } from './use-drive-file-info';
 
 /**
  * The glyph a drive row leads with.
@@ -11,12 +25,12 @@ import type { Item } from '@nix/web-collections/core/container-model';
  * as "a folder" here is that it holds more children, not what its own body happens to be. A note
  * with children still draws as a folder; a note without draws as a note.
  */
-export function driveKindIcon(item: Item): LucideIcon {
+export function driveKindIcon(item: Item, info?: DriveFileInfo): LucideIcon {
   if (item.hasChildren) return Folder;
 
   switch (item.type) {
     case 'file':
-      return File;
+      return fileIcon(item.title, info);
     case 'spreadsheet':
       return Sheet;
     case 'canvas':
@@ -39,4 +53,35 @@ export function isDriveContainerCandidate(item: Item): boolean {
   // file cannot itself hold children, so it is never a candidate no matter what it says about
   // `hasChildren`).
   return item.hasChildren || item.type !== 'file';
+}
+
+const EXTENSION_ICONS: Readonly<Record<string, LucideIcon>> = {
+  zip: FileArchive,
+  gz: FileArchive,
+  tar: FileArchive,
+  '7z': FileArchive,
+  csv: Sheet,
+  xls: Sheet,
+  xlsx: Sheet,
+  pdf: FileText,
+  doc: FileText,
+  docx: FileText,
+  txt: FileText,
+  md: FileText,
+  json: FileCode,
+  js: FileCode,
+  ts: FileCode,
+  html: FileCode,
+  xml: FileCode,
+};
+
+/** A file's glyph from its media type when the record is here, else from its name's extension. */
+export function fileIcon(name: string, info?: DriveFileInfo): LucideIcon {
+  const current = info?.status === 'ready' ? info.record.current : undefined;
+  const mediaType = current?.mediaType ?? '';
+  if (mediaType.startsWith('image/')) return FileImage;
+  if (mediaType.startsWith('video/')) return FileVideo;
+  if (mediaType.startsWith('audio/')) return FileAudio;
+  const extension = /\.([^./\\]+)$/u.exec(current?.fileName ?? name)?.[1]?.toLowerCase() ?? '';
+  return EXTENSION_ICONS[extension] ?? (mediaType.startsWith('text/') ? FileText : File);
 }

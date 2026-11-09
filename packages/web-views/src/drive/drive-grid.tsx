@@ -7,7 +7,7 @@ import { rowGestures } from '@nix/web-collections/core/use-item-selection';
 import { driveKindIcon } from './drive-icons';
 import { DriveFileThumbnail } from './drive-file-thumbnail';
 import { DriveRowActions } from './drive-row-actions';
-import { isFileRow, rowDetail, type RowsProps } from './drive-rows';
+import { isImageRow, type RowsProps } from './drive-rows';
 
 export function DriveGrid(props: RowsProps): ReactNode {
   const {
@@ -34,7 +34,7 @@ export function DriveGrid(props: RowsProps): ReactNode {
     >
       {rows.map((item) => {
         const info = fileInfo.get(item.id);
-        const RowIcon = driveKindIcon(item);
+        const RowIcon = driveKindIcon(item, info);
         const isSelected = selection?.selected.has(item.id) === true;
         const openProps = rowGestures(
           selection,
@@ -80,7 +80,7 @@ export function DriveGrid(props: RowsProps): ReactNode {
                   <SelectCheckbox item={item} />
                   <DriveRowActions item={item} rowContextMenu={rowContextMenu} />
                 </div>
-                {isFileRow(item) ? (
+                {isImageRow(item, info) ? (
                   <DriveFileThumbnail
                     item={item}
                     info={info}
@@ -107,9 +107,6 @@ export function DriveGrid(props: RowsProps): ReactNode {
                     {item.title || 'Untitled'}
                   </Text>
                 </button>
-                <Text variant="caption" as="span" tone="muted">
-                  {rowDetail(item, info)}
-                </Text>
               </li>
             )}
           </ContextMenu>

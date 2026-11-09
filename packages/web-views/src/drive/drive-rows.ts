@@ -1,22 +1,29 @@
 import type { MenuEntry } from '@nix/ui';
 import type { DragEvent } from 'react';
 
-import { formatBytes } from '@nix/web-collections/items/file-facts';
+import { formatBytes, formatWhen } from '@nix/web-collections/items/file-facts';
 import type { Item } from '@nix/web-collections/core/container-model';
 import { kindOf } from './drive-sort';
 import type { DriveFileInfo } from './use-drive-file-info';
 
-/** The kind and size line a phone row and a grid card carry in place of the dropped columns. */
+/** Kind, size and date as one line: the detail one tap away, not on every row. */
 export function rowDetail(item: Item, info: DriveFileInfo | undefined): string {
   const kind = kindOf(item, info);
-  return item.type === 'file' && info?.status === 'ready'
-    ? `${kind} · ${formatBytes(info.record.current.byteLength)}`
-    : kind;
+  const size =
+    item.type === 'file' && info?.status === 'ready'
+      ? ` · ${formatBytes(info.record.current.byteLength)}`
+      : '';
+  return `${kind}${size} · ${formatWhen(item.updatedAt)}`;
 }
 
-/** A file that is not also drawn as a folder: the rows whose picture can be a thumbnail. */
-export function isFileRow(item: Item): boolean {
-  return item.type === 'file' && !item.hasChildren;
+/** A file whose picture is a real thumbnail (an image), rather than a type icon. */
+export function isImageRow(item: Item, info: DriveFileInfo | undefined): boolean {
+  return (
+    item.type === 'file' &&
+    !item.hasChildren &&
+    info?.status === 'ready' &&
+    info.record.current.mediaType.startsWith('image/')
+  );
 }
 
 export interface RowsProps {
