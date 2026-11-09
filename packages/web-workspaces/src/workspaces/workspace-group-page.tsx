@@ -1,11 +1,10 @@
 import { readLastWorkspaceId } from './last-workspace';
 import { conversations, type Conversation } from '@nix/api-client';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { Button, Input, Text, focusRing } from '@nix/ui';
+import { Button, Text, UndoBar, focusRing } from '@nix/ui';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
-import { addGroup } from './arrangement';
 import { useAccessibleWorkspaces } from './workspace-context';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { WorkspaceGroupsSection } from './workspace-groups-section';
@@ -16,10 +15,8 @@ export function LegacyWorkspaceGroupRedirect(): ReactNode {
 }
 
 export function WorkspaceGroupsPage(): ReactNode {
-  const { arrangement, loading, saving, error, save } = useWorkspaceArrangement();
-  const [name, setName] = useState('');
   return (
-    <main className={`${paneScroller} mx-auto flex w-full max-w-4xl flex-col gap-6 p-6`}>
+    <main className={`${paneScroller} mx-auto flex w-full max-w-6xl flex-col gap-6 p-6`}>
       <BackToWorkspace />
       <Text as="h1" variant="h3">
         Workspace groups
@@ -28,45 +25,8 @@ export function WorkspaceGroupsPage(): ReactNode {
         Organize your workspaces and explore them together with your pets. Groups are personal and
         do not grant access.
       </Text>
-      {error ? <Text role="alert">{error}</Text> : null}
-      <form
-        className="flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save(addGroup(arrangement, name)).then((ok) => {
-            if (ok) setName('');
-          });
-        }}
-      >
-        <Input
-          aria-label="New group name"
-          value={name}
-          maxLength={80}
-          onChange={(event) => {
-            setName(event.currentTarget.value);
-          }}
-        />
-        <Button type="submit" disabled={loading || saving || !name.trim()}>
-          Create group
-        </Button>
-      </form>
-      {loading ? (
-        <Text role="status">Loading groups…</Text>
-      ) : (
-        <ul className="flex flex-col gap-3" aria-label="Open workspace group">
-          {arrangement.groups.map((group) => (
-            <li key={group.id}>
-              <Link
-                className={`text-accent-text underline ${focusRing}`}
-                to={`/workspaces/groups/${group.id}`}
-              >
-                {group.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
       <WorkspaceGroupsSection headingLevel="h2" />
+      <PageUndoBar />
     </main>
   );
 }
@@ -92,7 +52,7 @@ export function WorkspaceGroupPage({
     (entry) => entry.lifecycleState === 'active' && group?.workspaceIds.includes(entry.id),
   );
   return (
-    <main className={`${paneScroller} mx-auto flex w-full max-w-4xl flex-col gap-6 p-6`}>
+    <main className={`${paneScroller} mx-auto flex w-full max-w-6xl flex-col gap-6 p-6`}>
       <Link className={`text-accent-text underline ${focusRing}`} to="/workspaces/groups">
         All workspace groups
       </Link>
@@ -188,6 +148,7 @@ export function WorkspaceGroupPage({
           ) : null}
         </>
       )}
+      <PageUndoBar />
     </main>
   );
 }
@@ -245,4 +206,13 @@ function BackToWorkspace(): ReactNode {
       Back to {destination.name}
     </Link>
   ) : null;
+}
+
+/** These pages sit outside the app shell, which normally hosts the undo bar. */
+function PageUndoBar(): ReactNode {
+  return (
+    <div className="fixed inset-x-4 bottom-4 z-20 mx-auto flex max-w-md justify-center">
+      <UndoBar />
+    </div>
+  );
 }
