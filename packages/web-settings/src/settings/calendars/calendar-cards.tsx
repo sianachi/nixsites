@@ -3,6 +3,7 @@ import { Button, Icon, Menu, Select, Text, type MenuEntry } from '@nix/ui';
 import { MoreHorizontal } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
+import { FlashText } from '../shared/flash-text';
 import { connectionTag, formatMoment, linkTag, providerName } from './calendar-labels';
 
 /**
@@ -118,7 +119,7 @@ export function LinkCards(props: {
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="flex min-w-0 flex-col gap-1">
               <Text variant="bodySmall" as="h4" className="break-words">
-                {link.name}
+                <FlashText stamp={link.revision}>{link.name}</FlashText>
               </Text>
               <Text variant="note" tone="muted">
                 {providerName(link.provider)}

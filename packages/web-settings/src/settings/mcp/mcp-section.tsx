@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
+import { CopyBox } from '../shared/copy-box';
+import { FlashText } from '../shared/flash-text';
 import { SettingsSection } from '../shared/settings-section';
 import { AccessTokenCreateDialog } from '../access-tokens/access-token-create-dialog';
 import { formatDay, tokenStatus } from '../access-tokens/token-facts';
@@ -28,18 +30,29 @@ export function McpSection(): ReactElement {
   const [createOpen, setCreateOpen] = useState(false);
   const [revokingAll, setRevokingAll] = useState(false);
   const [revokeRefusal, setRevokeRefusal] = useState<string | null>(null);
+  /** The token one Revoke click is waiting on a confirmation for. */
+  const [revoking, setRevoking] = useState<AccessToken | null>(null);
+  /** What the last action did, in words. Revoking cannot be undone, so there is no Undo. */
+  const [done, setDone] = useState<string | null>(null);
+  const [before, setBefore] = useState<ReadonlySet<string> | null>(null);
   const now = new Date();
   const mcpTokens = tokens.filter((token) => token.name.startsWith(MCP_TOKEN_PREFIX));
   const live = mcpTokens.filter((token) => tokenStatus(token, now).kind === 'live');
 
   async function revokeAll(): Promise<void> {
     setRevokeRefusal(null);
+    setDone(null);
+    let revoked = 0;
     for (const token of live) {
       const outcome = await revoke(token.id);
       if (outcome.refusal !== null) {
         setRevokeRefusal(outcome.refusal);
         break;
       }
+      revoked += 1;
+    }
+    if (revoked > 0) {
+      setDone(`Revoked ${String(revoked)} MCP ${revoked === 1 ? 'token' : 'tokens'}.`);
     }
     setRevokingAll(false);
     await reload();
@@ -81,9 +94,10 @@ export function McpSection(): ReactElement {
               an <code className="font-mono text-sm">Authorization: Bearer</code> header holding a
               personal access token made here.
             </Text>
-            <pre className="overflow-x-auto rounded-md border border-divider bg-surface p-3 font-mono text-sm">
-              {`claude mcp add --transport http nix ${mcpUrl} --header "Authorization: Bearer <token>"`}
-            </pre>
+            <CopyBox
+              label="the command"
+              text={`claude mcp add --transport http nix ${mcpUrl} --header "Authorization: Bearer <token>"`}
+            />
           </>
         )}
       </div>
@@ -95,9 +109,10 @@ export function McpSection(): ReactElement {
         <Text variant="note" tone="muted">
           With nixctl signed in, add it as a stdio server. No token from this page is needed.
         </Text>
-        <pre className="overflow-x-auto rounded-md border border-divider bg-surface p-3 font-mono text-sm">
-          {`{ "mcpServers": { "nix": { "command": "nixctl", "args": ["mcp"] } } }`}
-        </pre>
+        <CopyBox
+          label="the configuration"
+          text={`{ "mcpServers": { "nix": { "command": "nixctl", "args": ["mcp"] } } }`}
+        />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -163,14 +178,19 @@ export function McpSection(): ReactElement {
                 key={token.id}
                 token={token}
                 now={now}
-                onRevoke={async () => {
-                  const outcome = await revoke(token.id);
-                  if (outcome.refusal !== null) setRevokeRefusal(outcome.refusal);
-                  await reload();
+                fresh={before !== null && !before.has(token.id)}
+                onRevoke={() => {
+                  setRevokeRefusal(null);
+                  setRevoking(token);
                 }}
               />
             ))}
           </ul>
+        )}
+        {done === null ? null : (
+          <Text role="status" variant="note">
+            {done}
+          </Text>
         )}
         {revokeRefusal === null ? null : (
           <Text role="alert" variant="note">
@@ -192,10 +212,56 @@ export function McpSection(): ReactElement {
           }
           onClose={(createdToken) => {
             setCreateOpen(false);
-            if (createdToken) void reload();
+            if (createdToken) {
+              setBefore(new Set(tokens.map((token) => token.id)));
+              setDone('Created an MCP token. It is at the top of the list.');
+              void reload();
+            }
           }}
         />
       ) : null}
+
+      {revoking === null ? null : (
+        <Dialog
+          open
+          title={`Revoke ${revoking.name}?`}
+          onClose={() => {
+            setRevoking(null);
+          }}
+          closeLabel="Keep the token"
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setRevoking(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const token = revoking;
+                  setRevoking(null);
+                  void (async () => {
+                    const outcome = await revoke(token.id);
+                    if (outcome.refusal !== null) setRevokeRefusal(outcome.refusal);
+                    else setDone(`Revoked ${token.name}. That client has lost access.`);
+                    await reload();
+                  })();
+                }}
+              >
+                Revoke token
+              </Button>
+            </>
+          }
+        >
+          <Text as="p">
+            The client using this token stops working on its next request. This cannot be undone: a
+            replacement is a new token that the client has to be given by hand.
+          </Text>
+        </Dialog>
+      )}
 
       {revokingAll ? (
         <Dialog
@@ -221,8 +287,9 @@ export function McpSection(): ReactElement {
           }
         >
           <Text as="p">
-            Every live MCP token is revoked. Clients using them stop working on their next request;
-            the command-line stdio server, which uses your signed-in profile, is unaffected.
+            Every live MCP token is revoked. Clients using them stop working on their next request,
+            and this cannot be undone; the command-line stdio server, which uses your signed-in
+            profile, is unaffected.
           </Text>
         </Dialog>
       ) : null}
@@ -233,33 +300,37 @@ export function McpSection(): ReactElement {
 function McpTokenRow({
   token,
   now,
+  fresh,
   onRevoke,
 }: {
   readonly token: AccessToken;
   readonly now: Date;
-  readonly onRevoke: () => Promise<void>;
+  readonly fresh: boolean;
+  readonly onRevoke: () => void;
 }): ReactElement {
   const state = tokenStatus(token, now).kind;
   return (
     <li className="flex flex-wrap items-center gap-3 py-2 min-h-11">
-      <div className="min-w-0 flex-1">
-        <Text as="p" variant="bodySmall" className="truncate">
-          {token.name}
-        </Text>
-        <Text as="p" variant="caption" tone="muted">
-          {state === 'live'
-            ? `Scopes ${token.scopes.join(', ')}, expires ${formatDay(token.expiresAt)}${
-                token.lastUsedAt === null
-                  ? ', never used'
-                  : `, last used ${formatDay(token.lastUsedAt)}`
-              }`
-            : state === 'revoked'
-              ? 'Revoked'
-              : 'Expired'}
-        </Text>
-      </div>
+      <FlashText className="min-w-0 flex-1" stamp={token.revokedAt} enter={fresh}>
+        <div className="min-w-0">
+          <Text as="p" variant="bodySmall" className="truncate">
+            {token.name}
+          </Text>
+          <Text as="p" variant="caption" tone="muted">
+            {state === 'live'
+              ? `Scopes ${token.scopes.join(', ')}, expires ${formatDay(token.expiresAt)}${
+                  token.lastUsedAt === null
+                    ? ', never used'
+                    : `, last used ${formatDay(token.lastUsedAt)}`
+                }`
+              : state === 'revoked'
+                ? 'Revoked'
+                : 'Expired'}
+          </Text>
+        </div>
+      </FlashText>
       {state === 'live' ? (
-        <Button variant="secondary" onClick={() => void onRevoke()}>
+        <Button variant="secondary" onClick={onRevoke}>
           Revoke
         </Button>
       ) : null}

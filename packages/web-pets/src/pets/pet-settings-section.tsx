@@ -5,7 +5,18 @@ import {
   type PetSettings,
   type PetSettingsResponse,
 } from '@nix/api-client';
-import { Button, Checkbox, Field, Icon, Input, Menu, Select, Text, Textarea } from '@nix/ui';
+import {
+  Button,
+  Checkbox,
+  Field,
+  Icon,
+  Input,
+  Menu,
+  Select,
+  Text,
+  Textarea,
+  useUndo,
+} from '@nix/ui';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { useId, useState, type ReactElement } from 'react';
 import { newPet, petCatalog } from './catalog';
@@ -59,6 +70,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   );
   const [message, setMessage] = useState<string | null>(null);
   const tiles = useId();
+  const undo = useUndo();
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
     if (JSON.stringify(draft) !== JSON.stringify(initial.settings)) {
@@ -86,23 +98,59 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
       ),
     });
   }
-  function add(profile: PetProfile): void {
+  function add(profile: PetProfile, label: string): void {
+    const wasActive = draft.activePetId;
+    const wasSelected = selectedId;
     change({
       ...draft,
       activePetId: draft.activePetId ?? profile.id,
       profiles: [...draft.profiles, profile],
     });
     setSelectedId(profile.id);
+    // Undo takes out only this pet; later edits to other pets stay.
+    undo.push(label, () => {
+      setDraft((cur) => ({
+        ...cur,
+        activePetId: cur.activePetId === profile.id ? wasActive : cur.activePetId,
+        profiles: cur.profiles.filter((entry) => entry.id !== profile.id),
+      }));
+      setSelectedId((cur) => (cur === profile.id ? wasSelected : cur));
+    });
   }
   function remove(): void {
+    if (pet === null) return;
+    const gone = pet;
+    const index = draft.profiles.indexOf(gone);
+    const wasActive = draft.activePetId === gone.id;
+    const wasEnabled = draft.enabled;
     const profiles = draft.profiles.filter((profile) => profile.id !== selectedId);
     change({
       ...draft,
       profiles,
       enabled: profiles.length > 0 && draft.enabled,
-      activePetId: draft.activePetId === selectedId ? (profiles[0]?.id ?? null) : draft.activePetId,
+      activePetId: wasActive ? (profiles[0]?.id ?? null) : draft.activePetId,
     });
     setSelectedId(profiles[0]?.id ?? null);
+    undo.push(`Removed ${gone.name || 'pet'}`, () => {
+      setDraft((cur) => {
+        const restored = [...cur.profiles];
+        restored.splice(Math.min(index, restored.length), 0, gone);
+        return {
+          ...cur,
+          profiles: restored,
+          activePetId: wasActive ? gone.id : cur.activePetId,
+          enabled: cur.enabled || (wasEnabled && cur.profiles.length === 0),
+        };
+      });
+      setSelectedId(gone.id);
+    });
+  }
+  function makeActive(target: PetProfile): void {
+    const previous = draft.activePetId;
+    change({ ...draft, activePetId: target.id });
+    undo.push(`Switched to ${target.name || 'pet'}`, () => {
+      setDraft((cur) => (cur.activePetId === target.id ? { ...cur, activePetId: previous } : cur));
+    });
   }
 
   async function saveSettings(): Promise<boolean> {
@@ -195,7 +243,8 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
               aria-label="Add pet"
               disabled={draft.profiles.length >= 12}
               onClick={() => {
-                add(newPet());
+                const fresh = newPet();
+                add(fresh, `Added ${fresh.name}`);
               }}
             >
               <Icon icon={Plus} size="sm" />
@@ -208,7 +257,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    change({ ...draft, activePetId: pet.id });
+                    makeActive(pet);
                   }}
                 >
                   Use this pet
@@ -221,11 +270,14 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                     label: 'Duplicate pet',
                     disabled: draft.profiles.length >= 12,
                     onSelect: () => {
-                      add({
-                        ...pet,
-                        id: crypto.randomUUID(),
-                        name: `${pet.name.slice(0, 75)} copy`,
-                      });
+                      add(
+                        {
+                          ...pet,
+                          id: crypto.randomUUID(),
+                          name: `${pet.name.slice(0, 75)} copy`,
+                        },
+                        `Duplicated ${pet.name}`,
+                      );
                     },
                   },
                   { label: 'Remove pet', destructive: true, onSelect: remove },

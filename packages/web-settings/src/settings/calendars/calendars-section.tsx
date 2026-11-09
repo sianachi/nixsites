@@ -8,15 +8,17 @@ import {
   Select,
   Table,
   Text,
+  useUndo,
   type MenuEntry,
 } from '@nix/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import {
+  calendarSummary,
   connectionTag,
   formatMoment,
   linkTag,
@@ -28,6 +30,7 @@ import { ConfirmDisconnectDialog } from './disconnect-dialog';
 import { LinkCalendarDialog } from './link-calendar-dialog';
 import { SyncLogDialog } from './sync-log-dialog';
 import { UnlinkDialog } from './unlink-dialog';
+import { FlashText } from '../shared/flash-text';
 import { SettingsSection } from '../shared/settings-section';
 import { useCalendarSync } from './use-calendar-sync';
 
@@ -48,6 +51,13 @@ export function CalendarsSection(): ReactElement {
   const sync = useCalendarSync();
   const narrow = useNarrowViewport();
   const { status, providers, connections, links, othersLinks, error, reload } = sync;
+  const undo = useUndo();
+  // The newest links, for an undo that runs later: it needs the current revision, not the one
+  // from the render that pushed it.
+  const latestLinks = useRef(links);
+  useEffect(() => {
+    latestLinks.current = links;
+  }, [links]);
   const location = useLocation();
   const [search, setSearch] = useSearchParams();
 
@@ -76,6 +86,8 @@ export function CalendarsSection(): ReactElement {
   const [done, setDone] = useState<string | null>(null);
   /** Whether a row action is in flight, so a second press cannot queue behind the first. */
   const [busy, setBusy] = useState(false);
+  /** The link whose sync is in flight, so its row says so where the person is looking. */
+  const [syncingId, setSyncingId] = useState<string | null>(null);
   /** The link whose change to syncing both ways is waiting to be confirmed. */
   const [widening, setWidening] = useState<CalendarLink | null>(null);
   const [linking, setLinking] = useState<CalendarConnection | null>(null);
@@ -87,7 +99,7 @@ export function CalendarsSection(): ReactElement {
   async function act(
     run: () => Promise<{ readonly refusal: string | null }>,
     success: string | null = null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     setNotice(null);
     setDone(null);
     setBusy(true);
@@ -95,9 +107,30 @@ export function CalendarsSection(): ReactElement {
       const { refusal } = await run();
       setNotice(refusal);
       setDone(refusal === null ? success : null);
+      return refusal === null;
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Changes a link and puts the inverse on the undo history; the undo re-reads the link. */
+  async function change(
+    link: CalendarLink,
+    next: { readonly direction?: string; readonly status?: string },
+    label: string,
+  ): Promise<void> {
+    const before = {
+      ...(next.direction === undefined ? {} : { direction: link.direction }),
+      ...(next.status === undefined ? {} : { status: link.status }),
+    };
+    if (!(await act(() => sync.update(link, next), label))) return;
+    undo.push(label, async () => {
+      const current = latestLinks.current.find((entry) => entry.id === link.id);
+      if (current === undefined) return;
+      const { refusal } = await sync.update(current, before);
+      setNotice(refusal);
+      setDone(refusal === null ? `Undid: ${label}` : null);
+    });
   }
 
   const connectTo = (provider: string): Promise<{ readonly refusal: string | null }> =>
@@ -138,7 +171,10 @@ export function CalendarsSection(): ReactElement {
         label: 'Sync now',
         disabled: busy,
         onSelect: () => {
-          void act(() => sync.sync(link.id), `A sync of ${link.name} has started.`);
+          setSyncingId(link.id);
+          void act(() => sync.sync(link.id), `A sync of ${link.name} has started.`).finally(() => {
+            setSyncingId(null);
+          });
         },
       });
     }
@@ -147,8 +183,10 @@ export function CalendarsSection(): ReactElement {
         label: link.status === 'active' ? 'Pause syncing' : 'Resume syncing',
         disabled: busy,
         onSelect: () => {
-          void act(() =>
-            sync.update(link, { status: link.status === 'active' ? 'paused' : 'active' }),
+          void change(
+            link,
+            { status: link.status === 'active' ? 'paused' : 'active' },
+            `${link.status === 'active' ? 'Paused' : 'Resumed'} syncing ${link.name}`,
           );
         },
       });
@@ -179,7 +217,7 @@ export function CalendarsSection(): ReactElement {
       setWidening(link);
       return;
     }
-    void act(() => sync.update(link, { direction }));
+    void change(link, { direction }, `Set ${link.name} to import only`);
   }
 
   const connectionColumns = [
@@ -226,7 +264,7 @@ export function CalendarsSection(): ReactElement {
       key: 'name',
       header: 'Calendar',
       rowHeader: true,
-      cell: (link: CalendarLink) => link.name,
+      cell: (link: CalendarLink) => <FlashText stamp={link.revision}>{link.name}</FlashText>,
     },
     {
       key: 'provider',
@@ -255,7 +293,13 @@ export function CalendarsSection(): ReactElement {
       header: 'Status',
       cell: (link: CalendarLink) => (
         <div className="flex flex-col gap-1">
-          {linkTag(link)}
+          {syncingId === link.id ? (
+            <Text as="span" variant="note" role="status">
+              Syncing…
+            </Text>
+          ) : (
+            linkTag(link)
+          )}
           <Text as="span" variant="note" tone="muted">
             Last synced {formatMoment(link.lastSyncedAt)}
           </Text>
@@ -287,6 +331,11 @@ export function CalendarsSection(): ReactElement {
       title="Calendars"
       summary="Sync Google or Outlook calendars into this workspace."
     >
+      {status === 'ready' ? (
+        <Text variant="note" tone="muted">
+          {calendarSummary(connections, links)}
+        </Text>
+      ) : null}
       <details>
         <summary className="min-h-11 cursor-pointer text-sm text-accent-text">
           How linked calendars work
@@ -487,7 +536,7 @@ export function CalendarsSection(): ReactElement {
                 onClick={() => {
                   const link = widening;
                   setWidening(null);
-                  void act(() => sync.update(link, { direction: 'two_way' }));
+                  void change(link, { direction: 'two_way' }, `Set ${link.name} to both ways`);
                 }}
               >
                 Sync both ways

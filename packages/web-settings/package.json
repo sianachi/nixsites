@@ -85,6 +85,10 @@
       "types": "./src/settings/preferences/PreferencesSection.tsx",
       "default": "./src/settings/preferences/PreferencesSection.tsx"
     },
+    "./settings/shared/copy-box": {
+      "types": "./src/settings/shared/copy-box.tsx",
+      "default": "./src/settings/shared/copy-box.tsx"
+    },
     "./settings/shared/preference-toggle": {
       "types": "./src/settings/shared/preference-toggle.tsx",
       "default": "./src/settings/shared/preference-toggle.tsx"

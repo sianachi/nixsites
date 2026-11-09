@@ -40,3 +40,13 @@ export function linkTag(link: CalendarLink): ReactNode {
 export function formatMoment(value: string | null): string {
   return value === null ? 'never' : new Date(value).toLocaleString();
 }
+
+/** One line under the title: how many accounts are connected and how many calendars sync. */
+export function calendarSummary(
+  connections: readonly { readonly status: string }[],
+  links: readonly { readonly status: string }[],
+): string {
+  const accounts = connections.filter((connection) => connection.status === 'active').length;
+  const syncing = links.filter((link) => link.status === 'active').length;
+  return `${String(accounts)} ${accounts === 1 ? 'account' : 'accounts'} connected, ${String(syncing)} ${syncing === 1 ? 'calendar' : 'calendars'} syncing.`;
+}

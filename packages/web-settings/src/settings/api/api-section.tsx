@@ -2,6 +2,7 @@ import { Text } from '@nix/ui';
 import { type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
 
+import { CopyBox } from '../shared/copy-box';
 import { SettingsSection } from '../shared/settings-section';
 
 /** Product documentation. The API guide in the repository is what that site publishes. */
@@ -52,9 +53,7 @@ export function ApiSection(): ReactElement {
         Send a User-Agent you choose on every request. The hosted edge blocks the default Python and
         urllib user agents.
       </Text>
-      <pre className="overflow-x-auto rounded-md border border-divider bg-surface p-3 font-mono text-sm">
-        {exchange}
-      </pre>
+      <CopyBox label="the example" text={exchange} />
       <Text variant="note" tone="muted">
         The response field accessToken is the bearer token for /api/v1. It lasts a few minutes.
         Exchange again before it runs out. Renaming an item does not edit a note body. The API has

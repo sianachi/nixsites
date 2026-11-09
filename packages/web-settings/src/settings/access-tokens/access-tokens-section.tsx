@@ -3,6 +3,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
+import { FlashText } from '../shared/flash-text';
 import { SettingsSection } from '../shared/settings-section';
 import { AccessTokenCreateDialog } from './access-token-create-dialog';
 import { formatDay, tokenStatus, type TokenStatus } from './token-facts';
@@ -42,6 +43,10 @@ export function AccessTokensSection(): ReactElement {
   const { status, tokens, error, reload, create, revoke } = useAccessTokens();
 
   const [createOpen, setCreateOpen] = useState(false);
+  /** The ids that existed when a token was created: rows outside it are new and slide in. */
+  const [before, setBefore] = useState<ReadonlySet<string> | null>(null);
+  /** What the last action did, in words. A revoked token is dead for good, so none of this undoes. */
+  const [done, setDone] = useState<string | null>(null);
 
   /** The token a revocation is being confirmed for, or null while none is. */
   const [revoking, setRevoking] = useState<AccessToken | null>(null);
@@ -65,6 +70,7 @@ export function AccessTokensSection(): ReactElement {
       }
 
       setRevoking(null);
+      setDone(`Revoked ${token.name}. Anything using it has lost access.`);
       await reload();
     } finally {
       setRevokeInFlight(false);
@@ -78,13 +84,18 @@ export function AccessTokensSection(): ReactElement {
       rowHeader: true,
       cell: (token: AccessToken) =>
         tokenStatus(token, now).kind === 'live' ? (
-          token.name
+          <FlashText stamp={token.revokedAt} enter={before !== null && !before.has(token.id)}>
+            {token.name}
+          </FlashText>
         ) : (
+          // Revoked a moment ago: tint it once so the change is seen where it happened.
           // The muted role rather than an opacity wash, so a dead row stays readable - distinct
           // is not the same as illegible, and an audit row nobody can read is not an audit.
-          <Text as="span" variant="bodySmall" tone="muted">
-            {token.name}
-          </Text>
+          <FlashText stamp={token.revokedAt}>
+            <Text as="span" variant="bodySmall" tone="muted">
+              {token.name}
+            </Text>
+          </FlashText>
         ),
     },
     {
@@ -166,6 +177,11 @@ export function AccessTokensSection(): ReactElement {
           audit of what has been able to act as your account.
         </Text>
       </details>
+      {done === null ? null : (
+        <Text variant="note" role="status">
+          {done}
+        </Text>
+      )}
       <Text variant="note">
         <Link to={`${pathname}?tab=api`} className="text-accent-text">
           Call the HTTP API with a token
@@ -225,6 +241,8 @@ export function AccessTokensSection(): ReactElement {
           onClose={(createdToken) => {
             setCreateOpen(false);
             if (createdToken) {
+              setBefore(new Set(tokens.map((token) => token.id)));
+              setDone('Created a token. It is at the top of the list.');
               void reload();
             }
           }}
