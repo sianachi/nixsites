@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { UNSET_LABEL } from '@nix/web-collections/core/container-model';
 import { bucketKey, formatMeasure, measureOf, type PlottedSeries } from './chart-model';
+import type { ChartPicking } from './chart-selection';
 import { ChartLegend } from './svg-charts';
 
 /**
@@ -21,7 +22,9 @@ export function BarTable({
   rowHeader,
   rows,
   series,
+  picking,
 }: {
+  readonly picking?: ChartPicking | undefined;
   readonly chart: ItemChart;
   readonly caption: string;
   readonly rowHeader: string;
@@ -76,7 +79,7 @@ export function BarTable({
               return (
                 <tr key={bucketKey(bucket)} className="border-b border-divider">
                   <th scope="row" className="w-full p-1 text-left font-normal">
-                    <span className="relative block">
+                    <Pick picking={picking} bucketKey={bucketKey(bucket)}>
                       <span aria-hidden="true" className="absolute inset-y-0 left-0 flex w-full">
                         {split ? (
                           series.map((entry) => (
@@ -99,7 +102,7 @@ export function BarTable({
                       <Text as="span" variant="bodySmall" className="relative px-2 py-1">
                         {bucket.value === null ? `${UNSET_LABEL} (no value)` : label}
                       </Text>
-                    </span>
+                    </Pick>
                   </th>
 
                   {split
@@ -124,6 +127,35 @@ export function BarTable({
         </table>
       </ScrollRegion>
     </div>
+  );
+}
+
+/** A bar's row: one button spanning it when the bars can be picked, so the whole bar is the target. */
+function Pick({
+  picking,
+  bucketKey: key,
+  children,
+}: {
+  readonly picking: ChartPicking | undefined;
+  readonly bucketKey: string;
+  readonly children: ReactNode;
+}): ReactNode {
+  if (picking === undefined) return <span className="relative block">{children}</span>;
+  return (
+    <button
+      type="button"
+      aria-pressed={picking.isOn([key])}
+      onClick={() => {
+        picking.toggle([key]);
+      }}
+      className={cn(
+        'relative block w-full rounded-sm text-left hover:bg-accent/8 active:bg-accent/16 any-pointer-coarse:min-h-(--control-lg)',
+        picking.isOn([key]) && 'ring-2 ring-accent',
+        focusRing,
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

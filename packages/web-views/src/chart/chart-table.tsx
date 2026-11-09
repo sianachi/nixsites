@@ -2,6 +2,7 @@ import { ScrollRegion, Table, Text, cn, focusRing, type TableColumn } from '@nix
 import type { ReactNode } from 'react';
 
 import { formatMeasure } from './chart-model';
+import type { ChartPicking } from './chart-selection';
 
 /** One column of a chart's table: a series as drawn, or a derived line. */
 export interface ChartTableColumn {
@@ -24,6 +25,8 @@ export interface ChartTableProps {
   readonly columns: readonly ChartTableColumn[];
   /** Fold the table behind a disclosure so a long one does not push the page down on a phone. */
   readonly collapse?: boolean;
+  /** When given, each row's name is a button that lists the items behind it: the keyboard path to a mark. */
+  readonly picking?: ChartPicking | undefined;
 }
 
 /**
@@ -45,6 +48,7 @@ export function ChartTable({
   rows,
   columns,
   collapse = false,
+  picking,
 }: ChartTableProps): ReactNode {
   const indexed = rows.map((row, index) => ({ ...row, index }));
   const tableColumns: TableColumn<(typeof indexed)[number]>[] = [
@@ -52,11 +56,31 @@ export function ChartTable({
       key: ' row',
       header: rowHeader,
       rowHeader: true,
-      cell: (row) => (
-        <Text as="span" variant="bodySmall" tone={row.muted === true ? 'muted' : 'default'}>
-          {row.label}
-        </Text>
-      ),
+      cell: (row) => {
+        const label = (
+          <Text as="span" variant="bodySmall" tone={row.muted === true ? 'muted' : 'default'}>
+            {row.label}
+          </Text>
+        );
+        return picking === undefined ? (
+          label
+        ) : (
+          <button
+            type="button"
+            aria-pressed={picking.isOn([row.key])}
+            onClick={() => {
+              picking.toggle([row.key]);
+            }}
+            className={cn(
+              'rounded-sm px-1 text-left hover:bg-accent/12 active:bg-accent/24 any-pointer-coarse:min-h-(--control-lg)',
+              picking.isOn([row.key]) && 'bg-accent/18 font-semibold',
+              focusRing,
+            )}
+          >
+            {label}
+          </button>
+        );
+      },
     },
     ...columns.map((column): TableColumn<(typeof indexed)[number]> => ({
       key: column.key,

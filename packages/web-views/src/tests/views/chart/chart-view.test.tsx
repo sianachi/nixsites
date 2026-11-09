@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { Item } from '@nix/api-client';
 import { createNixClient, itemChartSchema, NixApiError } from '@nix/api-client';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
@@ -287,5 +288,79 @@ describe('a chart grouped by a priority or a checkbox', () => {
     render(<ChartBody chart={chart} fields={field('resolved', 'checkbox')} />);
 
     expect(rowNames()).toEqual(['Not checked', 'Checked']);
+  });
+});
+
+describe('picking a mark', () => {
+  const todo = (id: string, title: string, status: string | null): Item =>
+    ({ id, title, properties: status === null ? {} : { status } }) as unknown as Item;
+  const children = [
+    todo('a', 'Paint', 'Todo'),
+    todo('b', 'Sand', 'Todo'),
+    todo('c', 'Wire', 'Done'),
+    todo('d', 'Sweep', null),
+  ];
+  const payload = itemChartSchema.parse(
+    chartOf({
+      buckets: [
+        { value: 'Todo', children: 2, total: null },
+        { value: 'Done', children: 1, total: null },
+        { value: null, children: 1, total: null },
+      ],
+      children: 4,
+    }),
+  );
+
+  function draw(onOpen = vi.fn()): void {
+    render(<ChartBody chart={payload} items={children} onOpen={onOpen} />);
+  }
+
+  it('lists the items behind a bar, as many as the figure says, and opens one', () => {
+    const onOpen = vi.fn();
+    draw(onOpen);
+
+    fireEvent.click(within(screen.getByRole('row', { name: /todo/i })).getByRole('button'));
+
+    const panel = screen.getByRole('complementary', { name: 'Items' });
+    expect(within(panel).getByText(/Todo · 2 items/)).toBeVisible();
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(2);
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Sand' }));
+    expect(onOpen).toHaveBeenCalledWith('b');
+  });
+
+  it('lists the children with no value under Unset', () => {
+    draw();
+
+    fireEvent.click(within(screen.getByRole('row', { name: /unset/i })).getByRole('button'));
+
+    expect(within(screen.getByRole('complementary')).getByText('Sweep')).toBeVisible();
+  });
+
+  it('clears with the Clear button and Escape', () => {
+    draw();
+    const bar = () => within(screen.getByRole('row', { name: /done/i })).getByRole('button');
+
+    fireEvent.click(bar());
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(screen.getByText(/to list the items in it/)).toBeVisible();
+
+    fireEvent.click(bar());
+    fireEvent.keyDown(bar(), { key: 'Escape' });
+    expect(screen.getByText(/to list the items in it/)).toBeVisible();
+  });
+
+  it('switches the type from the chart and says so', () => {
+    draw();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    expect(screen.getByText('Showing pie')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pie' })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('does not offer a year grid for a chart that is not counted by day', () => {
+    draw();
+
+    expect(screen.queryByRole('button', { name: 'Year grid' })).toBeNull();
   });
 });

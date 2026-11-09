@@ -20,6 +20,7 @@ import {
 } from './chart-model';
 import { ChartTable, type ChartTableColumn } from './chart-table';
 import { PieWithTable } from './pie-with-table';
+import type { ChartPicking } from './chart-selection';
 import { ChartLegend, ColumnChart, LineChart } from './svg-charts';
 import { YearGrid } from './year-grid';
 
@@ -28,7 +29,9 @@ export function Drawing({
   kind,
   labels,
   caption,
+  picking,
 }: {
+  readonly picking?: ChartPicking | undefined;
   readonly chart: ItemChart;
   readonly kind: ChartKind;
   readonly labels: ChartLabels;
@@ -61,6 +64,8 @@ export function Drawing({
       bucketLabel(bucket.value, chart.period, labels, chart.groupBy, true),
     ),
     whole: !totals,
+    keys: chart.buckets.map(bucketKey),
+    picking,
   };
   const series = plottedSeries(chart, labels, { cumulative });
   const averages = averaged ? series.map((entry) => trailingAverage(entry.values)) : undefined;
@@ -97,6 +102,7 @@ export function Drawing({
       rows={rows}
       columns={columns}
       collapse={rows.length > 12}
+      picking={picking}
     />
   );
 
@@ -109,6 +115,7 @@ export function Drawing({
           rowHeader={rowHeader}
           rows={rows}
           series={series}
+          picking={picking}
         />
       );
 
@@ -165,7 +172,7 @@ export function Drawing({
       );
 
     case 'pie':
-      return <PieWithTable chart={chart} labels={labels} rowHeader={rowHeader} />;
+      return <PieWithTable chart={chart} labels={labels} rowHeader={rowHeader} picking={picking} />;
 
     case 'year': {
       const unit = totals ? labels.property(chart.measureProperty) || 'total' : 'items';
@@ -179,7 +186,19 @@ export function Drawing({
       });
       return (
         <div className="flex flex-col gap-3">
-          <YearGrid cells={cells} label={caption} unit={unit} />
+          <YearGrid
+            cells={cells}
+            label={caption}
+            unit={unit}
+            onSelect={
+              picking === undefined
+                ? undefined
+                : (date) => {
+                    picking.toggle([date]);
+                  }
+            }
+            selected={cells.find((cell) => picking?.isOn([cell.date]) === true)?.date ?? null}
+          />
           <details>
             <summary
               className={cn(

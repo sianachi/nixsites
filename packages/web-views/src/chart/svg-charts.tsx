@@ -8,10 +8,11 @@ import {
   pieGeometry,
   scaleTicks,
 } from '@nix/chart-render';
-import { Text } from '@nix/ui';
+import { Text, cn } from '@nix/ui';
 import { useId, type ReactNode } from 'react';
 
 import { formatMeasure, type PlottedSeries, type SeriesStyle } from './chart-model';
+import type { ChartPicking } from './chart-selection';
 
 /**
  * The drawn chart types: columns, lines and areas, and a pie.
@@ -132,7 +133,44 @@ function Gridlines(): ReactNode {
   );
 }
 
+/**
+ * A full-height strip over one bucket: the target a finger can hit, since a bar of three items is a
+ * sliver. Picking it picks the whole bucket; a mark inside picks its series. Pointer-only by design:
+ * the keyboard path is the table's buttons, which say the same figures.
+ */
+function Band({
+  keys,
+  x,
+  width,
+  picking,
+}: {
+  readonly keys: readonly string[];
+  readonly x: number;
+  readonly width: number;
+  readonly picking: ChartPicking;
+}): ReactNode {
+  return (
+    <rect
+      x={x}
+      y={0}
+      width={width}
+      height={HEIGHT}
+      onClick={() => {
+        picking.toggle(keys);
+      }}
+      className={cn(
+        'cursor-pointer',
+        picking.isOn(keys) ? 'fill-accent/15' : 'fill-transparent hover:fill-accent/10',
+      )}
+    />
+  );
+}
+
 interface AxisProps {
+  /** The bucket keys, aligned with `labels`, which a pick is made of. */
+  readonly keys?: readonly string[] | undefined;
+  /** Present when the marks can be picked to list the items behind them. */
+  readonly picking?: ChartPicking | undefined;
   /** One label per bucket, of which the frame shows the first, middle and last. */
   readonly labels: readonly string[];
   /** The same labels shortened for a phone. */
@@ -154,6 +192,8 @@ export function ColumnChart({
   shortLabels,
   whole,
   stacked,
+  keys = [],
+  picking,
 }: ColumnChartProps): ReactNode {
   const prefix = useId().replaceAll(':', '');
   const geometry = columnGeometry({ series, count: labels.length, whole, stacked });
@@ -167,12 +207,26 @@ export function ColumnChart({
       >
         <SeriesPatterns prefix={prefix} styles={series.map((entry) => entry.style)} />
         <Gridlines />
+        {picking === undefined
+          ? null
+          : keys.map((key, index) => (
+              <Band
+                key={key}
+                keys={[key]}
+                x={(index * WIDTH) / Math.max(1, labels.length)}
+                width={WIDTH / Math.max(1, labels.length)}
+                picking={picking}
+              />
+            ))}
         {labels.map((label, index) => (
           <g key={`${label}-${String(index)}`}>
             {geometry.rects
               .filter((rect) => rect.bucket === index)
               .map((rect) => {
                 const entry = series[rect.series];
+                const key = keys[index] ?? '';
+                const split = series.length > 1;
+                const picked = picking?.isOn([key], split ? rect.series : undefined) === true;
                 return entry === undefined ? null : (
                   <rect
                     key={entry.key}
@@ -181,9 +235,20 @@ export function ColumnChart({
                     width={rect.width}
                     height={rect.height}
                     fill={patternFill(prefix, rect.series)}
-                    className={geometry.separated ? 'stroke-background' : undefined}
-                    strokeWidth={geometry.separated ? 1 : 0}
+                    className={cn(
+                      geometry.separated ? 'stroke-background' : undefined,
+                      picking !== undefined && 'cursor-pointer hover:opacity-80 active:opacity-65',
+                      picked && 'stroke-foreground',
+                    )}
+                    strokeWidth={picked ? 2.5 : geometry.separated ? 1 : 0}
                     vectorEffect="non-scaling-stroke"
+                    onClick={
+                      picking === undefined
+                        ? undefined
+                        : () => {
+                            picking.toggle([key], split ? rect.series : undefined);
+                          }
+                    }
                   >
                     <title>{`${label}, ${entry.label}: ${formatMeasure(entry.values[index] ?? 0)}`}</title>
                   </rect>
@@ -215,6 +280,8 @@ export function LineChart({
   area,
   stacked,
   averages,
+  keys = [],
+  picking,
 }: LineChartProps): ReactNode {
   const prefix = useId().replaceAll(':', '');
   const geometry = lineGeometry({
@@ -235,12 +302,22 @@ export function LineChart({
       >
         <SeriesPatterns prefix={prefix} styles={series.map((entry) => entry.style)} />
         <Gridlines />
+        {picking === undefined
+          ? null
+          : keys.map((key, index) => {
+              const count = labels.length;
+              const step = count < 2 ? WIDTH : WIDTH / (count - 1);
+              const centre = count < 2 ? WIDTH / 2 : (index / (count - 1)) * WIDTH;
+              return (
+                <Band key={key} keys={[key]} x={centre - step / 2} width={step} picking={picking} />
+              );
+            })}
         {geometry.areas.map((points, position) => (
           <polygon
             key={`area-${series[position]?.key ?? String(position)}`}
             points={points}
             fill={patternFill(prefix, position)}
-            className={geometry.stacking ? undefined : 'opacity-50'}
+            className={cn('pointer-events-none', geometry.stacking ? undefined : 'opacity-50')}
           />
         ))}
         {series.map((entry, position) => (
@@ -248,7 +325,7 @@ export function LineChart({
             key={`line-${entry.key}`}
             d={geometry.lines[position] ?? ''}
             fill="none"
-            className={entry.style.stroke}
+            className={cn('pointer-events-none', entry.style.stroke)}
             strokeDasharray={entry.style.dash}
             strokeWidth="2"
             vectorEffect="non-scaling-stroke"
@@ -261,7 +338,7 @@ export function LineChart({
               key={`average-${entry.key}`}
               d={d}
               fill="none"
-              className={entry.style.stroke}
+              className={cn('pointer-events-none', entry.style.stroke)}
               strokeDasharray="0 6"
               strokeWidth="3"
               strokeLinecap="round"
@@ -271,6 +348,9 @@ export function LineChart({
         })}
         {geometry.points.map((point) => {
           const entry = series[point.series];
+          const key = keys[point.bucket] ?? '';
+          const split = series.length > 1;
+          const picked = picking?.isOn([key], split ? point.series : undefined) === true;
           return entry === undefined ? null : (
             <circle
               key={`${entry.key}-${String(point.bucket)}`}
@@ -278,8 +358,18 @@ export function LineChart({
               cy={point.cy}
               r="0.01"
               fill="none"
-              className={entry.style.stroke}
-              strokeWidth="6"
+              className={cn(
+                entry.style.stroke,
+                picking !== undefined && 'cursor-pointer hover:opacity-80 active:opacity-65',
+              )}
+              strokeWidth={picked ? 11 : 6}
+              onClick={
+                picking === undefined
+                  ? undefined
+                  : () => {
+                      picking.toggle([key], split ? point.series : undefined);
+                    }
+              }
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             >
@@ -294,13 +384,21 @@ export function LineChart({
 
 export interface PieSlice {
   readonly key: string;
+  /** The bucket keys the slice stands for: one, or every folded value for Other. */
+  readonly keys?: readonly string[];
   readonly label: string;
   readonly value: number;
   readonly style: SeriesStyle;
 }
 
 /** Shares of the whole. Slices run clockwise from twelve o'clock in the order given. */
-export function PieChart({ slices }: { readonly slices: readonly PieSlice[] }): ReactNode {
+export function PieChart({
+  slices,
+  picking,
+}: {
+  readonly slices: readonly PieSlice[];
+  readonly picking?: ChartPicking | undefined;
+}): ReactNode {
   const prefix = useId().replaceAll(':', '');
   const geometry = pieGeometry(slices.map((slice) => slice.value));
 
@@ -315,10 +413,30 @@ export function PieChart({ slices }: { readonly slices: readonly PieSlice[] }): 
           if (slice === undefined) {
             return null;
           }
+          const keys = slice.keys ?? [slice.key];
+          const pickable = {
+            className: cn(
+              picking !== undefined && 'cursor-pointer hover:opacity-80 active:opacity-65',
+              picking?.isOn(keys) === true ? 'stroke-foreground' : 'stroke-background',
+            ),
+            onClick:
+              picking === undefined
+                ? undefined
+                : () => {
+                    picking.toggle(keys);
+                  },
+          };
           const title = `${slice.label}: ${formatMeasure(slice.value)} (${String(Math.round(share * 100))}%)`;
           if (d === null) {
             return (
-              <circle key={slice.key} cx="0" cy="0" r="1" fill={patternFill(prefix, index)}>
+              <circle
+                key={slice.key}
+                cx="0"
+                cy="0"
+                r="1"
+                fill={patternFill(prefix, index)}
+                {...pickable}
+              >
                 <title>{title}</title>
               </circle>
             );
@@ -328,8 +446,8 @@ export function PieChart({ slices }: { readonly slices: readonly PieSlice[] }): 
               key={slice.key}
               d={d}
               fill={patternFill(prefix, index)}
-              className="stroke-background"
-              strokeWidth="1"
+              {...pickable}
+              strokeWidth={picking?.isOn(keys) === true ? 2.5 : 1}
               vectorEffect="non-scaling-stroke"
             >
               <title>{title}</title>

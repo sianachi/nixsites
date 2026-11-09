@@ -10,6 +10,7 @@ import {
   seriesStyle,
   type ChartLabels,
 } from './chart-model';
+import type { ChartPicking } from './chart-selection';
 import { ChartTable } from './chart-table';
 import { ChartLegend, PieChart, type PieSlice } from './svg-charts';
 
@@ -21,7 +22,9 @@ export function PieWithTable({
   chart,
   labels,
   rowHeader,
+  picking,
 }: {
+  readonly picking?: ChartPicking | undefined;
   readonly chart: ItemChart;
   readonly labels: ChartLabels;
   readonly rowHeader: string;
@@ -38,12 +41,17 @@ export function PieWithTable({
   const named = ranked.slice(0, MAXIMUM_SERIES);
   const folded = ranked.slice(MAXIMUM_SERIES);
   const slices: PieSlice[] = [
-    ...named.map((slice, index) => ({ ...slice, style: seriesStyle(index, false) })),
+    ...named.map((slice, index) => ({
+      ...slice,
+      keys: [slice.key],
+      style: seriesStyle(index, false),
+    })),
     ...(folded.length === 0
       ? []
       : [
           {
             key: ' other',
+            keys: folded.map((slice) => slice.key),
             label: `Other (${countOf(folded.length, 'value')})`,
             value: folded.reduce((sum, slice) => sum + slice.value, 0),
             style: seriesStyle(MAXIMUM_SERIES, true),
@@ -54,13 +62,14 @@ export function PieWithTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <PieChart slices={slices} />
+      <PieChart slices={slices} picking={picking} />
       <ChartLegend entries={slices} lines={false} />
       <ChartTable
         caption="Every figure"
         rowHeader={rowHeader}
         rows={ranked}
         collapse={ranked.length > 12}
+        picking={picking}
         columns={[
           {
             key: 'value',
