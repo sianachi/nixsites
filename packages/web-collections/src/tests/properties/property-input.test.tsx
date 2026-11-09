@@ -9,6 +9,8 @@ import {
   type WorkspaceMember,
   type WorkspaceMembersState,
 } from '@nix/web-settings/settings/members/use-workspace-members';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { propertyOf } from '../../testing/property-fixture';
 
 // A date-or-time property is read and written in the reader's own zone, so it needs one fixed for
@@ -23,6 +25,13 @@ process.env.TZ = 'Pacific/Honolulu';
  */
 vi.mock('@nix/web-settings/settings/members/use-workspace-members', () => ({
   useWorkspaceMembers: vi.fn(),
+}));
+
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
+  useOptionalApiClient: vi.fn(() => null),
+}));
+vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
+  useOptionalWorkspace: vi.fn(() => null),
 }));
 
 /**
@@ -756,6 +765,25 @@ describe('an assignee property', () => {
       ...overrides,
     };
   }
+
+  it('suggests the members for a text owner and still takes any typed name', () => {
+    vi.mocked(useWorkspaceMembers).mockReturnValue(membersState({ members: [ada, grace] }));
+    vi.mocked(useOptionalApiClient).mockReturnValueOnce({} as never);
+    vi.mocked(useOptionalWorkspace).mockReturnValueOnce({} as never);
+
+    const { container } = render(
+      <PropertyInput
+        item={itemWith({ owner: 'Someone outside' })}
+        property={propertyOf({ key: 'owner', label: 'Owner', type: 'text' })}
+        onCommit={vi.fn()}
+      />,
+    );
+
+    expect(
+      [...container.querySelectorAll('datalist option')].map((o) => o.getAttribute('value')),
+    ).toEqual(['Ada Lovelace', 'Grace Hopper']);
+    expect(screen.getByRole('combobox', { name: 'Owner' })).toHaveValue('Someone outside');
+  });
 
   it('offers the workspace members and a way back to unassigned', () => {
     vi.mocked(useWorkspaceMembers).mockReturnValue(membersState({ members: [ada, grace] }));

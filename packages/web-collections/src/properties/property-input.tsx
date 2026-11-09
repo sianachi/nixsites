@@ -1,5 +1,9 @@
 import { useState, type ReactNode } from 'react';
 
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { useWorkspaceMembers } from '@nix/web-settings/settings/members/use-workspace-members';
+
 import { readPropertyText } from '../core/container-model';
 
 import { CheckboxValue } from './inputs/checkbox-value';
@@ -107,6 +111,28 @@ function SourcedValue(props: PropertyInputProps): ReactNode {
   );
 }
 
+/**
+ * A text field named `owner` suggests the workspace's members, the source the assignee picker
+ * reads, and still takes any typed name.
+ * shortcut: matched by key, since a text property has no person marker; upgrade when the schema gets one.
+ */
+function OwnerTextValue(props: PropertyInputProps): ReactNode {
+  // Stories and bare tests have no workspace to list members from; the hook throws there.
+  const client = useOptionalApiClient();
+  const workspace = useOptionalWorkspace();
+  return client !== null && workspace !== null ? (
+    <MemberSuggestedText {...props} />
+  ) : (
+    <TypedValue {...props} kind="text" />
+  );
+}
+
+function MemberSuggestedText(props: PropertyInputProps): ReactNode {
+  const { members } = useWorkspaceMembers();
+  const names = [...new Set(members.map((member) => member.subjectDisplayName))];
+  return <TypedValue {...props} kind="text" suggestions={names} />;
+}
+
 function PropertyControl(props: PropertyInputProps): ReactNode {
   switch (props.property.type) {
     case 'text':
@@ -114,6 +140,8 @@ function PropertyControl(props: PropertyInputProps): ReactNode {
       // pet wrote over several lines is edited as several lines rather than flattened on first edit.
       return /[\r\n]/.test(readPropertyText(props.item, props.property.key)) ? (
         <LongTextValue {...props} />
+      ) : props.property.key === 'owner' ? (
+        <OwnerTextValue {...props} />
       ) : (
         <TypedValue {...props} kind="text" />
       );
