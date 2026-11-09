@@ -75,10 +75,13 @@ const EXTENSION_ICONS: Readonly<Record<string, LucideIcon>> = {
   xml: FileCode,
 };
 
-/** A file's glyph from its media type when the record is here, else from its name's extension. */
-export function fileIcon(name: string, info?: DriveFileInfo): LucideIcon {
+/**
+ * A file's glyph from its media type when the record is here (or `knownMediaType` is, for a caller
+ * that already holds the media type), else from its name's extension.
+ */
+export function fileIcon(name: string, info?: DriveFileInfo, knownMediaType?: string): LucideIcon {
   const current = info?.status === 'ready' ? info.record.current : undefined;
-  const mediaType = current?.mediaType ?? '';
+  const mediaType = current?.mediaType ?? knownMediaType ?? '';
   if (mediaType.startsWith('image/')) return FileImage;
   if (mediaType.startsWith('video/')) return FileVideo;
   if (mediaType.startsWith('audio/')) return FileAudio;

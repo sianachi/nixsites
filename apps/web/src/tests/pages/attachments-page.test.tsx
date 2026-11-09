@@ -15,6 +15,10 @@ const VERSION = 'f2222222-2222-4222-8222-222222222222';
 const SOURCE = 'f3333333-3333-4333-8333-333333333333';
 const HOLDER = 'f4444444-4444-4444-8444-444444444444';
 const REFERENCE = 'f5555555-5555-4555-8555-555555555555';
+const SECOND = 'f7777777-7777-4777-8777-777777777777';
+const SECOND_VERSION = 'f8888888-8888-4888-8888-888888888888';
+const THIRD = 'f9999999-9999-4999-8999-999999999999';
+const THIRD_VERSION = 'fa000000-0000-4000-8000-000000000000';
 const PRINCIPAL = 'f6666666-6666-4666-8666-666666666666';
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -134,6 +138,22 @@ function stubAttachments(options: Options = {}): Call[] {
         });
       }
       if (path.includes('/references/')) return new Response(null, { status: 204 });
+      if (path.endsWith('/properties')) {
+        // The client parses the answer as an item; a bare {} would fail it and block the undo entry.
+        return json({
+          id: FILE,
+          workspaceId: STUB_WORKSPACE_ID,
+          title: 'Contract.pdf',
+          type: 'file',
+          parentId: null,
+          hasChildren: false,
+          seq: 1,
+          lifecycleState: 'active',
+          properties: {},
+          createdAt: '2026-11-01T00:00:00.000Z',
+          updatedAt: '2026-11-01T00:00:00.000Z',
+        });
+      }
       if (path.endsWith('/file/download')) {
         return json({
           url: 'https://files.example.test/x',
@@ -179,9 +199,12 @@ describe('the attachments page', () => {
     const list = await screen.findByRole('list', { name: 'Attachments' });
     expect(within(list).getByText('Contract.pdf')).toBeVisible();
     expect(within(list).getByText('Approved')).toBeVisible();
+    expect(within(list).getByText('Public link')).toBeVisible();
+    // The rest is one tap away, not on every row.
+    expect(within(list).queryByText('2 pins')).toBeNull();
+    await manage(userEvent.setup());
     expect(within(list).getByText('Expires 2027-03-01')).toBeVisible();
     expect(within(list).getByText('2 pins')).toBeVisible();
-    expect(within(list).getByText('Public link')).toBeVisible();
     expect(within(list).getByRole('link', { name: 'Source note' })).toHaveAttribute(
       'href',
       expect.stringContaining(SOURCE),
@@ -325,9 +348,7 @@ describe('the attachments page', () => {
 
     expect(await screen.findByText('Offer record (pin)')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Unpin Offer record' }));
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove' }),
-    );
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => {
       expect(
         calls.some(
@@ -337,6 +358,106 @@ describe('the attachments page', () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it('approves from the row without opening Manage', async () => {
+    const calls = stubAttachments();
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Approve Contract.pdf' }));
+    await waitFor(() => {
+      expect(calls.find((call) => call.path.endsWith('/state'))?.body).toEqual({
+        state: 'approved',
+      });
+    });
+    expect(await screen.findByText('Approved “Contract.pdf”')).toBeVisible();
+  });
+
+  it('submits several selected files for review in one action, and undoes it', async () => {
+    const calls = stubAttachments({
+      rows: [
+        row(),
+        row({ itemId: SECOND, title: 'Budget.xlsx', shownVersionId: SECOND_VERSION }),
+        row({
+          itemId: THIRD,
+          title: 'Done.pdf',
+          shownVersionId: THIRD_VERSION,
+          shownVersionState: 'approved',
+        }),
+      ],
+    });
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+    await screen.findByRole('list', { name: 'Attachments' });
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select all shown files' }));
+    await user.click(await screen.findByRole('button', { name: 'Submit for review (2)' }));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.path.endsWith('/state'))).toHaveLength(2);
+    });
+    expect(await screen.findByText('Submitted for review: 2 files, 1 skipped')).toBeVisible();
+
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      const writes = calls.filter((call) => call.path.endsWith('/state'));
+      expect(writes).toHaveLength(4);
+      expect(writes.slice(2).map((call) => call.body)).toEqual([
+        { state: 'draft' },
+        { state: 'draft' },
+      ]);
+    });
+  });
+
+  it('sets an expiry on the selected files and undoes it with the old value', async () => {
+    const calls = stubAttachments({ rows: [row({ expiresAt: '2027-03-01T00:00:00+00:00' })] });
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Select Contract.pdf' }));
+    await user.type(screen.getByLabelText('Expiry date for selected files'), '2027-04-02');
+    await user.click(screen.getByRole('button', { name: 'Set expiry (1)' }));
+    await waitFor(() => {
+      expect(calls.find((call) => call.path.endsWith('/properties'))?.body).toEqual({
+        properties: { expiry: new Date('2027-04-02T23:59:59').toISOString() },
+      });
+    });
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.path.endsWith('/properties')).at(-1)?.body).toEqual({
+        properties: { expiry: '2027-03-01T00:00:00+00:00' },
+      });
+    });
+  });
+
+  it('finds the files that need attention without opening any row', async () => {
+    const soon = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    stubAttachments({
+      rows: [
+        row({ shownVersionState: 'approved', title: 'Fine.pdf' }),
+        row({
+          itemId: SECOND,
+          title: 'Review me.pdf',
+          shownVersionId: SECOND_VERSION,
+          shownVersionState: 'in_review',
+        }),
+        row({
+          itemId: THIRD,
+          title: 'Lapsing.pdf',
+          shownVersionId: THIRD_VERSION,
+          shownVersionState: 'approved',
+          expiresAt: soon,
+        }),
+      ],
+    });
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Needs attention (2)' }));
+    const list = screen.getByRole('list', { name: 'Attachments' });
+    expect(within(list).queryByText('Fine.pdf')).toBeNull();
+    expect(within(list).getByText('Review me.pdf')).toBeVisible();
+    expect(within(list).getByText('Expiring soon')).toBeVisible();
   });
 
   it('downloads the shown version', async () => {

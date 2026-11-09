@@ -197,6 +197,10 @@
       "types": "./src/core/view-tools.tsx",
       "default": "./src/core/view-tools.tsx"
     },
+    "./drive/drive-icons": {
+      "types": "./src/drive/drive-icons.ts",
+      "default": "./src/drive/drive-icons.ts"
+    },
     "./drive/drive-download-action": {
       "types": "./src/drive/drive-download-action.tsx",
       "default": "./src/drive/drive-download-action.tsx"
