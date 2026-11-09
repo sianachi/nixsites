@@ -1,6 +1,8 @@
 import { fireEvent, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { UndoProvider, useUndo } from '@nix/ui';
 
 import { InteractiveFormView } from '../../../form/interactive-form-view';
 import { aContainer } from '@nix/web-collections/testing/container-fixture';
@@ -52,42 +54,63 @@ const interactiveForm = {
   confirmationMessage: 'Thanks for checking in.',
 };
 
+function UndoNow(): ReactNode {
+  const undo = useUndo();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void undo.undoLatest();
+      }}
+    >
+      Undo now
+    </button>
+  );
+}
+
 function renderForm(
   create: (title: string, properties?: Record<string, unknown>) => Promise<string | null>,
   mode: string | null = null,
-): void {
-  renderAt(
-    <InteractiveFormView
-      container={aContainer({
-        schema: {
-          properties: [
-            {
-              key: 'mood',
-              label: 'Mood',
-              type: 'select',
-              options: ['Good', 'Low'],
-              required: false,
-            },
-            { key: 'detail', label: 'Detail', type: 'text', options: [], required: false },
-            {
-              key: 'detail_length',
-              label: 'Detail length',
-              type: 'formula',
-              expression: 'LEN([detail])',
-              options: [],
-              required: false,
-            },
-          ],
-          declared: [],
-          inherit: true,
-        },
-        create,
-      })}
-      view={aView({ kind: 'interactive_form', interactiveForm, mode })}
-      onOpen={vi.fn()}
-    />,
+): ReturnType<typeof renderAt> {
+  return renderAt(
+    <UndoProvider>
+      <UndoNow />
+      <InteractiveFormView
+        container={aContainer({
+          schema: {
+            properties: [
+              {
+                key: 'mood',
+                label: 'Mood',
+                type: 'select',
+                options: ['Good', 'Low'],
+                required: false,
+              },
+              { key: 'detail', label: 'Detail', type: 'text', options: [], required: false },
+              {
+                key: 'detail_length',
+                label: 'Detail length',
+                type: 'formula',
+                expression: 'LEN([detail])',
+                options: [],
+                required: false,
+              },
+            ],
+            declared: [],
+            inherit: true,
+          },
+          create,
+        })}
+        view={aView({ kind: 'interactive_form', interactiveForm, mode })}
+        onOpen={vi.fn()}
+      />
+    </UndoProvider>,
   );
 }
+
+afterEach(() => {
+  sessionStorage.clear();
+});
 
 describe('interactive forms', () => {
   it('calculates only answers still visible after a conditional page is hidden', async () => {
@@ -95,9 +118,7 @@ describe('interactive forms', () => {
     const user = userEvent.setup();
     renderForm(create, 'temporary');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mood' }), 'Low');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.type(screen.getByRole('textbox', { name: 'What happened?' }), 'Busy');
-    await user.click(screen.getByRole('button', { name: 'Back' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mood' }), 'Good');
     await user.click(screen.getByRole('button', { name: 'Show results' }));
     expect(screen.getByLabelText('Detail length')).toHaveTextContent('0');
@@ -117,17 +138,20 @@ describe('interactive forms', () => {
     await user.click(screen.getByRole('button', { name: 'Send response' }));
     expect(create).toHaveBeenCalledExactlyOnceWith('Good', { mood: 'Good' });
   });
-  it('navigates visible pages, enforces their required fields, and creates schema-backed properties', async () => {
+  it('shows every visible page at once, counts required answers, and creates schema-backed properties', async () => {
     const create = vi.fn(() => Promise.resolve(null));
     const user = userEvent.setup();
     renderForm(create);
 
     expect(screen.getByRole('combobox', { name: 'Mood' })).toBeRequired();
+    expect(screen.getByText('0 of 1 required answered')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mood' }), 'Low');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.getByRole('heading', { name: 'Tell us more' }).closest('header')).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Tell us more' })).toBeInTheDocument();
+    expect(screen.getByText('1 of 2 required answered')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Send response' }));
     expect(screen.getByText('This answer is required.')).toBeInTheDocument();
+    expect(screen.getByText(/still empty: What happened\?/)).toBeInTheDocument();
 
     const detail = screen.getByRole('textbox', { name: 'What happened?' });
     await vi.waitFor(() => {
@@ -139,6 +163,21 @@ describe('interactive forms', () => {
 
     expect(await screen.findByText('Recorded')).toBeInTheDocument();
     expect(create).toHaveBeenCalledWith('Low', { mood: 'Low', detail: 'A difficult morning' });
+  });
+
+  it('clears answers, undoes the clear without dropping later answers, and restores a draft', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderForm(vi.fn(() => Promise.resolve(null)));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Mood' }), 'Low');
+    await user.click(screen.getByRole('button', { name: 'Clear answers' }));
+    expect(screen.getByRole('combobox', { name: 'Mood' })).toHaveValue('');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Mood' }), 'Good');
+    await user.click(screen.getByRole('button', { name: 'Undo now' }));
+    expect(screen.getByRole('combobox', { name: 'Mood' })).toHaveValue('Good');
+    unmount();
+    renderForm(vi.fn(() => Promise.resolve(null)));
+    expect(screen.getByRole('combobox', { name: 'Mood' })).toHaveValue('Good');
+    expect(screen.getByText(/Draft restored/)).toBeInTheDocument();
   });
 
   it('does not send two responses when Send response is tapped twice before the first answer returns', async () => {

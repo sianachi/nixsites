@@ -1,4 +1,4 @@
-import { Button, Checkbox, Text } from '@nix/ui';
+import { Button, Checkbox, Text, useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
@@ -69,23 +69,57 @@ function resolveFlow(
   return { pages: shown, answers: effective };
 }
 
+function draftKey(viewId: string): string {
+  return `nix:interactive-form-draft:${viewId}`;
+}
+
+function readDraft(viewId: string): Record<string, PropertyValue> {
+  try {
+    const raw = sessionStorage.getItem(draftKey(viewId));
+    const parsed: unknown = raw === null ? null : JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, PropertyValue>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDraft(viewId: string, answers: Record<string, PropertyValue>): void {
+  try {
+    if (Object.keys(answers).length === 0) sessionStorage.removeItem(draftKey(viewId));
+    else sessionStorage.setItem(draftKey(viewId), JSON.stringify(answers));
+  } catch {
+    // Storage can be blocked; the draft is a convenience.
+  }
+}
+
 export function InteractiveFormView({ container, view }: ViewRendererProps): ReactNode {
   const form = view.interactiveForm;
-  const [pageIndex, setPageIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, PropertyValue>>({});
+  const undo = useUndo();
+  const [initial] = useState(() => readDraft(view.id));
+  const [restored, setRestored] = useState(() => Object.keys(initial).length > 0);
+  const [answers, setAnswers] = useState<Record<string, PropertyValue>>(initial);
   const answersRef = useRef(answers);
+  // Remounts the inputs when answers are cleared or restored, so they show the new values.
+  const [generation, setGeneration] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [completion, setCompletion] = useState<'saved' | 'temporary' | null>(null);
   const [saveChoice, setSaveChoice] = useState<boolean | null>(null);
   const saveResponse = saveChoice ?? view.mode !== 'temporary';
+  // Temporary mode promises nothing is kept, so only saved responses keep a draft.
+  useEffect(() => {
+    writeDraft(view.id, saveResponse && completion === null ? answers : {});
+  }, [view.id, saveResponse, completion, answers]);
   const [outcome, setOutcome] = useState<string | null>(null);
+  const [missing, setMissing] = useState<{ id: string; text: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const pageHeaderRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    pageHeaderRef.current?.focus();
-  }, [pageIndex, completion]);
+    if (completion !== null) pageHeaderRef.current?.focus();
+  }, [completion]);
 
   const definitions = new Map(
     (container.schema?.properties ?? []).map((property) => [property.key, property]),
@@ -114,7 +148,10 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
       properties[block.propertyKey] = flow.answers[block.id] ?? null;
     }
   }
-  const page = visiblePages[Math.min(pageIndex, Math.max(0, visiblePages.length - 1))];
+  const requiredBlocks = visiblePages
+    .flatMap((entry) => entry.blocks)
+    .filter((block) => block.kind === 'field' && block.required);
+  const answeredCount = requiredBlocks.filter((block) => !isEmpty(flow.answers[block.id])).length;
 
   if (completion !== null) {
     return (
@@ -150,7 +187,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
           onClick={() => {
             setAnswers({});
             answersRef.current = {};
-            setPageIndex(0);
+            setGeneration((current) => current + 1);
             setCompletion(null);
           }}
         >
@@ -160,14 +197,42 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
     );
   }
 
-  if (page === undefined)
+  if (visiblePages.length === 0)
     return (
       <Text tone="muted" className="wrap-anywhere">
         No page currently matches these answers.
       </Text>
     );
-  const visibleBlocks = page.blocks.filter((block) => isVisible(block.visibleWhen, answers));
-  const last = pageIndex >= visiblePages.length - 1;
+
+  function setAll(next: Record<string, PropertyValue>): void {
+    answersRef.current = next;
+    setAnswers(next);
+    setErrors({});
+    setOutcome(null);
+    setRestored(false);
+    setGeneration((current) => current + 1);
+  }
+
+  function clearAnswers(): void {
+    const previous = answersRef.current;
+    if (Object.keys(previous).length === 0) return;
+    setAll({});
+    // Answers typed after the clear win over the ones brought back.
+    undo.push('Cleared your answers', () => {
+      setAll({ ...previous, ...answersRef.current });
+    });
+  }
+
+  function focusField(id: string): void {
+    requestAnimationFrame(() => {
+      const target = formRef.current?.querySelector<HTMLElement>(`[data-block="${id}"]`);
+      const input = target?.querySelector<HTMLElement>('input, select, textarea') ?? target;
+      // jsdom has no scrollIntoView; guard it without an optional chain the types call redundant.
+      if (input !== null && typeof input.scrollIntoView === 'function')
+        input.scrollIntoView({ block: 'center' });
+      input?.focus();
+    });
+  }
 
   function validate(blocks: readonly FormBlock[]): boolean {
     if (!reportFormValidity(formRef.current)) return false;
@@ -184,14 +249,19 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
     );
     setErrors(required);
     if (Object.keys(required).length === 0) return true;
-    setOutcome('Some required answers are still empty.');
-    const firstMissingPage = visiblePages.findIndex((candidate) =>
-      candidate.blocks.some((block) => block.id in required),
+    setOutcome(
+      `${String(Object.keys(required).length)} required ${
+        Object.keys(required).length === 1 ? 'answer is' : 'answers are'
+      } still empty: ${blocks
+        .filter((block) => block.id in required)
+        .map((block) => block.text)
+        .join(', ')}.`,
     );
-    if (firstMissingPage >= 0) setPageIndex(firstMissingPage);
-    requestAnimationFrame(() =>
-      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(),
-    );
+    const firstMissing = blocks.find((block) => block.id in required);
+    if (firstMissing !== undefined) {
+      setMissing({ id: firstMissing.id, text: firstMissing.text });
+      focusField(firstMissing.id);
+    }
     return false;
   }
 
@@ -206,6 +276,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
     const flow = resolveFlow(definition.pages, currentAnswers);
     const shownBlocks = flow.pages.flatMap((entry) => entry.blocks);
     if (!validate(shownBlocks)) return;
+    setMissing(null);
 
     if (!saveResponse) {
       setOutcome(null);
@@ -255,11 +326,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (last) void finish();
-        else if (validate(visibleBlocks)) {
-          setOutcome(null);
-          setPageIndex((current) => current + 1);
-        }
+        void finish();
       }}
     >
       <div className="flex min-w-0 flex-col gap-1">
@@ -278,69 +345,109 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
             : 'Answers stay in this view. Uploads and history are off.'}
         </Text>
       </div>
-      <header
-        ref={pageHeaderRef}
-        tabIndex={-1}
-        className="flex min-w-0 flex-col gap-1 border-b border-divider pb-3"
-      >
-        <Text variant="caption" tone="muted">
-          Page {String(pageIndex + 1)} of {String(visiblePages.length)}
+      <div className="flex min-w-0 flex-col gap-1">
+        <Text variant="caption" tone="muted" role="status">
+          {restored ? 'Draft restored. ' : ''}
+          {requiredBlocks.length === 0
+            ? 'No required answers.'
+            : `${String(answeredCount)} of ${String(requiredBlocks.length)} required answered`}
         </Text>
-        <Text variant="h3" as="h2" className="wrap-anywhere">
-          {page.title}
-        </Text>
-        {page.description === null ? null : (
-          <Text tone="muted" className="wrap-anywhere">
-            {page.description}
-          </Text>
+        {requiredBlocks.length === 0 ? null : (
+          <progress
+            aria-label="Required answers"
+            className="h-1.5 w-full"
+            max={requiredBlocks.length}
+            value={answeredCount}
+          />
         )}
-      </header>
+      </div>
 
-      {visibleBlocks.map((block) => (
-        <InteractiveBlock
-          key={block.id}
-          block={block}
-          definition={block.propertyKey === null ? undefined : definitions.get(block.propertyKey)}
-          value={answers[block.id]}
-          error={errors[block.id] ?? null}
-          allowInputStorage={saveResponse}
-          parentId={container.itemId}
-          onValue={(value) => {
-            const next = { ...answersRef.current, [block.id]: value };
-            answersRef.current = next;
-            setAnswers(next);
-            setErrors((current) =>
-              Object.fromEntries(Object.entries(current).filter(([id]) => id !== block.id)),
-            );
-          }}
-        />
+      {visiblePages.map((page) => (
+        <section
+          key={page.id}
+          aria-labelledby={`form-page-${page.id}`}
+          className="flex min-w-0 flex-col gap-4"
+        >
+          <header className="flex min-w-0 flex-col gap-1 border-b border-divider pb-2">
+            <Text variant="h3" as="h2" id={`form-page-${page.id}`} className="wrap-anywhere">
+              {page.title}
+            </Text>
+            {page.description === null ? null : (
+              <Text tone="muted" className="wrap-anywhere">
+                {page.description}
+              </Text>
+            )}
+          </header>
+          {page.blocks.map((block) => (
+            <div key={`${block.id}:${String(generation)}`} data-block={block.id} data-enter="">
+              <InteractiveBlock
+                block={block}
+                definition={
+                  block.propertyKey === null ? undefined : definitions.get(block.propertyKey)
+                }
+                value={answers[block.id]}
+                error={errors[block.id] ?? null}
+                allowInputStorage={saveResponse}
+                parentId={container.itemId}
+                onValue={(value) => {
+                  const next = { ...answersRef.current, [block.id]: value };
+                  answersRef.current = next;
+                  setAnswers(next);
+                  setRestored(false);
+                  setErrors((current) =>
+                    Object.fromEntries(Object.entries(current).filter(([id]) => id !== block.id)),
+                  );
+                }}
+              />
+            </div>
+          ))}
+        </section>
       ))}
 
       {outcome === null ? null : (
-        <Text variant="bodySmall" role="alert" className="rounded-md border border-divider p-3">
-          {outcome}
-        </Text>
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-2 rounded-md border border-divider p-3"
+        >
+          <Text variant="bodySmall" className="min-w-0 flex-1 wrap-anywhere">
+            {outcome}
+          </Text>
+          {missing === null ? null : (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                focusField(missing.id);
+              }}
+            >
+              Go to {missing.text}
+            </Button>
+          )}
+        </div>
       )}
       <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-divider bg-background py-2">
-        {pageIndex === 0 ? null : (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setPageIndex((current) => current - 1);
-            }}
-          >
-            Back
-          </Button>
-        )}
         <Button type="submit" aria-disabled={sending}>
-          {sending
-            ? 'Sending…'
-            : last
-              ? saveResponse
-                ? 'Send response'
-                : 'Show results'
-              : 'Continue'}
+          {sending ? (
+            <>
+              <span
+                aria-hidden
+                className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-current border-r-transparent"
+              />
+              Sending…
+            </>
+          ) : saveResponse ? (
+            'Send response'
+          ) : (
+            'Show results'
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={sending || Object.keys(answers).length === 0}
+          onClick={clearAnswers}
+        >
+          Clear answers
         </Button>
       </div>
     </form>
