@@ -1,4 +1,4 @@
-import { Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { Blueprint, Button, Icon, Text, cn, focusRing, useUndo } from '@nix/ui';
 import {
   CalendarClock,
   CalendarDays,
@@ -72,6 +72,7 @@ export function Homebase({
   const templateLibrary = useTemplateLibrary();
   const [choosingStructure, setChoosingStructure] = useState(false);
   const [exploring, setExploring] = useState(false);
+  const undo = useUndo();
   const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
 
   const now = new Date();
@@ -79,8 +80,15 @@ export function Homebase({
 
   function createNote(): void {
     void tree.create(null, 'Untitled note').then((outcome) => {
-      if (outcome.id !== null) openPreview(outcome.id);
-      else
+      if (outcome.id !== null) {
+        const createdId = outcome.id;
+        openPreview(createdId);
+        undo.push('Created "Untitled note"', async () => {
+          const removed = await tree.remove(createdId);
+          if (removed.refusal === null) void navigate(home);
+          else publishNotice({ key: 'new-note-undo-failed', message: removed.refusal });
+        });
+      } else
         publishNotice({
           key: 'new-note-failed',
           message: outcome.refusal ?? 'That could not be created.',
@@ -88,22 +96,13 @@ export function Homebase({
     });
   }
 
-  const actions: Action[] = [
+  const quick: Action[] = [
     {
       key: 'note',
       label: tree.isCreating ? 'Creating…' : 'New note',
       detail: 'A blank page, opened at once',
       icon: FilePlus,
       onSelect: createNote,
-    },
-    {
-      key: 'structured',
-      label: 'Structured note',
-      detail: 'Board, list, tracker or form',
-      icon: Columns2,
-      onSelect: () => {
-        setChoosingStructure(true);
-      },
     },
     ...(workspace.canUseDailyNotes
       ? [
@@ -116,6 +115,17 @@ export function Homebase({
           },
         ]
       : []),
+  ];
+  const more: Action[] = [
+    {
+      key: 'structured',
+      label: 'Structured note',
+      detail: 'Board, list, tracker or form',
+      icon: Columns2,
+      onSelect: () => {
+        setChoosingStructure(true);
+      },
+    },
     {
       key: 'calendar',
       label: 'Calendar',
@@ -153,21 +163,54 @@ export function Homebase({
     },
   ];
 
+  const [latest, ...earlier] = recents;
+  const latestItem = latest === undefined ? undefined : tree.find(latest.itemId);
+  const latestParent = latestItem?.parentId == null ? null : tree.find(latestItem.parentId);
+
   const start = (
     <section aria-labelledby="homebase-start" className="flex min-w-0 flex-col gap-3">
-      <Text as="h2" variant="h6" tone="muted" id="homebase-start">
+      <Text as="h2" variant="h6" tone="muted" id="homebase-start" className="sr-only">
         Start something
       </Text>
-      <ul className="grid grid-cols-2 gap-2 md:grid-cols-1">
-        {actions.map((action, index) => (
+      <ul
+        className={cn(
+          'grid grid-cols-2 gap-3',
+          latest === undefined ? 'md:grid-cols-2' : 'md:grid-cols-[2fr_1fr_1fr]',
+        )}
+      >
+        {latest === undefined ? null : (
+          <li className="col-span-2 md:col-span-1">
+            <button
+              type="button"
+              className={cn(
+                'flex h-full min-h-24 w-full min-w-0 flex-col justify-between gap-2 rounded-md border border-divider bg-surface p-3 text-left',
+                'hover:bg-divider active:scale-[0.97] motion-reduce:active:scale-100',
+                focusRing,
+              )}
+              onClick={() => {
+                openPreview(latest.itemId);
+              }}
+            >
+              <Text as="span" variant="kicker" className="text-accent-text">
+                Continue
+              </Text>
+              <Text
+                as="span"
+                variant="h5"
+                className="line-clamp-2 min-w-0 [overflow-wrap:anywhere]"
+              >
+                {(latestItem?.title ?? latest.title) || 'Untitled'}
+              </Text>
+              <Text as="span" variant="note" tone="muted" truncate>
+                {latestParent == null ? 'Last opened' : latestParent.title || 'Untitled'}
+              </Text>
+            </button>
+          </li>
+        )}
+        {quick.map((action, index) => (
           <li
             key={action.key}
-            // Two across on a phone: New note takes a row, and so does a last tile left alone.
-            className={
-              index === 0 || (index === actions.length - 1 && index % 2 === 1)
-                ? 'col-span-2 sm:col-span-1'
-                : undefined
-            }
+            className={index === 0 && quick.length === 1 ? 'col-span-2 md:col-span-1' : undefined}
           >
             <ActionTile
               action={action}
@@ -180,12 +223,27 @@ export function Homebase({
     </section>
   );
 
+  const moreActions = (
+    <section aria-labelledby="homebase-more" className="flex min-w-0 flex-col gap-3">
+      <Text as="h2" variant="h6" tone="muted" id="homebase-more">
+        More
+      </Text>
+      <ul className="grid grid-cols-2 gap-2 md:grid-cols-1">
+        {more.map((action) => (
+          <li key={action.key}>
+            <ActionTile action={action} primary={false} disabled={false} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+
   const recent = (
     <section aria-labelledby="homebase-recent" className="flex min-w-0 flex-col gap-3">
       <Text as="h2" variant="h6" tone="muted" id="homebase-recent">
         Recently viewed
       </Text>
-      {recents.length === 0 ? (
+      {latest === undefined ? (
         <Blueprint className="flex flex-col gap-1 p-4">
           <Text as="p" variant="body">
             Notes you open show up here.
@@ -196,7 +254,7 @@ export function Homebase({
         </Blueprint>
       ) : (
         <ul className="border-t border-divider">
-          {recents.map((entry) => {
+          {earlier.slice(0, 8).map((entry) => {
             const item = tree.find(entry.itemId);
             const parent = item?.parentId == null ? null : tree.find(item.parentId);
             const title = (item?.title ?? entry.title) || 'Untitled';
@@ -205,7 +263,8 @@ export function Homebase({
                 <button
                   type="button"
                   className={cn(
-                    'flex min-h-(--control-lg) w-full min-w-0 items-center gap-3 rounded-sm px-2 text-left hover:bg-surface',
+                    'flex min-h-(--control-lg) w-full min-w-0 items-center gap-3 rounded-sm px-2 py-1 text-left hover:bg-surface',
+                    'active:scale-[0.97] motion-reduce:active:scale-100',
                     focusRing,
                   )}
                   onClick={() => {
@@ -213,20 +272,22 @@ export function Homebase({
                   }}
                 >
                   <Icon icon={iconForType(item?.type)} size="sm" className="shrink-0 text-muted" />
-                  <Text as="span" variant="body" truncate className="min-w-0 flex-1">
-                    {title}
-                  </Text>
-                  {parent == null ? null : (
-                    <Text
-                      as="span"
-                      variant="note"
-                      tone="muted"
-                      truncate
-                      className="max-w-40 shrink-0 max-sm:hidden"
-                    >
-                      {parent.title || 'Untitled'}
+                  <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-3">
+                    <Text as="span" variant="body" truncate className="min-w-0 flex-1">
+                      {title}
                     </Text>
-                  )}
+                    {parent == null ? null : (
+                      <Text
+                        as="span"
+                        variant="note"
+                        tone="muted"
+                        truncate
+                        className="min-w-0 sm:max-w-40 sm:shrink-0"
+                      >
+                        {parent.title || 'Untitled'}
+                      </Text>
+                    )}
+                  </span>
                 </button>
               </li>
             );
@@ -283,9 +344,13 @@ export function Homebase({
         </div>
       </header>
 
-      <div className="grid min-w-0 gap-10 md:grid-cols-3">
-        <div className="min-w-0">{start}</div>
-        <div className="min-w-0 md:col-span-2">{recent}</div>
+      {start}
+
+      <div className="grid min-w-0 gap-10 md:grid-cols-[2fr_1fr]">
+        {earlier.length > 0 || latest === undefined ? (
+          <div className="min-w-0">{recent}</div>
+        ) : null}
+        <div className="min-w-0 md:col-start-2">{moreActions}</div>
       </div>
 
       {exploring ? (
@@ -342,6 +407,7 @@ function ActionTile({
     primary
       ? 'max-sm:min-h-0 max-sm:flex-row max-sm:items-center border-accent-fill bg-accent-fill hover:bg-accent-fill-hover disabled:opacity-45'
       : 'border-divider hover:bg-surface',
+    'active:scale-[0.97] motion-reduce:active:scale-100',
     focusRing,
   );
   const body = (

@@ -28,34 +28,35 @@ describe('Homebase', () => {
     ).toBeVisible();
     const start = screen.getByRole('region', { name: 'Start something' });
     expect(within(start).getByRole('button', { name: /new note/i })).toBeInTheDocument();
-    expect(within(start).getByRole('button', { name: /structured note/i })).toBeInTheDocument();
+    expect(within(start).getByRole('button', { name: /continue.*roadmap/i })).toBeInTheDocument();
     expect(within(start).getByRole('link', { name: /today's note/i })).toHaveAttribute(
       'href',
       `${HOME}/daily`,
     );
-    expect(within(start).getByRole('link', { name: /calendar/i })).toHaveAttribute(
+    const more = screen.getByRole('region', { name: 'More' });
+    expect(within(more).getByRole('button', { name: /structured note/i })).toBeInTheDocument();
+    expect(within(more).getByRole('link', { name: /calendar/i })).toHaveAttribute(
       'href',
       `${HOME}/calendar`,
     );
-    expect(within(start).getByRole('link', { name: /templates/i })).toHaveAttribute(
+    expect(within(more).getByRole('link', { name: /templates/i })).toHaveAttribute(
       'href',
       `${HOME}/templates`,
     );
-    expect(within(start).getByRole('link', { name: /automations/i })).toHaveAttribute(
+    expect(within(more).getByRole('link', { name: /automations/i })).toHaveAttribute(
       'href',
       `${HOME}/automations`,
     );
-    expect(within(start).getByRole('link', { name: /settings/i })).toHaveAttribute(
+    expect(within(more).getByRole('link', { name: /settings/i })).toHaveAttribute(
       'href',
       `${HOME}/settings`,
     );
     expect(screen.queryByRole('group', { name: 'Homebase layout' })).not.toBeInTheDocument();
 
-    await userEvent.click(within(start).getByRole('button', { name: /^import/i }));
+    await userEvent.click(within(more).getByRole('button', { name: /^import/i }));
     expect(await screen.findByRole('dialog', { name: /import/i })).toBeVisible();
 
-    const recent = screen.getByRole('region', { name: 'Recently viewed' });
-    await userEvent.click(within(recent).getByRole('button', { name: /roadmap/i }));
+    await userEvent.click(within(start).getByRole('button', { name: /continue.*roadmap/i }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Roadmap');
   });
 
@@ -73,12 +74,14 @@ describe('Homebase', () => {
     renderAt(<App />, HOME);
 
     const start = await screen.findByRole('region', { name: 'Start something' });
-    await userEvent.click(within(start).getByRole('button', { name: /structured note/i }));
+    const more = screen.getByRole('region', { name: 'More' });
+    await userEvent.click(within(more).getByRole('button', { name: /structured note/i }));
     expect(await screen.findByRole('dialog', { name: 'New structured item' })).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: /^close$/i }));
 
     await userEvent.click(within(start).getByRole('button', { name: /new note/i }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeVisible();
   });
 
   it('explores the files: into a folder, back up the path, filtered, and open', async () => {
