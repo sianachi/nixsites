@@ -14,6 +14,7 @@ import type {
   PropertyDefinition,
   View,
 } from '@nix/web-collections/core/container-model';
+import { UndoBar, UndoProvider } from '@nix/ui';
 import { GalleryView } from '../../../gallery/gallery-view';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 
@@ -938,6 +939,63 @@ describe('setting a cover from a card', () => {
 
     await waitFor(() => {
       expect(setProperties).toHaveBeenCalledWith('i1', { cover: null });
+    });
+  });
+
+  it('puts a removed cover back from the shared undo history', async () => {
+    const user = userEvent.setup();
+    const setProperties = vi.fn(() => Promise.resolve(null));
+    const container = containerFor({
+      schema: schemaOf(COVER, OWNER),
+      view: viewOf(),
+      items: [WITH_COVER],
+      setProperties,
+    });
+
+    renderAt(
+      <UndoProvider>
+        {galleryOf({ items: [WITH_COVER], container })}
+        <UndoBar />
+      </UndoProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Change cover for Harbour at dawn' }));
+    await user.click(screen.getByRole('button', { name: 'Remove cover' }));
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => {
+      expect(setProperties).toHaveBeenLastCalledWith('i1', { cover: SHOT });
+    });
+  });
+
+  it('says so when something that is not a picture is dropped on a card', () => {
+    renderAt(galleryOf({ items: [WITH_COVER] }));
+
+    fireEvent.drop(card('Harbour at dawn'), {
+      dataTransfer: { files: [new File(['x'], 'notes.txt', { type: 'text/plain' })] },
+    });
+
+    expect(screen.getByText(/Choose a PNG, JPEG, WebP or AVIF/)).toBeInTheDocument();
+  });
+
+  it('uploads a picture dropped on a card as its cover', async () => {
+    const setProperties = vi.fn(() => Promise.resolve(null));
+    const container = containerFor({
+      schema: schemaOf(COVER, OWNER),
+      view: viewOf(),
+      items: [WITH_COVER],
+      setProperties,
+    });
+    renderAt(galleryOf({ items: [WITH_COVER], container }));
+
+    fireEvent.drop(card('Harbour at dawn'), {
+      dataTransfer: { files: [new File(['x'], 'a.png', { type: 'image/png' })] },
+    });
+
+    await waitFor(() => {
+      expect(setProperties).toHaveBeenCalledWith('i1', {
+        cover: fileImageReference('uploaded-file-item'),
+      });
     });
   });
 });

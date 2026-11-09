@@ -1,13 +1,18 @@
 import { files as fileResources } from '@nix/api-client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+
+import { Select, useUndo } from '@nix/ui';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PartialNotice } from '@nix/web-foundation/components/states/status-panels';
-import { mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
+import { isImageFile, mediaTypeForFile } from '@nix/web-foundation/lib/file-kind';
 import { fileImageReference } from '@nix/web-collections/properties/inputs/image-reference';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { readPropertyText } from '@nix/web-collections/core/container-model';
-import { ShownItems } from '@nix/web-collections/core/item-selection-context';
+import {
+  ShownItems,
+  useOptionalItemSelection,
+} from '@nix/web-collections/core/item-selection-context';
 import { CreateItemControl } from '../core/create-item-control';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { drawable, useViewChrome } from '../core/view-chrome';
@@ -79,6 +84,31 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
   // one per card, since a gallery can hold hundreds of them and only one is ever in front of
   // somebody at a time.
   const [coverItemId, setCoverItemId] = useState<string | null>(null);
+  const undo = useUndo();
+  const selection = useOptionalItemSelection();
+  // A refusal from a drop or a bulk change, said above the grid: neither has a dialog to say it in.
+  const [problem, setProblem] = useState<string | null>(null);
+
+  /**
+   * One property write that can be undone from the shared history. The undo writes the value this
+   * card had, and only that property of only that card, so later edits elsewhere survive it.
+   */
+  async function writeUndoable(
+    itemId: string,
+    key: string,
+    value: unknown,
+    describe: (title: string) => string,
+  ): Promise<string | null> {
+    const item = container.children.find((child) => child.id === itemId);
+    const before = item?.properties[key] ?? null;
+    const refusal = await container.setProperties(itemId, { [key]: value });
+    if (refusal === null && item !== undefined) {
+      undo.push(describe(item.title || 'Untitled'), async () => {
+        await container.setProperties(itemId, { [key]: before });
+      });
+    }
+    return refusal;
+  }
 
   /**
    * The property this gallery's covers write to, making one if none exists yet.
@@ -136,9 +166,12 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
       }),
     );
     const uploaded = await fileResources.uploadAndCompleteFile(client, upload, file);
-    const refusal = await container.setProperties(itemId, {
-      [ensured.key]: fileImageReference(uploaded.itemId),
-    });
+    const refusal = await writeUndoable(
+      itemId,
+      ensured.key,
+      fileImageReference(uploaded.itemId),
+      (title) => `Set the cover of "${title}"`,
+    );
     if (refusal !== null) throw new Error(refusal);
   }
 
@@ -146,7 +179,12 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
     const ensured = await ensureCoverProperty();
     if ('error' in ensured) throw new Error(ensured.error);
 
-    const refusal = await container.setProperties(itemId, { [ensured.key]: address });
+    const refusal = await writeUndoable(
+      itemId,
+      ensured.key,
+      address,
+      (title) => `Set the cover of "${title}"`,
+    );
     if (refusal !== null) throw new Error(refusal);
   }
 
@@ -154,9 +192,79 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
     // Nothing to clear when there was never a cover property to clear it from.
     if (cover.kind !== 'ready') return;
 
-    const refusal = await container.setProperties(itemId, { [cover.property.key]: null });
+    const refusal = await writeUndoable(
+      itemId,
+      cover.property.key,
+      null,
+      (title) => `Removed the cover of "${title}"`,
+    );
     if (refusal !== null) throw new Error(refusal);
   }
+
+  const secondary = view.columns.filter((key) => key !== view.coverProperty && key !== 'title');
+  const schema = container.schema?.properties ?? [];
+  // The property the tray's "Set status" writes: the shown single-choice field, preferring one
+  // called status. Nothing is offered when the cards show no such field.
+  const statusProperty = (() => {
+    const choices = schema.filter(
+      (property) => property.type === 'select' && secondary.includes(property.key),
+    );
+    return choices.find((property) => property.key === 'status') ?? choices[0] ?? null;
+  })();
+  const setTrayActions = selection?.setTrayActions;
+  const selectedKey = selection === null ? '' : [...selection.selected].join('\u0000');
+  const applyStatus = useRef<(value: string) => Promise<void>>(() => Promise.resolve());
+  useEffect(() => {
+    applyStatus.current = async (value) => {
+      if (statusProperty === null || selection === null) return;
+      const key = statusProperty.key;
+      const targets = container.children.filter((child) => selection.selected.has(child.id));
+      const before = new Map(targets.map((child) => [child.id, child.properties[key] ?? null]));
+      const write = (valueFor: (id: string) => unknown) =>
+        container.setPropertiesMany(
+          targets.map((child) => ({
+            itemId: child.id,
+            label: child.title || 'Untitled',
+            properties: { [key]: valueFor(child.id) },
+          })),
+        );
+      const outcome = await write(() => value);
+      setProblem(
+        outcome.refused.length === 0
+          ? null
+          : `${String(outcome.refused.length)} could not be changed: ${outcome.refused[0]?.reason ?? ''}`,
+      );
+      if (outcome.saved > 0)
+        undo.push(
+          `Set ${statusProperty.label} to ${value} on ${String(outcome.saved)} ${outcome.saved === 1 ? 'card' : 'cards'}`,
+          async () => {
+            await write((id) => before.get(id));
+          },
+        );
+    };
+  });
+  useEffect(() => {
+    if (setTrayActions === undefined || statusProperty === null || selectedKey === '') return;
+    setTrayActions(
+      <Select
+        aria-label={`Set ${statusProperty.label.toLowerCase()} of the selected cards`}
+        value=""
+        onChange={(event) => {
+          if (event.target.value !== '') void applyStatus.current(event.target.value);
+        }}
+      >
+        <option value="">Set {statusProperty.label.toLowerCase()}…</option>
+        {statusProperty.options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </Select>,
+    );
+    return () => {
+      setTrayActions(null);
+    };
+  }, [setTrayActions, statusProperty, selectedKey]);
 
   const chrome = useViewChrome({
     container,
@@ -196,8 +304,7 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
   // would put a wall of raw URLs under the titles - directly against what the notice above the
   // grid is saying, which is that nothing has been lost. Somebody chose it as the cover, not as a
   // column, and undoing that choice for them is not this view's decision to make.
-  const secondary = view.columns.filter((key) => key !== view.coverProperty && key !== 'title');
-  const schema = container.schema?.properties ?? [];
+
   const coverItem =
     coverItemId === null ? null : (chrome.items.find((item) => item.id === coverItemId) ?? null);
 
@@ -220,6 +327,8 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
           this attribute is what keeps the promise on the platform where it breaks.
 
           Named after the view, so a switcher tab and the region it opens agree on what they are. */}
+      {problem === null ? null : <PartialNotice pending={problem} />}
+
       <GalleryGrid
         items={chrome.items}
         label={view.name}
@@ -229,8 +338,26 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
         schema={schema}
         onOpen={onOpen}
         onWrite={(itemId, propertyKey, value) =>
-          container.setProperties(itemId, { [propertyKey]: value })
+          writeUndoable(
+            itemId,
+            propertyKey,
+            value,
+            (title) =>
+              `Changed ${schema.find((p) => p.key === propertyKey)?.label ?? propertyKey} of "${title}"`,
+          )
         }
+        onDropCover={(itemId, file) => {
+          if (!isImageFile(file)) {
+            setProblem('Choose a PNG, JPEG, WebP or AVIF image no larger than 10 MiB.');
+            return;
+          }
+          setProblem(null);
+          uploadCoverFile(itemId, file).catch((cause: unknown) => {
+            setProblem(
+              cause instanceof Error ? cause.message : 'That picture could not be uploaded.',
+            );
+          });
+        }}
         onRequestCover={(itemId) => {
           setCoverItemId(itemId);
         }}

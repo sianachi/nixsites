@@ -1,6 +1,6 @@
-import { Button, ContextMenu, Icon, Text, blueprintFrame, cn, focusRing } from '@nix/ui';
+import { Button, ContextMenu, Icon, Text, blueprintFrame, cn, focusRing, useFlash } from '@nix/ui';
 import { ImagePlus } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import {
   readPropertyText,
@@ -35,6 +35,7 @@ interface GalleryCardProps {
   readonly coverFailed: boolean;
   readonly onCoverFailure: () => void;
   readonly onRequestCover: () => void;
+  readonly onDropCover: (file: File) => void;
   readonly position: number;
   readonly setSize: number;
   readonly virtualIndex?: number;
@@ -52,11 +53,14 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
     coverFailed,
     onCoverFailure,
     onRequestCover,
+    onDropCover,
     position,
     setSize,
     virtualIndex,
   } = props;
   const itemActions = useItemContextActions(onOpen);
+  const flash = useFlash(item.updatedAt);
+  const [dropping, setDropping] = useState(false);
   const selection = useOptionalItemSelection();
   const clickSelects = useClickSelects();
   const isSelected = selection?.selected.has(item.id) === true;
@@ -100,6 +104,24 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
       {(contextTarget) => (
         <li
           {...contextTarget}
+          {...flash}
+          // An image dropped on the card becomes its cover: the same result as the corner button.
+          onDragOver={(event) => {
+            if (!event.dataTransfer.types.includes('Files')) return;
+            event.preventDefault();
+            setDropping(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+              setDropping(false);
+          }}
+          onDrop={(event) => {
+            setDropping(false);
+            const file = event.dataTransfer.files[0];
+            if (file === undefined) return;
+            event.preventDefault();
+            onDropCover(file);
+          }}
           {...(virtualIndex === undefined ? {} : { role: 'listitem' })}
           aria-posinset={position}
           aria-setsize={setSize}
@@ -108,6 +130,7 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
             blueprintFrame,
             'group relative flex min-w-0 flex-col gap-2 bg-surface p-3 shadow-sm',
             isSelected && 'bg-accent/10 outline-2 -outline-offset-2 outline-accent',
+            dropping && 'outline-2 -outline-offset-2 outline-dashed outline-accent',
           )}
         >
           {/* The selection box, in the card's corner: drawn on hover or focus until something is

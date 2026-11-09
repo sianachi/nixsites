@@ -28,10 +28,22 @@ export interface GalleryGridProps {
     value: PropertyValue,
   ) => Promise<string | null>;
   readonly onRequestCover: (itemId: string) => void;
+  readonly onDropCover: (itemId: string, file: File) => void;
 }
 
 export function GalleryGrid(props: GalleryGridProps): ReactNode {
-  const { items, label, cover, size, secondary, schema, onOpen, onWrite, onRequestCover } = props;
+  const {
+    items,
+    label,
+    cover,
+    size,
+    secondary,
+    schema,
+    onOpen,
+    onWrite,
+    onRequestCover,
+    onDropCover,
+  } = props;
   const [failedCovers, setFailedCovers] = useState<ReadonlySet<string>>(() => new Set());
 
   const card = (item: Item, index: number, virtualIndex?: number): ReactNode => {
@@ -53,6 +65,9 @@ export function GalleryGrid(props: GalleryGridProps): ReactNode {
         }}
         onRequestCover={() => {
           onRequestCover(item.id);
+        }}
+        onDropCover={(file) => {
+          onDropCover(item.id, file);
         }}
         position={index + 1}
         setSize={items.length}
