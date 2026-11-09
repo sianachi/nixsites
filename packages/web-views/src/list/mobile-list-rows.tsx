@@ -3,6 +3,7 @@ import {
   ContextMenu,
   Text,
   cn,
+  useFlash,
   type ContextMenuTargetProps,
   type TableColumn,
 } from '@nix/ui';
@@ -88,10 +89,12 @@ function MobileRow(props: {
   readonly selected: boolean;
 }): ReactNode {
   const { item, columns, target, selectColumn, selected } = props;
+  const flash = useFlash(item.updatedAt);
 
   return (
     <li
       {...target}
+      {...flash}
       className={cn('flex min-w-0 items-center gap-2 py-2', selected && 'bg-accent/10')}
     >
       {selectColumn?.cell(item)}

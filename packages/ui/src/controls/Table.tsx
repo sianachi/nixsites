@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ComponentPropsWithoutRef,
   type HTMLAttributes,
   type ReactNode,
   type Ref,
@@ -13,6 +14,7 @@ import { ContextMenu, type ContextMenuTargetProps } from './ContextMenu';
 import { type MenuEntry } from './Menu';
 import { Icon } from '../primitives/Icon';
 import { Text } from '../primitives/Text';
+import { useFlash } from './use-flash';
 import {
   dragHandleLineStates,
   focusRing,
@@ -133,6 +135,8 @@ export interface TableProps<Row> {
   readonly rowLongPress?: (row: Row) => boolean;
   /** Marks a row selected: a tint and `aria-selected`. Colour is never the only signal. */
   readonly rowSelected?: (row: Row) => boolean;
+  /** Tints a row once whenever this value changes for it (a row's `updatedAt`); see `useFlash`. */
+  readonly rowFlash?: (row: Row) => unknown;
   /**
    * Drag-and-drop on a row, for a caller that lets rows be dragged onto each other. `dropTarget`
    * outlines the row a drop would land on; the handlers are the browser's own.
@@ -228,6 +232,7 @@ export function Table<Row>(props: TableProps<Row>): ReactNode {
     rowContextMenuLabel,
     rowLongPress,
     rowSelected,
+    rowFlash,
     rowDrag,
     tableRef,
     columnWidths,
@@ -244,8 +249,9 @@ export function Table<Row>(props: TableProps<Row>): ReactNode {
   ): ReactNode => {
     const { dropTarget = false, ...dragProps } = rowDrag?.(row) ?? {};
     return (
-      <tr
+      <FlashRow
         key={rowKey(row)}
+        flashKey={rowFlash?.(row)}
         {...contextTarget}
         {...dragProps}
         // `group` lets a cell reveal something on row hover or focus (the list's selection box).
@@ -276,7 +282,7 @@ export function Table<Row>(props: TableProps<Row>): ReactNode {
             </td>
           );
         })}
-      </tr>
+      </FlashRow>
     );
   };
 
@@ -539,4 +545,13 @@ function ColumnResizeHandle({
       />
     </div>
   );
+}
+
+/** A `<tr>` that tints once when `flashKey` changes. */
+function FlashRow({
+  flashKey,
+  ...rowProps
+}: ComponentPropsWithoutRef<'tr'> & { readonly flashKey: unknown }): ReactNode {
+  const flash = useFlash(flashKey);
+  return <tr {...rowProps} {...flash} />;
 }

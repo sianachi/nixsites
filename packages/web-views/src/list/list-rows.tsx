@@ -59,6 +59,7 @@ export function ListRows(props: ListRowsProps): ReactNode {
         {...(widths ?? {})}
         onSortChange={onSortChange}
         rowSelected={rowSelection.selected}
+        rowFlash={(item) => item.updatedAt}
         {...(rowSelection.drag === undefined ? {} : { rowDrag: rowSelection.drag })}
         {...(rowSelection.longPress === undefined ? {} : { rowLongPress: rowSelection.longPress })}
         {...(rowContextMenu === undefined

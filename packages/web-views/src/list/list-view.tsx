@@ -1,6 +1,16 @@
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import { type MenuEntry, type TableColumn, type TableRowDrag, type TableSort } from '@nix/ui';
-import { useState, type ReactNode } from 'react';
+import {
+  Menu,
+  Button,
+  Select,
+  Text,
+  useUndo,
+  type MenuEntry,
+  type TableColumn,
+  type TableRowDrag,
+  type TableSort,
+} from '@nix/ui';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { dropRefusal } from '@nix/web-collections/items/bulk-move';
 import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
@@ -109,6 +119,123 @@ export function ListView(props: ListViewProps): ReactNode {
   const [overId, setOverId] = useState<string | null>(null);
   const viewId = view?.id ?? null;
   const columnWidths = useColumnWidths(viewId);
+  const undo = useUndo();
+  const latest = useRef(container);
+  useEffect(() => {
+    latest.current = container;
+  });
+  const [bulkProblem, setBulkProblem] = useState<string | null>(null);
+
+  // The tray's bulk fields: the single-choice field called status (else the first), and the text
+  // field called owner. Nothing is offered when the schema has neither.
+  const schemaProps = container.schema?.properties ?? [];
+  const statusProperty =
+    schemaProps.find((p) => p.type === 'select' && p.key === 'status') ??
+    schemaProps.find((p) => p.type === 'select') ??
+    null;
+  const ownerProperty = schemaProps.find((p) => p.key === 'owner' && p.type === 'text') ?? null;
+  const owners = [
+    ...new Set(
+      container.children.flatMap((child) => {
+        const value = ownerProperty === null ? null : child.properties[ownerProperty.key];
+        return typeof value === 'string' && value !== '' ? [value] : [];
+      }),
+    ),
+  ];
+  const setTrayActions = selection?.setTrayActions;
+  const selectedKey = selection === null ? '' : [...selection.selected].join('\u0000');
+  const bulk = useRef<(key: string, label: string, value: string | null) => Promise<void>>(() =>
+    Promise.resolve(),
+  );
+  useEffect(() => {
+    bulk.current = async (key, label, value) => {
+      if (selection === null) return;
+      const targets = latest.current.children.filter((child) => selection.selected.has(child.id));
+      const before = new Map(targets.map((child) => [child.id, child.properties[key] ?? null]));
+      const write = (valueFor: (id: string) => unknown) =>
+        latest.current.setPropertiesMany(
+          targets.map((child) => ({
+            itemId: child.id,
+            label: child.title || 'Untitled',
+            properties: { [key]: valueFor(child.id) },
+          })),
+        );
+      const outcome = await write(() => value);
+      setBulkProblem(
+        outcome.refused.length === 0
+          ? null
+          : `${String(outcome.refused.length)} could not be changed: ${outcome.refused[0]?.reason ?? ''}`,
+      );
+      if (outcome.saved > 0) {
+        const what = outcome.saved === 1 ? 'item' : 'items';
+        undo.push(
+          value === null
+            ? `Cleared ${label.toLowerCase()} on ${String(outcome.saved)} ${what}`
+            : `Set ${label.toLowerCase()} to ${value} on ${String(outcome.saved)} ${what}`,
+          async () => {
+            await write((id) => before.get(id));
+          },
+        );
+      }
+    };
+  });
+  const ownersKey = owners.join('\u0000');
+  useEffect(() => {
+    if (setTrayActions === undefined || selectedKey === '') return;
+    if (statusProperty === null && ownerProperty === null) return;
+    setTrayActions(
+      <>
+        {statusProperty === null ? null : (
+          <Select
+            aria-label={`Set ${statusProperty.label.toLowerCase()} of the selected items`}
+            value=""
+            onChange={(event) => {
+              if (event.target.value !== '')
+                void bulk.current(statusProperty.key, statusProperty.label, event.target.value);
+            }}
+          >
+            <option value="">Set {statusProperty.label.toLowerCase()}…</option>
+            {statusProperty.options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </Select>
+        )}
+        {ownerProperty === null ? null : (
+          <Menu
+            label="Set owner of the selected items"
+            items={[
+              ...owners.map((name) => ({
+                kind: 'action' as const,
+                label: name,
+                onSelect: () => {
+                  void bulk.current(ownerProperty.key, ownerProperty.label, name);
+                },
+              })),
+              {
+                kind: 'action' as const,
+                label: 'Unassigned',
+                onSelect: () => {
+                  void bulk.current(ownerProperty.key, ownerProperty.label, null);
+                },
+              },
+            ]}
+          >
+            {(trigger) => (
+              <Button {...trigger} variant="secondary">
+                Set owner
+              </Button>
+            )}
+          </Menu>
+        )}
+      </>,
+    );
+    return () => {
+      setTrayActions(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt on selection and owner-list change only
+  }, [setTrayActions, selectedKey, statusProperty?.key, ownerProperty?.key, ownersKey]);
 
   // Which sections are folded away. Seeded from the view's stored `collapsedGroups` (ADR-0054) and
   // then held here: folding a section is somebody reading, not somebody rearranging the view for
@@ -154,9 +281,46 @@ export function ListView(props: ListViewProps): ReactNode {
     return chrome.node;
   }
 
-  function write(itemId: string, key: string, value: PropertyValue): Promise<string | null> {
-    return container.setProperties(itemId, { [key]: value });
+  async function write(itemId: string, key: string, value: PropertyValue): Promise<string | null> {
+    const row = container.children.find((child) => child.id === itemId);
+    const before = (row?.properties[key] ?? null) as PropertyValue;
+    const refusal = await container.setProperties(itemId, { [key]: value });
+    if (refusal === null && row !== undefined) {
+      const label = schemaProps.find((p) => p.key === key)?.label ?? key;
+      undo.push(`Changed ${label.toLowerCase()} of "${row.title || 'Untitled'}"`, async () => {
+        await container.setProperties(itemId, { [key]: before });
+      });
+    }
+    return refusal;
   }
+
+  // Progress in place, only when the list has a status with a "Done" option.
+  const doneOption = statusProperty?.options.find((o) => o.toLowerCase() === 'done');
+  const doneCount =
+    statusProperty === null || doneOption === undefined
+      ? 0
+      : chrome.items.filter((item) => item.properties[statusProperty.key] === doneOption).length;
+  const progress =
+    doneOption === undefined || chrome.items.length === 0 ? null : (
+      <div className="mb-2 flex items-center gap-2">
+        <Text as="span" variant="caption" tone="muted">
+          {String(doneCount)} of {String(chrome.items.length)} done
+        </Text>
+        <div
+          role="progressbar"
+          aria-label="Done"
+          aria-valuemin={0}
+          aria-valuemax={chrome.items.length}
+          aria-valuenow={doneCount}
+          className="h-1.5 w-24 overflow-hidden rounded-full bg-divider"
+        >
+          <div
+            className="h-full bg-accent transition-[width] duration-300"
+            style={{ width: `${String((doneCount / chrome.items.length) * 100)}%` }}
+          />
+        </div>
+      </div>
+    );
 
   const refusalStore: CellRefusalStore = {
     read: (itemId, key) => refusals.get(cellRefusalKey(itemId, key)) ?? null,
@@ -369,6 +533,8 @@ export function ListView(props: ListViewProps): ReactNode {
       {selection === null ? null : <ShownItems ids={orderIds} />}
       {chrome.notice}
       {sectionNotice}
+      {progress}
+      {bulkProblem === null ? null : <PartialNotice pending={bulkProblem} />}
 
       {sections === null ? (
         rowsFor(chrome.items, ITEMS_CAPTION)
