@@ -39,7 +39,6 @@ function CreationStudio(): ReactNode {
   const targetContainer = useContainer(itemId ?? null);
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [discarding, setDiscarding] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,23 +224,16 @@ function CreationStudio(): ReactNode {
       previewing={previewing}
       saving={saving}
       error={error}
-      discarding={discarding}
       onStepChange={setStep}
       onError={setError}
       onPreviewToggle={() => {
         setPreviewing((current) => !current);
       }}
       onCancel={() => {
-        setDiscarding(true);
-      }}
-      onFinish={() => void finish()}
-      onDiscardClose={() => {
-        setDiscarding(false);
-      }}
-      onDiscard={() => {
-        browserSessionStorage()?.removeItem(draftKey(recipe, draftScope));
+        // The draft stays in session storage, so coming back restores it.
         void navigate(-1);
       }}
+      onFinish={() => void finish()}
     >
       {step === 0 ? (
         <BasicsStep recipe={recipe} draft={draft} onChange={setDraft} />

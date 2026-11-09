@@ -1,9 +1,9 @@
-import { Button, Checkbox, Field, Icon, Input, Segmented, Select, Text } from '@nix/ui';
+import { Button, Checkbox, Field, Icon, Input, Segmented, Select, Text, useUndo } from '@nix/ui';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import type { PropertyDefinition as PropertyDefinitionType } from '@nix/web-collections/core/container-model';
-import { insertAt, useUndoRemove } from '../core/use-undo-remove';
+import { insertAt } from '../core/use-undo-remove';
 import { LineListInput } from '../core/line-list-input';
 import { PROPERTY_TYPES, isDateShaped } from '@nix/web-collections/core/property-types';
 import { StructuredViewConfiguration } from '../core/structured-view-configuration';
@@ -167,11 +167,62 @@ function FieldsEditor({
   readonly properties: readonly PropertyDefinitionType[];
   readonly onChange: (properties: readonly PropertyDefinitionType[]) => void;
 }): ReactNode {
-  const { track, notice } = useUndoRemove(properties, onChange);
+  const undo = useUndo();
+  const latest = useRef({ properties, onChange });
+  useEffect(() => {
+    latest.current = { properties, onChange };
+  });
+  // Each undo reverses only its own change, applied to the fields as they are now.
+  function apply(
+    update: (current: readonly PropertyDefinitionType[]) => readonly PropertyDefinitionType[],
+  ): void {
+    latest.current.onChange(update(latest.current.properties));
+  }
+  function swap(key: string, offset: number): void {
+    apply((current) => {
+      const next = [...current];
+      const from = next.findIndex((entry) => entry.key === key);
+      const a = next[from];
+      const b = next[from + offset];
+      if (a === undefined || b === undefined) return next;
+      next[from] = b;
+      next[from + offset] = a;
+      return next;
+    });
+  }
+  function move(property: PropertyDefinitionType, index: number, offset: number): void {
+    swap(property.key, offset);
+    undo.push(
+      `Moved “${property.label || 'field'}” to position ${String(index + offset + 1)} of ${String(properties.length)}`,
+      () => {
+        swap(property.key, -offset);
+      },
+    );
+  }
+  function change(
+    property: PropertyDefinitionType,
+    label: string,
+    forward: Partial<PropertyDefinitionType>,
+    back: Partial<PropertyDefinitionType>,
+  ): void {
+    const set = (patch: Partial<PropertyDefinitionType>): void => {
+      apply((current) =>
+        current.map((entry) => (entry.key === property.key ? { ...entry, ...patch } : entry)),
+      );
+    };
+    set(forward);
+    undo.push(label, () => {
+      set(back);
+    });
+  }
   return (
     <div className="@container/fields flex min-w-0 flex-col gap-3">
       {properties.map((property, index) => (
-        <div key={index} className="flex min-w-0 flex-col gap-3 rounded-md bg-surface p-3">
+        <div
+          key={index}
+          data-enter=""
+          className="flex min-w-0 flex-col gap-3 rounded-md bg-surface p-3"
+        >
           <div className="flex min-w-0 flex-wrap items-end gap-2 @md/fields:flex-nowrap">
             <div className="flex min-w-0 basis-full items-end gap-2 @md/fields:basis-0 @md/fields:flex-1">
               <Field label="Field name" className="min-w-0 flex-1">
@@ -196,8 +247,10 @@ function FieldsEditor({
                 variant="icon"
                 aria-label={`Remove ${property.label || 'field'}`}
                 onClick={() => {
-                  track(property.label || 'field', (state) => insertAt(state, index, property));
                   onChange(properties.filter((_, position) => position !== index));
+                  undo.push(`Removed field “${property.label || 'field'}”`, () => {
+                    apply((current) => insertAt(current, index, property));
+                  });
                 }}
               >
                 <Icon icon={Trash2} size="sm" />
@@ -210,20 +263,13 @@ function FieldsEditor({
                     {...control}
                     value={property.type}
                     onChange={(event) => {
-                      onChange(
-                        properties.map((entry, position) =>
-                          position === index
-                            ? {
-                                ...entry,
-                                type: event.target.value,
-                                options:
-                                  event.target.value === 'select' ||
-                                  event.target.value === 'multi_select'
-                                    ? entry.options
-                                    : [],
-                              }
-                            : entry,
-                        ),
+                      const type = event.target.value;
+                      const keepsOptions = type === 'select' || type === 'multi_select';
+                      change(
+                        property,
+                        `Changed “${property.label || 'field'}” to ${PROPERTY_TYPES.find((entry) => entry.value === type)?.label ?? type}`,
+                        { type, options: keepsOptions ? property.options : [] },
+                        { type: property.type, options: property.options },
                       );
                     }}
                   >
@@ -240,12 +286,7 @@ function FieldsEditor({
                 aria-label={`Move ${property.label || 'field'} earlier`}
                 disabled={index === 0}
                 onClick={() => {
-                  const next = [...properties];
-                  const previous = next[index - 1];
-                  if (previous === undefined) return;
-                  next[index - 1] = property;
-                  next[index] = previous;
-                  onChange(next);
+                  move(property, index, -1);
                 }}
               >
                 <Icon icon={ChevronUp} size="sm" />
@@ -255,12 +296,7 @@ function FieldsEditor({
                 aria-label={`Move ${property.label || 'field'} later`}
                 disabled={index === properties.length - 1}
                 onClick={() => {
-                  const next = [...properties];
-                  const following = next[index + 1];
-                  if (following === undefined) return;
-                  next[index] = following;
-                  next[index + 1] = property;
-                  onChange(next);
+                  move(property, index, 1);
                 }}
               >
                 <Icon icon={ChevronDown} size="sm" />
@@ -294,10 +330,12 @@ function FieldsEditor({
             label="Required"
             checked={property.required}
             onChange={(event) => {
-              onChange(
-                properties.map((entry, position) =>
-                  position === index ? { ...entry, required: event.target.checked } : entry,
-                ),
+              const required = event.target.checked;
+              change(
+                property,
+                `Made “${property.label || 'field'}” ${required ? 'required' : 'optional'}`,
+                { required },
+                { required: !required },
               );
             }}
           />
@@ -307,22 +345,22 @@ function FieldsEditor({
         variant="secondary"
         className="self-start"
         onClick={() => {
-          onChange([
-            ...properties,
-            {
-              key: `field_${String(properties.length + 1)}`,
-              label: `Field ${String(properties.length + 1)}`,
-              type: 'text',
-              options: [],
-              required: false,
-            },
-          ]);
+          const added: PropertyDefinitionType = {
+            key: `field_${String(properties.length + 1)}`,
+            label: `Field ${String(properties.length + 1)}`,
+            type: 'text',
+            options: [],
+            required: false,
+          };
+          onChange([...properties, added]);
+          undo.push(`Added field “${added.label}”`, () => {
+            apply((current) => current.filter((entry) => entry.key !== added.key));
+          });
         }}
       >
         <Icon icon={Plus} size="sm" />
         Add field
       </Button>
-      {notice}
     </div>
   );
 }

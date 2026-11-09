@@ -464,18 +464,16 @@ describe('the guided creation studio', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  it('opens the discard dialog on Escape', async () => {
+  it('leaves on Escape without a prompt and keeps the draft', async () => {
     const user = userEvent.setup();
     stubCoreApi();
     renderAt(<App />, '/new/board');
 
+    expect(await screen.findByText(/Step 1 of 2/)).toBeVisible();
     await user.click(await screen.findByRole('textbox', { name: 'Name' }));
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('dialog', { name: 'Discard this setup?' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Keep editing' }));
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Discard this setup?' })).not.toBeInTheDocument();
-    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('nix:create:board:root')).not.toBeNull();
   });
 
   it('draws Required and the publish link as checkboxes', async () => {

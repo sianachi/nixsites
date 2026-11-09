@@ -21,7 +21,6 @@ function Example({
   const [step, setStep] = useState(initialStep);
   const [previewing, setPreviewing] = useState(initialPreviewing);
   const [error, setError] = useState<string | null>(null);
-  const [discarding, setDiscarding] = useState(false);
   return (
     <main
       aria-label="Guided setup example"
@@ -39,24 +38,13 @@ function Example({
         previewing={previewing}
         saving={false}
         error={error}
-        discarding={discarding}
         onStepChange={setStep}
         onError={setError}
         onPreviewToggle={() => {
           setPreviewing((value) => !value);
         }}
-        onCancel={() => {
-          setDiscarding(true);
-        }}
+        onCancel={noop}
         onFinish={noop}
-        onDiscardClose={() => {
-          setDiscarding(false);
-        }}
-        onDiscard={() => {
-          setDraft(draftFor(FALLBACK_RECIPE));
-          setStep(0);
-          setDiscarding(false);
-        }}
       >
         {step === 0 ? (
           <BasicsStep recipe={FALLBACK_RECIPE} draft={draft} onChange={setDraft} />

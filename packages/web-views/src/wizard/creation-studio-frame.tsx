@@ -1,4 +1,4 @@
-import { Button, Dialog, Icon, Text, cn, focusRing } from '@nix/ui';
+import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowLeft, ArrowRight, Check, Eye } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
@@ -26,14 +26,11 @@ export function CreationStudioFrame({
   previewing,
   saving,
   error,
-  discarding,
   onStepChange,
   onError,
   onPreviewToggle,
   onCancel,
   onFinish,
-  onDiscardClose,
-  onDiscard,
   children,
 }: {
   readonly recipe: StructuredRecipe;
@@ -47,19 +44,17 @@ export function CreationStudioFrame({
   readonly previewing: boolean;
   readonly saving: boolean;
   readonly error: string | null;
-  readonly discarding: boolean;
   readonly onStepChange: (step: number) => void;
   readonly onError: (error: string | null) => void;
   readonly onPreviewToggle: () => void;
   readonly onCancel: () => void;
   readonly onFinish: () => void;
-  readonly onDiscardClose: () => void;
-  readonly onDiscard: () => void;
   readonly children: ReactNode;
 }): ReactNode {
   const zen = useZenActive();
   const stepMainRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
+  const refusal = validateDraft(draft, existingProperties);
 
   useEffect(() => {
     if (previousStep.current === step) return;
@@ -71,7 +66,6 @@ export function CreationStudioFrame({
   }, [step]);
 
   useEffect(() => {
-    if (discarding) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape' && !event.defaultPrevented) onCancel();
     };
@@ -79,7 +73,7 @@ export function CreationStudioFrame({
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [discarding, onCancel]);
+  }, [onCancel]);
 
   function focusFirstField(): void {
     queueMicrotask(() => {
@@ -125,6 +119,7 @@ export function CreationStudioFrame({
                 : `Edit ${recipe.label}`}
           </Text>
           <Text variant="note" tone="muted" className="mt-0.5 block truncate">
+            {`Step ${String(step + 1)} of ${String(STEPS.length)} · `}
             {itemId === undefined
               ? `Creating in ${destination}`
               : viewId === undefined
@@ -227,6 +222,13 @@ export function CreationStudioFrame({
       </div>
 
       <footer className="shrink-0 border-t border-divider px-3 py-2">
+        {refusal === null ? null : (
+          <div className="mx-auto mb-2 max-w-xl">
+            <Text variant="note" tone="muted" as="p">
+              {refusal}
+            </Text>
+          </div>
+        )}
         <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-2">
           {step > 0 ? (
             <Button
@@ -253,10 +255,7 @@ export function CreationStudioFrame({
                 Continue <Icon icon={ArrowRight} size="sm" />
               </Button>
             ) : null}
-            <Button
-              disabled={saving || validateDraft(draft, existingProperties) !== null}
-              onClick={onFinish}
-            >
+            <Button disabled={saving || refusal !== null} onClick={onFinish}>
               {saving
                 ? intent === 'create'
                   ? 'Creating…'
@@ -272,31 +271,6 @@ export function CreationStudioFrame({
           </div>
         </div>
       </footer>
-
-      <Dialog
-        open={discarding}
-        title="Discard this setup?"
-        onClose={onDiscardClose}
-        actions={
-          <>
-            <Button variant="secondary" onClick={onDiscardClose}>
-              Keep editing
-            </Button>
-            <Button variant="danger" onClick={onDiscard}>
-              Discard setup
-            </Button>
-          </>
-        }
-      >
-        <Text variant="bodySmall">
-          {itemId === undefined
-            ? 'The item has not been created yet.'
-            : viewId === undefined
-              ? 'The view has not been added yet.'
-              : 'The existing view has not been changed yet.'}{' '}
-          Discarding removes this tab&rsquo;s saved draft.
-        </Text>
-      </Dialog>
     </div>
   );
 }
