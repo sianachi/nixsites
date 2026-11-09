@@ -1,6 +1,6 @@
 import { Blueprint, Button, Icon, Text } from '@nix/ui';
-import { ArrowRight } from 'lucide-react';
-import { useLayoutEffect, type ReactNode } from 'react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { inNativeShell, switchServer } from '@nix/web-platform/pwa/install-nix';
@@ -20,10 +20,24 @@ export interface LoginPageProps {
 const GRAPH_PAPER =
   'bg-[linear-gradient(to_right,var(--grid-rule)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-rule)_1px,transparent_1px)] [--grid-rule:color-mix(in_srgb,var(--color-accent)_5%,transparent)] bg-[length:34px_34px]'; // design-token-exempt: a 1px hairline and the design file's own 34px tile, neither of which is a spacing step - see above.
 
+const SLOW_AFTER_MS = 3000;
+
 export function LoginPage({ onSignIn, error = null }: LoginPageProps): ReactNode {
   useLayoutEffect(claimZenSurface, []);
   const zen = useZenActive();
   const isBusy = useSessionStore(selectIsBusy);
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    if (!isBusy) return undefined;
+    const timer = setTimeout(() => {
+      setSlow(true);
+    }, SLOW_AFTER_MS);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [isBusy]);
 
   return (
     <main className="flex min-h-dvh flex-col bg-background">
@@ -52,33 +66,47 @@ export function LoginPage({ onSignIn, error = null }: LoginPageProps): ReactNode
               variant="primary"
               onClick={onSignIn}
               disabled={isBusy}
-              className="min-h-10 w-full justify-center text-sm"
+              aria-busy={isBusy}
+              className="min-h-11 w-full justify-center text-sm"
             >
-              {isBusy ? 'Redirecting…' : 'Continue with SSO'}
-              <Icon icon={ArrowRight} size="sm" />
+              {isBusy ? 'Signing in…' : 'Continue with SSO'}
+              {isBusy ? (
+                <span className="inline-flex animate-spin motion-reduce:animate-none">
+                  <Icon icon={Loader2} size="sm" />
+                </span>
+              ) : (
+                <Icon icon={ArrowRight} size="sm" />
+              )}
             </Button>
 
+            <div role="status" className="mt-3 min-h-5">
+              {isBusy && slow ? (
+                <Text variant="caption" as="p" tone="muted">
+                  Still working. The network is slow, so this can take a moment.
+                </Text>
+              ) : null}
+            </div>
+
             {error !== null && (
-              <Text
-                variant="caption"
-                as="p"
-                tone="accent"
-                role="alert"
-                className="mt-3 break-words"
-              >
-                {error}
-              </Text>
+              <div role="alert" className="mt-1 break-words">
+                <Text variant="caption" as="p" tone="accent" className="font-semibold">
+                  Sign-in failed
+                </Text>
+                <Text variant="caption" as="p" tone="accent">
+                  {error} Try again with the button above.
+                </Text>
+              </div>
             )}
             <Button
               variant="ghost"
               onClick={toggleZenMode}
               aria-pressed={zen}
-              className="mt-4 self-start"
+              className="mt-4 min-h-11 self-start"
             >
               {zen ? 'Exit Zen' : 'Enter Zen'}
             </Button>
             {inNativeShell ? (
-              <Button variant="ghost" onClick={switchServer} className="self-start">
+              <Button variant="ghost" onClick={switchServer} className="min-h-11 self-start">
                 Switch server
               </Button>
             ) : null}

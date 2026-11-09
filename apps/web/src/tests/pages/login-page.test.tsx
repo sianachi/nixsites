@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,7 +40,30 @@ describe('sign-in Zen', () => {
     useSessionStore.setState({ status: 'authenticating' });
     render(<LoginPage onSignIn={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Redirecting…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Signing in…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Exit Zen' })).toBeEnabled();
+  });
+
+  it('says so when sign-in is slow, and offers Try again after a failure', () => {
+    vi.useFakeTimers();
+    useSessionStore.setState({ status: 'authenticating' });
+    const { unmount } = render(<LoginPage onSignIn={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Signing in…' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    expect(screen.queryByText(/Still working/)).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Still working');
+    unmount();
+    vi.useRealTimers();
+
+    useSessionStore.setState({ status: 'anonymous' });
+    render(<LoginPage onSignIn={vi.fn()} error="The provider did not answer." />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Sign-in failed');
+    expect(screen.getByRole('alert')).toHaveTextContent('Try again');
+    expect(screen.getByRole('button', { name: 'Continue with SSO' })).toBeEnabled();
   });
 });
