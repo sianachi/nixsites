@@ -1,3 +1,4 @@
+import { TITLE_COLUMN_KEY } from '@nix/web-collections/core/columns';
 import { useEffect, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 
 import { type CellRef } from '@nix/sheet';
@@ -107,6 +108,11 @@ export function useGridViewport(args: {
   const visibleCols: number[] = [];
   for (let col = cols.first; col <= cols.last; col += 1) {
     visibleCols.push(col);
+  }
+
+  // The title column stays mounted (and is pinned by the grid) however far the grid scrolls.
+  if (columns[0]?.key === TITLE_COLUMN_KEY && visibleCols[0] !== 0) {
+    visibleCols.unshift(0);
   }
 
   return {

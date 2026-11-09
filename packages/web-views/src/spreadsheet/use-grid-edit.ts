@@ -1,4 +1,5 @@
 import { type CellRef } from '@nix/sheet';
+import { useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type Dispatch, type RefObject } from 'react';
 
 import { isKnownPropertyType } from '@nix/web-collections/properties/property-input';
@@ -7,6 +8,7 @@ import { type Item, type PropertyDefinition } from '@nix/web-collections/core/co
 import { isComputedType } from '@nix/web-collections/core/property-types';
 import type { PlanOutcome, PlanWrite } from '@nix/web-collections/core/use-container';
 import {
+  selectedRange,
   type GridBounds,
   type SelectionAction,
   type SelectionState,
@@ -69,6 +71,12 @@ export function useGridEdit(args: GridEditArgs): GridEdit {
     onWriteMany,
     onOpen,
   } = args;
+  const undo = useUndo();
+
+  /** The values a bag is about to overwrite, so Undo can put exactly those back. */
+  function previous(item: Item, bag: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(Object.keys(bag).map((key) => [key, item.properties[key] ?? null]));
+  }
 
   /**
    * What the grid last had to say: a refusal, a bulk gesture's outcome, or why a keystroke did
@@ -143,6 +151,18 @@ export function useGridEdit(args: GridEditArgs): GridEdit {
       properties: write.bag,
     }));
 
+    const reverse: PlanWrite[] = plan.writes.map((write) => ({
+      itemId: write.item.id,
+      label: write.item.title || 'Untitled',
+      properties: previous(write.item, write.bag),
+    }));
+    const done = { taken: 'Pasted into', filled: 'Filled', cleared: 'Cleared' }[verb];
+    if (writes.length > 0) {
+      undo.push(`${done} ${String(writes.length)} ${writes.length === 1 ? 'row' : 'rows'}`, () => {
+        void onWriteMany(reverse);
+      });
+    }
+
     void onWriteMany(writes)
       .then((outcome) => {
         const parts: string[] = [];
@@ -208,6 +228,11 @@ export function useGridEdit(args: GridEditArgs): GridEdit {
 
     setNotice(null);
     editSettledRef.current = true;
+
+    const reverse = previous(item, { [column.key]: coerced.value });
+    undo.push(`Changed ${column.label} on ${item.title || 'Untitled'}`, () => {
+      void onWrite(item.id, reverse);
+    });
 
     void onWrite(item.id, { [column.key]: coerced.value })
       .then((refusal) => {
@@ -293,7 +318,42 @@ export function useGridEdit(args: GridEditArgs): GridEdit {
     const write = ++propertyWriteRef.current;
     setPropertyRefusal(null);
     setNotice(null);
-    void onWrite(editedItem.id, { [editedProperty.key]: value })
+
+    // A pick inside a multi-row selection applies to every selected row of that column.
+    const range = selectedRange(selection);
+    const column = columns.findIndex((entry) => entry.key === editedProperty.key);
+    const row = items.findIndex((entry) => entry.id === editedItem.id);
+    const many =
+      range.endRow > range.startRow &&
+      row >= range.startRow &&
+      row <= range.endRow &&
+      column >= range.startCol &&
+      column <= range.endCol;
+    const targets = many ? items.slice(range.startRow, range.endRow + 1) : [editedItem];
+    const bag = { [editedProperty.key]: value };
+    const reverse: PlanWrite[] = targets.map((target) => ({
+      itemId: target.id,
+      label: target.title || 'Untitled',
+      properties: previous(target, bag),
+    }));
+    undo.push(
+      many
+        ? `Set ${editedProperty.label} on ${String(targets.length)} rows`
+        : `Set ${editedProperty.label} on ${editedItem.title || 'Untitled'}`,
+      () => {
+        void onWriteMany(reverse);
+      },
+    );
+    const send = many
+      ? onWriteMany(
+          targets.map((target) => ({
+            itemId: target.id,
+            label: target.title || 'Untitled',
+            properties: bag,
+          })),
+        ).then((outcome) => outcome.refused[0]?.reason ?? null)
+      : onWrite(editedItem.id, bag);
+    void send
       .then((refusal) => {
         if (
           propertyWriteRef.current === write &&

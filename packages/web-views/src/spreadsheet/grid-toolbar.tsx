@@ -1,5 +1,5 @@
 import { Button, Icon, Popover, Text, cn, focusRing } from '@nix/ui';
-import { Check, SquareArrowOutUpRight, X } from 'lucide-react';
+import { ArrowDownToLine, BoxSelect, Check, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 interface GridToolbarProps {
@@ -23,8 +23,15 @@ interface GridToolbarProps {
   readonly onPopoverOpenChange: (open: boolean) => void;
   readonly popoverContent: (controls: { close: () => void }) => ReactNode;
 
+  /** Tap-select mode: the first tap anchors a range, later taps extend it. */
+  readonly selecting: boolean;
+  readonly onToggleSelecting: () => void;
+  readonly canFillDown: boolean;
+  readonly onFillDown: () => void;
+  /** "3 × 2 selected" while more than one cell is selected. */
+  readonly selectionLabel: string | null;
+
   readonly onEdit: () => void;
-  readonly onOpenActive: () => void;
 }
 
 export function GridToolbar(props: GridToolbarProps): ReactNode {
@@ -92,6 +99,34 @@ export function GridToolbar(props: GridToolbarProps): ReactNode {
           </div>
         ) : null}
 
+        <Button
+          variant="secondary"
+          className="min-w-0 max-w-full"
+          aria-pressed={props.selecting}
+          aria-label="Select a range of rows by tapping its first and last cell"
+          onClick={props.onToggleSelecting}
+        >
+          <Icon icon={BoxSelect} size="sm" />
+          <span className="truncate">Select range</span>
+        </Button>
+
+        <Button
+          variant="secondary"
+          className="min-w-0 max-w-full"
+          disabled={!props.canFillDown}
+          aria-label="Fill down: copy the first selected row into the rows below"
+          onClick={props.onFillDown}
+        >
+          <Icon icon={ArrowDownToLine} size="sm" />
+          <span className="truncate">Fill down</span>
+        </Button>
+
+        {props.selectionLabel === null ? null : (
+          <Text as="span" variant="note" tone="muted" className="self-center">
+            {props.selectionLabel}
+          </Text>
+        )}
+
         {props.usesPopover ? (
           <Popover
             label={props.popoverLabel}
@@ -122,23 +157,6 @@ export function GridToolbar(props: GridToolbarProps): ReactNode {
             <span className="truncate">Edit {activeColumnLabel ?? 'property'}</span>
           </Button>
         )}
-
-        {/* The pointer-only way to open a row: tapping the title twice already does it, but a
-            visible control means opening never depends on a double-click or a keyboard. */}
-        <Button
-          variant="secondary"
-          className="min-w-0 max-w-full"
-          aria-label={
-            activeItemTitle === undefined ? 'Open item' : `Open ${activeItemTitle || 'Untitled'}`
-          }
-          disabled={activeItemTitle === undefined}
-          onClick={props.onOpenActive}
-        >
-          <Icon icon={SquareArrowOutUpRight} size="sm" />
-          <span className="truncate">
-            {activeItemTitle === undefined ? 'Open' : `Open ${activeItemTitle || 'Untitled'}`}
-          </span>
-        </Button>
       </div>
     </>
   );

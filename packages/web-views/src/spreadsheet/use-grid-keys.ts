@@ -37,6 +37,7 @@ interface GridKeysArgs {
 export function useGridKeys(args: GridKeysArgs): {
   onGridKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   fillSeries: () => boolean;
+  fillDown: () => void;
 } {
   const {
     items,
@@ -79,6 +80,15 @@ export function useGridKeys(args: GridKeysArgs): {
     return true;
   }
 
+  /** Fill down: the range's first row repeated over the rows below it. */
+  function fillDown(): void {
+    if (range.endRow === range.startRow) {
+      setNotice('Select rows to fill down: the first row of the selection is the pattern.');
+    } else {
+      applyPlan(fillPlan(range, items, columns), 'filled');
+    }
+  }
+
   function onGridKeyDown(event: ReactKeyboardEvent<HTMLDivElement>): void {
     if (selection.mode === 'edit') {
       return;
@@ -117,11 +127,7 @@ export function useGridKeys(args: GridKeysArgs): {
       // and silence would be indistinguishable from breakage.
       event.preventDefault();
       setTrapsTab(true);
-      if (range.endRow === range.startRow) {
-        setNotice('Select rows to fill down: the first row of the selection is the pattern.');
-      } else {
-        applyPlan(fillPlan(range, items, columns), 'filled');
-      }
+      fillDown();
       return;
     }
 
@@ -166,5 +172,5 @@ export function useGridKeys(args: GridKeysArgs): {
     }
   }
 
-  return { onGridKeyDown, fillSeries };
+  return { onGridKeyDown, fillSeries, fillDown };
 }

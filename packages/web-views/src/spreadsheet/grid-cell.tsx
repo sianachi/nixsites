@@ -1,6 +1,6 @@
 import { cellKey } from '@nix/sheet';
-import { Icon, cn, gridRangeCell } from '@nix/ui';
-import { Check, ChevronDown, Square } from 'lucide-react';
+import { Icon, cn, gridRangeCell, useFlash } from '@nix/ui';
+import { Check, ChevronDown, Square, SquareArrowOutUpRight } from 'lucide-react';
 import { type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 
 import { type Item } from '@nix/web-collections/core/container-model';
@@ -21,6 +21,10 @@ interface GridCellProps {
   readonly inRange: boolean;
   readonly onMouseDown: (event: ReactMouseEvent<HTMLDivElement>) => void;
   readonly onDoubleClick: () => void;
+  readonly onOpen: () => void;
+
+  /** How far the grid is scrolled sideways when this is the pinned title cell; else 0. */
+  readonly pinShift: number;
 }
 
 export function GridCell(props: GridCellProps): ReactNode {
@@ -35,8 +39,12 @@ export function GridCell(props: GridCellProps): ReactNode {
     inRange,
     onMouseDown,
     onDoubleClick,
+    onOpen,
+    pinShift,
   } = props;
   const shown = cellDisplay(item, column);
+  // Tints the cell once when its shown value changes (an edit, fill, paste, clear or undo).
+  const flash = useFlash(shown);
   const isTitle = column.key === TITLE_COLUMN_KEY;
   // design-token-exempt: a cell's place and size are grid geometry computed at runtime
   const cellStyle = {
@@ -44,6 +52,7 @@ export function GridCell(props: GridCellProps): ReactNode {
     left: `${String(props.left)}px`,
     width: `${String(props.width)}px`,
     height: `${String(rowHeight)}px`,
+    ...(isTitle ? { transform: `translateX(${String(pinShift)}px)` } : {}),
   };
 
   // Justification: this grid uses aria-activedescendant, where focus stays on the
@@ -69,16 +78,38 @@ export function GridCell(props: GridCellProps): ReactNode {
       }
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
+      {...flash}
       className={cn(
         'absolute overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-divider px-2 py-1.5 text-sm',
         column.type === 'number' ? 'text-right' : 'text-left',
-        isTitle ? 'font-semibold' : '',
+        isTitle ? 'z-[1] bg-background font-semibold' : '',
         inRange ? gridRangeCell : '',
         isActive ? 'outline-2 -outline-offset-2 outline-accent' : '',
       )}
       style={cellStyle}
     >
-      {column.type === 'checkbox' || column.type === 'completion' ? (
+      {isTitle ? (
+        <span className="flex h-full items-center justify-between gap-1">
+          <span className="truncate">{shown}</span>
+          {/* A visible way to open the row, with no double-tap or keyboard. Out of the tab order:
+              focus stays on the grid (aria-activedescendant). */}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={`Open ${item.title || 'Untitled'}`}
+            className="-my-1.5 -mr-2 flex h-[calc(100%+0.75rem)] shrink-0 items-center border-l border-divider px-2 text-accent hover:bg-hover active:bg-hover pointer-coarse:min-w-11 pointer-coarse:justify-center"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen();
+            }}
+          >
+            <Icon icon={SquareArrowOutUpRight} size="sm" />
+          </button>
+        </span>
+      ) : column.type === 'checkbox' || column.type === 'completion' ? (
         <Icon icon={item.properties[column.key] === true ? Check : Square} size="sm" />
       ) : column.type === 'select' ||
         column.type === 'priority' ||

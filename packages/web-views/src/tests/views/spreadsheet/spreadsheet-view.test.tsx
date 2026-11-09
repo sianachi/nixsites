@@ -4,6 +4,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UndoProvider, useUndo } from '@nix/ui';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aContainer } from '@nix/web-collections/testing/container-fixture';
 import { aView, item, property, schemaOf } from '@nix/web-collections/testing/view-fixture';
@@ -455,6 +456,58 @@ describe('ranges and the clipboard', () => {
     pressOnGrid('d', { ctrlKey: true });
 
     expect(writes).toEqual([{ itemId: 'item-b', bag: { status: 'open' } }]);
+  });
+
+  it('fills down from the visible Fill down button, enabled only for a multi-row selection', () => {
+    renderAt(sheetWith({ items: [ALPHA, BETA] }));
+    const button = screen.getByRole('button', { name: /^Fill down/ });
+    expect(button).toBeDisabled();
+
+    grid().focus();
+    pressOnGrid('ArrowRight');
+    pressOnGrid('ArrowDown', { shiftKey: true });
+    expect(screen.getByText('2 × 1 selected')).toBeInTheDocument();
+    fireEvent.click(button);
+
+    expect(writes).toEqual([{ itemId: 'item-b', bag: { status: 'open' } }]);
+  });
+
+  it('undoes a fill down through the shared undo history, restoring the old values', () => {
+    function UndoButton(): ReactNode {
+      const undo = useUndo();
+      return (
+        <button type="button" onClick={() => void undo.undoLatest()}>
+          Undo last
+        </button>
+      );
+    }
+    renderAt(
+      <UndoProvider>
+        {sheetWith({ items: [ALPHA, BETA] })}
+        <UndoButton />
+      </UndoProvider>,
+    );
+
+    grid().focus();
+    pressOnGrid('ArrowRight');
+    pressOnGrid('ArrowDown', { shiftKey: true });
+    pressOnGrid('d', { ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last' }));
+
+    expect(writes).toEqual([
+      { itemId: 'item-b', bag: { status: 'open' } },
+      { itemId: 'item-b', bag: { status: 'done' } },
+    ]);
+  });
+
+  it('extends a range by tapping in Select range mode, with no Shift key', () => {
+    renderAt(sheetWith({ items: [ALPHA, BETA] }));
+
+    fireEvent.click(screen.getByRole('button', { name: /^Select a range of rows/ }));
+    fireEvent.mouseDown(screen.getByRole('gridcell', { name: /^Status for Alpha/ }));
+    fireEvent.mouseDown(screen.getByRole('gridcell', { name: /^Status for Beta/ }));
+
+    expect(screen.getByText('2 × 1 selected')).toBeInTheDocument();
   });
 
   it('clears the selected range on Delete, leaving the read-only title alone', () => {

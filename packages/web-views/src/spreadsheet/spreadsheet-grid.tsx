@@ -78,6 +78,9 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
   // Fixed for this mount: a window moved between a mouse and a touch screen re-opens the view.
   const [rowHeight] = useState(pickRowHeight);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Tap-select mode for touch: no Shift key, so the first tap anchors and later taps extend.
+  const [selecting, setSelecting] = useState(false);
+  const anchoredRef = useRef(false);
   const editorRef = useRef<HTMLInputElement>(null);
   const menuCellRef = useRef<CellRef | null>(null);
 
@@ -148,7 +151,7 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
     columns,
   );
 
-  const { onGridKeyDown, fillSeries } = useGridKeys({
+  const { onGridKeyDown, fillSeries, fillDown } = useGridKeys({
     items,
     columns,
     selection,
@@ -220,6 +223,11 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
     if (selection.mode === 'edit' && !commitDraft('stay')) {
       return;
     }
+    if (selecting) {
+      dispatch({ type: 'moveTo', ref: { row, col }, extend: anchoredRef.current });
+      anchoredRef.current = true;
+      return;
+    }
     if (alreadyFocused && isActive && !event.shiftKey) {
       if (isTitle) {
         onOpen(item.id);
@@ -274,7 +282,23 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
         popoverOpen={
           propertyEdit !== null && editedItem !== undefined && editedProperty !== undefined
         }
-        popoverLabel={`Edit ${editedProperty?.label ?? activeColumn?.label ?? 'property'} for ${(editedItem?.title ?? activeItem?.title ?? '') || 'Untitled'}`}
+        popoverLabel={`Edit ${editedProperty?.label ?? activeColumn?.label ?? 'property'} for ${
+          range.endRow > range.startRow
+            ? `${String(range.endRow - range.startRow + 1)} rows`
+            : (editedItem?.title ?? activeItem?.title ?? '') || 'Untitled'
+        }`}
+        selecting={selecting}
+        onToggleSelecting={() => {
+          anchoredRef.current = false;
+          setSelecting((on) => !on);
+        }}
+        canFillDown={range.endRow > range.startRow}
+        onFillDown={fillDown}
+        selectionLabel={
+          rangeIsCell
+            ? null
+            : `${String(range.endRow - range.startRow + 1)} × ${String(range.endCol - range.startCol + 1)} selected`
+        }
         onPopoverOpenChange={(open) => {
           if (!open) closePropertyEdit();
           else if (activeColumn !== undefined && activeItem !== undefined) {
@@ -302,11 +326,6 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
           if (activeColumn !== undefined && activeItem !== undefined)
             beginEdit('open', cellText(activeItem, activeColumn));
         }}
-        onOpenActive={() => {
-          if (activeItem !== undefined) {
-            onOpen(activeItem.id);
-          }
-        }}
       />
 
       <GridHeader
@@ -320,6 +339,7 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
         onSort={onSort}
         viewId={viewId}
         rowHeight={rowHeight}
+        pinShift={scroll.left}
       />
 
       {/* The body: the one real scroller, and the keyboard's home. */}
@@ -406,6 +426,10 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
                           onDoubleClick={() => {
                             openCell(item, column);
                           }}
+                          onOpen={() => {
+                            onOpen(item.id);
+                          }}
+                          pinShift={col === 0 ? scroll.left : 0}
                         />
                       );
                     })}

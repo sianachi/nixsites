@@ -1,3 +1,4 @@
+import { TITLE_COLUMN_KEY } from '@nix/web-collections/core/columns';
 import { Icon, cn, focusRing, focusRingInset } from '@nix/ui';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { Fragment, useRef, type CSSProperties, type ReactNode } from 'react';
@@ -22,6 +23,9 @@ interface GridHeaderProps {
   readonly onSort: (key: string, direction: SortDirection) => void;
   readonly viewId: string;
   readonly rowHeight: number;
+
+  /** The sideways scroll, cancelled on the first (title) column so it stays pinned. */
+  readonly pinShift: number;
 }
 
 export function GridHeader(props: GridHeaderProps): ReactNode {
@@ -31,6 +35,7 @@ export function GridHeader(props: GridHeaderProps): ReactNode {
     offsets,
     widths,
     headerStripStyle,
+    pinShift,
     sortBy,
     direction,
     onSort,
@@ -59,6 +64,9 @@ export function GridHeader(props: GridHeaderProps): ReactNode {
             left: `${String(offsets[col] ?? 0)}px`,
             width: `${String(widths[col] ?? 0)}px`,
             height: `${String(rowHeight)}px`,
+            ...(col === 0 && column.key === TITLE_COLUMN_KEY
+              ? { transform: `translateX(${String(pinShift)}px)` }
+              : {}),
           };
           const width = widths[col] ?? 0;
           // design-token-exempt: the handle sits on the column's right edge, grid geometry
@@ -75,6 +83,7 @@ export function GridHeader(props: GridHeaderProps): ReactNode {
                   );
                 }}
                 className={cn(
+                  col === 0 && column.key === TITLE_COLUMN_KEY ? 'z-[1] bg-surface' : '',
                   'absolute top-0 flex cursor-default items-center gap-1 truncate border-r border-divider px-2 text-left text-sm font-semibold',
                   sorted ? 'text-accent-text' : 'text-foreground',
                   focusRing,
