@@ -275,7 +275,8 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
                     if (!hidden)
                     {
                         messages.Add(new ConversationMessageResponse(messageId, role, text, row.CreatedAt, row.CreatedBy.Value,
-                            row.Seq.ToString(CultureInfo.InvariantCulture), Guid.TryParse(ReadString(bag, "chat_turn_id", ""), out var requestId) ? requestId : null));
+                            row.Seq.ToString(CultureInfo.InvariantCulture), Guid.TryParse(ReadString(bag, "chat_turn_id", ""), out var requestId) ? requestId : null,
+                            role == "assistant" ? ReadSources(bag) : null));
                     }
                 }
                 else if (hidden && !currentHidden)
@@ -298,10 +299,16 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
         }
     }
 
+    private static Guid[]? ReadSources(JsonNode bag) =>
+        bag is JsonObject { } obj && obj["chat_sources"] is JsonArray array
+            ? array.Select(node => node is JsonValue value && value.TryGetValue<string>(out var text) && Guid.TryParse(text, out var id) ? id : Guid.Empty)
+                .Where(id => id != Guid.Empty).ToArray()
+            : null;
+
     private static string ReadString(JsonNode bag, string key, string fallback) =>
         bag is JsonObject obj && obj[key] is JsonValue value && value.TryGetValue<string>(out var text) ? text : fallback;
 
-    internal async Task<ItemId> Append(Item parent, string role, string text, CancellationToken cancellationToken, Guid? requestId = null)
+    internal async Task<ItemId> Append(Item parent, string role, string text, CancellationToken cancellationToken, Guid? requestId = null, IReadOnlyList<Guid>? sources = null)
     {
         var now = clock.GetUtcNow();
         var context = session.Current!.Value;
@@ -326,6 +333,11 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
                 ["chat_part"] = part,
                 ["chat_turn_id"] = requestId?.ToString()
             };
+            if (sources is { Count: > 0 })
+            {
+                // The workspaces this reply was answered from, so the chat can show them per reply.
+                bag["chat_sources"] = new JsonArray(sources.Select(source => (JsonNode)JsonValue.Create(source.ToString())).ToArray());
+            }
             await tree.InsertAsync(new Item
             {
                 Id = part == 0 ? messageId : ItemId.Create(),
@@ -457,7 +469,7 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
         }
         if (status == "completed" && !string.IsNullOrWhiteSpace(text))
         {
-            await Append(found.Value, "assistant", text, cancellationToken).ConfigureAwait(false);
+            await Append(found.Value, "assistant", text, cancellationToken, sources: config.SourceWorkspaceIds).ConfigureAwait(false);
         }
 
         var previewStart = Math.Max(0, text.Length - 2000);

@@ -2,6 +2,7 @@ import { type ConversationMessage } from '@nix/api-client';
 import { Button, Icon, Text } from '@nix/ui';
 import { FilePlus } from 'lucide-react';
 import { type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { type ProgramPiece } from '../../openui/fence';
 import { PetMessageText } from '../pet-message-text';
 
@@ -15,6 +16,9 @@ export function ChatMessage({
   earlierPieces,
   onAsk,
   onSave,
+  sourceNames,
+  saved,
+  below,
 }: {
   readonly message: ConversationMessage;
   readonly latest: boolean;
@@ -22,7 +26,13 @@ export function ChatMessage({
   readonly sourceWorkspaceIds: readonly string[];
   readonly earlierPieces: readonly ProgramPiece[] | undefined;
   readonly onAsk: (text: string) => void;
-  readonly onSave: (text: string) => void;
+  readonly onSave: () => void;
+  /** Names of the workspaces this reply was answered from; empty when the server did not record them. */
+  readonly sourceNames: readonly string[];
+  /** Where this reply was kept as a note, if it was. */
+  readonly saved?: undefined | { readonly href: string; readonly workspaceName: string };
+  /** The in-place save form, when it is open for this reply. */
+  readonly below?: ReactNode;
 }): ReactNode {
   if (message.role === 'system')
     return (
@@ -42,6 +52,11 @@ export function ChatMessage({
       <Text as="span" variant="note" className="sr-only">
         {fromUser ? 'You said' : 'Pet said'}
       </Text>
+      {sourceNames.length ? (
+        <Text variant="caption" tone="muted">
+          Answered from {sourceNames.join(', ')}
+        </Text>
+      ) : null}
       <div
         className={
           fromUser
@@ -65,18 +80,26 @@ export function ChatMessage({
         />
       </div>
       {message.role === 'assistant' ? (
-        <Button
-          variant="ghost"
-          className="w-(--control-md) px-0 any-pointer-coarse:w-(--control-lg)"
-          aria-label="Save insight as note"
-          title="Save insight as note"
-          onClick={() => {
-            onSave(message.text);
-          }}
-        >
-          <Icon icon={FilePlus} size="sm" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            className="w-(--control-md) px-0 any-pointer-coarse:w-(--control-lg)"
+            aria-label="Save insight as note"
+            title="Save insight as note"
+            onClick={onSave}
+          >
+            <Icon icon={FilePlus} size="sm" />
+          </Button>
+          {saved ? (
+            <Link to={saved.href} data-enter="">
+              <Text as="span" variant="note">
+                Saved to {saved.workspaceName}
+              </Text>
+            </Link>
+          ) : null}
+        </div>
       ) : null}
+      {below}
     </article>
   );
 }

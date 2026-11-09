@@ -25,6 +25,8 @@ export const conversationMessageSchema = z.object({
   seq: z.string(),
   createdAt: z.string(),
   authorId: z.uuid().nullable(),
+  // The workspaces an assistant reply was answered from; absent on older replies.
+  sourceWorkspaceIds: z.array(z.uuid()).nullish(),
 });
 export const conversationMessagesSchema = z.object({
   items: z.array(conversationMessageSchema),

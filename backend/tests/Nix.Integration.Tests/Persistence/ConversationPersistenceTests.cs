@@ -203,6 +203,43 @@ public sealed class ConversationPersistenceTests(NixPostgresFixture fixture) : I
     }
 
     [Fact]
+    public async Task Assistant_replies_report_the_workspaces_they_were_answered_from_and_older_ones_report_none()
+    {
+        var id = await Create([new("assistant", "Imported reply")]);
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var tree = work.Resolve<IItemTree>();
+        var context = TestTenants.AlphaContext;
+        var source = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var messageId = ItemId.Create();
+        var bag = new System.Text.Json.Nodes.JsonObject
+        {
+            ["chat_role"] = "assistant",
+            ["chat_text"] = "Answered",
+            ["chat_message_id"] = messageId.Value.ToString(),
+            ["chat_sources"] = new System.Text.Json.Nodes.JsonArray(source.ToString(), "not-a-guid")
+        };
+        await tree.InsertAsync(new Item
+        {
+            Id = messageId,
+            TenantId = context.TenantId,
+            WorkspaceId = new(TestTenants.AlphaWorkspace),
+            Type = "document",
+            ParentId = new(id),
+            Seq = await tree.NextSiblingSequenceAsync(new(TestTenants.AlphaWorkspace), new(id), Cancellation),
+            Properties = bag.ToJsonString(),
+            LifecycleState = ItemLifecycleState.Active,
+            CreatedBy = context.PrincipalId,
+            LastModifiedBy = context.PrincipalId,
+            CreatedAt = now,
+            LastModifiedAt = now
+        }, Cancellation);
+        var messages = await work.Resolve<ConversationService>().Messages(id, null, 50, Cancellation);
+        Assert.Null(messages.Value.Items[0].SourceWorkspaceIds);
+        Assert.Equal([source], messages.Value.Items[1].SourceWorkspaceIds);
+    }
+
+    [Fact]
     public async Task Long_unicode_transcripts_are_chunked_without_loss_below_the_property_storage_bound()
     {
         var text = new string('a', 2999) + "\U0001F600" + new string('界', 20000);

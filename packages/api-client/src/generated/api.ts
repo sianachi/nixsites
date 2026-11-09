@@ -4204,6 +4204,7 @@ export interface components {
       seq: string;
       /** Format: uuid */
       requestId?: null | string;
+      sourceWorkspaceIds?: null | string[];
     };
     ConversationMessagesResponse: {
       items: components['schemas']['ConversationMessageResponse'][];

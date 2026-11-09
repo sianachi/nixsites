@@ -33,4 +33,22 @@ describe('saved conversation notes', () => {
       'a'.repeat(6000) + ' Final conclusion.',
     );
   });
+  it('names the workspaces each reply was answered from', async () => {
+    render(Editor.render());
+    expect(await screen.findByText('Answered from Research')).toBeVisible();
+  });
+  it('opens the save form under the reply it keeps, with a destination already chosen', async () => {
+    render(Editor.render());
+    fireEvent.click(await screen.findByRole('button', { name: 'Save insight as note' }));
+    const form = await screen.findByRole('region', { name: 'Save insight as note' });
+    expect(form.closest('article')).not.toBeNull();
+    expect(
+      await screen.findByRole('combobox', { name: 'Insight destination workspace' }),
+    ).toHaveValue('11111111-1111-4111-8111-111111111111');
+    expect(await screen.findByRole('button', { name: 'Save to Research' })).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'I confirm this destination and its sharing' }),
+    );
+    expect(screen.getByRole('button', { name: 'Save to Research' })).toBeEnabled();
+  });
 });

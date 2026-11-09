@@ -7,23 +7,39 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useAccessibleWorkspaces } from '@nix/web-workspaces/workspaces/workspace-context';
 import { ChatDestination } from './new-chat-note';
 
+export interface SavedInsight {
+  readonly itemId: string;
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly title: string;
+}
+
+/** Opens in place under the reply, with the title and destination already filled in. */
 export function SaveInsightNote({
   text,
+  initialTitle = 'Conversation insight',
+  initialWorkspaceId = '',
+  onSaved,
   onClose,
 }: {
   readonly text: string;
+  readonly initialTitle?: string;
+  readonly initialWorkspaceId?: string;
+  /** Defaults to closing the form. */
+  readonly onSaved?: (saved: SavedInsight) => void;
   readonly onClose: () => void;
 }): ReactNode {
   const client = useApiClient();
   const { workspaces } = useAccessibleWorkspaces();
-  const [workspaceId, setWorkspaceId] = useState('');
+  const [workspaceId, setWorkspaceId] = useState(initialWorkspaceId);
   const [parentId, setParentId] = useState<string | null>(null);
-  const [title, setTitle] = useState('Conversation insight');
+  const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(text);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const destination = workspaces.find((entry) => entry.id === workspaceId);
   async function save() {
     setBusy(true);
     setError('');
@@ -34,7 +50,12 @@ export function SaveInsightNote({
       setCreatedId(created.id);
       try {
         await createCompanionBodies(client).append(created.id, body, new AbortController().signal);
-        onClose();
+        (onSaved ?? onClose)({
+          itemId: created.id,
+          workspaceId,
+          workspaceName: destination?.name ?? '',
+          title,
+        });
       } catch {
         setError(
           'The note was created, but its text could not be confirmed. Open it before retrying to avoid duplicates.',
@@ -46,7 +67,6 @@ export function SaveInsightNote({
       setBusy(false);
     }
   }
-  const destination = workspaces.find((entry) => entry.id === workspaceId);
   return (
     <section
       aria-label="Save insight as note"
@@ -124,10 +144,10 @@ export function SaveInsightNote({
           }
           onClick={() => void save()}
         >
-          Save insight
+          Save to {destination?.name ?? 'a workspace'}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={onClose}>
-          Close
+          Cancel
         </Button>
       </div>
     </section>

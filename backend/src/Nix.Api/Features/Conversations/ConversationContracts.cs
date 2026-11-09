@@ -14,7 +14,8 @@ public sealed record ConversationSourcesRequest(IReadOnlyList<Guid> SourceWorksp
 public sealed record ConversationTurnResponse(Guid Id, Guid RequestId, string Status, string? Error, string Text = "");
 public sealed record ConversationResponse(Guid ItemId, Guid WorkspaceId, string Title, IReadOnlyList<Guid> SourceWorkspaceIds,
     Guid PetId, long Revision, bool CanSend, ConversationTurnResponse? Turn, bool CanEdit = false);
-public sealed record ConversationMessageResponse(Guid Id, string Role, string Text, DateTimeOffset CreatedAt, Guid? AuthorId, string Seq = "", Guid? RequestId = null);
+public sealed record ConversationMessageResponse(Guid Id, string Role, string Text, DateTimeOffset CreatedAt, Guid? AuthorId, string Seq = "", Guid? RequestId = null,
+    IReadOnlyList<Guid>? SourceWorkspaceIds = null);
 public sealed record ConversationMessagesResponse(IReadOnlyList<ConversationMessageResponse> Items, string? NextCursor);
 internal sealed record ConversationTurn(Guid Id, Guid RequestId, string Status, Guid ActorId, DateTimeOffset ExpiresAt,
     string? Error = null, string Text = "", Guid? PetId = null);
