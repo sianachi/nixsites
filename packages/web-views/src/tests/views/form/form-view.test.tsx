@@ -11,6 +11,7 @@ import type {
   PropertyDefinition,
   View,
 } from '@nix/web-collections/core/container-model';
+import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { FormView } from '../../../form/form-view';
 
 /**
@@ -348,5 +349,31 @@ describe('temporary calculations', () => {
     await user.type(screen.getByLabelText(/Title/), 'Check-in');
     await user.click(screen.getByRole('button', { name: 'Add entry' }));
     expect(create).toHaveBeenCalledExactlyOnceWith('Check-in', { weight: 72, height: 1.8 });
+  });
+});
+
+describe('FormView added list', () => {
+  it('lists an added entry beside the form once the container reports it', async () => {
+    const user = userEvent.setup();
+    function Harness(): ReactNode {
+      const [list, setList] = useState<ContainerData['children']>([]);
+      const container = aContainer({
+        schema: SCHEMA,
+        children: list,
+        create: (title) => {
+          setList([{ id: 'new-1', title } as ContainerData['children'][number]]);
+          return Promise.resolve(null);
+        },
+      });
+      return <FormView container={container} view={aView({ kind: 'form' })} onOpen={vi.fn()} />;
+    }
+    renderAt(<Harness />);
+
+    await user.type(screen.getByLabelText(/Title/), 'Tuesday');
+    await user.click(screen.getByRole('button', { name: 'Add entry' }));
+
+    expect(
+      await screen.findByRole('complementary', { name: 'Added this session' }),
+    ).toHaveTextContent('Tuesday');
   });
 });

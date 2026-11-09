@@ -1,4 +1,5 @@
-import { Button, Checkbox, Field, Input, Text } from '@nix/ui';
+import { items as coreItems } from '@nix/api-client';
+import { Button, Checkbox, Field, Input, Text, useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
@@ -13,6 +14,7 @@ import {
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
+import { notifyItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { rememberSubmission, usualValues, type UsualValue } from './form-memory';
@@ -140,6 +142,19 @@ function EntryForm({
 
   /** Bumped on a blocked submit, so the focus effect runs again even when the text is identical. */
   const [blockedAt, setBlockedAt] = useState(0);
+
+  const undo = useUndo();
+  const client = useOptionalApiClient();
+  // Entries added in this sitting, shown beside the form so each add is confirmed where it happened.
+  const [added, setAdded] = useState<readonly { id: string; title: string; leaving: boolean }[]>(
+    [],
+  );
+  // Read after `create` resolves: the reload it awaits has re-rendered by then, so this holds the
+  // new child and lets the add find its id for Undo.
+  const childrenRef = useRef(container.children);
+  useEffect(() => {
+    childrenRef.current = container.children;
+  });
 
   const titleRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -286,6 +301,7 @@ function EntryForm({
     setSending(true);
 
     try {
+      const knownIds = new Set(container.children.map((child) => child.id));
       const refusal = await container.create(title.trim(), sent);
 
       if (refusal !== null) {
@@ -299,10 +315,33 @@ function EntryForm({
         rememberSubmission(workspace.workspaceId, view.id, offered, sent);
         setUsual(usualValues(workspace.workspaceId, view.id, offered));
       }
+      const label = title.trim();
+      const created = childrenRef.current.find((child) => !knownIds.has(child.id));
       setTitle('');
       setBag({});
       setSubmissions((current) => current + 1);
       setOutcome({ kind: 'saved', text: 'Entry added.' });
+      if (created !== undefined) {
+        setAdded((current) => [{ id: created.id, title: label, leaving: false }, ...current]);
+        if (client !== null && workspace !== null) {
+          const { workspaceId } = workspace;
+          undo.push(`Added ${label}`, async () => {
+            await client.execute(coreItems.deleteItem(workspaceId, created.id));
+            notifyItemChildrenChanged(workspaceId, container.itemId, {
+              removedItemIds: [created.id],
+            });
+            setAdded((current) =>
+              current.map((entry) =>
+                entry.id === created.id ? { ...entry, leaving: true } : entry,
+              ),
+            );
+            window.setTimeout(() => {
+              setAdded((current) => current.filter((entry) => entry.id !== created.id));
+            }, 150);
+            titleRef.current?.focus();
+          });
+        }
+      }
     } catch {
       setOutcome({
         kind: 'refused',
@@ -314,180 +353,201 @@ function EntryForm({
   }
 
   return (
-    <form
-      ref={formRef}
-      aria-label={view.name}
-      className="flex min-w-0 w-full max-w-xl flex-col gap-4"
-      // The form owns its validation - the per-field sentences below - and the design language
-      // never shows browser default bubbles. Without this the controls' own `required` attributes
-      // would block submission before the handler could say anything.
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        void submit();
-      }}
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <Checkbox
-          label="Save this entry"
-          checked={saveResponse}
-          disabled={sending}
-          onChange={(event) => {
-            setSaveChoice(event.target.checked);
-            setOutcome(null);
-            setFieldErrors({});
-          }}
-        />
-        <Text variant="note" tone="muted" className="wrap-anywhere">
-          {saveResponse
-            ? 'Adds a child entry to this note.'
-            : 'Answers stay in this view. Uploads and history are off.'}
-        </Text>
-      </div>
-      <div ref={fieldsRef} key={submissions} className="flex flex-col gap-4">
-        {saveResponse ? (
-          <Field label="Title" required error={fieldErrors.title ?? null}>
-            {(control) => (
-              <Input
-                {...control}
-                ref={titleRef}
-                value={title}
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  // Cleared on the keystroke that answers it, the same trigger `setValue` uses for
-                  // every other field - one rule, not two.
-                  setFieldErrors((current) =>
-                    'title' in current
-                      ? Object.fromEntries(
-                          Object.entries(current).filter(([key]) => key !== 'title'),
-                        )
-                      : current,
-                  );
-                }}
-              />
-            )}
-          </Field>
-        ) : null}
-
-        {summarise ? (
-          <UsualValuesSummary
-            fieldLabels={pending.map(({ definition }) => definition.label)}
-            onUseAll={() => {
-              for (const { definition, habit } of pending) {
-                setValue(definition.key, habit.stored);
-              }
-              // The summary goes as soon as it is used; focus moves to the first field it filled.
-              focusField(pending[0]?.definition.key);
+    <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,36rem)_minmax(0,18rem)] md:gap-8">
+      <form
+        ref={formRef}
+        aria-label={view.name}
+        className="flex min-w-0 w-full max-w-xl flex-col gap-4"
+        // The form owns its validation - the per-field sentences below - and the design language
+        // never shows browser default bubbles. Without this the controls' own `required` attributes
+        // would block submission before the handler could say anything.
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <Checkbox
+            label="Save this entry"
+            checked={saveResponse}
+            disabled={sending}
+            onChange={(event) => {
+              setSaveChoice(event.target.checked);
+              setOutcome(null);
+              setFieldErrors({});
             }}
           />
-        ) : null}
-
-        <MemberNames enabled={canName}>
-          {(memberName) =>
-            offered.map((definition) => {
-              const habit = summarise ? undefined : pendingHabit(definition.key);
-              return (
-                <div
-                  key={definition.key}
-                  ref={(node) => {
-                    if (node === null) {
-                      fieldBoxes.current.delete(definition.key);
-                    } else {
-                      fieldBoxes.current.set(definition.key, node);
-                    }
+          <Text variant="note" tone="muted" className="wrap-anywhere">
+            {saveResponse
+              ? 'Adds a child entry to this note.'
+              : 'Answers stay in this view. Uploads and history are off.'}
+          </Text>
+        </div>
+        <div ref={fieldsRef} key={submissions} className="flex flex-col gap-4">
+          {saveResponse ? (
+            <Field label="Title" required error={fieldErrors.title ?? null}>
+              {(control) => (
+                <Input
+                  {...control}
+                  ref={titleRef}
+                  value={title}
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    // Cleared on the keystroke that answers it, the same trigger `setValue` uses for
+                    // every other field - one rule, not two.
+                    setFieldErrors((current) =>
+                      'title' in current
+                        ? Object.fromEntries(
+                            Object.entries(current).filter(([key]) => key !== 'title'),
+                          )
+                        : current,
+                    );
                   }}
-                  className="flex flex-col gap-1"
-                >
-                  <PropertyInput
-                    item={{ title, properties: bag, parentId: container.itemId }}
-                    property={definition}
-                    density="panel"
-                    error={fieldErrors[definition.key] ?? null}
-                    allowInputStorage={saveResponse}
-                    onCommit={(value) => {
-                      setValue(definition.key, value);
+                />
+              )}
+            </Field>
+          ) : null}
+
+          {summarise ? (
+            <UsualValuesSummary
+              fieldLabels={pending.map(({ definition }) => definition.label)}
+              onUseAll={() => {
+                for (const { definition, habit } of pending) {
+                  setValue(definition.key, habit.stored);
+                }
+                // The summary goes as soon as it is used; focus moves to the first field it filled.
+                focusField(pending[0]?.definition.key);
+              }}
+            />
+          ) : null}
+
+          <MemberNames enabled={canName}>
+            {(memberName) =>
+              offered.map((definition) => {
+                const habit = summarise ? undefined : pendingHabit(definition.key);
+                return (
+                  <div
+                    key={definition.key}
+                    ref={(node) => {
+                      if (node === null) {
+                        fieldBoxes.current.delete(definition.key);
+                      } else {
+                        fieldBoxes.current.set(definition.key, node);
+                      }
                     }}
-                  />
-                  {habit === undefined ? null : (
-                    <UsualValueHint
-                      fieldLabel={definition.label}
-                      valueText={valueText(definition, habit.key, memberName)}
-                      value={valueText(definition, habit.key, memberName)}
-                      onUse={() => {
-                        setValue(definition.key, habit.stored);
-                        // The hint unmounts with its button; focus goes to the field it just filled.
-                        focusField(definition.key);
+                    className="flex flex-col gap-1"
+                  >
+                    <PropertyInput
+                      item={{ title, properties: bag, parentId: container.itemId }}
+                      property={definition}
+                      density="panel"
+                      error={fieldErrors[definition.key] ?? null}
+                      allowInputStorage={saveResponse}
+                      onCommit={(value) => {
+                        setValue(definition.key, value);
                       }}
                     />
-                  )}
-                </div>
-              );
-            })
-          }
-        </MemberNames>
-      </div>
+                    {habit === undefined ? null : (
+                      <UsualValueHint
+                        fieldLabel={definition.label}
+                        valueText={valueText(definition, habit.key, memberName)}
+                        value={valueText(definition, habit.key, memberName)}
+                        onUse={() => {
+                          setValue(definition.key, habit.stored);
+                          // The hint unmounts with its button; focus goes to the field it just filled.
+                          focusField(definition.key);
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })
+            }
+          </MemberNames>
+        </div>
 
-      <FormResults properties={container.schema?.properties ?? []} values={bag} />
+        <FormResults properties={container.schema?.properties ?? []} values={bag} />
 
-      {offered.length === 0 ? (
-        <Text tone="muted">
-          {saveResponse
-            ? 'This one has no properties yet, so entries carry only a title. Add properties under Properties to build the form out.'
-            : 'This form has no editable properties. Add properties under Properties to supply inputs.'}
-        </Text>
-      ) : null}
+        {offered.length === 0 ? (
+          <Text tone="muted">
+            {saveResponse
+              ? 'This one has no properties yet, so entries carry only a title. Add properties under Properties to build the form out.'
+              : 'This form has no editable properties. Add properties under Properties to supply inputs.'}
+          </Text>
+        ) : null}
 
-      {unavailable.length > 0 ? (
-        <Text variant="note" tone="muted">
-          {unavailable.length === 1
-            ? `The configured field "${unavailable[0] ?? ''}" cannot be offered as an input here.`
-            : `Some configured fields cannot be offered as inputs here: ${unavailable.join(', ')}.`}
-        </Text>
-      ) : null}
+        {unavailable.length > 0 ? (
+          <Text variant="note" tone="muted">
+            {unavailable.length === 1
+              ? `The configured field "${unavailable[0] ?? ''}" cannot be offered as an input here.`
+              : `Some configured fields cannot be offered as inputs here: ${unavailable.join(', ')}.`}
+          </Text>
+        ) : null}
 
-      {/* aria-disabled rather than disabled: disabling the focused element throws focus to the
+        {/* aria-disabled rather than disabled: disabling the focused element throws focus to the
           body, and each outcome decides where focus goes instead. The double-submit guard is the
           early return in submit(). */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" aria-disabled={sending}>
-          {saveResponse ? 'Add entry' : 'Calculate'}
-        </Button>
-        {!saveResponse ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setBag({});
-              setTitle('');
-              setFieldErrors({});
-              setOutcome(null);
-              setSubmissions((current) => current + 1);
-            }}
-          >
-            Clear inputs
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 bg-background py-2 md:static md:py-0">
+          <Button type="submit" aria-disabled={sending}>
+            {saveResponse ? 'Add entry' : 'Calculate'}
           </Button>
-        ) : null}
-      </div>
+          {!saveResponse ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setBag({});
+                setTitle('');
+                setFieldErrors({});
+                setOutcome(null);
+                setSubmissions((current) => current + 1);
+              }}
+            >
+              Clear inputs
+            </Button>
+          ) : null}
+        </div>
 
-      {/* Two always-mounted regions, so an announcement fires the moment a sentence appears. The
+        {/* Two always-mounted regions, so an announcement fires the moment a sentence appears. The
           alert interrupts and is reserved for a refusal; saved, blocked and in-flight inform via
           status - the blocked summary informs rather than interrupts because focus (above) is
           what carries the interruption to the field itself. Not one region with a switched role,
           which assistive technology would not re-announce. */}
-      <div
-        className={
-          outcome?.kind === 'refused' || outcome?.kind === 'blocked'
-            ? 'rounded-md border border-divider p-3'
-            : undefined
-        }
-      >
-        <Text variant="bodySmall" role="alert" as="p">
-          {outcome?.kind === 'refused' ? outcome.text : null}
-        </Text>
-        <Text variant="bodySmall" role="status" as="p">
-          {sending ? 'Adding the entry.' : outcome?.kind === 'refused' ? null : outcome?.text}
-        </Text>
-      </div>
-    </form>
+        <div
+          className={
+            outcome?.kind === 'refused' || outcome?.kind === 'blocked'
+              ? 'rounded-md border border-divider p-3'
+              : undefined
+          }
+        >
+          <Text variant="bodySmall" role="alert" as="p">
+            {outcome?.kind === 'refused' ? outcome.text : null}
+          </Text>
+          <Text variant="bodySmall" role="status" as="p">
+            {sending ? 'Adding the entry.' : outcome?.kind === 'refused' ? null : outcome?.text}
+          </Text>
+        </div>
+      </form>
+      {added.length > 0 ? (
+        <aside aria-label="Added this session" className="flex min-w-0 flex-col gap-2">
+          <Text variant="note" tone="muted">
+            Added ({String(added.length)})
+          </Text>
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+            {added.map((entry) => (
+              <li
+                key={entry.id}
+                data-enter=""
+                data-leave={entry.leaving ? '' : undefined}
+                className="rounded-md border border-divider px-3 py-2"
+              >
+                <Text variant="bodySmall">{entry.title}</Text>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
+    </div>
   );
 }
