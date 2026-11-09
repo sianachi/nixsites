@@ -109,10 +109,11 @@ function TimelineRow({ placed, columns, aside, virtualIndex }: TimelineRowProps)
 
           <td colSpan={last - first + 1} className="border-b border-divider p-1">
             {placement.kind === 'milestone' ? (
-              <Milestone placed={placed} onOpen={aside.onOpen} />
+              <Milestone placed={placed} aside={aside} onOpen={aside.onOpen} />
             ) : (
               <Bar
                 placed={placed}
+                aside={aside}
                 onOpen={aside.onOpen}
                 continuesBefore={placement.continuesBefore}
                 continuesAfter={placement.continuesAfter}

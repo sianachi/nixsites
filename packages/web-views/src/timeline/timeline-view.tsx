@@ -24,6 +24,8 @@ import {
   titleOf,
   type AsideContext,
 } from './timeline-model';
+import { useMoveDates } from './timeline-move';
+import { NudgeButtons } from './timeline-reschedule';
 import { TimelineAgenda } from './timeline-agenda';
 import { OffAxisList } from './timeline-off-axis';
 import { RescheduleFields } from './timeline-reschedule';
@@ -118,6 +120,23 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
     }
   }, [rescheduling]);
 
+  // The view's own grain, overridable by the address the way the view itself is - a link saying
+  // "look at this quarter" should open on a quarter. A grain left behind by a calendar that this
+  // view has no meaning for falls back rather than being refused; see `readScale`.
+  const scale = readScale(urlMode ?? view.mode);
+
+  // `axis`, never `window`: a local called `window` shadows the DOM global for the whole of this
+  // function body, and `window.name` and `window.length` both type-check against the wrong object.
+  const axis = buildWindow(scale, anchor);
+  const zone = readerZone();
+
+  // Called before the chrome early-return (hooks cannot follow it); a view with no start property is never drawn.
+  const { move, status } = useMoveDates(axis, zone, {
+    startKey: view.dateProperty ?? '',
+    endKey: view.endDateProperty,
+    setProperties: container.setProperties,
+  });
+
   const reason = describeUndrawable(view, container.schema, container.views);
 
   const chrome = useViewChrome({
@@ -162,16 +181,6 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
   const startKey: string = chrome.drawable;
   const endKey: string | null = view.endDateProperty;
 
-  // The view's own grain, overridable by the address the way the view itself is - a link saying
-  // "look at this quarter" should open on a quarter. A grain left behind by a calendar that this
-  // view has no meaning for falls back rather than being refused; see `readScale`.
-  const scale = readScale(urlMode ?? view.mode);
-
-  // `axis`, never `window`: a local called `window` shadows the DOM global for the whole of this
-  // function body, and `window.name` and `window.length` both type-check against the wrong object.
-  const axis = buildWindow(scale, anchor);
-  const zone = readerZone();
-
   const placed = chrome.items.map((item) => place(item, startKey, endKey, zone, axis));
 
   const rows = placed.filter(
@@ -192,7 +201,8 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
 
   const open = rescheduling === null ? null : (placed.find(byId(rescheduling)) ?? null);
 
-  const aside: AsideContext = {
+  const base: Omit<AsideContext, 'move'> = {
+    daysPerColumn: scale === 'quarter' ? 7 : 1,
     onOpen,
     rescheduling,
     setRescheduling,
@@ -202,6 +212,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
     endKey,
     setProperties: container.setProperties,
   };
+  const aside: AsideContext = { ...base, move };
 
   return (
     // `min-h-0 flex-1` so the pane keeps the vertical axis: the wide axis is this view's and is
@@ -279,6 +290,15 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
       {/* What the address is hiding, said separately from what the window is: one is a filter
           somebody set, the other is a stretch of time somebody paged away from. */}
       {chrome.notice}
+
+      {/* What the last move did, in words, for the person who dragged and for a screen reader. */}
+      <div role="status" className={status === '' ? 'sr-only' : undefined}>
+        {status === '' ? null : (
+          <Text variant="caption" tone="muted">
+            {status}
+          </Text>
+        )}
+      </div>
 
       {lostEnd === null ? null : <PartialNotice pending={lostEnd} />}
 
@@ -371,6 +391,7 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
             </Text>
           </div>
 
+          <NudgeButtons placed={open} aside={aside} />
           <RescheduleFields key={open.item.id} item={open.item} aside={aside} />
         </section>
       )}

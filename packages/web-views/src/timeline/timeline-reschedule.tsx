@@ -9,7 +9,7 @@ import type {
   PropertyDefinition,
   PropertyValue,
 } from '@nix/web-collections/core/container-model';
-import type { AsideContext } from './timeline-model';
+import type { AsideContext, Placed } from './timeline-model';
 import { titleOf } from './timeline-model';
 
 /**
@@ -43,6 +43,96 @@ export function RescheduleToggle({
     >
       <Icon icon={CalendarClock} size="sm" />
     </Button>
+  );
+}
+
+const NUDGES: readonly {
+  readonly group: string;
+  readonly edge: 'both' | 'start' | 'end';
+  readonly steps: readonly (readonly [string, number])[];
+}[] = [
+  {
+    group: 'Move',
+    edge: 'both',
+    steps: [
+      ['1 week earlier', -7],
+      ['1 day earlier', -1],
+      ['1 day later', 1],
+      ['1 week later', 7],
+    ],
+  },
+  {
+    group: 'Start',
+    edge: 'start',
+    steps: [
+      ['1 day earlier', -1],
+      ['1 day later', 1],
+    ],
+  },
+  {
+    group: 'End',
+    edge: 'end',
+    steps: [
+      ['1 day earlier', -1],
+      ['1 day later', 1],
+    ],
+  },
+];
+
+const SHORT: Record<string, string> = {
+  '1 week earlier': '-1w',
+  '1 day earlier': '-1d',
+  '1 day later': '+1d',
+  '1 week later': '+1w',
+};
+
+/** The drag, as buttons: the same `move` the bars call, in steps. Disabled where the item has no such date. */
+export function NudgeButtons({
+  placed,
+  aside,
+}: {
+  readonly placed: Placed;
+  readonly aside: AsideContext;
+}): ReactNode {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-2">
+      {NUDGES.map(({ group, edge, steps }) => (
+        <div key={group} role="group" aria-label={group} className="flex items-center gap-1">
+          <Text variant="caption" tone="muted" as="span">
+            {group}
+          </Text>
+          {steps.map(([name, days]) => (
+            <Button
+              key={name}
+              variant="secondary"
+              aria-label={`${group === 'Move' ? 'Move' : group} ${name}`}
+              className="min-w-11 py-1 pointer-coarse:min-h-11"
+              disabled={
+                placed.start === null ||
+                shiftBlocked(placed, edge) ||
+                (edge === 'end' && placed.end === null)
+              }
+              onClick={() => {
+                aside.move(placed, edge, days);
+              }}
+            >
+              {SHORT[name]}
+            </Button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Only plain dates move; see `useMoveDates`. */
+function shiftBlocked(placed: Placed, edge: 'both' | 'start' | 'end'): boolean {
+  const plain = (raw: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(raw);
+  if (edge === 'end') {
+    return !plain(placed.endRaw);
+  }
+  return (
+    !plain(placed.startRaw) || (edge === 'both' && placed.endRaw !== '' && !plain(placed.endRaw))
   );
 }
 

@@ -192,6 +192,11 @@ export interface AsideContext {
   readonly schema: EffectiveSchema | null;
   readonly startKey: string;
   readonly endKey: string | null;
+  /** Shifts the dates (see `useMoveDates`); the drag, resize and nudge buttons all call it. */
+  readonly move: (placed: Placed, edge: 'both' | 'start' | 'end', days: number) => void;
+
+  /** Columns are weeks at the quarter grain, so a drag snaps to this many days. */
+  readonly daysPerColumn: number;
   readonly setProperties: (
     itemId: string,
     properties: Record<string, unknown>,

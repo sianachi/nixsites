@@ -9,6 +9,7 @@ import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '@nix/web-collections/testing/view-fixture';
 import { aContainer, views } from '@nix/web-collections/testing/container-fixture';
 import type { EffectiveSchema, Item, View } from '@nix/web-collections/core/container-model';
+import { daysBetween, shiftDay } from '../../../timeline/timeline-move';
 import { TimelineView } from '../../../timeline/timeline-view';
 import { ContainerView } from '../../../core/container-view';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
@@ -430,6 +431,35 @@ describe('the scale', () => {
   });
 });
 
+describe('moving by buttons', () => {
+  it('moves a bar a week and says so', async () => {
+    const user = person();
+    const { setProperties } = render({ children: [ROLLOUT] });
+
+    await user.click(screen.getByRole('button', { name: 'Reschedule Rollout' }));
+    await user.click(screen.getByRole('button', { name: 'Move 1 week later' }));
+
+    expect(setProperties).toHaveBeenCalledWith('item-rollout', {
+      starts: '2026-03-10',
+      ends: '2026-03-13',
+    });
+    expect(await screen.findByText(/Moved "Rollout" 7 days later/)).toBeTruthy();
+  });
+
+  it('says when a move takes the end before the start', async () => {
+    const user = person();
+    renderLive({ items: [ROLLOUT] });
+
+    await user.click(screen.getByRole('button', { name: 'Reschedule Rollout' }));
+    await user.click(screen.getByRole('button', { name: 'Start 1 day later' }));
+    await user.click(screen.getByRole('button', { name: 'End 1 day earlier' }));
+    await user.click(screen.getByRole('button', { name: 'End 1 day earlier' }));
+    await user.click(screen.getByRole('button', { name: 'End 1 day earlier' }));
+
+    expect(await screen.findAllByText(/end date falls before its start/)).not.toHaveLength(0);
+  });
+});
+
 describe('correcting the dates', () => {
   it('reschedules an item from the keyboard without a pointer', async () => {
     // The only way to change a bar in this build, and it has to be reachable without a mouse: there
@@ -683,4 +713,13 @@ describe('timeline item context menus', () => {
       expect(screen.queryByRole('menu', { name: 'Rollout actions' })).not.toBeInTheDocument();
     },
   );
+});
+
+describe('day arithmetic for moves', () => {
+  it('shifts across month and leap-year edges and counts whole days', () => {
+    expect(shiftDay('2026-03-01', -1)).toBe('2026-02-28');
+    expect(shiftDay('2028-02-28', 1)).toBe('2028-02-29');
+    expect(shiftDay('next Tuesday', 1)).toBeNull();
+    expect(daysBetween('2026-03-06', '2026-03-03')).toBe(-3);
+  });
 });
