@@ -45,7 +45,11 @@ export function ItemCard(props: ItemCardProps): ReactNode {
     onWrite,
     dateProperty,
     zone,
+    landed,
   } = props.card;
+  // Tints the card once where it landed after a move or an undo; a remounted card in its new day
+  // starts the animation as it appears.
+  const flash = landed?.id === item.id ? { 'data-flash': landed.n % 2 === 0 ? 'a' : 'b' } : {};
   const selection = useOptionalItemSelection();
   const clickSelects = useClickSelects();
   const openBeside = selection?.openBeside;
@@ -84,7 +88,7 @@ export function ItemCard(props: ItemCardProps): ReactNode {
         onReschedule={setRescheduling}
       >
         {(contextTarget) => (
-          <div className="group group/card relative">
+          <div {...flash} className="group group/card relative rounded-sm">
             <SelectCheckbox
               item={item}
               className="absolute left-1 top-1 z-20 rounded-sm bg-surface"
@@ -118,7 +122,7 @@ export function ItemCard(props: ItemCardProps): ReactNode {
                 variant="subtle"
                 aria-label={`Reschedule ${item.title || 'Untitled'}`}
                 aria-haspopup="dialog"
-                className="absolute inset-y-0 right-0 rounded-sm bg-background px-0.5 py-0 opacity-0 focus-visible:opacity-100 group-hover/chip:opacity-100 pointer-coarse:opacity-100"
+                className="absolute inset-y-0 right-0 rounded-sm bg-background px-0.5 py-0 opacity-0 focus-visible:opacity-100 group-hover/chip:opacity-100 pointer-coarse:px-3 pointer-coarse:opacity-100"
                 onClick={() => {
                   setRescheduling(item.id);
                 }}
@@ -140,7 +144,7 @@ export function ItemCard(props: ItemCardProps): ReactNode {
       onReschedule={setRescheduling}
     >
       {(contextTarget) => (
-        <div className="group group/card flex items-start gap-1">
+        <div {...flash} className="group group/card flex items-start gap-1">
           <SelectCheckbox item={item} className="self-start" />
           <div
             {...contextTarget}

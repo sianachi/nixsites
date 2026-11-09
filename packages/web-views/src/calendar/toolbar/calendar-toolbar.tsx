@@ -9,6 +9,7 @@ import {
   type CalendarDay,
   type CalendarMonth,
 } from '@nix/web-collections/core/calendar-dates';
+import { agendaDayLabel } from '@nix/web-collections/core/day-math';
 import { CreateItemControl } from '../../core/create-item-control';
 
 type Mode = 'month' | 'week' | 'day';
@@ -22,13 +23,28 @@ interface CalendarToolbarProps {
     title: string,
     properties?: Record<string, unknown>,
   ) => Promise<string | null>;
+  /** The day the Add control puts the new item on, and the property that holds it. */
+  readonly addDay: string;
+  readonly dateProperty: string;
+  readonly todayText: string;
   readonly onStep: (delta: number) => void;
   readonly onToday: () => void;
 }
 
 /** The heading, the month/week/day switch, the add control and the previous/today/next steps. */
 export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
-  const { mode, month, anchor, onMode, onCreate, onStep, onToday } = props;
+  const {
+    mode,
+    month,
+    anchor,
+    onMode,
+    onCreate,
+    addDay,
+    dateProperty,
+    todayText,
+    onStep,
+    onToday,
+  } = props;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -66,11 +82,14 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
         ))}
       </nav>
 
-      {/* Always visible, never gated behind a hover. The agenda is the default on a phone and
-            had no way to add anything at all until a day's own control was reached below - this
-            is the one that is reachable the moment the calendar opens, made without a date the
-            same way "Add the first item" is on an empty calendar. */}
-      <CreateItemControl label="Add an item" onCreate={onCreate} />
+      {/* Always visible, never gated behind a hover, and dated: it says which day it adds to and
+            writes that day, so adding to a day is one tap and a name on every width. */}
+      <CreateItemControl
+        label={`Add to ${addDay === todayText ? 'today' : agendaDayLabel(addDay)}`}
+        properties={{ [dateProperty]: addDay }}
+        onCreate={onCreate}
+        className="pointer-coarse:min-h-(--control-lg)"
+      />
 
       <div className="ml-auto flex items-center gap-1">
         <Button

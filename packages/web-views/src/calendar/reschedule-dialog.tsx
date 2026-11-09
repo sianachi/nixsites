@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { useRef, useState, type ReactNode } from 'react';
 
 import { readDateValue, type Item } from '@nix/web-collections/core/container-model';
+import { shiftDateText } from '@nix/web-collections/core/day-math';
 import { readTimestampValue, writeTimestampValue } from '@nix/web-collections/core/timestamps';
 import { useViewSuggestionPreference } from '@nix/web-foundation/lib/suggestion-preferences';
 import { FreeSlotHint } from './free-slot-hint';
@@ -96,6 +97,15 @@ export interface RescheduleDialogProps {
    * proves nothing about the others.
    */
   readonly siblings?: readonly Item[] | undefined;
+
+  /**
+   * Quick moves, offered when given: Today, Tomorrow, Next week, a day either side of where the
+   * item is, and picking the day on the calendar itself. Each writes at once and keeps the time of
+   * day. Absent (the collated calendar), the dialog is the date field alone.
+   */
+  readonly onDay?: ((day: string) => void) | undefined;
+  readonly onPickOnCalendar?: (() => void) | undefined;
+  readonly todayText?: string | undefined;
 }
 
 /**
@@ -130,6 +140,9 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
     canRemove = true,
     endDateProperty = null,
     siblings,
+    onDay,
+    onPickOnCalendar,
+    todayText,
   } = props;
   const [draft, setDraft] = useState(() => readDraft(item, dateProperty, placesByTime, zone));
   const [error, setError] = useState<string | null>(null);
@@ -253,6 +266,44 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
         }}
         className="flex flex-col gap-3"
       >
+        {onDay === undefined || todayText === undefined ? null : (
+          <div role="group" aria-label="Quick dates" className="flex flex-wrap items-center gap-1">
+            {(
+              [
+                ['Today', todayText],
+                ['Tomorrow', shiftDateText(todayText, 1)],
+                ['Next week', shiftDateText(todayText, 7)],
+                ['Day earlier', shiftDateText(draft.slice(0, 10) || todayText, -1)],
+                ['Day later', shiftDateText(draft.slice(0, 10) || todayText, 1)],
+              ] as const
+            ).map(([name, day]) =>
+              day === null ? null : (
+                <Button
+                  key={name}
+                  type="button"
+                  variant="secondary"
+                  className="py-1 text-sm"
+                  onClick={() => {
+                    onDay(day);
+                  }}
+                >
+                  {name}
+                </Button>
+              ),
+            )}
+            {onPickOnCalendar === undefined ? null : (
+              <Button
+                type="button"
+                variant="secondary"
+                className="py-1 text-sm"
+                onClick={onPickOnCalendar}
+              >
+                Pick on calendar
+              </Button>
+            )}
+          </div>
+        )}
+
         <Field label={placesByTime ? 'New date and time' : 'New date'} error={error}>
           {(control) => (
             <Input

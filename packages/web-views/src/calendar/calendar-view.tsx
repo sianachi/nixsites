@@ -1,7 +1,7 @@
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import { Blueprint, Button, Text } from '@nix/ui';
+import { Blueprint, Button, Text, useUndo } from '@nix/ui';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { ShownItems } from '@nix/web-collections/core/item-selection-context';
 import type { PropertyValue, View } from '@nix/web-collections/core/container-model';
@@ -22,7 +22,11 @@ import { EndTimeHint } from './hours/end-time-hint';
 import { MonthGrid, buildWeeks } from './month-grid';
 import { RescheduleDialog } from './reschedule-dialog';
 import { VIEW_GUTTER_BLEED } from '@nix/web-collections/core/view-gutter';
-import { readTimestampValue, readerZone } from '@nix/web-collections/core/timestamps';
+import {
+  readTimestampValue,
+  readerZone,
+  writeTimestampValue,
+} from '@nix/web-collections/core/timestamps';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import { useViewState } from '@nix/web-collections/core/view-state';
@@ -33,6 +37,7 @@ import { MonthDots } from './month/month-dots';
 import { DayCell } from './month/day-cell';
 import { NO_DATE_PROPERTY, describeUnrenderable } from './model/describe-unrenderable';
 import {
+  agendaDayLabel,
   daysBetween,
   readDayValue,
   readMode,
@@ -125,6 +130,24 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
     setDraggedState({ id: itemId, from: occurrenceDate });
   }
   const [rescheduling, setRescheduling] = useState<string | null>(null);
+  // The item being carried to a day the person is about to tap: the touch road to a move, for a
+  // phone where a month is too small to drop a card on.
+  const [moving, setMoving] = useState<string | null>(null);
+  // The item that just landed somewhere, so its card can say so with a flash where it now sits.
+  const [landed, setLanded] = useState<{ readonly id: string; readonly n: number } | null>(null);
+  const undo = useUndo();
+
+  useEffect(() => {
+    if (landed === null) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setLanded(null);
+    }, 1500);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [landed]);
 
   const reason = describeUnrenderable(view, container.schema, container.views);
   const configured = view.dateProperty;
@@ -243,10 +266,54 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
       ? null
       : (container.schema?.properties.find((property) => property.key === secondaryKey) ?? null);
 
+  /** Where a write put an item, in words: "Tue 17 Mar at 14:00", or "Unscheduled". */
+  function whereText(values: Record<string, string | null>): string {
+    const value = values[dateProperty];
+    if (value === null || value === undefined) {
+      return 'Unscheduled';
+    }
+    const moment = readTimestampValue({ [dateProperty]: value }, dateProperty);
+    return moment === null
+      ? agendaDayLabel(value)
+      : `${agendaDayLabel(moment.at.setZone(zone).toISODate() ?? value)} at ${moment.at.setZone(zone).toFormat('HH:mm')}`;
+  }
+
   function moveTo(itemId: string, values: Record<string, string | null>): void {
-    void container.setProperties(itemId, values);
+    const item = items.find((entry) => entry.id === itemId);
+    // What the keys held before, read now: the undo writes these back and nothing else, so an edit
+    // made to the item's other properties in between survives it.
+    const before = Object.fromEntries(
+      Object.keys(values).map((key) => {
+        const held = item?.properties[key];
+        return [key, typeof held === 'string' ? held : null];
+      }),
+    );
+    void container.setProperties(itemId, values).then((refusal) => {
+      if (refusal !== null || item === undefined) {
+        return;
+      }
+      setLanded((last) => ({ id: itemId, n: (last?.n ?? 0) + 1 }));
+      undo.push(`Moved ${item.title || 'Untitled'} to ${whereText(values)}`, async () => {
+        await container.setProperties(itemId, before);
+        setLanded((last) => ({ id: itemId, n: (last?.n ?? 0) + 1 }));
+      });
+    });
     setRescheduling(null);
+    setMoving(null);
     setDraggedState(null);
+  }
+
+  /** A day for an item's start or end: keeps the time of day when the stored value is a moment. */
+  function onDay(
+    item: { readonly properties: Record<string, unknown> },
+    key: string,
+    day: string,
+  ): string {
+    const moment = readTimestampValue(item.properties, key);
+    return moment === null
+      ? day
+      : (writeTimestampValue(`${day}T${moment.at.setZone(zone).toFormat('HH:mm:ss')}`, zone) ??
+          day);
   }
 
   /**
@@ -264,14 +331,28 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
         const shiftedStart = delta === null ? null : shiftDateText(start, delta);
         const shiftedEnd = delta === null ? null : shiftDateText(end, delta);
 
-        if (shiftedStart !== null && shiftedEnd !== null) {
-          moveTo(itemId, { [dateProperty]: shiftedStart, [endDateProperty]: shiftedEnd });
+        if (item !== undefined && shiftedStart !== null && shiftedEnd !== null) {
+          moveTo(itemId, {
+            [dateProperty]: onDay(item, dateProperty, shiftedStart),
+            [endDateProperty]: onDay(item, endDateProperty, shiftedEnd),
+          });
           return;
         }
       }
     }
 
-    moveTo(itemId, { [dateProperty]: to });
+    // A day-only drop keeps the time of day: it must not turn a 14:00 appointment into an
+    // all-day item.
+    const dropped = items.find((entry) => entry.id === itemId);
+    moveTo(itemId, {
+      [dateProperty]: dropped === undefined ? to : onDay(dropped, dateProperty, to),
+    });
+  }
+
+  /** A day chosen from the dialog's quick dates, or tapped while an item is being carried. */
+  function moveToDay(itemId: string, to: string): void {
+    const item = items.find((entry) => entry.id === itemId);
+    dropOnDate(itemId, item === undefined ? null : readDayValue(item, dateProperty, zone), to);
   }
 
   /** What a drop into the unscheduled list, or the dialog's own "Remove date", both write. */
@@ -288,6 +369,9 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
     clearDragged: () => {
       setDraggedState(null);
     },
+    moving,
+    landed,
+    moveToDay,
     moveTo,
     dropOnDate,
     dateProperty,
@@ -355,6 +439,15 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
     setAnchor((current) => addDays(current, delta * (mode === 'week' ? 7 : 1)));
   }
 
+  /** The day the toolbar's Add writes to: the one picked on the phone's strip, else the day shown. */
+  const addDay =
+    mode === 'day'
+      ? dayText(anchor)
+      : narrow && mode === 'month' && picked !== null
+        ? picked
+        : todayText;
+  const movingItem = moving === null ? null : (items.find((entry) => entry.id === moving) ?? null);
+
   return (
     // gap-3, matching the board's, the gallery's and the timeline's own root wrapper: all four are
     // the same shape - an optional error, a header row, then the view's content - and this was the
@@ -377,13 +470,35 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
           setPicked(null);
           setMode(grain);
         }}
-        onCreate={container.create}
+        onCreate={card.onCreate}
+        addDay={addDay}
+        dateProperty={dateProperty}
+        todayText={todayText}
         onStep={step}
         onToday={() => {
           setPicked(null);
           setAnchor(todayDay());
         }}
       />
+
+      {movingItem === null ? null : (
+        <div
+          role="status"
+          className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md border border-accent bg-background p-2"
+        >
+          <Text variant="bodySmall" as="span">
+            {`Moving ${movingItem.title || 'Untitled'}. Tap a day.`}
+          </Text>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMoving(null);
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
 
       {/* What the address is hiding, said separately from what the grid is: one is a filter
           somebody set, the other is a month somebody paged away from. */}
@@ -420,7 +535,13 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
               todayText={todayText}
               byDate={byDate}
               picked={picked}
-              onPick={setPicked}
+              onPick={(date) => {
+                if (moving !== null && date !== null) {
+                  moveToDay(moving, date);
+                } else {
+                  setPicked(date);
+                }
+              }}
             />
           ) : null}
           <PhoneAgenda
@@ -523,6 +644,21 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
           onMove={(values) => {
             moveTo(reschedulingItem.id, values);
           }}
+          onDay={(day) => {
+            moveToDay(reschedulingItem.id, day);
+          }}
+          onPickOnCalendar={() => {
+            // A phone's agenda and a week or day grid have no day to tap, so the pick happens on
+            // the month.
+            setMoving(reschedulingItem.id);
+            setRescheduling(null);
+            setShowGrid(false);
+            setPicked(null);
+            if (mode !== 'month') {
+              setMode('month');
+            }
+          }}
+          todayText={todayText}
         />
       )}
     </div>

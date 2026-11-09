@@ -27,6 +27,13 @@ export function DayCell(props: DayCellProps): ReactNode {
 
   return (
     <td
+      // Captured, so a tap on a chip inside the day moves the carried item here instead of opening that chip.
+      onClickCapture={(event) => {
+        if (card.moving !== null) {
+          event.stopPropagation();
+          card.moveToDay(card.moving, cell.date);
+        }
+      }}
       // The cell's accessible name carries the whole date, so somebody moving through the grid with
       // a screen reader always knows which day they are on rather than hearing a bare "17".
       aria-label={name}
@@ -56,6 +63,9 @@ export function DayCell(props: DayCellProps): ReactNode {
         // shown is the shape that stands out.
         cell.outside ? 'bg-surface/50' : '',
         over && dragged !== null ? 'outline-2 -outline-offset-2 outline-accent' : '',
+        card.moving === null
+          ? ''
+          : 'cursor-pointer hover:outline-2 hover:-outline-offset-2 hover:outline-accent',
       )}
     >
       <div className="flex h-full flex-col gap-0.5 p-1">

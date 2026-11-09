@@ -8,6 +8,12 @@ export interface CardContext {
 
   /** What a drag that never lands on a target - lifted, then dropped nowhere - clears. */
   readonly clearDragged: () => void;
+  /** The item being carried to a tapped day, or null. */
+  readonly moving: string | null;
+  /** The item that just landed, for the flash on its card; `n` restarts it on a repeat. */
+  readonly landed: { readonly id: string; readonly n: number } | null;
+  /** Moves an item to a day, keeping its time of day. What a tap while `moving` writes. */
+  readonly moveToDay: (itemId: string, day: string) => void;
   readonly moveTo: (itemId: string, values: Record<string, string | null>) => void;
 
   /**

@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UndoProvider } from '@nix/ui';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { aView } from '@nix/web-collections/testing/view-fixture';
@@ -1015,12 +1016,11 @@ describe('adding an item without a hover or a drag', () => {
     const create = vi.fn(() => Promise.resolve(null));
     renderCalendar({ children: [KICKOFF], create });
 
-    await person.click(screen.getByRole('button', { name: 'Add an item' }));
-    await person.type(screen.getByRole('textbox', { name: 'Add an item' }), 'Toolbar pick{Enter}');
+    await person.click(screen.getByRole('button', { name: 'Add to today' }));
+    await person.type(screen.getByRole('textbox', { name: 'Add to today' }), 'Toolbar pick{Enter}');
 
-    // Made without a date, the same way the empty calendar's own "Add the first item" is: the
-    // toolbar has no day to place it on.
-    expect(create).toHaveBeenCalledWith('Toolbar pick', undefined);
+    // Named for the day it adds to, and dated to it: one tap and a name, on every width.
+    expect(create).toHaveBeenCalledWith('Toolbar pick', { due: '2026-03-15' });
   });
 
   describe('the agenda, which is what a phone opens on', () => {
@@ -1088,6 +1088,91 @@ describe('adding an item without a hover or a drag', () => {
 
       // Dated to the day its own heading names - the same write a drop onto a month cell makes.
       expect(create).toHaveBeenCalledWith('Agenda pick', { due: '2026-03-17' });
+    });
+  });
+});
+
+describe('moving an item to another day', () => {
+  const MOMENT_SCHEMA: EffectiveSchema = {
+    properties: [
+      { key: 'starts', label: 'Starts', type: 'timestamp', options: [], required: false },
+    ],
+    declared: [],
+    inherit: true,
+  };
+  const MOMENT_VIEW: View = aView({
+    id: 'view-moments',
+    name: 'Moments',
+    kind: 'calendar',
+    columns: ['title'],
+    dateProperty: 'starts',
+  });
+  const DENTIST = itemOf('item-dentist', 'Dentist', {
+    starts: '2026-03-17T14:00:00-10:00[Pacific/Honolulu]',
+  });
+
+  function renderMoments() {
+    const data = aContainer({
+      schema: MOMENT_SCHEMA,
+      views: views([MOMENT_VIEW]),
+      setProperties: vi.fn(() => Promise.resolve(null)),
+      reload: vi.fn(() => Promise.resolve()),
+      children: [DENTIST],
+    });
+    renderAt(
+      <UndoProvider>
+        <CalendarView container={data} view={MOMENT_VIEW} onOpen={vi.fn()} />
+      </UndoProvider>,
+      '/',
+    );
+    return data.setProperties;
+  }
+
+  it('keeps the time of day when a card is dropped on another day', () => {
+    const setProperties = renderMoments();
+
+    const dataTransfer = { effectAllowed: '', setData: vi.fn(), getData: vi.fn() };
+    fireEvent.dragStart(screen.getByRole('button', { name: /^(?!Reschedule).*Dentist/ }), {
+      dataTransfer,
+    });
+    fireEvent.drop(screen.getByRole('cell', { name: 'Friday 27 March 2026' }), { dataTransfer });
+
+    expect(setProperties).toHaveBeenCalledWith('item-dentist', {
+      starts: '2026-03-27T14:00:00-10:00[Pacific/Honolulu]',
+    });
+  });
+
+  it('moves with a quick date and takes it back with Ctrl+Z, writing only what it changed', async () => {
+    const person = user();
+    const setProperties = renderMoments();
+
+    await person.click(screen.getByRole('button', { name: /Reschedule Dentist/ }));
+    await person.click(screen.getByRole('button', { name: 'Day later' }));
+    expect(setProperties).toHaveBeenLastCalledWith('item-dentist', {
+      starts: '2026-03-18T14:00:00-10:00[Pacific/Honolulu]',
+    });
+
+    await person.keyboard('{Control>}z{/Control}');
+    expect(setProperties).toHaveBeenLastCalledWith('item-dentist', {
+      starts: '2026-03-17T14:00:00-10:00[Pacific/Honolulu]',
+    });
+  });
+
+  it('carries an item to a tapped day after Pick on calendar, and Cancel leaves it alone', async () => {
+    const person = user();
+    const setProperties = renderMoments();
+
+    await person.click(screen.getByRole('button', { name: /Reschedule Dentist/ }));
+    await person.click(screen.getByRole('button', { name: 'Pick on calendar' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Moving Dentist');
+    await person.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(setProperties).not.toHaveBeenCalled();
+
+    await person.click(screen.getByRole('button', { name: /Reschedule Dentist/ }));
+    await person.click(screen.getByRole('button', { name: 'Pick on calendar' }));
+    await person.click(screen.getByRole('cell', { name: 'Friday 27 March 2026' }));
+    expect(setProperties).toHaveBeenCalledWith('item-dentist', {
+      starts: '2026-03-27T14:00:00-10:00[Pacific/Honolulu]',
     });
   });
 });
