@@ -1,6 +1,17 @@
-import { Button, Checkbox, ContextMenu, Icon, Menu, Text, cn, focusRing } from '@nix/ui';
+import {
+  Button,
+  Checkbox,
+  ContextMenu,
+  Icon,
+  Menu,
+  Text,
+  cn,
+  focusRing,
+  useFlash,
+  useUndo,
+} from '@nix/ui';
 import { Ellipsis, TriangleAlert } from 'lucide-react';
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ComponentProps, type ReactNode } from 'react';
 
 import {
   EmptyPanel,
@@ -17,7 +28,7 @@ import {
   type ViewFilterRule,
 } from '@nix/web-collections/core/container-model';
 import { useViewState } from '@nix/web-collections/core/view-state';
-import { ruleConditions } from '@nix/web-collections/core/filter-rules';
+import { applyRules, ruleConditions } from '@nix/web-collections/core/filter-rules';
 import type { ViewRendererProps } from '../core/view-kinds';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { editableDefinition, QueryRowValue } from './query-row-values';
@@ -51,6 +62,9 @@ export function QueryView(props: ViewRendererProps): ReactNode {
   const openProps = useItemOpenProps(onOpen);
   const visibility = useHiddenItems();
   const viewState = useViewState();
+  const undo = useUndo();
+  // Rows fading out after "Hide for me"; the hide itself lands when the fade ends.
+  const [leaving, setLeaving] = useState<ReadonlySet<string>>(new Set());
 
   // The itemId this view runs against is the smart list itself - the container's own id, not its
   // children. Every child the container may incidentally hold stays untouched by this view.
@@ -138,6 +152,23 @@ export function QueryView(props: ViewRendererProps): ReactNode {
         detail="No item the filters match is visible to you right now. The list refills as items change."
       />
     );
+  }
+
+  // Hiding is per person and local, so Undo (button or Cmd/Ctrl+Z) just shows the row again.
+  function hideRow(id: string, title: string | null): void {
+    const name = title ?? 'Untitled';
+    setLeaving((cur) => new Set(cur).add(id));
+    window.setTimeout(() => {
+      visibility.hide(id, name, { undo: false });
+      undo.push(`Hid ${name}`, () => {
+        visibility.show(id, name);
+      });
+      setLeaving((cur) => {
+        const next = new Set(cur);
+        next.delete(id);
+        return next;
+      });
+    }, 150);
   }
 
   function suggestFromExamples(): void {
@@ -234,6 +265,18 @@ export function QueryView(props: ViewRendererProps): ReactNode {
           />
         </Suspense>
       )}
+      {proposal === null ? null : (
+        <Text variant="note" tone="muted" role="status">
+          {/* shortcut: "me" matches nothing here (no principal), over loaded rows only; upgrade by passing the principal id */}
+          {`${String(
+            applyRules(
+              results.results.map((r) => ({ ...r, title: r.title ?? '' })),
+              proposal.draft,
+              { today: results.today, principalId: null },
+            ).length,
+          )} of ${String(results.results.length)} loaded items would match`}
+        </Text>
+      )}
 
       {run.refreshError === null ? null : (
         <div role="alert" className="flex items-start gap-2 rounded-md border border-divider p-3">
@@ -305,14 +348,16 @@ export function QueryView(props: ViewRendererProps): ReactNode {
                 {
                   label: 'Hide for me',
                   onSelect: () => {
-                    visibility.hide(row.id, row.title ?? 'Untitled');
+                    hideRow(row.id, row.title);
                   },
                 },
               ]}
             >
               {(target) => (
-                <li
+                <FlashRow
                   {...target}
+                  changed={JSON.stringify(row.properties)}
+                  data-leave={leaving.has(row.id) ? '' : undefined}
                   className="flex min-w-0 items-start gap-2 border-b border-divider py-2 sm:gap-3"
                 >
                   <div className="flex min-w-0 flex-1 flex-col">
@@ -400,7 +445,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
                         kind: 'action',
                         label: 'Hide for me',
                         onSelect: () => {
-                          visibility.hide(row.id, row.title ?? 'Untitled');
+                          hideRow(row.id, row.title);
                         },
                       },
                     ]}
@@ -416,7 +461,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
                       </Button>
                     )}
                   </Menu>
-                </li>
+                </FlashRow>
               )}
             </ContextMenu>
           );
@@ -424,4 +469,11 @@ export function QueryView(props: ViewRendererProps): ReactNode {
       </ul>
     </div>
   );
+}
+
+/** A row that tints once when the values it carries change (an in-place edit, or an undo of one). */
+function FlashRow(props: ComponentProps<'li'> & { readonly changed: string }): ReactNode {
+  const { changed, ...rest } = props;
+  const flash = useFlash(changed);
+  return <li {...rest} {...flash} />;
 }

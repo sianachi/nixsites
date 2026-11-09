@@ -1,4 +1,6 @@
 import { createNixClient } from '@nix/api-client';
+import { UndoBar, UndoProvider } from '@nix/ui';
+import { onNotice, type Notice } from '@nix/web-foundation/lib/notices';
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -133,9 +135,12 @@ function renderQueryView(
     );
   }
   renderAt(
-    <ApiClientOverrideProvider client={client}>
-      <Subject />
-    </ApiClientOverrideProvider>,
+    <UndoProvider>
+      <ApiClientOverrideProvider client={client}>
+        <Subject />
+      </ApiClientOverrideProvider>
+      <UndoBar />
+    </UndoProvider>,
     url,
   );
   return onOpen;
@@ -200,11 +205,51 @@ describe('the smart list', () => {
     renderQueryView();
     await user.click(await screen.findByRole('button', { name: 'Actions for Water plants' }));
     await user.click(screen.getByRole('menuitem', { name: 'Hide for me' }));
+    // The row fades for 150 ms before the hide lands.
+    await screen.findByText('All matches are hidden for you.');
     expect(screen.queryByRole('button', { name: 'Water plants' })).not.toBeInTheDocument();
     expect(screen.getByText('All matches are hidden for you.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Show these results' }));
     expect(screen.getByRole('button', { name: 'Water plants' })).toBeInTheDocument();
     expect(readHiddenItems(preference)).toEqual([ROW_TWO]);
+  });
+
+  it('hides a row with one Undo path: the shared history, not the notice', async () => {
+    const user = userEvent.setup();
+    const notices: Notice[] = [];
+    const stop = onNotice((notice) => notices.push(notice));
+    stubRun(results([row(ROW_ONE, 'Water plants', '2026-08-10')]));
+    renderQueryView();
+    await user.click(await screen.findByRole('button', { name: 'Actions for Water plants' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide for me' }));
+    await screen.findByText('All matches are hidden for you.');
+    stop();
+
+    expect(notices.at(-1)?.action).toBeUndefined();
+    expect(screen.getAllByRole('button', { name: 'Undo' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByRole('button', { name: 'Water plants' })).toBeInTheDocument();
+  });
+
+  it('undoes a hide with Ctrl+Z', async () => {
+    const user = userEvent.setup();
+    stubRun(results([row(ROW_ONE, 'Water plants', '2026-08-10')]));
+    renderQueryView();
+    await user.click(await screen.findByRole('button', { name: 'Actions for Water plants' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide for me' }));
+    await screen.findByText('All matches are hidden for you.');
+    await user.keyboard('{Control>}z{/Control}');
+    expect(await screen.findByRole('button', { name: 'Water plants' })).toBeInTheDocument();
+  });
+
+  it('shows how many loaded items a draft would match while suggesting filters', async () => {
+    const user = userEvent.setup();
+    stubRun(results([row(ROW_ONE, 'Water plants', '2026-08-10')]));
+    renderQueryView();
+    await user.click(await screen.findByRole('button', { name: 'Suggest filters from examples' }));
+    await user.click(screen.getByRole('checkbox', { name: /Water plants as an example/ }));
+    await user.click(screen.getByRole('button', { name: 'Suggest filters' }));
+    expect(await screen.findByText(/of 1 loaded items would match/)).toBeInTheDocument();
   });
 
   it('shows each match with the container it lives in and the values it matched on', async () => {

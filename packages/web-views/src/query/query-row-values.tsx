@@ -1,4 +1,5 @@
 import { isNixApiError, structure as coreStructure } from '@nix/api-client';
+import { useUndo } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -21,13 +22,25 @@ export function QueryRowValue(props: {
   const { itemId, title, properties, property, onSaved } = props;
   const client = useApiClient();
   const [refusal, setRefusal] = useState<string | null>(null);
+  const undo = useUndo();
   const owner = { title, properties };
 
   async function write(value: PropertyValue): Promise<boolean> {
     setRefusal(null);
+    const previous = properties[property.key] as PropertyValue;
     try {
       await client.execute(coreStructure.setItemProperties(itemId, { [property.key]: value }));
       onSaved();
+      // The change may take the row out of this list; the label says so and Undo brings it back.
+      undo.push(
+        `Changed ${property.label} on ${title || 'Untitled'}; it may no longer match this list`,
+        async () => {
+          await client.execute(
+            coreStructure.setItemProperties(itemId, { [property.key]: previous }),
+          );
+          onSaved();
+        },
+      );
       return true;
     } catch (reason) {
       setRefusal(

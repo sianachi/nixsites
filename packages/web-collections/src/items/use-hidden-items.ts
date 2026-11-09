@@ -21,7 +21,8 @@ export interface HiddenItemsPreference {
   readonly hiddenIds: readonly string[];
   readonly hiddenSet: ReadonlySet<string>;
   readonly saveFailed: boolean;
-  readonly hide: (itemId: string, title: string) => void;
+  /** `undo: false` leaves the notice without its own Undo, for a caller that records one itself. */
+  readonly hide: (itemId: string, title: string, options?: { readonly undo?: boolean }) => void;
   readonly show: (itemId: string, title: string) => void;
   readonly showItems: (itemIds: readonly string[]) => void;
   readonly showAll: () => void;
@@ -52,7 +53,7 @@ export function useHiddenItems(target: 'items' | 'tree-children' = 'items'): Hid
     hiddenIds,
     hiddenSet: hiddenItemSet(hiddenIds),
     saveFailed: scope !== null && failedScope === scope,
-    hide: (itemId: string, title: string) => {
+    hide: (itemId, title, options) => {
       if (scope === null) return;
       const ids = readHiddenItems(scope);
       if (ids.length >= 4000 && !ids.includes(itemId)) {
@@ -67,16 +68,20 @@ export function useHiddenItems(target: 'items' | 'tree-children' = 'items'): Hid
       publishNotice({
         key: 'item-visibility',
         message: `${title || 'Untitled'}${target === 'items' ? ' hidden' : ': children hidden from tree'}.${retained ? '' : ' Your browser could not save this preference; it lasts until this page reloads.'}`,
-        action: {
-          label: 'Undo',
-          onAction: () => {
-            const saved = store(readHiddenItems(scope).filter((id) => id !== itemId));
-            publishNotice({
-              key: 'item-visibility',
-              message: `${title || 'Item'}${target === 'items' ? ' shown again' : ': children shown in tree'}.${saved ? '' : ' Your browser could not save this preference; it lasts until this page reloads.'}`,
-            });
-          },
-        },
+        ...(options?.undo === false
+          ? {}
+          : {
+              action: {
+                label: 'Undo',
+                onAction: () => {
+                  const saved = store(readHiddenItems(scope).filter((id) => id !== itemId));
+                  publishNotice({
+                    key: 'item-visibility',
+                    message: `${title || 'Item'}${target === 'items' ? ' shown again' : ': children shown in tree'}.${saved ? '' : ' Your browser could not save this preference; it lasts until this page reloads.'}`,
+                  });
+                },
+              },
+            }),
       });
     },
     show: (itemId: string, title: string) => {
