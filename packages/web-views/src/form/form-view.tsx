@@ -25,6 +25,8 @@ import { UsualValueHint, UsualValuesSummary } from './usual-value-hint';
 import { FormResults } from './form-results';
 import { reportFormValidity } from './form-validity';
 
+const FORM_LAYOUT = 'grid min-w-0 gap-6 md:grid-cols-[minmax(0,36rem)_minmax(0,18rem)] md:gap-8'; // design-token-exempt: the form's reading measure beside the added-entries column.
+
 /**
  * The form view: schema inputs and formula results, with a choice to save each entry.
  *
@@ -353,7 +355,7 @@ function EntryForm({
   }
 
   return (
-    <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,36rem)_minmax(0,18rem)] md:gap-8">
+    <div className={FORM_LAYOUT}>
       <form
         ref={formRef}
         aria-label={view.name}

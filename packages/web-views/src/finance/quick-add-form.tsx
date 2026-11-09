@@ -6,6 +6,9 @@ import { formatMonth, monthOf, parseAmount, todayIn } from './money';
 import { LineOptions } from './transaction-dialog';
 import type { FinanceState } from './use-finance';
 
+const QUICK_ADD_LAYOUT =
+  '@container grid min-w-0 grid-cols-2 gap-3 rounded-lg border border-divider p-3 @3xl:grid-cols-[minmax(9rem,11rem)_2fr_1.5fr_1.2fr_9rem_auto] @3xl:items-end'; // design-token-exempt: one row of date, description, amount, account and category tracks sized to their content.
+
 /**
  * Records transactions one after another without a dialog: the account and day carry over, and
  * focus goes back to Amount after each one. Typing a description that matches an earlier
@@ -93,7 +96,7 @@ export function QuickAddForm({
     <form
       aria-label="Add a transaction"
       aria-busy={busy}
-      className="@container grid min-w-0 grid-cols-2 gap-3 rounded-lg border border-divider p-3 @3xl:grid-cols-[minmax(9rem,11rem)_2fr_1.5fr_1.2fr_9rem_auto] @3xl:items-end"
+      className={QUICK_ADD_LAYOUT}
       onSubmit={(event) => {
         void submit(event);
       }}

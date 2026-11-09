@@ -35,7 +35,7 @@ function GoalBar({
     >
       <div
         className="h-full bg-accent transition-[width] duration-300 ease-out motion-reduce:transition-none"
-        style={{ width: `${String(percent)}%` }}
+        style={{ width: `${String(percent)}%` }} // design-token-exempt: a progress bar's fill is a runtime ratio, not a design-scale value.
       />
     </div>
   );

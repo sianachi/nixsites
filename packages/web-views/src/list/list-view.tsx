@@ -316,7 +316,7 @@ export function ListView(props: ListViewProps): ReactNode {
         >
           <div
             className="h-full bg-accent transition-[width] duration-300"
-            style={{ width: `${String((doneCount / chrome.items.length) * 100)}%` }}
+            style={{ width: `${String((doneCount / chrome.items.length) * 100)}%` }} // design-token-exempt: a progress bar's fill is a runtime ratio, not a design-scale value.
           />
         </div>
       </div>

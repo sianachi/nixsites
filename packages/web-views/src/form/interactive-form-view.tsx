@@ -227,9 +227,8 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
     requestAnimationFrame(() => {
       const target = formRef.current?.querySelector<HTMLElement>(`[data-block="${id}"]`);
       const input = target?.querySelector<HTMLElement>('input, select, textarea') ?? target;
-      // jsdom has no scrollIntoView; guard it without an optional chain the types call redundant.
-      if (input !== null && typeof input.scrollIntoView === 'function')
-        input.scrollIntoView({ block: 'center' });
+      // jsdom has no scrollIntoView, so it is checked rather than assumed.
+      if (typeof input?.scrollIntoView === 'function') input.scrollIntoView({ block: 'center' });
       input?.focus();
     });
   }

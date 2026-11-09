@@ -87,7 +87,7 @@ export function HabitTrackerHeader({
         >
           <div
             className="h-full bg-accent transition-[width] duration-300 ease-out motion-reduce:transition-none"
-            style={{ width: `${String(dayTotal === 0 ? 0 : (dayDone / dayTotal) * 100)}%` }}
+            style={{ width: `${String(dayTotal === 0 ? 0 : (dayDone / dayTotal) * 100)}%` }} // design-token-exempt: a progress bar's fill is a runtime ratio, not a design-scale value.
           />
         </div>
       ) : null}
