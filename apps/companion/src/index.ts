@@ -1,6 +1,6 @@
-import { readConfig } from './config.ts';
-import { stdoutLogger } from './diagnostics.ts';
-import { createCompanionServer } from './server.ts';
+import { readConfig } from './core/config.ts';
+import { stdoutLogger } from './shared/diagnostics.ts';
+import { createCompanionServer } from './server/server.ts';
 
 /**
  * The pet companion service: `POST /v1/companion` for Core's PetWorkerClient, `/healthz` for

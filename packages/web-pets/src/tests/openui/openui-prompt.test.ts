@@ -8,7 +8,7 @@ import { openUiPrompt, PROMPT_EXAMPLES } from '../../openui/prompt';
 describe('the pet’s OpenUI instructions', () => {
   it('match the catalog the companion reads (regenerate with vitest -u)', async () => {
     await expect(openUiPrompt()).toMatchFileSnapshot(
-      '../../../../../apps/companion/src/openui.txt',
+      '../../../../../apps/companion/src/tools/openui.txt',
     );
   });
 

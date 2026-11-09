@@ -14,9 +14,9 @@ const starters: Record<Role, () => Promise<Running>> = {
   collab: async () => (await import('../../collab/src/main.ts')).startCollab(),
   'sites-worker': async () => (await import('../../sites/src/worker/main.ts')).startSitesWorker(),
   companion: async () => {
-    const { readConfig } = await import('../../companion/src/config.ts');
-    const { stdoutLogger } = await import('../../companion/src/diagnostics.ts');
-    const { createCompanionServer } = await import('../../companion/src/server.ts');
+    const { readConfig } = await import('../../companion/src/core/config.ts');
+    const { stdoutLogger } = await import('../../companion/src/shared/diagnostics.ts');
+    const { createCompanionServer } = await import('../../companion/src/server/server.ts');
     const config = readConfig(process.env);
     const logger = stdoutLogger();
     const server = createCompanionServer(config, { logger });
