@@ -1,3 +1,4 @@
+import type { HabitTracker } from '@nix/api-client';
 import { formatShortDate } from '@nix/web-foundation/lib/date-format';
 
 export const WEEKDAYS = [
@@ -52,4 +53,31 @@ const spokenDay = new Intl.DateTimeFormat(undefined, {
 /** A stored `yyyy-mm-dd` day as a person says it - "Tuesday 20 October" - for screen readers. */
 export function spokenDayName(day: string): string {
   return spokenDay.format(new Date(`${day}T00:00:00Z`));
+}
+
+/** Whether the habit is due on `day`, from the server's occurrence when it has one. */
+export function habitScheduled(tracker: HabitTracker, day: string): boolean {
+  const occurrence = tracker.occurrences?.find((entry) => entry.date === day);
+  return (
+    occurrence?.scheduled ??
+    (day >= tracker.startDate &&
+      (tracker.frequency === 'daily' || tracker.weekdays.includes(weekdayFor(day))))
+  );
+}
+
+export function habitDone(tracker: HabitTracker, day: string): boolean {
+  const occurrence = tracker.occurrences?.find((entry) => entry.date === day);
+  return (
+    occurrence?.completed ??
+    tracker.checkIns.some((entry) => entry.occurredOn === day && entry.completed)
+  );
+}
+
+/** Which week (0 = this one) holds `day`, so the loaded range follows day navigation. */
+export function weekOffsetFor(day: string): number {
+  const monday = weekWindow(0).from;
+  const days = Math.round(
+    (Date.parse(`${day}T00:00:00Z`) - Date.parse(`${monday}T00:00:00Z`)) / 86_400_000,
+  );
+  return Math.floor(days / 7);
 }

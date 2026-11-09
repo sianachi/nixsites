@@ -1,12 +1,45 @@
-import { Button, ContextMenu, cn, focusRing, Icon, Input, Text } from '@nix/ui';
+import { Button, ContextMenu, cn, focusRing, Icon, Input, Text, useFlash, useUndo } from '@nix/ui';
 import { Check, CheckCircle2, Circle, CircleAlert, Clock3, Pencil } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import type { HabitTracker } from '@nix/api-client';
 import { tap } from '@nix/web-foundation/native/native-shell';
-import { spokenDayName, todayInTimezone, weekdayFor } from './habit-days';
+import { shiftedDay, spokenDayName, todayInTimezone, weekdayFor } from './habit-days';
+
+/** A table cell that tints once when its check-in changes (including by undo). */
+function FlashCell({
+  trigger,
+  ...props
+}: { readonly trigger: string } & ComponentProps<'td'>): ReactNode {
+  const flash = useFlash(trigger);
+  return <td {...flash} {...props} />;
+}
+
+/** A quantity's progress toward its goal, as a filling bar. */
+function GoalBar({
+  value,
+  target,
+  className,
+}: {
+  readonly value: number;
+  readonly target: number;
+  readonly className?: string;
+}): ReactNode {
+  const percent = target > 0 ? Math.min(100, Math.max(0, (value / target) * 100)) : 0;
+  return (
+    <div
+      aria-hidden="true"
+      className={cn('h-1.5 w-full overflow-hidden rounded-full bg-surface-raised', className)}
+    >
+      <div
+        className="h-full bg-accent transition-[width] duration-300 ease-out motion-reduce:transition-none"
+        style={{ width: `${String(percent)}%` }}
+      />
+    </div>
+  );
+}
 
 export function HabitRow({
   itemId,
@@ -37,6 +70,7 @@ export function HabitRow({
     status: 'active' | 'paused' | 'archived',
   ) => Promise<string | null>;
 }): ReactNode {
+  const undo = useUndo();
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
   const [message, setMessage] = useState<string | null>(null);
@@ -71,13 +105,34 @@ export function HabitRow({
       }
     }
   }
+  const changeStatus = (next: 'active' | 'paused' | 'archived'): void => {
+    const previous = lifecycle;
+    setStatusPending(true);
+    void onStatus(itemId, next).then((result) => {
+      setMessage(result);
+      setStatusPending(false);
+      if (result !== null) return;
+      const verb =
+        next === 'paused'
+          ? 'Paused'
+          : next === 'archived'
+            ? 'Archived'
+            : previous === 'paused'
+              ? 'Resumed'
+              : 'Restored';
+      undo.push(`${verb} ${title || 'Untitled habit'}`, async () => {
+        setMessage(await onStatus(itemId, previous));
+      });
+    });
+  };
   return (
     <tr
-      className={
+      className={cn(
         compact
           ? 'grid grid-cols-7 border-b border-divider @lg:table-row'
-          : 'block border-b border-divider @lg:table-row'
-      }
+          : 'block border-b border-divider @lg:table-row',
+        lifecycle !== 'active' && 'opacity-60',
+      )}
     >
       <th
         scope="row"
@@ -153,13 +208,7 @@ export function HabitRow({
                 variant="subtle"
                 disabled={statusPending}
                 onClick={() => {
-                  setStatusPending(true);
-                  void onStatus(itemId, lifecycle === 'paused' ? 'active' : 'paused').then(
-                    (result) => {
-                      setMessage(result);
-                      setStatusPending(false);
-                    },
-                  );
+                  changeStatus(lifecycle === 'paused' ? 'active' : 'paused');
                 }}
               >
                 {statusPending ? 'Saving' : lifecycle === 'paused' ? 'Resume' : 'Pause'}
@@ -169,13 +218,7 @@ export function HabitRow({
               variant="subtle"
               disabled={statusPending}
               onClick={() => {
-                setStatusPending(true);
-                void onStatus(itemId, lifecycle === 'archived' ? 'active' : 'archived').then(
-                  (result) => {
-                    setMessage(result);
-                    setStatusPending(false);
-                  },
-                );
+                changeStatus(lifecycle === 'archived' ? 'active' : 'archived');
               }}
             >
               {lifecycle === 'archived' ? 'Restore' : 'Archive'}
@@ -224,26 +267,39 @@ export function HabitRow({
             !Number.isFinite(Number(quantity)) ||
             Number(quantity) < 0 ||
             Number(quantity) > 1_000_000);
-        const act = async (undo: boolean): Promise<void> => {
-          tap(undo ? 'light' : 'medium');
-          setOptimistic((current) => ({
-            ...current,
-            [day]: !undo && (!measured || Number(quantity) >= target),
-          }));
+        const savedQuantity = entry?.quantity ?? 0;
+        const shownQuantity = invalidQuantity ? 0 : Number(quantity);
+        const today = todayInTimezone(tracker.timezone);
+        const when = day === today ? 'today' : day === shiftedDay(today, -1) ? 'yesterday' : day;
+        const name = title || 'Untitled habit';
+        // One write (`null` clears the day), then one undo entry that restores only this day.
+        const commit = async (
+          next: { readonly completed: boolean; readonly quantity: number | null } | null,
+          said: string,
+        ): Promise<void> => {
+          tap(next === null ? 'light' : 'medium');
+          const before = entry;
+          const write = (
+            to: { readonly completed: boolean; readonly quantity: number | null } | null,
+          ): Promise<string | null> =>
+            to === null ? onUndo(itemId, day) : onSave(itemId, day, to.completed, to.quantity);
+          setOptimistic((current) => ({ ...current, [day]: next?.completed ?? false }));
           setPending((current) => new Set(current).add(key));
-          const refusal = undo
-            ? await onUndo(itemId, day)
-            : await onSave(itemId, day, true, measured ? Number(quantity) : null);
+          const refusal = await write(next);
           setPending((current) => {
-            const next = new Set(current);
-            next.delete(key);
-            return next;
+            const left = new Set(current);
+            left.delete(key);
+            return left;
           });
+          // Back to the saved quantity either way: on success the refetch carries it, on refusal the
+          // write never happened.
+          setQuantities((current) =>
+            Object.fromEntries(Object.entries(current).filter(([entryDay]) => entryDay !== day)),
+          );
           if (refusal === null) {
-            setQuantities((current) => {
-              return Object.fromEntries(
-                Object.entries(current).filter(([entryDay]) => entryDay !== day),
-              );
+            undo.push(said, async () => {
+              setOptimistic((current) => ({ ...current, [day]: before?.completed ?? false }));
+              setMessage(await write(before ?? null));
             });
           } else {
             // The write was refused: the tap never happened as far as Core is concerned, so the
@@ -255,9 +311,37 @@ export function HabitRow({
           }
           setMessage(refusal);
         };
+        const toggle = (): Promise<void> =>
+          checked
+            ? commit(null, `Unchecked ${name} (${when})`)
+            : commit({ completed: true, quantity: null }, `Checked in ${name} (${when})`);
+        const clear = (): Promise<void> => commit(null, `Cleared ${name} (${when})`);
+        const setQuantity = (raw: number): Promise<void> => {
+          // shortcut: taps while a save is in flight are ignored; queue them if people step fast.
+          if (pending.has(key)) return Promise.resolve();
+          const value = Math.max(0, Math.round(raw * 100) / 100);
+          if (value === 0) return entry === undefined ? Promise.resolve() : clear();
+          setQuantities((current) => ({ ...current, [day]: String(value) }));
+          const done = value >= target;
+          return commit(
+            { completed: done, quantity: value },
+            `${name}: ${String(value)} of ${String(target)} ${unit} (${when})${done ? ' - done' : ''}`,
+          );
+        };
+        const commitTyped = (): void => {
+          if (invalidQuantity) {
+            setQuantities((current) =>
+              Object.fromEntries(Object.entries(current).filter(([entryDay]) => entryDay !== day)),
+            );
+          } else if (quantities[day] !== undefined && Number(quantity) !== savedQuantity) {
+            void setQuantity(Number(quantity));
+          }
+        };
+        const stepDisabled = pending.has(key) || future || lifecycle !== 'active';
         return (
-          <td
+          <FlashCell
             key={day}
+            trigger={`${String(checked)}:${String(entry?.quantity ?? '')}`}
             className={cn(
               compact
                 ? cn('p-0.5 text-center align-top @lg:p-2', selectedDay === day && 'col-span-7')
@@ -266,126 +350,180 @@ export function HabitRow({
             )}
           >
             {compact && selectedDay !== day ? (
-              <Button
-                variant={checked ? 'primary' : 'ghost'}
-                className="h-(--control-md) w-full min-w-0 p-0 any-pointer-coarse:h-(--control-lg) @lg:w-(--control-md) any-pointer-coarse:@lg:w-(--control-lg)"
-                disabled={future || (!scheduled && !hasEntry)}
-                aria-busy={pending.has(key) || undefined}
-                aria-label={`${title}, ${spokenDayName(day)}, ${future ? 'upcoming' : checked ? 'done' : scheduled ? 'not done' : 'not scheduled'}`}
-                aria-pressed={checked}
-                title={`${day}: ${future ? 'Upcoming' : stateLabel}${entry?.quantity == null ? '' : `, ${String(entry.quantity)}/${String(target)} ${unit}`}`}
-                onClick={() => {
-                  // Not `disabled` while saving: that would drop focus to the body after each tap.
-                  if (pending.has(key)) return;
-                  // A plain habit is one tap; a measured one needs its quantity first.
-                  if (measured || lifecycle !== 'active') setSelectedDay(day);
-                  else void act(checked);
-                }}
-              >
-                {checked ? (
-                  <Check size={18} aria-hidden="true" />
-                ) : !scheduled ? (
-                  <Text as="span" variant="caption">
-                    —
-                  </Text>
-                ) : stateLabel === 'partial' ? (
-                  <Clock3 size={18} aria-hidden="true" />
-                ) : stateLabel === 'missed' ? (
-                  <CircleAlert size={18} aria-hidden="true" />
-                ) : (
-                  <Circle size={18} aria-hidden="true" />
-                )}
-              </Button>
-            ) : scheduled || hasEntry ? (
-              <div className="flex flex-wrap items-center justify-start gap-2 @lg:justify-end">
-                {measured ? (
-                  <Input
-                    aria-label={`${title}, ${day}, quantity`}
-                    className="w-24"
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={quantity}
-                    disabled={pending.has(key) || future || lifecycle !== 'active'}
-                    onChange={(event) => {
-                      setQuantities((current) => ({ ...current, [day]: event.target.value }));
-                    }}
-                  />
-                ) : null}
+              <>
                 <Button
-                  variant={checked ? 'primary' : 'secondary'}
-                  disabled={pending.has(key) || future || invalidQuantity || lifecycle !== 'active'}
-                  aria-label={
-                    measured
-                      ? `Save ${title}, ${day}, quantity`
-                      : `${checked ? 'Done: undo check-in for' : 'Check in'} ${title}, ${day}${future ? ', upcoming' : ''}`
-                  }
+                  variant={checked ? 'primary' : 'ghost'}
+                  className="h-(--control-md) w-full min-w-0 p-0 any-pointer-coarse:h-(--control-lg) @lg:w-(--control-md) any-pointer-coarse:@lg:w-(--control-lg)"
+                  disabled={future || (!scheduled && !hasEntry)}
+                  aria-busy={pending.has(key) || undefined}
+                  aria-label={`${title}, ${spokenDayName(day)}, ${future ? 'upcoming' : checked ? 'done' : scheduled ? 'not done' : 'not scheduled'}`}
                   aria-pressed={checked}
+                  title={`${day}: ${future ? 'Upcoming' : stateLabel}${entry?.quantity == null ? '' : `, ${String(entry.quantity)}/${String(target)} ${unit}`}`}
                   onClick={() => {
-                    void act(!measured && checked);
+                    // Not `disabled` while saving: that would drop focus to the body after each tap.
+                    if (pending.has(key)) return;
+                    // A plain habit is one tap; a measured one needs its quantity first.
+                    if (measured || lifecycle !== 'active') setSelectedDay(day);
+                    else void toggle();
                   }}
                 >
-                  {!measured && checked ? <Check size={18} aria-hidden="true" /> : null}
-                  {pending.has(key) ? 'Saving' : measured ? 'Save' : checked ? 'Done' : 'Check in'}
+                  {checked ? (
+                    <Check size={18} aria-hidden="true" />
+                  ) : !scheduled ? (
+                    <Text as="span" variant="caption">
+                      —
+                    </Text>
+                  ) : stateLabel === 'partial' ? (
+                    <Clock3 size={18} aria-hidden="true" />
+                  ) : stateLabel === 'missed' ? (
+                    <CircleAlert size={18} aria-hidden="true" />
+                  ) : (
+                    <Circle size={18} aria-hidden="true" />
+                  )}
                 </Button>
-                <Text
-                  variant="caption"
-                  tone="muted"
-                  className="inline-flex items-center gap-1 capitalize"
-                >
-                  <span aria-hidden="true">
-                    {stateLabel === 'completed' ? (
-                      <CheckCircle2 size={14} />
-                    ) : stateLabel === 'missed' ? (
-                      <CircleAlert size={14} />
-                    ) : stateLabel === 'partial' ? (
-                      <Clock3 size={14} />
-                    ) : (
-                      <Circle size={14} />
-                    )}
-                  </span>
-                  {stateLabel === 'scheduled'
-                    ? 'Due today'
-                    : stateLabel === 'missed'
-                      ? 'No check-in'
-                      : stateLabel === 'partial'
-                        ? 'Partly done'
-                        : stateLabel}
-                </Text>
-                {measured && hasEntry ? (
-                  <Button
-                    variant="subtle"
-                    disabled={pending.has(key) || future || lifecycle !== 'active'}
-                    aria-label={`Undo ${title}, ${day}`}
-                    onClick={() => {
-                      void act(true);
-                    }}
-                  >
-                    Undo
-                  </Button>
+                {measured && scheduled ? (
+                  <GoalBar value={savedQuantity} target={target} className="mt-1" />
                 ) : null}
-                {measured && entry ? (
-                  <Text variant="caption" tone="muted">
-                    {`${String(entry.quantity ?? 0)}/${String(target)} ${unit}`}
+              </>
+            ) : scheduled || hasEntry ? (
+              <>
+                <div className="flex flex-wrap items-center justify-start gap-2 @lg:justify-end">
+                  {measured ? (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="secondary"
+                        className="min-w-(--control-md) px-0 any-pointer-coarse:min-w-(--control-lg)"
+                        aria-label={`One less ${unit}, ${name}, ${day}`}
+                        title="One less"
+                        disabled={stepDisabled || shownQuantity <= 0}
+                        onClick={() => {
+                          void setQuantity(shownQuantity - 1);
+                        }}
+                      >
+                        −
+                      </Button>
+                      <Input
+                        aria-label={`${title}, ${day}, quantity`}
+                        className="w-16 text-center"
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder="0"
+                        value={quantity}
+                        disabled={stepDisabled}
+                        onChange={(event) => {
+                          setQuantities((current) => ({ ...current, [day]: event.target.value }));
+                        }}
+                        onBlur={commitTyped}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') commitTyped();
+                        }}
+                      />
+                      <Button
+                        variant="secondary"
+                        className="min-w-(--control-md) px-0 any-pointer-coarse:min-w-(--control-lg)"
+                        aria-label={`One more ${unit}, ${name}, ${day}`}
+                        title="One more"
+                        disabled={stepDisabled}
+                        onClick={() => {
+                          void setQuantity(shownQuantity + 1);
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant={checked ? 'primary' : 'secondary'}
+                      disabled={pending.has(key) || future || lifecycle !== 'active'}
+                      aria-label={`${checked ? 'Done: undo check-in for' : 'Check in'} ${title}, ${day}${future ? ', upcoming' : ''}`}
+                      aria-pressed={checked}
+                      onClick={() => {
+                        void toggle();
+                      }}
+                    >
+                      {checked ? <Check size={18} aria-hidden="true" /> : null}
+                      {pending.has(key) ? 'Saving' : checked ? 'Done' : 'Check in'}
+                    </Button>
+                  )}
+                  <Text
+                    variant="caption"
+                    tone="muted"
+                    className="inline-flex items-center gap-1 capitalize"
+                  >
+                    <span aria-hidden="true">
+                      {stateLabel === 'completed' ? (
+                        <CheckCircle2 size={14} />
+                      ) : stateLabel === 'missed' ? (
+                        <CircleAlert size={14} />
+                      ) : stateLabel === 'partial' ? (
+                        <Clock3 size={14} />
+                      ) : (
+                        <Circle size={14} />
+                      )}
+                    </span>
+                    {stateLabel === 'scheduled'
+                      ? 'Due today'
+                      : stateLabel === 'missed'
+                        ? 'No check-in'
+                        : stateLabel === 'partial'
+                          ? 'Partly done'
+                          : stateLabel}
                   </Text>
+                  {measured && !checked ? (
+                    <Button
+                      variant="secondary"
+                      disabled={stepDisabled}
+                      aria-label={`Complete ${title}, ${day}`}
+                      onClick={() => {
+                        void setQuantity(target);
+                      }}
+                    >
+                      Complete
+                    </Button>
+                  ) : null}
+                  {measured && entry ? (
+                    <Button
+                      variant="subtle"
+                      disabled={stepDisabled}
+                      aria-label={`Clear ${title}, ${day}`}
+                      onClick={() => {
+                        void clear();
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  ) : null}
+                  {measured ? (
+                    <Text variant="caption" tone="muted">
+                      {`/ ${String(target)} ${unit}`}
+                    </Text>
+                  ) : null}
+                  {compact ? (
+                    <Button
+                      variant="subtle"
+                      onClick={() => {
+                        setSelectedDay(null);
+                      }}
+                    >
+                      Close
+                    </Button>
+                  ) : null}
+                </div>
+                {measured ? (
+                  <GoalBar
+                    value={shownQuantity}
+                    target={target}
+                    className="mt-2 ml-auto max-w-64"
+                  />
                 ) : null}
-                {compact ? (
-                  <Button
-                    variant="subtle"
-                    onClick={() => {
-                      setSelectedDay(null);
-                    }}
-                  >
-                    Close
-                  </Button>
-                ) : null}
-              </div>
+              </>
             ) : (
               <Text variant="caption" tone="muted">
                 Not scheduled
               </Text>
             )}
-          </td>
+          </FlashCell>
         );
       })}
     </tr>

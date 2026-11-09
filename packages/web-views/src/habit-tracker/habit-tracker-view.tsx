@@ -20,7 +20,17 @@ import { HabitInsights } from './habit-insights';
 import { HabitRow } from './habit-row';
 import { HabitSetup } from './habit-setup';
 import { HabitTrackerHeader } from './habit-tracker-header';
-import { dateText, shiftedDay, todayInTimezone, weekWindow, WEEKDAYS } from './habit-days';
+import {
+  dateText,
+  habitDone,
+  habitScheduled,
+  shiftedDay,
+  spokenDayName,
+  todayInTimezone,
+  weekOffsetFor,
+  weekWindow,
+  WEEKDAYS,
+} from './habit-days';
 
 // The tracker's public surface stays here; tests import these from this module.
 export { HabitSetup, todayInTimezone, weekWindow };
@@ -56,6 +66,8 @@ function storeTodayOnly(storage: Storage | undefined, value: boolean): void {
 
 export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewProps): ReactNode {
   const [weekOffset, setWeekOffset] = useState(0);
+  // The day the Day screen shows; `null` is today (each habit in its own timezone).
+  const [viewDay, setViewDay] = useState<string | null>(null);
   const [todayOnlyChoice, setTodayOnlyChoice] = useState<boolean | null>(() =>
     readStoredTodayOnly(browserStorage()),
   );
@@ -137,6 +149,23 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
     if (!showArchived && tracker?.status === 'archived') return [];
     return tracker === undefined ? [] : [{ ...item, tracker }];
   });
+  const calendarToday = dateText(new Date());
+  const activeHabits = habits.filter((item) => item.tracker.status === 'active');
+  const dayOf = (item: { readonly tracker: HabitTracker }): string =>
+    viewDay ?? todayInTimezone(item.tracker.timezone);
+  const dueToday = activeHabits.filter((item) => habitScheduled(item.tracker, dayOf(item)));
+  const dayDone = dueToday.filter((item) => habitDone(item.tracker, dayOf(item))).length;
+  const missedYesterday =
+    viewDay === null
+      ? activeHabits.filter((item) => {
+          const yesterday = shiftedDay(todayInTimezone(item.tracker.timezone), -1);
+          return habitScheduled(item.tracker, yesterday) && !habitDone(item.tracker, yesterday);
+        }).length
+      : 0;
+  const goToDay = (day: string | null): void => {
+    setViewDay(day);
+    setWeekOffset(day === null ? 0 : weekOffsetFor(day));
+  };
   const shownHabitIds =
     screen === 'checkins' && (state.status === 'ready' || state.status === 'partial')
       ? habits.map((item) => item.id)
@@ -171,6 +200,18 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
       <HabitTrackerHeader
         screen={screen}
         todayOnly={todayOnly}
+        dayTitle={
+          viewDay === null
+            ? 'Today'
+            : viewDay === shiftedDay(calendarToday, -1)
+              ? 'Yesterday'
+              : spokenDayName(viewDay)
+        }
+        dayDone={dayDone}
+        dayTotal={dueToday.length}
+        viewingEarlierDay={viewDay !== null}
+        nextDayDisabled={viewDay === null}
+        missedYesterday={missedYesterday}
         weekOffset={weekOffset}
         windowFrom={window.from}
         windowTo={window.to}
@@ -178,7 +219,14 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
         showArchived={showArchived}
         onToday={() => {
           chooseTodayOnly(true);
-          setWeekOffset(0);
+          goToDay(null);
+        }}
+        onShiftDay={(delta) => {
+          const next = shiftedDay(viewDay ?? calendarToday, delta);
+          goToDay(next >= calendarToday ? null : next);
+        }}
+        onReviewYesterday={() => {
+          goToDay(shiftedDay(calendarToday, -1));
         }}
         onWeek={() => {
           chooseTodayOnly(false);
@@ -309,22 +357,6 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
           aria-label={todayOnly ? 'Today habit check-ins' : 'Weekly habit check-ins'}
           className={cn('min-w-0 max-w-full overflow-x-auto', focusRing)}
         >
-          {todayOnly ? (
-            <Text variant="bodySmall" tone="muted" className="mb-3">
-              {
-                habits
-                  .filter((item) => item.tracker.status === 'active')
-                  .filter((item) =>
-                    item.tracker.checkIns.some(
-                      (entry) =>
-                        entry.occurredOn === todayInTimezone(item.tracker.timezone) &&
-                        entry.completed,
-                    ),
-                  ).length
-              }{' '}
-              completed today. Each habit follows its saved timezone.
-            </Text>
-          ) : null}
           <table
             className={
               todayOnly
@@ -362,7 +394,7 @@ export function HabitTrackerView({ container, view, onOpen }: HabitTrackerViewPr
                   key={item.id}
                   itemId={item.id}
                   title={item.title}
-                  days={todayOnly ? [todayInTimezone(item.tracker.timezone)] : window.days}
+                  days={todayOnly ? [dayOf(item)] : window.days}
                   tracker={item.tracker}
                   onOpen={onOpen}
                   onSave={saveCheckInAndRefresh}

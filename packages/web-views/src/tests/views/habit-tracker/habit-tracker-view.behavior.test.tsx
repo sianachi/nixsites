@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { useState } from 'react';
 import type { HabitTracker } from '@nix/api-client';
+import { UndoBar, UndoProvider } from '@nix/ui';
 import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
@@ -105,11 +106,14 @@ const habit = {
 const mount = (empty = false, suppliedContainer?: ContainerData) =>
   render(
     <MemoryRouter>
-      <HabitTrackerView
-        container={suppliedContainer ?? aContainer({ children: empty ? [] : [habit] })}
-        view={view}
-        onOpen={vi.fn()}
-      />
+      <UndoProvider>
+        <HabitTrackerView
+          container={suppliedContainer ?? aContainer({ children: empty ? [] : [habit] })}
+          view={view}
+          onOpen={vi.fn()}
+        />
+        <UndoBar />
+      </UndoProvider>
     </MemoryRouter>,
   );
 
@@ -335,32 +339,84 @@ describe('habit tracker user flows', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('updates a partial quantity and offers independent undo', async () => {
+  it('steps a quantity, shows its progress bar and undoes only that change', async () => {
     mount();
     openWeekDay('2026-03-16');
     const quantity = screen.getByRole('spinbutton', { name: 'Read, 2026-03-16, quantity' });
     expect(quantity).toHaveValue(1);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'One more pages, Read, 2026-03-16' }));
+      await Promise.resolve();
+    });
+    expect(saveCheckIn).toHaveBeenCalledWith('habit-1', '2026-03-16', true, 2);
+    expect(await screen.findByText('Read: 2 of 2 pages (2026-03-16) - done')).toBeVisible();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
+      await Promise.resolve();
+    });
+    // The undo restores the day's previous check-in, not a snapshot of anything else.
+    expect(saveCheckIn).toHaveBeenLastCalledWith('habit-1', '2026-03-16', false, 1);
+  });
+
+  it('saves a typed quantity on blur and clears a day with Clear', async () => {
+    mount();
+    openWeekDay('2026-03-16');
+    const quantity = screen.getByRole('spinbutton', { name: 'Read, 2026-03-16, quantity' });
     fireEvent.change(quantity, { target: { value: '2' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save Read, 2026-03-16, quantity' }));
+      fireEvent.blur(quantity);
       await Promise.resolve();
     });
     expect(saveCheckIn).toHaveBeenCalledWith('habit-1', '2026-03-16', true, 2);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Undo Read, 2026-03-16' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Clear Read, 2026-03-16' }));
       await Promise.resolve();
     });
     expect(undoCheckIn).toHaveBeenCalledWith('habit-1', '2026-03-16');
   });
 
-  it('refuses an empty quantity even for a target of one with a custom unit', () => {
+  it('undoes a first check-in by deleting it', async () => {
+    tracker = { ...tracker, target: 1, unit: 'times', checkIns: [] };
+    mount();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Check in Read, 2026-03-18' }));
+      await Promise.resolve();
+    });
+    expect(await screen.findByText('Checked in Read (today)')).toBeVisible();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
+      await Promise.resolve();
+    });
+    expect(undoCheckIn).toHaveBeenCalledWith('habit-1', '2026-03-18');
+  });
+
+  it('refuses an empty quantity: the step down is unavailable and nothing is saved', () => {
     tracker = { ...tracker, target: 1, unit: 'glass', checkIns: [] };
     mount();
     openWeekDay('2026-03-16');
     expect(screen.getByRole('spinbutton', { name: 'Read, 2026-03-16, quantity' })).toHaveValue(
       null,
     );
-    expect(screen.getByRole('button', { name: 'Save Read, 2026-03-16, quantity' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'One less glass, Read, 2026-03-16' })).toBeDisabled();
+    expect(saveCheckIn).not.toHaveBeenCalled();
+  });
+
+  it('shows how many habits are done today and walks to earlier days', () => {
+    tracker = { ...tracker, target: 1, unit: 'times', checkIns: [] };
+    mount();
+    expect(screen.getByText('0 of 1 done')).toBeVisible();
+    expect(screen.getByRole('progressbar', { name: 'Habits done' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Previous day' }));
+    expect(screen.getByRole('heading', { name: 'Yesterday' })).toBeVisible();
+    expect(screen.getByText('Editing an earlier day.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Check in Read, 2026-03-17' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Next day' }));
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Yesterday: 1 not done/ }));
+    expect(screen.getByRole('heading', { name: 'Yesterday' })).toBeVisible();
   });
 
   it('uses the saved timezone for Today and disables future weekly cells', async () => {
@@ -371,7 +427,7 @@ describe('habit tracker user flows', () => {
     expect(
       screen.getByRole('button', { name: `Read, ${spokenDayName('2026-03-20')}, upcoming` }),
     ).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Check in Read, 2026-03-19' }));
       await Promise.resolve();

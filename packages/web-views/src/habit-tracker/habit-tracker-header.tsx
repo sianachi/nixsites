@@ -5,12 +5,20 @@ import type { ReactNode } from 'react';
 export function HabitTrackerHeader({
   screen,
   todayOnly,
+  dayTitle,
+  dayDone,
+  dayTotal,
+  viewingEarlierDay,
+  nextDayDisabled,
+  missedYesterday,
   weekOffset,
   windowFrom,
   windowTo,
   showSetup,
   showArchived,
   onToday,
+  onShiftDay,
+  onReviewYesterday,
   onWeek,
   onInsights,
   onToggleSetup,
@@ -20,12 +28,20 @@ export function HabitTrackerHeader({
 }: {
   readonly screen: 'checkins' | 'insights';
   readonly todayOnly: boolean;
+  readonly dayTitle: string;
+  readonly dayDone: number;
+  readonly dayTotal: number;
+  readonly viewingEarlierDay: boolean;
+  readonly nextDayDisabled: boolean;
+  readonly missedYesterday: number;
   readonly weekOffset: number;
   readonly windowFrom: string;
   readonly windowTo: string;
   readonly showSetup: boolean;
   readonly showArchived: boolean;
   readonly onToday: () => void;
+  readonly onShiftDay: (delta: -1 | 1) => void;
+  readonly onReviewYesterday: () => void;
   readonly onWeek: () => void;
   readonly onInsights: () => void;
   readonly onToggleSetup: () => void;
@@ -41,7 +57,7 @@ export function HabitTrackerHeader({
             {screen === 'insights'
               ? 'Your progress'
               : todayOnly
-                ? 'Today'
+                ? dayTitle
                 : weekOffset === 0
                   ? 'This week'
                   : weekOffset < 0
@@ -52,7 +68,7 @@ export function HabitTrackerHeader({
             {screen === 'insights'
               ? 'See the pattern, then choose a day to update it.'
               : todayOnly
-                ? 'One day at a time. Check in with your habits below.'
+                ? `${String(dayDone)} of ${String(dayTotal)} done`
                 : `${windowFrom} to ${windowTo}`}
           </Text>
         </div>
@@ -60,6 +76,21 @@ export function HabitTrackerHeader({
           {showSetup ? 'Close setup' : 'Add a habit'}
         </Button>
       </div>
+      {screen === 'checkins' && todayOnly ? (
+        <div
+          role="progressbar"
+          aria-label="Habits done"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={dayTotal === 0 ? 0 : Math.round((dayDone / dayTotal) * 100)}
+          className="h-1.5 overflow-hidden rounded-full bg-surface-raised"
+        >
+          <div
+            className="h-full bg-accent transition-[width] duration-300 ease-out motion-reduce:transition-none"
+            style={{ width: `${String(dayTotal === 0 ? 0 : (dayDone / dayTotal) * 100)}%` }}
+          />
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav
           className="flex max-w-full flex-wrap gap-1 rounded-lg bg-surface-raised p-1"
@@ -70,7 +101,7 @@ export function HabitTrackerHeader({
             aria-pressed={screen === 'checkins' && todayOnly}
             onClick={onToday}
           >
-            Today
+            Day
           </Button>
           <Button
             variant={screen === 'checkins' && !todayOnly ? 'primary' : 'ghost'}
@@ -102,6 +133,44 @@ export function HabitTrackerHeader({
           </Button>
         </details>
       </div>
+      {screen === 'checkins' && todayOnly ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            aria-label="Previous day"
+            onClick={() => {
+              onShiftDay(-1);
+            }}
+          >
+            ‹ Previous
+          </Button>
+          <Button
+            variant="secondary"
+            aria-label="Next day"
+            disabled={nextDayDisabled}
+            onClick={() => {
+              onShiftDay(1);
+            }}
+          >
+            Next ›
+          </Button>
+          {viewingEarlierDay ? (
+            <>
+              <Button variant="primary" onClick={onToday}>
+                Back to today
+              </Button>
+              <Text as="span" variant="caption" tone="muted">
+                Editing an earlier day.
+              </Text>
+            </>
+          ) : null}
+          {missedYesterday > 0 ? (
+            <Button variant="secondary" onClick={onReviewYesterday}>
+              {`Yesterday: ${String(missedYesterday)} not done. Review`}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {screen === 'checkins' && !todayOnly ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button
