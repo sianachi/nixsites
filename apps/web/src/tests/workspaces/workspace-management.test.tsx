@@ -505,6 +505,27 @@ describe('workspace management', () => {
     expect(suggestions()).not.toContain('New Person (new.person@example.com)');
   });
 
+  it('undoes a role change from the Undo bar and counts members', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ members });
+    renderAt(<App />, '/settings');
+
+    expect(await screen.findByText(/2 members/)).toBeVisible();
+    const role = await screen.findByRole('combobox', { name: 'Role for Working editor' });
+    await user.selectOptions(role, 'viewer');
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Role for Working editor' })).toHaveValue(
+        'viewer',
+      );
+    });
+    await user.click(await screen.findByRole('button', { name: /^Undo/ }));
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Role for Working editor' })).toHaveValue(
+        'editor',
+      );
+    });
+  });
+
   it('keeps a failed removal confirmation open and reports the refusal live', async () => {
     const user = userEvent.setup();
     stubCoreApi({ members, memberMutationFails: true });

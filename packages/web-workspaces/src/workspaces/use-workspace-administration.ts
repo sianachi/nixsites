@@ -8,6 +8,7 @@ import {
 } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useUndo } from '@nix/ui';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import type { AssignableRole } from './settings/shared';
 import { useWorkspace } from './workspace-context';
@@ -43,6 +44,7 @@ export interface WorkspaceAdministration {
 
 export function useWorkspaceAdministration(inviteeQuery = ''): WorkspaceAdministration {
   const client = useApiClient();
+  const undo = useUndo();
   const { workspaceId, workspace, reload: reloadWorkspaces, workspaceUpdated } = useWorkspace();
   const [reloadKey, setReloadKey] = useState(0);
   const [membersStatus, setMembersStatus] = useState<LoadStatus>('loading');
@@ -234,34 +236,77 @@ export function useWorkspaceAdministration(inviteeQuery = ''): WorkspaceAdminist
       if (saved) {
         workspaceUpdated(renamed);
         reloadWorkspaces();
+        const previous = workspace.name;
+        undo.push(`Renamed workspace to ${name}`, async () => {
+          const back = await client.execute(coreWorkspaces.renameWorkspace(workspaceId, previous));
+          workspaceUpdated(back);
+          reloadWorkspaces();
+        });
       }
       return saved;
     },
     invite: (principalId, role) => {
       const invitee = invitees.find((candidate) => candidate.principalId === principalId);
       const label = invitee?.displayName ?? 'the selected person';
-      return mutate(
-        (signal) =>
-          client.execute(coreWorkspaces.createInvitation(workspaceId, principalId, role), {
-            signal,
-          }),
-        `${label} was invited. They join when they accept.`,
-      );
+      let created: string | null = null;
+      return mutate(async (signal) => {
+        const invitation = await client.execute(
+          coreWorkspaces.createInvitation(workspaceId, principalId, role),
+          { signal },
+        );
+        created = invitation.id;
+      }, `${label} was invited. They join when they accept.`).then((saved) => {
+        if (saved && created !== null) {
+          const invitationId = created;
+          undo.push(`${label} was invited as ${role}`, async () => {
+            await client.execute(coreWorkspaces.revokeInvitation(workspaceId, invitationId));
+            reload();
+          });
+        }
+        return saved;
+      });
     },
-    revokeInvitation: (invitationId) =>
-      mutate(
+    revokeInvitation: (invitationId) => {
+      const invitation = invitations.find((candidate) => candidate.id === invitationId);
+      return mutate(
         (signal) =>
           client.execute(coreWorkspaces.revokeInvitation(workspaceId, invitationId), { signal }),
         'Invitation revoked.',
-      ),
-    changeRole: (principalId, role) =>
-      mutate(
+      ).then((saved) => {
+        // Re-inviting the same person at the same role is the same server check as inviting.
+        if (saved && invitation?.targetPrincipalId) {
+          const { targetPrincipalId, role, emailNormalized } = invitation;
+          undo.push(`Revoked the invitation for ${emailNormalized}`, async () => {
+            await client.execute(
+              coreWorkspaces.createInvitation(workspaceId, targetPrincipalId, role),
+            );
+            reload();
+          });
+        }
+        return saved;
+      });
+    },
+    changeRole: (principalId, role) => {
+      const member = members.find((candidate) => candidate.subjectId === principalId);
+      return mutate(
         (signal) =>
           client.execute(coreWorkspaces.changeMemberRole(workspaceId, principalId, role), {
             signal,
           }),
         'Member role changed.',
-      ),
+      ).then((saved) => {
+        if (saved && member !== undefined && member.role !== role) {
+          const previous = member.role;
+          undo.push(`Changed ${member.subjectDisplayName} to ${role}`, async () => {
+            await client.execute(
+              coreWorkspaces.changeMemberRole(workspaceId, principalId, previous),
+            );
+            reload();
+          });
+        }
+        return saved;
+      });
+    },
     removeMember: (principalId) =>
       mutate(
         (signal) =>

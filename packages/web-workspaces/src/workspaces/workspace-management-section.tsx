@@ -23,6 +23,7 @@ export function WorkspaceManagementSection({
   const administration = useWorkspaceAdministration(inviteeQuery);
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
   const { mutationNotice, mutationError } = administration;
+  const pendingCount = administration.invitations.filter((i) => i.status === 'pending').length;
 
   // Saves and refusals are said once, by the shell's toasts, not kept in the page.
   useEffect(() => {
@@ -61,6 +62,14 @@ export function WorkspaceManagementSection({
         <section aria-labelledby="workspace-people-heading" className="flex flex-col gap-2">
           <Text id="workspace-people-heading" variant="h4" as="h3">
             People
+            {administration.membersStatus === 'ready' ? (
+              <Text as="span" variant="note" tone="muted">
+                {' · '}
+                {String(administration.members.length)}{' '}
+                {administration.members.length === 1 ? 'member' : 'members'}
+                {pendingCount > 0 ? `, ${String(pendingCount)} invited` : ''}
+              </Text>
+            ) : null}
           </Text>
           {administration.membersStatus === 'error' ||
           administration.membersStatus === 'partial' ||

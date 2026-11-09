@@ -1,4 +1,4 @@
-import { Button, Select, Tag, Text } from '@nix/ui';
+import { Button, Select, Tag, Text, useFlash } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
@@ -52,7 +52,7 @@ export function PeopleList(props: {
       ) : null}
       <ul aria-label="People" className="flex flex-col divide-y divide-divider">
         {administration.members.map((member) => (
-          <li key={`${member.subjectType}:${member.subjectId}`} className={ROW}>
+          <MemberRow key={`${member.subjectType}:${member.subjectId}`} member={member}>
             <Text className="min-w-0 flex-1 basis-40 break-words">{member.subjectDisplayName}</Text>
             <Select
               aria-label={`Role for ${member.subjectDisplayName}`}
@@ -103,7 +103,7 @@ export function PeopleList(props: {
                 Remove
               </Button>
             ) : null}
-          </li>
+          </MemberRow>
         ))}
         {pending.map((invitation) => (
           <li key={invitation.id} className={ROW}>
@@ -124,5 +124,18 @@ export function PeopleList(props: {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** A member row that tints once when the member's role changes. */
+function MemberRow(props: {
+  readonly member: Administration['members'][number];
+  readonly children: ReactNode;
+}): ReactNode {
+  const flash = useFlash(props.member.role);
+  return (
+    <li className={ROW} {...flash}>
+      {props.children}
+    </li>
   );
 }
