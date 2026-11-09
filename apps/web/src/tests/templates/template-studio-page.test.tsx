@@ -92,6 +92,23 @@ describe('the template studio', () => {
     expect(screen.getByText('Content')).toBeVisible();
   });
 
+  it('explains a missing name beside the field and names the destination by the final action', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [SOURCE] });
+    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/templates/new?sourceItem=${SOURCE.id}`);
+
+    const name = await screen.findByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findAllByText('Give this template a name.')).toHaveLength(2);
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+
+    await user.type(name, 'Kit');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Saves to this workspace\u2019s templates')).toBeVisible();
+  });
+
   it('gives both narrow-screen template regions their own bounded scroller', async () => {
     stubCoreApi({ items: [SOURCE] });
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}/templates/new?sourceItem=${SOURCE.id}`);

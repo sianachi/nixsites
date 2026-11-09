@@ -7,6 +7,7 @@ import {
   useSearchParams,
 } from 'react-router';
 
+import { useUndo } from '@nix/ui';
 import { emptyTemplateInitialization, isCanceledError } from '@nix/api-client';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -17,6 +18,7 @@ import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   applyStoredTemplate,
   captureTemplate,
+  deleteTemplate,
   discardTemplateEditDraft,
   preflightTemplate,
   resumeTemplateFileTransfer,
@@ -87,6 +89,7 @@ function TemplateStudio(): ReactNode {
   const targetTitle = itemId === undefined ? null : (tree.find(itemId)?.title ?? 'Current item');
   const client = useApiClient();
   const navigate = useNavigate();
+  const undo = useUndo();
   const [template, setTemplate] = useState<TemplateDetail | null>(null);
   const [editOperation, setEditOperation] = useState<TemplateEditDraft | null>(null);
   const [captureFacts, setCaptureFacts] = useState<CaptureFacts>({ status: 'loading' });
@@ -297,6 +300,10 @@ function TemplateStudio(): ReactNode {
         );
         if (first.fileTransferPending === true) setCopyingFiles(false);
         if (controller.signal.aborted || activeOperation.current !== controller) return;
+        const savedTitle = draft.title.trim();
+        undo.push(`Saved template ${savedTitle}`, async () => {
+          await client.execute(deleteTemplate({ id: first.templateId, workspaceId }));
+        });
         complete(`/w/${workspaceId}/templates`);
         return;
       }
@@ -466,6 +473,11 @@ function TemplateStudio(): ReactNode {
           draft={draft}
           destination={destination}
           targetTitle={targetTitle}
+          nameError={
+            error !== null && mode !== 'apply' && draft.title.trim().length === 0
+              ? 'Give this template a name.'
+              : null
+          }
           initialization={template?.initialization ?? null}
           itemOptions={tree.items}
           onChange={(next) => {

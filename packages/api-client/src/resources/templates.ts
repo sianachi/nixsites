@@ -77,7 +77,9 @@ export const templateItemById = (
     cacheKey: [...templateKey(templateId), 'items', sourceId],
   });
 
-export const deleteTemplate = (template: TemplateSummary): CommandEndpoint<undefined> =>
+export const deleteTemplate = (
+  template: Pick<TemplateSummary, 'id' | 'workspaceId'>,
+): CommandEndpoint<undefined> =>
   defineCommand({
     operation: 'templates.delete',
     method: 'DELETE',

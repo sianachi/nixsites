@@ -197,6 +197,13 @@ export function TemplateStudioShell({
               {error}
             </Text>
           )}
+          {step === TEMPLATE_STUDIO_STEPS.length - 1 ? (
+            <Text variant="caption" tone="muted">
+              {mode === 'capture' || mode === 'edit'
+                ? 'Saves to this workspace\u2019s templates'
+                : `Destination: ${destination}`}
+            </Text>
+          ) : null}
           <div className="flex items-center justify-between gap-2">
             {step > 0 ? (
               <Button variant="secondary" disabled={working} onClick={onBack}>

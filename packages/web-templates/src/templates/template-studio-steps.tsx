@@ -19,6 +19,7 @@ export function Basics({
   draft,
   destination,
   targetTitle,
+  nameError,
   initialization,
   itemOptions,
   onChange,
@@ -27,6 +28,7 @@ export function Basics({
   readonly draft: TemplateDraft;
   readonly destination: string;
   readonly targetTitle: string | null;
+  readonly nameError: string | null;
   readonly initialization: TemplateInitialization | null;
   readonly itemOptions: readonly TreeItem[];
   readonly onChange: (draft: TemplateDraft) => void;
@@ -62,7 +64,7 @@ export function Basics({
           {mode === 'create' ? `Creating in ${destination}` : 'Shown in the New menu.'}
         </Text>
       </div>
-      <Field label="Name">
+      <Field label="Name" error={nameError}>
         {(control) => (
           <Input
             {...control}

@@ -128,22 +128,7 @@ describe('the templates resource', () => {
   });
 
   it('invalidates both detail and catalog after deletion', () => {
-    const endpoint = deleteTemplate({
-      id: TEMPLATE_ID,
-      workspaceId: WORKSPACE_ID,
-      title: 'Delivery board',
-      description: null,
-      origin: 'user',
-      revision: 1,
-      includeBody: false,
-      includeChildren: false,
-      fieldCount: 0,
-      viewCount: 0,
-      childCount: 0,
-      viewKinds: [],
-      capabilities: { canEdit: true, canDelete: true, canExport: true, canApply: true },
-      updatedAt: '2026-08-17T09:00:00+00:00',
-    });
+    const endpoint = deleteTemplate({ id: TEMPLATE_ID, workspaceId: WORKSPACE_ID });
 
     expect(endpoint.invalidates).toEqual([
       templateKey(TEMPLATE_ID),

@@ -1,4 +1,4 @@
-import { Blueprint, Tag, Text } from '@nix/ui';
+import { Blueprint, Tag, Text, useFlash } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 import type { TemplateDetail, TemplatePreflight } from './template-api';
@@ -268,8 +268,10 @@ export function TemplateFact({
   readonly label: string;
   readonly value: string;
 }): ReactNode {
+  // Tint once when the value changes, so ticking an include option visibly lands in the preview.
+  const flash = useFlash(value);
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+    <div {...flash} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
       <Text variant="caption" tone="muted">
         {label}
       </Text>
