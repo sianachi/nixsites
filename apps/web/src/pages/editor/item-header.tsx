@@ -1,4 +1,4 @@
-import { Button, Text, focusRing } from '@nix/ui';
+import { Button, Text, focusRing, useFlash, useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { noteColumn } from '@nix/web-foundation/layout/regions';
@@ -38,6 +38,30 @@ export function ItemHeader({
   // leave the previous note's name in the field, and the next blur would save it onto the new one.
   const [draft, setDraft] = useState(title);
   const titleRef = useRef<HTMLInputElement>(null);
+  const cancelled = useRef(false);
+  const [needsTitle, setNeedsTitle] = useState(false);
+  const undo = useUndo();
+  const flash = useFlash(title);
+
+  function commitTitle(): void {
+    if (cancelled.current) {
+      cancelled.current = false;
+      return;
+    }
+    const next = draft.trim();
+    if (!next) {
+      // An empty name would leave the item unfindable: keep the old one and say why.
+      setDraft(title);
+      setNeedsTitle(true);
+      return;
+    }
+    if (next === title) {
+      setDraft(title);
+      return;
+    }
+    void tree.rename(itemId, next);
+    undo.push(`Renamed "${title}" to "${next}"`, () => tree.rename(itemId, title));
+  }
 
   // A freshly created item arrives called "Untitled note" and the next thing anybody does is name
   // it. Selecting the placeholder means that is one keystroke rather than a click, a select-all and
@@ -99,28 +123,46 @@ export function ItemHeader({
         ) : null}
 
         <div className="flex items-center gap-2">
-          <input
-            ref={titleRef}
-            aria-label={`${bodyKind === 'canvas' ? 'Canvas' : bodyKind === 'spreadsheet' ? 'Spreadsheet' : 'Note'} title`}
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              onCommit();
-            }}
-            onBlur={() => {
+          <div className="flex min-w-0 flex-1 flex-col" {...flash}>
+            <input
+              ref={titleRef}
+              aria-label={`${bodyKind === 'canvas' ? 'Canvas' : bodyKind === 'spreadsheet' ? 'Spreadsheet' : 'Note'} title`}
+              value={draft}
+              placeholder="Untitled"
+              title="Rename"
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setNeedsTitle(false);
+                onCommit();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                } else if (event.key === 'Escape') {
+                  event.stopPropagation();
+                  cancelled.current = true;
+                  setDraft(title);
+                  event.currentTarget.blur();
+                }
+              }}
               // On blur rather than on every keystroke: a rename is a write to the item row, and one
               // per character would be a request per character.
-              if (draft !== title) {
-                void tree.rename(itemId, draft);
-              }
-            }}
-            // No `outline-none` beside the ring. In Tailwind v4 that utility sets `--tw-outline-style:
-            // none` on the element, and `focus-visible:outline-2` resolves its style through the same
-            // variable - so the two together left the field that renames an item with no visible focus
-            // at all. `focusRing` replaces the UA outline rather than removing it, which is the whole
-            // point of the primitive.
-            className={`min-h-(--control-sm) min-w-0 flex-1 bg-transparent font-heading text-lg font-semibold leading-snug sm:text-xl ${focusRing}`}
-          />
+              onBlur={commitTitle}
+              // No `outline-none` beside the ring. In Tailwind v4 that utility sets `--tw-outline-style:
+              // none` on the element, and `focus-visible:outline-2` resolves its style through the same
+              // variable - so the two together left the field that renames an item with no visible focus
+              // at all. `focusRing` replaces the UA outline rather than removing it, which is the whole
+              // point of the primitive.
+              className={`min-h-(--control-sm) min-w-0 flex-1 bg-transparent font-heading text-lg font-semibold leading-snug sm:text-xl ${focusRing}`}
+            />
+            {needsTitle ? (
+              <span role="status">
+                <Text as="span" variant="caption" className="text-danger">
+                  A note needs a title
+                </Text>
+              </span>
+            ) : null}
+          </div>
           {trailing}
         </div>
       </div>
