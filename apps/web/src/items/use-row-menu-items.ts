@@ -16,6 +16,7 @@ import {
   Columns2,
   ExternalLink,
   FileText,
+  FolderInput,
   FolderLock,
   FolderPlus,
   FolderUp,
@@ -48,6 +49,7 @@ interface RowMenuArgs {
   readonly onSharePublicLink: (item: TreeItem) => void;
   readonly openButtonRef: RefObject<HTMLButtonElement | null>;
   readonly moveToRoot: () => void;
+  readonly onMoveItem: (itemId: string) => void;
 }
 
 /**
@@ -70,6 +72,7 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
     onSharePublicLink,
     openButtonRef,
     moveToRoot,
+    onMoveItem,
   } = args;
   const { workspaceId } = useWorkspace();
   const { publicLinks } = useCapabilities();
@@ -170,6 +173,14 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
         : []),
       ...(automateEntry === null ? [] : [automateEntry(item.id)]),
       ...(muteRemindersEntry === null ? [] : [muteRemindersEntry(item.id, title)]),
+      {
+        kind: 'action',
+        label: 'Move to…',
+        icon: FolderInput,
+        onSelect: () => {
+          onMoveItem(item.id);
+        },
+      },
       ...(item.parentId === null
         ? []
         : [

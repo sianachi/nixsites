@@ -217,7 +217,7 @@ describe('deleting an item', () => {
     });
   });
 
-  it('names what it deleted in a toast that offers Undo', async () => {
+  it('names what it deleted in the undo bar', async () => {
     const user = deleteUser();
     const LEAF = item({ id: '4a4a4a4a-4444-4444-8444-4a4a4a4a4a4a', title: 'Notes' });
     stubCoreApi({ items: [LEAF] });
@@ -226,7 +226,7 @@ describe('deleting an item', () => {
     await screen.findByRole('button', { name: 'Notes' });
     await user.click(screen.getByRole('button', { name: /delete notes/i }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Deleted "Notes".');
+    expect(await screen.findByRole('status')).toHaveTextContent('Deleted "Notes"');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
   });
 
@@ -244,7 +244,7 @@ describe('deleting an item', () => {
     await user.click(screen.getByRole('button', { name: /delete engineering/i }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Deleted "Engineering" and everything inside it.',
+      'Deleted "Engineering" and everything inside it',
     );
   });
 
@@ -273,13 +273,10 @@ describe('deleting an item', () => {
     await screen.findByRole('status');
     await user.click(screen.getByRole('button', { name: 'Undo' }));
 
-    // The toast that offered Undo dismisses the instant it is pressed, before the restore could
+    // The undo bar says "Undid: ..." the instant Undo is pressed, before the restore could
     // possibly have failed - so a fresh notice, in the item's own name, is what says the attempt
-    // did not work. Without it the item would simply stay gone, with nothing beyond the tree's
-    // own easy-to-miss foot-of-sidebar alert to explain why Undo did not bring it back.
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      '"Engineering" could not be restored.',
-    );
+    // did not work.
+    expect(await screen.findByText('"Engineering" could not be restored.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Engineering' })).not.toBeInTheDocument();
   });
 
@@ -299,9 +296,7 @@ describe('deleting an item', () => {
     // reaching back in and taking focus again - the exact bug already fixed once for the primary
     // deletion toast, reproduced one step later if this one also auto-focused on mount.
     const focusedOnceUndoSettled = document.activeElement;
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      '"Engineering" could not be restored.',
-    );
+    expect(await screen.findByText('"Engineering" could not be restored.')).toBeInTheDocument();
     expect(document.activeElement).toBe(focusedOnceUndoSettled);
     expect(screen.getByRole('button', { name: 'Dismiss' })).not.toHaveFocus();
   });
@@ -322,10 +317,10 @@ describe('deleting an item', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Engineering' })).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
   });
 
-  it('leaves the deletion standing once the undo window times out', async () => {
+  it('keeps Undo available after the message fades', async () => {
     const user = deleteUser();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
@@ -340,11 +335,12 @@ describe('deleting an item', () => {
       await vi.advanceTimersByTimeAsync(8000);
     });
 
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    // The sentence fades; the Undo button stays for as long as there is history.
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Engineering' })).not.toBeInTheDocument();
   });
 
-  it('keeps two pending deletions on screen at once, rather than the second discarding the first', async () => {
+  it('undoes two deletions in a row, newest first, from one Undo button or Ctrl+Z', async () => {
     const ALPHA = item({ id: '3a3a3a3a-3333-4333-8333-3a3a3a3a3a3a', title: 'Alpha' });
     const BRAVO = item({ id: '3b3b3b3b-3333-4333-8333-3b3b3b3b3b3b', title: 'Bravo' });
     const user = deleteUser();
@@ -353,88 +349,19 @@ describe('deleting an item', () => {
 
     await screen.findByRole('button', { name: 'Alpha' });
     await user.click(screen.getByRole('button', { name: /delete alpha/i }));
-
-    // Waited for explicitly rather than assuming `await user.click()` alone settles it: the
-    // delete this button starts is `async` and un-awaited by its own click handler (see
-    // `app-shell.tsx`'s `requestDelete`), so nothing but the toast actually appearing guarantees
-    // its whole chain - the request, the state update, the mount-focus effect - has finished
-    // before the next line runs. Without this, the second click below can race the first
-    // deletion's own settling under a loaded test run.
-    await screen.findByRole('status');
-
+    await screen.findByText('Deleted "Alpha"');
     await user.click(screen.getByRole('button', { name: /delete bravo/i }));
-    await waitFor(() => {
-      expect(screen.getAllByRole('status')).toHaveLength(2);
-    });
+    await screen.findByText('Deleted "Bravo"');
 
-    // Both toasts are up: a second deletion arriving while the first's undo window is still open
-    // no longer discards it - only a third deletion would (see the next test).
-    const statuses = screen.getAllByRole('status');
-    expect(statuses[0]).toHaveTextContent('Deleted "Alpha".');
-    expect(statuses[1]).toHaveTextContent('Deleted "Bravo".');
-
-    // The newer toast is a genuinely fresh mount, not the older one's message swapped in place -
-    // it gets its own mount-focus effect, landing focus on its own Undo rather than leaving focus
-    // wherever the first toast happened to put it.
-    await waitFor(() => {
-      const undoButtons = screen.getAllByRole('button', { name: 'Undo' });
-      expect(undoButtons[1]).toHaveFocus();
-    });
-
-    const [firstUndo] = screen.getAllByRole('button', { name: 'Undo' });
-    if (firstUndo === undefined) {
-      throw new Error('expected two Undo buttons');
-    }
-
-    await user.click(firstUndo);
-    expect(await screen.findByRole('button', { name: 'Alpha' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    await user.click(screen.getByRole('button', { name: 'Undo (2)' }));
     expect(await screen.findByRole('button', { name: 'Bravo' })).toBeInTheDocument();
-  });
+    // One entry left (the stub's listing hands every item back, so presence of Alpha proves nothing).
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeInTheDocument();
 
-  it('evicts only the oldest pending deletion once a third arrives', async () => {
-    const ALPHA = item({ id: '3a3a3a3a-3333-4333-8333-3a3a3a3a3a3a', title: 'Alpha' });
-    const BRAVO = item({ id: '3b3b3b3b-3333-4333-8333-3b3b3b3b3b3b', title: 'Bravo' });
-    const CHARLIE = item({ id: '3c3c3c3c-3333-4333-8333-3c3c3c3c3c3c', title: 'Charlie' });
-    const user = deleteUser();
-    stubCoreApi({ items: [ALPHA, BRAVO, CHARLIE] });
-    renderAt(<App />);
-
-    await screen.findByRole('button', { name: 'Alpha' });
-
-    // Each delete is awaited to settle - via the toast it produces actually appearing - before
-    // the next one fires, for the same reason the previous test does: the delete each of these
-    // buttons starts is `async` and un-awaited by its own click handler (`app-shell.tsx`'s
-    // `requestDelete`), so only the toast's own appearance guarantees its whole chain has
-    // finished, and without waiting the clicks below can race each other's settling under a
-    // loaded test run.
-    await user.click(screen.getByRole('button', { name: /delete alpha/i }));
-    await screen.findByText('Deleted "Alpha".');
-
-    await user.click(screen.getByRole('button', { name: /delete bravo/i }));
-    await screen.findByText('Deleted "Bravo".');
-
-    await user.click(screen.getByRole('button', { name: /delete charlie/i }));
+    await user.keyboard('{Control>}z{/Control}');
+    expect(await screen.findByRole('button', { name: 'Alpha' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getAllByRole('status')).toHaveLength(2);
+      expect(screen.queryByRole('button', { name: /^Undo/ })).not.toBeInTheDocument();
     });
-
-    // Alpha's undo window is the one that has been on screen the longest, so it is the one a
-    // third deletion in a row costs.
-    expect(screen.queryByText('Deleted "Alpha".')).not.toBeInTheDocument();
-    expect(screen.getByText('Deleted "Bravo".')).toBeInTheDocument();
-    expect(screen.getByText('Deleted "Charlie".')).toBeInTheDocument();
-
-    // Charlie's toast is a fresh mount taking the slot Alpha's toast is evicted from, not Bravo's
-    // toast merely relabelled in place - so it is the one holding focus, on its own Undo.
-    await waitFor(() => {
-      const undoButtons = screen.getAllByRole('button', { name: 'Undo' });
-      expect(undoButtons[1]).toHaveFocus();
-    });
-
-    // Alpha is not lost - it is a soft delete, exactly as it was before this toast existed, only
-    // no longer undoable from here.
-    expect(screen.queryByRole('button', { name: 'Alpha' })).not.toBeInTheDocument();
   });
 });

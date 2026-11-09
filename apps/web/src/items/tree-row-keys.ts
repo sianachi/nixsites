@@ -1,12 +1,22 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
-import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
+import type {
+  MutationOutcome,
+  TreeItem,
+  WorkspaceTree,
+} from '@nix/web-collections/items/use-workspace-tree';
 import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';
 import { siblingMoveTarget } from './sibling-move-target';
 
 interface RowKeyArgs {
   readonly item: TreeItem;
   readonly tree: WorkspaceTree;
+  /** The undoable move (`useUndoableMove`). */
+  readonly move: (
+    itemId: string,
+    parentId: string | null,
+    afterId: string | null,
+  ) => Promise<MutationOutcome>;
   readonly siblings: readonly TreeItem[];
   readonly index: number;
   readonly canOpenBeside: boolean;
@@ -23,7 +33,7 @@ interface RowKeyArgs {
  * drag can produce.
  */
 export function handleRowMoveKey(event: ReactKeyboardEvent<HTMLElement>, args: RowKeyArgs): void {
-  const { item, tree, siblings, index, canOpenBeside, besideRefusal, onOpenBeside } = args;
+  const { item, tree, move, siblings, index, canOpenBeside, besideRefusal, onOpenBeside } = args;
   const previous = index > 0 ? siblings[index - 1] : undefined;
   const next = index >= 0 ? siblings[index + 1] : undefined;
 
@@ -49,13 +59,13 @@ export function handleRowMoveKey(event: ReactKeyboardEvent<HTMLElement>, args: R
   if (event.key === 'ArrowUp' && previous !== undefined) {
     event.preventDefault();
     // Before the sibling above, which is after the one above that.
-    void tree.move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'up'));
+    void move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'up'));
     return;
   }
 
   if (event.key === 'ArrowDown' && next !== undefined) {
     event.preventDefault();
-    void tree.move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'down'));
+    void move(item.id, item.parentId, siblingMoveTarget(siblings, index, 'down'));
     return;
   }
 
@@ -63,13 +73,13 @@ export function handleRowMoveKey(event: ReactKeyboardEvent<HTMLElement>, args: R
     event.preventDefault();
     // Inside the sibling above, which is the only unambiguous "indent": the item below cannot
     // take it without reordering them both.
-    void tree.move(item.id, previous.id, null);
+    void move(item.id, previous.id, null);
     return;
   }
 
   if (event.key === 'ArrowLeft' && item.parentId !== null) {
     event.preventDefault();
     const parent = tree.find(item.parentId);
-    void tree.move(item.id, parent?.parentId ?? null, item.parentId);
+    void move(item.id, parent?.parentId ?? null, item.parentId);
   }
 }

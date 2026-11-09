@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -211,5 +211,25 @@ describe('moving an item to the workspace root', () => {
     await waitFor(() => {
       expect(move).toHaveBeenCalledWith(child.id, null, ROOT_B.id);
     });
+  });
+});
+
+describe('moving an item without dragging or keys', () => {
+  it('offers a labelled Move to… control on each row that opens the destination dialog', async () => {
+    const user = userEvent.setup();
+    renderSidebar(treeOf(vi.fn(() => Promise.resolve({ refusal: null }))));
+
+    await user.click(screen.getByRole('button', { name: 'Move Second to…' }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('offers a drop target for the top level only while a row is being dragged', () => {
+    renderSidebar(treeOf(vi.fn(() => Promise.resolve({ refusal: null }))));
+    expect(screen.queryByText('Drop here to move to the top level')).not.toBeInTheDocument();
+
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Second' }));
+
+    expect(screen.getByText('Drop here to move to the top level')).toBeInTheDocument();
   });
 });

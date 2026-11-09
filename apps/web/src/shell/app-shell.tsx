@@ -12,7 +12,7 @@ import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
 import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
 import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 import { useRememberLocation } from '@nix/web-platform/pwa/use-remember-location';
-import { focusRing } from '@nix/ui';
+import { focusRing, useUndo } from '@nix/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router';
@@ -290,6 +290,7 @@ export function AppShell(): ReactNode {
   const treeRegionRef = useRef<HTMLDivElement>(null);
 
   const shellToasts = useShellToasts();
+  const undo = useUndo();
   // Passing notices from anywhere in the workspace - a copied link, closed tabs - shown once,
   // here, as a toast for sighted readers and through the live region for everyone else.
   const pushToast = shellToasts.push;
@@ -379,18 +380,14 @@ export function AppShell(): ReactNode {
       return;
     }
 
-    shellToasts.push({
-      key: item.id,
-      message: item.hasChildren
-        ? `Deleted "${title}" and everything inside it.`
-        : `Deleted "${title}".`,
-      action: {
-        label: 'Undo',
-        onAction: () => {
-          void undoDeletion(item.id, title);
-        },
-      },
-    });
+    // Focus goes to the tree region: the row that held it is gone.
+    treeRegionRef.current?.focus();
+    // The shared undo history, not a toast of its own: one Undo (button and Ctrl/Cmd+Z) for every
+    // reversible action, newest first.
+    undo.push(
+      item.hasChildren ? `Deleted "${title}" and everything inside it` : `Deleted "${title}"`,
+      () => undoDeletion(item.id, title),
+    );
   }
 
   /**
@@ -401,20 +398,16 @@ export function AppShell(): ReactNode {
   async function requestDeleteMany(items: readonly TreeItem[]): Promise<readonly string[]> {
     const outcome = await executeBulkDelete(tree, items);
     if (outcome.deleted.length === 0 && outcome.failed.length === 0) return [];
-    shellToasts.push({
-      key: `bulk-delete-${items.map((item) => item.id).join('-')}`,
-      message: describeBulkDelete(outcome),
-      ...(outcome.deleted.length === 0
-        ? {}
-        : {
-            action: {
-              label: 'Undo',
-              onAction: () => {
-                void undoBulkDeletion(outcome.deleted);
-              },
-            },
-          }),
-    });
+    treeRegionRef.current?.focus();
+    const summary = describeBulkDelete(outcome);
+    if (outcome.deleted.length > 0) undo.push(summary, () => undoBulkDeletion(outcome.deleted));
+    // A failure is a notice of its own: the undo bar's sentence fades after a few seconds.
+    if (outcome.failed.length > 0) {
+      shellToasts.push({
+        key: `bulk-delete-${items.map((item) => item.id).join('-')}`,
+        message: summary,
+      });
+    }
     return outcome.deleted.map((item) => item.id);
   }
 

@@ -1,11 +1,16 @@
 import { useState, type DragEvent, type HTMLAttributes } from 'react';
-import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
+import type { MutationOutcome, TreeItem } from '@nix/web-collections/items/use-workspace-tree';
 import { collectDropped } from './drop-upload';
 import { dropZoneAt, type DropZone } from './tree-geometry';
 
 interface RowDragDropArgs {
   readonly item: TreeItem;
-  readonly tree: WorkspaceTree;
+  /** The undoable move (`useUndoableMove`). */
+  readonly move: (
+    itemId: string,
+    parentId: string | null,
+    afterId: string | null,
+  ) => Promise<MutationOutcome>;
   /** The sibling above, for a drop on the row's bottom edge that lands "before" it. */
   readonly previousId: string | null;
   readonly dragged: string | null;
@@ -21,7 +26,7 @@ interface RowDragDrop {
 }
 
 export function useRowDragDrop(args: RowDragDropArgs): RowDragDrop {
-  const { item, tree, previousId, dragged, setDragged, onDropFiles } = args;
+  const { item, move, previousId, dragged, setDragged, onDropFiles } = args;
   const [zone, setZone] = useState<DropZone | null>(null);
   const dropping = zone !== null && dragged !== item.id;
 
@@ -54,8 +59,8 @@ export function useRowDragDrop(args: RowDragDropArgs): RowDragDrop {
     // The server refuses an item dropped into its own subtree, so the one gesture that could break
     // the tree is the one it will not perform.
     void (landing === 'inside'
-      ? tree.move(dragged, item.id, null)
-      : tree.move(dragged, item.parentId, landing === 'after' ? item.id : previousId));
+      ? move(dragged, item.id, null)
+      : move(dragged, item.parentId, landing === 'after' ? item.id : previousId));
 
     setDragged(null);
   }

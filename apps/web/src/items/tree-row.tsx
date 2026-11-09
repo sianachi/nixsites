@@ -12,7 +12,9 @@ import {
   ChevronRight,
   Columns2,
   FolderLock,
+  FolderInput,
   FolderUp,
+  GripVertical,
   MoreHorizontal,
   Shield,
   Trash2,
@@ -54,6 +56,9 @@ interface TreeRowProps {
   readonly onOpenPinned: (itemId: string) => void;
   readonly onDeleteItem: (item: TreeItem) => void;
   readonly moveToRoot: () => void;
+  readonly onMoveItem: (itemId: string) => void;
+  /** `data-flash` from `useFlash`: tints the row once after a move or a create. */
+  readonly flashProps: { readonly 'data-flash'?: 'a' | 'b' };
   readonly contextItems: () => MenuEntry[];
 }
 
@@ -81,6 +86,8 @@ export function TreeRow(props: TreeRowProps): ReactNode {
     onOpenPinned,
     onDeleteItem,
     moveToRoot,
+    onMoveItem,
+    flashProps,
     contextItems,
   } = props;
   // A selector rather than the whole store, so a row re-renders when its own answer moves and not
@@ -93,8 +100,9 @@ export function TreeRow(props: TreeRowProps): ReactNode {
     <div
       {...contextTarget}
       {...dragProps}
+      {...flashProps}
       className={[
-        'group relative flex items-center gap-1 rounded-md pr-1',
+        'group relative flex cursor-grab items-center gap-1 rounded-md pr-1 active:cursor-grabbing',
         indentAt(ROW_INDENT, depth),
         selected ? 'bg-accent/14' : inSelection ? 'bg-accent/10' : 'hover:bg-accent/8',
         dropping && zone === 'inside' ? 'outline-2 -outline-offset-2 outline-accent' : '',
@@ -174,6 +182,15 @@ export function TreeRow(props: TreeRowProps): ReactNode {
         ) : null}
       </button>
 
+      {/* The drag handle's picture: the whole row drags, this says so. Shown on hover and focus, and
+            always on touch where there is no hover; "Move to..." does the same without dragging. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none flex shrink-0 text-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
+      >
+        <Icon icon={GripVertical} size="sm" />
+      </span>
+
       {/* Beside Delete, in the row's own established grammar: revealed on hover, always
             reachable by keyboard - and, below `sm`, always visible and at the 28px control size
             rather than 20px, because touch has no hover to reveal a hidden control with, and a
@@ -230,6 +247,19 @@ export function TreeRow(props: TreeRowProps): ReactNode {
         title={item.title}
         className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-lg) ${keptIds.has(item.id) ? 'opacity-100 pointer-events-auto' : 'sm:pointer-coarse:hidden'} ${focusRing}`}
       />
+
+      {/* The labelled equivalent of dragging: pick a place and a position in a dialog. */}
+      <button
+        type="button"
+        data-context-menu-ignore
+        aria-label={`Move ${item.title || 'Untitled'} to…`}
+        onClick={() => {
+          onMoveItem(item.id);
+        }}
+        className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-sm) in-data-[layout=touch]:size-(--control-md)! sm:pointer-coarse:hidden ${focusRing}`}
+      >
+        <Icon icon={FolderInput} size="sm" />
+      </button>
 
       {/* A direct escape from nesting. Dragging beside a root or pressing Alt+Left once per
             ancestor still works, but neither is a reasonable requirement for the common outcome

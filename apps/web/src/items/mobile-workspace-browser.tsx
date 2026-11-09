@@ -1,12 +1,25 @@
 import { treeChildrenEntry } from '@nix/web-collections/items/item-menu-entries';
 import { Button, ContextMenu, Icon, Menu, Text, type MenuEntry } from '@nix/ui';
-import { ArrowLeft, ChevronRight, EyeOff, MoreHorizontal, Shapes, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  EyeOff,
+  FolderInput,
+  FolderUp,
+  MoreHorizontal,
+  Shapes,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
+import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
+import { MobileItemMove } from './mobile-item-move';
+import { useUndoableMove } from './use-undoable-move';
 
 export function MobileWorkspaceBrowser({
   tree,
@@ -24,6 +37,9 @@ export function MobileWorkspaceBrowser({
   readonly destinations: ReactNode;
 }): ReactNode {
   const visibility = useHiddenItems();
+  const commands = useOptionalItemCommands();
+  const move = useUndoableMove(tree);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const treeChildren = useHiddenItems('tree-children');
   const landmarks = useItemLandmarks();
   const iconReturnFocus = useRef<HTMLButtonElement | null>(null);
@@ -99,6 +115,26 @@ export function MobileWorkspaceBrowser({
       >
         {visible.map((item) => {
           const actions: MenuEntry[] = [
+            {
+              kind: 'action',
+              label: 'Move to…',
+              icon: FolderInput,
+              onSelect: () => {
+                setMovingId(item.id);
+              },
+            },
+            ...(item.parentId === null
+              ? []
+              : [
+                  {
+                    kind: 'action' as const,
+                    label: 'Move to top level',
+                    icon: FolderUp,
+                    onSelect: () => {
+                      void move(item.id, null, tree.childrenOf(null).at(-1)?.id ?? null);
+                    },
+                  },
+                ]),
             treeChildrenEntry(treeChildren, item.id, item.title),
             ...(landmarks.enabled
               ? [
@@ -124,6 +160,19 @@ export function MobileWorkspaceBrowser({
                 visibility.hide(item.id, item.title);
               },
             },
+            ...(commands === null || item.noDelete === true
+              ? []
+              : [
+                  {
+                    kind: 'action' as const,
+                    label: 'Delete',
+                    icon: Trash2,
+                    destructive: true,
+                    onSelect: () => {
+                      commands.deleteItem(item);
+                    },
+                  },
+                ]),
           ];
           return (
             <div key={item.id} className="flex min-w-0 items-center gap-1 rounded-md">
@@ -225,6 +274,15 @@ export function MobileWorkspaceBrowser({
           <Icon icon={X} size="sm" />
         </Button>
       </div>
+      {movingId === null ? null : (
+        <MobileItemMove
+          itemId={movingId}
+          tree={tree}
+          onClose={() => {
+            setMovingId(null);
+          }}
+        />
+      )}
       {iconItem?.scope !== landmarks.scope ? null : (
         <ItemLandmarkDialog
           key={`${landmarks.scope ?? ''}:${iconItem.id}`}

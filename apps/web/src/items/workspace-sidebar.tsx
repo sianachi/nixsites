@@ -1,5 +1,16 @@
 import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
-import { Button, ContextMenu, Skeleton, chromeSurface, Icon, Text, cn, focusRing } from '@nix/ui';
+import {
+  Button,
+  ContextMenu,
+  Skeleton,
+  chromeSurface,
+  Icon,
+  Text,
+  cn,
+  focusRing,
+  useFlash,
+  useUndo,
+} from '@nix/ui';
 import { files as fileResources, isNixApiError, items as coreItems } from '@nix/api-client';
 import { collectDropped, uploadEntries } from './drop-upload';
 import { FilePlus, LayoutGrid, MessageSquare, Upload, type LucideIcon } from 'lucide-react';
@@ -13,13 +24,14 @@ import { type OpenBesideRefusal } from '../tabs/use-open-item';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
 import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
-import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';
 import { TreeRow } from './tree-row';
 import { handleRowMoveKey } from './tree-row-keys';
 import { useRowDragDrop } from './use-row-drag-drop';
 import { useRowMenuItems } from './use-row-menu-items';
+import { MobileItemMove } from './mobile-item-move';
+import { useUndoableMove } from './use-undoable-move';
 import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import {
   ItemSelectionContext,
@@ -122,6 +134,14 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   } = props;
   const [dragged, setDragged] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The row that just moved or was created, tinted once where it landed (`useFlash` in the row).
+  const [flashed, setFlashed] = useState<{ readonly id: string; readonly n: number } | null>(null);
+  const flash = (id: string): void => {
+    setFlashed((current) => ({ id, n: (current?.n ?? 0) + 1 }));
+  };
+  // "Move to..." for one row: the destination-then-position dialog the phone already uses.
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const undo = useUndo();
   // Several rows at once (requirement 7): Shift+click or the row menu's Select, then one move.
   const selection = useItemSelection();
   const commands = useOptionalItemCommands();
@@ -256,6 +276,14 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     // people end up with six items called "Untitled note".
     if (created !== null) {
       onSelect(created);
+      flash(created);
+      const parent = parentId === null ? null : tree.find(parentId);
+      undo.push(
+        `Created "${title}"${parent === null ? '' : ` in "${parent.title || 'Untitled'}"`}`,
+        async () => {
+          await tree.remove(created);
+        },
+      );
     }
   }
 
@@ -389,6 +417,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
               void uploadFiles(dropped, parentId);
             }}
             onDeleteItem={onDeleteItem}
+            flashed={flashed}
+            onFlash={flash}
+            onMoveItem={setMovingId}
             landmarks={landmarks.landmarks}
             onSharePublicLink={(item) => {
               setSharing({ id: item.id, title: item.title || 'Untitled' });
@@ -419,6 +450,16 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
             {tree.error}
           </Text>
         </div>
+      )}
+      {movingId === null ? null : (
+        <MobileItemMove
+          itemId={movingId}
+          tree={tree}
+          onMoved={flash}
+          onClose={() => {
+            setMovingId(null);
+          }}
+        />
       )}
       {sharing === null ? null : (
         <SharePublicLinkDialog
@@ -562,6 +603,10 @@ interface TreeBodyProps {
 
   /** Deletes an item and starts its undo window. */
   readonly onDeleteItem: (item: TreeItem) => void;
+  /** The row to tint now, and how to name one (after a move or a create). */
+  readonly flashed: { readonly id: string; readonly n: number } | null;
+  readonly onFlash: (itemId: string) => void;
+  readonly onMoveItem: (itemId: string) => void;
   readonly landmarks: ItemLandmarks;
   readonly onChooseIcon: ((item: TreeItem, invoker: HTMLElement | null) => void) | undefined;
   readonly onSharePublicLink: (item: TreeItem) => void;
@@ -571,8 +616,10 @@ interface TreeBodyProps {
 const TREE_SKELETON_WIDTHS = ['w-3/4', 'w-1/2', 'w-2/3', 'w-5/12', 'w-3/5'] as const;
 
 function TreeBody(props: TreeBodyProps): ReactNode {
-  const { tree } = props;
+  const { tree, dragged, setDragged } = props;
   const visibility = useHiddenItems();
+  const move = useUndoableMove(tree, props.onFlash);
+  const [overTop, setOverTop] = useState(false);
 
   if (tree.status === 'loading') {
     // Rows in the positions the tree will take, so the sidebar fills in rather than appearing.
@@ -621,6 +668,34 @@ function TreeBody(props: TreeBodyProps): ReactNode {
       {roots.map((item) => (
         <TreeNode key={item.id} item={item} depth={0} {...props} />
       ))}
+      {/* Only while an item is being dragged: the way to the top level without a sibling to aim at. */}
+      {dragged === null ? null : (
+        <li
+          role="presentation"
+          onDragOver={(event) => {
+            event.preventDefault();
+            setOverTop(true);
+          }}
+          onDragLeave={() => {
+            setOverTop(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setOverTop(false);
+            const last = tree.childrenOf(null).filter((item) => item.id !== dragged);
+            void move(dragged, null, last.at(-1)?.id ?? null);
+            setDragged(null);
+          }}
+          className={cn(
+            'mx-1 mt-3 rounded-md border border-dashed border-divider px-3 py-3 text-center',
+            overTop && 'border-accent bg-accent/10',
+          )}
+        >
+          <Text variant="caption" tone="muted">
+            Drop here to move to the top level
+          </Text>
+        </li>
+      )}
     </ul>
   );
 }
@@ -654,7 +729,12 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     setDragged,
     onDropFiles,
     onDeleteItem,
+    flashed,
+    onFlash,
+    onMoveItem,
   } = props;
+  const move = useUndoableMove(tree, onFlash);
+  const flashProps = useFlash(flashed?.id === item.id ? flashed.n : null);
 
   // Loading/revealing children must not opt the sidebar into showing them.
   const [expanded, setExpanded] = useState(false);
@@ -674,7 +754,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
   const index = siblings.findIndex((sibling) => sibling.id === item.id);
   const { zone, dropping, dragProps } = useRowDragDrop({
     item,
-    tree,
+    move,
     previousId: index > 0 ? (siblings[index - 1]?.id ?? null) : null,
     dragged,
     setDragged,
@@ -690,10 +770,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
    */
   function moveToRoot(): void {
     const lastRoot = tree.childrenOf(null).at(-1);
-    void tree.move(item.id, null, lastRoot?.id ?? null).then((outcome) => {
-      if (outcome.refusal !== null)
-        publishNotice({ key: 'move-refused', message: outcome.refusal });
-    });
+    void move(item.id, null, lastRoot?.id ?? null);
   }
 
   const contextItems = useRowMenuItems({
@@ -711,6 +788,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
     onSharePublicLink: props.onSharePublicLink,
     openButtonRef,
     moveToRoot,
+    onMoveItem,
   });
 
   const rowSelection = useOptionalItemSelection();
@@ -785,6 +863,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
               handleRowMoveKey(event, {
                 item,
                 tree,
+                move,
                 siblings,
                 index,
                 canOpenBeside,
@@ -799,6 +878,8 @@ function TreeNode(props: TreeNodeProps): ReactNode {
             onOpenPinned={onOpenPinned}
             onDeleteItem={onDeleteItem}
             moveToRoot={moveToRoot}
+            onMoveItem={onMoveItem}
+            flashProps={flashProps}
             contextItems={contextItems}
           />
         )}

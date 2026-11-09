@@ -5,6 +5,7 @@ import { MobileDestinationPicker } from '@nix/web-collections/items/mobile-desti
 import { WorkspaceItemTransfer } from './workspace-item-transfer';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { siblingMoveTarget } from './sibling-move-target';
+import { useUndoableMove } from './use-undoable-move';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 
 type Step = 'destination' | 'position' | 'workspace';
@@ -42,11 +43,15 @@ export function MobileItemMove({
   itemId,
   tree,
   onClose,
+  onMoved,
 }: {
   readonly itemId: string;
   readonly tree: WorkspaceTree;
   readonly onClose: () => void;
+  /** Told which item moved, so the caller can tint it where it landed. */
+  readonly onMoved?: (itemId: string) => void;
 }): ReactNode {
+  const move = useUndoableMove(tree, onMoved);
   const workspace = useOptionalWorkspace();
   const current = tree.find(itemId);
   const currentParentId = current?.parentId ?? null;
@@ -67,7 +72,7 @@ export function MobileItemMove({
     setSaving(true);
     setError(null);
     try {
-      const result = await tree.move(itemId, targetParentId, targetAfterId);
+      const result = await move(itemId, targetParentId, targetAfterId);
       if (result.refusal !== null) setError(result.refusal);
       else onClose();
     } catch {
