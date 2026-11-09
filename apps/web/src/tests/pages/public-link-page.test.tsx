@@ -1,5 +1,5 @@
 import { createNixClient } from '@nix/api-client';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -49,7 +49,7 @@ describe('public link page', () => {
     );
     expect(document.querySelector('script')).toBeNull();
     expect(document.querySelector('img')).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument();
     expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute(
       'content',
       'noindex, nofollow',
@@ -72,11 +72,45 @@ describe('public link page', () => {
         url: 'https://files.test/brief',
       }),
     );
-    expect(await screen.findByRole('link', { name: 'Download brief.pdf' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Download' })).toHaveAttribute(
       'href',
       'https://files.test/brief',
     );
     expect(await screen.findByTitle('brief.pdf')).toHaveAttribute('src', 'blob:brief');
+  });
+
+  it('saves a note copy and says so', async () => {
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() }),
+    );
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    renderLink(() => Response.json({ kind: 'note', title: 'Plan/1', html: '<p>Hi</p>' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save a copy' }));
+    expect(await screen.findByText('Saved a copy as Plan-1.html')).toBeInTheDocument();
+  });
+
+  it('offers download and full size for an image', async () => {
+    renderLink(() =>
+      Response.json({
+        kind: 'file',
+        name: 'a.png',
+        mediaType: 'image/png',
+        url: 'https://f.test/a',
+      }),
+    );
+    expect(await screen.findByRole('link', { name: 'Download' })).toHaveAttribute(
+      'href',
+      'https://f.test/a',
+    );
+    expect(screen.getByRole('link', { name: 'Open full size' })).toBeInTheDocument();
+    expect(screen.getByText('PNG file · image/png')).toBeInTheDocument();
+  });
+
+  it('withholds a file whose url the server did not give', async () => {
+    renderLink(() => Response.json({ kind: 'file', name: 'x.zip', mediaType: 'application/zip' }));
+    expect(await screen.findByText('This file is not available')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Download' })).toBeNull();
   });
 
   it('gives a dead link a plain message with no reason', async () => {
