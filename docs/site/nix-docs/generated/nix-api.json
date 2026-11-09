@@ -16926,6 +16926,16 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "sourceWorkspaceIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
