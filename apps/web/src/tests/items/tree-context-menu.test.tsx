@@ -233,6 +233,7 @@ describe('the sidebar row context menu', () => {
       'Copy link',
       'Automate…',
       'Mute reminders',
+      'Move to…',
       'Protect from deletion',
       'Stop new children',
       'Edit one at a time',

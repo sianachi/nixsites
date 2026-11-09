@@ -62,6 +62,8 @@ internal sealed class CalendarSyncHost : IAsyncDisposable
         {
             ["ConnectionStrings:Nix"] = fixture.ApplicationConnectionString,
             ["Nix:Scheduling:Enabled"] = "false",
+            // The tests play the calendar worker themselves, so the in-process host must not lease its jobs first.
+            ["Nix:Workers:Families:0"] = "notify",
             [InternalBoundaryMiddleware.SecretConfigurationKey] = InternalSecret,
             [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.calendar.test",
             [SelfIssuedTokenService.AudienceConfigurationKey] = "nix",

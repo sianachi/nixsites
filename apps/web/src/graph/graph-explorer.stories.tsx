@@ -78,7 +78,7 @@ SearchAndFocus.play = async ({
     canvas.getByRole('searchbox', { name: 'Find an item' }),
     'Research findings',
   );
-  await userEvent.click(canvas.getByRole('button', { name: 'Focus graph on Research findings' }));
+  await userEvent.click(canvas.getByRole('button', { name: 'Show Research findings in graph' }));
   await canvas.findByText('Showing Research findings');
 };
 export function DarkClusters(): ReactElement {

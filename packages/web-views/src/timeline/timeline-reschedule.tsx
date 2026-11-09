@@ -97,7 +97,12 @@ export function NudgeButtons({
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2">
       {NUDGES.map(({ group, edge, steps }) => (
-        <div key={group} role="group" aria-label={group} className="flex items-center gap-1">
+        <div
+          key={group}
+          role="group"
+          aria-label={group}
+          className="flex flex-wrap items-center gap-1"
+        >
           <Text variant="caption" tone="muted" as="span">
             {group}
           </Text>

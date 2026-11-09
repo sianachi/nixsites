@@ -104,7 +104,7 @@ export const VirtualizedDraft = {
       return element;
     };
     await userEvent.click(within(card('Item 2')).getByRole('button', { name: /Owner for Item 2/ }));
-    const field = within(card('Item 2')).getByRole<HTMLInputElement>('textbox', {
+    const field = within(card('Item 2')).getByRole<HTMLInputElement>('combobox', {
       name: 'Owner for Item 2',
     });
     await userEvent.clear(field);

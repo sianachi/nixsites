@@ -345,7 +345,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
         </Text>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <Text variant="caption" tone="muted" role="status">
+        <Text as="p" variant="caption" tone="muted" role="status">
           {restored ? 'Draft restored. ' : ''}
           {requiredBlocks.length === 0
             ? 'No required answers.'

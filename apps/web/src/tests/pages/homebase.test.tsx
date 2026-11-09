@@ -81,7 +81,11 @@ describe('Homebase', () => {
 
     await userEvent.click(within(start).getByRole('button', { name: /new note/i }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
-    expect(await screen.findByRole('button', { name: 'Undo' })).toBeVisible();
+    // Scoped to the undo bar: the opened note's toolbar has its own text Undo.
+    const created = await screen.findByText('Created "Untitled note"');
+    const bar = created.closest<HTMLElement>('[role="status"]');
+    if (bar === null) throw new Error('The undo bar is missing.');
+    expect(within(bar).getByRole('button', { name: 'Undo' })).toBeVisible();
   });
 
   it('explores the files: into a folder, back up the path, filtered, and open', async () => {

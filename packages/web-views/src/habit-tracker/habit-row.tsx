@@ -131,7 +131,6 @@ export function HabitRow({
         compact
           ? 'grid grid-cols-7 border-b border-divider @lg:table-row'
           : 'block border-b border-divider @lg:table-row',
-        lifecycle !== 'active' && 'opacity-60',
       )}
     >
       <th

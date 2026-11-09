@@ -172,7 +172,7 @@ describe('the calendar', () => {
 
   it('draws daily notes while they are on', async () => {
     stubCoreApi({ calendarEntries: ENTRIES });
-    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/calendar`);
+    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/calendar?grain=month`);
 
     expect(await screen.findByRole('button', { name: /^Filing deadline/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2026-03-17, in Daily notes' })).toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('the calendar', () => {
 
   it('leaves daily notes off while they are off, even if the read sends them', async () => {
     stubCoreApi({ workspaces: [OFF], calendarEntries: ENTRIES });
-    renderAt(<App />, `/w/${OFF.id}/calendar`);
+    renderAt(<App />, `/w/${OFF.id}/calendar?grain=month`);
 
     expect(await screen.findByRole('button', { name: /^Filing deadline/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '2026-03-17, in Daily notes' })).toBeNull();
