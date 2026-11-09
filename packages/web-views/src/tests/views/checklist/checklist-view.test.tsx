@@ -1,6 +1,9 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
+import { UndoBar, UndoProvider } from '@nix/ui';
+import { ItemCommandsProvider } from '@nix/web-collections/items/item-commands-context';
+import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
@@ -31,6 +34,8 @@ interface HarnessOptions {
   readonly lines?: readonly Item[];
   readonly onOpen?: (itemId: string) => void;
   readonly selecting?: boolean;
+  /** Mounts the undo history and the item commands, as the shell does. */
+  readonly shell?: boolean;
 }
 
 /** A checklist over an in-memory container whose writes land optimistically, like `useContainer`. */
@@ -68,6 +73,39 @@ function Harness(options: HarnessOptions): ReactNode {
       onOpen={options.onOpen ?? vi.fn()}
     />
   );
+  if (options.shell === true) {
+    const gone = (id: string): void => {
+      setChildren((current) => current.filter((entry) => entry.id !== id));
+    };
+    const tree = {
+      status: 'ready',
+      error: null,
+      items: [],
+      find: () => null,
+      remove: (id: string) => {
+        gone(id);
+        return Promise.resolve({ refusal: null });
+      },
+      restore: (id: string) => {
+        const original = (options.lines ?? LINES).find((entry) => entry.id === id);
+        if (original !== undefined) setChildren((current) => [...current, original]);
+        return Promise.resolve({ refusal: null });
+      },
+      rename: () => Promise.resolve(),
+    } as unknown as WorkspaceTree;
+    return (
+      <UndoProvider>
+        <ItemCommandsProvider
+          tree={tree}
+          onDeleteItem={vi.fn()}
+          onDeleteItems={() => Promise.resolve([])}
+        >
+          {checklist}
+        </ItemCommandsProvider>
+        <UndoBar />
+      </UndoProvider>
+    );
+  }
   if (!options.selecting) return checklist;
   return (
     <ItemSelectionContext
@@ -286,5 +324,55 @@ describe('ChecklistView', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('undoes a tick without touching what changed after it', async () => {
+    const user = userEvent.setup();
+    renderAt(<Harness shell />);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Bread' }));
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: 'Bread' })).toBeChecked();
+    });
+    await user.click(screen.getByRole('checkbox', { name: 'Eggs' }));
+    expect(await screen.findByText('Ticked Eggs')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Undo/ }));
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: 'Eggs' })).not.toBeChecked();
+    });
+    expect(screen.getByRole('checkbox', { name: 'Bread' })).toBeChecked();
+  });
+
+  it('adds each line of a pasted list and undoes the whole paste in one step', async () => {
+    const user = userEvent.setup();
+    const created: string[] = [];
+    renderAt(<Harness shell onCreate={(title) => created.push(title)} />);
+
+    const field = screen.getByRole('textbox', { name: 'Add a line' });
+    await user.click(field);
+    await user.paste('- Jam\n[ ] Tea\n\n* Rice\n');
+
+    expect(created).toEqual(['Jam', 'Tea', 'Rice']);
+    expect(await screen.findByText('Added 3 lines')).toBeInTheDocument();
+  });
+
+  it('clears the done lines and brings them back with Undo', async () => {
+    const user = userEvent.setup();
+    renderAt(<Harness shell />);
+
+    await user.click(screen.getByRole('button', { name: 'Clear done' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('checkbox', { name: 'Milk' })).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText('Cleared 1 done line')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Undo/ }));
+    expect(await screen.findByRole('checkbox', { name: 'Milk' })).toBeInTheDocument();
+  });
+
+  it('offers no Clear done without the shell commands', () => {
+    renderAt(<Harness />);
+    expect(screen.queryByRole('button', { name: 'Clear done' })).not.toBeInTheDocument();
   });
 });
