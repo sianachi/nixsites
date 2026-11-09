@@ -1,5 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent, { type UserEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
@@ -103,24 +103,20 @@ describe('the workspace menu', () => {
     await user.click(screen.getByRole('link', { name: 'Manage group Clients' }));
     expect(await screen.findByRole('heading', { name: 'Clients', level: 1 })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Manage' }));
+    await user.click(await screen.findByRole('button', { name: 'Rename group Clients' }));
     const name = await screen.findByRole('textbox', { name: 'Name of group Clients' });
     await user.clear(name);
-    await user.type(name, 'Customers');
-    await user.tab();
+    await user.type(name, 'Customers{Enter}');
     expect(await screen.findByRole('heading', { name: 'Customers', level: 1 })).toBeVisible();
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: `Group for ${STUB_WORKSPACE.name}` }),
-      groupId,
-    );
-    await waitFor(() =>
-      expect(
-        screen.getByRole('combobox', { name: `Group for ${STUB_WORKSPACE.name}` }),
-      ).toHaveDisplayValue('Customers'),
-    );
+    await user.click(screen.getByRole('checkbox', { name: `Select ${STUB_WORKSPACE.name}` }));
+    await user.click(screen.getByRole('button', { name: 'Customers' }));
+    expect(
+      within(await screen.findByRole('list', { name: 'Workspaces in Customers' })).getByText(
+        STUB_WORKSPACE.name,
+      ),
+    ).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Remove group Customers' }));
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'This workspace group no longer exists.',
-    );
+    expect(await screen.findByText('This workspace group no longer exists.')).toBeVisible();
   });
 
   it('lists saved groups with their workspaces and the rest under Other workspaces', async () => {
@@ -151,99 +147,58 @@ describe('the workspace menu', () => {
   });
 });
 
-async function openArrange(user: UserEvent): Promise<HTMLElement> {
-  await openWorkspacePanel(user);
-  await user.click(screen.getByRole('button', { name: 'Arrange workspaces…' }));
-  return screen.findByRole('region', { name: 'Workspace groups and pins' });
-}
-
-describe('workspace groups in the workspace menu', () => {
-  it('creates a group from a workspace row, renames it and removes it without losing the workspace', async () => {
+describe('the workspaces page', () => {
+  it('pins and files a workspace, says so, and undoes each from the Undo button', async () => {
     const user = userEvent.setup();
-    stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
-    renderAt(<App />, '/settings');
-
-    const section = await openArrange(user);
-    // No groups yet: nothing to manage.
-    expect(within(section).queryByText('Manage groups')).not.toBeInTheDocument();
-
-    await user.selectOptions(
-      await within(section).findByRole('combobox', { name: `Group for ${SHARED.name}` }),
-      'New group…',
-    );
-    await user.type(
-      await within(section).findByRole('textbox', { name: `New group for ${SHARED.name}` }),
-      'Clients',
-    );
-    await user.click(within(section).getByRole('button', { name: 'Add' }));
-
-    // The new group is created and already holds the workspace it was made from.
-    const select = await within(section).findByRole('combobox', {
-      name: `Group for ${SHARED.name}`,
-    });
-    await waitFor(() => {
-      expect(select).toHaveDisplayValue('Clients');
-    });
-
-    await user.click(within(section).getByText('Manage groups'));
-    const name = within(section).getByRole('textbox', { name: 'Name of group Clients' });
-    await user.clear(name);
-    await user.type(name, 'Customers');
-    await user.tab();
-    await waitFor(() => {
-      expect(select).toHaveDisplayValue('Customers');
-    });
-
-    await user.click(within(section).getByRole('button', { name: 'Remove group Customers' }));
-    await waitFor(() => {
-      expect(within(section).queryByText('Manage groups')).not.toBeInTheDocument();
-    });
-    // Still here, now ungrouped: a removed group takes nothing with it.
-    expect(select).toHaveDisplayValue('No group');
-    expect(within(section).getByText(SHARED.name)).toBeVisible();
-  });
-
-  it('shows a missing group without exposing the other group controls', async () => {
+    const groupId = '44444444-4444-4444-8444-444444444444';
     stubCoreApi({
       workspaces: [STUB_WORKSPACE, SHARED],
-      workspaceArrangement: { revision: 1, groups: [], pinnedWorkspaceIds: [] },
+      workspaceArrangement: {
+        revision: 1,
+        groups: [{ id: groupId, name: 'Clients', workspaceIds: [] }],
+        pinnedWorkspaceIds: [],
+      },
     });
-    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/workspace-groups/missing`);
-    expect(await screen.findByText('This workspace group no longer exists.')).toBeVisible();
-    expect(
-      screen.queryByRole('combobox', { name: `Group for ${SHARED.name}` }),
-    ).not.toBeInTheDocument();
+    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/workspaces`);
+
+    const page = await screen.findByRole('region', { name: 'Workspaces' });
+    await user.click(await within(page).findByRole('button', { name: `Pin ${SHARED.name}` }));
+    expect(await screen.findByText(`Pinned ${SHARED.name}`)).toBeVisible();
+    const picker = within(page).getAllByRole('combobox', { name: `Group for ${SHARED.name}` })[0];
+    if (picker === undefined) throw new Error('Expected a group picker.');
+    await user.selectOptions(picker, groupId);
+    expect(await screen.findByText(`Filed ${SHARED.name} in Clients`)).toBeVisible();
+    expect(within(page).getByRole('button', { name: 'Clients' })).toHaveTextContent('1');
+
+    // Newest first: filing is undone and the pin made before it survives.
+    await user.click(screen.getByRole('button', { name: 'Undo (2)' }));
+    await waitFor(() => {
+      expect(within(page).getByRole('button', { name: 'Clients' })).toHaveTextContent('0');
+    });
+    expect(within(page).getAllByRole('button', { name: `Unpin ${SHARED.name}` })).not.toHaveLength(
+      0,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(within(page).queryByRole('heading', { name: 'Pinned' })).not.toBeInTheDocument();
+    });
   });
 
-  it('creates an empty group in the global hub and opens its analysis page', async () => {
+  it('creates a group from a row and files the workspace in it', async () => {
     const user = userEvent.setup();
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
-    renderAt(<App />, '/workspaces/groups');
-    await user.type(await screen.findByRole('textbox', { name: 'New group name' }), 'Research');
-    await user.click(screen.getByRole('button', { name: 'Create group' }));
-    await user.click(await screen.findByRole('link', { name: 'Research' }));
-    expect(await screen.findByRole('heading', { name: 'Research', level: 1 })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Compare priorities' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Manage' }));
-    expect(screen.getByRole('combobox', { name: `Group for ${SHARED.name}` })).toBeVisible();
-  });
-
-  it('cancels a pending new group with Escape', async () => {
-    const user = userEvent.setup();
-    stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
-    renderAt(<App />, '/settings');
-
-    const section = await openArrange(user);
+    renderAt(<App />, `/w/${STUB_WORKSPACE.id}/workspaces`);
+    const page = await screen.findByRole('region', { name: 'Workspaces' });
     await user.selectOptions(
-      await within(section).findByRole('combobox', { name: `Group for ${SHARED.name}` }),
+      await within(page).findByRole('combobox', { name: `Group for ${SHARED.name}` }),
       'New group…',
     );
     await user.type(
-      within(section).getByRole('textbox', { name: `New group for ${SHARED.name}` }),
-      '{Escape}',
+      within(page).getByRole('textbox', { name: `New group for ${SHARED.name}` }),
+      'Clients{Enter}',
     );
-    expect(
-      within(section).getByRole('combobox', { name: `Group for ${SHARED.name}` }),
-    ).toHaveDisplayValue('No group');
+    expect(await screen.findByText(`Created group Clients with ${SHARED.name}`)).toBeVisible();
+    expect(await within(page).findByRole('list', { name: 'Clients' })).toBeVisible();
   });
 });

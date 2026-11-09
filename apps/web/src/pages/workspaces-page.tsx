@@ -10,7 +10,7 @@ export function WorkspacesPage(): ReactNode {
   const inDialog = useInRouteDialog();
   return (
     <div
-      className={`${paneScroller} mx-auto flex w-full max-w-2xl flex-col gap-4 ${inDialog ? '' : 'p-3 sm:p-6'}`}
+      className={`${paneScroller} mx-auto flex w-full max-w-2xl md:max-w-4xl flex-col gap-4 ${inDialog ? '' : 'p-3 sm:p-6'}`}
     >
       {inDialog ? null : (
         <Text variant="h3" as="h1">

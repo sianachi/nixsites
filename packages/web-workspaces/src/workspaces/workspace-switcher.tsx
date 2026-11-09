@@ -1,10 +1,32 @@
-import { Dialog, Icon, Input, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
-import { Archive, Check, ChevronDown, Layers, Pin, PinOff, Plus, Settings } from 'lucide-react';
-import type { Workspace } from '@nix/api-client';
+import {
+  Button,
+  Dialog,
+  Icon,
+  Input,
+  Menu,
+  Select,
+  Text,
+  focusRing,
+  useFlash,
+  useUndo,
+  type MenuEntry,
+} from '@nix/ui';
+import {
+  Archive,
+  Check,
+  ChevronDown,
+  FolderClosed,
+  Layers,
+  Pin,
+  PinOff,
+  Plus,
+  Settings,
+} from 'lucide-react';
+import type { Workspace, WorkspaceArrangementInput } from '@nix/api-client';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { arrangeWorkspaces, togglePin } from './arrangement';
+import { addGroup, arrangeWorkspaces, assignToGroup, removeGroup, togglePin } from './arrangement';
 import { CreateWorkspaceForm } from './settings/create-workspace-form';
 import { readRecentWorkspaceIds } from './last-workspace';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
@@ -48,6 +70,7 @@ export function WorkspaceSwitcher(): ReactNode {
 }
 
 const RECENT_LIMIT = 8;
+const NEW_GROUP = '__new__';
 
 /**
  * The workspace entries for the profile menu: the most recently used workspaces with a tick on the
@@ -150,46 +173,80 @@ function useWorkspacePanel(
       setDialog(kind);
     };
 
-  const row = (entry: Workspace, close: () => void): ReactNode => (
-    <li key={entry.id} className="flex items-center gap-1 px-1 pointer-coarse:min-h-(--control-lg)">
-      <Link
-        to={`/w/${entry.id}`}
-        aria-current={entry.id === workspace.id ? 'page' : undefined}
-        onClick={close}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-3 text-md text-foreground no-underline hover:bg-accent/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-      >
-        <Icon
-          icon={Check}
-          size="sm"
-          className={entry.id === workspace.id ? 'text-accent-text' : 'invisible'}
-        />
-        <span className="truncate">{entry.name}</span>
-        {entry.pendingInvitationId === null ? null : (
-          <Text variant="caption" as="span" tone="muted" className="shrink-0">
-            Invited
-          </Text>
-        )}
-      </Link>
-      <button
-        type="button"
-        aria-label={pinnedIds.has(entry.id) ? `Unpin ${entry.name}` : `Pin ${entry.name}`}
-        aria-pressed={pinnedIds.has(entry.id)}
-        onClick={() => {
-          void save(togglePin(arrangement, entry.id));
-        }}
-        className={`flex size-(--control-sm) shrink-0 items-center justify-center text-muted hover:bg-accent/10 hover:text-foreground pointer-coarse:size-(--control-lg) ${focusRing}`}
-      >
-        <Icon icon={pinnedIds.has(entry.id) ? PinOff : Pin} size="sm" />
-      </button>
-      <Link
-        to={`/w/${entry.id}/settings`}
-        aria-label={`Manage ${entry.name}`}
-        onClick={close}
-        className="flex size-(--control-sm) shrink-0 items-center justify-center text-muted no-underline hover:bg-accent/10 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent pointer-coarse:size-(--control-lg)"
-      >
-        <Icon icon={Settings} size="sm" />
-      </Link>
-    </li>
+  const latest = useRef({ arrangement, save });
+  useEffect(() => {
+    latest.current = { arrangement, save };
+  });
+  const undo = useUndo();
+  const [newGroupFor, setNewGroupFor] = useState<string | null>(null);
+  const groupOf = (id: string): { readonly id: string; readonly name: string } | undefined =>
+    arrangement.groups.find((group) => group.workspaceIds.includes(id));
+
+  // Saves, then records the inverse. Undo re-reads the latest saved arrangement, so it reverses only
+  // this action and keeps anything done since.
+  const apply = async (
+    next: WorkspaceArrangementInput,
+    label: string,
+    reverse: (current: WorkspaceArrangementInput) => WorkspaceArrangementInput,
+  ): Promise<void> => {
+    if (!(await save(next))) return;
+    undo.push(label, async () => {
+      await latest.current.save(reverse(latest.current.arrangement));
+    });
+  };
+  const pin = (entry: Workspace): void => {
+    const was = pinnedIds.has(entry.id);
+    void apply(
+      togglePin(arrangement, entry.id),
+      `${was ? 'Unpinned' : 'Pinned'} ${entry.name}`,
+      (current) =>
+        current.pinnedWorkspaceIds.includes(entry.id) === was
+          ? current
+          : togglePin(current, entry.id),
+    );
+  };
+  // shortcut: undo puts the workspace back at the end of its old group, not at its old position.
+  const file = (entry: Workspace, groupId: string | null): void => {
+    const before = groupOf(entry.id);
+    const target = arrangement.groups.find((group) => group.id === groupId);
+    if (before?.id === target?.id) return;
+    void apply(
+      assignToGroup(arrangement, entry.id, groupId),
+      target === undefined
+        ? `Removed ${entry.name} from ${before?.name ?? 'its group'}`
+        : `Filed ${entry.name} in ${target.name}`,
+      (current) => assignToGroup(current, entry.id, before?.id ?? null),
+    );
+  };
+  const createGroupFor = (entry: Workspace, name: string): void => {
+    const before = groupOf(entry.id);
+    const added = addGroup(arrangement, name);
+    const created = added.groups[added.groups.length - 1];
+    if (created === undefined) return;
+    setNewGroupFor(null);
+    void apply(
+      assignToGroup(added, entry.id, created.id),
+      `Created group ${created.name} with ${entry.name}`,
+      (current) => removeGroup(assignToGroup(current, entry.id, before?.id ?? null), created.id),
+    );
+  };
+
+  const row = (entry: Workspace, close: () => void, hit?: 'first' | 'match'): ReactNode => (
+    <WorkspaceRow
+      key={entry.id}
+      entry={entry}
+      current={entry.id === workspace.id}
+      pinned={pinnedIds.has(entry.id)}
+      group={page ? (groupOf(entry.id) ?? null) : undefined}
+      groups={arrangement.groups}
+      hit={hit}
+      creating={newGroupFor === entry.id}
+      close={close}
+      onPin={pin}
+      onFile={file}
+      onStartCreate={setNewGroupFor}
+      onCreate={createGroupFor}
+    />
   );
 
   const items: MenuEntry[] = [
@@ -210,9 +267,9 @@ function useWorkspacePanel(
             inputRef={searchRef}
             listClass={listClass}
           >
-            <div className={listClass}>
+            <div className={page ? `${listClass} md:columns-2 md:gap-3` : listClass}>
               {arranged.pinned.length > 0 ? (
-                <>
+                <section className="break-inside-avoid">
                   <Text
                     as="h3"
                     variant="kicker"
@@ -225,10 +282,14 @@ function useWorkspacePanel(
                   <ul aria-labelledby="workspaces-pinned">
                     {arranged.pinned.map((entry) => row(entry, close))}
                   </ul>
-                </>
+                </section>
               ) : null}
               {arranged.groups.map((group) => (
-                <section key={group.id} aria-labelledby={`workspaces-group-${group.id}`}>
+                <section
+                  key={group.id}
+                  className="break-inside-avoid"
+                  aria-labelledby={`workspaces-group-${group.id}`}
+                >
                   <div className="flex items-center gap-1 px-1">
                     <button
                       type="button"
@@ -251,6 +312,9 @@ function useWorkspacePanel(
                         className={collapsedGroups.has(group.id) ? '-rotate-90' : ''}
                       />
                       <span className="truncate">{group.name}</span>
+                      <span aria-hidden="true" className="ml-auto shrink-0">
+                        {group.workspaces.length}
+                      </span>
                     </button>
                     <Link
                       to={`/workspaces/groups/${group.id}`}
@@ -277,23 +341,25 @@ function useWorkspacePanel(
                   </div>
                 </section>
               ))}
-              {arranged.groups.length > 0 && arranged.ungrouped.length > 0 ? (
-                <Text
-                  as="h3"
-                  variant="kicker"
-                  tone="muted"
-                  className="px-3 pt-1"
-                  id="workspaces-ungrouped"
+              <section className="break-inside-avoid">
+                {arranged.groups.length > 0 && arranged.ungrouped.length > 0 ? (
+                  <Text
+                    as="h3"
+                    variant="kicker"
+                    tone="muted"
+                    className="px-3 pt-1"
+                    id="workspaces-ungrouped"
+                  >
+                    Other workspaces
+                  </Text>
+                ) : null}
+                <ul
+                  aria-label={arranged.groups.length > 0 ? undefined : 'Your workspaces'}
+                  aria-labelledby={arranged.groups.length > 0 ? 'workspaces-ungrouped' : undefined}
                 >
-                  Other workspaces
-                </Text>
-              ) : null}
-              <ul
-                aria-label={arranged.groups.length > 0 ? undefined : 'Your workspaces'}
-                aria-labelledby={arranged.groups.length > 0 ? 'workspaces-ungrouped' : undefined}
-              >
-                {arranged.ungrouped.map((entry) => row(entry, close))}
-              </ul>
+                  {arranged.ungrouped.map((entry) => row(entry, close))}
+                </ul>
+              </section>
             </div>
           </WorkspaceSearch>
 
@@ -390,7 +456,7 @@ function WorkspaceSearch({
   readonly listClass: string;
   readonly inputRef: RefObject<HTMLInputElement | null> | undefined;
   readonly workspaces: readonly Workspace[];
-  readonly row: (entry: Workspace, close: () => void) => ReactNode;
+  readonly row: (entry: Workspace, close: () => void, hit?: 'first' | 'match') => ReactNode;
   readonly close: () => void;
   readonly children: ReactNode;
 }): ReactNode {
@@ -435,10 +501,173 @@ function WorkspaceSearch({
               No workspace matches “{query.trim()}”.
             </Text>
           ) : (
-            <ul aria-label="Matching workspaces">{matches.map((entry) => row(entry, close))}</ul>
+            <ul aria-label="Matching workspaces">
+              {matches.map((entry, index) => row(entry, close, index === 0 ? 'first' : 'match'))}
+            </ul>
           )}
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * One workspace in the list: open, pin, file into a group (a folder button over a native select, so
+ * it is a real picker on a phone), and manage. Pinning and filing flash the row and are undoable.
+ */
+function WorkspaceRow({
+  entry,
+  current,
+  pinned,
+  group,
+  groups,
+  hit,
+  creating,
+  close,
+  onPin,
+  onFile,
+  onStartCreate,
+  onCreate,
+}: {
+  readonly entry: Workspace;
+  readonly current: boolean;
+  readonly pinned: boolean;
+  /** The group it sits in; `undefined` hides the group controls (the menu variant). */
+  readonly group: { readonly id: string; readonly name: string } | null | undefined;
+  readonly groups: readonly { readonly id: string; readonly name: string }[];
+  readonly hit: 'first' | 'match' | undefined;
+  readonly creating: boolean;
+  readonly close: () => void;
+  readonly onPin: (entry: Workspace) => void;
+  readonly onFile: (entry: Workspace, groupId: string | null) => void;
+  readonly onStartCreate: (workspaceId: string | null) => void;
+  readonly onCreate: (entry: Workspace, name: string) => void;
+}): ReactNode {
+  const flash = useFlash(`${String(pinned)}|${group?.id ?? ''}`);
+  const [name, setName] = useState('');
+  const iconButton =
+    'flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted transition-transform hover:bg-accent/10 hover:text-foreground active:scale-90 pointer-coarse:size-(--control-lg)';
+  return (
+    <li
+      {...flash}
+      className="flex flex-wrap items-center gap-1 px-1 pointer-coarse:min-h-(--control-lg)"
+    >
+      <Link
+        to={`/w/${entry.id}`}
+        aria-current={current ? 'page' : undefined}
+        onClick={close}
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-3 text-md text-foreground no-underline hover:bg-accent/10 active:bg-foreground/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+      >
+        <Icon icon={Check} size="sm" className={current ? 'text-accent-text' : 'invisible'} />
+        <span className="truncate">{entry.name}</span>
+        {entry.pendingInvitationId === null ? null : (
+          <Text variant="caption" as="span" tone="muted" className="shrink-0">
+            Invited
+          </Text>
+        )}
+        {/* Visual hints only: the link's name stays the workspace's name. */}
+        {hit !== undefined && group ? (
+          <span aria-hidden="true" className="shrink-0">
+            <Text variant="caption" as="span" tone="muted">
+              {group.name}
+            </Text>
+          </span>
+        ) : null}
+        {hit === 'first' ? (
+          <span
+            aria-hidden="true"
+            title="Enter opens this one"
+            className="hidden shrink-0 pointer-fine:inline"
+          >
+            <Text variant="caption" as="span" tone="muted">
+              ↵
+            </Text>
+          </span>
+        ) : null}
+      </Link>
+      <button
+        type="button"
+        aria-label={pinned ? `Unpin ${entry.name}` : `Pin ${entry.name}`}
+        aria-pressed={pinned}
+        onClick={() => {
+          onPin(entry);
+        }}
+        className={`${iconButton} ${focusRing}`}
+      >
+        <Icon icon={pinned ? PinOff : Pin} size="sm" />
+      </button>
+      {group === undefined ? null : (
+        <div
+          title={group === null ? 'Add to a group' : `In ${group.name} - change group`}
+          className={`relative ${iconButton} focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-accent ${group === null ? '' : 'text-accent-text'}`}
+        >
+          <Icon icon={FolderClosed} size="sm" />
+          <Select
+            aria-label={`Group for ${entry.name}`}
+            value={group?.id ?? ''}
+            className="absolute inset-0 h-full min-h-0 w-full cursor-pointer border-0 p-0 opacity-0 any-pointer-coarse:h-full"
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              if (value === NEW_GROUP) {
+                setName('');
+                onStartCreate(entry.id);
+              } else onFile(entry, value === '' ? null : value);
+            }}
+          >
+            <option value="">No group</option>
+            {groups.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+            <option value={NEW_GROUP}>New group…</option>
+          </Select>
+        </div>
+      )}
+      <Link
+        to={`/w/${entry.id}/settings`}
+        aria-label={`Manage ${entry.name}`}
+        onClick={close}
+        className={`${iconButton} no-underline ${focusRing}`}
+      >
+        <Icon icon={Settings} size="sm" />
+      </Link>
+      {creating ? (
+        <form
+          className="flex w-full items-center gap-1 pb-2 pl-8"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (name.trim().length > 0) onCreate(entry, name);
+          }}
+        >
+          <Input
+            aria-label={`New group for ${entry.name}`}
+            placeholder="New group name"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- Justification: the person just chose "New group…" from this row's picker.
+            autoFocus
+            value={name}
+            maxLength={80}
+            onChange={(event) => {
+              setName(event.currentTarget.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') onStartCreate(null);
+            }}
+          />
+          <Button type="submit" disabled={name.trim().length === 0}>
+            Add
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              onStartCreate(null);
+            }}
+          >
+            Cancel
+          </Button>
+        </form>
+      ) : null}
+    </li>
   );
 }
