@@ -1,6 +1,7 @@
-import { Button, ContextMenu, Icon, Text, focusRing } from '@nix/ui';
+import { Button, ContextMenu, Icon, Input, Text, focusRing, useUndo } from '@nix/ui';
+import type { KeptItem } from '@nix/api-client';
 import { FileText } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 
 import { useHiddenItemPredicate } from '@nix/web-collections/items/use-hidden-items';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
@@ -53,6 +54,12 @@ export function BookmarksPage(): ReactElement {
   const reload = useBookmarksStore((state) => state.reload);
   const toggle = useBookmarksStore((state) => state.toggle);
   const { openPreview } = useOpenItem();
+  const undo = useUndo();
+  const [query, setQuery] = useState('');
+  // Rows just removed, kept on screen for the fade-out (the store drops them at once).
+  const [leaving, setLeaving] = useState<ReadonlyMap<string, { item: KeptItem; index: number }>>(
+    new Map(),
+  );
 
   if (status === 'loading') {
     return (
@@ -95,12 +102,63 @@ export function BookmarksPage(): ReactElement {
     );
   }
 
-  const visible = items.filter((item) => !isHidden(item.itemId, item.workspaceId));
+  const reachable = items.filter((item) => !isHidden(item.itemId, item.workspaceId));
+  const needle = query.trim().toLowerCase();
+  const matches = (item: KeptItem): boolean =>
+    needle === '' || (item.title ?? 'Untitled').toLowerCase().includes(needle);
+  const visible = reachable.filter(matches);
+  // Fading rows go back where they were, unless a failed removal already restored them.
+  const shown = [...visible];
+  for (const { item, index } of leaving.values()) {
+    if (matches(item) && !shown.some((row) => row.itemId === item.itemId)) {
+      shown.splice(Math.min(index, shown.length), 0, item);
+    }
+  }
+
+  function remove(item: KeptItem): void {
+    const title = item.title ?? 'Untitled';
+    const index = reachable.findIndex((row) => row.itemId === item.itemId);
+    setLeaving((cur) => new Map(cur).set(item.itemId, { item, index }));
+    setTimeout(() => {
+      setLeaving((cur) => {
+        const next = new Map(cur);
+        next.delete(item.itemId);
+        return next;
+      });
+    }, 150);
+    void toggle(item.itemId);
+    undo.push(`Removed ${title}`, async () => {
+      if (!useBookmarksStore.getState().keptIds.has(item.itemId)) {
+        await useBookmarksStore.getState().keep(item.itemId);
+      }
+    });
+  }
+
   return (
     <BookmarksFrame>
-      {visible.length < items.length ? (
+      <div className="flex flex-col gap-1">
+        <Input
+          type="search"
+          aria-label="Search bookmarks"
+          placeholder="Search bookmarks"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && query !== '') setQuery('');
+          }}
+        />
         <Text role="status" variant="caption" tone="muted">
-          {String(items.length - visible.length)} hidden
+          {needle === ''
+            ? `${String(reachable.length)} ${reachable.length === 1 ? 'bookmark' : 'bookmarks'}`
+            : `${String(visible.length)} of ${String(reachable.length)}`}
+        </Text>
+      </div>
+      {items.length > reachable.length ? (
+        <Text role="status" variant="caption" tone="muted">
+          {String(items.length - reachable.length)} hidden
         </Text>
       ) : null}
       {hidden > 0 && (
@@ -109,10 +167,26 @@ export function BookmarksPage(): ReactElement {
         />
       )}
 
+      {shown.length === 0 && reachable.length > 0 ? (
+        <div role="status" className="flex flex-col items-center gap-2 py-8 text-center">
+          <Text variant="h4" as="h2">
+            No matches
+          </Text>
+          <Text tone="muted">Nothing is bookmarked under “{query}”.</Text>
+          <Button
+            onClick={() => {
+              setQuery('');
+            }}
+          >
+            Clear search
+          </Button>
+        </div>
+      ) : null}
+
       {/* Named, because the tree is also a list and a reader moving between landmarks needs to
           know which one they have arrived in. */}
       <ul aria-label="Bookmarks" className="flex flex-col gap-px">
-        {visible.map((item) => {
+        {shown.map((item) => {
           const title = item.title ?? 'Untitled';
 
           return (
@@ -129,13 +203,17 @@ export function BookmarksPage(): ReactElement {
                 {
                   label: 'Remove bookmark',
                   onSelect: () => {
-                    void toggle(item.itemId);
+                    remove(item);
                   },
                 },
               ]}
             >
               {(target) => (
-                <li {...target} className="flex min-w-0 items-center gap-1">
+                <li
+                  {...target}
+                  data-leave={leaving.has(item.itemId) ? '' : undefined}
+                  className="flex min-w-0 items-center gap-1"
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -149,7 +227,14 @@ export function BookmarksPage(): ReactElement {
                     </Text>
                   </button>
 
-                  <BookmarkButton compact itemId={item.itemId} title={title} />
+                  <BookmarkButton
+                    compact
+                    itemId={item.itemId}
+                    title={title}
+                    onToggle={() => {
+                      remove(item);
+                    }}
+                  />
                 </li>
               )}
             </ContextMenu>

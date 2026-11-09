@@ -33,10 +33,13 @@ export interface BookmarkButtonProps {
   readonly compact?: boolean | undefined;
 
   readonly className?: string | undefined;
+
+  /** Replaces the plain toggle, for a caller that wraps the action (the shelf adds undo). */
+  readonly onToggle?: (() => void) | undefined;
 }
 
 export function BookmarkButton(props: BookmarkButtonProps): ReactNode {
-  const { itemId, title, compact = false, className = '' } = props;
+  const { itemId, title, compact = false, className = '', onToggle } = props;
   const kept = useIsKept(itemId);
   const toggle = useBookmarksStore((state) => state.toggle);
 
@@ -59,7 +62,8 @@ export function BookmarkButton(props: BookmarkButtonProps): ReactNode {
         // The tree's rows open an item on click, and the editor's chrome sits inside other
         // controls. Neither should fire because somebody aimed at the star.
         event.stopPropagation();
-        void toggle(itemId);
+        if (onToggle) onToggle();
+        else void toggle(itemId);
       }}
       className={cn(
         focusRing,
@@ -82,7 +86,8 @@ export function BookmarkButton(props: BookmarkButtonProps): ReactNode {
       aria-pressed={kept}
       className={className}
       onClick={() => {
-        void toggle(itemId);
+        if (onToggle) onToggle();
+        else void toggle(itemId);
       }}
     >
       <Icon icon={Star} size="sm" className={kept ? 'fill-current text-accent-text' : ''} />

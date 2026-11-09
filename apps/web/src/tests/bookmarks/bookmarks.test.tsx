@@ -165,6 +165,47 @@ describe('the bookmarks destination', () => {
     );
   });
 
+  it('finds a bookmark by part of its title and restores the list when cleared', async () => {
+    stubCoreApi({
+      items: [NOTE, OTHER],
+      bookmarks: [KEPT, { ...KEPT, itemId: OTHER.id, title: 'Board pack' }],
+    });
+    renderAt(<App />, '/bookmarks');
+
+    const shelf = await screen.findByRole('list', { name: 'Bookmarks' });
+    expect(within(shelf).getAllByRole('listitem')).toHaveLength(2);
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search bookmarks' }), 'board');
+    expect(within(shelf).getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('1 of 2')).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Search bookmarks' }));
+    expect(within(shelf).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('says when a search matches nothing, and offers to clear it', async () => {
+    stubCoreApi({ items: [NOTE], bookmarks: [KEPT] });
+    renderAt(<App />, '/bookmarks');
+
+    await screen.findByRole('list', { name: 'Bookmarks' });
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search bookmarks' }), 'zzz');
+    expect(await screen.findByText('No matches')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(await screen.findByRole('list', { name: 'Bookmarks' })).toBeInTheDocument();
+  });
+
+  it('keeps the unreachable notice, not the empty state, after removing the last visible one', async () => {
+    stubCoreApi({ items: [NOTE], bookmarks: [KEPT], bookmarksHidden: 1 });
+    renderAt(<App />, '/bookmarks');
+
+    const shelf = await screen.findByRole('list', { name: 'Bookmarks' });
+    await userEvent.click(within(shelf).getByRole('button', { name: 'Bookmark Acquisition memo' }));
+
+    expect(await screen.findByText(/1 bookmark is not shown/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing kept yet/i)).not.toBeInTheDocument();
+  });
+
   it('says a shelf with nothing on it is empty, not broken', async () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />, '/bookmarks');
