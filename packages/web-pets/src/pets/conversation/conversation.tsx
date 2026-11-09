@@ -2,7 +2,7 @@
 // sub-panels - kept apart from the floating launcher in `pet-companion.tsx` so a page can render
 // the same conversation without the launcher, the drag handling or the panel positioning. How it
 // sits on screen is the caller's `layout`; everything inside is the same in all of them.
-import { type PetProfile, type PetSettings } from '@nix/api-client';
+import { type PetConnection, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button, Text, focusRing } from '@nix/ui';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -42,6 +42,8 @@ import { useDialogBehaviour } from './state/use-dialog-behaviour';
 import { useMessageContext } from './state/use-message-context';
 import { statusText } from './state/status-text';
 import { useRename } from './state/use-rename';
+import { useResumeUndo } from './state/use-resume-undo';
+import { PetHistory } from '../pet-history';
 import { useTurns } from './state/use-turns';
 
 type ConversationPanel = 'chat' | 'settings' | 'history';
@@ -208,8 +210,17 @@ export function Conversation({
     workspaceId,
     petId: pet.id,
     rootItemId: noteScope?.rootItemId,
+    currentTitle: runtime?.title,
     setRuntime,
   });
+  const undoResume = useResumeUndo({
+    workspaceId,
+    petId: pet.id,
+    rootItemId: noteScope?.rootItemId,
+    setRuntime,
+  });
+  // The conversation list beside the chat reloads whenever the live conversation changes.
+  const listKey = `${messages[0]?.id ?? ''}:${runtime?.title ?? ''}`;
 
   function goBackFromPanel() {
     setPanel('chat');
@@ -249,7 +260,10 @@ export function Conversation({
     },
     onNewConversation: () => {
       context.setAutoPageOff(false);
-      void reset();
+      const hadMessages = messages.length > 0;
+      void reset().then(() => {
+        undoResume('Started a new conversation', hadMessages);
+      });
     },
     onRename: () => {
       setPanel('chat');
@@ -266,6 +280,12 @@ export function Conversation({
       setPanel('settings');
     },
   });
+
+  function resumeFromList(resumed: PetConnection) {
+    const hadMessages = messages.length > 0;
+    setRuntime(resumed);
+    undoResume(`Opened ${resumed.title || 'a past conversation'}`, hadMessages);
+  }
 
   const suggestions = petSuggestions(Boolean(currentItem));
   const slash = useSlashMenu(draft, suggestions, pickSuggestion);
@@ -309,208 +329,237 @@ export function Conversation({
       aria-label={`Conversation with ${pet.name}`}
       className={dialogClass(layout)}
     >
-      <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {announcement}
-      </div>
-      {insight !== null ? (
-        <SaveInsightNote
-          text={insight}
-          onClose={() => {
-            setInsight(null);
-          }}
-        />
-      ) : null}
-      {saveChat ? (
-        <NewChatNote
-          sourceWorkspaceIds={[workspaceId]}
-          messages={messages.map((message) => ({ role: message.role, text: message.text }))}
-          onClose={() => {
-            setSaveChat(false);
-          }}
-        />
-      ) : null}
-      <ConversationHeader
-        layout={layout}
-        zen={zen}
-        petName={pet.name}
-        appearance={pet.appearance}
-        motion={settings.motion}
-        animation={animation}
-        status={statusText({
-          runtimeLoaded: Boolean(runtime),
-          connected,
-          errored,
-          hasDraft,
-          needsDecision: approvalPending,
-          running,
-        })}
-        title={runtime?.title}
-        renaming={rename.renaming}
-        renameBusy={rename.renameBusy}
-        renameError={rename.renameError}
-        onRename={(title) => {
-          void rename.renameConversation(title);
-        }}
-        onCancelRename={rename.cancelRename}
-        menuItems={menuItems}
-        menuTrigger={menuTrigger}
-        onClose={onClose}
-        noteScope={noteScope}
-        locked={running || busy}
-      />
-      {panel === 'settings' ? (
-        <PetSettingsPanel
-          pet={pet}
-          workspaceId={workspaceId}
-          model={model}
-          models={models}
-          running={running || busy}
-          runtime={runtime}
-          readWithoutAsking={readWithoutAsking}
-          headingRef={panelHeading}
-          onModelChange={(next) => {
-            setModel(next);
-            writeConversationModel(workspaceId, pet.id, pet.provider, next);
-          }}
-          onReadWithoutAskingChange={(next) => {
-            setReadWithoutAsking(next);
-            writeReadWithoutAsking(next);
-          }}
-          onBack={goBackFromPanel}
-        />
-      ) : panel === 'history' ? (
-        <HistoryPanel
-          headingRef={panelHeading}
-          onBack={goBackFromPanel}
-          workspaceId={workspaceId}
-          petId={pet.id}
-          name={pet.name}
-          client={client}
-          rootItemId={noteScope?.rootItemId}
-          running={running || busy}
-          onResumed={(resumed) => {
-            setRuntime(resumed);
-            goBackFromPanel();
-          }}
-        />
-      ) : !runtime ? (
-        // Must-fix 11/12: while nothing has ever loaded yet, the body says so plainly instead of
-        // showing the empty-state suggestions as if the conversation were simply quiet - and once
-        // a load error shows up here, it replaces the "Loading" text rather than sitting beside it.
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
-          {errorKind === 'load' && error ? (
-            <>
-              <Text role="alert">{loadErrorMessage}</Text>
-              <Button variant="ghost" onClick={retryWatch}>
-                Retry now
-              </Button>
-            </>
-          ) : (
-            <Text variant="note" tone="muted">
-              Loading conversation…
-            </Text>
-          )}
-        </div>
-      ) : !connected ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {pet.provider === 'chatgpt' ? (
-            <PetConnectionPanel />
-          ) : (
-            <div className="flex flex-col gap-3">
-              <Text role="alert">
-                {runtime.reason ||
-                  `Set up ${petProviderLabels[pet.provider]} in Pet settings to chat.`}
-              </Text>
-              <Link to={`/w/${workspaceId}/settings?tab=pets`} className={`underline ${focusRing}`}>
-                <Text as="span">Open Pet settings</Text>
-              </Link>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <MessageList
-            client={client}
+      {layout === 'page' ? (
+        // Wide enough, the past conversations stay beside the chat instead of behind a menu.
+        <aside
+          aria-label="Conversations"
+          className="hidden w-72 shrink-0 flex-col gap-2 overflow-y-auto overscroll-contain border-r border-divider bg-surface p-3 @4xl:flex"
+        >
+          <Text as="h2" variant="h3">
+            Conversations
+          </Text>
+          <PetHistory
+            key={listKey}
             workspaceId={workspaceId}
+            petId={pet.id}
+            name={pet.name}
+            client={client}
+            rootItemId={noteScope?.rootItemId}
+            running={running || busy}
+            onResumed={(resumed) => {
+              resumeFromList(resumed);
+              input.current?.focus();
+            }}
+          />
+        </aside>
+      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {announcement}
+        </div>
+        {insight !== null ? (
+          <SaveInsightNote
+            text={insight}
+            onClose={() => {
+              setInsight(null);
+            }}
+          />
+        ) : null}
+        {saveChat ? (
+          <NewChatNote
+            sourceWorkspaceIds={[workspaceId]}
+            messages={messages.map((message) => ({ role: message.role, text: message.text }))}
+            onClose={() => {
+              setSaveChat(false);
+            }}
+          />
+        ) : null}
+        <ConversationHeader
+          layout={layout}
+          zen={zen}
+          petName={pet.name}
+          appearance={pet.appearance}
+          motion={settings.motion}
+          animation={animation}
+          status={statusText({
+            runtimeLoaded: Boolean(runtime),
+            connected,
+            errored,
+            hasDraft,
+            needsDecision: approvalPending,
+            running,
+          })}
+          title={runtime?.title}
+          renaming={rename.renaming}
+          renameBusy={rename.renameBusy}
+          renameError={rename.renameError}
+          onRename={(title) => {
+            void rename.renameConversation(title);
+          }}
+          onCancelRename={rename.cancelRename}
+          menuItems={menuItems}
+          menuTrigger={menuTrigger}
+          onClose={onClose}
+          noteScope={noteScope}
+          locked={running || busy}
+        />
+        {panel === 'settings' ? (
+          <PetSettingsPanel
             pet={pet}
-            settings={settings}
+            workspaceId={workspaceId}
+            model={model}
+            models={models}
+            running={running || busy}
             runtime={runtime}
-            messages={messages}
-            piecesBefore={piecesBefore}
-            running={running}
-            busy={busy}
-            hasDraft={hasDraft}
-            approvalPending={approvalPending}
-            workspaceAccess={workspaceAccess}
-            suggestions={suggestions}
-            onPick={pickSuggestion}
-            onAsk={askFromComponent}
-            setRuntime={setRuntime}
-            reportNeedsDecision={reportNeedsDecision}
-            applyWithoutAsking={applyWithoutAsking}
-            applyExemptToolIds={applyExemptToolIds}
-            noteScope={noteScope}
-            editing={editing}
-            setEditing={(value) => {
-              if (value === null) closeEditor();
-              else setEditing(value);
+            readWithoutAsking={readWithoutAsking}
+            headingRef={panelHeading}
+            onModelChange={(next) => {
+              setModel(next);
+              writeConversationModel(workspaceId, pet.id, pet.provider, next);
             }}
-            enterToSend={!touchLikeComposer}
-            resendTurn={resendTurn}
-            retryLastTurn={retryLastTurn}
-            onSaveInsight={setInsight}
+            onReadWithoutAskingChange={(next) => {
+              setReadWithoutAsking(next);
+              writeReadWithoutAsking(next);
+            }}
+            onBack={goBackFromPanel}
           />
-          {error ? (
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-divider px-3 py-2 @sm:px-4">
-              <Text role="alert">{errorKind === 'load' ? loadErrorMessage : error}</Text>
-              {error && retryLabel() ? (
-                <Button variant="ghost" onClick={retryError}>
-                  {retryLabel()}
+        ) : panel === 'history' ? (
+          <HistoryPanel
+            headingRef={panelHeading}
+            onBack={goBackFromPanel}
+            workspaceId={workspaceId}
+            petId={pet.id}
+            name={pet.name}
+            client={client}
+            rootItemId={noteScope?.rootItemId}
+            running={running || busy}
+            onResumed={(resumed) => {
+              resumeFromList(resumed);
+              goBackFromPanel();
+            }}
+          />
+        ) : !runtime ? (
+          // Must-fix 11/12: while nothing has ever loaded yet, the body says so plainly instead of
+          // showing the empty-state suggestions as if the conversation were simply quiet - and once
+          // a load error shows up here, it replaces the "Loading" text rather than sitting beside it.
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
+            {errorKind === 'load' && error ? (
+              <>
+                <Text role="alert">{loadErrorMessage}</Text>
+                <Button variant="ghost" onClick={retryWatch}>
+                  Retry now
                 </Button>
-              ) : null}
-            </div>
-          ) : null}
-          <Composer
-            petName={pet.name}
-            input={input}
-            draft={draft}
-            onDraftChange={(text) => {
-              setDraft(text);
-              regenerateRequestId();
-            }}
-            touchLikeComposer={touchLikeComposer}
-            slash={slash}
-            onSubmit={() => void submit()}
-            onInterrupt={() => void interrupt()}
-            running={running}
-            canSend={!busy && Boolean(draft.trim()) && connected}
-            chips={context.chips}
-            onRemoveChip={context.removeContext}
-            needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}
-            onTurnOnWorkspaceAccess={() => {
-              setWorkspaceAccess(true);
-              writeWorkspaceAccess(workspaceId, pet.id, true);
-            }}
-            workspaceAccess={workspaceAccess}
-            hasNoteScope={noteScope !== undefined}
-            noteReadOnly={noteScope?.readOnly ?? false}
-            onToggleWorkspaceAccess={() => {
-              const next = !workspaceAccess;
-              setWorkspaceAccess(next);
-              writeWorkspaceAccess(workspaceId, pet.id, next);
-              // Nothing can be applied without workspace tools, so the switch goes with it.
-              if (!next) setApplyWithoutAsking(false);
-            }}
-            applyWithoutAsking={applyWithoutAsking}
-            onApplyChange={setApplyWithoutAsking}
-            hasPage={Boolean(currentItem)}
-            contextCount={context.contexts.length}
-            hasSelection={context.hasSelection}
-            onAttachPage={context.attachPageContext}
-            onShareSelection={context.shareSelection}
-          />
-        </>
-      )}
+              </>
+            ) : (
+              <Text variant="note" tone="muted">
+                Loading conversation…
+              </Text>
+            )}
+          </div>
+        ) : !connected ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {pet.provider === 'chatgpt' ? (
+              <PetConnectionPanel />
+            ) : (
+              <div className="flex flex-col gap-3">
+                <Text role="alert">
+                  {runtime.reason ||
+                    `Set up ${petProviderLabels[pet.provider]} in Pet settings to chat.`}
+                </Text>
+                <Link
+                  to={`/w/${workspaceId}/settings?tab=pets`}
+                  className={`underline ${focusRing}`}
+                >
+                  <Text as="span">Open Pet settings</Text>
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <MessageList
+              client={client}
+              workspaceId={workspaceId}
+              pet={pet}
+              settings={settings}
+              runtime={runtime}
+              messages={messages}
+              piecesBefore={piecesBefore}
+              running={running}
+              busy={busy}
+              hasDraft={hasDraft}
+              approvalPending={approvalPending}
+              workspaceAccess={workspaceAccess}
+              suggestions={suggestions}
+              onPick={pickSuggestion}
+              onAsk={askFromComponent}
+              setRuntime={setRuntime}
+              reportNeedsDecision={reportNeedsDecision}
+              applyWithoutAsking={applyWithoutAsking}
+              applyExemptToolIds={applyExemptToolIds}
+              noteScope={noteScope}
+              editing={editing}
+              setEditing={(value) => {
+                if (value === null) closeEditor();
+                else setEditing(value);
+              }}
+              enterToSend={!touchLikeComposer}
+              resendTurn={resendTurn}
+              retryLastTurn={retryLastTurn}
+              onSaveInsight={setInsight}
+            />
+            {error ? (
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-divider px-3 py-2 @sm:px-4">
+                <Text role="alert">{errorKind === 'load' ? loadErrorMessage : error}</Text>
+                {error && retryLabel() ? (
+                  <Button variant="ghost" onClick={retryError}>
+                    {retryLabel()}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            <Composer
+              petName={pet.name}
+              input={input}
+              draft={draft}
+              onDraftChange={(text) => {
+                setDraft(text);
+                regenerateRequestId();
+              }}
+              touchLikeComposer={touchLikeComposer}
+              slash={slash}
+              onSubmit={() => void submit()}
+              onInterrupt={() => void interrupt()}
+              running={running}
+              canSend={!busy && Boolean(draft.trim()) && connected}
+              chips={context.chips}
+              onRemoveChip={context.removeContext}
+              needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}
+              onTurnOnWorkspaceAccess={() => {
+                setWorkspaceAccess(true);
+                writeWorkspaceAccess(workspaceId, pet.id, true);
+              }}
+              workspaceAccess={workspaceAccess}
+              hasNoteScope={noteScope !== undefined}
+              noteReadOnly={noteScope?.readOnly ?? false}
+              onToggleWorkspaceAccess={() => {
+                const next = !workspaceAccess;
+                setWorkspaceAccess(next);
+                writeWorkspaceAccess(workspaceId, pet.id, next);
+                // Nothing can be applied without workspace tools, so the switch goes with it.
+                if (!next) setApplyWithoutAsking(false);
+              }}
+              applyWithoutAsking={applyWithoutAsking}
+              onApplyChange={setApplyWithoutAsking}
+              hasPage={Boolean(currentItem)}
+              contextCount={context.contexts.length}
+              hasSelection={context.hasSelection}
+              onAttachPage={context.attachPageContext}
+              onShareSelection={context.shareSelection}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -519,6 +568,6 @@ function dialogClass(layout: 'floating' | 'fullscreen' | 'page'): string {
   return layout === 'fullscreen'
     ? '@container fixed inset-x-0 top-[var(--phone-dialog-top,0)] z-40 flex h-[var(--phone-dialog-height,100dvh)] min-w-0 w-full flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground outline-none'
     : layout === 'page'
-      ? '@container flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden bg-background text-foreground outline-none'
+      ? '@container flex h-full min-h-0 min-w-0 w-full overflow-hidden bg-background text-foreground outline-none'
       : '@container flex h-[calc(100dvh-var(--spacing)*36)] max-h-192 min-w-0 w-128 max-w-full flex-col overflow-hidden rounded-lg border border-divider bg-background text-foreground shadow-lg outline-none';
 }
