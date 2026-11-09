@@ -9,6 +9,7 @@ import {
   writeGraphPresentation,
   type GraphPresentation,
 } from './graph-presentation';
+import { kindLabel } from './graph-selection-bar';
 import { GRAPH_REPRESENTATIONS, type GraphRepresentation } from './graph-representations';
 
 interface Connection {
@@ -52,6 +53,7 @@ function WorkspaceGraphExplorer({
   workspaceId,
   onMove,
   onLink,
+  flash = null,
   initialFocusId = null,
 }: {
   readonly nodes: readonly GraphNode[];
@@ -65,6 +67,7 @@ function WorkspaceGraphExplorer({
   readonly workspaceId?: string | undefined;
   readonly onMove?: ((itemId: string, parentId: string) => void) | undefined;
   readonly onLink?: ((sourceId: string, targetId: string) => void) | undefined;
+  readonly flash?: { readonly ids: readonly string[]; readonly token: number } | null;
   readonly initialFocusId?: string | null;
 }): ReactNode {
   const visibility = useHiddenItems();
@@ -117,11 +120,31 @@ function WorkspaceGraphExplorer({
   const titles = new Map(
     nodes.map((node) => [node.id, node.title?.trim() ? node.title : 'Untitled']),
   );
-  const matches = nodes.filter((node) =>
-    (node.title?.trim() ? node.title : 'Untitled')
-      .toLocaleLowerCase()
-      .includes(search.trim().toLocaleLowerCase()),
-  );
+  // Every word must appear; titles that start with the query come first, then the most connected.
+  const query = search.trim().toLocaleLowerCase();
+  const words = query.split(/\s+/).filter(Boolean);
+  const starts = (id: string): boolean =>
+    (titles.get(id) ?? '').toLocaleLowerCase().startsWith(query);
+  const matches = nodes
+    .filter((node) => {
+      const title = (titles.get(node.id) ?? '').toLocaleLowerCase();
+      return words.every((word) => title.includes(word));
+    })
+    .sort(
+      (a, b) =>
+        Number(starts(b.id)) - Number(starts(a.id)) ||
+        (connections.get(b.id)?.length ?? 0) - (connections.get(a.id)?.length ?? 0),
+    );
+  /** Brings an item into view and picks it out, keeping the layout the reader chose. */
+  const showInGraph = (id: string): void => {
+    setPendingFocusId(null);
+    setChoice('spatial');
+    setVisitedSpatial(true);
+    if (presentation.representation === 'focused') {
+      setPresentation((current) => ({ ...current, focusId: id }));
+    }
+    setReveal((current) => ({ id, token: (current?.token ?? 0) + 1 }));
+  };
   const focusInGraph = (id: string): void => {
     setPendingFocusId(null);
     setPresentation({ representation: 'focused', focusId: id, distance: 1 });
@@ -157,9 +180,20 @@ function WorkspaceGraphExplorer({
           type="search"
           placeholder="Search item titles"
           value={search}
+          autoComplete="off"
+          enterKeyHint="search"
           onChange={(event) => {
             setSearch(event.target.value);
             setLimit(50);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setSearch('');
+            } else if (event.key === 'Enter' && mode === 'spatial' && matches[0] !== undefined) {
+              event.preventDefault();
+              showInGraph(matches[0].id);
+              setSearch('');
+            }
           }}
         />
       </label>
@@ -167,25 +201,37 @@ function WorkspaceGraphExplorer({
         <section aria-label="Graph search results" className="flex min-w-0 flex-col gap-2">
           <Text as="p" variant="caption" tone="muted" role="status">
             {String(matches.length)} matching items{partial ? ' in the loaded portion' : ''}. Choose
-            an item to focus its connections.
+            one to show it in the graph.
           </Text>
           <ul className="flex min-w-0 flex-col gap-1">
-            {matches.slice(0, 10).map((node) => (
+            {matches.slice(0, 8).map((node) => (
               <li key={node.id} className="min-w-0">
                 <Button
                   variant="ghost"
-                  className="h-auto min-h-(--control-md) w-full justify-start break-all whitespace-normal text-left"
-                  aria-label={`Focus graph on ${titles.get(node.id) ?? 'Untitled'}`}
+                  className="h-auto min-h-(--control-md) w-full justify-start gap-2 break-all whitespace-normal text-left pointer-coarse:min-h-(--control-lg)"
+                  aria-label={`Show ${titles.get(node.id) ?? 'Untitled'} in graph`}
                   onClick={() => {
-                    focusInGraph(node.id);
+                    showInGraph(node.id);
+                    setSearch('');
                   }}
                 >
-                  {titles.get(node.id)}
+                  <span>{titles.get(node.id)}</span>
+                  <Text as="span" variant="caption" tone="muted">
+                    {[
+                      kindLabel(node.type),
+                      node.parentId !== null && titles.has(node.parentId)
+                        ? `in ${titles.get(node.parentId) ?? ''}`
+                        : null,
+                      `${String(connections.get(node.id)?.length ?? 0)} links`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
                 </Button>
               </li>
             ))}
           </ul>
-          {matches.length > 10 ? (
+          {matches.length > 8 ? (
             <Button
               variant="ghost"
               onClick={() => {
@@ -311,6 +357,8 @@ function WorkspaceGraphExplorer({
             workspaceId={workspaceId}
             onMove={onMove}
             onLink={onLink}
+            onFocus={focusInGraph}
+            flash={flash}
             nodes={nodes}
             links={links}
             onOpen={onOpen}
@@ -334,14 +382,8 @@ function WorkspaceGraphExplorer({
           {matches.slice(0, limit).map((node) => {
             const related = connections.get(node.id) ?? [];
             const title = titles.get(node.id) ?? 'Untitled';
-            const showInGraph = (): void => {
-              setPendingFocusId(null);
-              setChoice('spatial');
-              setVisitedSpatial(true);
-              if (presentation.representation === 'focused') {
-                setPresentation((current) => ({ ...current, focusId: node.id }));
-              }
-              setReveal((current) => ({ id: node.id, token: (current?.token ?? 0) + 1 }));
+            const show = (): void => {
+              showInGraph(node.id);
             };
             return (
               <li key={node.id} className="min-w-0 py-3">
@@ -354,7 +396,7 @@ function WorkspaceGraphExplorer({
                         onOpen(node.id);
                       },
                     },
-                    { label: 'Show in graph', onSelect: showInGraph },
+                    { label: 'Show in graph', onSelect: show },
                     {
                       label: 'Focus in graph',
                       onSelect: () => {
@@ -379,7 +421,7 @@ function WorkspaceGraphExplorer({
                 <Button
                   variant="subtle"
                   aria-label={`Show ${titles.get(node.id) ?? 'Untitled'} in graph`}
-                  onClick={showInGraph}
+                  onClick={show}
                 >
                   Show in graph
                 </Button>

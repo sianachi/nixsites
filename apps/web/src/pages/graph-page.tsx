@@ -1,6 +1,6 @@
 import { isNixApiError, items as coreItems, type GraphNode } from '@nix/api-client';
-import { Button, Select, Text } from '@nix/ui';
-import type { ReactElement, ReactNode } from 'react';
+import { Button, Select, Text, useUndo } from '@nix/ui';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -98,15 +98,19 @@ export function GraphPage(): ReactElement {
     none: dialogOrPage,
   }[resolveOpenMode({ view: { kind: 'graph', open: openMode }, narrow, canOpenBeside: false })];
   const client = useApiClient();
+  const undo = useUndo();
+  const [flash, setFlash] = useState<{ ids: readonly string[]; token: number } | null>(null);
 
   /**
-   * Moves an item inside another, from a drop the reader has confirmed.
+   * Moves an item inside another, from a drop or the selected item's "Move into" list.
    *
    * The graph is read again afterwards rather than patched: a move changes the layout of
    * everything around it, and the server's answer is the only one that includes what else changed
-   * meanwhile. Undo is offered only when the old parent is known - on a truncated graph a null
-   * parent can mean "its parent was not drawn", and undoing to the workspace root would then be a
-   * second move rather than a reversal.
+   * meanwhile. The move happens at once, with no confirmation: it goes on the shared undo history,
+   * so a slip is one Undo away. That is offered only when the old parent is known - on a truncated
+   * graph a null parent can mean "its parent was not drawn", and undoing to the workspace root
+   * would then be a second move rather than a reversal. The two items involved are flashed so the
+   * result is seen where it happened, the same on undo.
    */
   const move = async (itemId: string, parentId: string, undoing = false): Promise<void> => {
     if (graph === null) {
@@ -127,20 +131,15 @@ export function GraphPage(): ReactElement {
 
     notifyItemChildrenChanged(graph.workspaceId, parentId);
     notifyItemChildrenChanged(graph.workspaceId, previous);
-    publishNotice({
-      key: `graph-move:${itemId}:${parentId}`,
-      message: `Moved "${titleOf(node)}" inside "${titleOf(destination)}".`,
-      ...(undoing || previous === null
-        ? {}
-        : {
-            action: {
-              label: 'Undo',
-              onAction: () => {
-                void move(itemId, previous, true);
-              },
-            },
-          }),
-    });
+    const label = `Moved "${titleOf(node)}" inside "${titleOf(destination)}".`;
+    if (!undoing) {
+      if (previous === null) {
+        publishNotice({ key: `graph-move:${itemId}:${parentId}`, message: label });
+      } else {
+        undo.push(label, () => move(itemId, previous, true));
+      }
+    }
+    setFlash((current) => ({ ids: [itemId, parentId], token: (current?.token ?? 0) + 1 }));
     await refresh();
   };
 
@@ -249,6 +248,7 @@ export function GraphPage(): ReactElement {
           void move(itemId, parentId);
         }}
         onLink={link}
+        flash={flash}
         nodes={graph.nodes}
         links={graph.links}
         onOpen={open}

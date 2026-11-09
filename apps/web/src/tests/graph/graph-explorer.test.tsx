@@ -136,7 +136,7 @@ it('searches all loaded titles above the drawing and focuses a result outside th
   expect(
     within(screen.getByRole('region', { name: 'Graph search results' })).getByRole('status'),
   ).toHaveTextContent('1 matching items in the loaded portion');
-  await user.click(screen.getByRole('button', { name: 'Focus graph on Weekly training' }));
+  await user.click(screen.getByRole('button', { name: 'Show Weekly training in graph' }));
 
   expect(screen.getByRole('combobox', { name: 'Focus item' })).toHaveValue('unrelated');
   expect(screen.getByRole('combobox', { name: 'Connection distance' })).toHaveValue('1');
@@ -257,10 +257,16 @@ it('keeps timeline positions fixed during a drag and still opens an item on a cl
   expect(onMove).not.toHaveBeenCalled();
   fireEvent.pointerDown(disc, { button: 0, pointerId: 2, clientX: 100, clientY: 100 });
   fireEvent.pointerUp(disc, { pointerId: 2, clientX: 100, clientY: 100 });
+  expect(onOpen).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(screen.getByRole('region', { name: 'Selected item' })).getByRole('button', {
+      name: 'Open',
+    }),
+  );
   expect(onOpen).toHaveBeenCalledWith('project');
 });
 
-it('selects a touched node first even when the device also has a mouse', () => {
+it('selects a clicked node and offers its actions below the drawing', () => {
   stubViewport(true);
   const onOpen = vi.fn();
   const { container } = render(<GraphView nodes={nodes} links={[]} onOpen={onOpen} />);
@@ -270,10 +276,95 @@ it('selects a touched node first even when the device also has a mouse', () => {
   fireEvent.pointerDown(disc, touch);
   fireEvent.pointerUp(disc, touch);
   expect(onOpen).not.toHaveBeenCalled();
-  expect(disc.querySelector('button')).toHaveTextContent('Open Project');
-  fireEvent.pointerDown(disc, touch);
-  fireEvent.pointerUp(disc, touch);
-  expect(onOpen).toHaveBeenCalledWith('project');
+  const bar = screen.getByRole('region', { name: 'Selected item' });
+  expect(within(bar).getByText('Project')).toBeInTheDocument();
+  fireEvent.click(within(bar).getByRole('button', { name: 'Deselect' }));
+  expect(screen.queryByRole('region', { name: 'Selected item' })).not.toBeInTheDocument();
+});
+
+it('moves and links the selected item without dragging, and says why a link is unavailable', () => {
+  stubViewport(true);
+  const onMove = vi.fn();
+  const onLink = vi.fn();
+  const onFocus = vi.fn();
+  const three = [
+    ...nodes,
+    { id: 'file', title: 'Scan', parentId: null, type: 'file', ...DATES },
+    { id: 'other', title: 'Other', parentId: null, type: 'note', ...DATES },
+  ];
+  const { container } = render(
+    <GraphView
+      nodes={three}
+      links={[]}
+      onOpen={vi.fn()}
+      onMove={onMove}
+      onLink={onLink}
+      onFocus={onFocus}
+    />,
+  );
+  const select = (id: string): void => {
+    const disc = container.querySelector(`[data-graph-node="${id}"]`);
+    if (disc === null) throw new Error('The graph node is missing.');
+    const press = { button: 0, pointerId: 1, clientX: 100, clientY: 100 };
+    fireEvent.pointerDown(disc, press);
+    fireEvent.pointerUp(disc, press);
+  };
+
+  select('plan');
+  let bar = screen.getByRole('region', { name: 'Selected item' });
+  const moveInto = within(bar).getByRole('combobox', { name: 'Move into' });
+  // Not itself, and not the parent it is already in.
+  expect(within(moveInto).queryByRole('option', { name: /^Plan/ })).not.toBeInTheDocument();
+  expect(within(moveInto).queryByRole('option', { name: /^Project/ })).not.toBeInTheDocument();
+  fireEvent.change(moveInto, { target: { value: 'other' } });
+  expect(onMove).toHaveBeenCalledWith('plan', 'other');
+  fireEvent.change(within(bar).getByRole('combobox', { name: 'Link to' }), {
+    target: { value: 'other' },
+  });
+  expect(onLink).toHaveBeenCalledWith('plan', 'other');
+  fireEvent.click(within(bar).getByRole('button', { name: 'Focus connections' }));
+  expect(onFocus).toHaveBeenCalledWith('plan');
+
+  select('file');
+  bar = screen.getByRole('region', { name: 'Selected item' });
+  expect(within(bar).queryByRole('combobox', { name: 'Link to' })).not.toBeInTheDocument();
+  expect(within(bar).getByText('Only a note can hold a link.')).toBeInTheDocument();
+});
+
+it("does not offer a move into the selected item's own descendants", () => {
+  stubViewport(true);
+  const { container } = render(
+    <GraphView nodes={nodes} links={[]} onOpen={vi.fn()} onMove={vi.fn()} />,
+  );
+  const disc = container.querySelector('[data-graph-node="project"]');
+  if (disc === null) throw new Error('The graph node is missing.');
+  const press = { button: 0, pointerId: 1, clientX: 100, clientY: 100 };
+  fireEvent.pointerDown(disc, press);
+  fireEvent.pointerUp(disc, press);
+  const moveInto = screen.getByRole('combobox', { name: 'Move into' });
+  expect(within(moveInto).queryByRole('option', { name: /^Plan/ })).not.toBeInTheDocument();
+});
+
+it('shows a search result in the graph on Enter and clears the search on Escape', async () => {
+  stubViewport(true);
+  const user = userEvent.setup();
+  const more = [
+    ...nodes,
+    { id: 'road', title: 'Road map', parentId: null, type: 'note', ...DATES },
+    { id: 'abroad', title: 'Abroad plans', parentId: null, type: 'note', ...DATES },
+  ];
+  render(<GraphExplorer nodes={more} links={[]} onOpen={vi.fn()} />);
+  const search = screen.getByRole('searchbox', { name: 'Find an item' });
+  await user.type(search, 'road');
+  const results = within(screen.getByRole('region', { name: 'Graph search results' }));
+  // A title that starts with the query ranks first, and each result says what and where it is.
+  expect(results.getAllByRole('button')[0]).toHaveAccessibleName('Show Road map in graph');
+  expect(results.getAllByRole('button')[0]).toHaveTextContent('Note · 0 links');
+  await user.keyboard('{Escape}');
+  expect(search).toHaveValue('');
+  await user.type(search, 'plan{Enter}');
+  expect(search).toHaveValue('');
+  expect(screen.getByText('Showing Plan')).toBeInTheDocument();
 });
 
 it('offers drawn node actions without opening or nudging a held node', () => {

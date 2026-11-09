@@ -51,6 +51,7 @@ import {
 } from './graph-layout';
 import { AT_HOME } from './graph-spring';
 import { creationOrder, graphStats, recencyOf, type Recency } from './graph-time';
+import { GraphSelectionBar, kindLabel } from './graph-selection-bar';
 import { GraphTree } from './graph-tree';
 import { stepIn, stepOut } from './graph-zoom';
 import { useSprungOffsets } from './use-sprung-offsets';
@@ -167,8 +168,9 @@ export interface GraphViewProps {
   readonly workspaceId?: string | undefined;
 
   /**
-   * Moves an item inside another. Offered when a node is dropped onto a node, after the reader
-   * confirms. Left out, dropping a node on another is only a nudge, as it always was.
+   * Moves an item inside another. Offered when a node is dropped onto a node, or chosen in the
+   * selected item's "Move into" list. It happens at once; the caller makes it undoable. Left out,
+   * dropping a node on another is only a nudge, as it always was.
    */
   readonly onMove?: ((itemId: string, parentId: string) => void) | undefined;
 
@@ -177,6 +179,12 @@ export interface GraphViewProps {
    * dragged onto another node. Left out, nodes have no link handle.
    */
   readonly onLink?: ((sourceId: string, targetId: string) => void) | undefined;
+
+  /** Narrows the graph to an item's connections; offered from the selected item's actions. */
+  readonly onFocus?: ((itemId: string) => void) | undefined;
+
+  /** Items to pick out for a moment because something just happened to them (a move, an undo). */
+  readonly flash?: { readonly ids: readonly string[]; readonly token: number } | null;
 }
 
 /**
@@ -322,11 +330,6 @@ function NodeShape({
   );
 }
 
-/** What a body kind is called in the legend and the filter. */
-function kindLabel(type: string): string {
-  return type.length === 0 ? 'Unknown' : `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
-}
-
 /** `none` has no children; `open` shows them; `closed` has folded them into itself. */
 type Fold = 'none' | 'open' | 'closed';
 
@@ -340,7 +343,7 @@ interface NodeMarkProps {
   /** Whether the label sits on the node's other side because the usual one was taken. */
   readonly flipped: boolean;
 
-  /** Whether a coarse-pointer tap has picked this node and it is offering its "Open" button. */
+  /** Whether a click or tap has picked this node, so its handles are shown and its actions are offered below. */
   readonly selected: boolean;
 
   /** Whether this node is among the ones currently brought forward. */
@@ -362,6 +365,12 @@ interface NodeMarkProps {
   /** Whether a node or a link being dragged would land on this one if released now. */
   readonly dropTarget: boolean;
 
+  /** Whether something just happened to this node: a ring that fades, kept still under reduced motion. */
+  readonly flashing: boolean;
+
+  /** The radius of the fold and link handles; larger for a finger. */
+  readonly handleRadius: number;
+
   /** Whether this node offers a link handle, and whether a link is being drawn from it now. */
   readonly linkable: boolean;
   readonly linking: boolean;
@@ -375,7 +384,6 @@ interface NodeMarkProps {
   readonly onPointerDown: (event: PointerEvent<SVGGElement>, node: PositionedNode) => void;
   readonly onPointerMove: (event: PointerEvent<SVGGElement>) => void;
   readonly onPointerUp: (event: PointerEvent<SVGGElement>, node: PositionedNode) => void;
-  readonly onOpen: (itemId: string) => void;
 }
 
 /**
@@ -399,6 +407,8 @@ const NodeMark = memo(function NodeMark({
   hiddenCount,
   onToggleFold,
   dropTarget,
+  flashing,
+  handleRadius,
   linkable,
   linking,
   onLinkPointerDown,
@@ -409,12 +419,11 @@ const NodeMark = memo(function NodeMark({
   onPointerDown,
   onPointerMove,
   onPointerUp,
-  onOpen,
 }: NodeMarkProps): ReactElement {
   return (
     <g
       data-graph-node={node.id}
-      className={`group cursor-default transition-transform duration-500 ease-out motion-reduce:transition-none ${RING_DELAY[Math.min(node.depth, RING_DELAY.length - 1)] ?? ''} ${absent ? 'pointer-events-none' : ''}`}
+      className={`group cursor-grab active:cursor-grabbing transition-transform duration-500 ease-out motion-reduce:transition-none ${RING_DELAY[Math.min(node.depth, RING_DELAY.length - 1)] ?? ''} ${absent ? 'pointer-events-none' : ''}`}
       transform={home}
       onPointerEnter={() => {
         onHover(node.id);
@@ -468,6 +477,31 @@ const NodeMark = memo(function NodeMark({
           />
         )}
 
+        {/* What just happened here: a ring that fades (the nodes are SVG, so the shared
+            [data-flash] wash, which needs a pseudo-element, cannot be used). */}
+        {flashing && (
+          <circle
+            cx={node.x}
+            cy={node.y}
+            r={node.radius + 4}
+            fill="none"
+            strokeWidth={3}
+            className="pointer-events-none animate-pulse stroke-accent-text motion-reduce:animate-none"
+          />
+        )}
+
+        {/* The drag grip: a hint that the node can be picked up. Shown on hover or once selected,
+            and always on a touch screen, where there is no hover to reveal it. */}
+        <text
+          x={node.x - node.radius - 16}
+          y={node.y}
+          dy="0.35em"
+          aria-hidden={true}
+          className={`pointer-events-none fill-current text-xs text-muted transition-opacity motion-reduce:transition-none pointer-coarse:opacity-100 ${selected ? '' : 'opacity-0 group-hover:opacity-100'}`}
+        >
+          ⋮⋮
+        </text>
+
         {/* The link handle: press here and drag to another node to ask for a reference to it.
             Shown like the fold control - on hover, once a tap has selected the node, and for as
             long as a link is being drawn from it, since the pointer has left the node by then.
@@ -490,7 +524,7 @@ const NodeMark = memo(function NodeMark({
             <circle
               cx={node.x + node.radius}
               cy={node.y + node.radius}
-              r={6}
+              r={handleRadius}
               className="fill-surface stroke-accent-text"
             />
             <polyline
@@ -528,7 +562,7 @@ const NodeMark = memo(function NodeMark({
             <circle
               cx={node.x + node.radius}
               cy={node.y - node.radius}
-              r={6}
+              r={handleRadius}
               className={`fill-surface ${NODE_STROKE}`}
             />
             <text
@@ -551,37 +585,6 @@ const NodeMark = memo(function NodeMark({
           </g>
         )}
       </g>
-
-      {/* Only a coarse-pointer selection reaches this - a mouse opens on its first click
-          and never sets a selection. Sized generously rather than tightly around the
-          label above it: a button a touch reader has to aim for defeats the point of
-          replacing a blind tap with a confirmed one. `stopPropagation` on press keeps this
-          button's own tap from being read as the start of a drag on the node underneath
-          it. */}
-      {selected && (
-        <foreignObject
-          x={node.x - 56}
-          y={node.y + node.radius * 2.5}
-          width={112}
-          height={28}
-          className="overflow-visible"
-        >
-          <button
-            data-context-menu-ignore
-            type="button"
-            tabIndex={-1}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-            }}
-            onClick={() => {
-              onOpen(node.id);
-            }}
-            className="w-full truncate rounded-md bg-accent-fill px-2 py-1 text-center text-xs text-background"
-          >
-            {`Open ${nodeTitle(node)}`}
-          </button>
-        </foreignObject>
-      )}
     </g>
   );
 });
@@ -768,6 +771,8 @@ function GraphDrawing({
   workspaceId,
   onMove,
   onLink,
+  onFocus,
+  flash = null,
   representation = 'radial',
   focusId = null,
   distance = 1,
@@ -1081,7 +1086,41 @@ function GraphDrawing({
     }
     setChosen({ centreX: node.x, centreY: node.y, scale: Math.max(camera.scale, 1) });
     setFoundId(id);
+    setSelectedId(id);
+    // A node inside a folded branch cannot be shown while the branch hides it.
+    const byId = new Map(nodes.map((candidate) => [candidate.id, candidate.parentId]));
+    setCollapsed((current) => {
+      const next = new Set(current);
+      const seen = new Set<string>();
+      for (
+        let up = byId.get(id);
+        up !== null && up !== undefined && !seen.has(up);
+        up = byId.get(up)
+      ) {
+        next.delete(up);
+        seen.add(up);
+      }
+      return next.size === current.size ? current : next;
+    });
   };
+
+  // Something just happened to some nodes (a move, an undo): ring them for a moment. Answered
+  // while rendering by token, like the reveal above, so only the marked nodes re-render.
+  const [handledFlash, setHandledFlash] = useState<number | null>(null);
+  const [flashing, setFlashing] = useState<ReadonlySet<string>>(new Set());
+  if (flash !== null && flash.token !== handledFlash) {
+    setHandledFlash(flash.token);
+    setFlashing(new Set(flash.ids));
+  }
+  useEffect(() => {
+    if (flashing.size === 0) return;
+    const timer = setTimeout(() => {
+      setFlashing(new Set());
+    }, 1000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [flashing]);
 
   // A reveal asked for from outside - "Show in graph" on a browse row. Answered while rendering,
   // by comparing against the last token handled, rather than in an effect: the camera is state
@@ -1126,23 +1165,18 @@ function GraphDrawing({
    * memoisation they exist for is undone on each render. They therefore read the camera, the
    * offsets and the selection from here instead of closing over them.
    */
-  const live = useRef({ camera, pane, offsets, selectedId, positioned, onMove, onLink });
+  const live = useRef({ camera, pane, offsets, positioned, onMove, onLink });
   useEffect(() => {
-    live.current = { camera, pane, offsets, selectedId, positioned, onMove, onLink };
+    live.current = { camera, pane, offsets, positioned, onMove, onLink };
   });
 
-  // The node a drag would land on if released now, a link being drawn, and a move waiting to be
-  // confirmed. A move is asked about rather than done on the drop: the same gesture a few pixels
-  // away is only a nudge, and restructuring the workspace should not be something a slip does.
+  // The node a drag would land on if released now, and a link being drawn. A drop moves at once;
+  // what makes a slip safe is that the caller records the move so it can be undone.
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [linking, setLinking] = useState<{
     readonly sourceId: string;
     readonly x: number;
     readonly y: number;
-  } | null>(null);
-  const [pendingMove, setPendingMove] = useState<{
-    readonly itemId: string;
-    readonly parentId: string;
   } | null>(null);
   const linkRef = useRef<string | null>(null);
 
@@ -1390,8 +1424,8 @@ function GraphDrawing({
       setDropTargetId(null);
 
       // Released on another node: that is a request to move this item inside it, not a nudge. The
-      // node goes back to where it was picked up from - if the move is confirmed the workspace is
-      // read again and laid out afresh, and if it is declined nothing should have changed.
+      // node goes back to where it was picked up from - the workspace is read again after the move
+      // and laid out afresh.
       const landed =
         drag?.moved === true && representation !== 'chronological'
           ? moveTargetAt(toGraph(event.clientX, event.clientY), drag.id)
@@ -1406,7 +1440,7 @@ function GraphDrawing({
           }
           return next;
         });
-        setPendingMove({ itemId: drag.id, parentId: landed.id });
+        live.current.onMove?.(drag.id, landed.id);
         return;
       }
 
@@ -1417,20 +1451,11 @@ function GraphDrawing({
         return;
       }
 
-      // A mouse opens on the first tap, as it always has. A coarse pointer never hovered, so the
-      // first tap only selects - naming the node and offering an "Open" button - and it takes a
-      // second tap on the same node, or that button, to actually leave the graph.
-      if (
-        (event.pointerType === 'touch' || isPointerCoarse()) &&
-        live.current.selectedId !== node.id
-      ) {
-        setSelectedId(node.id);
-        return;
-      }
-
-      open(node.id);
+      // A click or tap picks the node: it is named, its handles show, and its actions (open, focus,
+      // move into, link to) are offered below, so nothing needs a drag, a hover or a right-click.
+      setSelectedId(node.id);
     },
-    [open, moveTargetAt, toGraph, representation],
+    [moveTargetAt, toGraph, representation],
   );
 
   // Presses on the pane itself, as opposed to on a node. Kept by pointer id because a pinch is
@@ -1520,10 +1545,9 @@ function GraphDrawing({
     readGesture();
   };
 
-  const movingNode =
-    pendingMove === null ? undefined : nodes.find((node) => node.id === pendingMove.itemId);
-  const movingInto =
-    pendingMove === null ? undefined : nodes.find((node) => node.id === pendingMove.parentId);
+  const selectedNode =
+    selectedId === null ? undefined : nodes.find((node) => node.id === selectedId);
+  const handleRadius = isPointerCoarse() ? 12 : 6;
   const linkSource =
     linking === null ? undefined : positioned.find((node) => node.id === linking.sourceId);
 
@@ -1846,6 +1870,8 @@ function GraphDrawing({
                   hiddenCount={folded.hidden.get(node.id) ?? 0}
                   onToggleFold={toggleFold}
                   dropTarget={node.id === dropTargetId}
+                  flashing={flashing.has(node.id)}
+                  handleRadius={handleRadius}
                   // A fold stands in for a whole branch, so it cannot hold a reference of its own.
                   linkable={onLink !== undefined && !collapsed.has(node.id)}
                   linking={linking?.sourceId === node.id}
@@ -1865,7 +1891,6 @@ function GraphDrawing({
                   onPointerDown={onNodePointerDown}
                   onPointerMove={onNodePointerMove}
                   onPointerUp={onNodePointerUp}
-                  onOpen={open}
                 />
               ))}
             </svg>
@@ -2036,31 +2061,19 @@ function GraphDrawing({
         )}
       </div>
 
-      {/* The move a drop asked for, put as a question. Named with both titles so the answer can
-          be given without looking back at the drawing. */}
-      {pendingMove !== null && movingNode !== undefined && movingInto !== undefined && (
-        <div role="group" aria-label="Confirm move" className="flex flex-wrap items-center gap-3">
-          <Text as="span" variant="note" role="status">
-            {`Move "${nodeTitle(movingNode)}" inside "${nodeTitle(movingInto)}"?`}
-          </Text>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              onMove?.(pendingMove.itemId, pendingMove.parentId);
-              setPendingMove(null);
-            }}
-          >
-            Move
-          </Button>
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setPendingMove(null);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
+      {selectedNode !== undefined && (
+        <GraphSelectionBar
+          node={selectedNode}
+          nodes={nodes}
+          links={links}
+          onOpen={open}
+          onFocus={onFocus}
+          onMove={onMove}
+          onLink={onLink}
+          onClose={() => {
+            setSelectedId(null);
+          }}
+        />
       )}
 
       <GraphTree

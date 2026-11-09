@@ -511,7 +511,7 @@ describe('handling a node with the pointer', () => {
     fireEvent.pointerDown(target, { button: 0, pointerId: 1, clientX: x, clientY: y });
   }
 
-  it('opens the note when a disc is clicked', async () => {
+  it('selects a clicked disc and opens it from the selected-item actions', async () => {
     stubCoreApi({ items: [ROOT, OTHER] });
     const { container } = renderAt(<App />, '/graph');
 
@@ -520,6 +520,11 @@ describe('handling a node with the pointer', () => {
     const disc = discFor(container, 0);
     press(disc, 100, 100);
     fireEvent.pointerUp(disc, { pointerId: 1, clientX: 100, clientY: 100 });
+
+    const bar = await screen.findByRole('region', { name: 'Selected item' });
+    expect(within(bar).getByText('Specifications')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /note title/i })).not.toBeInTheDocument();
+    fireEvent.click(within(bar).getByRole('button', { name: 'Open' }));
 
     expect(await screen.findByRole('textbox', { name: /note title/i })).toHaveValue(
       'Specifications',
@@ -645,7 +650,7 @@ describe('touching a node on a coarse pointer', () => {
       }) as MediaQueryList;
   }
 
-  it('selects the node on the first tap, naming it, without opening it', async () => {
+  it('selects the node on a tap, naming it, without opening it', async () => {
     stubCoarsePointer();
     stubCoreApi({ items: [ROOT, OTHER] });
     const { container } = renderAt(<App />, '/graph');
@@ -661,10 +666,11 @@ describe('touching a node on a coarse pointer', () => {
       (text) => text.textContent === 'Specifications',
     );
     expect(label?.getAttribute('class')).not.toContain('opacity-0');
-    expect(screen.getByText('Open Specifications')).toBeVisible();
+    const bar = screen.getByRole('region', { name: 'Selected item' });
+    expect(within(bar).getByText('Specifications')).toBeVisible();
   });
 
-  it('opens on the second tap of the already-selected node', async () => {
+  it("opens through the selected item's Open button", async () => {
     stubCoarsePointer();
     stubCoreApi({ items: [ROOT, OTHER] });
     const { container } = renderAt(<App />, '/graph');
@@ -673,41 +679,27 @@ describe('touching a node on a coarse pointer', () => {
 
     const disc = discFor(container, 0);
     tap(disc, 100, 100);
-    tap(disc, 100, 100);
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Selected item' })).getByRole('button', {
+        name: 'Open',
+      }),
+    );
 
     expect(await screen.findByRole('textbox', { name: /note title/i })).toHaveValue(
       'Specifications',
     );
   });
 
-  it('opens through its own "Open" button as well as a second tap', async () => {
-    stubCoarsePointer();
+  it('puts the same selection on a mouse click, so no action needs a drag or a hover', async () => {
     stubCoreApi({ items: [ROOT, OTHER] });
     const { container } = renderAt(<App />, '/graph');
 
     await screen.findByRole('tree', { name: /workspace graph/i });
 
-    const disc = discFor(container, 0);
-    tap(disc, 100, 100);
-    fireEvent.click(screen.getByText('Open Specifications'));
+    tap(discFor(container, 0), 100, 100);
 
-    expect(await screen.findByRole('textbox', { name: /note title/i })).toHaveValue(
-      'Specifications',
-    );
-  });
-
-  it('leaves a mouse opening on the first tap, exactly as before', async () => {
-    stubCoreApi({ items: [ROOT, OTHER] });
-    const { container } = renderAt(<App />, '/graph');
-
-    await screen.findByRole('tree', { name: /workspace graph/i });
-
-    const disc = discFor(container, 0);
-    tap(disc, 100, 100);
-
-    expect(await screen.findByRole('textbox', { name: /note title/i })).toHaveValue(
-      'Specifications',
-    );
+    expect(screen.getByRole('region', { name: 'Selected item' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /note title/i })).not.toBeInTheDocument();
   });
 });
 
