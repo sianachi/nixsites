@@ -1,3 +1,4 @@
+import { useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
@@ -32,6 +33,28 @@ export interface OutlineTreeState {
   readonly startRename: (id: string) => void;
   readonly rename: (row: OutlineRow, title: string) => Promise<void>;
   readonly cancelRename: (id: string) => void;
+  /** The row the last edit was about and how, so that row can confirm it where it happened. */
+  readonly edit: RowEdit | null;
+  /** The row being dragged and the row it is over, for the drop mark. */
+  readonly drag: DragState | null;
+  readonly setDrag: (drag: DragState | null) => void;
+  /** Drops `row` above or below `target`, or inside it when it is open and the drop is below. */
+  readonly dropOn: (row: OutlineRow, target: OutlineRow, before: boolean) => Promise<void>;
+  /** Tuck the next new item under the row above it; resolves to a refusal to show, or null. */
+  readonly indentDraft: (text: string) => Promise<string | null>;
+  readonly outdentDraft: (text: string) => string | null;
+}
+
+export interface RowEdit {
+  readonly id: string;
+  readonly kind: 'move' | 'add' | 'rename';
+  readonly n: number;
+}
+
+export interface DragState {
+  readonly id: string;
+  readonly overId: string | null;
+  readonly before: boolean;
 }
 
 /**
@@ -49,6 +72,9 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<RowEdit | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const undo = useUndo();
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const pendingFocus = useRef<string | null>(null);
 
@@ -117,6 +143,16 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
       : (rows[0]?.item.id ?? null);
   const activeRow = rows.find((row) => row.item.id === activeId) ?? null;
 
+  function flashEdit(id: string, kind: RowEdit['kind']): void {
+    setEdit((current) => ({ id, kind, n: (current?.n ?? 0) + 1 }));
+  }
+
+  // Undo runs later, from whatever the screen is then: it re-reads through the latest closure.
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  });
+
   /** Re-reads one parent's children: the container's own for the top level, a read otherwise. */
   async function refresh(parentId: string | null): Promise<void> {
     if (parentId === rootId) {
@@ -164,8 +200,10 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     row: OutlineRow,
     parentId: string | null,
     afterId: string | null,
+    label: string,
   ): Promise<boolean> {
     setNote(null);
+    const originalAfter = row.siblings[row.index - 1]?.id ?? null;
     setBusy(true);
     try {
       try {
@@ -175,6 +213,21 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
         return false;
       }
       pendingFocus.current = row.item.id;
+      flashEdit(row.item.id, 'move');
+      // One entry puts it back where it was from the current state, not from a snapshot.
+      undo.push(label, async () => {
+        try {
+          await source.move(row.item.id, parentId, row.parentId, originalAfter);
+        } catch (reason) {
+          setNote({ itemId: row.item.id, text: describeOutlineRefusal(reason) });
+          return;
+        }
+        pendingFocus.current = row.item.id;
+        flashEdit(row.item.id, 'move');
+        await Promise.all(
+          [...new Set([row.parentId, parentId])].map((parent) => refreshRef.current(parent)),
+        ).catch(() => undefined);
+      });
       // The move happened; a failed re-read is a different sentence from a refused move, because
       // retrying the move would move it again.
       try {
@@ -189,6 +242,12 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     } finally {
       setBusy(false);
     }
+  }
+
+  async function childrenToAppendTo(above: Item): Promise<readonly Item[] | undefined> {
+    const known = nested.get(above.id);
+    if (known !== undefined || !above.hasChildren) return known;
+    return sortItems(await source.list(above.id), null, false);
   }
 
   async function indent(row: OutlineRow): Promise<void> {
@@ -206,17 +265,16 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     }
     // Last among the new parent's children, which means knowing them: read them first if the row
     // above has never been opened, rather than guessing "first" and landing it out of order.
-    let children = nested.get(above.id);
-    if (children === undefined && above.hasChildren) {
-      try {
-        children = sortItems(await source.list(above.id), null, false);
-      } catch (reason) {
-        setNote({ itemId: row.item.id, text: describeOutlineRefusal(reason) });
-        return;
-      }
+    let children: readonly Item[] | undefined;
+    try {
+      children = await childrenToAppendTo(above);
+    } catch (reason) {
+      setNote({ itemId: row.item.id, text: describeOutlineRefusal(reason) });
+      return;
     }
     const last = children?.[children.length - 1];
-    if (await move(row, above.id, last?.id ?? null)) {
+    const label = `Indented "${titleOf(row.item)}" under "${titleOf(above)}"`;
+    if (await move(row, above.id, last?.id ?? null, label)) {
       setExpanded((current) => new Set(current).add(above.id));
     }
   }
@@ -228,19 +286,54 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     }
     const parentRow = rows.find((candidate) => candidate.item.id === row.parentId);
     if (parentRow === undefined) return;
-    await move(row, parentRow.parentId, parentRow.item.id);
+    await move(
+      row,
+      parentRow.parentId,
+      parentRow.item.id,
+      `Outdented "${titleOf(row.item)}" out of "${titleOf(parentRow.item)}"`,
+    );
+  }
+
+  function moved(row: OutlineRow, direction: 'up' | 'down'): string {
+    const place = direction === 'up' ? row.index : row.index + 2;
+    return `Moved "${titleOf(row.item)}" ${direction} to ${String(place)} of ${String(row.siblings.length)}`;
   }
 
   async function reorder(row: OutlineRow, by: -1 | 1): Promise<void> {
     if (by === -1) {
       if (row.index === 0) return;
       const before = row.siblings[row.index - 2];
-      await move(row, row.parentId, before?.id ?? null);
+      await move(row, row.parentId, before?.id ?? null, moved(row, 'up'));
       return;
     }
     const after = row.siblings[row.index + 1];
     if (after === undefined) return;
-    await move(row, row.parentId, after.id);
+    await move(row, row.parentId, after.id, moved(row, 'down'));
+  }
+
+  async function dropOn(row: OutlineRow, target: OutlineRow, before: boolean): Promise<void> {
+    setDrag(null);
+    if (row.item.id === target.item.id) return;
+    const into = !before && expanded.has(target.item.id) && target.item.hasChildren;
+    const parentId = into ? target.item.id : target.parentId;
+    const afterId = into
+      ? null
+      : before
+        ? (target.siblings[target.index - 1]?.id ?? null)
+        : target.item.id;
+    // Dropping where it already sits is not an edit.
+    if (
+      parentId === row.parentId &&
+      (afterId === row.item.id || afterId === (row.siblings[row.index - 1]?.id ?? null))
+    )
+      return;
+    const where = into ? 'into' : before ? 'above' : 'below';
+    await move(
+      row,
+      parentId,
+      afterId,
+      `Moved "${titleOf(row.item)}" ${where} "${titleOf(target.item)}"`,
+    );
   }
 
   /** Makes a sibling from the draft field, then keeps the field open after it for the next one. */
@@ -271,8 +364,9 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     } catch {
       placementRefused ??= 'Added, but this outline could not be re-read. Reload to see it.';
     }
-    setDraft({ ...at, afterId: created.id });
+    setDraft({ parentId: at.parentId, afterId: created.id, level: at.level });
     setFocusedId(created.id);
+    flashEdit(created.id, 'add');
     if (placementRefused !== null) setNote({ itemId: created.id, text: placementRefused });
     return null;
   }
@@ -301,6 +395,17 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
       setNote({ itemId: row.item.id, text: describeOutlineRefusal(reason) });
       return;
     }
+    flashEdit(row.item.id, 'rename');
+    undo.push(`Renamed "${titleOf(row.item)}" to "${named}"`, async () => {
+      try {
+        await source.rename(row.item.id, row.parentId, row.item.title);
+      } catch (reason) {
+        setNote({ itemId: row.item.id, text: describeOutlineRefusal(reason) });
+        return;
+      }
+      flashEdit(row.item.id, 'rename');
+      await refreshRef.current(row.parentId).catch(() => undefined);
+    });
     try {
       await refresh(row.parentId);
     } catch {
@@ -319,6 +424,45 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
       pendingFocus.current = back;
       setFocusedId(back);
     }
+  }
+
+  /** Moves the next new item's place in: last child of the row it follows. */
+  async function indentDraft(text: string): Promise<string | null> {
+    if (draft === null) return null;
+    const above = childrenOf(draft.parentId).find((item) => item.id === draft.afterId);
+    if (above === undefined) return 'There is nothing above to tuck this under.';
+    if (above.noChildren === true) return `"${titleOf(above)}" does not accept new children.`;
+    let children: readonly Item[] | undefined;
+    try {
+      children = await childrenToAppendTo(above);
+    } catch (reason) {
+      return describeOutlineRefusal(reason);
+    }
+    if (children !== undefined) {
+      const known = children;
+      setNested((current) => new Map(current).set(above.id, known));
+    }
+    setExpanded((current) => new Set(current).add(above.id));
+    setDraft({
+      parentId: above.id,
+      afterId: children?.[children.length - 1]?.id ?? null,
+      level: draft.level + 1,
+      text,
+    });
+    return null;
+  }
+
+  function outdentDraft(text: string): string | null {
+    if (draft === null) return null;
+    const parentRow = rows.find((candidate) => candidate.item.id === draft.parentId);
+    if (parentRow === undefined) return 'Already at the top level.';
+    setDraft({
+      parentId: parentRow.parentId,
+      afterId: parentRow.item.id,
+      level: draft.level - 1,
+      text,
+    });
+    return null;
   }
 
   function focusRow(id: string | undefined): void {
@@ -353,5 +497,11 @@ export function useOutlineTree(container: ContainerData, source: OutlineSource):
     startRename,
     rename,
     cancelRename,
+    edit,
+    drag,
+    setDrag,
+    dropOn,
+    indentDraft,
+    outdentDraft,
   };
 }

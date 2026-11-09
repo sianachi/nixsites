@@ -14,6 +14,8 @@ export interface Draft {
   readonly parentId: string | null;
   readonly afterId: string | null;
   readonly level: number;
+  /** What was typed in the field, kept when the field changes level. */
+  readonly text?: string;
 }
 
 /** A sentence about one row - a refused move, a locked branch - shown under that row. */

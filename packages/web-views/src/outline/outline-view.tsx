@@ -81,6 +81,9 @@ export function OutlineTree(props: OutlineTreeProps): ReactNode {
       <DraftField
         key={`${draft.parentId ?? 'root'}:${draft.afterId ?? 'first'}`}
         level={draft.level}
+        initialText={draft.text ?? ''}
+        onIndent={tree.indentDraft}
+        onOutdent={tree.outdentDraft}
         onSubmit={(title) => tree.add(title, draft)}
         onCancel={tree.cancelDraft}
       />

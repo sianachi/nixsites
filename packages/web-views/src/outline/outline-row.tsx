@@ -1,9 +1,10 @@
-import { ContextMenu, Icon, Text, cn, focusRing, isEditableTarget } from '@nix/ui';
+import { ContextMenu, Icon, Text, cn, focusRing, isEditableTarget, useFlash } from '@nix/ui';
 import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
   ChevronRight,
+  GripVertical,
   IndentDecrease,
   IndentIncrease,
   Lock,
@@ -46,7 +47,11 @@ export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
     rowRefs,
     setFocusedId,
     setDraft,
+    edit,
+    drag,
+    setDrag,
   } = tree;
+  const flash = useFlash(edit?.id === row.item.id ? edit.n : null);
   const selection = useOptionalItemSelection();
   const openBeside = selection?.openBeside;
   // A phone has no hover, so the boxes appear only once a long-press has started a selection.
@@ -67,6 +72,8 @@ export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
         },
     clickSelects,
   );
+  const dropMark =
+    drag?.overId === id && drag.id !== id ? (drag.before ? 'before' : 'after') : null;
   const indentation = `min(${String((row.level - 1) * 1.5)}rem, 25%)`;
   return (
     <ContextMenu
@@ -133,6 +140,33 @@ export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
       {(contextTarget) => (
         <div
           {...contextTarget}
+          {...flash}
+          data-enter={edit?.id === id && edit.kind === 'add' ? '' : undefined}
+          draggable={renamingId !== id && !busy}
+          onDragStart={(event) => {
+            setDrag({ id, overId: null, before: false });
+            event.dataTransfer.effectAllowed = 'move';
+            // Without data attached, Firefox refuses to start the drag at all.
+            event.dataTransfer.setData('text/plain', id);
+          }}
+          onDragOver={(event) => {
+            if (drag === null) return;
+            event.preventDefault();
+            const box = event.currentTarget.getBoundingClientRect();
+            const before = event.clientY < box.top + box.height / 2;
+            if (drag.overId !== id || drag.before !== before)
+              setDrag({ ...drag, overId: id, before });
+          }}
+          onDrop={(event) => {
+            if (drag === null) return;
+            event.preventDefault();
+            const source = tree.rows.find((candidate) => candidate.item.id === drag.id);
+            if (source !== undefined) void tree.dropOn(source, row, drag.before);
+            else setDrag(null);
+          }}
+          onDragEnd={() => {
+            setDrag(null);
+          }}
           ref={(element) => {
             if (element === null) rowRefs.current.delete(id);
             else rowRefs.current.set(id, element);
@@ -165,12 +199,22 @@ export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
             tree.startRename(id);
           }}
           className={cn(
-            'group flex min-h-(--control-sm) min-w-0 flex-wrap items-center gap-1 rounded-sm py-1 pointer-coarse:min-h-(--control-lg)',
+            'group flex border-y-2 border-transparent min-h-(--control-sm) min-w-0 flex-wrap items-center gap-1 rounded-sm py-1 pointer-coarse:min-h-(--control-lg)',
             id === activeId ? 'bg-foreground/7' : '',
+            drag?.id === id && 'opacity-40',
+            dropMark === 'before' && 'border-t-accent',
+            dropMark === 'after' && 'border-b-accent',
             focusRing,
           )}
           style={{ paddingInlineStart: indentation }} // design-token-exempt: tree-depth indentation is capped relative to available width so deep titles remain readable
         >
+          {/* Where the pointer can drag, a grip says so; the toolbar and keys do the same on touch. */}
+          <span
+            aria-hidden="true"
+            className="hidden w-4 shrink-0 cursor-grab justify-center text-muted opacity-0 group-hover:opacity-100 group-focus:opacity-100 pointer-fine:inline-flex"
+          >
+            <Icon icon={GripVertical} size="sm" />
+          </span>
           {/* The disclosure is a pointer convenience over what Right and Left already do,
                       so it is not a second tab stop inside the row. */}
           <span

@@ -1,4 +1,4 @@
-import { Button, Icon } from '@nix/ui';
+import { Button, Icon, Text } from '@nix/ui';
 import {
   ArrowDown,
   ArrowUp,
@@ -24,6 +24,9 @@ interface OutlineToolbarProps {
   readonly onDown: () => void;
 }
 
+// On a phone the main ways to act carry a short word beside the glyph.
+const labelled = 'pointer-coarse:w-auto pointer-coarse:gap-1 pointer-coarse:px-3';
+
 /**
  * The structural edits as one row of icon buttons, acting on the row last focused - a phone has no
  * Tab key. Each is named for the row it acts on, so no caption has to say which row that is.
@@ -48,17 +51,73 @@ export function OutlineToolbar(props: OutlineToolbarProps): ReactNode {
       <Button variant="icon" aria-label="Open" onClick={onOpen} disabled={row === null}>
         <Icon icon={ExternalLink} size="sm" />
       </Button>
-      <Button variant="icon" aria-label={`Indent${name}`} onClick={onIndent} disabled={disabled}>
+      <Button
+        variant="icon"
+        className={labelled}
+        aria-label={`Indent${name}`}
+        onClick={onIndent}
+        disabled={disabled}
+      >
         <Icon icon={IndentIncrease} size="sm" />
+        <Text
+          as="span"
+          variant="caption"
+          aria-hidden="true"
+          className="hidden pointer-coarse:inline"
+        >
+          Indent
+        </Text>
       </Button>
-      <Button variant="icon" aria-label={`Outdent${name}`} onClick={onOutdent} disabled={disabled}>
+      <Button
+        variant="icon"
+        className={labelled}
+        aria-label={`Outdent${name}`}
+        onClick={onOutdent}
+        disabled={disabled}
+      >
         <Icon icon={IndentDecrease} size="sm" />
+        <Text
+          as="span"
+          variant="caption"
+          aria-hidden="true"
+          className="hidden pointer-coarse:inline"
+        >
+          Outdent
+        </Text>
       </Button>
-      <Button variant="icon" aria-label={`Move${name} up`} onClick={onUp} disabled={disabled}>
+      <Button
+        variant="icon"
+        className={labelled}
+        aria-label={`Move${name} up`}
+        onClick={onUp}
+        disabled={disabled}
+      >
         <Icon icon={ArrowUp} size="sm" />
+        <Text
+          as="span"
+          variant="caption"
+          aria-hidden="true"
+          className="hidden pointer-coarse:inline"
+        >
+          Up
+        </Text>
       </Button>
-      <Button variant="icon" aria-label={`Move${name} down`} onClick={onDown} disabled={disabled}>
+      <Button
+        variant="icon"
+        className={labelled}
+        aria-label={`Move${name} down`}
+        onClick={onDown}
+        disabled={disabled}
+      >
         <Icon icon={ArrowDown} size="sm" />
+        <Text
+          as="span"
+          variant="caption"
+          aria-hidden="true"
+          className="hidden pointer-coarse:inline"
+        >
+          Down
+        </Text>
       </Button>
     </div>
   );

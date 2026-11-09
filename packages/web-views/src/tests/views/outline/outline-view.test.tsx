@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useRef, useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { UndoProvider, useUndo } from '@nix/ui';
 import { renderAt } from '@nix/web-editor/testing/render-with-router';
 import { aView } from '@nix/web-collections/testing/view-fixture';
 import { aContainer } from '@nix/web-collections/testing/container-fixture';
@@ -181,6 +182,20 @@ function treeTitles(): string[] {
 function row(title: string): HTMLElement {
   const escaped = title.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   return screen.getByRole('treeitem', { name: new RegExp(`^${escaped}(?:$|,| [A-Z"])`, 'u') });
+}
+
+function UndoButton(): ReactNode {
+  const undo = useUndo();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void undo.undoLatest();
+      }}
+    >
+      Undo it
+    </button>
+  );
 }
 
 describe('OutlineTree', () => {
@@ -473,5 +488,72 @@ describe('OutlineTree', () => {
 
     expect(screen.getByText(/Only the first 4 items/u)).toBeInTheDocument();
     expect(row('Alpha')).toHaveAttribute('aria-setsize', '-1');
+  });
+
+  it('undoes an indent and a rename, each reversing only itself', async () => {
+    const user = userEvent.setup();
+    renderAt(
+      <UndoProvider>
+        <Harness />
+        <UndoButton />
+      </UndoProvider>,
+    );
+
+    row('Charlie').focus();
+    await user.keyboard('{Tab}');
+    await waitFor(() => {
+      expect(row('Charlie')).toHaveAttribute('aria-level', '2');
+    });
+    row('Bravo').focus();
+    await user.keyboard('{F2}');
+    const field = await screen.findByRole('textbox');
+    await user.clear(field);
+    await user.type(field, 'Renamed{Enter}');
+    await screen.findByRole('treeitem', { name: /^Renamed/u });
+
+    await user.click(screen.getByRole('button', { name: 'Undo it' }));
+    await waitFor(() => {
+      expect(row('Bravo')).toBeInTheDocument();
+    });
+    // The indent is still in place until its own undo.
+    expect(row('Charlie')).toHaveAttribute('aria-level', '2');
+    await user.click(screen.getByRole('button', { name: 'Undo it' }));
+    await waitFor(() => {
+      expect(treeTitles()).toEqual(['Alpha', 'Bravo', 'Bravo one', 'Charlie', 'Delta']);
+    });
+  });
+
+  it('tucks the next new item under the row above with the Indent button and Tab', async () => {
+    const user = userEvent.setup();
+    renderAt(<Harness />);
+
+    row('Charlie').focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('textbox', { name: 'New item' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Indent next item' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('does not accept new children');
+    await user.click(screen.getByRole('button', { name: 'Done adding' }));
+    expect(screen.queryByRole('textbox', { name: 'New item' })).toBeNull();
+
+    row('Bravo').focus();
+    await user.keyboard('{Enter}');
+    await user.type(await screen.findByRole('textbox', { name: 'New item' }), 'Sub');
+    await user.keyboard('{Tab}');
+    await waitFor(() => {
+      expect(screen.getByRole('treeitem', { name: 'New item' })).toHaveAttribute('aria-level', '2');
+    });
+    expect(screen.getByRole('textbox', { name: 'New item' })).toHaveValue('Sub');
+  });
+
+  it('moves a row by dragging it below another', async () => {
+    const onMove = vi.fn();
+    renderAt(<Harness onMove={onMove} />);
+
+    fireEvent.dragStart(row('Alpha'), { dataTransfer: { setData: vi.fn() } });
+    fireEvent.dragOver(row('Delta'), { clientY: 9999 });
+    fireEvent.drop(row('Delta'), { clientY: 9999 });
+    await waitFor(() => {
+      expect(onMove).toHaveBeenCalledWith('a', ROOT, 'd');
+    });
   });
 });
