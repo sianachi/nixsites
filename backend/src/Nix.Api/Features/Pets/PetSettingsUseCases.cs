@@ -62,7 +62,8 @@ public static class PetSettingsValidation
         {
             if (profile is null || profile.Id == Guid.Empty || !ids.Add(profile.Id)
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
-                || profile.Appearance is not ("owl" or "cat" or "fox" or "eye-of-ra" or "demiurge")
+                || profile.Appearance is not ("owl" or "cat" or "fox" or "eye-of-ra" or "demiurge"
+                    or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite")
                 || profile.Personality is not ("calm" or "playful" or "encouraging" or "concise")
                 || profile.ResponseLength is not ("concise" or "balanced" or "detailed")
                 || profile.Instructions is null || profile.Instructions.Length > 2000

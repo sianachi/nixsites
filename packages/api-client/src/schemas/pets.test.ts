@@ -20,7 +20,18 @@ describe('pet boundary schemas', () => {
   it('accepts an owl independently of its personality', () => {
     expect(petSettingsSchema.parse(settings).profiles[0]?.personality).toBe('playful');
   });
-  it.each(['eye-of-ra', 'demiurge', 'fox', 'cat'])('accepts the %s appearance', (appearance) => {
+  it.each([
+    'eye-of-ra',
+    'demiurge',
+    'fox',
+    'cat',
+    'octopus',
+    'axolotl',
+    'moth',
+    'pangolin',
+    'phoenix-chick',
+    'mushroom-sprite',
+  ])('accepts the %s appearance', (appearance) => {
     expect(
       petSettingsSchema.parse({
         ...settings,

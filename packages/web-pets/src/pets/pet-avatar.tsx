@@ -6,12 +6,24 @@ import eyeOfRaAtlas from './eye-of-ra-atlas.json';
 import demiurgeAtlas from './demiurge-atlas.json';
 import foxAtlas from './fox-atlas.json';
 import nekoAtlas from './neko-atlas.json';
+import octopusAtlas from './octopus-atlas.json';
+import axolotlAtlas from './axolotl-atlas.json';
+import mothAtlas from './moth-atlas.json';
+import pangolinAtlas from './pangolin-atlas.json';
+import phoenixChickAtlas from './phoenix-chick-atlas.json';
+import mushroomSpriteAtlas from './mushroom-sprite-atlas.json';
 
 export const petAtlases = {
   'eye-of-ra': eyeOfRaAtlas,
   demiurge: demiurgeAtlas,
   fox: foxAtlas,
   cat: nekoAtlas,
+  octopus: octopusAtlas,
+  axolotl: axolotlAtlas,
+  moth: mothAtlas,
+  pangolin: pangolinAtlas,
+  'phoenix-chick': phoenixChickAtlas,
+  'mushroom-sprite': mushroomSpriteAtlas,
 } as const;
 
 export const petAnimationStates = [

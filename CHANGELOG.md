@@ -7,6 +7,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Added Octopus, Axolotl, Moth, Pangolin, Phoenix Chick and Mushroom Sprite as animated appearances in companion settings.
+
 - Workspace passwords. An owner can close a workspace behind one password in its settings. Until a member enters it, they see only the workspace's name and that it is locked: no items, titles, search, graph, views, files, comments, members, settings, agents, MCP or offline sync. An unlock lasts 15 minutes, belongs to the browser session or access token that entered it, and ends when the owner changes or removes the password or the member locks the workspace again. The same password lets anyone in the organization who signs in and opens the workspace's join link join as a viewer; every failed join answers alike, so links cannot be used to find workspaces. A forgotten password cannot be recovered. New routes: `PUT /api/v1/workspaces/{id}/password`, `POST .../password/remove`, `POST` and `DELETE .../unlock`, `POST .../join`; workspace responses gain `passwordProtected` and `unlockedUntil`, and a closed workspace's response carries only its name and kind. A member's device sync of a closed workspace answers 423 `workspaces.locked`, so an offline copy keeps its unsynced edits instead of being wiped as revoked access. `nixctl ws password|unlock|relock|join` read passwords from stdin; the pet and MCP catalog refuses all of them.
 
 - Pet chat streams. Replies, tool cards and approvals arrive over one open connection instead of repeated polling; the app falls back to polling when a stream cannot open. New routes: `POST /api/v1/me/pets/runtime/stream` and `.../runtime/note/stream`.
