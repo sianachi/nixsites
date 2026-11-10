@@ -211,8 +211,8 @@ describe('what the graph admits to', () => {
 
     await screen.findByRole('tree', { name: /workspace graph/i });
 
-    expect(await screen.findByRole('status', { name: '' })).toBeInTheDocument();
-    expect(screen.getByText(/first 2000 items/i)).toBeInTheDocument();
+    const warning = await screen.findByText(/first 2000 items/i);
+    expect(warning.closest('[role="status"]')).toBeInTheDocument();
     expect(screen.getByText(/not drawn/i)).toBeInTheDocument();
   });
 

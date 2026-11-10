@@ -18920,6 +18920,10 @@
           "title": {
             "type": "string",
             "default": ""
+          },
+          "serverWrites": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -19265,6 +19269,26 @@
           "readWithoutAsking": {
             "type": "boolean",
             "default": false
+          },
+          "fingerprint": {
+            "type": "string",
+            "default": ""
+          },
+          "editedArguments": {
+            "type": "string",
+            "default": ""
+          },
+          "editNote": {
+            "type": "string",
+            "default": ""
+          },
+          "automatic": {
+            "type": "boolean",
+            "default": false
+          },
+          "approvedOperation": {
+            "type": "string",
+            "default": ""
           }
         }
       },

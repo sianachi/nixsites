@@ -327,8 +327,9 @@ internal static class PetInlineEndpoint
             {
                 if (log.IsEnabled(LogLevel.Information))
                 {
-                    ApiLog.PetInlineEnded(log, request.RequestId, request.Kind, outcome, Encoding.UTF8.GetByteCount(request.Selection ?? string.Empty),
-                        copied, status, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                    var selectionBytes = Encoding.UTF8.GetByteCount(request.Selection ?? string.Empty);
+                    var elapsedMs = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                    ApiLog.PetInlineEnded(log, request.RequestId, request.Kind, outcome, selectionBytes, copied, status, elapsedMs);
                 }
             });
             lease = null;

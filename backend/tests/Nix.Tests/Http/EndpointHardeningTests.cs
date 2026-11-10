@@ -145,10 +145,10 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
     }
 
     /// <summary>
-    /// The policy each mutating route is expected to carry. The two unauthenticated public
-    /// surfaces carry their own windows; every other mutation shares the writes policy.
+    /// The policy for each write or read sent as a POST. The two unauthenticated public
+    /// surfaces carry their own windows. Other mutations share the writes policy.
     /// </summary>
-    private static string ExpectedPolicy(RouteEndpoint endpoint) => endpoint.RoutePattern.RawText switch
+    private static string? ExpectedPolicy(RouteEndpoint endpoint) => endpoint.RoutePattern.RawText switch
     {
         "/public/v1/forms/{token}" => RateLimitRefusal.PublicFormsPolicyName,
         "/public/v1/auth/token" => RateLimitRefusal.TokenExchangePolicyName,
@@ -171,6 +171,9 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
         // A read sent as a POST: its own window, so lookups while typing never spend the writes
         // window a person's saves draw on.
         "/api/v1/search/mentions" => RateLimitRefusal.SuggestionsPolicyName,
+
+        // Like the GET watch routes, these reads are capped by the companion's watcher slots.
+        "/api/v1/me/pets/runtime/stream" or "/api/v1/me/pets/runtime/note/stream" => null,
 
         // The ad-hoc query and its aggregate: reads sent as POSTs, on their own window, so a
         // dashboard's tiles or an assistant's lookups never spend a person's saves.

@@ -168,7 +168,7 @@ describe('workspace layout preferences', () => {
       expect(
         screen
           .getAllByRole('status')
-          .some((status) => status.textContent?.includes('Your saved layout has already changed.')),
+          .some((status) => status.textContent.includes('Your saved layout has already changed.')),
       ).toBe(true);
     });
     expect(layoutWrites()).toHaveLength(2);
