@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, Text } from '@nix/ui';
 import { useId, useRef, type ReactNode } from 'react';
 
@@ -51,7 +52,11 @@ export interface OutlineTreeProps extends OutlineViewProps {
 
 export function OutlineTree(props: OutlineTreeProps): ReactNode {
   const { container, view, onOpen, source } = props;
-  const itemActions = useItemContextActions(onOpen);
+  const compact = useCompactCollection();
+  const itemActions = useItemContextActions(onOpen, {
+    includeOpen: !compact,
+    includeRename: !compact,
+  });
   const clickSelects = useClickSelects();
   const tree = useOutlineTree(container, source);
   const releaseTab = useRef(false);
@@ -128,7 +133,13 @@ export function OutlineTree(props: OutlineTreeProps): ReactNode {
         }}
       />
 
-      <Text as="p" id={captionId} variant="caption" tone="muted" className="pointer-coarse:sr-only">
+      <Text
+        as="p"
+        id={captionId}
+        variant="caption"
+        tone="muted"
+        className={compact ? 'sr-only' : 'pointer-coarse:sr-only'}
+      >
         Enter adds below. F2 renames. Tab and Shift+Tab indent and outdent. Ctrl or Cmd with Up and
         Down reorders. Escape, then Tab, leaves.
       </Text>

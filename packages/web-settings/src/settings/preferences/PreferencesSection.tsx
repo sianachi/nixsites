@@ -1,7 +1,6 @@
 import { type ReactElement } from 'react';
+import { Text } from '@nix/ui';
 
-import { useIconStripPreference } from '@nix/web-foundation/lib/icon-strip-preference';
-import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
 import { PreferenceToggle } from '../shared/preference-toggle';
@@ -12,35 +11,13 @@ export function PreferencesSection(): ReactElement {
   const sites = useCapabilities().sites;
   const publishing = usePublishingPreference((state) => state.enabled);
   const setPublishing = usePublishingPreference((state) => state.setEnabled);
-  const statusBar = useStatusBarPreference((state) => state.enabled);
-  const setStatusBar = useStatusBarPreference((state) => state.setEnabled);
-  const iconStrip = useIconStripPreference((state) => state.enabled);
-  const setIconStrip = useIconStripPreference((state) => state.setEnabled);
 
   return (
     <>
-      <SettingsSection
-        title="Appearance"
-        scope={
-          <ScopeNote>
-            Switches save as you flip them to your account, so every device follows.
-          </ScopeNote>
-        }
-      >
-        <PreferenceToggle
-          label="Show icon strip"
-          checked={iconStrip}
-          onChange={setIconStrip}
-          description="The strip of destinations down the left on a wide screen"
-          unsaved={null}
-        />
-        <PreferenceToggle
-          label="Show status bar"
-          checked={statusBar}
-          onChange={setStatusBar}
-          description="Backlinks, word or item count and sync state, along the bottom on a wide screen"
-          unsaved={null}
-        />
+      <SettingsSection title="Appearance">
+        <Text as="p" variant="bodySmall" tone="muted">
+          To change your layout, open Preferences in the account menu.
+        </Text>
       </SettingsSection>
       {sites ? (
         <SettingsSection

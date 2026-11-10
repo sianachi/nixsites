@@ -1,3 +1,5 @@
+import { useContext } from 'react';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import type { MenuEntry } from '@nix/ui';
 import {
   CheckSquare,
@@ -12,6 +14,7 @@ import {
 
 import { useAutomateEntry } from '../items/automate-entry';
 import { useOptionalItemCommands } from '../items/item-commands-context';
+import { useClickSelects } from './item-open-click';
 import { useOptionalItemSelection } from './item-selection-context';
 import { bookmarkEntry, copyLinkEntry } from '../items/item-menu-entries';
 import { useMuteRemindersEntry } from '@nix/web-settings/settings/notifications/mute-reminders-entry';
@@ -26,7 +29,19 @@ import { useHiddenItems } from '../items/use-hidden-items';
  */
 export function useItemContextActions(
   onOpen: (itemId: string) => void,
+  {
+    includeOpen,
+    includeSelect = true,
+    includeRename = true,
+  }: {
+    readonly includeOpen?: boolean;
+    readonly includeSelect?: boolean;
+    readonly includeRename?: boolean;
+  } = {},
 ): (itemId: string, title: string, extra?: readonly MenuEntry[]) => MenuEntry[] {
+  const clickSelects = useClickSelects();
+  const presentation = useContext(ZenPresentationContext);
+  const showOpen = includeOpen ?? (presentation === null || clickSelects);
   const workspace = useOptionalWorkspace();
   const automateEntry = useAutomateEntry(workspace?.workspaceId ?? null);
   const muteRemindersEntry = useMuteRemindersEntry();
@@ -41,7 +56,7 @@ export function useItemContextActions(
     const treeItem = commands?.tree.find(itemId) ?? null;
     const deleteProtected = treeItem?.noDelete === true;
     const shared: MenuEntry[] = [
-      ...(selection !== null && allows?.select === true
+      ...(includeSelect && selection !== null && allows?.select === true
         ? [
             {
               kind: 'action' as const,
@@ -53,7 +68,7 @@ export function useItemContextActions(
             },
           ]
         : []),
-      ...(commands !== null && allows?.rename !== false
+      ...(includeRename && commands !== null && allows?.rename !== false
         ? [
             {
               kind: 'action' as const,
@@ -102,14 +117,18 @@ export function useItemContextActions(
           ]
         : [];
     return [
-      {
-        kind: 'action',
-        label: 'Open',
-        icon: FileText,
-        onSelect: () => {
-          onOpen(itemId);
-        },
-      },
+      ...(showOpen
+        ? [
+            {
+              kind: 'action' as const,
+              label: 'Open',
+              icon: FileText,
+              onSelect: () => {
+                onOpen(itemId);
+              },
+            },
+          ]
+        : []),
       ...extra,
       ...shared,
       ...(!visibility.enabled

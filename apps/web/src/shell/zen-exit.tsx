@@ -12,19 +12,22 @@ import { setZenMode } from '@nix/web-foundation/lib/zen-mode';
  * content and stays under the dialogs' `z-30`, so a modal that is open is not left with a live
  * control above it.
  */
-export function ZenExit(): ReactNode {
+export function ZenExit({ children }: { readonly children?: ReactNode } = {}): ReactNode {
   return (
-    <Button
-      variant="icon"
-      aria-label="Exit Zen mode"
-      title="Exit Zen mode"
-      onClick={() => {
-        setZenMode(false);
-      }}
-      // design-token-exempt: inset from the window corner, clear of the device safe area.
-      className="fixed right-[calc(env(safe-area-inset-right)+var(--spacing)*3)] top-[calc(env(safe-area-inset-top)+var(--spacing)*2)] z-20 min-h-(--control-lg) min-w-(--control-lg) bg-background text-muted opacity-75 hover:opacity-100 focus-visible:opacity-100"
-    >
-      <Icon icon={Minimize2} size="sm" />
-    </Button>
+    // design-token-exempt: inset from the window corner, clear of the device safe area.
+    <div className="fixed right-[calc(env(safe-area-inset-right)+var(--spacing)*3)] top-[calc(env(safe-area-inset-top)+var(--spacing)*2)] z-20 flex items-center gap-1">
+      <Button
+        variant="icon"
+        aria-label="Exit Zen mode"
+        title="Exit Zen mode"
+        onClick={() => {
+          setZenMode(false);
+        }}
+        className="min-h-(--control-lg) min-w-(--control-lg) bg-background text-muted opacity-75 hover:opacity-100 focus-visible:opacity-100"
+      >
+        <Icon icon={Minimize2} size="sm" />
+      </Button>
+      {children}
+    </div>
   );
 }

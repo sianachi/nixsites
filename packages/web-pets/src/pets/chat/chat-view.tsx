@@ -1,3 +1,4 @@
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { NewChatNote } from './new-chat-note';
 import { ChatMessage } from './chat-message';
 import { SaveInsightNote, type SavedInsight } from './save-insight-note';
@@ -9,7 +10,7 @@ import {
   type ConversationMessage,
 } from '@nix/api-client';
 import { Button, Text, Textarea, Checkbox, useUndo } from '@nix/ui';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PetChatViewport } from '../pet-chat-viewport';
 import { PetMessageText } from '../pet-message-text';
@@ -24,6 +25,7 @@ export function ChatView({
   readonly itemId: string;
   readonly workspaceId: string;
 }): ReactNode {
+  const presentation = useContext(ZenPresentationContext);
   const client = useApiClient();
   const { workspaces } = useAccessibleWorkspaces();
   const [needsSetup, setNeedsSetup] = useState(false);
@@ -32,6 +34,8 @@ export function ChatView({
   const [insight, setInsight] = useState<ConversationMessage | null>(null);
   const [saved, setSaved] = useState<Readonly<Record<string, SavedInsight>>>({});
   const [chat, setChat] = useState<Conversation | null>(null);
+  const compact =
+    presentation?.collectionTools === false || (presentation !== null && chat?.canEdit === false);
   const [messages, setMessages] = useState<readonly ConversationMessage[]>([]);
   // Each message's view of the generated-UI blocks before it, so a patch can find what it changes.
   const piecesBefore = useMemo(() => earlierPieces(messages), [messages]);
@@ -214,9 +218,15 @@ export function ChatView({
         <Text role="status">Loading conversation…</Text>
       ) : (
         <>
-          <div className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col gap-2 @5xl:flex-row @5xl:gap-6">
-            <div className="flex min-w-0 flex-col gap-2 @5xl:w-64 @5xl:shrink-0">
-              <div className="flex min-w-0 items-center gap-2 px-3 @sm:px-4 @5xl:hidden">
+          <div
+            className={`mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col gap-2 ${compact ? '' : '@5xl:flex-row @5xl:gap-6'}`}
+          >
+            <div
+              className={`flex min-w-0 flex-col gap-2 ${compact ? '' : '@5xl:w-64 @5xl:shrink-0'}`}
+            >
+              <div
+                className={`flex min-w-0 items-center gap-2 px-3 @sm:px-4 ${compact ? '' : '@5xl:hidden'}`}
+              >
                 <Text variant="note" tone="muted" className="min-w-0 flex-1 truncate">
                   Sources: {chat.sourceWorkspaceIds.map(nameOf).join(', ')}
                 </Text>
@@ -237,7 +247,7 @@ export function ChatView({
               {chat.canEdit ? (
                 <fieldset
                   aria-label="Pet answers from"
-                  className={`${editingSources ? 'flex' : 'hidden @5xl:flex'} flex-col gap-2 px-3 @sm:px-4 @5xl:px-0`}
+                  className={`${editingSources ? 'flex' : compact ? 'hidden' : 'hidden @5xl:flex'} flex-col gap-2 px-3 @sm:px-4 ${compact ? '' : '@5xl:px-0'}`}
                 >
                   <legend>
                     <Text as="span" variant="h5">

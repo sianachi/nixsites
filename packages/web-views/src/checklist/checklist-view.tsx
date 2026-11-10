@@ -31,6 +31,7 @@ import {
 import { TITLE_COLUMN_KEY } from '@nix/web-collections/core/columns';
 import { propertyTypeWord, valueShapeOf } from '@nix/web-collections/core/property-types';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import { drawable, undrawable, useViewChrome } from '../core/view-chrome';
 import type { ViewConfigurationEditorProps } from '../core/view-kinds';
@@ -434,7 +435,8 @@ function ChecklistLine(props: ChecklistLineProps): ReactNode {
   } = props;
   const flash = useFlash(item.updatedAt);
   const commands = useOptionalItemCommands();
-  const itemActions = useItemContextActions(onOpen);
+  const compact = useCompactCollection();
+  const itemActions = useItemContextActions(onOpen, editing ? { includeOpen: true } : {});
   const openProps = useItemOpenProps(onOpen);
   const selection = useOptionalItemSelection();
   const isSelected = selection?.selected.has(item.id) === true;
@@ -447,13 +449,17 @@ function ChecklistLine(props: ChecklistLineProps): ReactNode {
       label={`${title} actions`}
       items={() =>
         itemActions(item.id, item.title, [
-          {
-            kind: 'action',
-            label: done ? 'Mark as not done' : 'Mark as done',
-            onSelect: () => {
-              onTick(!done);
-            },
-          },
+          ...(compact
+            ? []
+            : [
+                {
+                  kind: 'action' as const,
+                  label: done ? 'Mark as not done' : 'Mark as done',
+                  onSelect: () => {
+                    onTick(!done);
+                  },
+                },
+              ]),
           ...(commands === null
             ? []
             : [{ kind: 'action' as const, label: 'Edit', onSelect: onEdit }]),

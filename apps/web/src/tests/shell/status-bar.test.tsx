@@ -106,15 +106,20 @@ describe('the status bar', () => {
     vi.restoreAllMocks();
   });
 
-  it('is gone when the setting is off, and the settings page switches it', async () => {
+  it('previews hiding the status bar from layout preferences and restores it on cancel', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [FOLDER] });
-    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings?tab=preferences`);
+    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}?item=${FOLDER.id}`);
 
     await screen.findByRole('group', { name: 'Status bar' });
-    await user.click(await screen.findByRole('checkbox', { name: 'Show status bar' }));
+    await user.click(screen.getByRole('button', { name: 'Test Person' }));
+    await user.click(screen.getByText('Preferences', { exact: true }));
+    const preferences = within(await screen.findByRole('dialog', { name: 'Preferences' }));
+    await user.click(preferences.getByRole('button', { name: 'Customize' }));
+    await user.selectOptions(preferences.getByRole('combobox', { name: 'Status bar' }), 'hide');
 
-    expect(useStatusBarPreference.getState().enabled).toBe(false);
     expect(screen.queryByRole('group', { name: 'Status bar' })).not.toBeInTheDocument();
+    await user.click(preferences.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('group', { name: 'Status bar' })).toBeVisible();
   });
 });

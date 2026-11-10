@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Text } from '@nix/ui';
 import {
   useCoarsePointer,
   useNarrowViewport,
   useRoomForAnotherPane,
 } from '@nix/web-foundation/layout/viewport';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { useOptionalItemCommands } from '@nix/web-collections/items/item-commands-context';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 
@@ -146,8 +147,12 @@ export function ContainerView({
     </SelectionBar>
   ) : null;
   // What a drop does here, said before it happens rather than discovered afterwards.
+  const presentation = useContext(ZenPresentationContext);
   const dragHint =
-    capabilities.drag === null || container.locked || coarse ? null : (
+    capabilities.drag === null ||
+    container.locked ||
+    coarse ||
+    presentation?.collectionTools === false ? null : (
       <Text as="p" variant="caption" tone="muted">
         {DRAG_EFFECT_COPY[capabilities.drag]}
       </Text>

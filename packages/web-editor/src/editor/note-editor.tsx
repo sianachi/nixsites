@@ -1149,10 +1149,16 @@ export function NoteEditor({
             writingMode={writingMode}
             writingModeControl={
               <>
-                <WritingModeControl />
+                <span
+                  className="contents"
+                  data-zen-tool={writingMode === 'prose' ? 'insert' : undefined}
+                >
+                  <WritingModeControl />
+                </span>
                 <Button
                   variant="subtle"
                   className={`shrink-0 whitespace-nowrap ${markdownMode?.phase === 'open' ? 'bg-accent/18 text-foreground' : ''}`}
+                  data-zen-tool={markdownMode === null ? 'advanced' : undefined}
                   aria-pressed={markdownMode?.phase === 'open'}
                   // A round trip through Markdown would silently apply every suggestion.
                   disabled={suggestionsPending && markdownMode === null}
@@ -1179,24 +1185,35 @@ export function NoteEditor({
                   Markdown
                 </Button>
                 {subject === undefined ? null : (
-                  <SuggestingControl
-                    editor={editor}
-                    suggesting={suggesting}
-                    pending={suggestionsPending}
-                    onToggle={() => {
-                      setSuggestingOn(!suggesting);
-                      try {
-                        if (suggesting) localStorage.removeItem(suggestingKey);
-                        else localStorage.setItem(suggestingKey, '1');
-                      } catch {
-                        // Not remembered; the switch still works for this session.
-                      }
-                    }}
-                  />
+                  <span
+                    className="contents"
+                    data-zen-tool={suggesting || suggestionsPending ? undefined : 'advanced'}
+                  >
+                    <SuggestingControl
+                      editor={editor}
+                      suggesting={suggesting}
+                      pending={suggestionsPending}
+                      onToggle={() => {
+                        setSuggestingOn(!suggesting);
+                        try {
+                          if (suggesting) localStorage.removeItem(suggestingKey);
+                          else localStorage.setItem(suggestingKey, '1');
+                        } catch {
+                          // Not remembered; the switch still works for this session.
+                        }
+                      }}
+                    />
+                  </span>
                 )}
               </>
             }
-            textWidthControl={narrow ? undefined : <TextWidthControl />}
+            textWidthControl={
+              narrow ? undefined : (
+                <span className="contents" data-zen-tool="advanced">
+                  <TextWidthControl />
+                </span>
+              )
+            }
             {...insertHandlers}
             onInsertLink={() => {
               insertionRef.current = editor.state.selection.from;

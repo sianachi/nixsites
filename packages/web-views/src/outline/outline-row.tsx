@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { ContextMenu, Icon, Text, cn, focusRing, isEditableTarget, useFlash } from '@nix/ui';
 import {
   ArrowDown,
@@ -36,6 +37,7 @@ interface OutlineRowViewProps {
 /** One tree row with its context menu: the disclosure, checkbox, title and the row's own note. */
 export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
   const { row, tree, itemActions, clickSelects, sizeKnown, releaseTab, onOpen } = props;
+  const compact = useCompactCollection();
   const {
     busy,
     expanded,
@@ -79,62 +81,68 @@ export function OutlineRowView(props: OutlineRowViewProps): ReactNode {
     <ContextMenu
       label={`${titleOf(row.item)} actions`}
       items={() =>
-        itemActions(id, row.item.title, [
-          {
-            kind: 'action',
-            label: 'Add item below',
-            icon: Plus,
-            disabled: busy,
-            onSelect: () => {
-              setDraft({ parentId: row.parentId, afterId: id, level: row.level });
-            },
-          },
-          {
-            kind: 'action',
-            label: 'Rename',
-            icon: Pencil,
-            disabled: busy,
-            onSelect: () => {
-              tree.startRename(id);
-            },
-          },
-          {
-            kind: 'action',
-            label: 'Indent',
-            icon: IndentIncrease,
-            disabled: busy,
-            onSelect: () => {
-              void tree.indent(row);
-            },
-          },
-          {
-            kind: 'action',
-            label: 'Outdent',
-            icon: IndentDecrease,
-            disabled: busy,
-            onSelect: () => {
-              void tree.outdent(row);
-            },
-          },
-          {
-            kind: 'action',
-            label: 'Move up',
-            icon: ArrowUp,
-            disabled: busy || row.index === 0,
-            onSelect: () => {
-              void tree.reorder(row, -1);
-            },
-          },
-          {
-            kind: 'action',
-            label: 'Move down',
-            icon: ArrowDown,
-            disabled: busy || row.index === row.siblings.length - 1,
-            onSelect: () => {
-              void tree.reorder(row, 1);
-            },
-          },
-        ])
+        itemActions(
+          id,
+          row.item.title,
+          compact
+            ? []
+            : [
+                {
+                  kind: 'action',
+                  label: 'Add item below',
+                  icon: Plus,
+                  disabled: busy,
+                  onSelect: () => {
+                    setDraft({ parentId: row.parentId, afterId: id, level: row.level });
+                  },
+                },
+                {
+                  kind: 'action',
+                  label: 'Rename',
+                  icon: Pencil,
+                  disabled: busy,
+                  onSelect: () => {
+                    tree.startRename(id);
+                  },
+                },
+                {
+                  kind: 'action',
+                  label: 'Indent',
+                  icon: IndentIncrease,
+                  disabled: busy,
+                  onSelect: () => {
+                    void tree.indent(row);
+                  },
+                },
+                {
+                  kind: 'action',
+                  label: 'Outdent',
+                  icon: IndentDecrease,
+                  disabled: busy,
+                  onSelect: () => {
+                    void tree.outdent(row);
+                  },
+                },
+                {
+                  kind: 'action',
+                  label: 'Move up',
+                  icon: ArrowUp,
+                  disabled: busy || row.index === 0,
+                  onSelect: () => {
+                    void tree.reorder(row, -1);
+                  },
+                },
+                {
+                  kind: 'action',
+                  label: 'Move down',
+                  icon: ArrowDown,
+                  disabled: busy || row.index === row.siblings.length - 1,
+                  onSelect: () => {
+                    void tree.reorder(row, 1);
+                  },
+                },
+              ],
+        )
       }
     >
       {(contextTarget) => (

@@ -53,6 +53,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Account → Preferences previews and applies three Zen layouts across the workspace and collection views. Essentials simplifies navigation and view controls, Workspace restores planning and insertion tools, and Full toolkit adds the advanced note tools. Layout choices and overrides stay on this device, and Undo restores the previous layout.
+
 - Tenant administrators can switch MCP and public links on or off in Settings > Administrators, taking effect at once (`GET`/`PUT /api/v1/tenant/settings`, `nixctl tenant settings`). The deployment setting stays the ceiling. Turning public links off stops existing links from serving without revoking them, and turning them back on restores them. With MCP off, the remote MCP endpoint refuses requests for that organisation.
 - "Share public link" on a note's menu in the sidebar creates, copies and revokes the note's public link, and lists attachments held back for lack of an approved version.
 - File versions now have a state: draft, in review, approved or revoked, with who changed it and when. Approving and revoking need an Editor or Owner; each workspace has a switch, off by default, that lets access tokens do it too. `PUT /api/v1/items/{id}/file/versions/{versionId}/state`, `set_file_version_state`, `nixctl file state`.
@@ -161,6 +163,8 @@ follows semantic versioning (`0.x` pre-1.0).
   item routes no longer declare a 501 response either.
 
 ### Fixed
+
+- Form entries can be undone even when the collection has not finished refreshing.
 
 - Public forms were not reachable behind the bundled reverse proxy configurations: `/public/v1/forms/*` fell through to the web app.
 - Creating an item with invalid properties answered 404; it now answers 422 with the reason.

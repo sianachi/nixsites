@@ -1,7 +1,8 @@
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Button, Popover, Text } from '@nix/ui';
-import { useEffect, useState, type ReactNode } from 'react';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 
 /** Each heading level indents one step further in the outline. */
 const OUTLINE_INDENT = ['', 'pl-3', 'pl-6', 'pl-9', 'pl-12', 'pl-15'] as const;
@@ -86,10 +87,13 @@ export function NoteStatsFooter({
   readonly showWords?: boolean;
 }): ReactNode {
   const stats = useNoteStats(editor);
+  const presentation = useContext(ZenPresentationContext);
+  const showStats =
+    presentation === null ? showWords : presentation.noteInsert && !presentation.statusBar;
 
   return (
     <div className={`flex shrink-0 items-center gap-3 ${className}`}>
-      {showWords ? (
+      {showStats ? (
         <Text variant="caption" tone="muted">
           {stats.words} {stats.words === 1 ? 'word' : 'words'} · {stats.minutes} min read
         </Text>

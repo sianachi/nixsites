@@ -11,6 +11,8 @@ import {
 import { useClickSelects } from '@nix/web-collections/core/item-open-click';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
+import { CardPropertySummary } from '../core/card-property-summary';
 import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import { rowGestures } from '@nix/web-collections/core/use-item-selection';
@@ -58,11 +60,14 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
     setSize,
     virtualIndex,
   } = props;
-  const itemActions = useItemContextActions(onOpen);
+  const compact = useCompactCollection();
+  const clickSelects = useClickSelects();
+  const itemActions = useItemContextActions(onOpen, {
+    includeSelect: !compact,
+  });
   const flash = useFlash(item.updatedAt);
   const [dropping, setDropping] = useState(false);
   const selection = useOptionalItemSelection();
-  const clickSelects = useClickSelects();
   const isSelected = selection?.selected.has(item.id) === true;
   const isFileCard = item.type === 'file' && !item.hasChildren;
   const coverValue = cover.kind === 'ready' ? readPropertyText(item, cover.property.key) : '';
@@ -91,14 +96,20 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
         return true;
       }}
       items={() =>
-        itemActions(item.id, item.title, [
-          {
-            kind: 'action',
-            label: coverValue.length > 0 ? 'Change cover' : 'Set cover',
-            icon: ImagePlus,
-            onSelect: onRequestCover,
-          },
-        ])
+        itemActions(
+          item.id,
+          item.title,
+          compact
+            ? []
+            : [
+                {
+                  kind: 'action',
+                  label: coverValue.length > 0 ? 'Change cover' : 'Set cover',
+                  icon: ImagePlus,
+                  onSelect: onRequestCover,
+                },
+              ],
+        )
       }
     >
       {(contextTarget) => (
@@ -138,7 +149,10 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
               is not the only way in. `z-20` lifts it above the title's stretched hit area. */}
           <SelectCheckbox
             item={item}
-            className="absolute left-2 top-2 z-20 rounded-md bg-surface"
+            className={cn(
+              'absolute left-2 top-2 z-20 rounded-md bg-surface',
+              compact && 'any-pointer-coarse:opacity-100',
+            )}
           />
           {/* **The title comes first in the DOM and the picture is moved above it visually.** A screen
           reader reading in source order would otherwise meet "No cover" before it had been told
@@ -235,7 +249,9 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
             </div>
           ) : null}
 
-          {fields.length === 0 ? null : (
+          {compact ? (
+            <CardPropertySummary item={item} fields={fields} />
+          ) : fields.length === 0 ? null : (
             // `relative z-10`: the title button's `after:absolute after:inset-0` stretched hit area
             // sits on top of the card in DOM order, and without a stacking context of its own this
             // layer would swallow every click a field control below it is meant to receive - a tap

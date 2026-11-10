@@ -52,6 +52,7 @@ import { MobileListRows } from './mobile-list-rows';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { drawable, useViewChrome, ViewSettingsLink } from '../core/view-chrome';
 import { viewConfigureHref } from '@nix/web-collections/core/view-configure-route';
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 import { useViewState, type SortDirection } from '@nix/web-collections/core/view-state';
 import {
@@ -109,10 +110,11 @@ export function ListView(props: ListViewProps): ReactNode {
   const narrow = useNarrowViewport();
   const viewState = useViewState();
   const [refusals, setRefusals] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const compact = useCompactCollection();
+  const clickSelects = useClickSelects();
   const itemActions = useItemContextActions(onOpen);
   const rowContextMenu = (item: Item): MenuEntry[] => itemActions(item.id, item.title);
   const selection = useOptionalItemSelection();
-  const clickSelects = useClickSelects();
   const commands = useOptionalItemCommands();
   // The rows being dragged and the row a drop would land on; null when nothing is mid-drag.
   const [dragging, setDragging] = useState<readonly string[] | null>(null);
@@ -422,7 +424,7 @@ export function ListView(props: ListViewProps): ReactNode {
             cell: (item: Item) => <SelectCheckbox item={item} />,
           } satisfies TableColumn<Item>,
         ]),
-    ...buildColumns(view, container.schema, gesturesFor, write, refusalStore),
+    ...buildColumns(view, container.schema, gesturesFor, write, refusalStore, compact),
   ];
   const sort = sortBy === null ? undefined : { columnKey: sortBy, direction };
   const onSortChange = (next: TableSort): void => {

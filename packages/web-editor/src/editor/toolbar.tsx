@@ -43,7 +43,8 @@ import {
   Undo2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useContext, useRef, useState, type ReactNode } from 'react';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 
 /**
  * The formatting toolbar.
@@ -126,6 +127,9 @@ export function EditorToolbar({
   onRedo,
 }: ToolbarProps): ReactNode {
   const [moreOpen, setMoreOpen] = useState(false);
+  const presentation = useContext(ZenPresentationContext);
+  const showInsert = presentation?.noteInsert !== false;
+  const showAdvanced = presentation?.noteAdvanced !== false;
   const [insertOpen, setInsertOpen] = useState(false);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const tableInsertRef = useRef<HTMLDivElement | null>(null);
@@ -488,15 +492,26 @@ export function EditorToolbar({
   ];
 
   if (compact) {
+    const inlineLists =
+      writingMode === 'poetry'
+        ? []
+        : lists.filter((control) =>
+            writingMode === 'planning'
+              ? ['taskList', 'orderedList'].includes(control.id)
+              : control.id === 'bulletList',
+          );
     const more = [
       ...blocks,
-      ...lists,
-      ...alignment,
-      ...marks.filter((control) => !['bold', 'italic'].includes(control.id)),
-      ...inserts,
-      tableInsert,
+      ...(presentation === null
+        ? lists
+        : lists.filter((control) => !inlineLists.includes(control))),
+      ...(showAdvanced ? alignment : []),
+      ...marks.filter((control) =>
+        showAdvanced ? !['bold', 'italic'].includes(control.id) : control.id === 'link',
+      ),
+      ...(showInsert ? [...inserts, tableInsert] : []),
       ...history,
-      ...move,
+      ...(showAdvanced ? move : []),
       ...(inColumns ? columns : []),
       ...(inTable ? table : []),
     ];
@@ -510,13 +525,7 @@ export function EditorToolbar({
         {writingMode === 'poetry' ? (
           <Group controls={poetry} label="Poetry tools" />
         ) : (
-          <Group
-            controls={lists.filter((control) =>
-              writingMode === 'planning'
-                ? ['taskList', 'orderedList'].includes(control.id)
-                : control.id === 'bulletList',
-            )}
-          />
+          <Group controls={inlineLists} />
         )}
         {writingModeControl}
         <Button
@@ -554,7 +563,7 @@ export function EditorToolbar({
                   {control.label}
                 </Button>
               ))}
-              {onInsertItem ? (
+              {showInsert && onInsertItem ? (
                 <>
                   <Button
                     variant="subtle"
@@ -644,6 +653,7 @@ export function EditorToolbar({
         trigger={(trigger) => (
           <Button
             variant="subtle"
+            data-zen-tool="insert"
             {...trigger}
             ref={(element) => {
               trigger.ref.current = element;
@@ -725,6 +735,7 @@ export function EditorToolbar({
       <ControlPopover
         label="More writing tools"
         triggerLabel="More tools"
+        advanced
         sections={[
           {
             label: 'Text formatting',
@@ -748,8 +759,10 @@ function ControlPopover({
   triggerLabel = label,
   controls,
   sections,
+  advanced,
 }: {
   readonly label: string;
+  readonly advanced?: boolean;
   readonly triggerLabel?: string;
   readonly controls?: readonly Control[];
   readonly sections?: readonly { readonly label: string; readonly controls: readonly Control[] }[];
@@ -766,6 +779,7 @@ function ControlPopover({
         <Button
           variant="subtle"
           aria-label={label === 'Block type' ? `${label}: ${triggerLabel}` : triggerLabel}
+          data-zen-tool={advanced === true ? 'advanced' : undefined}
           {...trigger}
         >
           {triggerLabel}

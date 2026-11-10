@@ -15,6 +15,7 @@ import {
   type View,
 } from '@nix/web-collections/core/container-model';
 import type { rowGestures } from '@nix/web-collections/core/use-item-selection';
+import { PropertyValueDisplay } from '@nix/web-collections/properties/property-value-display';
 import { ListCell } from './list-cell';
 
 /** The selection column's key; never a property, so it cannot collide with one. */
@@ -48,6 +49,7 @@ export function buildColumns(
   gestures: (item: Item) => RowGestures,
   write: (itemId: string, key: string, value: PropertyValue) => Promise<string | null>,
   refusals: CellRefusalStore,
+  compact = false,
 ): readonly ListColumn[] {
   const { keys, definitions } = resolveConfiguredColumns(view, schema);
 
@@ -80,12 +82,23 @@ export function buildColumns(
     ...keys.map((key): ListColumn => {
       const definition = definitions.get(key);
 
+      const readOnly =
+        compact &&
+        definition !== undefined &&
+        definition.type !== 'checkbox' &&
+        definition.type !== 'completion';
+
       return {
         key,
         header: definition?.label ?? key,
         sortable: true,
-        cell: (item) => renderProperty(item, key, definition, write, refusals),
-        ...(definition !== undefined && isKnownPropertyType(definition.type)
+        cell: (item) =>
+          readOnly && refusals.read(item.id, key) === null ? (
+            <PropertyValueDisplay item={item} property={definition} density="cell" />
+          ) : (
+            renderProperty(item, key, definition, write, refusals)
+          ),
+        ...(!readOnly && definition !== undefined && isKnownPropertyType(definition.type)
           ? {
               property: definition,
               cardCell: (item: Item) =>

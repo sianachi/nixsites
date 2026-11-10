@@ -1,7 +1,8 @@
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, GripVertical } from 'lucide-react';
 import { Button, ContextMenu, Blueprint, Icon, Menu, Text, cn, focusRing, useFlash } from '@nix/ui';
-import { useRef, type ReactNode } from 'react';
+import { useContext, useRef, type ReactNode } from 'react';
 
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import type { StaleMember } from '@nix/web-foundation/lib/suggest/staleness';
 import {
   readSelectValue,
@@ -13,6 +14,7 @@ import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import { CardPropertySummary } from '../core/card-property-summary';
 import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { ListCell } from '../list/list-cell';
 import { staleDismissalKey, type BoardColumn } from './board-grouping';
@@ -136,8 +138,12 @@ function BoardCard(props: BoardCardProps): ReactNode {
     onReorder,
     marker,
   } = props;
+  const presentation = useContext(ZenPresentationContext);
+  const compact = presentation?.collectionTools === false;
   const flash = useFlash(item.updatedAt);
-  const itemActions = useItemContextActions(onOpen);
+  const itemActions = useItemContextActions(onOpen, {
+    includeSelect: presentation === null,
+  });
   const openProps = useItemOpenProps(onOpen);
   const selection = useOptionalItemSelection();
   const isSelected = selection?.selected.has(item.id) === true;
@@ -154,8 +160,8 @@ function BoardCard(props: BoardCardProps): ReactNode {
   });
 
   // Drag is desktop-only, so a column move needs a menu path for keyboard and touch. One entry per
-  // other column (not "Move to…", which is the tree move every view has). Offered twice: from the
-  // context menu, and from a visible button on the card for touch and assistive technology.
+  // other column (not "Move to…", which is the tree move every view has). The visible button
+  // supplies that path on touch and for assistive technology.
   const moveItems = columns
     .filter((column) => column.value !== current)
     .map((column) => ({
@@ -204,7 +210,7 @@ function BoardCard(props: BoardCardProps): ReactNode {
   return (
     <ContextMenu
       label={`${item.title || 'Untitled'} actions`}
-      items={() => itemActions(item.id, item.title, menuItems)}
+      items={() => itemActions(item.id, item.title, presentation === null ? menuItems : [])}
     >
       {(contextTarget) => (
         <li
@@ -241,7 +247,11 @@ function BoardCard(props: BoardCardProps): ReactNode {
                 )}
               />
               <div
-                className="min-w-0 flex-1"
+                className={cn(
+                  'min-w-0 flex-1',
+                  presentation !== null &&
+                    'flex items-start gap-1 pointer-fine:cursor-grab pointer-fine:active:cursor-grabbing',
+                )}
                 draggable
                 onDragStart={(event) => {
                   setDragged(item.id);
@@ -254,11 +264,25 @@ function BoardCard(props: BoardCardProps): ReactNode {
                   setDragged(null);
                 }}
               >
+                {presentation === null ? null : (
+                  <span
+                    aria-hidden="true"
+                    className="hidden shrink-0 text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-fine:block"
+                  >
+                    <Icon icon={GripVertical} size="sm" />
+                  </span>
+                )}
                 <button
                   ref={titleRef}
                   type="button"
                   {...openProps(item.id)}
-                  className={cn('w-full text-left', focusRing)}
+                  className={cn(
+                    'text-left',
+                    presentation === null
+                      ? 'w-full'
+                      : 'min-w-0 flex-1 pointer-fine:cursor-grab pointer-fine:active:cursor-grabbing',
+                    focusRing,
+                  )}
                 >
                   <Text variant="h5" as="span" lines={2}>
                     {item.title || 'Untitled'}
@@ -295,7 +319,9 @@ function BoardCard(props: BoardCardProps): ReactNode {
               />
             )}
 
-            {fields.length === 0 ? null : (
+            {compact ? (
+              <CardPropertySummary item={item} fields={fields} />
+            ) : fields.length === 0 ? null : (
               <div className="-mx-2 flex flex-col">
                 {fields.map((field) => (
                   <ValuePopover

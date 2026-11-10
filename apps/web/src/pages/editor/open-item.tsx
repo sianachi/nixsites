@@ -95,8 +95,13 @@ export function OpenItem({
   // Creation shares the tree cache with navigation. Loading children does not expand the
   // sidebar; only an explicit expansion there changes which descendants are visible.
   const createChild = useCallback(
-    async (title: string, properties?: Record<string, unknown>): Promise<string | null> => {
-      const { refusal } = await tree.create(itemId, title, 'note', properties);
+    async (
+      title: string,
+      properties?: Record<string, unknown>,
+      onCreated?: (createdId: string) => void,
+    ): Promise<string | null> => {
+      const { id, refusal } = await tree.create(itemId, title, 'note', properties);
+      if (id !== null && refusal === null) onCreated?.(id);
       return refusal;
     },
     [itemId, tree],
