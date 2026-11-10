@@ -303,6 +303,8 @@ type MirrorItem = NonNullable<Awaited<ReturnType<ViewSource['item']>>>;
  */
 export function createDemoFetch(): typeof fetch {
   const items = new Map(sampleItems().map((entry) => [entry.id, entry]));
+  let uiSettings: Json = { 'editor.viewSuggestions': 'off' };
+  let uiSettingsRevision = 0;
   const trashed = new Set<string>();
   const structure = new Map(
     Object.entries(STRUCTURE).map(([id, { properties, views }]) => [
@@ -470,7 +472,21 @@ export function createDemoFetch(): typeof fetch {
     [
       'GET',
       /^\/api\/v1\/me\/ui-settings$/,
-      () => json({ settings: { 'editor.viewSuggestions': 'off' }, revision: 0 }),
+      () => json({ settings: uiSettings, revision: uiSettingsRevision }),
+    ],
+    [
+      'PATCH',
+      /^\/api\/v1\/me\/ui-settings$/,
+      ({ body }) => {
+        const patch = field(body, 'settings');
+        if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) {
+          return problem(422, 'me.invalid_ui_settings', 'Send a settings object.');
+        }
+        uiSettings = Object.fromEntries(
+          Object.entries({ ...uiSettings, ...patch }).filter(([, value]) => value !== null),
+        );
+        return json({ settings: uiSettings, revision: ++uiSettingsRevision });
+      },
     ],
     [
       'GET',

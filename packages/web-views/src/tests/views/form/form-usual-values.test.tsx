@@ -83,7 +83,7 @@ describe('usual values in a form', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /Title/ }), { target: { value: 'Rent' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add entry' }));
     await waitFor(() => {
-      expect(create).toHaveBeenCalledWith('Rent', {});
+      expect(create).toHaveBeenCalledWith('Rent', {}, expect.any(Function));
     });
   });
 
@@ -98,7 +98,7 @@ describe('usual values in a form', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /Title/ }), { target: { value: 'Rent' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add entry' }));
     await waitFor(() => {
-      expect(create).toHaveBeenCalledWith('Rent', { category: 'Bills' });
+      expect(create).toHaveBeenCalledWith('Rent', { category: 'Bills' }, expect.any(Function));
     });
   });
 

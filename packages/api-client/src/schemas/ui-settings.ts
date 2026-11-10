@@ -2,6 +2,16 @@
 
 import { z } from 'zod';
 
+export const workspaceLayoutSchema = z.strictObject({
+  preset: z.enum(['essentials', 'workspace', 'full']),
+  overrides: z.partialRecord(
+    z.enum(['explorer', 'navigation', 'status', 'view', 'insert', 'advanced']),
+    z.boolean(),
+  ),
+});
+
+export type WorkspaceLayout = z.infer<typeof workspaceLayoutSchema>;
+
 /** The allow-list the server enforces; a key outside it is refused with 422. */
 const settingShapes = {
   'editor.keyboardMode': z.enum(['standard', 'vim', 'emacs']),
@@ -16,6 +26,7 @@ const settingShapes = {
   'graph.openMode': z.enum(['page', 'dialog', 'beside', 'tab']),
   'shell.statusBar': z.boolean(),
   'shell.iconStrip': z.boolean(),
+  'shell.layout': workspaceLayoutSchema,
 } as const;
 
 /** Stored settings: a key the person never set is absent, and keys a newer server adds are dropped. */
@@ -37,6 +48,7 @@ export const uiSettingsPatchSchema = z.object({
   'graph.openMode': settingShapes['graph.openMode'].nullable().optional(),
   'shell.statusBar': settingShapes['shell.statusBar'].nullable().optional(),
   'shell.iconStrip': settingShapes['shell.iconStrip'].nullable().optional(),
+  'shell.layout': settingShapes['shell.layout'].nullable().optional(),
 });
 
 export const uiSettingsResponseSchema = z.object({

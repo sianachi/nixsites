@@ -53,7 +53,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
-- Account → Preferences previews and applies three Zen layouts across the workspace and collection views. Essentials simplifies navigation and view controls, Workspace restores planning and insertion tools, and Full toolkit adds the advanced note tools. Layout choices and overrides stay on this device, and Undo restores the previous layout.
+- Account → Preferences previews and applies three Zen layouts across the workspace and collection views. Essentials simplifies navigation and view controls, Workspace restores planning and insertion tools, and Full toolkit adds the advanced note tools. Nix remembers your applied layout and overrides across devices. Undo restores the previous layout across devices too.
 
 - Tenant administrators can switch MCP and public links on or off in Settings > Administrators, taking effect at once (`GET`/`PUT /api/v1/tenant/settings`, `nixctl tenant settings`). The deployment setting stays the ceiling. Turning public links off stops existing links from serving without revoking them, and turning them back on restores them. With MCP off, the remote MCP endpoint refuses requests for that organisation.
 - "Share public link" on a note's menu in the sidebar creates, copies and revokes the note's public link, and lists attachments held back for lack of an approved version.

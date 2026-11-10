@@ -1,6 +1,8 @@
+import { uiSettings, workspaceLayoutSchema, type WorkspaceLayout } from '@nix/api-client';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { writeStored } from '@nix/web-foundation/lib/stored-setting';
-import { z } from 'zod';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { Button, Popover, Select, Text, useUndo } from '@nix/ui';
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 
@@ -39,23 +41,13 @@ const presets = [
     detail: 'Add Markdown, suggestions, text width, and advanced formatting to the note editor.',
   },
 ] as const;
-type Preset = (typeof presets)[number]['id'];
+type Preset = WorkspaceLayout['preset'];
 
-interface Layout {
-  readonly preset: Preset;
-  readonly overrides: Partial<Record<Setting, boolean>>;
-}
-
-const storedLayout = z.object({
-  preset: z.enum(presets.map(({ id }) => id)),
-  overrides: z.partialRecord(z.enum(settingKeys), z.boolean()),
-});
-
-function readLayout(key: string | null): Layout | null {
+function readLayout(key: string | null): WorkspaceLayout | null {
   if (key === null) return null;
   try {
     const raw = browserStorage()?.getItem(key);
-    return raw ? (storedLayout.safeParse(JSON.parse(raw)).data ?? null) : null;
+    return raw ? (workspaceLayoutSchema.safeParse(JSON.parse(raw)).data ?? null) : null;
   } catch {
     return null;
   }
@@ -65,8 +57,18 @@ function defaultVisible(preset: Preset, setting: Setting): boolean {
   return preset === 'full' || (preset === 'workspace' && setting !== 'advanced');
 }
 
-function visible(layout: Layout, setting: Setting): boolean {
+function visible(layout: WorkspaceLayout, setting: Setting): boolean {
   return layout.overrides[setting] ?? defaultVisible(layout.preset, setting);
+}
+
+function sameLayout(left: WorkspaceLayout | null, right: WorkspaceLayout | null): boolean {
+  return (
+    left === right ||
+    (left !== null &&
+      right !== null &&
+      left.preset === right.preset &&
+      settingKeys.every((setting) => left.overrides[setting] === right.overrides[setting]))
+  );
 }
 
 function presetLabel(preset: Preset): string {
@@ -75,26 +77,39 @@ function presetLabel(preset: Preset): string {
 
 interface Preview {
   readonly active: boolean;
-  readonly draft: Layout | null;
-  readonly setDraft: (layout: Layout) => void;
+  readonly draft: WorkspaceLayout | null;
+  readonly setDraft: (layout: WorkspaceLayout) => void;
   readonly changed: boolean;
+  readonly saving: boolean;
+  readonly saveFailed: boolean;
   readonly visible: (setting: Setting) => boolean;
   readonly explorer: boolean;
   readonly toggleExplorer: () => void;
   readonly open: () => void;
   readonly cancel: () => void;
-  readonly apply: () => void;
+  readonly apply: (close: () => void) => Promise<void>;
 }
 
 interface LayoutSession {
   readonly key: string | null;
-  readonly applied: Layout | null;
-  readonly draft: Layout | null;
+  readonly applied: WorkspaceLayout | null;
+  readonly draft: WorkspaceLayout | 'open' | null;
+  readonly revision: number;
   readonly explorerPeek: boolean | null;
+  readonly saving: boolean;
+  readonly saveFailed: boolean;
 }
 
 function startSession(key: string | null): LayoutSession {
-  return { key, applied: readLayout(key), draft: null, explorerPeek: null };
+  return {
+    key,
+    applied: readLayout(key),
+    draft: null,
+    revision: -1,
+    explorerPeek: null,
+    saving: false,
+    saveFailed: false,
+  };
 }
 
 export function useZenLayoutPreview(
@@ -102,21 +117,58 @@ export function useZenLayoutPreview(
   native: Pick<Record<Setting, boolean>, 'explorer' | 'navigation' | 'status'>,
 ): Preview {
   const key = subject === null ? null : `nix.layout.${subject}`;
+  const client = useOptionalApiClient();
   const [session, setSession] = useState(() => startSession(key));
+  const connection = useRef<{ signal: AbortSignal; pending: boolean } | null>(null);
   const undo = useUndo();
   let currentSession = session;
   if (session.key !== key) {
     currentSession = startSession(key);
     setSession(currentSession);
   }
-  const { applied, draft, explorerPeek } = currentSession;
+  const { applied, explorerPeek, saving, saveFailed } = currentSession;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    connection.current = { signal, pending: false };
+    const refresh = (): void => {
+      if (client === null || key === null) return;
+      void client.query(uiSettings.settings(), { signal, forceRefresh: true }).then(
+        ({ settings: saved, revision }) => {
+          const layout = saved['shell.layout'] ?? null;
+          if (signal.aborted) return;
+          setSession((value) => {
+            if (value.key !== key || value.revision >= revision) return value;
+            if (sameLayout(value.applied, layout)) return { ...value, revision };
+            return { ...value, applied: layout, revision, explorerPeek: null };
+          });
+        },
+        () => {
+          // Keep the cached layout when Core is unreachable.
+        },
+      );
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    return () => {
+      if (connection.current?.pending === true) {
+        setSession((value) => (value.key === key ? { ...value, saving: false } : value));
+      }
+      controller.abort();
+      connection.current = null;
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+    };
+  }, [client, key]);
 
   useEffect(() => {
     if (key !== null) writeStored(key, applied === null ? null : JSON.stringify(applied));
   }, [key, applied]);
 
   // Before the first apply, respect the person's current shell settings.
-  const initial: Layout = {
+  const initial: WorkspaceLayout = {
     preset: 'full',
     overrides: {
       ...(native.explorer ? {} : { explorer: false }),
@@ -125,11 +177,83 @@ export function useZenLayoutPreview(
     },
   };
   const baseline = applied ?? initial;
-  const changed =
-    draft !== null &&
-    (baseline.preset !== draft.preset ||
-      settingKeys.some((setting) => baseline.overrides[setting] !== draft.overrides[setting]));
+  const draft = currentSession.draft === 'open' ? baseline : currentSession.draft;
+  const changed = draft !== null && !sameLayout(baseline, draft);
   const current = draft ?? baseline;
+
+  async function save(next: WorkspaceLayout | null, expected?: WorkspaceLayout) {
+    const scope = connection.current;
+    if (scope === null || scope.pending) return null;
+    scope.pending = true;
+    const update = (updateSession: (value: LayoutSession) => LayoutSession): void => {
+      if (!scope.signal.aborted) {
+        setSession((value) => (value.key === key ? updateSession(value) : value));
+      }
+    };
+    update((value) => ({ ...value, saving: true, saveFailed: false }));
+    try {
+      let previous = applied;
+      if (client !== null && key !== null) {
+        const options = { signal: scope.signal, forceRefresh: true };
+        const before = await client.query(uiSettings.settings(), options);
+        previous = before.settings['shell.layout'] ?? null;
+        if (expected !== undefined && !sameLayout(previous, expected)) {
+          update((value) =>
+            value.revision > before.revision
+              ? value
+              : { ...value, applied: previous, revision: before.revision, explorerPeek: null },
+          );
+          if (!scope.signal.aborted) {
+            publishNotice({
+              key: 'layout-undo',
+              message: 'Your saved layout has already changed.',
+            });
+          }
+          return null;
+        }
+        const saved = await client.execute(
+          uiSettings.patchSettings({ 'shell.layout': next }),
+          options,
+        );
+        update((value) =>
+          value.revision > saved.revision
+            ? value
+            : {
+                ...value,
+                applied: saved.settings['shell.layout'] ?? null,
+                revision: saved.revision,
+                explorerPeek: null,
+              },
+        );
+      } else {
+        update((value) =>
+          expected !== undefined && !sameLayout(value.applied, expected)
+            ? value
+            : { ...value, applied: next, explorerPeek: null },
+        );
+      }
+      return scope.signal.aborted ? null : { previous };
+    } catch {
+      if (expected === undefined) {
+        update((value) => ({ ...value, saveFailed: true }));
+      } else if (!scope.signal.aborted) {
+        publishNotice({
+          key: 'layout-undo',
+          message: 'Could not restore your previous layout.',
+          action: {
+            label: 'Retry',
+            onAction: () => {
+              if (connection.current === scope) void save(next, expected);
+            },
+          },
+        });
+      }
+      return null;
+    } finally {
+      scope.pending = false;
+      update((value) => ({ ...value, saving: false }));
+    }
+  }
 
   return {
     active: applied !== null || changed,
@@ -138,20 +262,21 @@ export function useZenLayoutPreview(
       setSession((value) => ({ ...value, draft: next }));
     },
     changed,
+    saving,
+    saveFailed,
     visible: (setting) => visible(current, setting),
     explorer: (changed ? null : explorerPeek) ?? visible(current, 'explorer'),
     toggleExplorer() {
+      if (connection.current?.pending === true) return;
       setSession((value) => {
-        if (value.draft !== null) {
+        if (draft !== null) {
           return {
             ...value,
             draft: {
-              ...value.draft,
+              ...draft,
               overrides: {
-                ...value.draft.overrides,
-                explorer: !(
-                  (changed ? null : value.explorerPeek) ?? visible(value.draft, 'explorer')
-                ),
+                ...draft.overrides,
+                explorer: !((changed ? null : value.explorerPeek) ?? visible(draft, 'explorer')),
               },
             },
           };
@@ -160,25 +285,22 @@ export function useZenLayoutPreview(
       });
     },
     open() {
-      setSession((value) => ({ ...value, draft: baseline }));
+      if (connection.current?.pending === true) return;
+      setSession((value) => ({ ...value, draft: 'open' }));
     },
     cancel() {
-      setSession((value) => ({ ...value, draft: null }));
+      if (connection.current?.pending === true) return;
+      setSession((value) => ({ ...value, draft: null, saveFailed: false }));
     },
-    apply() {
+    async apply(close) {
       if (draft === null || !changed) return;
-      setSession((value) => ({ ...value, applied: draft, draft: null, explorerPeek: null }));
-      undo.push(`Applied ${presetLabel(draft.preset)} layout`, () => {
-        setSession((value) =>
-          value.key !== key || value.applied !== draft
-            ? value
-            : {
-                ...value,
-                applied,
-                draft: value.draft === draft ? baseline : value.draft,
-                explorerPeek: value.explorerPeek ?? explorerPeek,
-              },
-        );
+      const scope = connection.current;
+      const result = await save(draft);
+      if (result === null) return;
+      close();
+      undo.push(`Applied ${presetLabel(draft.preset)} layout`, async () => {
+        if (connection.current !== scope) return;
+        await save(result.previous, draft);
       });
     },
   };
@@ -223,7 +345,7 @@ function LayoutPanel({
   narrow,
   close,
 }: {
-  readonly layout: Layout;
+  readonly layout: WorkspaceLayout;
   readonly preview: Preview;
   readonly narrow: boolean;
   readonly close: () => void;
@@ -232,7 +354,7 @@ function LayoutPanel({
   const [custom, setCustom] = useState(false);
   const customizeButton = useRef<HTMLButtonElement>(null);
   return (
-    <>
+    <fieldset disabled={preview.saving} aria-busy={preview.saving} className="contents">
       <div className="flex items-baseline justify-between gap-2">
         <Text as="h2" variant="body" className="font-bold">
           {custom ? 'Customize layout' : 'Choose a layout'}
@@ -319,7 +441,12 @@ function LayoutPanel({
       )}
       {custom ? (
         <Text variant="caption" tone="muted">
-          Layout choices stay on this device.
+          Your saved layout follows you across devices.
+        </Text>
+      ) : null}
+      {preview.saveFailed ? (
+        <Text variant="caption" role="alert">
+          Could not save your layout. Try again.
         </Text>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-1 border-t border-divider pt-2">
@@ -340,15 +467,14 @@ function LayoutPanel({
             variant="primary"
             disabled={!preview.changed}
             onClick={() => {
-              preview.apply();
-              close();
+              void preview.apply(close);
             }}
           >
-            Apply layout
+            {preview.saving ? 'Saving…' : 'Apply layout'}
           </Button>
         </div>
       </div>
-    </>
+    </fieldset>
   );
 }
 

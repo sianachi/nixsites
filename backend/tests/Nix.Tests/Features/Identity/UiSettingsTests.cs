@@ -22,9 +22,10 @@ public sealed class UiSettingsTests
             {"editor.keyboardMode":"vim","editor.textWidth":"full","editor.pageGuides":false,
              "editor.phraseSuggestions":true,"editor.unlinkedMentionUnderline":true,
              "editor.viewSuggestions":"off","editor.choiceOrder":"on","dailyNotes.openTodayOnStart":true,
-             "sites.publishingEnabled":false,"graph.openMode":"beside","shell.statusBar":false}
+             "sites.publishingEnabled":false,"graph.openMode":"beside","shell.statusBar":false,
+             "shell.layout":{"preset":"workspace","overrides":{"explorer":false,"advanced":true}}}
             """)));
-        Assert.Null(UiSettingsValidation.Check(Patch("""{"editor.keyboardMode":null,"editor.pageGuides":null,"graph.openMode":null}""")));
+        Assert.Null(UiSettingsValidation.Check(Patch("""{"editor.keyboardMode":null,"editor.pageGuides":null,"graph.openMode":null,"shell.layout":null}""")));
         Assert.Null(UiSettingsValidation.Check(Patch("{}")));
     }
 
@@ -44,6 +45,11 @@ public sealed class UiSettingsTests
     [InlineData("""{"editor.textWidth":"Full"}""")]
     [InlineData("""{"graph.openMode":["tab"]}""")]
     [InlineData("""{"graph.openMode":{}}""")]
+    [InlineData("""{"shell.layout":{"preset":"simple","overrides":{}}}""")]
+    [InlineData("""{"shell.layout":{"preset":"full"}}""")]
+    [InlineData("""{"shell.layout":{"preset":"full","overrides":{"sidebar":true}}}""")]
+    [InlineData("""{"shell.layout":{"preset":"full","overrides":{"view":"true"}}}""")]
+    [InlineData("""{"shell.layout":{"preset":"full","overrides":{"view":false,"view":true}}}""")]
     public void A_value_of_the_wrong_type_or_an_unknown_option_is_refused(string json) =>
         Assert.Equal(UiSettingsValidation.InvalidCode, UiSettingsValidation.Check(Patch(json))?.Code);
 
@@ -77,7 +83,7 @@ public sealed class UiSettingsTests
         var session = new ScopedNixSessionContextAccessor();
         session.Set(context);
         var store = new MemoryStore();
-        store.Seed(context, """{"editor.keyboardMode":"nano","editor.retiredSetting":true,"editor.pageGuides":false,"graph.openMode":"tab"}""");
+        store.Seed(context, """{"editor.keyboardMode":"nano","editor.retiredSetting":true,"editor.pageGuides":false,"graph.openMode":"tab","shell.layout":{"preset":"unknown","overrides":{}}}""");
 
         var read = await new GetUiSettingsHandler(store, session).HandleAsync(new(), Cancellation);
         Assert.Equal(["editor.pageGuides", "graph.openMode"], read.Settings.Keys.Order());
@@ -96,11 +102,12 @@ public sealed class UiSettingsTests
         var store = new MemoryStore();
         var handler = new PatchUiSettingsHandler(store, session);
 
-        var first = await handler.HandleAsync(new(Patch("""{"editor.keyboardMode":"vim","editor.pageGuides":false}""")), Cancellation);
+        var first = await handler.HandleAsync(new(Patch("""{"editor.keyboardMode":"vim","editor.pageGuides":false,"shell.layout":{"preset":"essentials","overrides":{"view":true}}}""")), Cancellation);
         Assert.True(first.IsSuccess);
         Assert.Equal(1, first.Value.Revision);
+        Assert.True(first.Value.Settings["shell.layout"].GetProperty("overrides").GetProperty("view").GetBoolean());
 
-        var second = await handler.HandleAsync(new(Patch("""{"editor.pageGuides":null,"graph.openMode":"tab"}""")), Cancellation);
+        var second = await handler.HandleAsync(new(Patch("""{"editor.pageGuides":null,"graph.openMode":"tab","shell.layout":null}""")), Cancellation);
         Assert.Equal(2, second.Value.Revision);
         Assert.Equal("vim", second.Value.Settings["editor.keyboardMode"].GetString());
         Assert.Equal("tab", second.Value.Settings["graph.openMode"].GetString());
