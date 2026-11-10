@@ -1,4 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { APP_ONLY_OPERATIONS, mayApplyUnasked } from '@nix/companion/auto-apply';
+import {
+  READ_ONLY_OPERATIONS,
+  workspaceToolSchema,
+  type WorkspaceToolArgs,
+} from '@nix/companion/tool-args';
 import {
   closeSync,
   fsyncSync,
@@ -17,6 +23,7 @@ import {
   Diagnostics,
   conversationKey,
   logSafeError,
+  rawSyntaxKinds,
   resultKind,
   traceRaw,
   turnErrorAttrs,
@@ -24,6 +31,7 @@ import {
   type TurnError,
 } from '../shared/diagnostics.ts';
 import { applyDelta, draftId, trimMessages, withoutDrafts } from '../providers/drafts.ts';
+import { SERVER_READ_MS, SERVER_WRITE_MS, type ServerTools } from '../tools/server-tools.ts';
 import {
   argumentRefusalCode,
   toolIdentity,
@@ -67,10 +75,10 @@ import {
 } from '../shared/util.ts';
 import { toolNamesChat } from '../tools/catalog.ts';
 
-/** toolVersion 11 adds explicit field edits and dynamic field sources. Older provider threads
+/** toolVersion 12 adds the supported-Markdown rule to the instructions. Older provider threads
  * restart on their next send to receive the current catalog and rules; visible conversation
  * history and its protected-read hold are retained. */
-export const TOOL_VERSION = 11;
+export const TOOL_VERSION = 12;
 export const MAX_TOOL_CALLS_PER_TURN = 20;
 export const MAX_CONCURRENT_WATCHERS = 4;
 export const MIN_WATCH_DWELL_MS = 120;
@@ -154,6 +162,7 @@ export interface AccountOptions {
   logger: Logger | undefined;
   trace: boolean;
   executeConversationTool?: ConversationToolExecutor | undefined;
+  serverTools?: ServerTools | undefined;
 }
 
 const publicTool = (t: ToolState): ToolCall => ({
@@ -279,6 +288,8 @@ export function turnPrompt(
 }
 
 /** One principal's provider process (or in-process transport) and its conversations. */
+export const MODEL_CACHE_MS = 5 * 60 * 1000;
+
 export class Account {
   readonly provider: string;
   readonly home: string;
@@ -287,7 +298,10 @@ export class Account {
   readonly conversations = new Map<string, Conversation>();
   private readonly chatEffort: string;
   private readonly executeConversationTool: ConversationToolExecutor | undefined;
+  private readonly serverTools: ServerTools | undefined;
   models: ModelInfo[] = [];
+  private modelsListedAt = 0;
+  private modelsKey = '';
   status = 'disconnected';
   reason = '';
   last = Date.now();
@@ -307,6 +321,7 @@ export class Account {
     this.transport = options.transport;
     this.chatEffort = options.chatEffort;
     this.executeConversationTool = options.executeConversationTool;
+    this.serverTools = options.serverTools;
     this.diag = new Diagnostics(options.home, options.logger, options.trace);
     mkdirSync(options.home, { recursive: true, mode: 0o700 });
     // A throw here would escape the transport's stdout listener or turn loop and stop the whole
@@ -520,6 +535,8 @@ export class Account {
       revision: 0,
       lockedRead: false,
       title: '',
+      // Left out when off, so the wire is what it was.
+      ...(this.serverTools?.mode === 'all' ? { serverWrites: true } : {}),
     };
     const c = this.conversations.get(key);
     if (c !== undefined) {
@@ -628,7 +645,9 @@ export class Account {
     const c = this.conversations.get(key);
     if (c === undefined) throw new Error('conversation could not be restored');
     const state = c.state;
-    if (op.startsWith('tool_')) {
+    if (op === 'tool_approve') {
+      this.approveTool(key, r);
+    } else if (op.startsWith('tool_')) {
       this.resolveTool(key, r);
     } else if (op === 'send') {
       const duplicate = c.requestId === r.requestId;
@@ -709,6 +728,21 @@ export class Account {
       });
     }
     this.models = models;
+    this.modelsListedAt = Date.now();
+  }
+
+  /** The cached list unless it is empty, older than MODEL_CACHE_MS or listed under another key. */
+  private async freshModels(signal: AbortSignal, apiKey: string): Promise<boolean> {
+    const key = createHash('sha256').update(apiKey).digest('hex');
+    if (
+      this.models.length > 0 &&
+      key === this.modelsKey &&
+      Date.now() - this.modelsListedAt < MODEL_CACHE_MS
+    )
+      return false;
+    await this.listModels(signal);
+    this.modelsKey = key;
+    return true;
   }
 
   /**
@@ -763,12 +797,20 @@ export class Account {
     };
     let supportsTools = true;
     if (r.model !== '' || (this.provider !== '' && this.provider !== 'chatgpt')) {
-      await this.listModels(signal);
-      const selected =
-        r.model !== ''
-          ? r.model
-          : ((this.models.find((m) => m.default) ?? this.models[0])?.id ?? '');
-      const found = this.models.find((m) => m.id === selected);
+      const fetched = await this.freshModels(signal, r.apiKey);
+      const pick = () => {
+        const selected =
+          r.model !== ''
+            ? r.model
+            : ((this.models.find((m) => m.default) ?? this.models[0])?.id ?? '');
+        return this.models.find((m) => m.id === selected);
+      };
+      let found = pick();
+      if (found === undefined && !fetched) {
+        // The cached list may be stale: list once more before refusing.
+        await this.listModels(signal);
+        found = pick();
+      }
       if (found === undefined) throw new Error('model is unavailable');
       supportsTools = found.supportsTools;
       if (!supportsTools && r.workspaceAccess) {
@@ -780,7 +822,7 @@ export class Account {
         this.bump(c);
         throw new Error('model does not support tools');
       }
-      params.model = selected;
+      params.model = found.id;
     }
     let method = 'thread/start';
     if (thread === '' && supportsTools) params.dynamicTools = workspaceToolsForRequest(r);
@@ -832,7 +874,13 @@ export class Account {
     c.rootItemId = r.rootItemId;
     c.conversationItemId = r.conversationItemId;
     c.sourceWorkspaceIds = [...r.sourceWorkspaceIds];
-    c.actor = { ...r, apiKey: '', earlierMessages: [] };
+    // The turn token is held only when this companion runs server tools, and only for the turn.
+    c.actor = {
+      ...r,
+      apiKey: '',
+      earlierMessages: [],
+      turnToken: this.serverTools === undefined ? '' : r.turnToken,
+    };
     c.readOnly = r.readOnly;
     c.tools = [];
     c.timing.start(r.model, '');
@@ -876,6 +924,7 @@ export class Account {
         step: 'turn/start',
         error: logSafeError(error),
       });
+      c.actor.turnToken = '';
       c.state = 'error';
       c.reason =
         'The response could not start. Check the selected model and ChatGPT connection, then retry.';
@@ -1279,6 +1328,17 @@ export class Account {
         call.claimId = c.requestId;
         call.claimedAt = Date.now();
         void this.executeDurableTool(key, c.actor, call.id, flat);
+      } else if (this.mayRunReadOnServer(c, flat, readOnly)) {
+        call.status = 'claimed';
+        call.claimId = c.requestId;
+        call.claimedAt = Date.now();
+        c.timing.toolClaimed(call.pendingSince);
+        this.diag.record(key, 'info', 'tool.claimed', {
+          tool: toolOperation(flat),
+          pending_ms: 0,
+          runner: 'server',
+        });
+        void this.executeServerTool(key, c.actor, call.id, flat);
       }
       if (!this.trySave(key)) {
         c.tools.pop();
@@ -1298,6 +1358,173 @@ export class Account {
       return true;
     }
     return false;
+  }
+
+  /** An approved write: claims the pending call and runs it here with Core's write token. */
+  private approveTool(key: string, r: Request): void {
+    const c = this.conversations.get(key);
+    const t = c?.tools.find((tool) => tool.id === r.toolId);
+    if (this.serverTools?.mode !== 'all' || r.turnToken === '')
+      throw new Error('server writes are off');
+    if (c === undefined || t === undefined) throw new Error('unknown tool call');
+    if (c.state !== 'thinking' || t.status !== 'pending') {
+      this.diag.record(key, 'warn', 'tool.claim_refused', {
+        tool: toolOperation(t.arguments),
+        status: t.status,
+        turn_state: c.state,
+      });
+      throw new Error('tool already claimed; do not execute again');
+    }
+    const args = r.editedArguments || t.arguments;
+    const operation = toolOperation(args);
+    // Core sized the token by the approved operation: that is the one call it may run.
+    if (operation !== r.approvedOperation) throw new Error('approval does not match the call');
+    if (
+      r.editedArguments !== '' &&
+      (r.automatic ||
+        operation !== toolOperation(t.arguments) ||
+        validateToolArguments(args) !== '' ||
+        noteScopeToolRefusal(c, args) !== '')
+    )
+      throw new Error('edited request is not allowed');
+    const parsed = workspaceToolSchema.parse(JSON.parse(args));
+    if (APP_ONLY_OPERATIONS.has(parsed.operation) || READ_ONLY_OPERATIONS.has(parsed.operation))
+      throw new Error('this operation is not approved on the server');
+    if (r.automatic && !mayApplyUnasked(parsed, c.lockedRead)) {
+      // Left pending: the app shows the card. lockedRead here is authoritative.
+      this.diag.record(key, 'info', 'tool.approve_held', { tool: operation });
+      return;
+    }
+    t.status = 'claimed';
+    t.claimId = r.requestId;
+    t.claimedAt = Date.now();
+    c.timing.toolClaimed(t.pendingSince);
+    this.diag.record(key, 'info', 'tool.claimed', { tool: operation, runner: 'server' });
+    this.save(key);
+    void this.executeApprovedTool(key, c.actor, t.id, args, r);
+  }
+
+  private async executeApprovedTool(
+    key: string,
+    actor: Request,
+    toolId: string,
+    args: string,
+    r: Request,
+  ): Promise<void> {
+    const serverTools = this.serverTools;
+    if (serverTools === undefined) return;
+    const c0 = this.conversations.get(key);
+    let text = '';
+    let success = false;
+    let lockedContent = false;
+    try {
+      const out = await serverTools.run(
+        {
+          // The write token lives in this closure only: never stored on the conversation or logged.
+          token: r.turnToken,
+          workspaceId: actor.workspaceId,
+          args,
+          timeZone: actor.timeZone,
+          ...(c0 !== undefined && c0.rootItemId !== ''
+            ? { scope: { rootItemId: c0.rootItemId, readOnly: c0.readOnly } }
+            : {}),
+          toolId,
+          claimId: r.requestId,
+          ...(r.fingerprint === '' ? {} : { fence: r.fingerprint }),
+        },
+        AbortSignal.timeout(SERVER_WRITE_MS),
+        true,
+      );
+      if (out.kind === 'result') ({ text, success, lockedContent } = out);
+    } catch {
+      // the uncertain-result text below stands
+    }
+    if (text === '')
+      text =
+        'The operation failed or its result is uncertain. Inspect Nix before retrying a write. Do not assume success.';
+    else if (r.editNote !== '') text = `${r.editNote}\n${text}`;
+    const c = this.conversations.get(key);
+    if (c?.requestId !== actor.requestId || c.state !== 'thinking') return;
+    try {
+      this.resolveTool(key, {
+        ...emptyRequest(),
+        operation: 'tool_result',
+        requestId: r.requestId,
+        toolId,
+        toolResult: text,
+        toolSuccess: success,
+        toolLockedContent: lockedContent,
+      });
+    } catch {
+      // the claim no longer matches; nothing to resolve
+    }
+  }
+
+  private mayRunReadOnServer(c: Conversation, flat: string, readOnly: boolean): boolean {
+    return (
+      this.serverTools !== undefined &&
+      readOnly &&
+      !APP_ONLY_OPERATIONS.has(toolOperation(flat) as WorkspaceToolArgs['operation']) &&
+      c.actor.readWithoutAsking &&
+      c.actor.turnToken !== ''
+    );
+  }
+
+  /** Runs a read with the turn token and feeds the result back; the app gets it when it must. */
+  private async executeServerTool(
+    key: string,
+    actor: Request,
+    toolId: string,
+    args: string,
+  ): Promise<void> {
+    const serverTools = this.serverTools;
+    if (serverTools === undefined) return;
+    const c0 = this.conversations.get(key);
+    const outcome = await serverTools
+      .run(
+        {
+          token: actor.turnToken,
+          workspaceId: actor.workspaceId,
+          args,
+          timeZone: actor.timeZone,
+          ...(c0 !== undefined && c0.rootItemId !== ''
+            ? { scope: { rootItemId: c0.rootItemId, readOnly: c0.readOnly } }
+            : {}),
+          toolId,
+          claimId: actor.requestId,
+        },
+        AbortSignal.timeout(SERVER_READ_MS),
+      )
+      .catch(() => ({ kind: 'app' as const }));
+    const c = this.conversations.get(key);
+    // Core refused the token: later reads of the turn go to the app, not into more 401s.
+    if (outcome.kind === 'app' && 'stopToken' in outcome && c?.requestId === actor.requestId)
+      c.actor.turnToken = '';
+    if (c?.requestId !== actor.requestId || c.state !== 'thinking') return;
+    if (outcome.kind === 'app') {
+      const t = c.tools.find((tool) => tool.id === toolId);
+      if (t?.status !== 'claimed' || t.claimId !== actor.requestId) return;
+      t.status = 'pending';
+      t.claimId = '';
+      t.claimedAt = 0;
+      this.diag.record(key, 'info', 'tool.released', { tool: toolOperation(args), reason: 'app' });
+      this.trySave(key);
+      return;
+    }
+    try {
+      this.resolveTool(key, {
+        ...emptyRequest(),
+        operation: 'tool_result',
+        requestId: actor.requestId,
+        toolId,
+        toolResult: outcome.text,
+        toolSuccess: outcome.success,
+        toolLockedContent: outcome.lockedContent,
+        toolImage: outcome.image,
+      });
+    } catch {
+      // the claim no longer matches; nothing to resolve
+    }
   }
 
   /** Runs a saved conversation's tool in Core and feeds the result back, off the request path. */
@@ -1378,6 +1605,7 @@ export class Account {
     // Sticky for the thread's life: the result is now in the model's context.
     if (r.toolLockedContent) c.lockedRead = true;
     const kind = resultKind(r.toolSuccess, t.result);
+    const rawSyntax = rawSyntaxKinds(t.result);
     this.diag.record(
       key,
       kind === 'failed' || kind === 'no_result' ? 'warn' : 'info',
@@ -1387,6 +1615,7 @@ export class Account {
         outcome: kind,
         run_ms: t.claimedAt === 0 ? 0 : Date.now() - t.claimedAt,
         result_chars: byteLen(t.result),
+        ...(rawSyntax === '' ? {} : { raw_syntax: rawSyntax }),
       },
       { result: t.result },
     );
@@ -1412,6 +1641,7 @@ export class Account {
   cancelToolsLocked(key: string): void {
     const c = this.conversations.get(key);
     if (c === undefined) return;
+    c.actor.turnToken = ''; // the token lives no longer than its turn
     for (const t of c.tools) {
       if (t.status !== 'pending' && t.status !== 'claimed') continue;
       this.diag.record(key, 'warn', 'tool.interrupted', {

@@ -487,7 +487,6 @@ const BODY_EDIT_LOSSES: Readonly<Record<string, string>> = {
   'highlight-dropped': 'Its highlights are removed. The words stay.',
   'underline-dropped': 'Its underlines are removed. The words stay.',
   'comment-dropped': 'Its comment highlights are removed. The words stay.',
-  'task-list-flattened': 'Its checklist becomes a plain bullet list, and ticks are lost.',
   'columns-flattened': 'Its side-by-side columns become one column.',
   'table-flattened': 'Its table loses merged cells, column widths and cell formatting.',
 };
@@ -539,6 +538,11 @@ function describeBodyEdit(args: PreviewToolArgs, context: PreviewContext): Previ
         path: where,
         code: loss.kind,
         message: BODY_EDIT_LOSSES[loss.kind] ?? BODY_EDIT_LOSS_FALLBACK,
+      })),
+      ...Object.entries(plan.markdownChanges.rawSyntax ?? {}).map(([kind, count]) => ({
+        path: where,
+        code: `raw-${kind}`,
+        message: `${String(count)} place${count === 1 ? '' : 's'} of ${kind.replace('-', ' ')} stay as plain text in the new text.`,
       })),
     ],
     bodyEdit: {

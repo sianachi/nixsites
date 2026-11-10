@@ -39,6 +39,9 @@ export NIX_COLLAB_OIDC_AUDIENCE="$NIX_OIDC_CLIENT_ID,$NIX_OIDC_PROJECT_ID,nix"
 export NIX_COMPANION_API_URL="${NIX_COMPANION_API_URL:-$NIX_API_ORIGIN}"
 export NIX_COMPANION_INTERNAL_SECRET="${NIX_COMPANION_INTERNAL_SECRET:-$internal_secret}"
 export NIX_COMPANION_ADDRESS="${NIX_COMPANION_ADDRESS:-:8302}"
+# Server-side pet tools (off | reads | all); the API reads Nix__Pets__ServerTools (scripts/dev-api.sh).
+export NIX_COMPANION_SERVER_TOOLS="${NIX_COMPANION_SERVER_TOOLS:-off}"
+export NIX_COMPANION_COLLAB_URL="${NIX_COMPANION_COLLAB_URL:-$NIX_COLLAB_ORIGIN}"
 export NIX_COMPANION_DATA_DIR="${NIX_COMPANION_DATA_DIR:-$repo_root/.local/companion}"
 # Local development keeps the full-content pet trace on, so a misbehaving pet can be debugged
 # from <data dir>/<account>/traces/*.jsonl. It is off unless set anywhere else.

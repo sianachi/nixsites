@@ -16,3 +16,4 @@ export { EMPTY_MARKDOWN_IMPORT_SCAN, type MarkdownImportScan } from './scan.js';
 export { documentToMarkdown, escapeInline } from './to-markdown.js';
 export { markdownToDocument, type FromMarkdownResult } from './from-markdown.js';
 export { type MarkdownLoss } from './losses.js';
+export { cleanModelMarkdown } from './model-markdown.js';

@@ -2632,3 +2632,91 @@ describe('companion work approvals', () => {
     });
   });
 });
+
+describe('approved writes run by the server', () => {
+  const serverRuntime = petConnectionSchema.parse({ ...runtime, serverWrites: true });
+  function showServer(onChange = vi.fn()) {
+    return render(
+      <PetWorkTools
+        client={client as unknown as NixClient}
+        runtime={serverRuntime}
+        workspaceId="11111111-1111-4111-8111-111111111111"
+        petId="22222222-2222-4222-8222-222222222222"
+        onChange={onChange}
+      />,
+      { wrapper: MemoryRouter },
+    );
+  }
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useRealRun();
+    sessionStorage.clear();
+  });
+
+  it('sends tool_approve and never runs the executor in the tab', async () => {
+    client.execute.mockImplementation((endpoint: { body: { requestId?: string } }) =>
+      Promise.resolve({
+        ...serverRuntime,
+        tools: (serverRuntime.tools ?? []).map((tool) => ({
+          ...tool,
+          status: 'claimed',
+          claimId: endpoint.body.requestId ?? '',
+        })),
+      }),
+    );
+    showServer();
+    await approveRequest();
+    await waitFor(() => {
+      expect(requestOperations()).toEqual(['tool_approve']);
+    });
+    expect(client.execute.mock.calls[0]?.[0]).toMatchObject({
+      body: { operation: 'tool_approve', approvedOperation: 'create_note', automatic: false },
+    });
+    expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the claim path for a decline', async () => {
+    client.execute.mockRejectedValue(new Error('offline'));
+    showServer();
+    const decline = screen.getByRole('button', { name: 'Decline request' });
+    await userEvent.click(decline);
+    await waitFor(() => {
+      expect(requestOperations()[0]).toBe('tool_claim');
+    });
+    expect(requestOperations()).not.toContain('tool_approve');
+  });
+
+  it('refreshes what a write changed once the server reports it completed', async () => {
+    const view = showServer();
+    const done = petConnectionSchema.parse({
+      ...serverRuntime,
+      tools: (serverRuntime.tools ?? []).map((tool) => ({ ...tool, status: 'completed' })),
+    });
+    client.execute.mockImplementation((endpoint: { body: { requestId?: string } }) =>
+      Promise.resolve({
+        ...serverRuntime,
+        tools: (serverRuntime.tools ?? []).map((tool) => ({
+          ...tool,
+          status: 'claimed',
+          claimId: endpoint.body.requestId ?? '',
+        })),
+      }),
+    );
+    await approveRequest();
+    await waitFor(() => {
+      expect(requestOperations()).toEqual(['tool_approve']);
+    });
+    view.rerender(
+      <PetWorkTools
+        client={client as unknown as NixClient}
+        runtime={done}
+        workspaceId="11111111-1111-4111-8111-111111111111"
+        petId="22222222-2222-4222-8222-222222222222"
+        onChange={vi.fn()}
+      />,
+    );
+    await waitFor(() => {
+      expect(client.invalidate).toHaveBeenCalledWith(['items']);
+    });
+  });
+});

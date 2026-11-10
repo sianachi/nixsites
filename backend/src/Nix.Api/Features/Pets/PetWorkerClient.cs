@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Nix.Abstractions;
+using Nix.Authentication;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
@@ -16,10 +18,10 @@ using Nix.Persistence.Workspaces;
 namespace Nix.Features.Pets;
 
 /// <summary>Core's bounded, authenticated gateway to the companion in the existing Go worker.</summary>
-public sealed class PetWorkerClient(HttpClient http, IConfiguration configuration,
+public sealed partial class PetWorkerClient(HttpClient http, IConfiguration configuration,
     INixSessionContextAccessor session, NixDispatcher dispatcher, IPermissionResolver permissions,
     IPetProviderCredentialStore credentials, PetProviderKeyProtector protector,
-    ILogger<PetWorkerClient>? logger = null)
+    ILogger<PetWorkerClient>? logger = null, SelfIssuedTokenService? tokens = null)
 {
     private readonly ILogger _log = logger ?? NullLogger<PetWorkerClient>.Instance;
 
@@ -92,7 +94,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
     public Task<Result<PetConnectionResponse>> ExecuteAsync(PetRuntimeRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.Operation == "watch")
+        if (request.Operation is "watch" or "watch_stream")
         {
             return Task.FromResult(Result.Failure<PetConnectionResponse>(new("pets.invalid_request", "Use the watch endpoint for this operation.")));
         }
@@ -106,21 +108,39 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
     public Task<Result<PetConnectionResponse>> ExecuteWatchAsync(Guid workspaceId, Guid petId, string mode, long after, CancellationToken cancellationToken, Guid? rootItemId = null) =>
         ExecuteCoreAsync(new PetRuntimeRequest("watch", workspaceId, petId, Mode: mode, RootItemId: rootItemId), after, cancellationToken);
 
+    /// <summary>Opens the companion's chat event stream with the same checks as a read. The caller owns the
+    /// response (headers read, body unread) and <paramref name="cancellationToken"/> bounds the whole stream.
+    /// Anything the worker answers other than a 200 event stream becomes a coded failure.</summary>
+    public async Task<Result<HttpResponseMessage>> OpenWatchStreamAsync(Guid workspaceId, Guid petId, string mode, Guid? rootItemId, CancellationToken cancellationToken)
+    {
+        var slot = new StreamSlot();
+        var result = await ExecuteCoreAsync(new PetRuntimeRequest("watch_stream", workspaceId, petId, Mode: mode, RootItemId: rootItemId), 0, cancellationToken, slot: slot).ConfigureAwait(false);
+        // No response and no failure means Core answered itself ("not configured"): the app falls back to watch, which shows that state.
+        return slot.Response is { } opened ? Result.Success(opened)
+            : Result.Failure<HttpResponseMessage>(result.IsFailure ? result.Error : new("pets.stream_unavailable", "No stream is available for this pet right now."));
+    }
+
+    private sealed class StreamSlot
+    {
+        public HttpResponseMessage? Response { get; set; }
+    }
+
     internal Task<Result<PetConnectionResponse>> ExecuteConversationAsync(PetRuntimeRequest request, Guid conversationItemId,
         IReadOnlyList<Guid> sourceWorkspaceIds, IReadOnlyList<PetMessage>? earlierMessages, CancellationToken cancellationToken) =>
         ExecuteCoreAsync(request with { ReadOnly = true, WorkspaceAccess = true, RootItemId = null }, 0, cancellationToken,
             conversationItemId, sourceWorkspaceIds, earlierMessages);
 
     private async Task<Result<PetConnectionResponse>> ExecuteCoreAsync(PetRuntimeRequest request, long after, CancellationToken cancellationToken,
-        Guid? conversationItemId = null, IReadOnlyList<Guid>? sourceWorkspaceIds = null, IReadOnlyList<PetMessage>? earlierMessages = null)
+        Guid? conversationItemId = null, IReadOnlyList<Guid>? sourceWorkspaceIds = null, IReadOnlyList<PetMessage>? earlierMessages = null, StreamSlot? slot = null)
     {
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
-        if (request.Operation is not ("status" or "connect" or "disconnect" or "models" or "read" or "watch" or "send" or "interrupt" or "reset" or "tool_claim" or "tool_result" or "history" or "read_history" or "delete_history" or "rename" or "resume_history")
+        if (request.Operation is not ("status" or "connect" or "disconnect" or "models" or "read" or "watch" or "watch_stream" or "send" or "interrupt" or "reset" or "tool_claim" or "tool_result" or "tool_approve" or "history" or "read_history" or "delete_history" or "rename" or "resume_history")
             || request.Text is null || request.SharedText is null || request.Text.Length > 8000 || request.SharedText.Length > 16000
             || request.Model is null || request.Model.Length > 160 || request.ToolId is null || request.ToolId.Length > 200
             || request.ToolResult is null || request.ToolResult.Length > 32000
             || request.ToolImage is null || request.ToolImage.Length > 0 && (request.Operation != "tool_result" || !IsValidToolImage(request.ToolImage))
-            || request.Operation is "tool_claim" or "tool_result" && (request.RequestId is null || request.RequestId == Guid.Empty || request.ToolId.Length == 0)
+            || request.Operation is "tool_claim" or "tool_result" or "tool_approve" && (request.RequestId is null || request.RequestId == Guid.Empty || request.ToolId.Length == 0)
+            || !IsValidApproval(request)
             || request.Mode is null || request.Mode is not ("" or "chat" or "consult")
             || request.RootItemId == Guid.Empty
             || request.Operation == "rename" && !IsValidTitle(request.Text)
@@ -245,7 +265,7 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
         {
             // A missing key is a settings state, not a worker failure: shown as a connection the
             // person can fix rather than a 4xx that reads as a broken pet.
-            return request.Operation is "status" or "connect" or "models" or "read" or "watch"
+            return request.Operation is "status" or "connect" or "models" or "read" or "watch" or "watch_stream"
                 ? Result.Success(new PetConnectionResponse(pet?.Provider ?? PetProviders.ChatGpt, "disconnected", resolved.Error.Message, false, Messages: []))
                 : Result.Failure<PetConnectionResponse>(resolved.Error);
         }
@@ -264,6 +284,22 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
             return Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion worker URL is invalid."));
         }
 
+        // The operator's switch lives here, on the side that mints: unset, empty or a typo is off.
+        // Saved conversations keep the C# tools, so they never get a token.
+        var serverTools = configuration["Nix:Pets:ServerTools"] is "reads" or "all";
+        var turnToken = serverTools && request.Operation == "send" && request.ReadWithoutAsking && request.WorkspaceAccess
+            && conversationItemId is null && request.RequestId is { } turnId && tokens is { IsConfigured: true }
+            ? tokens.MintPetTurn(context.PrincipalId, context.TenantId, turnId, PetTurnMode.Read)
+            : null;
+        // An approved write gets its own token, sized by the operation the owner approved: only a
+        // person-approved move or action reaches Admin routes, never an automatic approval.
+        if (configuration["Nix:Pets:ServerTools"] == "all" && request.Operation == "tool_approve" && conversationItemId is null
+            && request.RequestId is { } approvalId && tokens is { IsConfigured: true })
+        {
+            var admin = request.ApprovedOperation is "move_item" or "run_action" && !request.Automatic;
+            turnToken = tokens.MintPetTurn(context.PrincipalId, context.TenantId, approvalId, admin ? PetTurnMode.Admin : PetTurnMode.Write);
+        }
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(28));
         using var outgoing = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "/v1/companion"));
@@ -276,9 +312,34 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
             request.RootItemId?.ToString(), request.ReadOnly, sharedItems.Count > 0 ? sharedItems : null,
             request.ReplaceFromMessageId?.ToString(), provider == PetProviders.ChatGpt ? null : provider, apiKey, conversationItemId?.ToString(),
             sourceWorkspaceIds?.Select(id => id.ToString()).ToArray(), earlierMessages,
-            request.ToolImage.Length > 0 ? request.ToolImage : null), PetJsonContext.Default.PetWorkerRequest);
+            request.ToolImage.Length > 0 ? request.ToolImage : null, turnToken, turnToken is not null && request.Operation == "send",
+            NullIfEmpty(request.Fingerprint), NullIfEmpty(request.EditedArguments), NullIfEmpty(request.EditNote), request.Automatic, NullIfEmpty(request.ApprovedOperation)), PetJsonContext.Default.PetWorkerRequest);
         try
         {
+            if (slot is not null)
+            {
+                var opened = await http.SendAsync(outgoing, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                if (opened.StatusCode == HttpStatusCode.OK
+                    && string.Equals(opened.Content.Headers.ContentType?.MediaType, "text/event-stream", StringComparison.OrdinalIgnoreCase))
+                {
+                    slot.Response = opened;
+                    return Result.Success(new PetConnectionResponse(provider, "connected", "", false));
+                }
+
+                using (opened)
+                {
+                    var failed = opened.StatusCode switch
+                    {
+                        HttpStatusCode.TooManyRequests => new NixError("pets.too_many_watches", "Too many active watches. Close another tab and try again."),
+                        // An older companion does not know the operation.
+                        HttpStatusCode.BadRequest => new NixError("pets.stream_unavailable", "The companion does not support streaming."),
+                        _ => new NixError("pets.unavailable", "The companion could not complete this request. Retry or check the selected provider in Settings > Pets."),
+                    };
+                    ApiLog.PetWorkerFailed(_log, request.Operation, $"worker returned HTTP {(int)opened.StatusCode}", failed.Code);
+                    return Result.Failure<PetConnectionResponse>(failed);
+                }
+            }
+
             using var response = await http.SendAsync(outgoing, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
@@ -327,7 +388,12 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
                     return Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion response exceeded the size limit."));
                 }
 
-                return value is null ? Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion returned an empty response.")) : Result.Success(value);
+                // Core's switch decides whether the app takes the server-write path: a companion
+                // still on "all" must not advertise writes Core will not mint a token for.
+                // shortcut: stream snapshot events pass the companion's flag through, so a Core kill switch
+                // is only exact on this path; upgrade if the app stops falling back on the error.
+                return value is null ? Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion returned an empty response."))
+                    : Result.Success(value.ServerWrites && configuration["Nix:Pets:ServerTools"] != "all" ? value with { ServerWrites = false } : value);
             }
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
@@ -391,6 +457,29 @@ public sealed class PetWorkerClient(HttpClient http, IConfiguration configuratio
 
     /// <summary>Bounds the date, zone and workspace map a request carries. The map is accepted on a
     /// send only: no other operation starts a turn, so on any other it would be dead weight.</summary>
+    private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
+
+    // The approval fields belong to tool_approve alone; an edited request is never an automatic one.
+    private static bool IsValidApproval(PetRuntimeRequest request)
+    {
+        if (request.Fingerprint is null || request.EditedArguments is null || request.EditNote is null || request.ApprovedOperation is null
+            || request.Fingerprint.Length > 262_144 || request.EditedArguments.Length > 40_000 || request.EditNote.Length > 2000)
+        {
+            return false;
+        }
+
+        if (request.Operation != "tool_approve")
+        {
+            return request.Fingerprint.Length == 0 && request.EditedArguments.Length == 0 && request.EditNote.Length == 0
+                && !request.Automatic && request.ApprovedOperation.Length == 0;
+        }
+
+        return ApprovedOperationPattern().IsMatch(request.ApprovedOperation) && !(request.EditedArguments.Length > 0 && request.Automatic);
+    }
+
+    [GeneratedRegex("^[a-z_]{1,64}$", RegexOptions.CultureInvariant)]
+    private static partial Regex ApprovedOperationPattern();
+
     private static bool IsValidTurnContext(PetRuntimeRequest request)
     {
         if (request.Today is null || request.TimeZone is null)

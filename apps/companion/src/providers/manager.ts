@@ -16,7 +16,9 @@ import {
   type Request,
 } from '../shared/types.ts';
 import { UUID } from '../shared/util.ts';
+import { serveWatchStream } from '../tools/watch-stream.ts';
 import { parseRequest, validRequest } from '../tools/validation.ts';
+import type { ServerTools } from '../tools/server-tools.ts';
 
 /** How many principals' providers may run at once. */
 export const MAX_ACCOUNTS = 4;
@@ -28,6 +30,7 @@ export interface ManagerDeps {
   /** Replaces the default launcher (the Codex child, or the in-process HTTPS transport). */
   launch?: Launch | undefined;
   executeConversationTool?: ConversationToolExecutor | undefined;
+  serverTools?: ServerTools | undefined;
   /** Provider origin overrides, for tests. */
   providerBaseUrls?: Partial<Record<'anthropic' | 'openrouter', string>> | undefined;
   fetch?: typeof fetch | undefined;
@@ -54,12 +57,14 @@ export class Manager {
   private readonly logger: Logger;
   private readonly launch: Launch;
   private readonly executeConversationTool: ConversationToolExecutor | undefined;
+  private readonly serverTools: ServerTools | undefined;
   private readonly timer: NodeJS.Timeout;
 
   constructor(config: CompanionConfig, deps: ManagerDeps = {}) {
     this.config = config;
     this.logger = deps.logger ?? stdoutLogger();
     this.executeConversationTool = deps.executeConversationTool;
+    this.serverTools = deps.serverTools;
     mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
     this.launch =
       deps.launch ??
@@ -165,6 +170,7 @@ export class Manager {
       logger: this.logger,
       trace: this.config.trace,
       executeConversationTool: this.executeConversationTool,
+      serverTools: this.serverTools,
     });
     ref.account = account;
     try {
@@ -196,6 +202,24 @@ export class Manager {
         return;
       }
       return serveInline(
+        async (signal) => {
+          try {
+            return await this.account(signal, request);
+          } catch (error) {
+            this.logger.log('error', 'companion runtime unavailable', {
+              operation: request.operation,
+              error: logSafeError(error),
+            });
+            return undefined;
+          }
+        },
+        res,
+        request,
+        client.signal,
+      );
+    }
+    if (request.operation === 'watch_stream') {
+      return serveWatchStream(
         async (signal) => {
           try {
             return await this.account(signal, request);

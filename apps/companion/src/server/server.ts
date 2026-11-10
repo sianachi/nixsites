@@ -11,6 +11,7 @@ import {
 import type { CompanionConfig } from '../core/config.ts';
 import { CoreClient } from '../core/core-client.ts';
 import { Manager, type ManagerDeps } from '../providers/manager.ts';
+import { createServerTools } from '../tools/server-tools.ts';
 
 export interface CompanionDeps extends ManagerDeps {
   /** Whether Core accepts the service credential; default a GET /healthz against NIX_COMPANION_API_URL. */
@@ -57,6 +58,7 @@ export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {
   });
   const manager = new Manager(config, {
     executeConversationTool: core.executeConversationTool,
+    serverTools: createServerTools(config),
     ...deps,
   });
   const ping = deps.ping ?? ((): Promise<boolean> => core.ping(AbortSignal.timeout(3000)));

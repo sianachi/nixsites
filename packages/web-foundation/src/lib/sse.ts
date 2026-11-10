@@ -27,6 +27,7 @@ const LINE_BREAK = /\r\n|\n|\r/;
 
 export async function* readSse(
   stream: ReadableStream<Uint8Array>,
+  maxRecordChars: number = MAX_SSE_RECORD_CHARS,
 ): AsyncGenerator<SseRecord, void, undefined> {
   const reader = stream.getReader();
   const decoder = new TextDecoder('utf-8');
@@ -48,7 +49,7 @@ export async function* readSse(
         continue;
       }
       recordChars += line.length + 1;
-      if (recordChars > MAX_SSE_RECORD_CHARS)
+      if (recordChars > maxRecordChars)
         throw new RangeError('The SSE record exceeded its size limit.');
       // A comment: the server's keep-alive, which says nothing and is not a field.
       if (line.startsWith(':')) continue;
@@ -86,7 +87,7 @@ export async function* readSse(
       const lines = complete.split(LINE_BREAK);
       buffer = (lines.pop() ?? '') + heldBack;
       yield* feed(lines);
-      if (recordChars + buffer.length > MAX_SSE_RECORD_CHARS)
+      if (recordChars + buffer.length > maxRecordChars)
         throw new RangeError('The SSE record exceeded its size limit.');
     }
   } finally {

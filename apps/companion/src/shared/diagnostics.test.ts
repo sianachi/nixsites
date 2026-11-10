@@ -8,6 +8,7 @@ import {
   MAX_TRACE_BYTES,
   conversationTag,
   logSafeError,
+  rawSyntaxKinds,
   resultKind,
   traceRaw,
   turnErrorAttrs,
@@ -171,6 +172,14 @@ describe('the shared log', () => {
       'no_result',
     );
     expect(resultKind(false, 'boom')).toBe('failed');
+  });
+
+  it('reads raw-Markdown kinds from a note write result and nothing else', () => {
+    const note =
+      'Some Markdown stayed as plain text in the note (bold-marker x2, html-tag x1). Rewrite';
+    expect(rawSyntaxKinds(`{"rawSyntaxNote":"${note}"}`)).toBe('bold-marker x2, html-tag x1');
+    expect(rawSyntaxKinds('stayed as plain text in the note (My Secret Title x1)')).toBe('');
+    expect(rawSyntaxKinds('Appended.')).toBe('');
   });
 
   it('keeps identifiers out of a failed history read', async () => {

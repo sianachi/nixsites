@@ -164,4 +164,12 @@ describe('readSse', () => {
       { event: 'message', data: 'x' },
     ]);
   });
+
+  it('honours a larger record cap', async () => {
+    const big = encoder.encode(`data: ${'x'.repeat(MAX_SSE_RECORD_CHARS + 10)}\n\n`);
+    await expect(collect([big])).rejects.toThrow(RangeError);
+    const records: SseRecord[] = [];
+    for await (const r of readSse(streamOf([big]), MAX_SSE_RECORD_CHARS * 2)) records.push(r);
+    expect(records).toHaveLength(1);
+  });
 });

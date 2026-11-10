@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canApplyWithoutAsking, hasExternalLink } from './auto-apply.js';
+import { canApplyWithoutAsking, hasExternalLink, mayApplyUnasked } from './auto-apply.js';
 import { READ_ONLY_OPERATIONS, workspaceToolSchema } from './tool-args.js';
 
 const everyOperation = workspaceToolSchema.shape.operation.options;
@@ -46,10 +46,42 @@ describe('hasExternalLink', () => {
     expect(hasExternalLink(['plain', 'HTTPS://EXAMPLE.TEST'])).toBe(true);
   });
 
+  it('finds scheme URLs written without the double slash', () => {
+    for (const text of [
+      '![x](https:evil.test/p.png?d=1)',
+      '![x](https:/evil.test/p.png)',
+      '![x](https:\\\\evil.test/p.png)',
+      '![x](https&#58;evil.test/p.png)',
+      '[x](https:evil.test)',
+    ]) {
+      expect(hasExternalLink([text]), text).toBe(true);
+    }
+  });
+
   it('lets ordinary text, item links and slashes through', () => {
     expect(hasExternalLink(['Weekly plan', '/w/123?item=456', 'a / b', 'http not a link'])).toBe(
       false,
     );
     expect(hasExternalLink([])).toBe(false);
+  });
+});
+
+describe('mayApplyUnasked', () => {
+  const base = workspaceToolSchema.parse({
+    operation: 'append_note',
+    itemId: '0192f0e0-0000-7000-8000-000000000002',
+    parentId: '',
+    title: '',
+    markdown: 'Hi',
+    query: '',
+    propertiesJson: '',
+    specJson: '',
+  });
+  it('allows a plain write, and refuses a protected read, a link or an always-ask operation', () => {
+    expect(mayApplyUnasked(base, false)).toBe(true);
+    expect(mayApplyUnasked(base, true)).toBe(false);
+    expect(mayApplyUnasked({ ...base, markdown: 'https://example.test/x' }, false)).toBe(false);
+    expect(mayApplyUnasked({ ...base, title: 'https://example.test/x' }, false)).toBe(false);
+    expect(mayApplyUnasked({ ...base, operation: 'trash_item' }, false)).toBe(false);
   });
 });

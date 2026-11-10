@@ -354,6 +354,23 @@ public sealed class NixTokenValidator
                     executionId);
             }
 
+            if (SelfIssuedTokenService.TryReadPetTurnClaims(
+                result.ClaimsIdentity,
+                out tenantId,
+                out principalId,
+                out var petRequestId,
+                out var petMode))
+            {
+                return new ValidatedPetTurnToken(tenantId, principalId, petRequestId, petMode);
+            }
+
+            // A pet claim that does not read cleanly (unknown mode, mixed with another kind) is refused whole.
+            if (result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetTurnClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetModeClaim) is not null)
+            {
+                return null;
+            }
+
             return SelfIssuedTokenService.TryReadBrowserSessionClaims(
                 result.ClaimsIdentity,
                 out tenantId,
@@ -572,3 +589,18 @@ public sealed record ValidatedWorkerExecutionToken(
     string Scope,
     string ExecutionId)
     : ValidatedToken(TenantId);
+
+/// <summary>A short-lived Core JWT a pet turn's server-run tools act with, as the person.</summary>
+public sealed record ValidatedPetTurnToken(
+    TenantId TenantId,
+    PrincipalId PrincipalId,
+    Guid RequestId,
+    PetTurnMode Mode)
+    : ValidatedToken(TenantId)
+{
+    /// <summary>Gets a value indicating whether the token reaches write routes.</summary>
+    public bool MayWrite => Mode != PetTurnMode.Read;
+
+    /// <summary>Gets a value indicating whether the token reaches admin routes.</summary>
+    public bool MayAdminister => Mode == PetTurnMode.Admin;
+}

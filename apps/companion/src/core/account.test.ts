@@ -1,7 +1,7 @@
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Account, TOOL_VERSION, turnPrompt } from './account.ts';
 import {
@@ -384,6 +384,54 @@ describe('model choice and effort', () => {
     await expect(send(h, { model: 'missing' })).rejects.toThrow('model is unavailable');
   });
 
+  describe('model list cache', () => {
+    const listed = (h: ReturnType<typeof harness>) =>
+      h.transport.calls.filter((c) => c.method === 'model/list').length;
+    const keyed = () => {
+      const h = harness({ provider: 'openrouter' });
+      h.transport.models = models;
+      return h;
+    };
+    // A distinct pet per call is a distinct conversation, so no turn is still running.
+    const turn = (h: ReturnType<typeof harness>, n: number, o = {}) =>
+      send(h, {
+        petId: `44444444-4444-4444-8444-4444444444${String(n).padStart(2, '0')}`,
+        apiKey: 'k1',
+        ...o,
+      });
+
+    it('lists once for two sends within five minutes, and again for a new key or an old list', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        const h = keyed();
+        await turn(h, 1);
+        await h.account
+          .handle(h.signal, request({ operation: 'interrupt' }))
+          .catch(() => undefined);
+        await turn(h, 2).catch(() => undefined);
+        expect(listed(h)).toBe(1);
+        await turn(h, 3, { apiKey: 'k2' });
+        expect(listed(h)).toBe(2);
+        vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+        await turn(h, 4, { apiKey: 'k2' });
+        expect(listed(h)).toBe(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('re-lists once when a model is missing from a cached list, not when the list is fresh', async () => {
+      const h = keyed();
+      await turn(h, 1);
+      expect(listed(h)).toBe(1);
+      await expect(turn(h, 2, { model: 'missing' })).rejects.toThrow('model is unavailable');
+      expect(listed(h)).toBe(2);
+      const f = keyed();
+      await expect(turn(f, 1, { model: 'missing' })).rejects.toThrow('model is unavailable');
+      expect(listed(f)).toBe(1);
+    });
+  });
+
   it('refuses workspace access for a model without tools, and chats without it', async () => {
     const h = harness({ provider: 'openrouter' });
     h.transport.models = [
@@ -542,7 +590,7 @@ describe('saved conversations after a restart', () => {
           durableState,
           messages: [{ id: 'a', role: 'user', text: 'q' }],
           tools: [],
-          toolVersion: 11,
+          toolVersion: 12,
         }),
       );
     };

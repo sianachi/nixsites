@@ -15,6 +15,10 @@ export interface CompanionConfig {
   readonly internalSecret: string;
   /** Core's origin, for the saved-conversation tools callback. */
   readonly apiUrl: string;
+  /** Which tools the companion runs itself with Core's turn token; off is today's behaviour. */
+  readonly serverTools: 'off' | 'reads' | 'all';
+  /** Collab's origin, for server-run note reads; set whenever serverTools is not off. */
+  readonly collabUrl: string;
   readonly address: { readonly host: string; readonly port: number };
   readonly release: { readonly version: string; readonly commit: string };
 }
@@ -74,6 +78,15 @@ export function readConfig(env: NodeJS.ProcessEnv): CompanionConfig {
   if (!Number.isInteger(idleSeconds) || idleSeconds < 1)
     throw new Error('NIX_COMPANION_IDLE_SECONDS must be a positive integer.');
   const trace = env.NIX_COMPANION_TRACE;
+  const mode = optional(env, 'NIX_COMPANION_SERVER_TOOLS', 'off');
+  if (mode !== 'off' && mode !== 'reads' && mode !== 'all')
+    throw new Error('NIX_COMPANION_SERVER_TOOLS must be off, reads or all.');
+  const collabUrl =
+    mode === 'off'
+      ? optional(env, 'NIX_COMPANION_COLLAB_URL', '')
+      : required(env, 'NIX_COMPANION_COLLAB_URL');
+  if (mode !== 'off' && !validServiceOrigin(collabUrl))
+    throw new Error('NIX_COMPANION_COLLAB_URL must be a valid Collab service origin.');
   return {
     dataDir,
     binary: optional(env, 'NIX_COMPANION_BINARY', 'codex'),
@@ -82,6 +95,8 @@ export function readConfig(env: NodeJS.ProcessEnv): CompanionConfig {
     idleSeconds,
     internalSecret: required(env, 'NIX_COMPANION_INTERNAL_SECRET'),
     apiUrl: apiUrl.replace(/\/+$/, ''),
+    serverTools: mode,
+    collabUrl: collabUrl.replace(/\/+$/, ''),
     address: parseAddress(optional(env, 'NIX_COMPANION_ADDRESS', ':8302')),
     release: { version: env.NIX_RELEASE_VERSION ?? '', commit: env.NIX_RELEASE_COMMIT ?? '' },
   };

@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1321,7 +1321,7 @@
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>NativeReplayRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>400</code>, <code>409</code>.</p>
+<p>Responses: <code>200</code>, <code>400</code>, <code>409</code>, <code>423</code>.</p>
 </article></section>
 <section id="notifications"><h2>Notifications</h2><article id="listnotifications" data-search="get /api/v1/me/notifications listnotifications   notifications">
 <h3><span class="verb">GET</span> <code>/api/v1/me/notifications</code></h3>
@@ -1539,6 +1539,18 @@
 <p>Request body: <code>PetRuntimeRequest</code>.</p>
 <p>Responses: <code>200</code>, <code>404</code>, <code>409</code>, <code>422</code>.</p>
 </article>
+<article id="streampetnoteruntime" data-search="post /api/v1/me/pets/runtime/note/stream streampetnoteruntime stream a note conversation as server-sent events the same events as the chat stream, for the conversation attached to 'rootitemid'. pets">
+<h3><span class="verb">POST</span> <code>/api/v1/me/pets/runtime/note/stream</code></h3>
+<p>Stream a note conversation as server-sent events</p>
+<p class="id">Operation id: <code>StreamPetNoteRuntime</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+<p>The same events as the chat stream, for the conversation attached to 'rootItemId'.</p>
+
+<p>Request body: <code>PetStreamRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>429</code>, <code>501</code>, <code>503</code>.</p>
+</article>
 <article id="watchpetnoteruntime" data-search="get /api/v1/me/pets/runtime/note/watch watchpetnoteruntime   pets">
 <h3><span class="verb">GET</span> <code>/api/v1/me/pets/runtime/note/watch</code></h3>
 <p></p>
@@ -1550,6 +1562,18 @@
 <ul><li><code>workspaceId</code> in query (required, string (uuid))</li><li><code>petId</code> in query (required, string (uuid))</li><li><code>rootItemId</code> in query (required, string (uuid))</li><li><code>mode</code> in query (optional, string)</li><li><code>after</code> in query (optional, integer | string)</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>429</code>.</p>
+</article>
+<article id="streampetruntime" data-search="post /api/v1/me/pets/runtime/stream streampetruntime stream a conversation as server-sent events server-sent events for one conversation: 'snapshot' (the whole connection response, first on every open and after any change that is not a text append), 'delta' ({revision, base, id, append}, applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, after which the client reopens). each event's id is the revision. a companion that cannot stream is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint. pets">
+<h3><span class="verb">POST</span> <code>/api/v1/me/pets/runtime/stream</code></h3>
+<p>Stream a conversation as server-sent events</p>
+<p class="id">Operation id: <code>StreamPetRuntime</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+<p>Server-sent events for one conversation: 'snapshot' (the whole connection response, first on every open and after any change that is not a text append), 'delta' ({revision, base, id, append}, applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, after which the client reopens). Each event's id is the revision. A companion that cannot stream is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint.</p>
+
+<p>Request body: <code>PetStreamRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>429</code>, <code>501</code>, <code>503</code>.</p>
 </article>
 <article id="watchpetruntime" data-search="get /api/v1/me/pets/runtime/watch watchpetruntime   pets">
 <h3><span class="verb">GET</span> <code>/api/v1/me/pets/runtime/watch</code></h3>
@@ -2341,7 +2365,7 @@
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>after</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>423</code>.</p>
 </article>
 <article id="reconcileworkspacesync" data-search="post /api/v1/workspaces/{workspaceid}/sync/reconcile reconcileworkspacesync recheck device-held identifiers without revealing unknown inaccessible identifiers  sync">
 <h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/sync/reconcile</code></h3>
@@ -2353,7 +2377,7 @@
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>ReconcileWorkspaceSyncRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>422</code>.</p>
+<p>Responses: <code>200</code>, <code>422</code>, <code>423</code>.</p>
 </article>
 <article id="getworkspacesyncsnapshot" data-search="get /api/v1/workspaces/{workspaceid}/sync/snapshot getworkspacesyncsnapshot enumerate all authorized metadata with a committed feed boundary  sync">
 <h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/sync/snapshot</code></h3>
@@ -2365,7 +2389,7 @@
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>boundary</code> in query (optional, string)</li><li><code>cursor</code> in query (optional, string (uuid))</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
-<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>, <code>422</code>, <code>423</code>.</p>
 </article></section>
 <section id="template-imports"><h2>Template imports</h2><article id="begintemplateimport" data-search="post /api/v1/template-imports begintemplateimport   template imports">
 <h3><span class="verb">POST</span> <code>/api/v1/template-imports</code></h3>
@@ -2498,6 +2522,66 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>sourceItemId</code> in path (required, string (uuid))</li><li><code>includeChildren</code> in query (required, boolean)</li><li><code>excludeSampleDescendants</code> in query (optional, boolean)</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
+</article></section>
+<section id="workspace-passwords"><h2>Workspace passwords</h2><article id="joinworkspace" data-search="post /api/v1/workspaces/{workspaceid}/join joinworkspace join a workspace with its password adds the signed-in person to the workspace as a viewer, when the workspace has a password, is active and is open to new members, and unlocks it for this session. every failure for somebody who is not yet a member - no such workspace, no password, closed to new members, wrong password - returns the same 'workspaces.join_refused' response, so the route cannot be used to find workspaces. workspace passwords">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/join</code></h3>
+<p>Join a workspace with its password</p>
+<p class="id">Operation id: <code>JoinWorkspace</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Adds the signed-in person to the workspace as a viewer, when the workspace has a password, is active and is open to new members, and unlocks it for this session. Every failure for somebody who is not yet a member - no such workspace, no password, closed to new members, wrong password - returns the same 'workspaces.join_refused' response, so the route cannot be used to find workspaces.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>WorkspacePasswordRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>429</code>, <code>503</code>.</p>
+</article>
+<article id="setworkspacepassword" data-search="put /api/v1/workspaces/{workspaceid}/password setworkspacepassword close a workspace behind a password, or change the password owner only. sets the one password members must present to open the workspace and anybody in the tenant may present, with the join link, to join it. when the workspace already has a password this changes it, which also needs 'currentpassword' and ends every other session's unlock. there is no recovery path for a forgotten password. a password withholds the workspace from members who have not unlocked it; it does not encrypt what is stored. workspace passwords">
+<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/password</code></h3>
+<p>Close a workspace behind a password, or change the password</p>
+<p class="id">Operation id: <code>SetWorkspacePassword</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Owner only. Sets the one password members must present to open the workspace and anybody in the tenant may present, with the join link, to join it. When the workspace already has a password this changes it, which also needs 'currentPassword' and ends every other session's unlock. There is no recovery path for a forgotten password. A password withholds the workspace from members who have not unlocked it; it does not encrypt what is stored.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetWorkspacePasswordRequest</code>.</p>
+<p>Responses: <code>204</code>, <code>400</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>429</code>, <code>503</code>.</p>
+</article>
+<article id="removeworkspacepassword" data-search="post /api/v1/workspaces/{workspaceid}/password/remove removeworkspacepassword remove a workspace's password owner only, and needs the password. a post with a body rather than a delete, because the password must not travel in a url. workspace passwords">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/password/remove</code></h3>
+<p>Remove a workspace's password</p>
+<p class="id">Operation id: <code>RemoveWorkspacePassword</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Owner only, and needs the password. A POST with a body rather than a DELETE, because the password must not travel in a URL.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>WorkspacePasswordRequest</code>.</p>
+<p>Responses: <code>204</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>429</code>, <code>503</code>.</p>
+</article>
+<article id="unlockworkspace" data-search="post /api/v1/workspaces/{workspaceid}/unlock unlockworkspace open a password-protected workspace to this session for a while members only; anybody else gets 'workspaces.not_found'. checks the password and opens the workspace to the calling browser session or access token for fifteen minutes. other sessions, including the caller's own elsewhere, stay locked. workspace passwords">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/unlock</code></h3>
+<p>Open a password-protected workspace to this session for a while</p>
+<p class="id">Operation id: <code>UnlockWorkspace</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Members only; anybody else gets 'workspaces.not_found'. Checks the password and opens the workspace to the calling browser session or access token for fifteen minutes. Other sessions, including the caller's own elsewhere, stay locked.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>WorkspacePasswordRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>404</code>, <code>409</code>, <code>429</code>, <code>503</code>.</p>
+</article>
+<article id="relockworkspace" data-search="delete /api/v1/workspaces/{workspaceid}/unlock relockworkspace close a password-protected workspace to this session again ends the calling session's unlock. idempotent. members only. workspace passwords">
+<h3><span class="verb">DELETE</span> <code>/api/v1/workspaces/{workspaceId}/unlock</code></h3>
+<p>Close a password-protected workspace to this session again</p>
+<p class="id">Operation id: <code>RelockWorkspace</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.</p>
+<p>Ends the calling session's unlock. Idempotent. Members only.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>, <code>404</code>.</p>
 </article></section>
 <section id="workspaces"><h2>Workspaces</h2><article id="getworkspacearrangement" data-search="get /api/v1/me/workspace-arrangement getworkspacearrangement the caller's own workspace groups and pins  workspaces">
 <h3><span class="verb">GET</span> <code>/api/v1/me/workspace-arrangement</code></h3>

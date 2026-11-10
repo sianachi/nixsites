@@ -140,6 +140,88 @@ public sealed class SelfIssuedTokenServiceTests
         Assert.Null(result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.BrowserSessionClaim));
     }
 
+    [Theory]
+    [InlineData(PetTurnMode.Read, 15)]
+    [InlineData(PetTurnMode.Write, 2)]
+    [InlineData(PetTurnMode.Admin, 2)]
+    public async Task A_pet_turn_token_round_trips_with_its_mode_and_lifetime(PetTurnMode mode, int minutes)
+    {
+        var mintedAt = DateTimeOffset.UtcNow;
+        using var service = Service(Configuration(FreshKeyPem()), new Support.FixedTimeProvider(mintedAt));
+        var tenantId = TenantId.From(Guid.NewGuid());
+        var principalId = PrincipalId.Create();
+        var requestId = Guid.NewGuid();
+
+        var token = service.MintPetTurn(principalId, tenantId, requestId, mode);
+
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+        var result = await handler.ValidateTokenAsync(token, service.CreateValidationParameters());
+        Assert.True(result.IsValid);
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(
+            result.ClaimsIdentity, out var readTenant, out var readPrincipal, out var readRequest, out var readMode));
+        Assert.Equal(tenantId, readTenant);
+        Assert.Equal(principalId, readPrincipal);
+        Assert.Equal(requestId, readRequest);
+        Assert.Equal(mode, readMode);
+        var expires = handler.ReadJwtToken(token).ValidTo;
+        Assert.Equal(mintedAt.UtcDateTime.AddMinutes(minutes), expires, TimeSpan.FromSeconds(1));
+        Assert.Null(result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.AccessTokenClaim));
+        Assert.Null(result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.BrowserSessionClaim));
+    }
+
+    [Fact]
+    public void A_pet_turn_token_refuses_empty_ids_and_an_unconfigured_service()
+    {
+        using var service = Service(Configuration(FreshKeyPem()));
+        using var unconfigured = Service(Configuration(signingKeyPem: null));
+
+        Assert.Throws<ArgumentException>(() =>
+            service.MintPetTurn(PrincipalId.From(Guid.Empty), TenantId.From(Guid.NewGuid()), Guid.NewGuid(), PetTurnMode.Read));
+        Assert.Throws<ArgumentException>(() =>
+            service.MintPetTurn(PrincipalId.Create(), TenantId.From(Guid.NewGuid()), Guid.Empty, PetTurnMode.Read));
+        Assert.Throws<InvalidOperationException>(() =>
+            unconfigured.MintPetTurn(PrincipalId.Create(), TenantId.From(Guid.NewGuid()), Guid.NewGuid(), PetTurnMode.Read));
+    }
+
+    [Fact]
+    public void Pet_turn_claims_are_refused_when_another_token_kind_is_mixed_in_or_the_mode_is_unknown()
+    {
+        var principal = Guid.NewGuid().ToString("D");
+        var tenant = Guid.NewGuid().ToString("D");
+        var turn = Guid.NewGuid().ToString("D");
+        ClaimsIdentity Identity(string mode, params Claim[] extra) => new(
+            [
+                new Claim("sub", principal),
+                new Claim(SelfIssuedTokenService.TenantClaim, tenant),
+                new Claim(SelfIssuedTokenService.PetTurnClaim, turn),
+                new Claim(SelfIssuedTokenService.PetModeClaim, mode),
+                .. extra,
+            ]);
+
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(Identity("read"), out _, out _, out _, out _));
+        Assert.False(SelfIssuedTokenService.TryReadPetTurnClaims(Identity("root"), out _, out _, out _, out _));
+        Assert.False(SelfIssuedTokenService.TryReadPetTurnClaims(Identity("READ"), out _, out _, out _, out _));
+        Assert.False(SelfIssuedTokenService.TryReadPetTurnClaims(
+            Identity("read", new Claim(SelfIssuedTokenService.AccessTokenClaim, Guid.NewGuid().ToString("D"))), out _, out _, out _, out _));
+        Assert.False(SelfIssuedTokenService.TryReadPetTurnClaims(
+            Identity("read", new Claim(SelfIssuedTokenService.BrowserSessionClaim, Guid.NewGuid().ToString("D"))), out _, out _, out _, out _));
+        Assert.False(SelfIssuedTokenService.TryReadPetTurnClaims(
+            Identity("read", new Claim(SelfIssuedTokenService.WorkerExecutionClaim, "x")), out _, out _, out _, out _));
+    }
+
+    [Fact]
+    public async Task An_expired_pet_turn_token_does_not_validate()
+    {
+        using var service = Service(
+            Configuration(FreshKeyPem()),
+            new Support.FixedTimeProvider(new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero)));
+
+        var token = service.MintPetTurn(PrincipalId.Create(), TenantId.From(Guid.NewGuid()), Guid.NewGuid(), PetTurnMode.Read);
+
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+        Assert.False((await handler.ValidateTokenAsync(token, service.CreateValidationParameters())).IsValid);
+    }
+
     [Fact]
     public async Task A_token_signed_by_a_different_key_does_not_validate()
     {

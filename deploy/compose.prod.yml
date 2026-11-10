@@ -166,6 +166,9 @@ services:
       ConnectionStrings__Nix: ${NIX_CORE_DATABASE_URL:?set NIX_CORE_DATABASE_URL}
       Nix__InternalSecret: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
       Nix__Pets__WorkerUrl: http://nix-node:8302
+      # Server-side pet tools (off | reads | all). Core's value is the kill switch: turn the
+      # companion's on first, then this one.
+      Nix__Pets__ServerTools: ${NIX_PETS_SERVER_TOOLS:-off}
       Nix__Collaboration__BaseUrl: http://nix-node:8100
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
       Nix__ObjectStorage__PublicOrigin: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
@@ -286,6 +289,8 @@ services:
       NIX_COMPANION_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
       NIX_COMPANION_API_URL: http://nix-api:8080
       NIX_COMPANION_ADDRESS: ":8302"
+      NIX_COMPANION_SERVER_TOOLS: ${NIX_COMPANION_SERVER_TOOLS:-off}
+      NIX_COMPANION_COLLAB_URL: http://nix-node:8100
       # Sites worker (only started when NIX_SITES_DOMAIN is set).
       NIX_SITES_API_URL: http://nix-api:8080
       NIX_SITES_COLLAB_URL: http://nix-node:8100

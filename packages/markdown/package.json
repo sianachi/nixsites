@@ -21,6 +21,10 @@
       "types": "./dist/from-markdown.d.ts",
       "default": "./dist/from-markdown.js"
     },
+    "./model-markdown": {
+      "types": "./dist/model-markdown.d.ts",
+      "default": "./dist/model-markdown.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",

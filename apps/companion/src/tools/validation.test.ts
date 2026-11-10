@@ -163,3 +163,16 @@ describe('request boundary', () => {
     expect(validRequest(request({ sourceWorkspaceIds: [IDS.workspace] }))).toBe(false);
   });
 });
+
+describe('turn token fields', () => {
+  it('accepts a token and the read-without-asking flag, which the strict decoder used to refuse', () => {
+    const body = JSON.stringify({ ...request(), turnToken: 'a.b-c.d_e', readWithoutAsking: true });
+    const parsed = parseRequest(body);
+    expect(parsed).toMatchObject({ turnToken: 'a.b-c.d_e', readWithoutAsking: true });
+    expect(parsed !== null && validRequest(parsed)).toBe(true);
+  });
+  it('refuses a token that is not three base64url parts or is too long', () => {
+    expect(validRequest(request({ turnToken: 'not a jwt' }))).toBe(false);
+    expect(validRequest(request({ turnToken: `a.b.${'c'.repeat(5000)}` }))).toBe(false);
+  });
+});

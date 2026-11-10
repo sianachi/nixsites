@@ -8,7 +8,12 @@ import { PetPage } from '../../pages/pet-page';
 import { MobileNoteToolbar } from '@nix/web-editor/editor/mobile-note-toolbar';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
-const client = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn() }));
+const client = vi.hoisted(() => ({
+  execute: vi.fn(),
+  query: vi.fn(),
+  // No stream on this server: the hook falls back to the watch these tests drive.
+  stream: vi.fn(() => Promise.resolve(new Response(null, { status: 501 }))),
+}));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),

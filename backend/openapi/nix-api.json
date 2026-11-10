@@ -759,6 +759,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -6641,6 +6651,156 @@
         }
       }
     },
+    "/api/v1/me/pets/runtime/stream": {
+      "post": {
+        "tags": [
+          "Pets"
+        ],
+        "summary": "Stream a conversation as server-sent events",
+        "description": "Server-sent events for one conversation: 'snapshot' (the whole connection response, first on every open and after any change that is not a text append), 'delta' ({revision, base, id, append}, applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, after which the client reopens). Each event's id is the revision. A companion that cannot stream is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint.",
+        "operationId": "StreamPetRuntime",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetStreamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/pets/runtime/note/stream": {
+      "post": {
+        "tags": [
+          "Pets"
+        ],
+        "summary": "Stream a note conversation as server-sent events",
+        "description": "The same events as the chat stream, for the conversation attached to 'rootItemId'.",
+        "operationId": "StreamPetNoteRuntime",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetStreamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations/{itemId}/configure": {
       "post": {
         "tags": [
@@ -9912,6 +10072,388 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/password": {
+      "put": {
+        "tags": [
+          "Workspace passwords"
+        ],
+        "summary": "Close a workspace behind a password, or change the password",
+        "description": "Owner only. Sets the one password members must present to open the workspace and anybody in the tenant may present, with the join link, to join it. When the workspace already has a password this changes it, which also needs 'currentPassword' and ends every other session's unlock. There is no recovery path for a forgotten password. A password withholds the workspace from members who have not unlocked it; it does not encrypt what is stored.",
+        "operationId": "SetWorkspacePassword",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWorkspacePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/password/remove": {
+      "post": {
+        "tags": [
+          "Workspace passwords"
+        ],
+        "summary": "Remove a workspace's password",
+        "description": "Owner only, and needs the password. A POST with a body rather than a DELETE, because the password must not travel in a URL.",
+        "operationId": "RemoveWorkspacePassword",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspacePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/unlock": {
+      "post": {
+        "tags": [
+          "Workspace passwords"
+        ],
+        "summary": "Open a password-protected workspace to this session for a while",
+        "description": "Members only; anybody else gets 'workspaces.not_found'. Checks the password and opens the workspace to the calling browser session or access token for fifteen minutes. Other sessions, including the caller's own elsewhere, stay locked.",
+        "operationId": "UnlockWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspacePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceUnlockResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workspace passwords"
+        ],
+        "summary": "Close a password-protected workspace to this session again",
+        "description": "Ends the calling session's unlock. Idempotent. Members only.",
+        "operationId": "RelockWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/join": {
+      "post": {
+        "tags": [
+          "Workspace passwords"
+        ],
+        "summary": "Join a workspace with its password",
+        "description": "Adds the signed-in person to the workspace as a viewer, when the workspace has a password, is active and is open to new members, and unlocks it for this session. Every failure for somebody who is not yet a member - no such workspace, no password, closed to new members, wrong password - returns the same 'workspaces.join_refused' response, so the route cannot be used to find workspaces.",
+        "operationId": "JoinWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspacePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceUnlockResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/templates": {
       "get": {
         "tags": [
@@ -11974,6 +12516,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -12047,6 +12599,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -12092,6 +12654,16 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -18348,6 +18920,10 @@
           "title": {
             "type": "string",
             "default": ""
+          },
+          "serverWrites": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -18689,6 +19265,30 @@
           "toolImage": {
             "type": "string",
             "default": ""
+          },
+          "readWithoutAsking": {
+            "type": "boolean",
+            "default": false
+          },
+          "fingerprint": {
+            "type": "string",
+            "default": ""
+          },
+          "editedArguments": {
+            "type": "string",
+            "default": ""
+          },
+          "editNote": {
+            "type": "string",
+            "default": ""
+          },
+          "automatic": {
+            "type": "boolean",
+            "default": false
+          },
+          "approvedOperation": {
+            "type": "string",
+            "default": ""
           }
         }
       },
@@ -18756,6 +19356,34 @@
           },
           "settings": {
             "$ref": "#/components/schemas/PetSettings"
+          }
+        }
+      },
+      "PetStreamRequest": {
+        "required": [
+          "workspaceId",
+          "petId"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "default": ""
+          },
+          "rootItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -20502,6 +21130,24 @@
             ]
           },
           "expectedVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SetWorkspacePasswordRequest": {
+        "required": [
+          "password",
+          "currentPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "currentPassword": {
             "type": [
               "null",
               "string"
@@ -24065,6 +24711,17 @@
           }
         }
       },
+      "WorkspacePasswordRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
       "WorkspacePrincipalResponse": {
         "required": [
           "principalId",
@@ -24362,6 +25019,19 @@
               "null",
               "boolean"
             ]
+          },
+          "passwordProtected": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "unlockedUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -24458,6 +25128,18 @@
           "resync": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "WorkspaceUnlockResponse": {
+        "required": [
+          "unlockedUntil"
+        ],
+        "type": "object",
+        "properties": {
+          "unlockedUntil": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -24579,6 +25261,9 @@
     },
     {
       "name": "Item locks"
+    },
+    {
+      "name": "Workspace passwords"
     },
     {
       "name": "Templates"

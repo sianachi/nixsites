@@ -397,6 +397,19 @@ describe('describeToolCall - note body edits', () => {
   };
   const books = context({ destination: { title: 'Trip plan', path: ['Trip plan'] } });
 
+  it('warns how many places of syntax stay as plain text', () => {
+    const model = describeToolCall(
+      args({ operation: 'replace_section', query: 'Budget', markdown: 'x' }),
+      {
+        ...books,
+        bodyEdit: { ...section, markdownChanges: { ...scan, rawSyntax: { 'html-tag': 2 } } },
+      },
+    );
+    expect(model.warnings.map((w) => w.message)).toContain(
+      '2 places of html tag stay as plain text in the new text.',
+    );
+  });
+
   it('names the section, the subject and the before and after text, with no block counts', () => {
     const model = describeToolCall(
       args({ operation: 'replace_section', query: 'Budget', markdown: 'Total is 450.' }),

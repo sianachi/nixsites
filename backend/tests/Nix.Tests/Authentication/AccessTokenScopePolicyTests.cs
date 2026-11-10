@@ -163,6 +163,8 @@ public sealed class AccessTokenScopePolicyTests
         ["PetRuntime"] = Requirement.InteractiveOnly,
         ["PetNoteRuntime"] = Requirement.InteractiveOnly,
         ["PetInlineWrite"] = Requirement.InteractiveOnly,
+        ["StreamPetRuntime"] = Requirement.InteractiveOnly,
+        ["StreamPetNoteRuntime"] = Requirement.InteractiveOnly,
         ["WatchPetRuntime"] = Requirement.InteractiveOnly,
         ["WatchPetNoteRuntime"] = Requirement.InteractiveOnly,
 

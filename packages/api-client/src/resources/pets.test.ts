@@ -1,12 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
-import { runtime, watchRuntime } from './pets.js';
+import { runtime, streamRuntimeRequest, watchRuntime } from './pets.js';
 
 const WORKSPACE_ID = 'a1000000-0000-4000-8000-000000000001';
 const PET_ID = 'a2000000-0000-4000-8000-000000000002';
 const ROOT_ITEM_ID = 'a3000000-0000-4000-8000-000000000003';
 
 describe('the pets resource', () => {
+  it('opens the conversation stream on the chat or the note path', () => {
+    expect(
+      streamRuntimeRequest({ workspaceId: WORKSPACE_ID, petId: PET_ID, mode: 'chat' }),
+    ).toEqual({
+      path: '/api/v1/me/pets/runtime/stream',
+      body: { workspaceId: WORKSPACE_ID, petId: PET_ID, mode: 'chat' },
+    });
+    expect(
+      streamRuntimeRequest({ workspaceId: WORKSPACE_ID, petId: PET_ID, rootItemId: ROOT_ITEM_ID }),
+    ).toEqual({
+      path: '/api/v1/me/pets/runtime/note/stream',
+      body: { workspaceId: WORKSPACE_ID, petId: PET_ID, rootItemId: ROOT_ITEM_ID, mode: '' },
+    });
+  });
+
   it('keeps the note conversation scope on runtime and watch requests', () => {
     expect(
       runtime({

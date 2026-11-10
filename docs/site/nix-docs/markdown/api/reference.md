@@ -45,6 +45,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Sync](#sync)
 - [Template imports](#template-imports)
 - [Templates](#templates)
+- [Workspace passwords](#workspace-passwords)
 - [Workspaces](#workspaces)
 
 ## AccessTokens
@@ -2289,7 +2290,7 @@ Parameters:
 
 Request body: `NativeReplayRequest`.
 
-Responses: `200`, `400`, `409`.
+Responses: `200`, `400`, `409`, `423`.
 
 ## Notifications
 
@@ -2602,6 +2603,26 @@ Request body: `PetRuntimeRequest`.
 
 Responses: `200`, `404`, `409`, `422`.
 
+### POST /api/v1/me/pets/runtime/note/stream
+
+<a id="streampetnoteruntime"></a>
+
+Stream a note conversation as server-sent events
+
+Operation id: `StreamPetNoteRuntime`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+The same events as the chat stream, for the conversation attached to 'rootItemId'.
+
+Request body: `PetStreamRequest`.
+
+Responses: `200`, `404`, `422`, `429`, `501`, `503`.
+
 ### GET /api/v1/me/pets/runtime/note/watch
 
 <a id="watchpetnoteruntime"></a>
@@ -2623,6 +2644,26 @@ Parameters:
 - `after` in query (optional, integer | string)
 
 Responses: `200`, `404`, `422`, `429`.
+
+### POST /api/v1/me/pets/runtime/stream
+
+<a id="streampetruntime"></a>
+
+Stream a conversation as server-sent events
+
+Operation id: `StreamPetRuntime`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Server-sent events for one conversation: 'snapshot' (the whole connection response, first on every open and after any change that is not a text append), 'delta' ({revision, base, id, append}, applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, after which the client reopens). Each event's id is the revision. A companion that cannot stream is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint.
+
+Request body: `PetStreamRequest`.
+
+Responses: `200`, `404`, `422`, `429`, `501`, `503`.
 
 ### GET /api/v1/me/pets/runtime/watch
 
@@ -4080,7 +4121,7 @@ Parameters:
 - `after` in query (optional, string)
 - `limit` in query (optional, integer | string)
 
-Responses: `200`, `404`, `422`.
+Responses: `200`, `404`, `422`, `423`.
 
 ### POST /api/v1/workspaces/{workspaceId}/sync/reconcile
 
@@ -4102,7 +4143,7 @@ Parameters:
 
 Request body: `ReconcileWorkspaceSyncRequest`.
 
-Responses: `200`, `422`.
+Responses: `200`, `422`, `423`.
 
 ### GET /api/v1/workspaces/{workspaceId}/sync/snapshot
 
@@ -4125,7 +4166,7 @@ Parameters:
 - `cursor` in query (optional, string (uuid))
 - `limit` in query (optional, integer | string)
 
-Responses: `200`, `404`, `422`.
+Responses: `200`, `404`, `422`, `423`.
 
 ## Template imports
 
@@ -4340,6 +4381,128 @@ Parameters:
 - `excludeSampleDescendants` in query (optional, boolean)
 
 Responses: `200`, `404`.
+
+## Workspace passwords
+
+<a id="workspace-passwords"></a>
+
+### POST /api/v1/workspaces/{workspaceId}/join
+
+<a id="joinworkspace"></a>
+
+Join a workspace with its password
+
+Operation id: `JoinWorkspace`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Adds the signed-in person to the workspace as a viewer, when the workspace has a password, is active and is open to new members, and unlocks it for this session. Every failure for somebody who is not yet a member - no such workspace, no password, closed to new members, wrong password - returns the same 'workspaces.join_refused' response, so the route cannot be used to find workspaces.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `WorkspacePasswordRequest`.
+
+Responses: `200`, `403`, `429`, `503`.
+
+### PUT /api/v1/workspaces/{workspaceId}/password
+
+<a id="setworkspacepassword"></a>
+
+Close a workspace behind a password, or change the password
+
+Operation id: `SetWorkspacePassword`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Owner only. Sets the one password members must present to open the workspace and anybody in the tenant may present, with the join link, to join it. When the workspace already has a password this changes it, which also needs 'currentPassword' and ends every other session's unlock. There is no recovery path for a forgotten password. A password withholds the workspace from members who have not unlocked it; it does not encrypt what is stored.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `SetWorkspacePasswordRequest`.
+
+Responses: `204`, `400`, `403`, `404`, `409`, `429`, `503`.
+
+### POST /api/v1/workspaces/{workspaceId}/password/remove
+
+<a id="removeworkspacepassword"></a>
+
+Remove a workspace's password
+
+Operation id: `RemoveWorkspacePassword`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Owner only, and needs the password. A POST with a body rather than a DELETE, because the password must not travel in a URL.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `WorkspacePasswordRequest`.
+
+Responses: `204`, `403`, `404`, `409`, `429`, `503`.
+
+### POST /api/v1/workspaces/{workspaceId}/unlock
+
+<a id="unlockworkspace"></a>
+
+Open a password-protected workspace to this session for a while
+
+Operation id: `UnlockWorkspace`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Members only; anybody else gets 'workspaces.not_found'. Checks the password and opens the workspace to the calling browser session or access token for fifteen minutes. Other sessions, including the caller's own elsewhere, stay locked.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `WorkspacePasswordRequest`.
+
+Responses: `200`, `403`, `404`, `409`, `429`, `503`.
+
+### DELETE /api/v1/workspaces/{workspaceId}/unlock
+
+<a id="relockworkspace"></a>
+
+Close a password-protected workspace to this session again
+
+Operation id: `RelockWorkspace`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.
+
+Ends the calling session's unlock. Idempotent. Members only.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `204`, `404`.
 
 ## Workspaces
 

@@ -518,9 +518,10 @@ export async function runWorkspaceTool(
         }),
         requestOptions,
       );
+      let appended: unknown;
       if (args.markdown) {
         try {
-          await bodies.append(item.id, args.markdown, signal);
+          appended = await bodies.append(item.id, args.markdown, signal);
         } catch {
           return {
             text: JSON.stringify({
@@ -536,7 +537,14 @@ export async function runWorkspaceTool(
           };
         }
       }
-      result = { id: item.id, title: item.title, created: true, contentConfirmed: true };
+      const rawSyntaxNote = (appended as { rawSyntaxNote?: string } | undefined)?.rawSyntaxNote;
+      result = {
+        id: item.id,
+        title: item.title,
+        created: true,
+        contentConfirmed: true,
+        ...(rawSyntaxNote === undefined ? {} : { rawSyntaxNote }),
+      };
       break;
     }
     case 'list_templates': {

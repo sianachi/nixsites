@@ -137,6 +137,14 @@ export function resultKind(success: boolean, result: string): string {
   return 'failed';
 }
 
+/** The raw-Markdown kinds a note write reported ("bold-marker x2, html-tag x1"), for the shared
+ * log. Fixed identifiers and counts only; anything else in the result is not matched. */
+export function rawSyntaxKinds(result: string): string {
+  return (
+    /stayed as plain text in the note \(([a-z-]+ x\d+(?:, [a-z-]+ x\d+)*)\)/.exec(result)?.[1] ?? ''
+  );
+}
+
 /** One conversation per pet per workspace (per note or saved chat when scoped). */
 export function conversationKey(r: {
   workspaceId: string;

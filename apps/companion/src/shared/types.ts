@@ -54,6 +54,16 @@ export interface Request {
   workspaceMap: WorkspaceMapEntry[];
   items: SharedItem[];
   replaceFromMessageId: string;
+  /** Core's short-lived read token for server-run tools; kept in memory only. */
+  turnToken: string;
+  readWithoutAsking: boolean;
+  /** tool_approve: the preview fingerprint the owner saw, edited flat arguments, the note about
+   * the edit, whether "Apply without asking" sent it, and the operation on the approved card. */
+  fingerprint: string;
+  editedArguments: string;
+  editNote: string;
+  automatic: boolean;
+  approvedOperation: string;
 }
 
 export function emptyRequest(): Request {
@@ -94,6 +104,13 @@ export function emptyRequest(): Request {
     workspaceMap: [],
     items: [],
     replaceFromMessageId: '',
+    turnToken: '',
+    readWithoutAsking: false,
+    fingerprint: '',
+    editedArguments: '',
+    editNote: '',
+    automatic: false,
+    approvedOperation: '',
   };
 }
 
@@ -150,6 +167,8 @@ export interface Response {
   revision: number;
   lockedRead: boolean;
   title: string;
+  /** True only when approved writes run here (NIX_COMPANION_SERVER_TOOLS=all). */
+  serverWrites?: boolean;
 }
 
 export interface ProviderUsage {

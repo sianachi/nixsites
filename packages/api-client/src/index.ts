@@ -17,7 +17,7 @@
  * error, schema and cache layers below them do not change.
  */
 
-export { createNixClient } from './client.js';
+export { createDirectCollabClient, createNixClient } from './client.js';
 export type { CallOptions, NixClient } from './client.js';
 
 export { defineCommand, defineQuery } from './endpoints.js';

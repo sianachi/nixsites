@@ -71,7 +71,6 @@ const LOSS_KIND_BY_MARKDOWN_KIND: Readonly<Record<string, LossKind>> = {
   'underline-dropped': 'text-formatting-dropped',
   'columns-flattened': 'columns-flattened',
   'table-flattened': 'malformed-node',
-  'task-list-flattened': 'malformed-node',
   'unknown-node': 'unknown-node',
   'unknown-mark': 'unknown-mark',
   'malformed-node': 'malformed-node',

@@ -1727,6 +1727,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/me/pets/runtime/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Stream a conversation as server-sent events
+     * @description Server-sent events for one conversation: 'snapshot' (the whole connection response, first on every open and after any change that is not a text append), 'delta' ({revision, base, id, append}, applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, after which the client reopens). Each event's id is the revision. A companion that cannot stream is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint.
+     */
+    post: operations['StreamPetRuntime'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/me/pets/runtime/note/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Stream a note conversation as server-sent events
+     * @description The same events as the chat stream, for the conversation attached to 'rootItemId'.
+     */
+    post: operations['StreamPetNoteRuntime'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/conversations/{itemId}/configure': {
     parameters: {
       query?: never;
@@ -2605,6 +2645,90 @@ export interface paths {
      * @description Ends the calling session's unlock before it runs out. Idempotent: relocking an item that is not unlocked, or not locked, succeeds.
      */
     delete: operations['RelockItem'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Close a workspace behind a password, or change the password
+     * @description Owner only. Sets the one password members must present to open the workspace and anybody in the tenant may present, with the join link, to join it. When the workspace already has a password this changes it, which also needs 'currentPassword' and ends every other session's unlock. There is no recovery path for a forgotten password. A password withholds the workspace from members who have not unlocked it; it does not encrypt what is stored.
+     */
+    put: operations['SetWorkspacePassword'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/password/remove': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Remove a workspace's password
+     * @description Owner only, and needs the password. A POST with a body rather than a DELETE, because the password must not travel in a URL.
+     */
+    post: operations['RemoveWorkspacePassword'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/unlock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Open a password-protected workspace to this session for a while
+     * @description Members only; anybody else gets 'workspaces.not_found'. Checks the password and opens the workspace to the calling browser session or access token for fifteen minutes. Other sessions, including the caller's own elsewhere, stay locked.
+     */
+    post: operations['UnlockWorkspace'];
+    /**
+     * Close a password-protected workspace to this session again
+     * @description Ends the calling session's unlock. Idempotent. Members only.
+     */
+    delete: operations['RelockWorkspace'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/join': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Join a workspace with its password
+     * @description Adds the signed-in person to the workspace as a viewer, when the workspace has a password, is active and is open to new members, and unlocks it for this session. Every failure for somebody who is not yet a member - no such workspace, no password, closed to new members, wrong password - returns the same 'workspaces.join_refused' response, so the route cannot be used to find workspaces.
+     */
+    post: operations['JoinWorkspace'];
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -4677,6 +4801,8 @@ export interface components {
       lockedRead: boolean;
       /** @default  */
       title: string;
+      /** @default false */
+      serverWrites: boolean;
     };
     PetHistoryEntry: {
       id: string;
@@ -4782,6 +4908,18 @@ export interface components {
       replaceFromMessageId?: null | string;
       /** @default  */
       toolImage: string;
+      /** @default false */
+      readWithoutAsking: boolean;
+      /** @default  */
+      fingerprint: string;
+      /** @default  */
+      editedArguments: string;
+      /** @default  */
+      editNote: string;
+      /** @default false */
+      automatic: boolean;
+      /** @default  */
+      approvedOperation: string;
     };
     PetSettings: {
       enabled: boolean;
@@ -4799,6 +4937,16 @@ export interface components {
       /** Format: int64 */
       revision: number | string;
       settings: components['schemas']['PetSettings'];
+    };
+    PetStreamRequest: {
+      /** Format: uuid */
+      workspaceId: string;
+      /** Format: uuid */
+      petId: string;
+      /** @default  */
+      mode: string;
+      /** Format: uuid */
+      rootItemId?: null | string;
     };
     PetToolCall: {
       id: string;
@@ -5206,6 +5354,10 @@ export interface components {
       default: null | string;
       hideDocument?: null | boolean;
       expectedVersion?: null | string;
+    };
+    SetWorkspacePasswordRequest: {
+      password: string;
+      currentPassword: null | string;
     };
     SetWorkspaceSharingRequest: {
       membershipLocked: null | boolean;
@@ -5982,6 +6134,9 @@ export interface components {
       canRemove: boolean;
       assignableRoles: string[];
     };
+    WorkspacePasswordRequest: {
+      password: string;
+    };
     WorkspacePrincipalResponse: {
       /** Format: uuid */
       principalId: string;
@@ -6046,6 +6201,9 @@ export interface components {
       collaboration: boolean;
       agentsMayApprove?: null | boolean;
       agentsMayCreatePublicLinks?: null | boolean;
+      passwordProtected?: null | boolean;
+      /** Format: date-time */
+      unlockedUntil?: null | string;
     };
     WorkspaceSyncChanges: {
       cursor: string;
@@ -6071,6 +6229,10 @@ export interface components {
       serverTime: string;
       /** @default false */
       resync: boolean;
+    };
+    WorkspaceUnlockResponse: {
+      /** Format: date-time */
+      unlockedUntil: string;
     };
     WriteItemBodyRequest: {
       markdown: null | string;
@@ -6644,6 +6806,15 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Locked */
+      423: {
         headers: {
           [name: string]: unknown;
         };
@@ -10957,6 +11128,140 @@ export interface operations {
       };
     };
   };
+  StreamPetRuntime: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PetStreamRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Implemented */
+      501: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  StreamPetNoteRuntime: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PetStreamRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Implemented */
+      501: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   ConfigureConversation: {
     parameters: {
       query?: never;
@@ -13323,6 +13628,306 @@ export interface operations {
       };
     };
   };
+  SetWorkspacePassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetWorkspacePasswordRequest'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RemoveWorkspacePassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkspacePasswordRequest'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UnlockWorkspace: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkspacePasswordRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceUnlockResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RelockWorkspace: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  JoinWorkspace: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkspacePasswordRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspaceUnlockResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   ListTemplates: {
     parameters: {
       query?: never;
@@ -14871,6 +15476,15 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
+      /** @description Locked */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
     };
   };
   GetWorkspaceSyncChanges: {
@@ -14914,6 +15528,15 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
+      /** @description Locked */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
     };
   };
   ReconcileWorkspaceSync: {
@@ -14942,6 +15565,15 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Locked */
+      423: {
         headers: {
           [name: string]: unknown;
         };

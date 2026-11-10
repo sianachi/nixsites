@@ -1,5 +1,6 @@
 import type { PetMemoryMode } from '../memory-mode';
 import { pets, type PetConnection, type PetToolCall, type NixClient } from '@nix/api-client';
+import { APP_ONLY_OPERATIONS } from '@nix/companion/auto-apply';
 import {
   READ_ONLY_OPERATIONS,
   WorkspaceToolRefusal,
@@ -7,6 +8,7 @@ import {
 } from '@nix/companion/tool-args';
 import type { StructureFingerprint } from '@nix/companion';
 import { Text } from '@nix/ui';
+import type { WorkspaceToolArgs } from '@nix/companion/tool-args';
 import { memo, useEffect, useRef, useState, type ComponentProps, type ReactElement } from 'react';
 import { readActionReceipt, writeActionReceipt } from '../action-receipts';
 import { writeMayRunWithoutAsking } from '../approval/write-gate';
@@ -76,6 +78,13 @@ function PetWorkToolsView({
   const [previewFailed, setPreviewFailed] = useState<Record<string, boolean>>({});
   // The owner's sentence for an approved write refused before it changed anything. Kept in
   // memory only: receipts in session storage hold outcomes, never document text.
+  // Tools the server held after "Apply without asking" sent them: they wait for a click.
+  const [held, setHeld] = useState<ReadonlySet<string>>(new Set());
+  // Writes this tab approved for the server to run, so the tab refreshes what they changed.
+  // shortcut: touched parents are the call's own parent and item, which misses run_action's item
+  // ids; upgrade by returning touchedParents in the tool state.
+  const serverLedger = useRef<BuildLedger | undefined>(undefined);
+  const serverApproved = useRef(new Map<string, WorkspaceToolArgs>());
   const [ownerReasons, setOwnerReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -87,6 +96,25 @@ function PetWorkToolsView({
       window.removeEventListener('nix-pet-device-changed', changed);
     };
   }, []);
+
+  useEffect(() => {
+    for (const tool of runtime.tools ?? []) {
+      const args = serverApproved.current.get(tool.id);
+      if (args === undefined || (tool.status !== 'completed' && tool.status !== 'failed')) continue;
+      serverApproved.current.delete(tool.id);
+      if (tool.status !== 'completed') continue;
+      afterWrite(client, workspaceId, args, {
+        text: tool.result,
+        readOnly: false,
+        touchedParents: [args.parentId || null, args.itemId],
+        lockedContent: false,
+      });
+      if (args.operation === 'build_blueprint') {
+        const build = buildOutcome(tool.result);
+        if (build?.complete) serverLedger.current = build.ledger;
+      }
+    }
+  }, [runtime.tools, client, workspaceId]);
 
   function decisionKey(tool: PetToolCall) {
     return `tool:${workspaceId}:${petId}${noteScope ? `:note:${noteScope.rootItemId}` : ''}:${tool.id}`;
@@ -124,6 +152,7 @@ function PetWorkToolsView({
         appliesWithoutAsking(tool) &&
         writeMayRunWithoutAsking(parsed.data) &&
         !previewFailed[tool.id] &&
+        !held.has(tool.id) &&
         !conversationReadLockedContent
       );
     })
@@ -173,6 +202,73 @@ function PetWorkToolsView({
     const requestId = crypto.randomUUID();
     const signal = AbortSignal.timeout(90000);
     try {
+      // When the companion runs approved writes, approval is one call: the server claims, runs
+      // the write with the fence and answers through the tool state. Declines and app-only tools
+      // keep the claim-run-result path below.
+      const serverArgs =
+        approved && runtime.serverWrites
+          ? workspaceToolSchema.parse(JSON.parse(edited?.arguments ?? tool.arguments))
+          : undefined;
+      if (serverArgs !== undefined && !APP_ONLY_OPERATIONS.has(serverArgs.operation)) {
+        const scope = {
+          workspaceId,
+          petId,
+          ...(noteScope ? { rootItemId: noteScope.rootItemId } : {}),
+        };
+        try {
+          const reply = await client.execute(
+            pets.runtime({
+              operation: 'tool_approve',
+              ...scope,
+              toolId: tool.id,
+              requestId,
+              approvedOperation: serverArgs.operation,
+              fingerprint: fence ?? '',
+              editedArguments: edited?.arguments ?? '',
+              editNote: edited?.note ?? '',
+              automatic: withoutAsking,
+            }),
+            { signal },
+          );
+          const receipt = reply.tools?.find((value) => value.id === tool.id);
+          onChange(reply);
+          if (receipt?.status === 'pending' && withoutAsking) {
+            // The server's own rules held it: the card asks instead.
+            setHeld((old) => new Set(old).add(tool.id));
+            writeActionReceipt(key, '');
+            setDecisions((old) =>
+              Object.fromEntries(Object.entries(old).filter(([k]) => k !== key)),
+            );
+            return true;
+          }
+          if (receipt?.status !== 'claimed' || receipt.claimId !== requestId)
+            throw new Error('Tool was claimed elsewhere.');
+        } catch (cause) {
+          // Reconcile once: a claim under this requestId is ours, a foreign or settled one is not.
+          const observed = await client.execute(pets.runtime({ operation: 'read', ...scope }), {
+            signal,
+          });
+          const receipt = observed.tools?.find((value) => value.id === tool.id);
+          onChange(observed);
+          if (receipt?.status === 'claimed' && receipt.claimId === requestId) {
+            serverApproved.current.set(tool.id, serverArgs);
+            return true;
+          }
+          const foreign =
+            receipt?.status === 'claimed' ||
+            receipt?.status === 'completed' ||
+            receipt?.status === 'failed' ||
+            receipt?.status === 'interrupted';
+          if (!foreign) throw cause;
+          const outcome =
+            receipt.status === 'claimed' ? 'Running in another session.' : 'Already settled.';
+          writeActionReceipt(key, outcome);
+          setDecisions((old) => ({ ...old, [key]: outcome }));
+          return true;
+        }
+        serverApproved.current.set(tool.id, serverArgs);
+        return true;
+      }
       // Claim on the server BEFORE any write. A lost claim response must never lead to execution.
       let claimed: PetConnection;
       try {
@@ -228,7 +324,10 @@ function PetWorkToolsView({
           const { runWorkspaceTool, createCompanionBodies, defaultClock, defaultIds } =
             await import('@nix/companion');
           const args = workspaceToolSchema.parse(JSON.parse(edited?.arguments ?? tool.arguments));
-          const ledger = args.operation === 'save_as_template' ? buildLedger : undefined;
+          const ledger =
+            args.operation === 'save_as_template'
+              ? (buildLedger ?? serverLedger.current)
+              : undefined;
           const outcome = await runWorkspaceTool(
             {
               core: client,
@@ -358,7 +457,7 @@ function PetWorkToolsView({
           readWithoutAsking={readWithoutAsking}
           memoryMode={memoryMode}
           applyWithoutAsking={appliesWithoutAsking(tool)}
-          followsLockedRead={conversationReadLockedContent}
+          followsLockedRead={conversationReadLockedContent || held.has(tool.id)}
           progress={progress[tool.id]}
           onBuildProgress={(message) => {
             setProgress((old) => ({ ...old, [tool.id]: message }));
@@ -392,7 +491,11 @@ type Props = ComponentProps<typeof PetWorkToolsView>;
 function sameToolInputs(prev: Props, next: Props): boolean {
   const before = prev.runtime.tools ?? [];
   const after = next.runtime.tools ?? [];
-  if (before.length !== after.length || prev.runtime.lockedRead !== next.runtime.lockedRead)
+  if (
+    before.length !== after.length ||
+    prev.runtime.lockedRead !== next.runtime.lockedRead ||
+    prev.runtime.serverWrites !== next.runtime.serverWrites
+  )
     return false;
   const sameTools = before.every((tool, index) => {
     const other = after[index];

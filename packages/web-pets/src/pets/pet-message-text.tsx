@@ -1,5 +1,5 @@
 import { nixSchema } from '@nix/editor-schema';
-import { markdownToDocument } from '@nix/markdown';
+import { cleanModelMarkdown, markdownToDocument } from '@nix/markdown';
 import { Button, Icon, Text } from '@nix/ui';
 import type { Node as DocumentNode } from '@tiptap/pm/model';
 import { Check, Copy, X } from 'lucide-react';
@@ -318,7 +318,7 @@ export function PetMessageText({
 }): ReactElement {
   const sourceKey = sourceWorkspaceIds.join(',');
   const parsed = useMemo(
-    () => (format === 'markdown' ? markdownToDocument(text) : undefined),
+    () => (format === 'markdown' ? markdownToDocument(cleanModelMarkdown(text)) : undefined),
     [format, text],
   );
   // The document tree is the costly part of a reply, and a streamed update re-renders every

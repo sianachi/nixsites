@@ -47,10 +47,6 @@ export const MARKDOWN_LOSSES = {
     detail:
       'GFM uses the first row as a header and cannot preserve merged cells, column widths, per-cell alignment, multi-block cells or inline formatting.',
   },
-  taskListFlattened: {
-    kind: 'task-list-flattened',
-    detail: 'A task list was written as a bullet list; its checkbox state was not kept.',
-  },
   commentDropped: {
     kind: 'comment-dropped',
     detail: 'A comment mark was dropped; the text it covered was kept.',

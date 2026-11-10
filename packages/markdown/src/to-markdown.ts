@@ -41,12 +41,12 @@ const DOC_ITEM_ID = 'document';
  * The characters that would otherwise start Markdown inline syntax mid-text.
  *
  * Deliberately a small set: over-escaping turns clean prose into a thicket of backslashes that then
- * has to survive its own round-trip. These five are the ones that change meaning inside a run of
+ * has to survive its own round-trip. These six are the ones that change meaning inside a run of
  * text; block-level starters (`#`, `-`, `>`) only bite at the start of a line, which the block
  * handlers control.
  */
 export function escapeInline(text: string): string {
-  return text.replace(/[\\`*[\]]/g, (match) => `\\${match}`);
+  return text.replace(/[\\`*[\]<]/g, (match) => `\\${match}`);
 }
 
 /** A code span, widened to double backticks only when the content itself carries one. */
@@ -282,10 +282,7 @@ function buildHandlers(loss: LossCollector): NodeHandlers<string> {
     orderedList: (node, ctx, children) =>
       renderList(readNumber(node.attrs, 'start') ?? 1)(node, ctx, children),
     listItem: block,
-    taskList: (node, ctx, children) => {
-      loss.note(MARKDOWN_LOSSES.taskListFlattened.kind, MARKDOWN_LOSSES.taskListFlattened.detail);
-      return renderList(null)(node, ctx, children);
-    },
+    taskList: renderList(null),
     taskItem: (node, _ctx, children) => {
       const box = readBoolean(node.attrs, 'checked') ? '[x] ' : '[ ] ';
       return box + children().join('\n\n');

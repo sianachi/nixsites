@@ -306,6 +306,8 @@ export async function boot(
     idleSeconds: 300,
     internalSecret: SECRET,
     apiUrl: 'http://127.0.0.1:1',
+    serverTools: 'off',
+    collabUrl: '',
     address: { host: '127.0.0.1', port: 0 },
     release: { version: '', commit: '' },
     ...options.config,

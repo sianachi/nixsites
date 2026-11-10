@@ -151,7 +151,8 @@ export async function applyInlineResult(
   const { markdownToDocument } = await import('@nix/markdown/from-markdown');
   if (editor.isDestroyed || !editor.isEditable) return { kind: 'failed', reason: 'not_editable' };
 
-  const parsed = markdownToDocument(markdown);
+  const { cleanModelMarkdown } = await import('@nix/markdown/model-markdown');
+  const parsed = markdownToDocument(cleanModelMarkdown(markdown));
   const content = parsed.ok ? (parsed.doc as { content?: unknown }).content : undefined;
   if (!Array.isArray(content) || content.length === 0) {
     return { kind: 'failed', reason: 'unreadable' };

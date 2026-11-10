@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  HUMAN_ONLY,
   OPERATIONS,
   findOperations,
   isHumanOnlyOperation,
@@ -61,6 +62,26 @@ describe('operation catalog', () => {
     expect(isHumanOnlyOperation(entry('KeepItem'))).toBe(false);
     // Approving a version is gated by Core and the workspace setting, not by the catalog.
     expect(isHumanOnlyOperation(entry('SetFileVersionState'))).toBe(false);
+  });
+
+  it('keeps the shared human-only examples in step with the list', () => {
+    // Core mirrors HUMAN_ONLY (PetTurnPolicy.cs) and replays this same fixture, so an entry
+    // without an example, or an example the list misses, fails here or in the Core tests.
+    const examples = JSON.parse(
+      readFileSync(new URL('./fixtures/human-only.json', import.meta.url), 'utf8'),
+    ) as { method: string; path: string }[];
+    for (const { method, path } of examples)
+      expect(isHumanOnlyOperation({ method, path } as OperationEntry), `${method} ${path}`).toBe(
+        true,
+      );
+    for (const [pattern, applies] of HUMAN_ONLY)
+      expect(
+        examples.some(
+          (example) =>
+            pattern.test(example.path) && (applies === 'any' || example.method !== 'GET'),
+        ),
+        String(pattern),
+      ).toBe(true);
   });
 
   it('warns about final, access and public changes, not about trashing', () => {

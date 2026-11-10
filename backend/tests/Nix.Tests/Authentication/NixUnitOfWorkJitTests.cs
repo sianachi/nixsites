@@ -71,6 +71,44 @@ public sealed class NixUnitOfWorkJitTests
         Assert.Equal(0, scenario.UserInfo.Calls);
     }
 
+    private const string AnItem = "/api/v1/items/22222222-2222-4222-8222-222222222222";
+
+    [Theory]
+    [InlineData(PetTurnMode.Read, "PATCH", AnItem)]
+    [InlineData(PetTurnMode.Write, "POST", AnItem + "/move")]
+    [InlineData(PetTurnMode.Admin, "PUT", "/api/v1/me/pets/settings")]
+    public async Task A_pet_turn_token_out_of_its_scope_is_refused_with_403(PetTurnMode mode, string method, string path)
+    {
+        await using var scenario = PetScenario(mode, method, path);
+
+        await scenario.InvokeAsync();
+
+        Assert.Equal(StatusCodes.Status403Forbidden, scenario.Context.Response.StatusCode);
+        Assert.Equal(0, scenario.Throttle.TrackedClients);
+    }
+
+    [Fact]
+    public async Task A_pet_turn_token_for_a_suspended_person_is_refused_with_403()
+    {
+        await using var scenario = PetScenario(PetTurnMode.Read, "GET", AnItem, PrincipalStatus.Suspended);
+
+        await scenario.InvokeAsync();
+
+        Assert.Equal(StatusCodes.Status403Forbidden, scenario.Context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_expired_pet_turn_token_is_refused_with_401()
+    {
+        await using var scenario = PetScenario(
+            PetTurnMode.Read, "GET", AnItem, mintedAt: DateTimeOffset.UtcNow.AddHours(-1));
+
+        await scenario.InvokeAsync();
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, scenario.Context.Response.StatusCode);
+        Assert.Equal(1, scenario.Throttle.TrackedClients);
+    }
+
     [Fact]
     public async Task Provider_unavailability_is_retryable_without_charging_the_failed_token_throttle_or_logging_claims()
     {
@@ -162,6 +200,46 @@ public sealed class NixUnitOfWorkJitTests
             directory,
             new StubUserInfo(UserInfoBehavior.Unavailable),
             [selfIssued]);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Reliability",
+        "CA2000:Dispose objects before losing scope",
+        Justification = "Scenario owns and disposes the transferred SelfIssuedTokenService.")]
+    private static Scenario PetScenario(
+        PetTurnMode mode,
+        string method,
+        string path,
+        PrincipalStatus status = PrincipalStatus.Active,
+        DateTimeOffset? mintedAt = null)
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.jit-test",
+                [SelfIssuedTokenService.AudienceConfigurationKey] = "nix-core",
+                [SelfIssuedTokenService.KeyIdConfigurationKey] = "core-test-key",
+                [SelfIssuedTokenService.SigningKeyConfigurationKey] = key.ExportPkcs8PrivateKeyPem(),
+            })
+            .Build();
+        var selfIssued = new SelfIssuedTokenService(
+            configuration,
+            mintedAt is { } at ? new Support.FixedTimeProvider(at) : TimeProvider.System);
+        var tenantId = TenantId.From(Guid.NewGuid());
+        var principalId = PrincipalId.Create();
+        var directory = new MissingDirectory(
+            registration: null,
+            principal: new AuthenticatedPrincipal(principalId, tenantId, status, "Owner"));
+        var scenario = new Scenario(
+            selfIssued.MintPetTurn(principalId, tenantId, Guid.NewGuid(), mode),
+            new NixTokenValidator(directory, selfIssued),
+            directory,
+            new StubUserInfo(UserInfoBehavior.Unavailable),
+            [selfIssued]);
+        scenario.Context.Request.Method = method;
+        scenario.Context.Request.Path = path;
+        return scenario;
     }
 
     private static string SignedExternalToken(
@@ -304,7 +382,9 @@ public sealed class NixUnitOfWorkJitTests
         }
     }
 
-    private sealed class MissingDirectory(IdentityProviderRegistration? registration) : IIdentityDirectory
+    private sealed class MissingDirectory(
+        IdentityProviderRegistration? registration,
+        AuthenticatedPrincipal? principal = null) : IIdentityDirectory
     {
         public ValueTask<IdentityProviderRegistration?> ResolveProviderAsync(
             string issuer,
@@ -325,7 +405,8 @@ public sealed class NixUnitOfWorkJitTests
         public ValueTask<AuthenticatedPrincipal?> FindPrincipalByIdAsync(
             TenantId tenantId,
             PrincipalId principalId,
-            CancellationToken cancellationToken) => ValueTask.FromResult<AuthenticatedPrincipal?>(null);
+            CancellationToken cancellationToken) => ValueTask.FromResult(
+                principal is not null && principal.Id == principalId && principal.TenantId == tenantId ? principal : null);
     }
 
     private sealed class StubBrowserSessions : IBrowserSessions

@@ -12,6 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nix/api-client": "workspace:*",
+    "@nix/companion": "workspace:*",
     "@nix/structure-spec": "workspace:*"
   },
   "devDependencies": {

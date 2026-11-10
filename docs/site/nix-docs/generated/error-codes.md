@@ -138,6 +138,10 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - POST /api/v1/me/pets/inline
 
+### `pets.stream_unavailable`
+
+- POST /api/v1/me/pets/runtime/stream
+
 ### `pets.unavailable`
 
 - POST /api/v1/me/pets/inline
@@ -239,10 +243,15 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - PUT /api/v1/workspaces/{workspaceId}/daily-notes/{date}
 
+### `workspaces.join_refused`
+
+- POST /api/v1/workspaces/{workspaceId}/join
+
 ### `workspaces.not_found`
 
 - GET /api/v1/workspaces/{workspaceId}
 - POST /api/v1/workspaces/{workspaceId}/query
+- POST /api/v1/workspaces/{workspaceId}/unlock
 - PUT /api/v1/workspaces/{workspaceId}/daily-notes/{date}
 
 ## Codes the server adds
@@ -313,6 +322,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `pets.invalid_key`
 - `pets.invalid_settings`
 - `pets.settings_conflict`
+- `pets.too_many_watches`
 - `pets.unknown_provider`
 - `query.could_not_run`
 - `query.invalid_request`
@@ -381,7 +391,6 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `workspaces.invalid_daily_date`
 - `workspaces.invalid_daily_settings`
 - `workspaces.invitee_search_invalid`
-- `workspaces.join_refused`
 - `workspaces.password_busy`
 - `workspaces.password_exists`
 - `workspaces.password_invalid`

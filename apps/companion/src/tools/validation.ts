@@ -46,6 +46,13 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   workspaceMap: 'map',
   items: 'items',
   replaceFromMessageId: 'string',
+  turnToken: 'string',
+  readWithoutAsking: 'boolean',
+  fingerprint: 'string',
+  editedArguments: 'string',
+  editNote: 'string',
+  automatic: 'boolean',
+  approvedOperation: 'string',
 };
 
 /** Decodes an object whose every key is in `keys` and whose values pass `check`; null otherwise. */
@@ -167,8 +174,19 @@ function isDate(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }
 
+const TURN_TOKEN = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+
 export function validTurnContext(r: Request): boolean {
   if (!validConversationContext(r)) return false;
+  if (r.turnToken !== '' && (r.turnToken.length > 4096 || !TURN_TOKEN.test(r.turnToken)))
+    return false;
+  if (
+    r.fingerprint.length > 262_144 ||
+    r.editedArguments.length > 40_000 ||
+    r.editNote.length > 2000 ||
+    (r.approvedOperation !== '' && !/^[a-z_]{1,64}$/.test(r.approvedOperation))
+  )
+    return false;
   if (r.today !== '' && !isDate(r.today)) return false;
   if (r.timeZone !== '' && !TIME_ZONE.test(r.timeZone)) return false;
   if (r.workspaceMap.length > MAX_WORKSPACE_MAP_ENTRIES || r.items.length > MAX_SHARED_ITEMS) {
@@ -202,7 +220,7 @@ export function validConversationContext(r: Request): boolean {
   if (r.conversationItemId === '') {
     return r.sourceWorkspaceIds.length === 0 && r.earlierMessages.length === 0;
   }
-  if (!['send', 'read', 'watch', 'interrupt'].includes(r.operation)) return false;
+  if (!['send', 'read', 'watch', 'watch_stream', 'interrupt'].includes(r.operation)) return false;
   if (
     !UUID.test(r.conversationItemId) ||
     r.rootItemId !== '' ||
@@ -252,11 +270,13 @@ export function validHistoryOp(r: Request): boolean {
 const CONTEXT_OPERATIONS = [
   'read',
   'watch',
+  'watch_stream',
   'send',
   'interrupt',
   'reset',
   'tool_claim',
   'tool_result',
+  'tool_approve',
   'history',
   'read_history',
   'delete_history',

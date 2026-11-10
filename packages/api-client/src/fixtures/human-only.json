@@ -1,0 +1,26 @@
+[
+  { "method": "POST", "path": "/api/v1/me/tokens" },
+  { "method": "PUT", "path": "/api/v1/me/pets/settings" },
+  { "method": "POST", "path": "/api/v1/me/push-subscriptions" },
+  { "method": "POST", "path": "/api/v1/me/calendar/connections/google" },
+  { "method": "PUT", "path": "/api/v1/me/preferences" },
+  { "method": "POST", "path": "/api/v1/conversations/22222222-2222-4222-8222-222222222222/turns" },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/33333333-3333-4333-8333-333333333333/conversations"
+  },
+  { "method": "POST", "path": "/api/v1/tenant/admins" },
+  { "method": "PUT", "path": "/api/v1/tenant/settings" },
+  { "method": "POST", "path": "/api/v1/sites/operators" },
+  {
+    "method": "POST",
+    "path": "/api/v1/sites/44444444-4444-4444-8444-444444444444/approval/approve"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspaces/33333333-3333-4333-8333-333333333333/agent-policy"
+  },
+  { "method": "POST", "path": "/api/v1/workspaces/33333333-3333-4333-8333-333333333333/password" },
+  { "method": "PUT", "path": "/api/v1/items/22222222-2222-4222-8222-222222222222/lock" },
+  { "method": "PUT", "path": "/api/v1/items/22222222-2222-4222-8222-222222222222/protection" }
+]

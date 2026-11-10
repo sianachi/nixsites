@@ -1,8 +1,26 @@
-import { isCanceledError, isNixApiError, pets, type PetConnection } from '@nix/api-client';
+import {
+  isCanceledError,
+  isNixApiError,
+  petConnectionSchema,
+  pets,
+  type PetConnection,
+} from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ownerTurnContext } from './turn-context';
+import { readReadWithoutAsking } from '@nix/web-foundation/lib/device-preferences';
 import { isAborted } from '@nix/web-foundation/lib/guards';
+import { readSse } from '@nix/web-foundation/lib/sse';
+import { z } from 'zod';
+
+/** A snapshot can exceed readSse's default record cap; Core's long-poll cap is the same 4 MiB. */
+const STREAM_RECORD_CHARS = 4 * 1024 * 1024;
+const streamDeltaSchema = z.object({
+  revision: z.number(),
+  base: z.number(),
+  id: z.string(),
+  append: z.string(),
+});
 
 /** The floor on how often the watch loop starts a new request, whether that request is the
  * next iteration of a normal poll or the very first one after a pause. */
@@ -179,7 +197,7 @@ export function usePetRuntime(
   }, [reportError]);
   useEffect(() => {
     panelOpenRef.current = panelOpen;
-    if (panelOpen) wake.current.dispatchEvent(new Event('wake'));
+    wake.current.dispatchEvent(new Event(panelOpen ? 'wake' : 'close'));
   }, [panelOpen]);
 
   const discoverModels = useCallback(() => {
@@ -286,6 +304,22 @@ export function usePetRuntime(
 
     let failures = 0;
     let nextEarliestStart = 0;
+    // Set for this hook instance when the server has no stream (demo, older Core or companion).
+    let streamUnavailable = false;
+    // Each stream has its own abort so it can be dropped (tab hidden, panel closed, provider
+    // changed) without ending the hook: a held stream pins a watcher slot and a Core connection.
+    let streamAbort: AbortController | undefined;
+    const dropStream = () => streamAbort?.abort();
+    const streamDropped = () => streamAbort?.signal.aborted === true;
+    const wakeTarget = wake.current;
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') dropStream();
+    };
+    const onClose = () => {
+      if (!shouldWatch()) dropStream();
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    wakeTarget.addEventListener('close', onClose);
 
     // Nothing is known yet the first time this runs (`runtimeRef.current` is still `null`) - that
     // counts as "must watch", not "idle", so a panel that starts closed still learns the actual
@@ -313,6 +347,62 @@ export function usePetRuntime(
         nextEarliestStart = requestStart + MIN_REQUEST_GAP_MS;
         const watchGeneration = generation.current;
         try {
+          if (!streamUnavailable) {
+            streamAbort = new AbortController();
+            const streamSignal = AbortSignal.any([controller.signal, streamAbort.signal]);
+            const response = await client.stream({
+              ...pets.streamRuntimeRequest({
+                workspaceId,
+                petId,
+                ...(rootItemId ? { rootItemId } : {}),
+              }),
+              signal: streamSignal,
+            });
+            if (isAborted(controller.signal)) break;
+            if (streamSignal.aborted) continue;
+            if (watchGeneration !== generation.current) continue;
+            const body = response.body;
+            if (
+              !response.ok ||
+              !body ||
+              !response.headers.get('Content-Type')?.includes('text/event-stream')
+            ) {
+              await body?.cancel().catch(() => undefined);
+              if (rootItemId && [403, 404, 409].includes(response.status)) {
+                refuseNoteScope();
+                break;
+              }
+              if ([404, 405, 501].includes(response.status)) {
+                streamUnavailable = true;
+                nextEarliestStart = 0; // fall straight through to the long poll
+                continue;
+              }
+              throw new Error(`The conversation stream answered ${String(response.status)}.`);
+            }
+            for await (const record of readSse(body, STREAM_RECORD_CHARS)) {
+              if (isAborted(streamSignal)) break;
+              if (watchGeneration !== generation.current) break;
+              if (record.event === 'snapshot') {
+                applyRaw(petConnectionSchema.parse(JSON.parse(record.data)));
+                failures = 0;
+                if (errorKindRef.current === 'load') reportError('', null);
+              } else if (record.event === 'delta') {
+                const delta = streamDeltaSchema.parse(JSON.parse(record.data));
+                const current = runtimeRef.current;
+                // A gap means a missed event: reopen, and the new stream starts with a snapshot.
+                if (current?.revision !== delta.base) break;
+                applyRaw({
+                  ...current,
+                  revision: delta.revision,
+                  messages:
+                    current.messages?.map((m) =>
+                      m.id === delta.id ? { ...m, text: m.text + delta.append } : m,
+                    ) ?? null,
+                });
+              } else if (record.event === 'end') break;
+            }
+            continue;
+          }
           // `forceRefresh` is what keeps this an actual long poll rather than a cache read: two
           // watches in a row commonly carry the *same* `after` (nothing changed yet), and the
           // generic query cache would otherwise serve the first response straight back for up
@@ -336,7 +426,9 @@ export function usePetRuntime(
           if (unchanged && elapsed < MIN_REQUEST_GAP_MS)
             nextEarliestStart = Date.now() + IMMEDIATE_UNCHANGED_DELAY_MS;
         } catch (cause) {
-          if (isCanceledError(cause) || isAborted(controller.signal)) break;
+          if (isAborted(controller.signal)) break;
+          if (streamDropped()) continue; // a dropped stream, not a failure
+          if (isCanceledError(cause)) break;
           if (watchGeneration !== generation.current) continue;
           if (rootItemId && isNixApiError(cause) && [403, 404, 409].includes(cause.status ?? 0)) {
             refuseNoteScope();
@@ -392,6 +484,7 @@ export function usePetRuntime(
     };
     const providerKeysChanged = () => {
       generation.current += 1;
+      dropStream();
       setExposedGeneration(generation.current);
       setBusy(false);
       void refreshProvider();
@@ -401,6 +494,8 @@ export function usePetRuntime(
     return () => {
       cancelled = true;
       controller.abort();
+      document.removeEventListener('visibilitychange', onHidden);
+      wakeTarget.removeEventListener('close', onClose);
       window.removeEventListener('nix-pet-provider-keys-changed', providerKeysChanged);
     };
   }, [
@@ -434,6 +529,7 @@ export function usePetRuntime(
                   text: input.text,
                   model: input.model,
                   workspaceAccess: input.workspaceAccess,
+                  readWithoutAsking: readReadWithoutAsking(),
                   ...(rootItemId ? { readOnly: input.readOnly ?? true } : {}),
                   ...ownerTurnContext(),
                   ...(input.workspaceMap ? { workspaceMap: input.workspaceMap } : {}),

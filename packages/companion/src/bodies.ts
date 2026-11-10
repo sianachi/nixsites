@@ -3,6 +3,7 @@ import { nixSchema } from '@nix/editor-schema';
 import {
   documentToMarkdown,
   EMPTY_MARKDOWN_IMPORT_SCAN,
+  cleanModelMarkdown,
   markdownToDocument,
   type MarkdownLoss,
 } from '@nix/markdown';
@@ -101,7 +102,21 @@ function headingLevel(node: NodeJson): number | undefined {
   return typeof level === 'number' ? level : 1;
 }
 
-function parseBlocks(markdown: string): {
+/** Tells the model when syntax stayed literal text, so it can rewrite instead of reporting success.
+ * Kinds and counts only, never note text. */
+function rawNote(scan: BodyEditPlan['markdownChanges']): { rawSyntaxNote?: string } {
+  const kinds = Object.entries(scan.rawSyntax ?? {});
+  if (kinds.length === 0) return {};
+  const list = kinds.map(([kind, count]) => `${kind} x${String(count)}`).join(', ');
+  return {
+    rawSyntaxNote: `Some Markdown stayed as plain text in the note (${list}). Rewrite those places with supported Markdown.`,
+  };
+}
+
+function parseBlocks(
+  markdown: string,
+  clean = true,
+): {
   blocks: NodeJson[];
   scan: BodyEditPlan['markdownChanges'];
 } {
@@ -110,7 +125,7 @@ function parseBlocks(markdown: string): {
       'Provide up to 16,000 characters of Markdown.',
       'The new text is too long, so nothing was edited.',
     );
-  const parsed = markdownToDocument(markdown);
+  const parsed = markdownToDocument(clean ? cleanModelMarkdown(markdown) : markdown);
   if (!parsed.ok)
     throw refuse(
       'The proposed Markdown is invalid.',
@@ -257,8 +272,15 @@ function placePassage(
   const [hit] = hits;
   if (hit === undefined) throw unsafe();
   const at = hit.markdown.indexOf(edit.find);
-  const next = hit.markdown.slice(0, at) + edit.replace + hit.markdown.slice(at + edit.find.length);
-  const parsed = next.trim() ? parseBlocks(next) : { blocks: [], scan: EMPTY_MARKDOWN_IMPORT_SCAN };
+  // Only the model's text is cleaned; the owner's own block is parsed as it rendered. Its raw
+  // syntax is counted from the model's text alone, so existing text is never flagged for rewriting.
+  const replace = edit.replace ? cleanModelMarkdown(edit.replace) : '';
+  const next = hit.markdown.slice(0, at) + replace + hit.markdown.slice(at + edit.find.length);
+  const parsed = next.trim()
+    ? parseBlocks(next, false)
+    : { blocks: [], scan: EMPTY_MARKDOWN_IMPORT_SCAN };
+  if (replace.trim()) parsed.scan = parseBlocks(replace, false).scan;
+  else parsed.scan = EMPTY_MARKDOWN_IMPORT_SCAN;
   const after = render(parsed.blocks).markdown;
   const nested = hit.block.parent !== fragment;
   if (nested && (parsed.blocks.length !== 1 || parsed.blocks[0]?.type !== hit.block.json.type))
@@ -380,7 +402,7 @@ export function createCompanionBodies(client: NixClient): CompanionBodies {
     async append(itemId, markdown, signal) {
       if (!markdown.trim() || markdown.length > 16000)
         throw new Error('Provide up to 16,000 characters of Markdown.');
-      const parsed = markdownToDocument(markdown);
+      const parsed = markdownToDocument(cleanModelMarkdown(markdown));
       if (!parsed.ok) throw new Error('The proposed Markdown is invalid.');
       const doc = await load(itemId, signal);
       const added = new Y.Doc();
@@ -402,7 +424,12 @@ export function createCompanionBodies(client: NixClient): CompanionBodies {
           fragment.insert(fragment.length, blocks);
         });
         await publish(itemId, doc, before, signal);
-        return { id: itemId, appended: true, markdownChanges: parsed.scan };
+        return {
+          id: itemId,
+          appended: true,
+          markdownChanges: parsed.scan,
+          ...rawNote(parsed.scan),
+        };
       } finally {
         doc.destroy();
         added.destroy();
@@ -438,6 +465,7 @@ export function createCompanionBodies(client: NixClient): CompanionBodies {
           blocksRemoved: placement.plan.blocksRemoved,
           blocksAdded: placement.plan.blocksAdded,
           markdownChanges: placement.plan.markdownChanges,
+          ...rawNote(placement.plan.markdownChanges),
         };
       } finally {
         doc.destroy();

@@ -73,7 +73,78 @@ internal static class PetEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
+        // A stream pins a connection for up to 130 s; the companion's watcher cap bounds that per person, as for watch.
+        group.MapPost("/runtime/stream", Stream).WithName("StreamPetRuntime")
+            .WithSummary("Stream a conversation as server-sent events")
+            .WithDescription(
+                "Server-sent events for one conversation: 'snapshot' (the whole connection response, first on every "
+                + "open and after any change that is not a text append), 'delta' ({revision, base, id, append}, "
+                + "applicable only when the client's revision equals base) and 'end' ({revision}, at the lifetime, "
+                + "after which the client reopens). Each event's id is the revision. A companion that cannot stream "
+                + "is 501 'pets.stream_unavailable'; the caller then uses the watch endpoint.")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        group.MapPost("/runtime/note/stream", StreamNote).WithName("StreamPetNoteRuntime")
+            .WithSummary("Stream a note conversation as server-sent events")
+            .WithDescription("The same events as the chat stream, for the conversation attached to 'rootItemId'.")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return endpoints;
+    }
+
+    private static Task<IResult> StreamNote(PetStreamRequest request, HttpContext context, [FromServices] PetWorkerClient worker, [FromServices] ILogger<PetWorkerClient> log) =>
+        request.RootItemId is null
+            ? Task.FromResult<IResult>(TypedResults.Problem(ApiProblem.Create(context, 422, "pets.invalid_request", "Companion request failed", "Choose a note for this conversation.")))
+            : Stream(request, context, worker, log);
+
+    private static async Task<IResult> Stream(PetStreamRequest request, HttpContext context, [FromServices] PetWorkerClient worker, [FromServices] ILogger<PetWorkerClient> log)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        CancellationTokenSource? deadline = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        try
+        {
+            deadline.CancelAfter(PetInlineLimits.StreamDeadline);
+            var opened = await worker.OpenWatchStreamAsync(request.WorkspaceId, request.PetId, request.Mode, request.RootItemId, deadline.Token).ConfigureAwait(false);
+            if (opened.IsFailure)
+            {
+                return TypedResults.Problem(ApiProblem.Create(context,
+                    opened.Error.Code switch
+                    {
+                        "pets.not_found" => 404,
+                        "pets.invalid_request" => 422,
+                        "pets.too_many_watches" => 429,
+                        "pets.stream_unavailable" => 501,
+                        _ => 503,
+                    }, opened.Error.Code, "Companion request failed", opened.Error.Message));
+            }
+
+            var result = new PetStreamResult(opened.Value, null, deadline, 32 * 1024 * 1024, (outcome, copied, _) =>
+            {
+                // A cap, a deadline or a client leaving is the normal end; only a broken worker is worth a line.
+                if (outcome == "upstream_error")
+                {
+                    ApiLog.PetWorkerFailed(log, "watch_stream", $"the stream broke after {copied} bytes", "pets.unavailable");
+                }
+            });
+            deadline = null;
+            return result;
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            return TypedResults.Problem(ApiProblem.Create(context, 503, "pets.unavailable", "Companion request failed", "The companion did not answer in time."));
+        }
+        finally
+        {
+            deadline?.Dispose();
+        }
     }
 
     private static Task<Results<Ok<PetConnectionResponse>, ProblemHttpResult>> Connection(

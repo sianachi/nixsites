@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NixApiError, petConnectionSchema, type PetConnection } from '@nix/api-client';
 import { usePetRuntime } from '../../pets/use-pet-runtime';
 
-const client = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn() }));
+const client = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), stream: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
 
 const WORKSPACE_ID = '11111111-1111-4111-8111-111111111111';
@@ -24,6 +24,7 @@ function connection(overrides: Record<string, unknown> = {}) {
     tools: [],
     revision: 0,
     lockedRead: false,
+    serverWrites: false,
     title: '',
     ...overrides,
   };
@@ -39,6 +40,9 @@ describe('usePetRuntime watch loop', () => {
     client.query.mockReset();
     client.execute.mockReset();
     client.execute.mockResolvedValue(connection());
+    // Most tests exercise the long-poll fallback, so the stream is "not there" unless a test says so.
+    client.stream.mockReset();
+    client.stream.mockImplementation(() => Promise.resolve(new Response(null, { status: 501 })));
     document.dispatchEvent(new Event('visibilitychange'));
   });
 
@@ -945,5 +949,173 @@ describe('usePetRuntime errorKind and retryWatch', () => {
       ).toBe(false);
     });
     expect(client.execute.mock.calls).toHaveLength(sentBefore);
+  });
+});
+
+function sseResponse(records: readonly [string, unknown][], hold = false): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const [event, data] of records)
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      if (!hold) controller.close();
+    },
+  });
+  return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+}
+
+/** A held stream that errors when its request is aborted, as a real fetch body does. */
+function abortableSse(signal: AbortSignal): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(
+        new TextEncoder().encode(`event: snapshot\ndata: ${JSON.stringify(draft(1, 'a'))}\n\n`),
+      );
+      signal.addEventListener('abort', () => {
+        controller.error(new DOMException('aborted', 'AbortError'));
+      });
+    },
+  });
+  return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+}
+
+const draft = (revision: number, text: string, tools: unknown[] = []) =>
+  connection({
+    revision,
+    state: 'thinking',
+    messages: [{ id: 'm1', role: 'assistant', text, createdAt: '2026-11-10T00:00:00Z' }],
+    tools,
+  });
+
+describe('usePetRuntime stream', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    client.query.mockReset();
+    client.execute.mockReset();
+    client.execute.mockResolvedValue(connection());
+    client.stream.mockReset();
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const settle = (ms = 0) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it('renders the snapshot, grows the draft by deltas and updates a tool card', async () => {
+    client.stream.mockResolvedValueOnce(
+      sseResponse(
+        [
+          ['snapshot', draft(1, 'Hel')],
+          ['delta', { revision: 2, base: 1, id: 'm1', append: 'lo' }],
+          [
+            'snapshot',
+            draft(3, 'Hello', [
+              { id: 't1', arguments: '{}', status: 'pending', result: '', claimId: '' },
+            ]),
+          ],
+        ],
+        true,
+      ),
+    );
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(50);
+    expect(result.current.runtime?.revision).toBe(3);
+    expect(result.current.runtime?.messages?.[0]?.text).toBe('Hello');
+    expect(result.current.runtime?.tools?.[0]?.status).toBe('pending');
+    expect(client.query).not.toHaveBeenCalled();
+  });
+
+  it('opens the stream with the note endpoint for a note scope', async () => {
+    client.stream.mockResolvedValue(sseResponse([['snapshot', draft(1, 'a')]], true));
+    renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true, 'note-1'));
+    await settle();
+    expect(client.stream.mock.calls[0]?.[0]).toMatchObject({
+      path: '/api/v1/me/pets/runtime/note/stream',
+      body: { rootItemId: 'note-1' },
+    });
+  });
+
+  it('reopens after end and after a stale delta, with no duplicated text', async () => {
+    client.stream
+      .mockResolvedValueOnce(
+        sseResponse([
+          ['snapshot', draft(1, 'Hel')],
+          ['end', { revision: 1 }],
+        ]),
+      )
+      .mockResolvedValueOnce(
+        sseResponse([
+          ['snapshot', draft(1, 'Hel')],
+          // base 5 is not the client's revision 1: a missed event, so this must not be appended.
+          ['delta', { revision: 6, base: 5, id: 'm1', append: 'XX' }],
+        ]),
+      )
+      .mockResolvedValue(sseResponse([['snapshot', draft(7, 'Hello world')]], true));
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(3000);
+    expect(client.stream.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(result.current.runtime?.messages?.[0]?.text).toBe('Hello world');
+  });
+
+  it('falls back to the watch loop on 501 and never retries the stream', async () => {
+    client.stream.mockResolvedValue(new Response(null, { status: 501 }));
+    client.query.mockResolvedValue(connection({ revision: 4 }));
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(3000);
+    expect(client.stream).toHaveBeenCalledTimes(1);
+    expect(client.query.mock.calls.length).toBeGreaterThan(0);
+    expect(result.current.runtime?.revision).toBe(4);
+  });
+
+  it('backs off after a fetch error and tries the stream again', async () => {
+    client.stream
+      .mockRejectedValueOnce(new TypeError('network'))
+      .mockResolvedValue(sseResponse([['snapshot', draft(2, 'back')]], true));
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(2500);
+    expect(client.stream).toHaveBeenCalledTimes(2);
+    expect(client.query).not.toHaveBeenCalled();
+    expect(result.current.runtime?.messages?.[0]?.text).toBe('back');
+  });
+
+  it('drops a held stream when the tab hides and reopens it once visible', async () => {
+    const signals: AbortSignal[] = [];
+    client.stream.mockImplementation((request: { signal: AbortSignal }) => {
+      signals.push(request.signal);
+      return Promise.resolve(abortableSse(request.signal));
+    });
+    renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(50);
+    expect(signals).toHaveLength(1);
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle(50);
+    expect(signals[0]?.aborted).toBe(true);
+    expect(client.stream).toHaveBeenCalledTimes(1);
+    visibility.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle(3000);
+    expect(client.stream).toHaveBeenCalledTimes(2);
+    visibility.mockRestore();
+  });
+
+  it('drops the open stream when the provider keys change', async () => {
+    const signals: AbortSignal[] = [];
+    client.stream.mockImplementation((request: { signal: AbortSignal }) => {
+      signals.push(request.signal);
+      return Promise.resolve(abortableSse(request.signal));
+    });
+    renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(50);
+    act(() => {
+      window.dispatchEvent(new Event('nix-pet-provider-keys-changed'));
+    });
+    await settle(3000);
+    expect(signals[0]?.aborted).toBe(true);
+    expect(signals.length).toBeGreaterThanOrEqual(2);
   });
 });

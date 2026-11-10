@@ -10,8 +10,7 @@
  * validated: an input that would produce a body the schema rejects returns `{ ok: false }` with
  * the reason, never a silently broken doc.
  *
- * A column layout and task-list checkbox state still do not come back as themselves: those were
- * written as their nearest Markdown form. GFM tables import with rows, cells, alignment and inline
+ * A column layout still does not come back as itself: it is written as its nearest Markdown form. GFM tables import with rows, cells, alignment and inline
  * marks. Exporting a richer Nix table first may already have changed its header roles, merged-cell
  * geometry, column widths, per-cell alignment, cell blocks and marks; those remain the table's
  * declared losses.
@@ -26,6 +25,7 @@ import {
   parseDocument,
   REFERENCE_KINDS,
 } from '@nix/editor-schema';
+import { countRawSyntax } from './raw-syntax.js';
 import { isLocalImageTarget, isPersistableImageTarget, type MarkdownImportScan } from './scan.js';
 
 export type FromMarkdownResult =
@@ -73,7 +73,114 @@ interface JsonNode {
 // GFM-ish: strikethrough and pipe tables are on; HTML is off so a stray tag is escaped text rather
 // than an injected node the schema has no home for. The details block is flattened before parsing;
 // image placement and import observations are handled by token rules below.
-const tokenizer = MarkdownIt('commonmark', { html: false }).enable(['strikethrough', 'table']);
+const tokenizer = MarkdownIt('commonmark', { html: false, linkify: true }).enable([
+  'strikethrough',
+  'table',
+  'linkify',
+]);
+// Only an explicit scheme (https://, mailto:) becomes a link: fuzzy matching would turn a file name
+// like `notes.md` (.md is a country domain) into one.
+tokenizer.linkify.set({ fuzzyLink: false, fuzzyEmail: false, fuzzyIP: false });
+
+// `<br>` is the one tag a model writes for a line break; every other tag stays escaped text.
+tokenizer.inline.ruler.before('text', 'nix_br', (state, silent) => {
+  const match = /^<br\s*\/?>/i.exec(state.src.slice(state.pos, state.pos + 8));
+  if (match === null) {
+    return false;
+  }
+  if (!silent) {
+    state.push('hardbreak', 'br', 0);
+  }
+  state.pos += match[0].length;
+  return true;
+});
+
+// `**text**` is bold whenever its inside neither starts nor ends with whitespace, whatever surrounds
+// it (`**Note:**text`, `**"hi"**there`), which CommonMark's flanking rules refuse next to
+// punctuation. Content holding another `*` is left to the standard emphasis rule.
+tokenizer.inline.ruler.before('emphasis', 'nix_strong', (state, silent) => {
+  const { src, pos } = state;
+  if (!src.startsWith('**', pos) || src[pos + 2] === '*' || (pos > 0 && src[pos - 1] === '*')) {
+    return false;
+  }
+  const end = src.indexOf('**', pos + 2);
+  if (end === -1 || end > state.posMax - 2) {
+    return false;
+  }
+  const inside = src.slice(pos + 2, end);
+  if (inside.length === 0 || /^\s|\s$|[*\n`[<]/.test(inside) || src[end + 2] === '*') {
+    return false;
+  }
+  if (!silent) {
+    const inner: Token[] = [];
+    state.md.inline.parse(inside, state.md, state.env, inner);
+    state.push('strong_open', 'strong', 1);
+    state.tokens.push(...inner);
+    state.push('strong_close', 'strong', -1);
+  }
+  state.pos = end + 2;
+  return true;
+});
+
+// A list whose items all start with `[ ]` or `[x]` is a task list. Runs last so the `[` `]` text
+// pieces have been joined into one text token.
+const TASK_BOX = /^\[([ xX])\](?:\s+|$)/;
+tokenizer.core.ruler.after('text_join', 'nix_task_lists', (state) => {
+  const all = state.tokens;
+  for (let index = 0; index < all.length; index += 1) {
+    const open = all[index];
+    if (open?.type !== 'bullet_list_open') {
+      continue;
+    }
+    const items: number[] = [];
+    let close = index + 1;
+    while (close < all.length) {
+      const token = all[close];
+      if (token?.type === 'bullet_list_close' && token.level === open.level) {
+        break;
+      }
+      if (token?.type === 'list_item_open' && token.level === open.level + 1) {
+        items.push(close);
+      }
+      close += 1;
+    }
+    const inlines = items.map((item) => all[item + 2]);
+    if (
+      items.length === 0 ||
+      !inlines.every((inline) => inline?.type === 'inline' && TASK_BOX.test(inline.content))
+    ) {
+      continue;
+    }
+    open.type = 'task_list_open';
+    const closing = all[close];
+    if (closing !== undefined) {
+      closing.type = 'task_list_close';
+    }
+    items.forEach((item, at) => {
+      const inline = inlines[at];
+      const itemOpen = all[item];
+      const checked = inline !== undefined && /^\[[xX]]/.test(inline.content);
+      itemOpen?.attrSet('checked', checked ? 'true' : 'false');
+      if (itemOpen !== undefined) {
+        itemOpen.type = 'task_item_open';
+      }
+      if (inline !== undefined) {
+        inline.content = inline.content.replace(TASK_BOX, '');
+        const first = inline.children?.[0];
+        if (first?.type === 'text') {
+          first.content = first.content.replace(TASK_BOX, '');
+        }
+      }
+      for (let end = item; end < close; end += 1) {
+        const token = all[end];
+        if (token?.type === 'list_item_close' && token.level === open.level + 1) {
+          token.type = 'task_item_close';
+          break;
+        }
+      }
+    });
+  }
+});
 
 // markdown-it intentionally refuses file-scheme images before emitting an image token. Recognise
 // that one rejected filesystem spelling here so the exact literal remains visible and the import
@@ -348,6 +455,11 @@ const tokens: Record<string, ParseSpec> = {
   td: { block: 'tableCell', getAttrs: tableCellAttrs },
   list_item: { block: 'listItem' },
   bullet_list: { block: 'bulletList' },
+  task_list: { block: 'taskList' },
+  task_item: {
+    block: 'taskItem',
+    getAttrs: (token) => ({ checked: token.attrGet('checked') === 'true' }),
+  },
   ordered_list: {
     block: 'orderedList',
     getAttrs: (token) => ({ start: Number(token.attrGet('start') ?? 1) || 1 }),
@@ -414,7 +526,7 @@ const parser = new MarkdownParser(nixSchema, tokenizer, tokens);
 const NIX_LINK = /^nix:\/\/([a-z]+)\/(.+)$/;
 
 /** A blockquote's first line marker, `[!tone]` - the spelling it gives a callout. */
-const CALLOUT_MARKER = /^\[!([a-z]+)]$/;
+const CALLOUT_MARKER = /^\[!([a-z]+)]\s*/i;
 
 function isKnownReferenceKind(kind: string): boolean {
   return (REFERENCE_KINDS as readonly string[]).includes(kind);
@@ -481,21 +593,23 @@ function asCallout(node: JsonNode): JsonNode | null {
   }
 
   const first = node.content[0];
-  if (first === undefined) {
-    return null;
-  }
-  const firstInline =
-    first.type === 'paragraph' && first.content?.length === 1 ? first.content[0] : undefined;
-  const markerText = firstInline?.type === 'text' ? (firstInline.text ?? '') : null;
-  const tone = markerText === null ? undefined : CALLOUT_MARKER.exec(markerText)?.[1];
-  if (tone === undefined) {
+  const lead = first?.type === 'paragraph' ? first.content?.[0] : undefined;
+  const match = lead?.type === 'text' ? CALLOUT_MARKER.exec(lead.text ?? '') : null;
+  if (first === undefined || lead === undefined || match === null) {
     return null;
   }
 
-  const rest = node.content.slice(1);
+  // The marker may stand alone or open the first paragraph (`> [!warning] Careful`).
+  const remainder = (lead.text ?? '').slice(match[0].length);
+  const leadRest = remainder.length > 0 ? [{ ...lead, text: remainder }] : [];
+  const paragraphRest = [...leadRest, ...(first.content?.slice(1) ?? [])];
+  const rest = [
+    ...(paragraphRest.length > 0 ? [{ ...first, content: paragraphRest }] : []),
+    ...node.content.slice(1),
+  ];
   return {
     type: 'callout',
-    attrs: { tone },
+    attrs: { tone: (match[1] ?? 'note').toLowerCase() },
     content: rest.length > 0 ? rest : [{ type: 'paragraph' }],
   };
 }
@@ -541,10 +655,11 @@ export function markdownToDocument(markdown: string): FromMarkdownResult {
     return { ok: false, reason: parsed.error };
   }
 
+  const rawSyntax = countRawSyntax(rebuilt);
   return {
     ok: true,
     doc: rebuilt,
-    scan: importScan,
+    scan: Object.keys(rawSyntax).length > 0 ? { ...importScan, rawSyntax } : importScan,
     localImageTargets: environment.localImageTargets,
   };
 }

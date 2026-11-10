@@ -184,6 +184,18 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
             return;
         }
 
+        if (validated is ValidatedPetTurnToken petTurn && !PetTurnPolicy.Allows(context.Request, petTurn))
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status403Forbidden,
+                InsufficientScopeCode,
+                "Pet turn token out of scope",
+                "This pet turn token cannot call this route.")
+                .ConfigureAwait(false);
+            return;
+        }
+
         var principal = validated switch
         {
             ValidatedCoreToken core => await directory.FindPrincipalByIdAsync(
@@ -202,6 +214,10 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
             ValidatedWorkerExecutionToken worker => await directory.FindPrincipalByIdAsync(
                 worker.TenantId,
                 worker.PrincipalId,
+                context.RequestAborted).ConfigureAwait(false),
+            ValidatedPetTurnToken pet => await directory.FindPrincipalByIdAsync(
+                pet.TenantId,
+                pet.PrincipalId,
                 context.RequestAborted).ConfigureAwait(false),
             _ => throw new InvalidOperationException("Unknown validated token kind."),
         };
@@ -321,6 +337,13 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
             // the export. Keep that downstream answer read-only too; otherwise a GET-only token
             // could still acquire a writable collaboration session from the authorization reply.
             scopeContext.SetTokenCeiling(mayWrite: false, mayAdminister: false);
+        }
+
+        // Collaboration asks Core whether the delegated actor may write; a read token answers no.
+        // No credentialContext grant is set for this kind, so locked bodies stay closed to it.
+        if (validated is ValidatedPetTurnToken petCeiling)
+        {
+            scopeContext.SetTokenCeiling(mayWrite: petCeiling.MayWrite, mayAdminister: petCeiling.MayAdminister);
         }
 
         var scopedPrincipalId = principal?.Id

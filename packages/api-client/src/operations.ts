@@ -38,7 +38,7 @@ export function operationById(id: string): OperationEntry | undefined {
  * tenant-wide powers, or stand in for a human approval. A person still does them in the web app
  * or with `nixctl api`. Mirrors Core's interactive-only routes plus the grants above them.
  */
-const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
+export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/me\/tokens(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/pets(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/push-subscriptions(\/|$)/, 'any'],
@@ -55,6 +55,8 @@ const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   // A workspace password is typed by a person: setting, changing or removing it, unlocking with
   // it and joining by it are never run by an assistant, which must not be handed the password.
   [/^\/api\/v1\/workspaces\/[^/]+\/(password|unlock|join)(\/|$)/, 'any'],
+  // Item lock passwords and protections are set by a person, for the same reason.
+  [/^\/api\/v1\/items\/[^/]+\/(lock|unlock|protection)(\/|$)/, 'any'],
 ];
 
 export function isHumanOnlyOperation(entry: OperationEntry): boolean {

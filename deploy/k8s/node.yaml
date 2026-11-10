@@ -75,6 +75,11 @@ spec:
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
             - name: NIX_COMPANION_API_URL
               value: http://nix-api:8080
+            # Server-side pet tools: off | reads | all. Core also needs Nix__Pets__ServerTools.
+            - name: NIX_COMPANION_SERVER_TOOLS
+              value: "off"
+            - name: NIX_COMPANION_COLLAB_URL
+              value: http://nix-node:8100
             - name: NIX_SITES_API_URL
               value: http://nix-api:8080
             - name: NIX_SITES_COLLAB_URL

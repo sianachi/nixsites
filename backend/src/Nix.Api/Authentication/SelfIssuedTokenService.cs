@@ -93,6 +93,12 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// <summary>Whether the delegated export may read only its root or the complete subtree.</summary>
     public const string WorkerScopeClaim = "nix_worker_scope";
 
+    /// <summary>The claim carrying the pet turn (the companion request id) a pet token serves.</summary>
+    public const string PetTurnClaim = "nix_pet_turn";
+
+    /// <summary>The claim carrying what a pet token may do: <c>read</c>, <c>write</c> or <c>admin</c>.</summary>
+    public const string PetModeClaim = "nix_pet_mode";
+
     private const int DefaultLifetimeMinutes = 10;
 
     /// <summary>
@@ -100,6 +106,15 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// on every delegated request, so lease loss revokes it before this outer bound.
     /// </summary>
     public static readonly TimeSpan WorkerExecutionLifetime = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Lifetime of a read-only pet token: the companion's stuck-turn bound, so the token never
+    /// outlives the turn it serves.
+    /// </summary>
+    public static readonly TimeSpan PetTurnReadLifetime = TimeSpan.FromMinutes(15);
+
+    /// <summary>Lifetime of a pet token that may write or administer; minted per approved call.</summary>
+    public static readonly TimeSpan PetTurnWriteLifetime = TimeSpan.FromMinutes(2);
 
     private readonly ECDsa? _key;
     private readonly ECDsaSecurityKey? _securityKey;
@@ -313,6 +328,38 @@ public sealed class SelfIssuedTokenService : IDisposable
     }
 
     /// <summary>
+    /// Mints the token the companion service runs one pet turn's tools with. It is bound to the
+    /// person, not a workspace; <c>PetTurnPolicy</c> bounds what it reaches.
+    /// </summary>
+    public string MintPetTurn(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode)
+    {
+        if (principalId.Value == Guid.Empty || requestId == Guid.Empty || !Enum.IsDefined(mode))
+        {
+            throw new ArgumentException("The pet turn token is invalid.");
+        }
+        if (!IsConfigured)
+        {
+            throw new InvalidOperationException("Cannot mint a pet turn token while Core signing is unconfigured.");
+        }
+        var now = Clock.GetUtcNow();
+        var token = new JwtSecurityToken(
+            issuer: Issuer,
+            audience: Audience,
+            claims:
+            [
+                new Claim("sub", principalId.Value.ToString("D", CultureInfo.InvariantCulture)),
+                new Claim(TenantClaim, tenantId.Value.ToString("D", CultureInfo.InvariantCulture)),
+                new Claim(PetTurnClaim, requestId.ToString("D", CultureInfo.InvariantCulture)),
+                new Claim(PetModeClaim, mode switch { PetTurnMode.Read => "read", PetTurnMode.Write => "write", _ => "admin" }),
+                new Claim("jti", Guid.CreateVersion7().ToString("D", CultureInfo.InvariantCulture)),
+            ],
+            notBefore: now.UtcDateTime,
+            expires: (now + (mode == PetTurnMode.Read ? PetTurnReadLifetime : PetTurnWriteLifetime)).UtcDateTime,
+            signingCredentials: new SigningCredentials(_securityKey, SecurityAlgorithms.EcdsaSha256));
+        return _handler.WriteToken(token);
+    }
+
+    /// <summary>
     /// Builds the validation parameters the token validator's self-issuer branch uses.
     /// </summary>
     /// <returns>Parameters accepting exactly this issuer, audience, key and algorithm.</returns>
@@ -454,6 +501,44 @@ public sealed class SelfIssuedTokenService : IDisposable
         return true;
     }
 
+    /// <summary>Reads a pet turn token's claims; false when any other token kind's claim is also present.</summary>
+    public static bool TryReadPetTurnClaims(
+        ClaimsIdentity identity,
+        out TenantId tenantId,
+        out PrincipalId principalId,
+        out Guid requestId,
+        out PetTurnMode mode)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        tenantId = default;
+        principalId = default;
+        mode = default;
+        if (identity.FindFirst(AccessTokenClaim) is not null
+            || identity.FindFirst(BrowserSessionClaim) is not null
+            || identity.FindFirst(WorkerExecutionClaim) is not null
+            || identity.FindFirst(WorkerJobClaim) is not null
+            || !Guid.TryParseExact(identity.FindFirst("sub")?.Value, "D", out var principal)
+            || !Guid.TryParseExact(identity.FindFirst(TenantClaim)?.Value, "D", out var tenant)
+            || !Guid.TryParseExact(identity.FindFirst(PetTurnClaim)?.Value, "D", out requestId)
+            || principal == Guid.Empty
+            || tenant == Guid.Empty
+            || requestId == Guid.Empty)
+        {
+            requestId = default;
+            return false;
+        }
+        switch (identity.FindFirst(PetModeClaim)?.Value)
+        {
+            case "read": mode = PetTurnMode.Read; break;
+            case "write": mode = PetTurnMode.Write; break;
+            case "admin": mode = PetTurnMode.Admin; break;
+            default: requestId = default; return false;
+        }
+        tenantId = TenantId.From(tenant);
+        principalId = PrincipalId.From(principal);
+        return true;
+    }
+
     /// <summary>
     /// Describes the public half of the signing key, for <c>/public/v1/auth/jwks</c>.
     /// </summary>
@@ -534,3 +619,16 @@ public sealed record JwkResponse(
     string Kid,
     string Use,
     string Alg);
+
+/// <summary>What a pet turn token may do on the person's behalf.</summary>
+public enum PetTurnMode
+{
+    /// <summary>Read routes only.</summary>
+    Read,
+
+    /// <summary>Read and write routes.</summary>
+    Write,
+
+    /// <summary>Read, write and admin routes.</summary>
+    Admin,
+}

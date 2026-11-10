@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.IdentityModel.Tokens.Jwt;
 using Nix.Abstractions;
+using Nix.Authentication;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Pets;
@@ -164,6 +166,35 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         Assert.False(result.Value.CanConnect);
         Assert.Empty(result.Value.Messages!);
         Assert.Contains("API key", result.Value.Reason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("anthropic")]
+    [InlineData("openrouter")]
+    public async Task A_missing_key_stream_is_stream_unavailable_so_the_app_falls_back_to_watch(string provider)
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(provider), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
+
+        var result = await gateway.OpenWatchStreamAsync(WorkspaceGuid, PetGuid, "", null, Cancellation);
+
+        Assert.Equal(0, handler.Calls);
+        Assert.True(result.IsFailure);
+        Assert.Equal("pets.stream_unavailable", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task A_stream_without_a_configured_companion_is_stream_unavailable()
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var gateway = new PetWorkerClient(http, new ConfigurationBuilder().Build(), Session(), Dispatcher(), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
+
+        var result = await gateway.OpenWatchStreamAsync(WorkspaceGuid, PetGuid, "", null, Cancellation);
+
+        Assert.Equal(0, handler.Calls);
+        Assert.Equal("pets.stream_unavailable", result.Error.Code);
     }
 
     [Fact]
@@ -410,6 +441,169 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         Assert.Equal(0, handler.Calls);
     }
 
+    [Theory]
+    [InlineData("reads", "send", true, true, true)]
+    [InlineData("all", "send", true, true, true)]
+    [InlineData(null, "send", true, true, false)]
+    [InlineData("", "send", true, true, false)]
+    [InlineData("off", "send", true, true, false)]
+    [InlineData("Reads", "send", true, true, false)]
+    [InlineData("reads", "send", false, true, false)]
+    [InlineData("reads", "send", true, false, false)]
+    [InlineData("reads", "read", true, true, false)]
+    [InlineData("reads", "watch", true, true, false)]
+    [InlineData("reads", "tool_claim", true, true, false)]
+    public async Task A_read_turn_token_is_minted_only_for_an_allowed_unasked_workspace_send(
+        string? serverTools, string operation, bool readWithoutAsking, bool workspaceAccess, bool minted)
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        using var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        var values = new Dictionary<string, string?>
+        {
+            ["Nix:Pets:WorkerUrl"] = "http://worker:8301",
+            ["Nix:InternalSecret"] = "test-secret",
+            [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.nix.test",
+            [SelfIssuedTokenService.AudienceConfigurationKey] = "nix-core",
+            [SelfIssuedTokenService.KeyIdConfigurationKey] = "core-key",
+            [SelfIssuedTokenService.SigningKeyConfigurationKey] = key.ExportPkcs8PrivateKeyPem(),
+        };
+        if (serverTools is not null)
+        {
+            values["Nix:Pets:ServerTools"] = serverTools;
+        }
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        using var signer = new SelfIssuedTokenService(configuration, TimeProvider.System);
+        var session = Session();
+        var gateway = new PetWorkerClient(http, configuration, session, Dispatcher(), new StubPermissions(), new NoCredentials(),
+            new PetProviderKeyProtector(new EphemeralDataProtectionProvider()), tokens: signer);
+        var requestId = Guid.NewGuid();
+        var request = new PetRuntimeRequest(operation, WorkspaceGuid, PetGuid, requestId, "Hello",
+            WorkspaceAccess: workspaceAccess, ToolId: operation == "tool_claim" ? "tool-one" : "", ReadWithoutAsking: readWithoutAsking);
+
+        var result = operation == "watch"
+            ? await gateway.ExecuteWatchAsync(WorkspaceGuid, PetGuid, "", 0, Cancellation)
+            : await gateway.ExecuteAsync(request, Cancellation);
+
+        Assert.True(result.IsSuccess);
+        using var body = JsonDocument.Parse(handler.Body);
+        if (!minted)
+        {
+            Assert.False(body.RootElement.TryGetProperty("turnToken", out _));
+            Assert.False(body.RootElement.TryGetProperty("readWithoutAsking", out _));
+            return;
+        }
+
+        Assert.True(body.RootElement.GetProperty("readWithoutAsking").GetBoolean());
+        var validated = await new JwtSecurityTokenHandler { MapInboundClaims = false }
+            .ValidateTokenAsync(body.RootElement.GetProperty("turnToken").GetString()!, signer.CreateValidationParameters());
+        Assert.True(validated.IsValid);
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(validated.ClaimsIdentity, out var tenant, out var principal, out var turn, out var mode));
+        Assert.Equal(session.Current!.Value.TenantId, tenant);
+        Assert.Equal(session.Current.Value.PrincipalId, principal);
+        Assert.Equal(requestId, turn);
+        Assert.Equal(PetTurnMode.Read, mode);
+    }
+
+    [Theory]
+    [InlineData("all", "append_note", false, "write")]
+    [InlineData("all", "append_note", true, "write")]
+    [InlineData("all", "move_item", false, "admin")]
+    [InlineData("all", "run_action", false, "admin")]
+    [InlineData("all", "move_item", true, "write")]
+    [InlineData("reads", "append_note", false, null)]
+    [InlineData("off", "append_note", false, null)]
+    [InlineData(null, "append_note", false, null)]
+    public async Task A_write_token_is_minted_for_an_approval_only_with_server_tools_all_and_sized_by_the_operation(
+        string? serverTools, string approved, bool automatic, string? expectedMode)
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, serverTools);
+        using var signerLifetime = signer;
+        var requestId = Guid.NewGuid();
+        var request = new PetRuntimeRequest("tool_approve", WorkspaceGuid, PetGuid, requestId, ToolId: "tool-one",
+            ApprovedOperation: approved, Fingerprint: "fp", Automatic: automatic);
+
+        var result = await gateway.ExecuteAsync(request, Cancellation);
+
+        Assert.True(result.IsSuccess);
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal("tool_approve", body.RootElement.GetProperty("operation").GetString());
+        Assert.Equal(approved, body.RootElement.GetProperty("approvedOperation").GetString());
+        Assert.Equal("fp", body.RootElement.GetProperty("fingerprint").GetString());
+        Assert.False(body.RootElement.TryGetProperty("readWithoutAsking", out _));
+        if (expectedMode is null)
+        {
+            Assert.False(body.RootElement.TryGetProperty("turnToken", out _));
+            return;
+        }
+
+        var validated = await new JwtSecurityTokenHandler { MapInboundClaims = false }
+            .ValidateTokenAsync(body.RootElement.GetProperty("turnToken").GetString()!, signer.CreateValidationParameters());
+        Assert.True(validated.IsValid);
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(validated.ClaimsIdentity, out _, out _, out var turn, out var mode));
+        Assert.Equal(requestId, turn);
+        Assert.Equal(expectedMode == "admin" ? PetTurnMode.Admin : PetTurnMode.Write, mode);
+    }
+
+    [Theory]
+    [InlineData("", false, false)]
+    [InlineData("Append Note", false, false)]
+    [InlineData("append_note", true, true)]
+    public async Task An_approval_without_an_operation_or_an_edited_automatic_one_is_refused(string approved, bool edited, bool automatic)
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, "all");
+        using var signerLifetime = signer;
+        var request = new PetRuntimeRequest("tool_approve", WorkspaceGuid, PetGuid, Guid.NewGuid(), ToolId: "tool-one",
+            ApprovedOperation: approved, EditedArguments: edited ? "{}" : "", Automatic: automatic);
+
+        var result = await gateway.ExecuteAsync(request, Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("pets.invalid_request", result.Error.Code);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task Approval_fields_on_any_other_operation_are_refused()
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, "all");
+        using var signerLifetime = signer;
+
+        var result = await gateway.ExecuteAsync(new PetRuntimeRequest("tool_claim", WorkspaceGuid, PetGuid, Guid.NewGuid(), ToolId: "tool-one", Fingerprint: "fp"), Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    private static (PetWorkerClient Gateway, SelfIssuedTokenService Signer) ApprovalGateway(HttpMessageHandler handler, string? serverTools)
+    {
+#pragma warning disable CA2000 // the test disposes the signer; the client lives for the test
+        var http = new HttpClient(handler);
+        var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+#pragma warning restore CA2000
+        var values = new Dictionary<string, string?>
+        {
+            ["Nix:Pets:WorkerUrl"] = "http://worker:8301",
+            ["Nix:InternalSecret"] = "test-secret",
+            [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.nix.test",
+            [SelfIssuedTokenService.AudienceConfigurationKey] = "nix-core",
+            [SelfIssuedTokenService.KeyIdConfigurationKey] = "core-key",
+            [SelfIssuedTokenService.SigningKeyConfigurationKey] = key.ExportPkcs8PrivateKeyPem(),
+        };
+        if (serverTools is not null)
+        {
+            values["Nix:Pets:ServerTools"] = serverTools;
+        }
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        var signer = new SelfIssuedTokenService(configuration, TimeProvider.System);
+        return (new PetWorkerClient(http, configuration, Session(), Dispatcher(), new StubPermissions(), new NoCredentials(),
+            new PetProviderKeyProtector(new EphemeralDataProtectionProvider()), tokens: signer), signer);
+    }
+
     private static readonly Guid ItemA = new("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     private static readonly Guid ItemB = new("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
     private static readonly Guid ItemC = new("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
@@ -632,6 +826,96 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
 
         Assert.True(result.IsFailure);
         Assert.Equal("pets.too_many_watches", result.Error.Code);
+    }
+
+    private HttpClient StreamClient(HttpMessageHandler handler)
+    {
+#pragma warning disable CA2000 // the gateway keeps the client for the whole test, and the handler is disposed by the caller
+        var http = new HttpClient(handler);
+#pragma warning restore CA2000
+        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
+        return factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services => services.AddSingleton(gateway))).CreateClient();
+    }
+
+    [Fact]
+    public async Task The_stream_endpoint_sends_watch_stream_and_copies_the_event_stream_unparsed()
+    {
+        using var handler = new RecordingWorker(inline: true);
+        using var client = StreamClient(handler);
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/runtime/stream", UriKind.Relative),
+            new PetStreamRequest(WorkspaceGuid, PetGuid, "chat"), Cancellation);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("event: done\ndata: {\"text\":\"Improved text\"}\n\n", await response.Content.ReadAsStringAsync(Cancellation));
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal("watch_stream", body.RootElement.GetProperty("operation").GetString());
+        Assert.Equal("chat", body.RootElement.GetProperty("mode").GetString());
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests, HttpStatusCode.TooManyRequests, "pets.too_many_watches")]
+    [InlineData(HttpStatusCode.BadRequest, HttpStatusCode.NotImplemented, "pets.stream_unavailable")]
+    [InlineData(HttpStatusCode.InternalServerError, HttpStatusCode.ServiceUnavailable, "pets.unavailable")]
+    public async Task The_stream_endpoint_maps_worker_statuses(HttpStatusCode worker, HttpStatusCode expected, string code)
+    {
+        using var handler = new StatusWorker(worker);
+        using var client = StreamClient(handler);
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/runtime/stream", UriKind.Relative),
+            new PetStreamRequest(WorkspaceGuid, PetGuid), Cancellation);
+
+        Assert.Equal(expected, response.StatusCode);
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        Assert.Equal(code, problem.RootElement.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task The_note_stream_endpoint_requires_a_note()
+    {
+        using var handler = new RecordingWorker(inline: true);
+        using var client = StreamClient(handler);
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/runtime/note/stream", UriKind.Relative),
+            new PetStreamRequest(WorkspaceGuid, PetGuid), Cancellation);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task A_watch_stream_operation_posted_to_runtime_is_refused()
+    {
+        using var handler = new RecordingWorker();
+        using var client = StreamClient(handler);
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/runtime", UriKind.Relative),
+            new PetRuntimeRequest("watch_stream", WorkspaceGuid, PetGuid), Cancellation);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task The_stream_endpoint_ends_the_response_at_the_byte_cap()
+    {
+        using var handler = new BigStreamWorker();
+        using var client = StreamClient(handler);
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/me/pets/runtime/stream", UriKind.Relative));
+        message.Content = JsonContent.Create(new PetStreamRequest(WorkspaceGuid, PetGuid));
+        using var response = await client.SendAsync(message,
+            HttpCompletionOption.ResponseHeadersRead, Cancellation);
+        var bytes = (await response.Content.ReadAsByteArrayAsync(Cancellation)).Length;
+
+        Assert.InRange(bytes, 1, 32 * 1024 * 1024);
+    }
+
+    private sealed class BigStreamWorker : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[33 * 1024 * 1024]) { Headers = { ContentType = new("text/event-stream") } } });
     }
 
     [Fact]
@@ -931,6 +1215,32 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         public ValueTask<bool> CanManageWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(false);
         public ValueTask<IReadOnlyList<WorkspaceId>> ReadableWorkspacesAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<WorkspaceId>>([]);
         public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) => ValueTask.FromResult(false);
+    }
+
+    [Theory]
+    [InlineData("all", true)]
+    [InlineData("reads", false)]
+    [InlineData("off", false)]
+    [InlineData(null, false)]
+    public async Task Server_writes_are_advertised_only_while_Core_s_switch_is_all(string? serverTools, bool expected)
+    {
+        using var handler = new ServerWritesWorker();
+        var (gateway, signer) = ApprovalGateway(handler, serverTools);
+        using var signerLifetime = signer;
+
+        var result = await gateway.ExecuteAsync(new PetRuntimeRequest("read", WorkspaceGuid, PetGuid, Guid.NewGuid()), Cancellation);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expected, result.Value.ServerWrites);
+    }
+
+    private sealed class ServerWritesWorker : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult<HttpResponseMessage>(new(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"provider\":\"chatgpt\",\"status\":\"connected\",\"reason\":\"\",\"canConnect\":false,\"messages\":[],\"serverWrites\":true}", System.Text.Encoding.UTF8, "application/json"),
+            });
     }
 
     private sealed class RecordingWorker(bool inline = false) : HttpMessageHandler

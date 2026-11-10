@@ -105,6 +105,7 @@ export interface RuntimeInput {
     | 'reset'
     | 'tool_claim'
     | 'tool_result'
+    | 'tool_approve'
     | 'history'
     | 'read_history'
     | 'delete_history'
@@ -133,6 +134,14 @@ export interface RuntimeInput {
   readonly toolImage?: string;
   /** With a tool result: the result came from an item under a lock (marks the conversation). */
   readonly toolLockedContent?: boolean;
+  /** With `tool_approve`: the operation on the approved card, the preview fingerprint the owner saw,
+   * the owner's edited flat arguments and note (when they changed the request), and whether
+   * "Apply without asking" sent it. */
+  readonly approvedOperation?: string;
+  readonly fingerprint?: string;
+  readonly editedArguments?: string;
+  readonly editNote?: string;
+  readonly automatic?: boolean;
   /** The archive a `read_history`, `delete_history`, `resume_history` or archived `rename` names. */
   readonly historyId?: string;
   readonly mode?: 'chat' | 'consult';
@@ -140,6 +149,9 @@ export interface RuntimeInput {
   readonly today?: string;
   /** The owner's IANA time zone. */
   readonly timeZone?: string;
+  /** The owner's "read without asking" device setting, sent with `send`: the server may then run
+   * this turn's read tools itself. */
+  readonly readWithoutAsking?: boolean;
   /** The workspace's main containers, sent with a conversation's first message only. */
   readonly workspaceMap?: readonly PetWorkspaceMapEntry[];
 }
@@ -175,6 +187,12 @@ export const runtime = (input: RuntimeInput): CommandEndpoint<PetConnection> =>
       toolSuccess: input.toolSuccess ?? false,
       toolImage: input.toolImage ?? '',
       toolLockedContent: input.toolLockedContent ?? false,
+      readWithoutAsking: input.readWithoutAsking ?? false,
+      approvedOperation: input.approvedOperation ?? '',
+      fingerprint: input.fingerprint ?? '',
+      editedArguments: input.editedArguments ?? '',
+      editNote: input.editNote ?? '',
+      automatic: input.automatic ?? false,
       mode: input.mode ?? '',
       today: input.today ?? '',
       timeZone: input.timeZone ?? '',
@@ -219,3 +237,24 @@ export const watchRuntime = (input: WatchRuntimeInput): QueryEndpoint<PetConnect
       after: input.after ?? 0,
     },
   });
+
+/**
+ * The POST that opens a conversation's event stream, for `NixClient.stream`. Events are
+ * `snapshot` (a whole connection response), `delta` (text appended to one message, valid only
+ * when the client's revision equals `base`) and `end`; a 501 means Core or its companion cannot
+ * stream and the caller falls back to `watchRuntime`.
+ */
+export const streamRuntimeRequest = (
+  input: Omit<WatchRuntimeInput, 'after'>,
+): { readonly path: string; readonly body: components['schemas']['PetStreamRequest'] } => ({
+  path:
+    input.rootItemId === undefined
+      ? '/api/v1/me/pets/runtime/stream'
+      : '/api/v1/me/pets/runtime/note/stream',
+  body: {
+    workspaceId: input.workspaceId,
+    petId: input.petId,
+    ...(input.rootItemId ? { rootItemId: input.rootItemId } : {}),
+    mode: input.mode ?? '',
+  },
+});

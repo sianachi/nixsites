@@ -105,6 +105,56 @@ public sealed class NixTokenValidatorTests
         Assert.Equal(executionId, worker.ExecutionId);
     }
 
+    [Fact]
+    public async Task Core_issuer_classifies_a_pet_turn_token_and_refuses_a_stolen_claim_shape()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.nix.test",
+                [SelfIssuedTokenService.AudienceConfigurationKey] = "nix-core",
+                [SelfIssuedTokenService.KeyIdConfigurationKey] = "core-key",
+                [SelfIssuedTokenService.SigningKeyConfigurationKey] = signingKey.ExportPkcs8PrivateKeyPem(),
+            })
+            .Build();
+        using var selfIssued = new SelfIssuedTokenService(configuration, TimeProvider.System);
+        var tenantId = TenantId.From(Guid.Parse("11111111-1111-4111-8111-111111111111"));
+        var principalId = PrincipalId.From(Guid.Parse("22222222-2222-4222-8222-222222222222"));
+        var requestId = Guid.Parse("33333333-3333-4333-8333-333333333333");
+        var validator = new NixTokenValidator(
+            new RegistrationDirectory(new Dictionary<string, IdentityProviderRegistration>()),
+            selfIssued);
+
+        var result = await validator.ValidateAsync(
+            selfIssued.MintPetTurn(principalId, tenantId, requestId, PetTurnMode.Write),
+            TestContext.Current.CancellationToken);
+
+        var pet = Assert.IsType<ValidatedPetTurnToken>(result);
+        Assert.Equal(tenantId, pet.TenantId);
+        Assert.Equal(principalId, pet.PrincipalId);
+        Assert.Equal(requestId, pet.RequestId);
+        Assert.Equal(PetTurnMode.Write, pet.Mode);
+        Assert.True(pet.MayWrite);
+        Assert.False(pet.MayAdminister);
+
+        // A signed token naming an unknown mode is refused whole, not half-trusted as another kind.
+        var unknownMode = new JwtSecurityTokenHandler { MapInboundClaims = false }.WriteToken(new JwtSecurityToken(
+            issuer: "https://core.nix.test",
+            audience: "nix-core",
+            claims:
+            [
+                new Claim("sub", principalId.ToString()),
+                new Claim(SelfIssuedTokenService.TenantClaim, tenantId.ToString()),
+                new Claim(SelfIssuedTokenService.PetTurnClaim, requestId.ToString("D")),
+                new Claim(SelfIssuedTokenService.PetModeClaim, "superuser"),
+            ],
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: new SigningCredentials(
+                new ECDsaSecurityKey(signingKey) { KeyId = "core-key" }, SecurityAlgorithms.EcdsaSha256)));
+        Assert.Null(await validator.ValidateAsync(unknownMode, TestContext.Current.CancellationToken));
+    }
+
     [Theory]
     [InlineData("api", "service")]
     [InlineData("service", "api")]

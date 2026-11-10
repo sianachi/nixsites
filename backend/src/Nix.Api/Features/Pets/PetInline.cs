@@ -323,7 +323,14 @@ internal static class PetInlineEndpoint
                 return Refuse(context, status, opened.Error.Code, "Inline writing request failed", opened.Error.Message);
             }
 
-            var result = new PetInlineStreamResult(opened.Value, lease, deadline, request, started, log);
+            var result = new PetStreamResult(opened.Value, lease, deadline, PetInlineLimits.StreamBytes, (outcome, copied, status) =>
+            {
+                if (log.IsEnabled(LogLevel.Information))
+                {
+                    ApiLog.PetInlineEnded(log, request.RequestId, request.Kind, outcome, Encoding.UTF8.GetByteCount(request.Selection ?? string.Empty),
+                        copied, status, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                }
+            });
             lease = null;
             deadline = null;
             return result;
@@ -345,7 +352,7 @@ internal static class PetInlineEndpoint
         TypedResults.Problem(ApiProblem.Create(context, status, code, title, detail));
 }
 
-/// <summary>Copies the worker's event stream to the response as it arrives and cleans up after it.</summary>
+/// <summary>Copies the worker's event stream (inline writing or a chat watch) to the response as it arrives and cleans up after it.</summary>
 /// <remarks>
 /// The worker's framing is the contract, so bytes are copied without being parsed or re-encoded,
 /// and flushed after every read so each event reaches the browser when the worker sends it.
@@ -353,8 +360,8 @@ internal static class PetInlineEndpoint
 /// goes away: the browser's disconnect cancels <c>RequestAborted</c>, which cancels the linked
 /// token the worker request was sent with.
 /// </remarks>
-internal sealed class PetInlineStreamResult(HttpResponseMessage response, IDisposable lease, CancellationTokenSource deadline,
-    PetInlineRequest request, long started, ILogger log) : IResult
+internal sealed class PetStreamResult(HttpResponseMessage response, IDisposable? lease, CancellationTokenSource deadline,
+    long byteCap, Action<string, long, int> ended) : IResult
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {
@@ -377,7 +384,7 @@ internal sealed class PetInlineStreamResult(HttpResponseMessage response, IDispo
                 int read;
                 while ((read = await upstream.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false)) > 0)
                 {
-                    if (copied + read > PetInlineLimits.StreamBytes)
+                    if (copied + read > byteCap)
                     {
                         outcome = "capped";
                         break;
@@ -402,14 +409,8 @@ internal sealed class PetInlineStreamResult(HttpResponseMessage response, IDispo
             ArrayPool<byte>.Shared.Return(buffer);
             response.Dispose();
             deadline.Dispose();
-            lease.Dispose();
-            if (log.IsEnabled(LogLevel.Information))
-            {
-                var selectionBytes = Encoding.UTF8.GetByteCount(request.Selection ?? string.Empty);
-                var elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-                ApiLog.PetInlineEnded(log, request.RequestId, request.Kind, outcome,
-                    selectionBytes, copied, httpContext.Response.StatusCode, elapsedMilliseconds);
-            }
+            lease?.Dispose();
+            ended(outcome, copied, httpContext.Response.StatusCode);
         }
     }
 }

@@ -117,6 +117,8 @@ export const petConnectionSchema = z.object({
    * Defaulted, so a server from before the field parses as unmarked.
    */
   lockedRead: z.boolean().default(false),
+  /** The companion runs approved writes itself (`tool_approve`); false from a server without it. */
+  serverWrites: z.boolean().default(false),
   /** The live conversation's name: the owner's rename, else its first message. */
   title: z.string().default(''),
 });

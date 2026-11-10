@@ -18,6 +18,8 @@ export interface MarkdownImportScan {
   readonly unsupportedImageAddresses: number;
   /** Images in an inline-only position represented as ordinary links or readable text. */
   readonly inlineImagesFlattened: number;
+  /** Leftover syntax kept as literal text outside code, by kind (bold-marker, html-tag, math, highlight, footnote). Absent when there is none. */
+  readonly rawSyntax?: Readonly<Record<string, number>>;
 }
 
 /** The immutable loss value for an empty body or a generated container. */

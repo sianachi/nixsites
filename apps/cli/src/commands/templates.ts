@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import {
-  createNixClient,
+  createDirectCollabClient,
   operations,
   templateImports,
   templates as templateResources,
@@ -13,12 +13,7 @@ import {
   templateApplicationRequestSchema,
   templateCaptureRequestSchema,
   templateInitializationSchema,
-  type BinaryQueryEndpoint,
-  type CallOptions,
-  type CommandEndpoint,
   type NixClient,
-  type PagedQueryEndpoint,
-  type QueryEndpoint,
   type TemplateApplicationRequest,
   type TemplateCaptureRequest,
   type TemplateCaptureResult,
@@ -147,34 +142,10 @@ export async function executeTemplateArchiveExport(
 
 /** Opens the authenticated Collab origin while reusing the Core-minted short-lived token. */
 export function collabClientFor(session: Session): NixClient {
-  const transport = createNixClient({
+  return createDirectCollabClient({
     baseUrl: session.endpoints.collabUrl,
     tokens: session.tokens,
   });
-  const directRoute = <T extends { readonly path: string }>(endpoint: T): T => ({
-    ...endpoint,
-    path: endpoint.path.replace(/^\/collab(?=\/)/, ''),
-  });
-  const client: NixClient = {
-    cache: transport.cache,
-    query: <T>(endpoint: QueryEndpoint<T>, options?: CallOptions) =>
-      transport.query(directRoute(endpoint), options),
-    queryResult: <T>(endpoint: QueryEndpoint<T>, options?: CallOptions) =>
-      transport.queryResult(directRoute(endpoint), options),
-    execute: <T>(endpoint: CommandEndpoint<T>, options?: CallOptions) =>
-      transport.execute(directRoute(endpoint), options),
-    stream: (request) =>
-      transport.stream({ ...request, path: request.path.replace(/^\/collab(?=\/)/, '') }),
-    download: (endpoint: BinaryQueryEndpoint, options?: CallOptions) =>
-      transport.download(directRoute(endpoint), options),
-    async *paginate<T>(endpoint: PagedQueryEndpoint<T>, options?: CallOptions) {
-      yield* transport.paginate(directRoute(endpoint), options);
-    },
-    invalidate: (prefix) => {
-      transport.invalidate(prefix);
-    },
-  };
-  return client;
 }
 
 export async function executeTemplateCapture(

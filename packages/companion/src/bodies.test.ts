@@ -113,6 +113,18 @@ const TRIP = [
 ].join('\n');
 
 describe('companion note bodies', () => {
+  it('tells the model which syntax stayed plain text, without quoting the note', async () => {
+    const note = noteFrom({ type: 'doc', content: [{ type: 'paragraph' }] });
+    const result = (await note.bodies.append(
+      itemId,
+      'Some <u>secret</u> here',
+      new AbortController().signal,
+    )) as { markdownChanges: { rawSyntax?: Record<string, number> }; rawSyntaxNote?: string };
+    expect(result.markdownChanges.rawSyntax).toEqual({ 'html-tag': 2 });
+    expect(result.rawSyntaxNote).toContain('html-tag x2');
+    expect(result.rawSyntaxNote).not.toContain('secret');
+  });
+
   it('appends content while preserving the existing rich body', async () => {
     const note = noteFrom({
       type: 'doc',
@@ -434,6 +446,29 @@ describe('replacing a passage', () => {
       expect(owner).toMatch(/nothing was edited|Nothing was edited/);
       expect(owner).not.toMatch(/nix_/);
     }
+    note.original.destroy();
+  });
+
+  it('cleans only the model text in a passage, not the owner block', async () => {
+    const note = noteFromMarkdown('```markdown\n# Template\n\n- [ ] item\n```\n\nTail');
+    const plan = await note.bodies.planEdit(
+      itemId,
+      { kind: 'passage', find: 'Template', replace: 'Form' },
+      new AbortController().signal,
+    );
+    expect(plan.blocksAdded).toBe(1);
+    expect(plan.scope).toBe('code block');
+    note.original.destroy();
+  });
+
+  it('does not flag the owner text in a passage as raw syntax', async () => {
+    const note = noteFromMarkdown('Use List<String> here today.');
+    const plan = await note.bodies.planEdit(
+      itemId,
+      { kind: 'passage', find: 'today', replace: 'now' },
+      new AbortController().signal,
+    );
+    expect(plan.markdownChanges.rawSyntax).toBeUndefined();
     note.original.destroy();
   });
 });

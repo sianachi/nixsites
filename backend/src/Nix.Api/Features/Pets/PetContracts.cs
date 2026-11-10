@@ -55,7 +55,7 @@ public sealed record SavePetSettingsRequest(long ExpectedRevision, PetSettings S
 public sealed record PetConnectionResponse(string Provider, string Status, string Reason, bool CanConnect,
     string VerificationUrl = "", string UserCode = "", string State = "idle", IReadOnlyList<PetMessage>? Messages = null,
     IReadOnlyList<PetModel>? Models = null, IReadOnlyList<PetToolCall>? Tools = null, IReadOnlyList<PetHistoryEntry>? History = null,
-    long Revision = 0, bool LockedRead = false, string Title = "");
+    long Revision = 0, bool LockedRead = false, string Title = "", bool ServerWrites = false);
 
 /// <summary>A private archived conversation in this workspace and pet.</summary>
 public sealed record PetHistoryEntry(string Id, string Title, string CreatedAt);
@@ -96,13 +96,24 @@ public sealed record PetWorkspaceMapEntry(Guid Id, string Title, string Type, IR
 /// <c>ToolImage</c> (tool_result only) is a picture the result carries, a <c>data:image/jpeg;base64</c> URL of
 /// at most <see cref="PetWorkerClient.MaxToolImageLength"/> characters, read by the browser from a file the
 /// caller could open.
+/// <c>ReadWithoutAsking</c> (send only) is the device setting that lets read tools run without a click; Core
+/// sends the companion a turn token only when it is set.
+/// <c>tool_approve</c> (an approved write the companion runs itself) carries <c>ToolId</c>, <c>RequestId</c>,
+/// <c>ApprovedOperation</c> (the tool operation on the card the owner approved), the preview <c>Fingerprint</c>
+/// the owner saw, <c>EditedArguments</c> and <c>EditNote</c> when the owner changed the request, and
+/// <c>Automatic</c> when "Apply without asking" sent it. Core mints the write token only for this operation.
 /// </remarks>
 public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = null, Guid? PetId = null,
     Guid? RequestId = null, string Text = "", Guid? ItemId = null, string SharedText = "",
     string Model = "", bool WorkspaceAccess = false, string ToolId = "", string ToolResult = "", bool ToolSuccess = false, Guid? HistoryId = null,
     string Mode = "", string Today = "", string TimeZone = "", IReadOnlyList<PetWorkspaceMapEntry>? WorkspaceMap = null,
     bool ToolLockedContent = false, Guid? RootItemId = null, bool ReadOnly = false,
-    IReadOnlyList<Guid>? ItemIds = null, Guid? ReplaceFromMessageId = null, string ToolImage = "");
+    IReadOnlyList<Guid>? ItemIds = null, Guid? ReplaceFromMessageId = null, string ToolImage = "",
+    bool ReadWithoutAsking = false, string Fingerprint = "", string EditedArguments = "", string EditNote = "",
+    bool Automatic = false, string ApprovedOperation = "");
+
+/// <summary>Opens a chat event stream: the conversation is the workspace, the pet and, for a note chat, the note.</summary>
+public sealed record PetStreamRequest(Guid WorkspaceId, Guid PetId, string Mode = "", Guid? RootItemId = null);
 
 /// <summary>One item attached to a turn: its id and the title Core read for it.</summary>
 internal sealed record PetWorkerItem(string Id, string Title);
@@ -123,7 +134,16 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConversationItemId = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? SourceWorkspaceIds = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<PetMessage>? EarlierMessages = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ToolImage = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ToolImage = null,
+    // A short-lived read token the companion runs this turn's read tools with. Like the API key it
+    // crosses the internal channel only and is never logged.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TurnToken = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ReadWithoutAsking = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? Fingerprint = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? EditedArguments = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? EditNote = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Automatic = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? ApprovedOperation = null);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
 /// <param name="WorkspaceId">The workspace the item is in.</param>
@@ -154,6 +174,7 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
 [JsonSerializable(typeof(PetProviderKeyResponse))]
 [JsonSerializable(typeof(SavePetProviderKeyRequest))]
 [JsonSerializable(typeof(PetRuntimeRequest))]
+[JsonSerializable(typeof(PetStreamRequest))]
 [JsonSerializable(typeof(PetInlineRequest))]
 [JsonSerializable(typeof(PetWorkerRequest))]
 [JsonSerializable(typeof(PetInlineWorkerRequest))]

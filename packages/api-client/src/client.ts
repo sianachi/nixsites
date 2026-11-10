@@ -332,3 +332,30 @@ export function createNixClient(config: NixClientConfig): NixClient {
     },
   };
 }
+
+/**
+ * A client for Collab's own origin: Core's contract spells collab routes `/collab/...`, which only
+ * the shared ingress understands, so the prefix is dropped for a direct call.
+ */
+export function createDirectCollabClient(config: NixClientConfig): NixClient {
+  const transport = createNixClient(config);
+  const strip = (path: string) => path.replace(/^\/collab(?=\/)/, '');
+  const direct = <T extends { readonly path: string }>(endpoint: T): T => ({
+    ...endpoint,
+    path: strip(endpoint.path),
+  });
+  return {
+    cache: transport.cache,
+    query: (endpoint, options) => transport.query(direct(endpoint), options),
+    queryResult: (endpoint, options) => transport.queryResult(direct(endpoint), options),
+    execute: (endpoint, options) => transport.execute(direct(endpoint), options),
+    stream: (request) => transport.stream({ ...request, path: strip(request.path) }),
+    download: (endpoint, options) => transport.download(direct(endpoint), options),
+    async *paginate(endpoint, options) {
+      yield* transport.paginate(direct(endpoint), options);
+    },
+    invalidate: (prefix) => {
+      transport.invalidate(prefix);
+    },
+  };
+}

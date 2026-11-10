@@ -165,6 +165,12 @@ importers:
 
   apps/companion:
     dependencies:
+      '@nix/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@nix/companion':
+        specifier: workspace:*
+        version: link:../../packages/companion
       '@nix/structure-spec':
         specifier: workspace:*
         version: link:../../packages/structure-spec
