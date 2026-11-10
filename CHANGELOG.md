@@ -24,6 +24,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The phone and portrait tablet note dock keeps Insert and Undo visible without sideways scrolling.
+  More groups tools by task. Undoing an inserted block restores the caret and keeps nearby typing.
 - CSV and TSV files open in the sheet grid instead of a read-only table. Edit cells and press Save
   to write the grid back as a new version of the file; files past the sheet's limits keep the
   read-only table.

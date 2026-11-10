@@ -72,7 +72,7 @@ function Writing({
       editor={editor}
       compact={compact}
       writingMode={mode}
-      writingModeControl={<WritingModeControl />}
+      writingModeControl={() => <WritingModeControl />}
       textWidthControl={compact ? undefined : <TextWidthControl />}
       onInsertImage={() => undefined}
       onInsertLink={() => undefined}
@@ -119,6 +119,12 @@ export const Collaboration = {
 export const PhonePlanning = {
   render: (): ReactElement => <Writing initialMode="planning" compact />,
 };
+export const PhoneWritingTools = {
+  render: (): ReactElement => <Writing compact />,
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'More' }));
+  },
+};
 export const ModeChoices = {
   render: (): ReactElement => <Writing />,
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
@@ -131,6 +137,7 @@ export const ModeChoices = {
 export const PhoneModeChoices = {
   render: (): ReactElement => <Writing initialMode="collaboration" compact />,
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'More' }));
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: 'Writing mode: Collaboration' }),
     );

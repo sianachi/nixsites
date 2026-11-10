@@ -707,6 +707,69 @@ describe('collaborative history keys', () => {
     });
   });
 
+  it('keeps the phone caret at the insertion point and undoes a table independently of typing', async () => {
+    stubViewport(false);
+    const user = userEvent.setup();
+    await open();
+    const body = screen.getByRole('textbox', { name: 'Note body' });
+    body.focus();
+    await user.keyboard('Keep this text{Enter}');
+    const before = body.innerHTML;
+
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Insert table' }));
+    expect(within(body).getByRole('table')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(body).toHaveFocus();
+    });
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    expect(
+      within(screen.getByRole('group', { name: /^Table$/u })).getByRole('button', {
+        name: 'Add row',
+      }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close writing tools' }));
+
+    await user.click(screen.getByRole('button', { name: 'Undo note edit' }));
+    expect(within(body).queryByRole('table')).not.toBeInTheDocument();
+    expect(body).toHaveFocus();
+    expect(body.innerHTML).toBe(before);
+    await user.keyboard('Continue here');
+    expect(body.querySelector('p:first-child')).toHaveTextContent(/^Keep this text$/);
+    expect(body.querySelector('p:nth-child(2)')).toHaveTextContent(/^Continue here$/);
+  });
+
+  it('restores the caret to the original paragraph when undoing a divider between paragraphs', async () => {
+    stubViewport(false);
+    const user = userEvent.setup();
+    const doc = await open();
+    act(() => {
+      const paragraphs = ['Write here', 'Later paragraph'].map((text) => {
+        const paragraph = new Y.XmlElement('paragraph');
+        paragraph.insert(0, [new Y.XmlText(text)]);
+        return paragraph;
+      });
+      doc.getXmlFragment('default').push(paragraphs);
+    });
+    const body = screen.getByRole('textbox', { name: 'Note body' });
+    body.focus();
+    const text = within(body).getByText('Write here', { exact: true }).firstChild;
+    if (!text) throw new Error('The first paragraph must have text.');
+    window.getSelection()?.collapse(text, 'Write here'.length);
+    document.dispatchEvent(new Event('selectionchange'));
+
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Divider' }));
+    expect(within(body).getByRole('separator')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(body).toHaveFocus();
+    });
+    await user.click(screen.getByRole('button', { name: 'Undo note edit' }));
+    await user.keyboard(' now');
+    expect(within(body).getByText('Write here now', { exact: true })).toBeInTheDocument();
+    expect(within(body).getByText('Later paragraph', { exact: true })).toBeInTheDocument();
+  });
+
   it('keeps focus on an unavailable history action', async () => {
     const user = userEvent.setup();
     await open();
@@ -1200,28 +1263,34 @@ it('closes the picker after inserting a section before a heading and leaves a pa
   await user.click(screen.getByRole('button', { name: /^Block type:/ }));
   await user.click(screen.getByRole('button', { name: 'Heading 1' }));
   const id = '00000000-0000-4000-8000-000000000077';
-  fileHarness.client.query.mockResolvedValueOnce(
-    Object.assign(
-      { references: [] },
+  const query = fileHarness.client.query;
+  const defaultQuery = query.getMockImplementation();
+  const result = {
+    references: [],
+    query: 'Source',
+    truncated: false,
+    results: [
       {
-        query: 'Source',
-        truncated: false,
-        results: [
-          {
-            id,
-            title: 'Source note',
-            type: 'note',
-            workspaceId: '00000000-0000-4000-8000-000000000002',
-          },
-        ],
+        id,
+        title: 'Source note',
+        type: 'note',
+        workspaceId: '00000000-0000-4000-8000-000000000002',
       },
-    ),
+    ],
+  };
+  await query.withImplementation(
+    (endpoint) =>
+      endpoint?.operation === 'search.run'
+        ? Promise.resolve(result)
+        : (defaultQuery?.(endpoint) ?? Promise.resolve({ references: [] })),
+    async () => {
+      await user.click(screen.getByRole('button', { name: 'Insert' }));
+      await user.click(screen.getByRole('button', { name: 'Embed note' }));
+      await user.type(screen.getByRole('textbox', { name: 'Search this workspace' }), 'Source');
+      await user.click(await screen.findByRole('button', { name: 'Source note' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    },
   );
-  await user.click(screen.getByRole('button', { name: 'Insert' }));
-  await user.click(screen.getByRole('button', { name: 'Embed note' }));
-  await user.type(screen.getByRole('textbox', { name: 'Search this workspace' }), 'Source');
-  await user.click(await screen.findByRole('button', { name: 'Source note' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   const content = doc.getXmlFragment('default').toArray();
   const index = content.findIndex(
     (node) => node instanceof Y.XmlElement && node.nodeName === 'itemBlock',
