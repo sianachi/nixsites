@@ -102,14 +102,7 @@ const phoneConnection = petConnectionSchema.parse({
   userCode: '',
 });
 
-/** Must-fix 9: the companion's connection now streams through the watch loop
- * (`client.query(pets.watchRuntime(...))`), not the old `execute`-only read - so a stub whose
- * `query` always answered with the settings payload made every conversation story's watch fail
- * schema validation and fall back to the connection panel instead of its own named state. Routing
- * by `endpoint.operation` is what lets the same stub answer both `pets.settings` (settings sheet)
- * and `pets.watchRuntime` (the live conversation) correctly. `revision: 1` keeps every watch tick
- * after the first a no-op rather than replaying `applyIfNewer`'s "equal revision" branch forever. */
-export function routeQuery(
+function routeQuery(
   settings: unknown,
   connection: ReturnType<typeof petConnectionSchema.parse>,
 ): (endpoint: { operation: string }) => Promise<unknown> {
@@ -128,17 +121,26 @@ export function routeQuery(
           : Promise.resolve(settings);
 }
 
-const phoneClient = {
-  ...createNixClient({
-    baseUrl: 'http://nix.invalid',
-    tokens: {
-      getAccessToken: () => Promise.resolve(null),
-      refreshAccessToken: () => Promise.resolve(null),
-    },
-  }),
-  query: routeQuery(phoneSettings, phoneConnection),
-  execute: () => Promise.resolve(phoneConnection),
-} as NixClient;
+export function companionStoryClient(
+  settings: unknown,
+  connection: ReturnType<typeof petConnectionSchema.parse>,
+): NixClient {
+  return {
+    ...createNixClient({
+      baseUrl: 'http://nix.invalid',
+      tokens: {
+        getAccessToken: () => Promise.resolve(null),
+        refreshAccessToken: () => Promise.resolve(null),
+      },
+    }),
+    query: routeQuery(settings, connection),
+    execute: () => Promise.resolve(connection),
+    // The static fixture serves the same snapshot through the polling fallback.
+    stream: () => Promise.resolve(new Response(null, { status: 501 })),
+  } as NixClient;
+}
+
+const phoneClient = companionStoryClient(phoneSettings, phoneConnection);
 
 /**
  * Stubs `matchMedia` to answer narrow (below the 640px phone breakpoint) so the two stories

@@ -62,6 +62,6 @@ void tiesBothWays;
 
 describe('the structure-spec contract tie', () => {
   it('carries every recipe the creation studio and the pet share', () => {
-    expect(STRUCTURED_RECIPES.length).toBe(16);
+    expect(STRUCTURED_RECIPES).toHaveLength(15);
   });
 });

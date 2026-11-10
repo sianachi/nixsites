@@ -12,12 +12,12 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import { WorkspaceProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   AutoOpenCompanion,
+  companionStoryClient,
   expectChatControls,
   PHONE_WORKSPACE,
   phoneSettings,
   phoneWorkspaceState,
   PhoneFrame,
-  routeQuery,
 } from './pet-story-fixtures';
 import { PetCompanion } from './pet-companion';
 import { PetHistory } from './pet-history';
@@ -873,34 +873,20 @@ export const CompanionPhone = {
 };
 export const DarkCompanionPhone = { ...CompanionPhone, globals: { ground: 'dark' } };
 
-/** A desktop-width companion, wired the same way `PhoneFrame` is but without the narrow stub, so
- * the redesigned dialog (header row, settings sheet, activity rows) can be shown at its normal
- * floating-panel size. `connection` stands in for every `pets.runtime` call the open dialog
- * makes, which is enough for a static story - nothing here submits a new one. */
 function desktopClient(connection: ReturnType<typeof petConnectionSchema.parse>): NixClient {
-  return {
-    ...createNixClient({
-      baseUrl: 'http://nix.invalid',
-      tokens: {
-        getAccessToken: () => Promise.resolve(null),
-        refreshAccessToken: () => Promise.resolve(null),
+  return companionStoryClient(
+    {
+      ...phoneSettings,
+      settings: {
+        ...phoneSettings.settings,
+        profiles: phoneSettings.settings.profiles.map((profile) => ({
+          ...profile,
+          provider: connection.provider,
+        })),
       },
-    }),
-    query: routeQuery(
-      {
-        ...phoneSettings,
-        settings: {
-          ...phoneSettings.settings,
-          profiles: phoneSettings.settings.profiles.map((profile) => ({
-            ...profile,
-            provider: connection.provider,
-          })),
-        },
-      },
-      connection,
-    ),
-    execute: () => Promise.resolve(connection),
-  } as NixClient;
+    },
+    connection,
+  );
 }
 
 function DesktopFrame({
