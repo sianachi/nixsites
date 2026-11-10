@@ -4204,7 +4204,7 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Template_import_keeps_habit_content_and_drops_every_other_reserved_key()
     {
-        // Security review F2: template content may carry habit and finance groups, and nothing
+        // Security review F2: template content may carry habit groups, and nothing
         // else from the $ space - not a structural query field, not a calendar mirror key.
         var root = Items()[0] with
         {
@@ -4228,7 +4228,7 @@ public sealed class TemplateStoreIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Capture_drops_reserved_keys_outside_habit_and_finance_content()
+    public async Task Capture_drops_reserved_keys_outside_habit_content()
     {
         var sourceId = await AddOrdinaryItemAsync("Reserved source");
         var work = await _fixture.Application.BeginUnitOfWorkAsync(

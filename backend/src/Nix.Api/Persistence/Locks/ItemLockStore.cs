@@ -55,6 +55,13 @@ public sealed class ItemLockStore(
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async ValueTask<bool> MayReadBodyIgnoringWorkspaceLockAsync(ItemId itemId, CancellationToken cancellationToken) =>
+        await sql.ScalarOrDefaultAsync<bool>(
+            ItemLockSql.MayReadBodyItemLocksOnly,
+            [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
+            cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async ValueTask<bool> AnyInSubtreeAsync(ItemId itemId, CancellationToken cancellationToken) =>
         await sql.ScalarOrDefaultAsync<bool>(
             ItemLockSql.AnyInSubtree,

@@ -39,7 +39,6 @@ const perKind: Readonly<Record<string, readonly string[]>> = {
   chat: [],
   custom: ['program'],
   drive: ['layout'],
-  finance: [],
 };
 
 function report(problems: Problem[], warnings: Problem[] = []): ValidationReport {

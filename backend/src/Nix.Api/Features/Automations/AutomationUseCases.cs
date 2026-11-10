@@ -45,7 +45,7 @@ public sealed class AutomationRuleSupport(
     IScheduledTriggerStore triggers,
     INixSessionContextAccessor session,
     TimeProvider clock,
-    IFinanceLock? topology = null)
+    IStructuralLock? topology = null)
 {
     /// <summary>The window an inline replan covers, the same 48 hours the planner does.</summary>
     private static readonly TimeSpan PlanWindowSpan = TimeSpan.FromHours(48);

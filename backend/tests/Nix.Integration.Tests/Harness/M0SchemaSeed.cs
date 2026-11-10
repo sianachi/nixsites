@@ -115,6 +115,41 @@ internal static class M0SchemaSeed
     }
 
     /// <summary>
+    /// Passwords each tenant's seeded workspace and issues one grant, so the workspace-lock tables
+    /// have a row per tenant for the isolation theories to filter.
+    /// </summary>
+    /// <param name="fixture">The database fixture.</param>
+    /// <returns>A task that completes when both tenants' rows are present.</returns>
+    /// <remarks>Separate from <see cref="SeedBothTenantsAsync"/> for the reason <see cref="SeedItemLocksAsync"/> is.</remarks>
+    public static async Task SeedWorkspaceLocksAsync(NixPostgresFixture fixture)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var connection = await fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            foreach (var rows in new[] { Alpha, Beta })
+            {
+                var tenant = Literal(rows.TenantId);
+                var workspace = Literal(rows.WorkspaceId);
+                var principal = Literal(rows.PrincipalId);
+                await RawSql.ExecuteAsync(
+                    connection,
+                    transaction: null,
+                    $"""
+                    INSERT INTO workspace_lock (workspace_id, tenant_id, password_hash, locked_by, locked_at)
+                    VALUES ({workspace}, {tenant},
+                            'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+                            {principal}, now());
+
+                    INSERT INTO workspace_unlock (workspace_id, credential_id, tenant_id, principal_id, expires_at)
+                    VALUES ({workspace}, {principal}, {tenant}, {principal}, now() + interval '15 minutes');
+                    """);
+            }
+        }
+    }
+
+    /// <summary>
     /// Seeds one named history version per tenant for schema-isolation coverage.
     /// </summary>
     /// <param name="fixture">The database fixture.</param>

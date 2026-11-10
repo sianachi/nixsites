@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Nix.Domain.Finance;
 using Nix.Domain.Habits;
 
 namespace Nix.Domain.Items;
@@ -13,8 +12,7 @@ namespace Nix.Domain.Items;
 /// <remarks>
 /// <para>
 /// <b>An allowlist per feature, everything else dropped or refused.</b> Templates and imports
-/// legitimately carry a habit's settings (<c>$habit_</c>) and a finance record's fields
-/// (<c>$fin_</c>), because applying them recreates a tracker or a ledger. Nothing else in the
+/// legitimately carry a habit's settings (<c>$habit_</c>), because applying them recreates a tracker. Nothing else in the
 /// space is content: the set-by stamps are re-attributed to whoever applies, calendar sync keys
 /// mirror an external event the copy is not, and any other <c>$</c> name is either a structural
 /// query field or a key the server may yet claim.
@@ -22,14 +20,14 @@ namespace Nix.Domain.Items;
 /// <para>
 /// <b>Allowlisted values are checked by their own validators when they are applied</b>
 /// (<see cref="Refuse"/>), not trusted because a template or a file carried them: a malformed
-/// <c>$habit_</c> or <c>$fin_</c> group would otherwise reach a tracker or a ledger that only
-/// their own endpoints have ever written.
+/// <c>$habit_</c> group would otherwise reach a tracker that only
+/// its own endpoints have ever written.
 /// </para>
 /// </remarks>
 public static class ReservedPropertyContent
 {
     /// <summary>The prefixes template and import content may carry.</summary>
-    public static readonly IReadOnlyList<string> ContentPrefixes = [ItemProperties.HabitPrefix, FinanceKeys.Prefix];
+    public static readonly IReadOnlyList<string> ContentPrefixes = [ItemProperties.HabitPrefix];
 
     /// <summary>Whether a key is in the reserved space and outside <paramref name="allowed"/>.</summary>
     /// <param name="key">The key.</param>
@@ -84,14 +82,13 @@ public static class ReservedPropertyContent
     /// The sentence refusing an allowlisted group whose values its own validator rejects, or null.
     /// </summary>
     /// <param name="bag">The bag about to be applied.</param>
-    /// <param name="title">The item's title, for the finance readers.</param>
     /// <returns>The reason, or <see langword="null"/>.</returns>
     /// <remarks>
     /// Habit settings and their history are judged by <see cref="HabitHistory.Read"/> whenever
-    /// their defining key is present. Finance settings and each record kind use their own readers.
+    /// their defining key is present.
     /// Decoded property names are checked, so JSON escapes cannot bypass the reserved-key rules.
     /// </remarks>
-    public static string? Refuse(string? bag, string title)
+    public static string? Refuse(string? bag)
     {
         if (bag is null)
         {
@@ -118,26 +115,6 @@ public static class ReservedPropertyContent
         if (content.ContainsKey("$habit_frequency") && HabitHistory.Read(bag) is null)
         {
             return "a habit's settings or history are malformed";
-        }
-
-        if (FinanceSettings.IsConfigured(bag) && FinanceSettings.Read(bag) is null)
-        {
-            return "finance settings are malformed";
-        }
-
-        if (FinanceAccount.Claims(bag) && FinanceAccount.Read(Guid.Empty, title, bag) is null)
-        {
-            return "a finance account's fields are malformed";
-        }
-
-        if (BudgetLine.Claims(bag) && BudgetLine.Read(Guid.Empty, title, 0, bag) is null)
-        {
-            return "a budget line's fields are malformed";
-        }
-
-        if (FinanceTransaction.Claims(bag) && FinanceTransaction.Read(Guid.Empty, title, bag) is null)
-        {
-            return "a finance transaction's fields are malformed";
         }
 
         return null;

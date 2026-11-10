@@ -1,7 +1,15 @@
+import {
+  isCanceledError,
+  workspaceLocks,
+  workspaces as coreWorkspaces,
+  type Workspace,
+} from '@nix/api-client';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { readLastLocation } from '@nix/web-platform/pwa/last-location';
 import { Button } from '@nix/ui';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 
 import {
@@ -12,7 +20,14 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { SHARE_PARAMETERS } from '../launch/launch-intent';
 import { readLastWorkspaceId } from './last-workspace';
-import { useAccessibleWorkspaces, WorkspaceProvider } from './workspace-context';
+import {
+  useAccessibleWorkspaces,
+  WorkspaceProvider,
+  type WorkspaceLoadState,
+} from './workspace-context';
+import { workspaceLockRefusal } from './workspace-lock-errors';
+import { closedReason, forgetClosedReason, rememberClosedReason } from './workspace-lock-state';
+import { WorkspaceUnlockScreen } from './workspace-unlock-screen';
 
 // `tab` joins this list for the same reason `state`, `grain`, `on` and `notes` are here: it picks
 // a view within a page - the settings screen's own tabs - rather than naming a resource, so a
@@ -226,13 +241,124 @@ export function WorkspaceGate({ children }: { readonly children: ReactNode }): R
   }
 
   return (
-    <WorkspaceProvider key={current.id} state={state}>
-      {state.status === 'partial' ? (
-        <div className="fixed right-4 top-4 z-50 max-w-lg">
-          <PartialNotice pending={state.error ?? 'The workspace list may be incomplete.'} />
-        </div>
-      ) : null}
-      {children}
-    </WorkspaceProvider>
+    <PasswordGate key={current.id} current={current} state={state}>
+      <WorkspaceProvider state={state}>
+        {state.status === 'partial' ? (
+          <div className="fixed right-4 top-4 z-50 max-w-lg">
+            <PartialNotice pending={state.error ?? 'The workspace list may be incomplete.'} />
+          </div>
+        ) : null}
+        {children}
+      </WorkspaceProvider>
+    </PasswordGate>
+  );
+}
+
+/** The longest a timer is armed for; a grant is fifteen minutes, so more is a clock gone wrong. */
+const MAX_TIMER_MS = 15 * 60 * 1000;
+
+/** How long before an unlock ends the person is told. */
+const WARNING_MS = 60 * 1000;
+
+/**
+ * Stands between a workspace and its content while a password closes it.
+ *
+ * **Core decides; this reports.** Every read is refused by Core while the workspace is closed, so
+ * nothing here protects anything by itself. What it does is keep the app from asking: with the
+ * workspace closed, no shell, editor or list is mounted, so no content request is made to fail
+ * noisily, and nothing of the workspace is drawn but its name.
+ *
+ * **An unlock that ran out closes the workspace at once**, by this browser's clock, and the list is
+ * read again for Core's answer. The unlock the list reported is then ignored until it changes, so a
+ * clock running ahead of Core's can only close the workspace early, never hold it open.
+ */
+function PasswordGate({
+  current,
+  state,
+  children,
+}: {
+  readonly current: Workspace;
+  readonly state: WorkspaceLoadState & {
+    readonly reload: () => void;
+    readonly workspaceUpdated: (workspace: Workspace) => void;
+  };
+  readonly children: ReactNode;
+}): ReactNode {
+  const client = useApiClient();
+  const navigate = useNavigate();
+  const until = current.unlockedUntil ?? null;
+  const [expiredFor, setExpiredFor] = useState<string | null>(null);
+  const { reload } = state;
+  const workspaceId = current.id;
+
+  useEffect(() => {
+    if (!current.passwordProtected || until === null) return;
+    const remaining = Date.parse(until) - Date.now();
+    const warn = setTimeout(
+      () => {
+        publishNotice({
+          key: 'workspace-closing',
+          message: `${current.name} locks again in a minute. Save what you are working on.`,
+        });
+      },
+      Math.min(Math.max(remaining - WARNING_MS, 0), MAX_TIMER_MS),
+    );
+    const close = setTimeout(
+      () => {
+        rememberClosedReason(workspaceId, 'expired');
+        setExpiredFor(until);
+        reload();
+      },
+      Math.min(Math.max(remaining, 0), MAX_TIMER_MS),
+    );
+    return () => {
+      clearTimeout(warn);
+      clearTimeout(close);
+    };
+  }, [current.name, current.passwordProtected, reload, until, workspaceId]);
+
+  const closed = current.passwordProtected === true && (until === null || expiredFor === until);
+  if (!closed) return children;
+
+  async function unlock(password: string): Promise<string | null> {
+    try {
+      await client.execute(workspaceLocks.unlockWorkspace(workspaceId, password));
+    } catch (cause) {
+      if (isCanceledError(cause)) return null;
+      return workspaceLockRefusal(cause, 'The workspace could not be unlocked. Try again.');
+    }
+    forgetClosedReason(workspaceId);
+    try {
+      // The closed list entry is stripped; the full one comes only now that Core will give it.
+      state.workspaceUpdated(
+        await client.query(coreWorkspaces.workspaceById(workspaceId), { forceRefresh: true }),
+      );
+    } catch {
+      reload();
+    }
+    return null;
+  }
+
+  const elsewhere = state.workspaces.find(
+    (entry) =>
+      entry.id !== workspaceId &&
+      entry.lifecycleState === 'active' &&
+      entry.pendingInvitationId === null &&
+      !(entry.passwordProtected && entry.unlockedUntil == null),
+  );
+
+  return (
+    <WorkspaceUnlockScreen
+      name={current.name}
+      reason={closedReason(workspaceId)}
+      onUnlock={unlock}
+      onLeave={
+        elsewhere === undefined
+          ? undefined
+          : () => {
+              void navigate(`/w/${elsewhere.id}`);
+            }
+      }
+    />
   );
 }

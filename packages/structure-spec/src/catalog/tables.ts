@@ -34,10 +34,10 @@ export interface ViewKindRule {
 /**
  * Every view kind a spec or a blueprint may declare, and what it needs from the schema.
  *
- * `drive` and `finance` are Core view kinds (`ViewKinds.All` in `ViewDefinition.cs`) the pet may
- * never offer - a public file drive and personal finances are not something a model should be
- * designing on somebody's behalf - so they have no row here. A future parity test comparing this
- * table against `ViewKinds.All` needs to add both back in before comparing.
+ * `drive` is a Core view kind (`ViewKinds.All` in `ViewDefinition.cs`) the pet may never offer - a
+ * public file drive is not something a model should be designing on somebody's behalf - so it has
+ * no row here. A future parity test comparing this table against `ViewKinds.All` needs to add it
+ * back in before comparing.
  */
 export const VIEW_KIND_RULES = [
   {
@@ -162,8 +162,8 @@ export const VIEW_KIND_RULES = [
   },
 ] as const satisfies readonly ViewKindRule[];
 
-/** The recipe ids the pet may never use: a file drive and personal finances are studio-only. */
-export const NEVER_PET_RECIPES: ReadonlySet<string> = new Set(['drive', 'finances']);
+/** The recipe ids the pet may never use: a file drive is studio-only. */
+export const NEVER_PET_RECIPES: ReadonlySet<string> = new Set(['drive']);
 
 /** The one property type the pet may never declare: values are member UUIDs it cannot verify. */
 export const NEVER_PET_PROPERTY_TYPE = 'assignee';

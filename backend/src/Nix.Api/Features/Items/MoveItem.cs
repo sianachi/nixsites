@@ -51,8 +51,7 @@ public sealed class MoveItemHandler(
     INixSessionContextAccessor session,
     TimeProvider clock,
     IItemLocks locks,
-    IFinanceMutationGuard? financeGuard = null,
-    IFinanceLock? topology = null,
+    IStructuralLock? topology = null,
     Nix.Features.Records.RecordKeys? recordKeys = null,
     IItemProtections? protections = null)
     : ICommandHandler<MoveItem, Item>
@@ -95,19 +94,6 @@ public sealed class MoveItemHandler(
             return await TransferAsync(command, item, destinationWorkspace, cancellationToken).ConfigureAwait(false);
         }
 
-        if (financeGuard is not null)
-        {
-            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, newParentId, true, cancellationToken).ConfigureAwait(false);
-            if (blocked is not null)
-            {
-                return Result.Failure<Item>(blocked.Value);
-            }
-            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.WorkspaceId != workspaceId)
-            {
-                return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
-            }
-        }
 
         if (newParentId != item.ParentId && item.ManagedBy == ItemManagers.CalendarEvent)
         {
@@ -221,7 +207,7 @@ public sealed class MoveItemHandler(
             return Result.Failure<Item>(ItemErrors.WorkspaceNotFound("No writable destination workspace is visible."));
         }
 
-        // Structural writes already share this lock with finance operations. Acquire both before
+        // Structural writes share this lock. Acquire both before
         // discovery, in a stable order, so opposing transfers cannot deadlock or discover stale trees.
         if (topology is not null)
         {
@@ -276,22 +262,6 @@ public sealed class MoveItemHandler(
             if (anchor is null || anchor.WorkspaceId != destination || anchor.ParentId != command.NewParentId)
             {
                 return Result.Failure<Item>(ItemErrors.SiblingNotInDestination("The chosen sibling is not in the destination."));
-            }
-        }
-        if (financeGuard is not null)
-        {
-            var error = await financeGuard.CheckAsync(item.WorkspaceId, item.Id, null, true, cancellationToken).ConfigureAwait(false);
-            if (error is not null)
-            {
-                return Result.Failure<Item>(error.Value);
-            }
-            if (command.NewParentId is { } financeParentId)
-            {
-                error = await financeGuard.CheckAsync(destination, financeParentId, null, false, cancellationToken).ConfigureAwait(false);
-                if (error is not null)
-                {
-                    return Result.Failure<Item>(error.Value);
-                }
             }
         }
         var context = _session.Current

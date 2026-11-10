@@ -19,7 +19,7 @@ describe('fixture ids', () => {
 });
 
 // The same files are replayed through Core's handlers by the C# side, so the two cannot drift.
-for (const slice of ['query', 'chart', 'calendar', 'habit', 'finance']) {
+for (const slice of ['query', 'chart', 'calendar', 'habit']) {
   const fixtures = loadFixtures(slice);
   describe.skipIf(fixtures.length === 0)(`${slice} fixtures`, () => {
     for (const fixture of fixtures)

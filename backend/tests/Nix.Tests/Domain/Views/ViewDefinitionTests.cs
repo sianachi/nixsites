@@ -41,7 +41,6 @@ public sealed class ViewDefinitionTests
     [InlineData(ViewKind.Sheet, "sheet")]
     [InlineData(ViewKind.Form, "form")]
     [InlineData(ViewKind.Query, "query")]
-    [InlineData(ViewKind.Finance, "finance")]
     [InlineData(ViewKind.Checklist, "checklist")]
     [InlineData(ViewKind.Matrix, "matrix")]
     [InlineData(ViewKind.Outline, "outline")]

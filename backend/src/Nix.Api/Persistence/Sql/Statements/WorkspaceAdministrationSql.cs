@@ -741,7 +741,7 @@ public static class WorkspaceAdministrationSql
                                    WHERE gm.tenant_id = caller.tenant_id AND gm.group_id = caller.subject_id
                                      AND gm.principal_id = @principal_id)))))
             FOR UPDATE
-        )
+        ), removed AS (
         DELETE FROM workspace_member target USING locked_workspace w
         WHERE target.tenant_id = @tenant_id AND target.workspace_id = @workspace_id
           AND target.subject_type = 'principal' AND target.subject_id = @target_principal_id
@@ -759,7 +759,15 @@ public static class WorkspaceAdministrationSql
               WHERE other.tenant_id = target.tenant_id AND other.workspace_id = target.workspace_id
                 AND other.subject_type = 'principal' AND other.role = 'owner'
                 AND other.subject_id <> target.subject_id AND p.kind = 'user' AND p.status = 'active'))
-        RETURNING target.subject_id
+        RETURNING target.subject_id, target.workspace_id
+        ), dropped AS (
+            -- A workspace password's unlocks go with the membership, so removing and re-adding a
+            -- person never reopens the workspace without the password.
+            DELETE FROM workspace_unlock opened USING removed
+            WHERE opened.tenant_id = @tenant_id AND opened.workspace_id = removed.workspace_id
+              AND opened.principal_id = removed.subject_id
+        )
+        SELECT subject_id FROM removed
         """;
 
     /// <summary>Tenant-admin recovery converts a personal workspace to shared and installs an active human owner.</summary>

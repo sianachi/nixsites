@@ -23,7 +23,7 @@ public sealed class AcceptWorkspaceInvitationHandler(WorkspaceAdministrationStor
         }
 
         // The invitee can still read the workspace row while invited, so a closed workspace says why.
-        var workspace = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        var workspace = await store.FindForResponseAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
         return Result.Failure<bool>(workspace is { MembershipLocked: true, PendingInvitationId: not null }
             ? WorkspaceAdministrationErrors.MembershipLocked()
             : WorkspaceErrors.NotFound());

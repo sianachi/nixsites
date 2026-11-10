@@ -42,8 +42,7 @@ public sealed class RestoreItemHandler(
     IItemTree tree,
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
-    TimeProvider clock,
-    IFinanceMutationGuard? financeGuard = null)
+    TimeProvider clock)
     : ICommandHandler<RestoreItem, Item>
 {
     private readonly INixSessionContextAccessor _session = session;
@@ -91,19 +90,6 @@ public sealed class RestoreItemHandler(
             return Result.Success(visible!);
         }
 
-        if (financeGuard is not null)
-        {
-            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
-            if (blocked is not null)
-            {
-                return Result.Failure<Item>(blocked.Value);
-            }
-            item = await tree.FindStoredAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.LifecycleState != ItemLifecycleState.Deleted)
-            {
-                return Result.Failure<Item>(ItemErrors.NotFound($"No deleted item {itemId} is visible."));
-            }
-        }
 
         var now = clock.GetUtcNow();
         await tree

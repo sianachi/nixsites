@@ -73,6 +73,16 @@ export function parseDelimited(
   return rows.filter((cells, index) => index < rows.length - 1 || cells.some((c) => c.length > 0));
 }
 
+/** RFC 4180 output: a field is quoted when it holds the delimiter, a quote or a line break. */
+export function serializeDelimited(
+  rows: readonly (readonly string[])[],
+  delimiter: ',' | '\t',
+): string {
+  const field = (cell: string): string =>
+    /["\r\n]/u.test(cell) || cell.includes(delimiter) ? `"${cell.replaceAll('"', '""')}"` : cell;
+  return rows.map((cells) => cells.map(field).join(delimiter)).join('\n') + '\n';
+}
+
 export function CsvViewer({
   fileName,
   source,

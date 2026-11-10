@@ -112,25 +112,36 @@ export function useUndo(): UndoApi {
   return useContext(UndoContext).api;
 }
 
-const TEXT_VISIBLE_MS = 5000;
+const VISIBLE_MS = 8000;
 
 /**
- * The visible face of the history: a polite `role="status"` sentence saying what happened (it
- * fades after a few seconds) and an Undo button that stays for as long as there is anything to
- * undo. The button is a real house Button (44px on touch) and is not rendered when the history is
- * empty, so no hidden focusable control lingers. Mount once, inside the fixed toast stack
- * (`ShellToasts`), so it sits with the other notices and above the mobile nav.
+ * The visible face of the history: a polite `role="status"` notice saying what happened, with an
+ * Undo button. It goes away on its own after a few seconds, unless a mouse is over it or the
+ * keyboard is on it; the history stays, so Ctrl/Cmd+Z keeps working and the next action or undo
+ * brings the bar back. Mount once, inside the fixed toast stack (`ShellToasts`), so it sits with
+ * the other notices and above the mobile nav.
  */
 export function UndoBar(): ReactNode {
   const { api, message } = useContext(UndoContext);
-  const [fadedId, setFadedId] = useState<number | undefined>(undefined);
+  const [expiredId, setExpiredId] = useState<number | undefined>(undefined);
+  const barRef = useRef<HTMLDivElement>(null);
+  const mouseOverRef = useRef(false);
   const messageId = message?.id;
-  const faded = fadedId === messageId;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setFadedId(messageId);
-    }, TEXT_VISIBLE_MS);
+    if (messageId === undefined) {
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    function expire(): void {
+      // Asked at expiry rather than tracked: focus left by a mouse click or a touch must not hold it.
+      if (mouseOverRef.current || barRef.current?.querySelector(':focus-visible')) {
+        timer = setTimeout(expire, VISIBLE_MS);
+        return;
+      }
+      setExpiredId(messageId);
+    }
+    timer = setTimeout(expire, VISIBLE_MS);
     return () => {
       clearTimeout(timer);
     };
@@ -138,28 +149,34 @@ export function UndoBar(): ReactNode {
 
   // The live region stays mounted so a later message is announced rather than appearing with it.
   return (
-    <div
-      role="status"
-      data-enter=""
-      hidden={message === null && api.depth === 0}
-      className="flex items-center gap-3 rounded-md border border-divider bg-background px-3 py-1 shadow-md"
-    >
-      <Text
-        variant="bodySmall"
-        as="p"
-        className={`min-w-0 flex-1 transition-opacity duration-300 ${faded ? 'opacity-0' : 'opacity-100'}`}
-      >
-        {message?.text}
-      </Text>
-      {api.depth === 0 ? null : (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            void api.undoLatest();
+    <div role="status" className="contents">
+      {message === null || expiredId === message.id ? null : (
+        <div
+          ref={barRef}
+          data-enter=""
+          onPointerEnter={(event) => {
+            // Touch has no hover: a tap would otherwise count as a mouse that never left.
+            mouseOverRef.current = event.pointerType === 'mouse';
           }}
+          onPointerLeave={() => {
+            mouseOverRef.current = false;
+          }}
+          className="flex items-center gap-3 rounded-md border border-divider bg-background px-3 py-1 shadow-md"
         >
-          {api.depth > 1 ? `Undo (${String(api.depth)})` : 'Undo'}
-        </Button>
+          <Text variant="bodySmall" as="p" className="min-w-0 flex-1">
+            {message.text}
+          </Text>
+          {api.depth === 0 ? null : (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                void api.undoLatest();
+              }}
+            >
+              {api.depth > 1 ? `Undo (${String(api.depth)})` : 'Undo'}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

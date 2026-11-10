@@ -26,7 +26,6 @@ using Nix.Features.Comments;
 using Nix.Features.Conversations;
 using Nix.Features.CurrentUser;
 using Nix.Features.Exports;
-using Nix.Features.Finance;
 using Nix.Features.Graph;
 using Nix.Features.Habits;
 using Nix.Features.Identity;
@@ -51,7 +50,6 @@ using Nix.Persistence.Authorization;
 using Nix.Persistence.Bookmarks;
 using Nix.Persistence.Calendar;
 using Nix.Persistence.Content;
-using Nix.Persistence.Finance;
 using Nix.Persistence.Graph;
 using Nix.Persistence.Habits;
 using Nix.Persistence.Identity;
@@ -203,35 +201,13 @@ public static class NixPersistenceServiceCollectionExtensions
         // Scoped, like everything else here: a store reads the scope's tenant and shares the
         // context's transaction, so it belongs to one unit of work and one tenant.
         services.AddScoped<IItemTree, ItemTree>();
-        services.AddScoped<IFinanceMutationGuard, Nix.Features.Finance.FinanceMutationGuard>();
         services.AddScoped<IHabitLock, HabitLock>();
         services.AddScoped<ICommandHandler<SetHabitSettings, HabitTrackerResponse>, HabitTrackerHandler>();
         services.AddScoped<IQueryHandler<ReadHabitTracker, Result<HabitTrackerResponse>>, HabitTrackerHandler>();
         services.AddScoped<ICommandHandler<SetHabitCheckIn, HabitCheckInResponse>, HabitTrackerHandler>();
         services.AddScoped<ICommandHandler<UndoHabitCheckIn, ItemId>, HabitTrackerHandler>();
         services.AddScoped<ICommandHandler<SetHabitStatus, HabitStatusResponse>, HabitTrackerHandler>();
-        services.AddScoped<IFinanceLock, FinanceLock>();
-        services.AddScoped<FinanceLoader>();
-        services.AddScoped<ICommandHandler<SetFinanceSettings, FinanceResponse>, FinanceSetupHandler>();
-        services.AddScoped<IQueryHandler<ReadFinance, Result<FinanceResponse>>, FinanceSetupHandler>();
-        services.AddScoped<ICommandHandler<CreateFinanceAccount, FinanceAccountResponse>, FinanceSetupHandler>();
-        services.AddScoped<ICommandHandler<SetFinanceAccount, FinanceAccountResponse>, FinanceSetupHandler>();
-        services.AddScoped<ICommandHandler<CreateBudgetLine, BudgetLineResponse>, FinanceSetupHandler>();
-        services.AddScoped<ICommandHandler<SetBudgetLine, BudgetLineResponse>, FinanceSetupHandler>();
-        services.AddScoped<IQueryHandler<ReadBudgetGrid, Result<BudgetGridResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ReadFinanceAccounts, Result<FinanceAccountsResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ReadLoanSchedule, Result<LoanScheduleResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ReadCashFlow, Result<CashFlowResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ReadFinanceDashboard, Result<FinanceDashboardResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ListFinanceTransactions, Result<FinanceTransactionsResponse>>, FinanceReportHandler>();
-        services.AddScoped<IQueryHandler<ReadFinanceMonth, Result<MonthChecklistResponse>>, FinanceReportHandler>();
-        services.AddScoped<ICommandHandler<CreateFinanceTransaction, FinanceTransactionResponse>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<SetFinanceTransaction, FinanceTransactionResponse>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<SetBudgetActual, BudgetActualResponse>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<DeleteFinanceTransaction, Guid>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<SetFinanceMonth, FinanceMonthResponse>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<PostScheduledTransactions, PostScheduledResponse>, FinanceLedgerHandler>();
-        services.AddScoped<ICommandHandler<ImportFinanceStatement, FinanceImportResponse>, FinanceLedgerHandler>();
+        services.AddScoped<IStructuralLock, StructuralLock>();
         services.AddScoped<IIdentityDirectory, IdentityDirectory>();
         services.AddScoped<IBrowserSessions, BrowserSessionStore>();
         services.AddScoped<ICliLoginSessions, CliLoginSessionStore>();
@@ -253,6 +229,12 @@ public static class NixPersistenceServiceCollectionExtensions
         // memoises answers for the lifetime of the unit of work, and a unit of work is one request
         // acting as one principal in one tenant.
         services.AddScoped<IPermissionResolver, WorkspaceMembershipResolver>();
+
+        // The same instance, for the few callers that must work while a workspace is closed to
+        // the caller by its password: lock management and the workspace list.
+        services.AddScoped<IWorkspaceMembershipIgnoringLock>(
+            static provider => (WorkspaceMembershipResolver)provider.GetRequiredService<IPermissionResolver>());
+        services.AddScoped<IWorkspaceLocks, Nix.Persistence.Locks.WorkspaceLockStore>();
 
         // The two readers over the derived tables. Scoped like the stores: both borrow the unit of
         // work's connection so their statements run inside the transaction that published the RLS
@@ -514,6 +496,12 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<RemoveItemLock, bool>, RemoveItemLockHandler>();
         services.AddScoped<ICommandHandler<UnlockItem, DateTimeOffset>, UnlockItemHandler>();
         services.AddScoped<ICommandHandler<RelockItem, bool>, RelockItemHandler>();
+
+        services.AddScoped<ICommandHandler<Nix.Features.WorkspaceLocks.SetWorkspacePassword, bool>, Nix.Features.WorkspaceLocks.SetWorkspacePasswordHandler>();
+        services.AddScoped<ICommandHandler<Nix.Features.WorkspaceLocks.RemoveWorkspacePassword, bool>, Nix.Features.WorkspaceLocks.RemoveWorkspacePasswordHandler>();
+        services.AddScoped<ICommandHandler<Nix.Features.WorkspaceLocks.UnlockWorkspace, DateTimeOffset>, Nix.Features.WorkspaceLocks.UnlockWorkspaceHandler>();
+        services.AddScoped<ICommandHandler<Nix.Features.WorkspaceLocks.RelockWorkspace, bool>, Nix.Features.WorkspaceLocks.RelockWorkspaceHandler>();
+        services.AddScoped<ICommandHandler<Nix.Features.WorkspaceLocks.JoinWorkspace, DateTimeOffset>, Nix.Features.WorkspaceLocks.JoinWorkspaceHandler>();
 
         services.AddScoped<ICommandHandler<CreateAccessToken, IssuedAccessToken>, CreateAccessTokenHandler>();
         services.AddScoped<IQueryHandler<ListAccessTokens, Result<IReadOnlyList<PersonalAccessToken>>>, ListAccessTokensHandler>();

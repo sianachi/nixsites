@@ -42,7 +42,7 @@ public static class AuthorizationSql
     /// arms and <c>IX_group_membership_tenant_id_principal_id</c> for the group lookup.
     /// </para>
     /// </remarks>
-    public const string WorkspaceRolesForPrincipal = """
+    public const string WorkspaceRolesIgnoringLock = """
         SELECT member.role
         FROM workspace_member member
         JOIN workspace
@@ -96,7 +96,7 @@ public static class AuthorizationSql
     /// arms and <c>IX_group_membership_tenant_id_principal_id</c> for the group lookup.
     /// </para>
     /// </remarks>
-    public const string WorkspacesReadableByPrincipal = """
+    private const string WorkspacesReadableIgnoringLock = """
         SELECT member.workspace_id, member.role
         FROM workspace_member member
         JOIN workspace
@@ -121,6 +121,58 @@ public static class AuthorizationSql
           AND workspace.lifecycle_state = 'active'
           AND member.subject_type = 'group'
           AND membership.principal_id = @principal_id
+        """;
+
+    /// <summary>
+    /// <see cref="WorkspaceRolesIgnoringLock"/> for an archived workspace as well (never one being
+    /// deleted). Used only to let a member unlock an archived workspace so it can be restored or
+    /// deleted; the point check behind every read still requires an active one.
+    /// </summary>
+    public static readonly string WorkspaceRolesIgnoringLockAnyLifecycle =
+        WorkspaceRolesIgnoringLock.Replace(
+            "workspace.lifecycle_state = 'active'",
+            "workspace.lifecycle_state <> 'purging'",
+            StringComparison.Ordinal);
+
+    /// <summary>
+    /// <see cref="WorkspaceRolesIgnoringLock"/> narrowed to a workspace that has no password or has
+    /// one this credential has opened. The point check behind every permission answer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A workspace password closes the workspace to its own members until they present it, so the
+    /// lock is part of the membership answer itself: a closed workspace yields no role, callers
+    /// report not found as they do for any workspace the principal cannot see, and no handler has
+    /// to remember to ask. <c>@credential_id</c> binds null for a request with no credential a
+    /// person holds, which matches no grant: fail closed.
+    /// </para>
+    /// <para>
+    /// Binds <c>@tenant_id</c>, <c>@workspace_id</c>, <c>@principal_id</c>, <c>@credential_id</c>
+    /// and <c>@now</c>. The lock probe is a primary-key lookup on <c>workspace_lock</c>.
+    /// </para>
+    /// </remarks>
+    public const string WorkspaceRolesForPrincipal = $$"""
+        SELECT held.role
+        FROM ({{WorkspaceRolesIgnoringLock}}) held
+        WHERE EXISTS (
+            SELECT 1 FROM workspace
+            WHERE workspace.tenant_id = @tenant_id
+              AND workspace.workspace_id = @workspace_id
+              AND ({{WorkspaceLockSql.WorkspaceIsOpen}} OR {{WorkspaceLockSql.IsPublicFormPrincipal}}))
+        """;
+
+    /// <summary>
+    /// The workspaces the principal holds a role in, minus those closed to this credential by a
+    /// workspace password. Feeds the permission predicate of every bulk read, so a closed
+    /// workspace's rows are filtered out inside the query that would have returned them.
+    /// </summary>
+    /// <remarks>Binds <c>@tenant_id</c>, <c>@principal_id</c>, <c>@credential_id</c> and <c>@now</c>.</remarks>
+    public const string WorkspacesReadableByPrincipal = $$"""
+        SELECT held.workspace_id, held.role
+        FROM ({{WorkspacesReadableIgnoringLock}}) held
+        JOIN workspace
+          ON workspace.tenant_id = @tenant_id AND workspace.workspace_id = held.workspace_id
+        WHERE {{WorkspaceLockSql.WorkspaceIsOpen}} OR {{WorkspaceLockSql.IsPublicFormPrincipal}}
         """;
 
     /// <summary>

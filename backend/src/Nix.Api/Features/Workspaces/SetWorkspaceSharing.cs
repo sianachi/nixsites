@@ -22,7 +22,7 @@ public sealed class SetWorkspaceSharingHandler(WorkspaceAdministrationStore stor
             return Result.Failure<WorkspaceSnapshot>(WorkspaceErrors.NotFound());
         }
 
-        var updated = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
+        var updated = await store.FindForResponseAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The workspace could not be read back.");
         return Result.Success(updated);
     }

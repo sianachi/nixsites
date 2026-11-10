@@ -14,7 +14,7 @@ function localOrigin(value) {
 }
 
 function primaryStory(entry) {
-  return /^(Nix\/(Views|Charts|Finance|Habits|Shell|Creation|Notification|Graph|Companions|Editor\/Writing modes)|Controls\/(Input|Select|Textarea|Menu|Popover|Dialog|Segmented))/.test(
+  return /^(Nix\/(Views|Charts|Habits|Shell|Creation|Notification|Graph|Companions|Editor\/Writing modes)|Controls\/(Input|Select|Textarea|Menu|Popover|Dialog|Segmented))/.test(
     entry.title,
   );
 }

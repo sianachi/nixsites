@@ -119,7 +119,7 @@ describe('the capability catalog', () => {
     }
   });
 
-  it('never offers the assignee property type or the drive and finances recipes', () => {
+  it('never offers the assignee property type or the drive recipe', () => {
     const catalog = buildCatalog();
     const propertyTypes = catalog.propertyTypes.map((type) => type.type);
     const recipeIds = catalog.recipes.map((recipe) => recipe.id);
@@ -127,9 +127,7 @@ describe('the capability catalog', () => {
 
     expect(propertyTypes).not.toContain('assignee');
     expect(recipeIds).not.toContain('drive');
-    expect(recipeIds).not.toContain('finances');
     expect(recipeViewKinds).not.toContain('drive');
-    expect(recipeViewKinds).not.toContain('finance');
   });
 
   it('names only known field types, view kinds and operators in patterns.txt', () => {

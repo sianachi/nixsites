@@ -34,6 +34,14 @@ export const workspaceSchema = z.object({
   agentsMayApprove: z.boolean().nullable().exactOptional(),
   /** Whether they may create public links. */
   agentsMayCreatePublicLinks: z.boolean().nullable().exactOptional(),
+  /**
+   * Whether the workspace has a password. While it does and `unlockedUntil` is absent, the
+   * workspace is closed to this session: only `id`, `name`, `kind`, and a pending invitation id
+   * carry information, and every other field is cleared.
+   */
+  passwordProtected: z.boolean().nullable().exactOptional(),
+  /** When this session's unlock ends; absent while closed, or when there is no password. */
+  unlockedUntil: z.iso.datetime({ offset: true }).nullable().exactOptional(),
 });
 
 export type Workspace = z.infer<typeof workspaceSchema>;
@@ -137,3 +145,14 @@ const _dailyNoteSettingsContract = dailyNoteSettingsSchema satisfies z.ZodType<
   components['schemas']['DailyNoteSettingsResponse']
 >;
 void _dailyNoteSettingsContract;
+
+/** The result of unlocking a workspace, or of joining one by its password. */
+export const workspaceUnlockResultSchema = z.object({
+  unlockedUntil: z.iso.datetime({ offset: true }),
+});
+export type WorkspaceUnlockResult = z.infer<typeof workspaceUnlockResultSchema>;
+
+const _workspaceUnlockContract = workspaceUnlockResultSchema satisfies z.ZodType<
+  components['schemas']['WorkspaceUnlockResponse']
+>;
+void _workspaceUnlockContract;

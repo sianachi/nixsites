@@ -41,6 +41,10 @@ export interface Authorizer {
    * says so only after its read check, to somebody who could ask its lock route the same thing,
    * so passing it on discloses nothing - and lets a client say "unlock it" rather than "missing".
    *
+   * `'workspace_locked'` means the caller is a member of a workspace a password has closed to this
+   * session. Unlike `'locked'` it is a pause, not a refusal: a client must keep its copy and
+   * pending edits and try again after an unlock.
+   *
    * `'unavailable'` means Core could not answer at all - unreachable, too slow, or failing on its
    * own side. It is still not a yes: every caller refuses on it. What it changes is the reason
    * given, because "you may not" makes a client discard what it holds and stop, and a Core outage
@@ -49,7 +53,7 @@ export interface Authorizer {
   authorize(
     token: string,
     itemId: string,
-  ): Promise<ItemAuthorization | 'locked' | 'unavailable' | null>;
+  ): Promise<ItemAuthorization | 'locked' | 'workspace_locked' | 'unavailable' | null>;
 }
 
 /**
@@ -81,7 +85,7 @@ export function createAuthorizer(options: {
     async authorize(
       token: string,
       itemId: string,
-    ): Promise<ItemAuthorization | 'locked' | 'unavailable' | null> {
+    ): Promise<ItemAuthorization | 'locked' | 'workspace_locked' | 'unavailable' | null> {
       let response: Response;
       try {
         response = await doFetch(`${options.coreBaseUrl}/internal/authz/items/${itemId}`, {
@@ -120,6 +124,10 @@ export function createAuthorizer(options: {
           const refusal = (await response.json().catch(() => null)) as { code?: unknown } | null;
           if (refusal?.code === 'internal.body_locked') {
             return 'locked';
+          }
+          // A password-protected workspace, not a refused note: callers must pause, never discard.
+          if (refusal?.code === 'internal.workspace_locked') {
+            return 'workspace_locked';
           }
         }
         return null;

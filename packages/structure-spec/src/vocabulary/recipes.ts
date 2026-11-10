@@ -14,7 +14,6 @@ export type StructuredRecipeId =
   | 'list'
   | 'drive'
   | 'habit-tracker'
-  | 'finances'
   | 'checklist'
   | 'matrix'
   | 'outline';
@@ -260,17 +259,6 @@ export const STRUCTURED_RECIPES: readonly StructuredRecipe[] = [
     viewKind: 'habit_tracker',
     defaultTitle: 'Untitled habit tracker',
     defaultViewName: 'Habits',
-    properties: [],
-  },
-  {
-    id: 'finances',
-    label: 'Finances',
-    detail: 'Accounts, a monthly budget, transactions, cards, a loan and a cash-flow projection.',
-    menu: 'structured',
-    group: 'Life',
-    viewKind: 'finance',
-    defaultTitle: 'Finances',
-    defaultViewName: 'Finances',
     properties: [],
   },
 ];

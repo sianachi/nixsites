@@ -39,6 +39,7 @@ import {
   LegacyWorkspaceGroupRedirect,
 } from '@nix/web-workspaces/workspaces/workspace-group-page';
 import { ArchivedWorkspacesPage } from '@nix/web-workspaces/workspaces/archived-workspaces-page';
+import { JoinWorkspacePage } from '@nix/web-workspaces/workspaces/join-workspace-page';
 import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/workspace-context';
 import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
@@ -135,6 +136,9 @@ export function AppRoutes(): ReactElement {
           <Route path="/links/:token" element={<PublicLinkPage />} />
 
           <Route element={<RequireSession />}>
+            {/* Outside the workspace list on purpose: a join link shows nothing about a workspace
+                before the password is accepted, so nothing here may load one. */}
+            <Route path="/join/:workspaceId" element={<JoinWorkspacePage />} />
             <Route element={<AccessibleWorkspacesProvider />}>
               <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
               <Route

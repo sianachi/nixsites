@@ -24,7 +24,7 @@ public sealed record RecordClaim(PropertyDefinition Definition, string? Value);
 /// the backstop, written with ON CONFLICT so a collision is a refusal rather than an aborted
 /// transaction. `shortcut: nested folders are separate scopes, widen if records need to live in subfolders.`
 /// </remarks>
-public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks, IFinanceLock topology)
+public sealed class RecordKeys(IRecordKeyStore store, IItemLocks locks, IStructuralLock topology)
 {
     /// <summary>The key fields the collection itself declares unique.</summary>
     /// <param name="collection">The collection, or null for a workspace root.</param>

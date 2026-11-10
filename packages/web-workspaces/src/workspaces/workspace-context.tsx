@@ -211,9 +211,14 @@ export function AccessibleWorkspacesProvider(): ReactNode {
   const subject = useSessionStore((session) => session.profile?.subject);
   // Once the complete list is known, local copies of bodies in any other workspace are copies of
   // something this person can no longer reach. A partial list proves nothing, so it prunes nothing.
+  // A workspace closed by its password counts as unreachable here: its bodies are not kept on
+  // this device while it is closed, and the copies from before it closed go with the next list.
   const reachable =
     state.status === 'ready' || state.status === 'empty'
-      ? state.workspaces.map((workspace) => workspace.id).join(' ')
+      ? state.workspaces
+          .filter((workspace) => !(workspace.passwordProtected && workspace.unlockedUntil == null))
+          .map((workspace) => workspace.id)
+          .join(' ')
       : null;
   useEffect(() => {
     if (subject === undefined || reachable === null || typeof indexedDB === 'undefined') return;

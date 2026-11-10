@@ -250,17 +250,17 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
     }
 
     [Fact]
-    public async Task Delete_takes_the_topology_lock_even_with_no_finance_guard()
+    public async Task Delete_takes_the_topology_lock()
     {
         var item = await CreateAsync("Loose note", Folder);
         await using var holdsLock = await BeginAsync(Locker);
-        await holdsLock.Resolve<IFinanceLock>().AcquireWorkspaceTopologyAsync(Workspace, Cancellation);
+        await holdsLock.Resolve<IStructuralLock>().AcquireWorkspaceTopologyAsync(Workspace, Cancellation);
 
         await using var deleter = await BeginAsync(Locker);
         var handler = new DeleteItemHandler(
             deleter.Resolve<IItemTree>(), deleter.Resolve<IPermissionResolver>(),
             deleter.Resolve<INixSessionContextAccessor>(), TimeProvider.System,
-            deleter.Resolve<IFinanceLock>(), financeGuard: null, deleter.Resolve<IItemProtections>());
+            deleter.Resolve<IStructuralLock>(), deleter.Resolve<IItemProtections>());
         var pending = handler.HandleAsync(new DeleteItem(item), Cancellation).AsTask();
 
         Assert.NotSame(pending, await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(1), Cancellation)));

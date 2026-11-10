@@ -37,11 +37,7 @@ namespace Nix.Features.Properties;
 /// </remarks>
 public sealed record SetItemProperties(ItemId ItemId, string Changes) : ICommand<Item>
 {
-    // The trusted marker lives on the command, never the HTTP DTO. Only finance handlers in this
-    // assembly set it after validating their domain write.
-    internal bool FinanceWrite { get; init; }
-
-    // The same kind of trusted marker for the habit handlers, which alone may write $habit_ keys.
+    // The trusted marker lives on the command, never the HTTP DTO, for the habit handlers, which alone may write $habit_ keys.
     // It never admits a scheduler set-by key.
     internal bool HabitWrite { get; init; }
 
@@ -59,7 +55,6 @@ public sealed class SetItemPropertiesHandler(
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
     TimeProvider clock,
-    IFinanceMutationGuard? financeGuard = null,
     RecordKeys? recordKeys = null)
     : ICommandHandler<SetItemProperties, Item>
 {
@@ -80,11 +75,6 @@ public sealed class SetItemPropertiesHandler(
 
         ArgumentNullException.ThrowIfNull(changes);
 
-        if (!command.FinanceWrite && ContainsReservedFinanceKey(changes))
-        {
-            return Result.Failure<Item>(new NixError("finance.reserved_property", "Finance properties may only be written through the finance endpoints."));
-        }
-
         if (ContainsKeyMatching(changes, name => SchedulingReservedProperties.IsRefused(name, command.HabitWrite, command.CalendarWrite)))
         {
             return Result.Failure<Item>(SchedulingReservedProperties.Error);
@@ -95,7 +85,7 @@ public sealed class SetItemPropertiesHandler(
             return Result.Failure<Item>(ReservedPropertyKeys.Refusal("$chat_config"));
         }
 
-        if (FirstKeySet(changes, name => ReservedPropertyKeys.IsRefused(name, command.HabitWrite, command.CalendarWrite, command.FinanceWrite)) is { } reserved)
+        if (FirstKeySet(changes, name => ReservedPropertyKeys.IsRefused(name, command.HabitWrite, command.CalendarWrite)) is { } reserved)
         {
             return Result.Failure<Item>(ReservedPropertyKeys.Refusal(reserved));
         }
@@ -131,19 +121,6 @@ public sealed class SetItemPropertiesHandler(
                 "This event cannot be edited in its calendar, so its time and details cannot be changed here."));
         }
 
-        if (!command.FinanceWrite && financeGuard is not null)
-        {
-            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
-            if (blocked is not null)
-            {
-                return Result.Failure<Item>(blocked.Value);
-            }
-            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.LifecycleState != ItemLifecycleState.Active)
-            {
-                return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
-            }
-        }
 
         // A unique field's value is stored in canonical form and claimed under a lock; a collision
         // is a refusal (the offline replay surfaces it as a refused operation, never a 500).
@@ -235,9 +212,6 @@ public sealed class SetItemPropertiesHandler(
             return null; // The merge below returns the established error.
         }
     }
-
-    private static bool ContainsReservedFinanceKey(string changes) =>
-        ContainsKeyMatching(changes, name => name.StartsWith("$fin_", StringComparison.Ordinal));
 
     /// <summary>The first key the change document sets (to anything but null) that matches, or null.</summary>
     private static string? FirstKeySet(string changes, Func<string, bool> matches)

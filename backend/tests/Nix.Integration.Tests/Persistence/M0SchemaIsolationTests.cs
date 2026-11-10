@@ -104,6 +104,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
         await _fixture.ResetAsync();
         await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
         await M0SchemaSeed.SeedItemLocksAsync(_fixture);
+        await M0SchemaSeed.SeedWorkspaceLocksAsync(_fixture);
         await M0SchemaSeed.SeedContentVersionsAsync(_fixture);
         await M0SchemaSeed.SeedCurrentSchemaRowsAsync(_fixture);
         await M0SchemaSeed.SeedSitesAsync(_fixture);

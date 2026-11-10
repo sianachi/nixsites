@@ -50,6 +50,7 @@ export {
   workspaceMemberSchema,
   workspacePrincipalSchema,
   workspaceSchema,
+  workspaceUnlockResultSchema,
   type DailyNote,
   type DailyNoteSettings,
   type Workspace,
@@ -57,6 +58,7 @@ export {
   type WorkspaceInvitee,
   type WorkspaceMember,
   type WorkspacePrincipal,
+  type WorkspaceUnlockResult,
 } from './workspaces.js';
 export {
   containerViewConfigurationsSchema,

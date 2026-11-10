@@ -8,6 +8,7 @@ import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useAccessibleWorkspaces } from './workspace-context';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { WorkspaceGroupsSection } from './workspace-groups-section';
+import { WorkspaceLockMark } from './workspace-lock-mark';
 
 export function LegacyWorkspaceGroupRedirect(): ReactNode {
   const { groupId = '' } = useParams();
@@ -110,6 +111,7 @@ export function WorkspaceGroupPage({
                           >
                             {entry.name}
                           </Link>
+                          <WorkspaceLockMark workspace={entry} />
                         </li>
                       ))}
                     </ul>

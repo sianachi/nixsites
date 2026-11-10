@@ -13,7 +13,6 @@ import {
   ListFilter,
   MousePointerClick,
   Table2,
-  Wallet,
 } from 'lucide-react';
 
 import { BoardView } from './board/board-view';
@@ -50,7 +49,6 @@ import { QueryView } from './query/query-view';
 import { SpreadsheetView } from './spreadsheet/spreadsheet-view';
 import { TimelineView } from './timeline/timeline-view';
 import { HabitTrackerView } from './habit-tracker/habit-tracker-view';
-import { FinanceView } from './finance/finance-view';
 
 /**
  * Every kind of view under `views/`, and everything this build knows about each one. The custom
@@ -413,20 +411,6 @@ const BUILTIN_VIEW_KINDS: readonly ViewKindDescriptor[] = [
     icon: ClipboardList,
     render: (props) => (
       <HabitTrackerView key={`${props.container.itemId ?? 'root'}:${props.view.id}`} {...props} />
-    ),
-    configures: [],
-    chooses: [],
-  },
-  {
-    // Personal finances live under one root item whose children are the accounts, budget lines
-    // and transactions; the view reads Core's derived figures rather than the container's rows.
-    // Requirement-free like the habit tracker: the root carries no schema and the view configures
-    // itself through the finance endpoints.
-    kind: 'finance',
-    label: 'Finances',
-    icon: Wallet,
-    render: (props) => (
-      <FinanceView key={`${props.container.itemId ?? 'root'}:${props.view.id}`} {...props} />
     ),
     configures: [],
     chooses: [],

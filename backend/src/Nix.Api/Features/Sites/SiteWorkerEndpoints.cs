@@ -140,7 +140,9 @@ internal static class SiteWorkerEndpoints
         // Judged as of the manifest's instant, under the same exclusions and dated collections.
         var candidate = await services.Sites.FindFileAsync(scope.Site!, ItemId.From(fileItemId), scope.Build!.CreatedAt, context.RequestAborted).ConfigureAwait(false);
         if (candidate is null
-            || !await services.Permissions.CanReadWorkspaceAsync(scope.Site!.WorkspaceId, context.RequestAborted).ConfigureAwait(false)
+            // The build is the owner's explicit publication and runs under an execution token, which
+            // never holds a workspace unlock: membership is what is checked here, not the password.
+            || await services.Membership.RoleIgnoringLockAsync(scope.Site!.WorkspaceId, context.RequestAborted).ConfigureAwait(false) is null
             || !services.Storage.IsConfigured)
         {
             return Problem(context, 404, "sites.file_unavailable", "The image is not available to this site.");

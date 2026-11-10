@@ -5,7 +5,7 @@ namespace Nix.Tests.Domain.Automations;
 
 /// <summary>
 /// The action list (ADR-0051 section 6): one to five actions, all-or-nothing, strict shapes, and
-/// never a write to a key the scheduler or the finance and habit endpoints own.
+/// never a write to a key the scheduler or the habit endpoints own.
 /// </summary>
 public sealed class AutomationActionJsonTests
 {

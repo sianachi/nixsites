@@ -16,11 +16,10 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
     private readonly INixSessionContextAccessor _session;
     private readonly TimeProvider _clock;
     private readonly IItemLocks _locks;
-    private readonly IFinanceMutationGuard? _financeGuard;
     private readonly ISiteStore? _sites;
     private readonly IRecordKeyStore? _recordKeys;
     private readonly IItemProtections? _protections;
-    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, IFinanceMutationGuard? financeGuard = null, ISiteStore? sites = null, IRecordKeyStore? recordKeys = null, IItemProtections? protections = null) => (_tree, _permissions, _session, _clock, _locks, _financeGuard, _sites, _recordKeys, _protections) = (tree, permissions, session, clock, locks, financeGuard, sites, recordKeys, protections);
+    public PurgeItemHandler(IItemTree tree, IPermissionResolver permissions, INixSessionContextAccessor session, TimeProvider clock, IItemLocks locks, ISiteStore? sites = null, IRecordKeyStore? recordKeys = null, IItemProtections? protections = null) => (_tree, _permissions, _session, _clock, _locks, _sites, _recordKeys, _protections) = (tree, permissions, session, clock, locks, sites, recordKeys, protections);
 
     public async ValueTask<Result<ItemId>> HandleAsync(PurgeItem command, CancellationToken cancellationToken)
     {
@@ -35,21 +34,6 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
             return Result.Failure<ItemId>(ItemErrors.LifecycleConflict("Only an item in Trash can be permanently deleted."));
         }
 
-        if (_financeGuard is not null)
-        {
-            var workspaceId = item.WorkspaceId;
-            var blocked = await _financeGuard.CheckAsync(workspaceId, item.Id, null, true, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
-            if (blocked is not null)
-            {
-                return Result.Failure<ItemId>(blocked.Value);
-            }
-            item = await _tree.FindStoredAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Deleted
-                || !await _permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
-            {
-                return Result.Failure<ItemId>(ItemErrors.NotFound($"No deleted item {command.ItemId} is visible."));
-            }
-        }
         // The root of a live site, or of one whose files are still being deleted, stays until the
         // site is unpublished and drained, as a workspace purge does.
         if (_sites is not null && await _sites.HasLiveOrStoredSiteAsync(item.WorkspaceId, item.Id, cancellationToken).ConfigureAwait(false))

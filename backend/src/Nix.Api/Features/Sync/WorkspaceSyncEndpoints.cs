@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Nix.Abstractions;
 using Nix.Domain.Sync;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
@@ -21,13 +22,13 @@ internal static class WorkspaceSyncEndpoints
         var group = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/sync").WithTags("Sync");
         group.MapGet("/snapshot", Snapshot).WithName("GetWorkspaceSyncSnapshot")
             .WithSummary("Enumerate all authorized metadata with a committed feed boundary")
-            .Produces<WorkspaceSyncSnapshot>().ProducesProblem(404).ProducesProblem(422);
+            .Produces<WorkspaceSyncSnapshot>().ProducesProblem(404).ProducesProblem(422).ProducesProblem(423);
         group.MapGet("/changes", Changes).WithName("GetWorkspaceSyncChanges")
             .WithSummary("Read current authorized metadata for committed change markers")
-            .Produces<WorkspaceSyncChanges>().ProducesProblem(404).ProducesProblem(422);
+            .Produces<WorkspaceSyncChanges>().ProducesProblem(404).ProducesProblem(422).ProducesProblem(423);
         group.MapPost("/reconcile", Reconcile).WithName("ReconcileWorkspaceSync")
             .WithSummary("Recheck device-held identifiers without revealing unknown inaccessible identifiers")
-            .Produces<WorkspaceSyncReconciliation>().ProducesProblem(422)
+            .Produces<WorkspaceSyncReconciliation>().ProducesProblem(422).ProducesProblem(423)
             .WithRequestBodyLimit(24 * 1024)
             .RequireRateLimiting(RateLimitRefusal.QueriesPolicyName);
         return endpoints;
@@ -42,6 +43,10 @@ internal static class WorkspaceSyncEndpoints
         {
             return TypedResults.Problem(Invalid(context));
         }
+        if (await ClosedAsync(workspaceId, context).ConfigureAwait(false) is { } closed)
+        {
+            return TypedResults.Problem(closed);
+        }
         var page = await dispatcher.QueryAsync<GetWorkspaceSyncSnapshot, WorkspaceSyncSnapshot?>(
             new(WorkspaceId.From(workspaceId), boundary is null ? null : parsed, cursor, limit), context.RequestAborted).ConfigureAwait(false);
         return page is null ? TypedResults.Problem(Missing(context)) : TypedResults.Ok(page);
@@ -55,6 +60,10 @@ internal static class WorkspaceSyncEndpoints
         {
             return TypedResults.Problem(Invalid(context));
         }
+        if (await ClosedAsync(workspaceId, context).ConfigureAwait(false) is { } closed)
+        {
+            return TypedResults.Problem(closed);
+        }
         var page = await dispatcher.QueryAsync<GetWorkspaceSyncChanges, WorkspaceSyncChanges?>(
             new(WorkspaceId.From(workspaceId), parsed, limit), context.RequestAborted).ConfigureAwait(false);
         return page is null ? TypedResults.Problem(Missing(context)) : TypedResults.Ok(page);
@@ -67,6 +76,10 @@ internal static class WorkspaceSyncEndpoints
         {
             return TypedResults.Problem(Invalid(context));
         }
+        if (await ClosedAsync(workspaceId, context).ConfigureAwait(false) is { } closed)
+        {
+            return TypedResults.Problem(closed);
+        }
         return TypedResults.Ok(await dispatcher.QueryAsync<ReconcileWorkspaceSync, WorkspaceSyncReconciliation>(
             new(WorkspaceId.From(workspaceId), request.ItemIds), context.RequestAborted).ConfigureAwait(false));
     }
@@ -75,6 +88,28 @@ internal static class WorkspaceSyncEndpoints
     {
         sequence = 0;
         return value is null || (long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out sequence) && sequence >= 0);
+    }
+
+    /// <summary>
+    /// A member of a workspace closed to this credential by its password gets 423, not the 404 of
+    /// a workspace they cannot reach. A device mirror treats 404 as revoked access and wipes the
+    /// workspace, unsynced edits included; a password lock closes access without ending it, so the
+    /// device must keep what it holds and wait for an unlock. A stranger still gets the 404.
+    /// </summary>
+    internal static async Task<ProblemDetails?> ClosedAsync(Guid workspaceId, HttpContext context)
+    {
+        var id = WorkspaceId.From(workspaceId);
+        var locks = context.RequestServices.GetRequiredService<IWorkspaceLocks>();
+        if (!(await locks.GetStateAsync(id, context.RequestAborted).ConfigureAwait(false)).Closed)
+        {
+            return null;
+        }
+
+        var membership = context.RequestServices.GetRequiredService<IWorkspaceMembershipIgnoringLock>();
+        return await membership.RoleIgnoringLockAsync(id, context.RequestAborted).ConfigureAwait(false) is null
+            ? null
+            : ApiProblem.Create(
+                context, 423, "workspaces.locked", "Workspace locked", "This workspace is locked to this credential. Unlock it to continue.");
     }
 
     private static ProblemDetails Invalid(HttpContext context) => ApiProblem.Create(

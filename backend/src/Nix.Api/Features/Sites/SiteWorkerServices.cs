@@ -27,6 +27,7 @@ public sealed class SiteWorkerServices(
     IWorkerDispatchStore dispatch,
     INixSessionContextAccessor session,
     IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     SelfIssuedTokenService tokens,
     IConfiguration configuration,
     SiteCapabilitySigner signer,
@@ -41,6 +42,8 @@ public sealed class SiteWorkerServices(
     internal IWorkerJobStore Jobs => jobs;
 
     internal IPermissionResolver Permissions => permissions;
+
+    internal IWorkspaceMembershipIgnoringLock Membership => membership;
 
     internal SelfIssuedTokenService Tokens => tokens;
 

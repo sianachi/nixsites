@@ -15,6 +15,7 @@ import { shortcutFor } from '@nix/web-foundation/keyboard/shortcut-registry';
 import { formatShortcut } from '@nix/web-foundation/lib/shortcuts';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { WorkspaceLockMark } from '@nix/web-workspaces/workspaces/workspace-lock-mark';
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { NotificationBell } from './notifications/notification-bell';
 import { ProfileMenu } from './profile-menu';
@@ -137,6 +138,7 @@ export function ShellHeader({
               <Text as="span" variant="bodySmall" truncate>
                 {workspace.name}
               </Text>
+              <WorkspaceLockMark workspace={workspace} />
               <Icon icon={ChevronDown} size="sm" className="shrink-0 text-muted" />
             </button>
           )}

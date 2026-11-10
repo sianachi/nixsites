@@ -15,6 +15,11 @@ function reminder(n: number): ShellToast {
   };
 }
 
+/** The undo bar's live region stays mounted while empty, so only count regions showing something. */
+function visibleToasts(): readonly HTMLElement[] {
+  return screen.getAllByRole('status').filter((region) => region.textContent !== '');
+}
+
 function setup(toasts: readonly ShellToast[], phone: boolean) {
   // No width query matches -> the narrow (phone) arrangement; all matching -> desktop.
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -44,7 +49,7 @@ afterEach(() => {
 describe('ShellToasts', () => {
   it('sits above the bottom nav, using the measured nav height', () => {
     setup([reminder(1)], true);
-    expect(screen.getByRole('status').parentElement?.className).toContain(
+    expect(visibleToasts()[0]?.parentElement?.className).toContain(
       'bottom-[var(--mobile-nav-height,0%)]',
     );
   });
@@ -52,7 +57,7 @@ describe('ShellToasts', () => {
   it('collapses reminders into one summary on a phone, and View opens the list', async () => {
     const { onViewReminders, onDismiss } = setup([reminder(1), reminder(2), reminder(3)], true);
 
-    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(visibleToasts()).toHaveLength(1);
     expect(screen.getByText('3 reminders')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'View' }));
@@ -79,11 +84,11 @@ describe('ShellToasts', () => {
 
   it('keeps two reminders on desktop and collapses at three', () => {
     const two = setup([reminder(1), reminder(2)], false);
-    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(visibleToasts()).toHaveLength(2);
     two.unmount();
 
     setup([reminder(1), reminder(2), reminder(3)], false);
-    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(visibleToasts()).toHaveLength(1);
     expect(screen.getByText('3 reminders')).toBeInTheDocument();
   });
 });

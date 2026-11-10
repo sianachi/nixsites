@@ -5,6 +5,7 @@ import { computeView, type ViewAnswer, type ViewRequest } from '@nix/view-comput
 
 import { planWrite, type PlannedWrite } from './mirror-writes';
 import { planViewWrite } from './view-writes';
+import { closedByPassword } from './workspace-closed';
 
 /**
  * Core, answered from the iOS shell's synced copy. The API client's `fetch` goes through
@@ -55,6 +56,7 @@ export const REMEMBERED = new Set([
   '/api/v1/me/workspace-arrangement',
 ]);
 export const WORKSPACES_SETTING = 'offline.workspaces';
+export const PROTECTED_SETTING = 'offline.protected-workspaces';
 export const rememberKey = (path: string): string => `offline.cache:${path}`;
 const MAX_REMEMBERED_BYTES = 256 * 1024;
 
@@ -194,7 +196,82 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     updatedAt: item.updatedAt ?? item.createdAt,
   });
 
+  /**
+   * The workspaces a password keeps closed on this device, whose items, search hits and files are
+   * not served. The mirror keeps their data, so queued edits survive to be sent after an unlock.
+   *
+   * A workspace is closed when the cached list says so (protected, with no unlock still running by
+   * the clock). Where the list does not state a workspace's password - the list is unreadable, or
+   * has no entry for it - the separately recorded protected ids decide: a workspace recorded as
+   * protected stays closed (its unlock state is unknown, so it is not trusted), and one that is
+   * not recorded is open, so ordinary workspaces keep working offline. If the recorded ids are
+   * present but unreadable, every workspace the list does not state is treated as closed. If they
+   * were never recorded (a device that has not synced since this was added), nothing is known to
+   * be protected and nothing is closed.
+   */
+  async function closedWorkspaceIds(store: MirrorReader): Promise<Set<string>> {
+    const closed = new Set<string>();
+    const stated = new Set<string>();
+    try {
+      const raw = await store.getSetting(WORKSPACES_SETTING);
+      const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+      for (const entry of Array.isArray(parsed) ? parsed.filter(isRecord) : []) {
+        const id = String(entry.id);
+        stated.add(id);
+        if (
+          closedByPassword({
+            passwordProtected: entry.passwordProtected === true,
+            unlockedUntil: typeof entry.unlockedUntil === 'string' ? entry.unlockedUntil : null,
+          })
+        )
+          closed.add(id);
+      }
+    } catch {
+      /* An unreadable list states nothing; the recorded ids below decide. */
+    }
+    const recorded = await store.getSetting(PROTECTED_SETTING).catch(() => null);
+    if (recorded === null) return closed;
+    try {
+      const ids: unknown = JSON.parse(recorded);
+      for (const id of Array.isArray(ids) ? ids : [])
+        if (!stated.has(String(id))) closed.add(String(id));
+    } catch {
+      for (const workspace of await store.readWorkspaceList())
+        if (!stated.has(workspace.id)) closed.add(workspace.id);
+    }
+    return closed;
+  }
+
+  /** A closed workspace as the list shows it: its name and that it is locked, nothing else. */
+  const closedEntry = (workspace: Json): Json => ({
+    id: workspace.id,
+    name: workspace.name,
+    versionRetentionDays: 0,
+    storageQuotaBytes: 0,
+    createdAt: new Date(0).toISOString(),
+    kind: workspace.kind === 'shared' ? 'shared' : 'personal',
+    canRename: false,
+    canManageMembers: false,
+    canLeave: false,
+    canUseDailyNotes: false,
+    pendingInvitationId: null,
+    lifecycleState:
+      typeof workspace.lifecycleState === 'string' ? workspace.lifecycleState : 'active',
+    archivedAt: null,
+    membershipLocked: false,
+    collaboration: false,
+    passwordProtected: true,
+    unlockedUntil: null,
+  });
+
   async function cachedWorkspaces(store: MirrorReader): Promise<Json[]> {
+    const closed = await closedWorkspaceIds(store);
+    return (await readCachedWorkspaces(store)).map((workspace) =>
+      closed.has(String(workspace.id)) ? closedEntry(workspace) : workspace,
+    );
+  }
+
+  async function readCachedWorkspaces(store: MirrorReader): Promise<Json[]> {
     const present = new Set((await store.readWorkspaceList()).map((workspace) => workspace.id));
     const raw = await store.getSetting(WORKSPACES_SETTING);
     let workspaces: Json[] = [];
@@ -253,17 +330,26 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     }
   }
 
-  /** Core's computed reads (queries, charts, calendar, habits, finance), recalculated offline. */
+  /** Core's computed reads (queries, charts, calendar, habits), recalculated offline. */
   async function computed(store: MirrorReader, request: ViewRequest): Promise<Response | null> {
+    const closed = await closedWorkspaceIds(store);
     const answered: ViewAnswer | null = await computeView(
       {
-        item: async (id) => (await store.readItems([id]))[0],
+        item: async (id) => {
+          const found = (await store.readItems([id]))[0];
+          return found !== undefined && closed.has(found.workspaceId) ? undefined : found;
+        },
         workspaceItems: async (workspaceId) =>
-          [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
+          closed.has(workspaceId)
+            ? []
+            : [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
         now: () => new Date(),
         ...withDefined('principalId', deps.principalId?.() ?? undefined),
         ...withDefined('timeZone', await cachedTimeZone(store)),
-        workspaceIds: async () => (await store.readWorkspaceList()).map((entry) => entry.id),
+        workspaceIds: async () =>
+          (await store.readWorkspaceList())
+            .map((entry) => entry.id)
+            .filter((id) => !closed.has(id)),
       },
       request,
     );
@@ -297,8 +383,12 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         : json(found);
     }
 
+    const closed = await closedWorkspaceIds(store);
+
     const listMatch = /^\/api\/v1\/workspaces\/([^/]+)\/items$/.exec(path);
     if (listMatch?.[1] !== undefined) {
+      if (closed.has(listMatch[1]))
+        return problem(404, 'workspaces.not_found', 'This workspace is locked.');
       const index = await workspaceIndex(store, listMatch[1]);
       const siblings = index.byParent.get(query.get('parentId') ?? null) ?? [];
       const limit = Math.max(1, Math.min(Number(query.get('limit')) || 100, 500));
@@ -316,7 +406,8 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       const hits: MirrorItem[] = [];
       if (needle.length >= 2)
         for (const workspace of await store.readWorkspaceList())
-          hits.push(...(await store.searchItems(workspace.id, needle)));
+          if (!closed.has(workspace.id))
+            hits.push(...(await store.searchItems(workspace.id, needle)));
       return json({
         query: query.get('q') ?? '',
         results: hits.slice(0, limit).map((item) => ({
@@ -338,7 +429,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       );
     if (itemMatch?.[1] === undefined) return null;
     const item = (await store.readItems([itemMatch[1]]))[0];
-    if (item?.lifecycleState !== 'active')
+    if (item?.lifecycleState !== 'active' || closed.has(item.workspaceId))
       return problem(404, 'item.not_found', 'This item is not in the synced copy.');
     const part = itemMatch[2];
 
@@ -473,6 +564,19 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
 
   /** Queues a supported write for replay and answers with the item as Core would. */
   async function write(store: MirrorReader, plan: PlannedWrite): Promise<Response> {
+    // A workspace a password has closed takes no new edits on this device either: nothing of it is
+    // shown, so nothing should be typed into it. What is already queued stays queued.
+    const closed = await closedWorkspaceIds(store);
+    const target =
+      plan.kind === 'create'
+        ? plan.workspaceId
+        : (await store.readItems([plan.itemId]))[0]?.workspaceId;
+    if (target !== undefined && closed.has(target))
+      return problem(
+        423,
+        'workspaces.locked',
+        'This workspace is locked. Unlock it to make changes.',
+      );
     const respondWith = async (itemId: string, status = 200): Promise<Response> => {
       indexes.clear();
       const found = (await store.readItems([itemId]))[0];

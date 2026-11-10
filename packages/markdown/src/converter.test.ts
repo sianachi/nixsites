@@ -151,7 +151,6 @@ describe('the Markdown converter', () => {
     'chart',
     'habit_tracker',
     'drive',
-    'finance',
     'checklist',
     'outline',
     'matrix',

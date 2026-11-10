@@ -153,7 +153,7 @@ public sealed class LockItemHandler(
     INixSessionContextAccessor session,
     CredentialSessionContext credential,
     TimeProvider clock,
-    IFinanceLock? topology = null)
+    IStructuralLock? topology = null)
     : ICommandHandler<LockItem, bool>
 {
     /// <summary>Sets or changes the lock.</summary>

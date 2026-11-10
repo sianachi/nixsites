@@ -314,7 +314,6 @@
         "backend/src/Nix.Api/Workers/CalendarSyncHandler.cs",
         "backend/src/Nix.Api/Workers/NotifyPushHandler.cs",
         "backend/src/Nix.Api/Features/Habits",
-        "backend/src/Nix.Api/Features/Finance",
         "backend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs",
         "backend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs",
         "backend/src/Nix.Api/Features/Items/DeleteItem.cs",
@@ -327,7 +326,7 @@
         "runtime": "ASP.NET",
         "transports": "PostgreSQL, AMQP, Provider HTTP",
         "depends_on": "Core scheduling, calendar and notification workers",
-        "source_paths": "backend/src/Nix.Api/Features/Automations\nbackend/src/Nix.Api/Features/Notifications\nbackend/src/Nix.Api/Features/CalendarSync\nbackend/src/Nix.Api/Persistence/Scheduling\nbackend/src/Nix.Workers/Calendar\nbackend/src/Nix.Api/Workers/CalendarSyncHandler.cs\nbackend/src/Nix.Api/Workers/NotifyPushHandler.cs\nbackend/src/Nix.Api/Features/Habits\nbackend/src/Nix.Api/Features/Finance\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Features/Items/DeleteItem.cs\nbackend/src/Nix.Api/Features/Items/MoveItem.cs"
+        "source_paths": "backend/src/Nix.Api/Features/Automations\nbackend/src/Nix.Api/Features/Notifications\nbackend/src/Nix.Api/Features/CalendarSync\nbackend/src/Nix.Api/Persistence/Scheduling\nbackend/src/Nix.Workers/Calendar\nbackend/src/Nix.Api/Workers/CalendarSyncHandler.cs\nbackend/src/Nix.Api/Workers/NotifyPushHandler.cs\nbackend/src/Nix.Api/Features/Habits\nbackend/src/Nix.Api/Workers/WorkerCapabilityRegistry.cs\nbackend/src/Nix.Api/Authentication/NixUnitOfWorkMiddleware.cs\nbackend/src/Nix.Api/Features/Items/DeleteItem.cs\nbackend/src/Nix.Api/Features/Items/MoveItem.cs"
       },
       "localProofItemId": "01a12247-5982-7149-877d-1c1f21617e42"
     },

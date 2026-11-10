@@ -102,7 +102,7 @@ internal static class AutomationJsonRead
 
     /// <summary>
     /// Checks a property key a rule names: 1..128 characters, and never a <c>$</c>-prefixed system
-    /// key - the scheduler's set-by keys, the habit and finance keys, and anything a later lane
+    /// key - the scheduler's set-by keys, the habit keys, and anything a later lane
     /// reserves the same way.
     /// </summary>
     internal static bool CheckKey(string? key, string path, ICollection<AutomationViolation> violations)

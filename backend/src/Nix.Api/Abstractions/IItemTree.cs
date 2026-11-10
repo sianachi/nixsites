@@ -107,15 +107,6 @@ public interface IItemTree
         int limit,
         CancellationToken cancellationToken);
 
-    /// <summary>Reads only finance-tagged ancestors and descendants relevant to a structural mutation.</summary>
-    public ValueTask<IReadOnlyList<Item>> ListFinanceBoundaryItemsAsync(
-        WorkspaceId workspaceId,
-        ItemId itemId,
-        bool includeDescendants,
-        int limit,
-        CancellationToken cancellationToken) => ValueTask.FromException<IReadOnlyList<Item>>(
-            new NotSupportedException("This item tree does not implement finance boundary queries."));
-
     /// <summary>Reads directly deleted items in a workspace, newest deletion first.</summary>
     public ValueTask<IReadOnlyList<Item>> ListDeletedAsync(
         WorkspaceId workspaceId,

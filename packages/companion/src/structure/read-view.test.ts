@@ -352,7 +352,7 @@ describe('pet view result evidence', () => {
     expect(result.limits.join(' ')).toContain('At most 4 configured summaries');
   });
 
-  it.each(['outline', 'form', 'interactive_form', 'habit_tracker', 'finance', 'drive'])(
+  it.each(['outline', 'form', 'interactive_form', 'habit_tracker', 'drive'])(
     'does not present unused saved rules as the renderer output for %s',
     async (kind) => {
       const fake = setup({ kind });

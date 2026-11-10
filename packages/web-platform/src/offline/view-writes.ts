@@ -1,11 +1,10 @@
 import type { MirrorReader } from './mirror-fetch';
 import type { PlannedWrite } from './mirror-writes';
-import { planFinanceWrite } from './view-writes/finance';
 import { planHabitWrite } from './view-writes/habit';
 import { planRecurrenceWrite } from './view-writes/recurrence';
 
 /**
- * Writes made from computed views (habit check-ins, finance records, recurrence completions),
+ * Writes made from computed views (habit check-ins, recurrence completions),
  * planned as the item writes Core would make, so offline edits show in the recalculated views.
  */
 export async function planViewWrite(
@@ -14,7 +13,7 @@ export async function planViewWrite(
   path: string,
   body: unknown,
 ): Promise<PlannedWrite | null> {
-  for (const plan of [planHabitWrite, planFinanceWrite, planRecurrenceWrite]) {
+  for (const plan of [planHabitWrite, planRecurrenceWrite]) {
     const planned = await plan(store, method, path, body);
     if (planned !== null) return planned;
   }

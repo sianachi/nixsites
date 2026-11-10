@@ -8,6 +8,12 @@ namespace Nix.Features.Workspaces;
 /// <param name="VersionRetentionDays">How long non-pinned version history is kept.</param>
 /// <param name="StorageQuotaBytes">The workspace's storage ceiling.</param>
 /// <param name="CreatedAt">When it was created.</param>
+/// <param name="PasswordProtected">
+/// Whether the workspace has a password. While it is closed to the caller (<c>passwordProtected</c>
+/// with no <c>unlockedUntil</c>) only <c>id</c>, <c>name</c>, <c>kind</c>, the caller's own
+/// <c>pendingInvitationId</c> and these two fields carry information; every other field is cleared.
+/// </param>
+/// <param name="UnlockedUntil">When the calling session's unlock ends, or null while closed or unprotected.</param>
 /// <remarks>
 /// No <c>tenantId</c>. The tenant is not a client concern: every request is already scoped to one
 /// by the session, a client can never address another, and putting it in the payload would invite
@@ -30,7 +36,9 @@ internal sealed record WorkspaceResponse(
     bool MembershipLocked,
     bool Collaboration,
     bool? AgentsMayApprove = null,
-    bool? AgentsMayCreatePublicLinks = null);
+    bool? AgentsMayCreatePublicLinks = null,
+    bool? PasswordProtected = null,
+    DateTimeOffset? UnlockedUntil = null);
 
 /// <summary>A request to create a shared workspace.</summary>
 internal sealed record CreateWorkspaceRequest(string Name);

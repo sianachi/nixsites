@@ -21,6 +21,14 @@ namespace Nix.Persistence.Authorization;
 /// tenant. Row-level security was isolating tenants from each other and nothing else.
 /// </para>
 /// <para>
+/// <b>A workspace password is part of the answer.</b> A workspace with a password and no unexpired
+/// grant for the current credential yields no role and is left out of the readable list, in the
+/// same statements that answer membership, so every point check and every bulk read inherits it.
+/// A request with no credential a person holds matches no grant and is closed out. The one
+/// exemption is <see cref="IWorkspaceMembershipIgnoringLock"/>, for password management, the
+/// workspace list and unattended work that must tell "locked" from "no access".
+/// </para>
+/// <para>
 /// Access control entries replace this class and keep the port. What changes then is granularity:
 /// the answer becomes per item rather than per workspace, and the filtering moves inside the item
 /// query because the two stop being equivalent.
@@ -35,11 +43,17 @@ namespace Nix.Persistence.Authorization;
 /// </remarks>
 public sealed class WorkspaceMembershipResolver(
     NixSqlExecutor sql,
-    INixSessionContextAccessor session)
-    : IPermissionResolver
+    INixSessionContextAccessor session,
+    CredentialSessionContext credential,
+    TimeProvider clock)
+    : IPermissionResolver, IWorkspaceMembershipIgnoringLock
 {
     private readonly INixSessionContextAccessor _session = session;
+    private readonly CredentialSessionContext _credential = credential;
+    private readonly TimeProvider _clock = clock;
     private readonly Dictionary<WorkspaceId, WorkspaceRole?> _roles = [];
+    private readonly Dictionary<WorkspaceId, WorkspaceRole?> _rolesIgnoringLock = [];
+    private readonly Dictionary<WorkspaceId, WorkspaceRole?> _rolesAnyLifecycle = [];
 
     private bool? _isAdministrator;
     private IReadOnlyList<WorkspaceId>? _readableWorkspaces;
@@ -112,6 +126,8 @@ public sealed class WorkspaceMembershipResolver(
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
+                CredentialParameter(),
+                NowParameter(),
             ],
             cancellationToken);
 
@@ -160,11 +176,25 @@ public sealed class WorkspaceMembershipResolver(
     /// Being a tenant administrator adds nothing here: administrators manage the tenant, and read or
     /// change a workspace only as a member of it.
     /// </remarks>
-    private async ValueTask<WorkspaceRole?> RoleInAsync(
+    private ValueTask<WorkspaceRole?> RoleInAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        ResolveRoleAsync(workspaceId, _roles, AuthorizationSql.WorkspaceRolesForPrincipal, withCredential: true, cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<WorkspaceRole?> RoleIgnoringLockAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        ResolveRoleAsync(workspaceId, _rolesIgnoringLock, AuthorizationSql.WorkspaceRolesIgnoringLock, withCredential: false, cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<WorkspaceRole?> RoleIgnoringLockAnyLifecycleAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        ResolveRoleAsync(workspaceId, _rolesAnyLifecycle, AuthorizationSql.WorkspaceRolesIgnoringLockAnyLifecycle, withCredential: false, cancellationToken);
+
+    private async ValueTask<WorkspaceRole?> ResolveRoleAsync(
         WorkspaceId workspaceId,
+        Dictionary<WorkspaceId, WorkspaceRole?> cache,
+        string statement,
+        bool withCredential,
         CancellationToken cancellationToken)
     {
-        if (_roles.TryGetValue(workspaceId, out var cached))
+        if (cache.TryGetValue(workspaceId, out var cached))
         {
             return cached;
         }
@@ -172,15 +202,19 @@ public sealed class WorkspaceMembershipResolver(
         var context = Session;
         WorkspaceRole? strongest = null;
 
-        var rows = sql.QueryAsync<string, RoleTextMapper>(
-            AuthorizationSql.WorkspaceRolesForPrincipal,
-            default,
-            [
-                Uuid("tenant_id", context.TenantId.Value),
-                Uuid("workspace_id", workspaceId.Value),
-                Uuid("principal_id", context.PrincipalId.Value),
-            ],
-            cancellationToken);
+        var parameters = new List<NpgsqlParameter>
+        {
+            Uuid("tenant_id", context.TenantId.Value),
+            Uuid("workspace_id", workspaceId.Value),
+            Uuid("principal_id", context.PrincipalId.Value),
+        };
+        if (withCredential)
+        {
+            parameters.Add(CredentialParameter());
+            parameters.Add(NowParameter());
+        }
+
+        var rows = sql.QueryAsync<string, RoleTextMapper>(statement, default, [.. parameters], cancellationToken);
 
         await foreach (var text in rows.ConfigureAwait(false))
         {
@@ -193,9 +227,17 @@ public sealed class WorkspaceMembershipResolver(
             }
         }
 
-        _roles[workspaceId] = strongest;
+        cache[workspaceId] = strongest;
         return strongest;
     }
+
+    // Null when the request carries no credential a person holds: matches no grant, so a workspace
+    // with a password is closed to it.
+    private NpgsqlParameter CredentialParameter() =>
+        new("credential_id", NpgsqlDbType.Uuid) { Value = _credential.CredentialId is { } id ? id : DBNull.Value };
+
+    private NpgsqlParameter NowParameter() =>
+        new("now", NpgsqlDbType.TimestampTz) { Value = _clock.GetUtcNow() };
 
     private static NpgsqlParameter Uuid(string name, Guid value) =>
         new(name, NpgsqlDbType.Uuid) { Value = value };

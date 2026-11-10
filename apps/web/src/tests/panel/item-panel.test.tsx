@@ -1,11 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
 import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
-import { STORAGE_KEY, readPanelOpen, storePanelOpen } from '../../panel/panel-state';
 
 /**
  * The settings panel.
@@ -47,22 +46,6 @@ describe('the settings panel', () => {
 
     expect(await screen.findByRole('button', { name: /settings/i })).toBeVisible();
     expect(screen.queryByRole('complementary', { name: /item settings/i })).not.toBeInTheDocument();
-  });
-
-  it('opens beside what it configures rather than over it', async () => {
-    const user = userEvent.setup();
-    stubCoreApi({ items: [NOTE] });
-    renderAt(<App />, `/?item=${NOTE.id}`);
-
-    await user.click(await screen.findByRole('button', { name: /settings/i }));
-
-    // A dialog is the wrong shape for configuring a view: it covers the view, so every change
-    // means closing it to look and reopening it to carry on.
-    const panel = await screen.findByRole('complementary', { name: /item settings/i });
-
-    expect(panel).toBeVisible();
-    expect(panel).toHaveClass('w-[340px]', 'max-w-full');
-    expect(screen.getByRole('textbox', { name: /note title/i })).toBeVisible();
   });
 
   it('offers the three panes, and says which is current', async () => {
@@ -114,22 +97,6 @@ describe('the settings panel', () => {
       'true',
     );
     expect(await within(panel).findByText(/no headings yet|open a note/i)).toBeVisible();
-  });
-
-  it('resizes the pinned panel from the keyboard', async () => {
-    const user = userEvent.setup();
-    stubCoreApi({ items: [NOTE] });
-    renderAt(<App />, `/?item=${NOTE.id}`);
-
-    await user.click(await screen.findByRole('button', { name: /settings/i }));
-    const panel = await screen.findByRole('complementary', { name: /item settings/i });
-    const handle = within(panel).getByRole('separator', { name: /resize the details panel/i });
-
-    handle.focus();
-    await user.keyboard('{ArrowLeft}');
-
-    expect(handle).toHaveAttribute('aria-valuenow', '348');
-    expect(panel).toHaveStyle({ width: '348px' });
   });
 
   it('offers no Site entry or pane on a deployment without sites', async () => {
@@ -190,54 +157,18 @@ describe('the settings panel', () => {
     expect(within(panel).queryByRole('button', { name: /kanban board/i })).not.toBeInTheDocument();
   });
 
-  it('remembers being open', async () => {
+  it('opens as a dialog over the page on desktop, and starts closed on the next note', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [NOTE] });
-    renderAt(<App />, `/?item=${NOTE.id}`);
+    const first = renderAt(<App />, `/?item=${NOTE.id}`);
 
     await user.click(await screen.findByRole('button', { name: /settings/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Item details' });
+    expect(within(dialog).getByRole('complementary', { name: /item settings/i })).toBeVisible();
 
-    await waitFor(() => {
-      expect(stored.get(STORAGE_KEY)).toBe('open');
-    });
-  });
-});
-
-describe('remembering the choice', () => {
-  it('defaults to closed', () => {
-    expect(readPanelOpen(undefined)).toBe(false);
-  });
-
-  it('stores closed as absence rather than as a second spelling', () => {
-    const storage = {
-      getItem: (key: string) => stored.get(key) ?? null,
-      setItem: (key: string, value: string) => void stored.set(key, value),
-      removeItem: (key: string) => void stored.delete(key),
-    } as unknown as Storage;
-
-    storePanelOpen(storage, true);
-    expect(stored.get(STORAGE_KEY)).toBe('open');
-
-    storePanelOpen(storage, false);
-    expect(stored.has(STORAGE_KEY)).toBe(false);
-  });
-
-  it('survives a browser that refuses storage', () => {
-    const refusing = {
-      getItem: () => {
-        throw new Error('denied');
-      },
-      setItem: () => {
-        throw new Error('denied');
-      },
-      removeItem: () => {
-        throw new Error('denied');
-      },
-    } as unknown as Storage;
-
-    expect(readPanelOpen(refusing)).toBe(false);
-    expect(() => {
-      storePanelOpen(refusing, true);
-    }).not.toThrow();
+    first.unmount();
+    renderAt(<App />, `/?item=${NOTE.id}`);
+    await screen.findByRole('button', { name: /settings/i });
+    expect(screen.queryByRole('dialog', { name: 'Item details' })).not.toBeInTheDocument();
   });
 });

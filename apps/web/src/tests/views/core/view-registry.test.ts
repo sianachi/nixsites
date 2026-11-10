@@ -25,7 +25,6 @@ const KINDS_IN_PICKER_ORDER = [
   'interactive_form',
   'chart',
   'habit_tracker',
-  'finance',
   'drive',
   'checklist',
   'matrix',

@@ -102,7 +102,7 @@ function idsUnder(value: unknown, key: RegExp, found: string[] = []): string[] {
  * Confines a run to this conversation's workspace before it is previewed or sent. Every workspace
  * named in the path, query or body must be this one. Every item named anywhere goes through the
  * same workspace and lock check as the typed tools. A site, automation or template in the path must
- * belong here too. Ids nested under those (comments, builds, finance lines) are Core's to scope.
+ * belong here too. Ids nested under those (comments, builds) are Core's to scope.
  */
 export async function confineActionRun(
   client: NixClient,

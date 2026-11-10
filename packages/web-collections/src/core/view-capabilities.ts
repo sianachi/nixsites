@@ -49,7 +49,6 @@ export const VIEW_CAPABILITIES: Readonly<Record<string, ViewCapabilities>> = {
   chart: NONE,
   form: NONE,
   interactive_form: NONE,
-  finance: NONE,
   // A program draws its own parts; the view offers no row actions around them.
   custom: NONE,
 };

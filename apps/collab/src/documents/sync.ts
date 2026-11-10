@@ -69,7 +69,8 @@ export async function syncDocument(
   },
 ): Promise<DocumentSyncSuccess> {
   const { document, tenantId } = input;
-  // Core's lock and move writers hold this workspace key exclusively.
+  // Core's lock and move writers hold this workspace key exclusively. The key text must match Core's
+  // StructuralLock (it kept the name of the retired finance feature that first used it).
   await sql.query('SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))', [
     `finance-workspace:${input.workspaceId.toLowerCase()}`,
   ]);

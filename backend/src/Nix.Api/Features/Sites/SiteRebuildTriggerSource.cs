@@ -32,6 +32,7 @@ public sealed class SiteRebuildTriggerSource(
     ISiteRebuildCandidates candidates,
     ISiteStore sites,
     IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     IPrincipalStatusChecker principalStatus,
     NixDispatcher dispatcher,
     SiteAudit audit,
@@ -101,7 +102,19 @@ public sealed class SiteRebuildTriggerSource(
             return TriggerOutcome.Skipped("mode_changed");
         }
 
-        if (!await principalStatus.IsActiveAsync(trigger.PrincipalId, cancellationToken).ConfigureAwait(false)
+        var principalActive = await principalStatus.IsActiveAsync(trigger.PrincipalId, cancellationToken).ConfigureAwait(false);
+        if (principalActive
+            && !await permissions.CanManageWorkspaceAsync(site.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            && await membership.RoleIgnoringLockAsync(site.WorkspaceId, cancellationToken).ConfigureAwait(false)
+                == Nix.Domain.Authorization.WorkspaceRole.Owner)
+        {
+            // A workspace password closes the workspace to this unattended rebuild, which holds no
+            // credential. The manager has not lost authority, so the mode stays: the site keeps its
+            // last build until someone with the workspace open publishes it again.
+            return TriggerOutcome.Skipped("workspace_locked");
+        }
+
+        if (!principalActive
             || !await permissions.CanManageWorkspaceAsync(site.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             site.RepublishMode = SiteRules.ManualMode;

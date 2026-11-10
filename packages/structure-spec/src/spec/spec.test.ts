@@ -37,10 +37,8 @@ describe('vocabulary parity', () => {
     expect([...ROLLUP_SPEC_AGGREGATES].sort()).toEqual([...vocabulary].sort());
   });
 
-  it('structured recipe ids are every recipe except drive and finances', () => {
-    const vocabulary = STRUCTURED_RECIPES.map((recipe) => recipe.id).filter(
-      (id) => id !== 'drive' && id !== 'finances',
-    );
+  it('structured recipe ids are every recipe except drive', () => {
+    const vocabulary = STRUCTURED_RECIPES.map((recipe) => recipe.id).filter((id) => id !== 'drive');
     expect([...STRUCTURED_SPEC_RECIPE_IDS].sort()).toEqual([...vocabulary].sort());
   });
 });
@@ -343,12 +341,9 @@ describe('entriesSpecSchema', () => {
 });
 
 describe('structuredSpecSchema', () => {
-  it('recipes drive and finances are refused', () => {
+  it('recipe drive is refused', () => {
     const drive = structuredSpecSchema.safeParse({ recipe: 'drive', fields: [] });
     expect(drive.success).toBe(false);
-
-    const finances = structuredSpecSchema.safeParse({ recipe: 'finances', fields: [] });
-    expect(finances.success).toBe(false);
 
     const board = structuredSpecSchema.safeParse({ recipe: 'board', fields: [] });
     expect(board.success).toBe(true);

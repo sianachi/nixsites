@@ -23,7 +23,7 @@ public sealed class ArchiveWorkspaceHandler(WorkspaceAdministrationStore store, 
             return Result.Failure<WorkspaceSnapshot>(WorkspaceAdministrationErrors.ArchiveRefused());
         }
 
-        var workspace = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        var workspace = await store.FindForResponseAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
         return workspace is null
             ? Result.Failure<WorkspaceSnapshot>(WorkspaceErrors.NotFound())
             : Result.Success(workspace);

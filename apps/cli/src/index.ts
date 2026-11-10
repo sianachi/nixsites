@@ -25,7 +25,6 @@ import { registerNoteCommands } from './commands/register-note.ts';
 import { registerStructureCommands } from './commands/register-structure.ts';
 import { registerApiCommands } from './commands/register-api.ts';
 import { registerRecurrenceCommands } from './commands/register-recurrence.ts';
-import { registerFinanceCommands } from './commands/register-finance.ts';
 import { registerHabitCommands } from './commands/register-habit.ts';
 import { registerNotificationCommands } from './commands/register-notification.ts';
 import { registerCalendarSyncCommands } from './commands/register-calendar-sync.ts';
@@ -138,7 +137,6 @@ export function buildProgram(): Command {
   registerStructureCommands(program, act);
   registerApiCommands(program, act);
   registerRecurrenceCommands(program, act);
-  registerFinanceCommands(program, act);
   registerHabitCommands(program, act);
   registerNotificationCommands(program, act);
   registerCalendarSyncCommands(program, act);

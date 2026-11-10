@@ -38,9 +38,6 @@ public sealed record CreateItem(
     /// <summary>Optional per-principal request identity, independent of the server-minted item ID.</summary>
     public Guid? IdempotencyKey { get; init; }
 
-    /// <summary>Internal capability for validated finance feature dispatches; never request-bound.</summary>
-    internal bool FinanceWrite { get; init; }
-
     /// <summary>
     /// Internal capability for validated habit feature dispatches, allowing <c>$habit_</c> keys;
     /// never request-bound, and never a way to write a scheduler set-by key.
@@ -74,7 +71,7 @@ public sealed class CreateItemHandler(
     ISchemaResolver schemas,
     INixSessionContextAccessor session,
     TimeProvider clock,
-    IFinanceLock? topology = null,
+    IStructuralLock? topology = null,
     RecordKeys? recordKeys = null)
     : ICommandHandler<CreateItem, Item>
 {
@@ -104,11 +101,6 @@ public sealed class CreateItemHandler(
         var parentId = command.ParentId;
         var properties = command.Properties;
 
-        if (!command.FinanceWrite && properties?.Any(pair => pair.Key.StartsWith("$fin_", StringComparison.Ordinal)) == true)
-        {
-            return Result.Failure<Item>(new NixError("finance.reserved_property", "Finance properties may only be written through the finance endpoints."));
-        }
-
         if (properties?.Any(pair => SchedulingReservedProperties.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite)) == true)
         {
             return Result.Failure<Item>(SchedulingReservedProperties.Error);
@@ -117,7 +109,7 @@ public sealed class CreateItemHandler(
         // Any other '$' key: reserved for the server and the structural query fields. A create
         // supplying null for one sets nothing, so only a value is refused.
         if (properties?.FirstOrDefault(pair => pair.Value is not null
-                && ReservedPropertyKeys.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite, command.FinanceWrite)) is { Key: { } reserved })
+                && ReservedPropertyKeys.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite)) is { Key: { } reserved })
         {
             return Result.Failure<Item>(ReservedPropertyKeys.Refusal(reserved));
         }

@@ -177,6 +177,12 @@ public sealed class NixDbContext : DbContext
     /// <summary>Gets the short-lived grants past item locks.</summary>
     public DbSet<ItemUnlock> ItemUnlocks => Set<ItemUnlock>();
 
+    /// <summary>Gets workspace passwords.</summary>
+    public DbSet<WorkspaceLock> WorkspaceLocks => Set<WorkspaceLock>();
+
+    /// <summary>Gets the short-lived grants past workspace locks.</summary>
+    public DbSet<WorkspaceUnlock> WorkspaceUnlocks => Set<WorkspaceUnlock>();
+
     /// <summary>Gets the revocable capabilities for published interactive forms.</summary>
     public DbSet<PublicFormLink> PublicFormLinks => Set<PublicFormLink>();
 
@@ -370,6 +376,8 @@ public sealed class NixDbContext : DbContext
         modelBuilder.ApplyConfiguration(new NoteCommentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new ItemLockConfiguration());
         modelBuilder.ApplyConfiguration(new ItemUnlockConfiguration());
+        modelBuilder.ApplyConfiguration(new WorkspaceLockConfiguration());
+        modelBuilder.ApplyConfiguration(new WorkspaceUnlockConfiguration());
         modelBuilder.ApplyConfiguration(new ItemTranscriptionConfiguration());
         modelBuilder.ApplyConfiguration(new PublicFormLinkConfiguration());
         modelBuilder.ApplyConfiguration(new ItemReferenceConfiguration());

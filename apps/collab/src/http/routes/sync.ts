@@ -111,10 +111,14 @@ export function registerSyncRoutes(app: FastifyInstance, deps: RouteDependencies
           if (authorization.reason === 'unauthenticated') {
             return problem(reply, 401, 'unauthenticated', 'The token could not be validated.');
           }
+          // A closed workspace is a pause: unavailable, so the device keeps the item and its
+          // pending edits instead of filing a refusal that purges them.
           results.push(
             authorization.reason === 'unavailable'
               ? { itemId, status: 'unavailable', code: 'authorization_unavailable' }
-              : { itemId, status: 'forbidden' },
+              : authorization.reason === 'workspace_locked'
+                ? { itemId, status: 'unavailable', code: 'workspace_locked' }
+                : { itemId, status: 'forbidden' },
           );
           continue;
         }

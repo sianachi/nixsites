@@ -61,7 +61,19 @@ import { columnOffsets, columnWindow, rowWindow } from '@nix/web-collections/she
 
 export interface SheetGridProps {
   readonly sheet: SheetData;
+  /** Browse and select only: every write path (typing, paste, delete, resize, undo) is inert. */
+  readonly readOnly?: boolean;
 }
+
+const noop = (): void => undefined;
+const READ_ONLY_WRITES = {
+  setCell: noop,
+  setColumnWidth: noop,
+  clearRange: noop,
+  pasteBlock: noop,
+  undo: noop,
+  redo: noop,
+} as const;
 
 // The cell geometry is runtime arithmetic: 32px, or 44px on a coarse pointer (`pickRowHeight`). The
 // h-8/w-12 chrome strips beside it are on the token spacing scale (which is not 4px -
@@ -74,7 +86,8 @@ const SPARE_COLS = 6;
 
 const GRID_HINT_ID = 'sheet-grid-keyboard-hint';
 
-export function SheetGrid({ sheet }: SheetGridProps): ReactNode {
+export function SheetGrid({ sheet: editable, readOnly = false }: SheetGridProps): ReactNode {
+  const sheet = readOnly ? { ...editable, ...READ_ONLY_WRITES } : editable;
   const [selection, dispatch] = useReducer(selectionReducer, INITIAL_SELECTION);
   const [rowHeight] = useState(pickRowHeight);
   const {
@@ -183,6 +196,7 @@ export function SheetGrid({ sheet }: SheetGridProps): ReactNode {
   }
 
   function beginEdit(source: 'typing' | 'open' | 'bar', draft: string): void {
+    if (readOnly) return;
     editSettledRef.current = false;
     dispatch({ type: 'startEdit', draft, source });
   }

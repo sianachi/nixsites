@@ -35,7 +35,8 @@ internal static class WorkspaceEndpoints
         ArgumentNullException.ThrowIfNull(endpoints);
 
         var workspaces = endpoints.MapGroup("/api/v1/workspaces")
-            .WithTags("Workspaces");
+            .WithTags("Workspaces")
+            .AddEndpointFilter(WorkspaceLocks.ClosedWorkspaceFilter.InvokeAsync);
 
         workspaces.MapGet("/", ListWorkspacesEndpoint.Handle)
             .WithName("ListWorkspaces")
@@ -200,11 +201,12 @@ internal static class WorkspaceEndpoints
     }
 
     internal static WorkspaceResponse ToResponse(WorkspaceSnapshot row) => new(
-        row.Id.Value, row.Name, row.VersionRetentionDays, row.StorageQuotaBytes, row.CreatedAt,
+        row.Id.Value, row.Name, row.VersionRetentionDays, row.StorageQuotaBytes,
+        row.Closed ? DateTimeOffset.UnixEpoch : row.CreatedAt,
         row.PersonalOwnerPrincipalId is null ? "shared" : "personal",
         row.CanRename, row.CanManageMembers, row.CanLeave, row.CanUseDailyNotes,
         row.PendingInvitationId, row.LifecycleState, row.ArchivedAt, row.MembershipLocked, row.Collaboration,
-        row.AgentsMayApprove, row.AgentsMayCreatePublicLinks);
+        row.AgentsMayApprove, row.AgentsMayCreatePublicLinks, row.PasswordProtected, row.UnlockedUntil);
 
     internal static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(HttpContext context, NixError error)
     {

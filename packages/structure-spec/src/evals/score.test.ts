@@ -15,7 +15,6 @@ const names = [
   'home-maintenance',
   'language-study',
   'small-garden',
-  'personal-finance-goals',
 ];
 const context = { inheritedFields: [], today: '2026-09-26' };
 function readScenario(name: string): DesignScenario {
@@ -58,14 +57,18 @@ describe('design evaluation', () => {
     expect(score.total).toBeLessThanOrEqual(80);
   });
 
-  it('awards full marks for declining a finance build', () => {
+  it('awards full marks for declining a build', () => {
     const report = {
       ok: true,
       problems: [],
       warnings: [],
       stats: { fields: 0, views: 0, entries: 0 },
     };
-    const score = scoreBlueprint(null, readScenario('personal-finance-goals').expectations, report);
+    const score = scoreBlueprint(
+      null,
+      { mustHave: [{ kind: 'declines' }], mustNot: [], maxItems: 1, preferComputed: [] },
+      report,
+    );
     expect(score.total).toBe(100);
   });
 });

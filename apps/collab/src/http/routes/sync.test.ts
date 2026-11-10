@@ -441,6 +441,16 @@ describe('native batch document synchronization', () => {
     });
   });
 
+  it('answers a password-closed workspace as a pause, never a refusal that purges the device copy', async () => {
+    const test = setup({ authorize: () => Promise.resolve('workspace_locked') });
+    expect(firstResult(await test.post([request()]))).toEqual({
+      itemId: ITEM,
+      status: 'unavailable',
+      code: 'workspace_locked',
+    });
+    expect(test.db.statements).toEqual([]);
+  });
+
   it('rechecks revocation even when this credential has a cached authorization', async () => {
     let granted = true;
     const test = setup({ authorize: () => Promise.resolve(granted ? GRANTED : null) });

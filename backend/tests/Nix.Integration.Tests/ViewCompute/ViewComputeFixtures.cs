@@ -283,7 +283,7 @@ internal static partial class ViewComputeFixtures
     }
 
     // CreateItem's reserved-key capabilities are internal to Core (the tests do not see them), so a
-    // fixture that carries habit or finance content sets them the way the feature code does.
+    // fixture that carries habit content sets them the way the feature code does.
     private static void AllowReservedKeys(CreateItem create, JsonObject? properties)
     {
         if (properties is null)
@@ -292,7 +292,6 @@ internal static partial class ViewComputeFixtures
         }
 
         Set("HabitWrite", "$habit_");
-        Set("FinanceWrite", "$fin_");
         Set("CalendarWrite", "$cal_");
 
         void Set(string capability, string prefix)

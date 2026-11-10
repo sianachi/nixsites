@@ -273,6 +273,8 @@ function handleConnection(
         close(CLOSE_CODES.unauthenticated, 'The token could not be validated.');
       } else if (result.reason === 'locked') {
         close(CLOSE_CODES.bodyLocked, 'This document is locked. Unlock it first.');
+      } else if (result.reason === 'workspace_locked') {
+        close(CLOSE_CODES.unavailable, 'This workspace is locked. Unlock it, then reconnect.');
       } else if (result.reason === 'unavailable') {
         close(CLOSE_CODES.unavailable, 'Access could not be confirmed. Retry shortly.');
       } else {
@@ -359,6 +361,9 @@ function handleConnection(
         close(CLOSE_CODES.unauthenticated, 'The token could not be validated. Reconnect.');
       } else if (rechecked.reason === 'locked') {
         close(CLOSE_CODES.bodyLocked, 'This document was locked. Unlock it to keep editing.');
+      } else if (rechecked.reason === 'workspace_locked') {
+        // Ends the session but not as revoked: a client told revoked drops its copy and its edits.
+        close(CLOSE_CODES.unavailable, 'This workspace was locked. Unlock it, then reconnect.');
       } else if (rechecked.reason === 'unavailable') {
         // Still closed - nothing outlives a permission that could not be confirmed - but not as
         // revoked. A client told "revoked" seals its cached body; one

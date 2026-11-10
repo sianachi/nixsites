@@ -158,6 +158,60 @@ describe('full sync report', () => {
     expect(report).toEqual({ failedWorkspaces: ['Work'], failedFiles: 0, unreachable: true });
   });
 
+  it('keeps a workspace a password has closed in the mirror and makes no pass at it', async () => {
+    runSyncPass.mockReset();
+    const { deps } = setup([], {});
+    const store = {
+      listItems: () => Promise.resolve([]),
+      replaceWorkspaceList: vi.fn(() => Promise.resolve()),
+      setSetting: vi.fn(() => Promise.resolve()),
+    };
+    const later = new Date(Date.now() + 60_000).toISOString();
+    const workspaces = [
+      { id: 'open', name: 'Open', lifecycleState: 'active' },
+      {
+        id: 'shut',
+        name: 'Shut',
+        lifecycleState: 'active',
+        passwordProtected: true,
+        unlockedUntil: null,
+      },
+      {
+        id: 'ended',
+        name: 'Ended',
+        lifecycleState: 'active',
+        passwordProtected: true,
+        unlockedUntil: '2000-01-01T00:00:00Z',
+      },
+      {
+        id: 'unlocked',
+        name: 'Unlocked',
+        lifecycleState: 'active',
+        passwordProtected: true,
+        unlockedUntil: later,
+      },
+    ];
+    runSyncPass.mockResolvedValue({ status: 'complete', replayedOperations: 0, conflicts: 0 });
+    await runFullSync({
+      ...deps,
+      store: store as unknown as SqliteMirrorStore,
+      listWorkspaces: () => Promise.resolve(workspaces),
+    });
+
+    // A closed workspace is neither synced nor dropped: a 404 on its routes would wipe the
+    // mirror's copy, unsynced edits included, as if access had been revoked.
+    expect(
+      runSyncPass.mock.calls.map(([input]) => (input as { workspaceId: string }).workspaceId),
+    ).toEqual(['open', 'unlocked']);
+    expect(store.setSetting).toHaveBeenCalledWith(
+      'offline.protected-workspaces',
+      JSON.stringify(['shut', 'ended', 'unlocked']),
+    );
+    expect(store.replaceWorkspaceList).toHaveBeenCalledWith(
+      workspaces.map(({ id, name }) => ({ id, name })),
+    );
+  });
+
   it('says nothing when everything synced', () => {
     expect(describeSyncProblem({ failedWorkspaces: [], failedFiles: 0, unreachable: false })).toBe(
       null,

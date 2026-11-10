@@ -1,6 +1,5 @@
 import { computeCalendar } from './calendar';
 import { computeChart } from './chart';
-import { computeFinance } from './finance';
 import { computeHabit } from './habit';
 import { computeQuery } from './query';
 import type { ViewRoute } from './types';
@@ -22,9 +21,4 @@ export const routes: readonly ViewRoute[] = [
     compute: computeCalendar,
   },
   { method: 'GET', pattern: new RegExp(`^/api/v1/items/${ID}/habit$`), compute: computeHabit },
-  {
-    method: 'GET',
-    pattern: new RegExp(`^/api/v1/items/${ID}/finance(/.*)?$`),
-    compute: computeFinance,
-  },
 ];

@@ -38,6 +38,7 @@ public sealed class PublishSiteHandler(
     SiteAccess access,
     IItemTree tree,
     IItemLocks locks,
+    IWorkspaceLocks workspaceLocks,
     IWorkerJobStore jobs,
     INixSessionContextAccessor session,
     NixDispatcher dispatcher,
@@ -76,6 +77,18 @@ public sealed class PublishSiteHandler(
         if (!options.IsEnabled || !signer.IsConfigured)
         {
             return Result.Failure<SiteBuildResponse>(SiteErrors.NotConfigured());
+        }
+
+        // The build worker reads page bodies through an execution token, which never holds a
+        // workspace unlock, so every body read would be refused partway through the build. Say so
+        // now. A site already published keeps serving its last build; only new builds are refused.
+        // The token is not widened to make this work.
+        if (command.Origin == "manual"
+            && (await workspaceLocks.GetStateAsync(site.WorkspaceId, cancellationToken).ConfigureAwait(false)).PasswordProtected)
+        {
+            return Result.Failure<SiteBuildResponse>(new(
+                "sites.workspace_protected",
+                "A site cannot be published from a password-protected workspace. Remove the workspace password to publish."));
         }
 
         if (await sites.FindBuildByKeyAsync(site.Id, key, cancellationToken).ConfigureAwait(false) is { } repeated)

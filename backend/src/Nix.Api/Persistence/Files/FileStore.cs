@@ -18,7 +18,7 @@ public sealed class FileStore(
     INixSessionContextAccessor session,
     IItemLocks locks,
     TimeProvider clock,
-    IFinanceLock? topology = null) : IFileStore
+    IStructuralLock? topology = null) : IFileStore
 {
     private const long MaxFileBytes = 100L * 1024 * 1024;
 

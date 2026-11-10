@@ -13,7 +13,6 @@ const KINDS = [
   'query',
   'interactive_form',
   'drive',
-  'finance',
   'checklist',
   'outline',
   'custom',

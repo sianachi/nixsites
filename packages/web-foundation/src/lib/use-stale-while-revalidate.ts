@@ -31,7 +31,7 @@ export interface StaleWhileRevalidate<Status extends string> {
 
   /**
    * Call when a load succeeds. `status` is the ready state to report - a caller whose success can
-   * land in more than one place (a container's `ready`/`partial`, finance's `ready`/`unconfigured`)
+   * land in more than one place (a container's `ready`/`partial`, another view's `ready`/`unconfigured`)
    * passes whichever applies. `note` is a warning to keep alongside an otherwise successful load;
    * most callers omit it.
    */

@@ -24,7 +24,7 @@ public sealed class SetItemProtectionHandler(
     IItemTree tree,
     IItemProtections protections,
     IPermissionResolver permissions,
-    IFinanceLock? topology = null) : ICommandHandler<SetItemProtection, Item>
+    IStructuralLock? topology = null) : ICommandHandler<SetItemProtection, Item>
 {
     /// <inheritdoc />
     public async ValueTask<Result<Item>> HandleAsync(SetItemProtection command, CancellationToken cancellationToken)

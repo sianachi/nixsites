@@ -160,6 +160,14 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
         "/api/v1/items/{itemId:guid}/unlock" when !IsDelete(endpoint) =>
             RateLimitRefusal.LockPasswordPolicyName,
 
+        // The same for a workspace password: setting, changing, removing, unlocking and joining all
+        // derive a key. Relocking checks nothing.
+        "/api/v1/workspaces/{workspaceId:guid}/password"
+            or "/api/v1/workspaces/{workspaceId:guid}/password/remove"
+            or "/api/v1/workspaces/{workspaceId:guid}/join" => RateLimitRefusal.LockPasswordPolicyName,
+        "/api/v1/workspaces/{workspaceId:guid}/unlock" when !IsDelete(endpoint) =>
+            RateLimitRefusal.LockPasswordPolicyName,
+
         // A read sent as a POST: its own window, so lookups while typing never spend the writes
         // window a person's saves draw on.
         "/api/v1/search/mentions" => RateLimitRefusal.SuggestionsPolicyName,

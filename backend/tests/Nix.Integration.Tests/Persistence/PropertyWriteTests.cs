@@ -578,40 +578,6 @@ public sealed class PropertyWriteTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_finance_view_can_be_created_and_read_back_after_commit()
-    {
-        ItemId folderId;
-        await using (var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
-        {
-            var folder = await NewItemAsync(work, "Finances", null, "folder");
-            folderId = folder.Id;
-
-            var stored = await work.Resolve<NixDispatcher>().SendAsync<SetContainerViews, ImmutableArray<ViewDefinition>>(
-                new SetContainerViews(
-                    folder.Id,
-                    [new ViewDefinition("finances", "Finances", ViewKind.Finance, [], null, [], null, null, false)],
-                    "finances"),
-                Cancellation);
-
-            Assert.True(stored.IsSuccess, stored.IsSuccess ? "" : stored.Error.Message);
-            await work.CommitAsync(Cancellation);
-        }
-
-        await using (var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
-        {
-            var read = await work.Resolve<NixDispatcher>().QueryAsync<GetContainerViews, Result<ContainerViewSet>>(
-                new GetContainerViews(folderId),
-                Cancellation);
-
-            Assert.True(read.IsSuccess, read.IsSuccess ? "" : read.Error.Message);
-            var financeView = Assert.Single(read.Value.Views);
-            Assert.Equal("finances", financeView.Id);
-            Assert.Equal(ViewKind.Finance, financeView.Kind);
-            Assert.Equal("finances", read.Value.Default);
-        }
-    }
-
-    [Fact]
     public async Task A_default_naming_a_view_that_is_not_being_stored_is_refused()
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);

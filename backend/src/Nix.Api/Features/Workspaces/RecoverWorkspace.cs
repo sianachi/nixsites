@@ -31,7 +31,7 @@ public sealed class RecoverWorkspaceHandler(
         {
             return Result.Failure<WorkspaceSnapshot>(WorkspaceAdministrationErrors.RecoveryRefused());
         }
-        var row = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
+        var row = await store.FindForResponseAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The recovered workspace could not be read back.");
         return Result.Success(row);
     }

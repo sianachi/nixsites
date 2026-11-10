@@ -49,6 +49,11 @@ describe('operation catalog', () => {
       'SendConversation',
       'SavePreferences',
       'SetWorkspaceAgentPolicy',
+      'SetWorkspacePassword',
+      'RemoveWorkspacePassword',
+      'UnlockWorkspace',
+      'RelockWorkspace',
+      'JoinWorkspace',
     ])
       expect(isHumanOnlyOperation(entry(id)), id).toBe(true);
     expect(isHumanOnlyOperation(entry('GetPreferences'))).toBe(false);

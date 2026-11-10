@@ -24,7 +24,10 @@ interface ItemPanelsProps {
   readonly onCloseHistory: () => void;
 }
 
-/** The settings panel and the revision history, beside the body on a wide window and over it on a narrow one. */
+/**
+ * The settings panel, as a drawer on touch screens and a dialog on desktop, and the revision
+ * history, beside the body on a wide window and over it on a narrow one.
+ */
 export function ItemPanels({
   itemId,
   container,
@@ -58,24 +61,14 @@ export function ItemPanels({
           />
         </PhonePanelDrawer>
       ) : panelOpen ? (
-        overlayDetails ? (
-          <Dialog
-            open
-            title="Item details"
-            onClose={togglePanel}
-            presentation="workspace"
-            className="sm:max-w-xl"
-          >
-            <ItemPanel
-              container={container}
-              details={details}
-              onClose={togglePanel}
-              overlay
-              pane={panelPane}
-              onPaneChange={setPanelPane}
-            />
-          </Dialog>
-        ) : (
+        // A dialog over the page on desktop, at every width, rather than a column beside it.
+        <Dialog
+          open
+          title="Item details"
+          onClose={togglePanel}
+          presentation="workspace"
+          className="sm:max-w-xl"
+        >
           <ItemPanel
             container={container}
             details={details}
@@ -83,7 +76,7 @@ export function ItemPanels({
             pane={panelPane}
             onPaneChange={setPanelPane}
           />
-        )
+        </Dialog>
       ) : null}
 
       {/* The document's revisions, beside it on a wide window and over it on a narrow one - the

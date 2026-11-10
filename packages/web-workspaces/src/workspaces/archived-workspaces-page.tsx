@@ -1,5 +1,5 @@
 import { Blueprint, Button, ContextMenu, Field, Input, Text, focusRing } from '@nix/ui';
-import { workspaces as coreWorkspaces } from '@nix/api-client';
+import { isCanceledError, workspaceLocks, workspaces as coreWorkspaces } from '@nix/api-client';
 import { useLayoutEffect, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -7,6 +7,8 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { useAccessibleWorkspaces } from './workspace-context';
+import { workspaceLockRefusal } from './workspace-lock-errors';
+import { workspaceClosed } from './workspace-lock-mark';
 
 /** Lists workspaces outside everyday navigation so archived work remains recoverable. */
 export function ArchivedWorkspacesPage(): ReactNode {
@@ -34,6 +36,21 @@ export function ArchivedWorkspacesPage(): ReactNode {
       setMutationError('The workspace could not be restored. Try again.');
     } finally {
       setRestoring(null);
+    }
+  }
+
+  // A workspace a password closes can be restored or deleted only after it is unlocked, so the
+  // owner is asked for the password here rather than shown buttons that would be refused.
+  async function unlock(workspaceId: string, password: string): Promise<string | null> {
+    try {
+      await client.execute(workspaceLocks.unlockWorkspace(workspaceId, password));
+      workspaceUpdated(
+        await client.query(coreWorkspaces.workspaceById(workspaceId), { forceRefresh: true }),
+      );
+      return null;
+    } catch (cause) {
+      if (isCanceledError(cause)) return null;
+      return workspaceLockRefusal(cause, 'The workspace could not be unlocked. Try again.');
     }
   }
 
@@ -151,14 +168,14 @@ export function ArchivedWorkspacesPage(): ReactNode {
               items={[
                 {
                   label: 'Restore workspace',
-                  disabled: restoring !== null || purging !== null,
+                  disabled: restoring !== null || purging !== null || workspaceClosed(workspace),
                   onSelect: () => {
                     void restore(workspace.id);
                   },
                 },
                 {
                   label: 'Delete permanently',
-                  disabled: restoring !== null || purging !== null,
+                  disabled: restoring !== null || purging !== null || workspaceClosed(workspace),
                   destructive: true,
                   onSelect: () => {
                     setConfirmation(workspace.id);
@@ -178,22 +195,31 @@ export function ArchivedWorkspacesPage(): ReactNode {
                           : 'recently'}
                       </Text>
                     </div>
-                    <Button
-                      variant="secondary"
-                      disabled={restoring !== null || purging !== null}
-                      onClick={() => void restore(workspace.id)}
-                    >
-                      {restoring === workspace.id ? 'Restoring…' : 'Restore workspace'}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      disabled={restoring !== null || purging !== null}
-                      onClick={() => {
-                        setConfirmation(workspace.id);
-                      }}
-                    >
-                      Delete permanently
-                    </Button>
+                    {workspaceClosed(workspace) ? (
+                      <UnlockToManage
+                        name={workspace.name}
+                        onUnlock={(password) => unlock(workspace.id, password)}
+                      />
+                    ) : (
+                      <>
+                        <Button
+                          variant="secondary"
+                          disabled={restoring !== null || purging !== null}
+                          onClick={() => void restore(workspace.id)}
+                        >
+                          {restoring === workspace.id ? 'Restoring…' : 'Restore workspace'}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          disabled={restoring !== null || purging !== null}
+                          onClick={() => {
+                            setConfirmation(workspace.id);
+                          }}
+                        >
+                          Delete permanently
+                        </Button>
+                      </>
+                    )}
                     {confirmation === workspace.id ? (
                       <div className="w-full border-t border-divider pt-3">
                         <Text variant="note" tone="muted">
@@ -228,5 +254,62 @@ export function ArchivedWorkspacesPage(): ReactNode {
         </div>
       )}
     </main>
+  );
+}
+
+/** The password prompt that stands where Restore and Delete would be for a closed workspace. */
+function UnlockToManage({
+  name,
+  onUnlock,
+}: {
+  readonly name: string;
+  readonly onUnlock: (password: string) => Promise<string | null>;
+}): ReactNode {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (busy) return;
+    if (password.length === 0) {
+      setError('Enter the password.');
+      return;
+    }
+    setBusy(true);
+    const refused = await onUnlock(password);
+    setBusy(false);
+    setPassword('');
+    if (refused !== null) setError(refused);
+  }
+
+  return (
+    <form
+      noValidate
+      aria-label={`Unlock ${name}`}
+      className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-end"
+      onSubmit={(event) => {
+        void submit(event);
+      }}
+    >
+      <Field label="Workspace password" error={error} className="min-w-0 flex-1">
+        {(control) => (
+          <Input
+            {...control}
+            type="password"
+            autoComplete="current-password"
+            readOnly={busy}
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setError(null);
+            }}
+          />
+        )}
+      </Field>
+      <Button type="submit" variant="secondary" disabled={busy}>
+        {busy ? 'Unlocking…' : 'Unlock to manage'}
+      </Button>
+    </form>
   );
 }

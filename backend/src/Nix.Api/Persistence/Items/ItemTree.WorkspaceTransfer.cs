@@ -38,7 +38,7 @@ public sealed partial class ItemTree
         }
         // The request resolver may have cached roles before a structural/membership wait.
         // Ask Core's same resolver against fresh rows after membership writers are excluded.
-        var freshPermissions = new WorkspaceMembershipResolver(_sql, _session);
+        var freshPermissions = new WorkspaceMembershipResolver(_sql, _session, _credential, _clock);
         if (!await freshPermissions.CanWriteWorkspaceAsync(sourceWorkspaceId, cancellationToken).ConfigureAwait(false)
             || !await freshPermissions.CanWriteWorkspaceAsync(destinationWorkspaceId, cancellationToken).ConfigureAwait(false))
         {

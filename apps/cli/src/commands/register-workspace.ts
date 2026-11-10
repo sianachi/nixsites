@@ -22,10 +22,18 @@ import {
   restoreWorkspace,
   revokeWorkspaceInvitation,
 } from './workspaces.ts';
+import { readPasswords } from './locks.ts';
 import { getOperation } from './operations.ts';
 import { parseInteger } from './program-support.ts';
 import type { PageCliOptions, ConfirmCliOptions } from './program-support.ts';
-import { type Act } from './shared.ts';
+import { readStdin, type Act } from './shared.ts';
+import {
+  joinWorkspace,
+  relockWorkspace,
+  removeWorkspacePassword,
+  setWorkspacePassword,
+  unlockWorkspace,
+} from './workspace-locks.ts';
 
 export function registerWorkspaceCommands(program: Command, act: Act): void {
   const ws = program.command('ws').description('The workspaces a token can reach.');
@@ -221,5 +229,68 @@ export function registerWorkspaceCommands(program: Command, act: Act): void {
       act(command, (profile, output) =>
         leaveWorkspace(profile, workspaceId, options.yes === true, output),
       ),
+    );
+
+  // A workspace password withholds the workspace from members until it is presented; it does not
+  // encrypt anything. Passwords come from stdin only, never an argument, which process lists and
+  // shell history would keep. These are a person's commands: the assistant catalog refuses them.
+  const password = ws
+    .command('password')
+    .description("Set, change or remove a workspace's password. Passwords are read from stdin.");
+
+  password
+    .command('set <workspaceId>')
+    .description(
+      'Close the workspace behind the password on stdin. With --change, stdin carries the ' +
+        'current password and then the new one, one per line. Owners only; a forgotten password ' +
+        'cannot be recovered.',
+    )
+    .option('--change', 'change the password of a workspace that has one', false)
+    .action((workspaceId: string, options: { change: boolean }, command: Command) =>
+      act(command, async (profile, output) => {
+        const [first = '', second] = readPasswords(await readStdin(), options.change ? 2 : 1);
+        await (options.change
+          ? setWorkspacePassword(profile, workspaceId, second ?? '', first, output)
+          : setWorkspacePassword(profile, workspaceId, first, undefined, output));
+      }),
+    );
+
+  password
+    .command('remove <workspaceId>')
+    .description('Remove the workspace password, given it on stdin. Owners only.')
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        const [secret = ''] = readPasswords(await readStdin(), 1);
+        await removeWorkspacePassword(profile, workspaceId, secret, output);
+      }),
+    );
+
+  ws.command('unlock <workspaceId>')
+    .description(
+      'Open a password-protected workspace to this profile, given the password on stdin.',
+    )
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        const [secret = ''] = readPasswords(await readStdin(), 1);
+        await unlockWorkspace(profile, workspaceId, secret, output);
+      }),
+    );
+
+  ws.command('relock <workspaceId>')
+    .description('Close a password-protected workspace to this profile again.')
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, (profile, output) => relockWorkspace(profile, workspaceId, output)),
+    );
+
+  ws.command('join <workspaceId>')
+    .description(
+      'Join a workspace by its password on stdin, as a viewer. The workspace id is the one in ' +
+        'its join link.',
+    )
+    .action((workspaceId: string, _options: unknown, command: Command) =>
+      act(command, async (profile, output) => {
+        const [secret = ''] = readPasswords(await readStdin(), 1);
+        await joinWorkspace(profile, workspaceId, secret, output);
+      }),
     );
 }

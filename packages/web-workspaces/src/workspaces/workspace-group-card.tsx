@@ -4,6 +4,8 @@ import { ArrowDown, ArrowUp, GripVertical, Pin, PinOff } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
+import { WorkspaceLockMark } from './workspace-lock-mark';
+
 /** One workspace under a group: tick, name and pin. Drag it onto another group to file it there. */
 export function MemberRow({
   entry,
@@ -56,9 +58,11 @@ export function MemberRow({
           }}
         />
       </label>
-      <Text as="span" variant="bodySmall" className="min-w-0 flex-1 truncate">
+      <Text as="span" variant="bodySmall" className="min-w-0 truncate">
         {entry.name}
       </Text>
+      <WorkspaceLockMark workspace={entry} />
+      <span className="flex-1" />
       <Button
         variant="icon"
         aria-label={`${pinned ? 'Unpin' : 'Pin'} ${entry.name}`}

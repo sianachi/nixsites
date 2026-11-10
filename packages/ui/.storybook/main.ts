@@ -31,7 +31,6 @@ const config: StorybookConfig = {
     '../../../packages/web-views/src/sheet/*.stories.tsx',
     '../../../packages/web-views/src/spreadsheet/*.stories.tsx',
     '../../../packages/web-views/src/form/*.stories.tsx',
-    '../../../packages/web-views/src/finance/*.stories.tsx',
     '../../../packages/web-views/src/habit-tracker/*.stories.tsx',
     '../../../packages/web-views/src/list/*.stories.tsx',
     '../../../packages/web-views/src/board/*.stories.tsx',

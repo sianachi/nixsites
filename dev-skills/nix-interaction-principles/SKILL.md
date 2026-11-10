@@ -74,13 +74,12 @@ After any action the person should know what to do next without thinking.
 - Undo reverses only its own action: record what the action changed and put that back, rather than
   restoring a whole-page snapshot that would also erase anything done since.
 - Every reversible action shows the toast, including moves, adds and field edits. After an undo,
-  the toast keeps an Undo button while there is still something to undo, so the visible control
-  reaches as far back as `Ctrl/Cmd+Z` does.
-- **Undo never disappears while there is history.** The toast's message may fade after a few
-  seconds, but a visible Undo control stays reachable for as long as `Ctrl/Cmd+Z` would still work
-  (shrink the toast to a small persistent "Undo" button, or keep one in the view's toolbar). A
-  phone has no keyboard shortcut, so a timed-out toast leaves it with no undo at all. The toast and
-  its Undo button never cover the controls the person is using, and the button is 44 px on touch.
+  the toast keeps an Undo button while there is still something to undo.
+- **The undo notice goes away on its own.** After a few seconds the whole toast, Undo button
+  included, leaves the screen unless a mouse is over it or the keyboard is on it. Never leave a
+  persistent Undo button or box behind. The history outlives the toast: `Ctrl/Cmd+Z` still works,
+  and the next action or undo brings the toast back. The toast and its Undo button never cover the
+  controls the person is using, and the button is 44 px on touch.
 - `Ctrl/Cmd+Z` undoes the last action whenever focus is not in a text field that has its own text
   undo. Toasts use `role="status"`; a hidden toast must not leave a focusable Undo button behind.
 - In the Nix codebase use the house `<Toast>` (`packages/ui/src/controls/Toast.tsx`) and
@@ -193,6 +192,6 @@ the non-drag control from 5.
    - Focus lands somewhere useful after each action.
    - Every action you can take shows a confirmation animation where it happened, plus words saying
      what happened; removals and undos animate too; anything slow or multi-step shows progress.
-   - A visible Undo stays reachable while there is history; nothing it covers is unreachable.
+   - The undo toast leaves on its own after a few seconds; nothing it covers is unreachable.
    - Every action the view had before still exists, and every part of the request was built.
    - Controls have hover/press feedback, reduced motion keeps the confirmation without movement.

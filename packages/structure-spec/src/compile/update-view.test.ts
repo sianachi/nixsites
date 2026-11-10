@@ -415,7 +415,7 @@ describe('validate update-view patches', () => {
     ).toEqual(['notes']);
   });
 
-  it.each(['form', 'interactive_form', 'habit_tracker', 'finance', 'drive', 'outline'])(
+  it.each(['form', 'interactive_form', 'habit_tracker', 'drive', 'outline'])(
     'refuses filters and sorts that the %s view does not apply',
     (kind) => {
       const target = view({ kind });

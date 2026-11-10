@@ -25,7 +25,7 @@ public sealed class RenameWorkspaceHandler(WorkspaceAdministrationStore store)
             return Result.Failure<WorkspaceSnapshot>(WorkspaceErrors.NotFound());
         }
 
-        var renamed = await store.FindAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
+        var renamed = await store.FindForResponseAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The renamed workspace could not be read back.");
         return Result.Success(renamed);
     }

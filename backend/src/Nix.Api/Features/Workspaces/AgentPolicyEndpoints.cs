@@ -27,6 +27,7 @@ internal static class AgentPolicyEndpoints
         endpoints.MapPut("/api/v1/workspaces/{workspaceId:guid}/agent-policy", Handle)
             .WithTags("Workspaces")
             .WithName("SetWorkspaceAgentPolicy")
+            .AddEndpointFilter(WorkspaceLocks.ClosedWorkspaceFilter.InvokeAsync)
             .Produces<WorkspaceResponse>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -51,7 +52,7 @@ internal static class AgentPolicyEndpoints
         var id = WorkspaceId.From(workspaceId);
         if (!await store.SetAgentPolicyAsync(id, request.AgentsMayApprove, request.AgentsMayCreatePublicLinks, context.RequestAborted)
             .ConfigureAwait(false)
-            || await store.FindAsync(id, context.RequestAborted).ConfigureAwait(false) is not { } updated)
+            || await store.FindForResponseAsync(id, context.RequestAborted).ConfigureAwait(false) is not { } updated)
         {
             return TypedResults.Problem(ApiProblem.Create(
                 context, 404, "workspaces.not_found", "Workspace not found", "No such workspace is visible."));

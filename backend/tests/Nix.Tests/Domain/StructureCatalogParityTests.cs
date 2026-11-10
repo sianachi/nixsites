@@ -34,13 +34,11 @@ public sealed class StructureCatalogParityTests
     }
 
     [Fact]
-    public void Catalog_view_kinds_plus_drive_and_finance_equal_every_view_kind_this_build_defines()
+    public void Catalog_view_kinds_plus_drive_equal_every_view_kind_this_build_defines()
     {
         var catalogKinds = Names(Catalog.Value, "viewKinds", "kind");
         Assert.DoesNotContain("drive", catalogKinds);
-        Assert.DoesNotContain("finance", catalogKinds);
         catalogKinds.Add("drive");
-        catalogKinds.Add("finance");
 
         var backendKinds = ViewKinds.All.Select(descriptor => descriptor.Text).ToHashSet(StringComparer.Ordinal);
 

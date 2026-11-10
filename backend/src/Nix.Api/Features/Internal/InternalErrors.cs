@@ -29,4 +29,15 @@ public static class InternalErrors
     /// person to unlock it.
     /// </summary>
     public static NixError BodyLocked(string detail) => new(BodyLockedCode, detail);
+
+    /// <summary>Stable code for an item in a workspace a password has closed to this credential.</summary>
+    public const string WorkspaceLockedCode = "internal.workspace_locked";
+
+    /// <summary>
+    /// The caller is a member, but the workspace's password has not been entered for this
+    /// credential. Its own code, apart from <see cref="BodyLockedCode"/>: an item lock means "this
+    /// note is refused" and makes a device drop its copy, while a closed workspace is a pause that
+    /// must keep every copy and pending edit until an unlock.
+    /// </summary>
+    public static NixError WorkspaceLocked(string detail) => new(WorkspaceLockedCode, detail);
 }

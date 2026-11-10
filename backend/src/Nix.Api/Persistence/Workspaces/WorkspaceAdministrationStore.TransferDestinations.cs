@@ -20,6 +20,13 @@ public sealed partial class WorkspaceAdministrationStore
             FROM workspace w
             WHERE w.tenant_id = @tenant_id AND w.lifecycle_state = 'active'
               AND w.workspace_id <> @source_workspace_id
+              AND NOT EXISTS (
+                  SELECT 1 FROM workspace_lock closed
+                  WHERE closed.tenant_id = w.tenant_id AND closed.workspace_id = w.workspace_id
+                    AND NOT EXISTS (
+                        SELECT 1 FROM workspace_unlock opened
+                        WHERE opened.tenant_id = closed.tenant_id AND opened.workspace_id = closed.workspace_id
+                          AND opened.credential_id = @credential_id AND opened.expires_at > @now))
               AND (@after_created_at IS NULL OR (w.created_at, w.workspace_id) < (@after_created_at, @after_id))
               AND (EXISTS (
                   SELECT 1 FROM workspace_member m
@@ -37,7 +44,8 @@ public sealed partial class WorkspaceAdministrationStore
             statement, default,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("source_workspace_id", source.Value), TimestampOrNull("after_created_at", afterCreatedAt),
-                UuidOrNull("after_id", afterId?.Value), Integer("limit", limit)], cancellationToken).ConfigureAwait(false))
+                UuidOrNull("after_id", afterId?.Value), Integer("limit", limit),
+                UuidOrNull("credential_id", _credential.CredentialId), Timestamp("now", DateTimeOffset.UtcNow)], cancellationToken).ConfigureAwait(false))
         {
             rows.Add(row);
         }

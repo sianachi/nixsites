@@ -38,7 +38,7 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
   types.
 - Formula properties, child rollups and server-backed charts with bounded evaluation and cycle
   detection.
-- List, board, calendar, gallery, timeline, spreadsheet, chart, drive, habit tracker, finance,
+- List, board, calendar, gallery, timeline, spreadsheet, chart, drive, habit tracker,
   checklist, matrix, outline, group chat, Quick Form, Interactive Form, Smart List and custom views,
   including composed primary and companion views; filters on every view, several sort keys and
   column summaries. Custom views run a small openui-lang program, written in a highlighted editor or
@@ -50,8 +50,7 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
   recurring tasks and calendar entries; Today, Next 7 days, Overdue and Assigned to me workflows; a
   My Day page with today's tasks and habits.
 - Habit tracking with check-in and undo, status, streak insights and charts.
-- Finance tracking: accounts, loans, budget lines and actuals, transactions, scheduled postings,
-  cash flow, a dashboard, a close-month checklist and bank CSV import with preview before commit.
+- Money tracking is plain CSV files, which open in the sheet grid.
 - Reminders as an explicit `reminder` property, due and habit reminders, a notification inbox,
   Web Push through the installed app, quiet hours, a time zone and per-container muting.
 - Automations owned by the person who wrote them: schedule, date-arrives and property-changed
@@ -113,13 +112,13 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
   vault import. PDF OCR is unavailable.
 - `nixctl`, a scriptable CLI with JSON output and 34 top-level commands: health, auth, workspaces,
   items, notes, canvases, properties, schema, views, query, search, structure and blueprints,
-  templates, history, recurrence, calendar and calendar sync, My Day, finance, habits,
+  templates, history, recurrence, calendar and calendar sync, My Day, habits,
   notifications, reminders, automations, files, export, import, document import, operations,
   chat notes, the companion, sites, MCP and stress runs.
 - An MCP server started through `nixctl mcp`, on stdio for one profile or over Streamable HTTP with
   `--listen`, where every request carries its own personal access token. It acts as that principal,
-  limited to their reach, with 108 tools covering items, notes and search, workspaces and members,
-  templates, finance, habits, document import, files, chat notes, the companion, structure and
+  limited to their reach, with 88 tools covering items, notes and search, workspaces and members,
+  templates, habits, document import, files, chat notes, the companion, structure and
   blueprints, notifications, reminders, item protection, calendar links and automations. Settings
   has an MCP tab that mints and revokes its tokens.
 - Imports, exports, file publication, calendar sync and notifications run as background jobs

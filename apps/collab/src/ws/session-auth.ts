@@ -38,7 +38,8 @@ export type SessionResult =
        * `unavailable` is a refusal too - nothing is granted on it - but one that says Core could
        * not be asked, so the client retries rather than concluding its access is gone.
        */
-      readonly reason: 'unauthenticated' | 'refused' | 'locked' | 'unavailable';
+      readonly reason:
+        'unauthenticated' | 'refused' | 'locked' | 'workspace_locked' | 'unavailable';
     };
 
 export interface SessionAuthenticator {
@@ -169,7 +170,11 @@ export function createSessionAuthenticator(options: {
         const draftGeneration = operationId === undefined ? undefined : generationFor(operationId);
 
         let authorization:
-          (ItemAuthorization & { resolvedItemId?: string }) | 'locked' | 'unavailable' | null;
+          | (ItemAuthorization & { resolvedItemId?: string })
+          | 'locked'
+          | 'workspace_locked'
+          | 'unavailable'
+          | null;
         if (draft !== null && options.draftItems !== undefined) {
           const answer = await options.draftItems
             .authorize(token, draft.templateId, draft.operationId, draft.sourceId)
@@ -212,6 +217,10 @@ export function createSessionAuthenticator(options: {
         if (authorization === 'locked') {
           // Never cached: an unlock must take effect on the next attempt, not after the TTL.
           return { ok: false, reason: 'locked' };
+        }
+        if (authorization === 'workspace_locked') {
+          // A pause, not a refusal, and never cached: an unlock must take effect on the next attempt.
+          return { ok: false, reason: 'workspace_locked' };
         }
         if (authorization === 'unavailable') {
           // Never cached either: the next attempt should ask Core again, not remember an outage.

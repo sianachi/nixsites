@@ -23,7 +23,6 @@ const SCENARIOS = [
   'home-maintenance',
   'language-study',
   'small-garden',
-  'personal-finance-goals',
 ] as const;
 const MAX_POLLS = 300;
 const MAX_ANSWERS = 8;
@@ -313,12 +312,6 @@ async function runDesignScenario(
           answersSent += 1;
           continue;
         }
-        if (
-          scenario.expectations.mustHave.some((item) => item.kind === 'declines') &&
-          /finances\s+view/i.test(assistant.text) &&
-          /use|suggest|existing|instead|recommend|already/i.test(assistant.text)
-        )
-          return noBlueprintResult(scenario, model, 'declined', answersSent);
       }
       if (poll < MAX_POLLS - 1) await sleep(POLL_INTERVAL_MS);
     }

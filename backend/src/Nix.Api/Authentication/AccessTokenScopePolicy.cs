@@ -162,9 +162,23 @@ public static class AccessTokenScopePolicy
             return Requirement.Read;
         }
 
+        // Unlocking or relocking a password-protected workspace issues or drops a grant for this
+        // token, an ordinary write like the item equivalent. Matched before the workspace DELETE
+        // rule below, which would otherwise read the relock as a permanent delete.
+        if (value.StartsWith("/api/v1/workspaces/", StringComparison.OrdinalIgnoreCase)
+            && value.EndsWith("/unlock", StringComparison.OrdinalIgnoreCase))
+        {
+            return Requirement.Write;
+        }
+
         // Workspace membership administration changes who can reach an entire item tree. The
         // database role remains the authority; an admin-scoped token is an additional ceiling.
+        // Setting or removing a workspace password, and joining by one, change who may reach it.
         if (value.Contains("/members", StringComparison.OrdinalIgnoreCase)
+            || (value.StartsWith("/api/v1/workspaces/", StringComparison.OrdinalIgnoreCase)
+                && (value.EndsWith("/password", StringComparison.OrdinalIgnoreCase)
+                    || value.EndsWith("/password/remove", StringComparison.OrdinalIgnoreCase)
+                    || value.EndsWith("/join", StringComparison.OrdinalIgnoreCase)))
             || value.Contains("/invitations", StringComparison.OrdinalIgnoreCase)
             || value.EndsWith("/sharing", StringComparison.OrdinalIgnoreCase)
             || value.EndsWith("/leave", StringComparison.OrdinalIgnoreCase)

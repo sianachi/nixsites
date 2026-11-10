@@ -115,3 +115,24 @@ it('reveals writing tools for selected text and keeps them open after formatting
   view.unmount();
   editor.destroy();
 });
+it('keeps the cursor clear of the dock when the editor scrolls it into view', () => {
+  const setProps = vi.fn();
+  const editor = {
+    isFocused: false,
+    isDestroyed: false,
+    isInitialized: true,
+    view: { setProps },
+    state: { selection: { empty: true }, doc: { descendants: () => undefined } },
+    on: () => undefined,
+    off: () => undefined,
+  } as unknown as Editor;
+  const view = render(<MobileNoteToolbar formatting={<button>Bold</button>} editor={editor} />);
+  // jsdom puts the dock at the top of a window `innerHeight` tall, so all of it is clearance.
+  const bottom = window.innerHeight + 16;
+  expect(setProps).toHaveBeenCalledWith({
+    scrollThreshold: { top: 0, right: 0, bottom, left: 0 },
+    scrollMargin: { top: 5, right: 5, bottom, left: 5 },
+  });
+  view.unmount();
+  expect(setProps).toHaveBeenLastCalledWith({ scrollThreshold: 0, scrollMargin: 5 });
+});

@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "Views: the view registry and every view kind (board, calendar, chart, checklist, drive, finance, form, gallery, habit tracker, list, matrix, outline, query, spreadsheet, timeline), suggestions and the creation wizard",
+  "description": "Views: the view registry and every view kind (board, calendar, chart, checklist, drive, form, gallery, habit tracker, list, matrix, outline, query, spreadsheet, timeline), suggestions and the creation wizard",
   "exports": {
     "./board/board-card": {
       "types": "./src/board/board-card.tsx",
@@ -229,90 +229,6 @@
       "types": "./src/drive/drive-view.tsx",
       "default": "./src/drive/drive-view.tsx"
     },
-    "./finance/assign-preview-dialog": {
-      "types": "./src/finance/assign-preview-dialog.tsx",
-      "default": "./src/finance/assign-preview-dialog.tsx"
-    },
-    "./finance/budget-actual-dialog": {
-      "types": "./src/finance/budget-actual-dialog.tsx",
-      "default": "./src/finance/budget-actual-dialog.tsx"
-    },
-    "./finance/close-month-dialog": {
-      "types": "./src/finance/close-month-dialog.tsx",
-      "default": "./src/finance/close-month-dialog.tsx"
-    },
-    "./finance/finance-account-dialog": {
-      "types": "./src/finance/finance-account-dialog.tsx",
-      "default": "./src/finance/finance-account-dialog.tsx"
-    },
-    "./finance/finance-accounts": {
-      "types": "./src/finance/finance-accounts.tsx",
-      "default": "./src/finance/finance-accounts.tsx"
-    },
-    "./finance/finance-balance-trend": {
-      "types": "./src/finance/finance-balance-trend.tsx",
-      "default": "./src/finance/finance-balance-trend.tsx"
-    },
-    "./finance/finance-budget": {
-      "types": "./src/finance/finance-budget.tsx",
-      "default": "./src/finance/finance-budget.tsx"
-    },
-    "./finance/finance-cashflow": {
-      "types": "./src/finance/finance-cashflow.tsx",
-      "default": "./src/finance/finance-cashflow.tsx"
-    },
-    "./finance/finance-dashboard": {
-      "types": "./src/finance/finance-dashboard.tsx",
-      "default": "./src/finance/finance-dashboard.tsx"
-    },
-    "./finance/finance-import-dialog": {
-      "types": "./src/finance/finance-import-dialog.tsx",
-      "default": "./src/finance/finance-import-dialog.tsx"
-    },
-    "./finance/finance-line-dialog": {
-      "types": "./src/finance/finance-line-dialog.tsx",
-      "default": "./src/finance/finance-line-dialog.tsx"
-    },
-    "./finance/finance-month-summary": {
-      "types": "./src/finance/finance-month-summary.tsx",
-      "default": "./src/finance/finance-month-summary.tsx"
-    },
-    "./finance/finance-setup": {
-      "types": "./src/finance/finance-setup.tsx",
-      "default": "./src/finance/finance-setup.tsx"
-    },
-    "./finance/finance-shared": {
-      "types": "./src/finance/finance-shared.tsx",
-      "default": "./src/finance/finance-shared.tsx"
-    },
-    "./finance/finance-transactions": {
-      "types": "./src/finance/finance-transactions.tsx",
-      "default": "./src/finance/finance-transactions.tsx"
-    },
-    "./finance/finance-view": {
-      "types": "./src/finance/finance-view.tsx",
-      "default": "./src/finance/finance-view.tsx"
-    },
-    "./finance/session-changes": {
-      "types": "./src/finance/session-changes.tsx",
-      "default": "./src/finance/session-changes.tsx"
-    },
-    "./finance/transaction-bulk-bar": {
-      "types": "./src/finance/transaction-bulk-bar.tsx",
-      "default": "./src/finance/transaction-bulk-bar.tsx"
-    },
-    "./finance/transaction-dialog": {
-      "types": "./src/finance/transaction-dialog.tsx",
-      "default": "./src/finance/transaction-dialog.tsx"
-    },
-    "./finance/transaction-filter-form": {
-      "types": "./src/finance/transaction-filter-form.tsx",
-      "default": "./src/finance/transaction-filter-form.tsx"
-    },
-    "./finance/transaction-table": {
-      "types": "./src/finance/transaction-table.tsx",
-      "default": "./src/finance/transaction-table.tsx"
-    },
     "./form/editor/block-editor": {
       "types": "./src/form/editor/block-editor.tsx",
       "default": "./src/form/editor/block-editor.tsx"
@@ -480,6 +396,10 @@
     "./sheet/cell-editor": {
       "types": "./src/sheet/cell-editor.tsx",
       "default": "./src/sheet/cell-editor.tsx"
+    },
+    "./sheet/csv-sheet-viewer": {
+      "types": "./src/sheet/csv-sheet-viewer.tsx",
+      "default": "./src/sheet/csv-sheet-viewer.tsx"
     },
     "./sheet/formula-bar": {
       "types": "./src/sheet/formula-bar.tsx",

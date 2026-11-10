@@ -188,6 +188,12 @@ public static class NixTables
     /// <summary>Short-lived per-credential grants past an item lock.</summary>
     public const string ItemUnlock = "item_unlock";
 
+    /// <summary>The password a workspace is closed behind.</summary>
+    public const string WorkspaceLock = "workspace_lock";
+
+    /// <summary>Short-lived per-credential grants past a workspace lock.</summary>
+    public const string WorkspaceUnlock = "workspace_unlock";
+
     /// <summary>Historical transcription state retained after the feature was retired.</summary>
     public const string ItemTranscription = "item_transcription";
 
@@ -325,6 +331,8 @@ public static class NixTables
         NoteCommentRevision,
         ItemLock,
         ItemUnlock,
+        WorkspaceLock,
+        WorkspaceUnlock,
         ItemTranscription,
         PublicFormLink,
         ItemReference,
@@ -439,6 +447,10 @@ public static class NixTables
             // the verifier) and nothing else.
             [ItemLock] = FullDml,
             [ItemUnlock] = FullDml,
+
+            // Core alone sets, checks and removes workspace locks and issues their grants.
+            [WorkspaceLock] = FullDml,
+            [WorkspaceUnlock] = FullDml,
 
             // Preserve the historical table's grants; its rows still cascade with audio items.
             [ItemTranscription] = FullDml,

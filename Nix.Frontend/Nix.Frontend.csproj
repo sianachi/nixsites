@@ -56,9 +56,10 @@
        right-click the solution, Reload Project) after adding one. This is what
        made apps/media look absent from the solution explorer on the day it was
        added while every command-line tool saw it. -->
-  <ItemGroup>
-    <None Include="../apps/*/src/**/*" LinkBase="apps" />
-    <None Include="../packages/*/src/**/*" LinkBase="packages" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="../apps/**/**/**/*" LinkBase="apps" />
+        <None Include="../packages/**/src/**/*" LinkBase="packages" />
+    </ItemGroup>
+
 
 </Project>

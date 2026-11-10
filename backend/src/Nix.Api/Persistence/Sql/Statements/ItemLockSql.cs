@@ -80,7 +80,7 @@ public static class ItemLockSql
     /// Covering means the item's own lock and every ancestor's, through the closure's self edge and
     /// its ancestor edges alike, so a child of a locked folder is closed until the folder is opened.
     /// </remarks>
-    public const string MayReadBody = """
+    public const string MayReadBodyItemLocksOnly = """
         SELECT NOT EXISTS (
             SELECT 1
             FROM item_closure AS edge
@@ -95,6 +95,31 @@ public static class ItemLockSql
                     AND item_unlock.item_id = item_lock.item_id
                     AND item_unlock.credential_id = @credential_id
                     AND item_unlock.expires_at > @now
+              )
+        )
+        """;
+
+    /// <summary>
+    /// <see cref="MayReadBodyItemLocksOnly"/> and also closed when the item's workspace has a
+    /// password this credential has not entered, so callers that ask only this (a notification
+    /// title, a worker reading for a job) get the answer the resolver gives.
+    /// </summary>
+    public const string MayReadBody = $"""
+        {MayReadBodyItemLocksOnly}
+        AND NOT EXISTS (
+            SELECT 1
+            FROM item
+            JOIN workspace_lock
+              ON workspace_lock.tenant_id = item.tenant_id
+             AND workspace_lock.workspace_id = item.workspace_id
+            WHERE item.tenant_id = @tenant_id
+              AND item.id = @item_id
+              AND NOT EXISTS (
+                  SELECT 1 FROM workspace_unlock
+                  WHERE workspace_unlock.tenant_id = @tenant_id
+                    AND workspace_unlock.workspace_id = workspace_lock.workspace_id
+                    AND workspace_unlock.credential_id = @credential_id
+                    AND workspace_unlock.expires_at > @now
               )
         )
         """;

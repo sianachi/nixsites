@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -66,7 +66,32 @@ describe('undo history', () => {
     expect(onUndo).toHaveBeenCalledWith(2);
   });
 
-  it('keeps the Undo button after the message text fades', () => {
+  it('goes away on its own, keeps the history, and comes back on the next undo', () => {
+    vi.useFakeTimers();
+    const onUndo = vi.fn();
+    render(
+      <UndoProvider>
+        <Harness onUndo={onUndo} />
+      </UndoProvider>,
+    );
+    act(() => {
+      screen.getByText('go').click();
+    });
+    expect(screen.getByRole('button', { name: 'Undo (2)' })).toBeVisible();
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    expect(onUndo).toHaveBeenCalledWith(2);
+    expect(screen.getByRole('status')).toHaveTextContent('Undid: Removed B');
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeVisible();
+    vi.useRealTimers();
+  });
+
+  it('stays while a mouse is over it, then goes once the mouse leaves', () => {
     vi.useFakeTimers();
     render(
       <UndoProvider>
@@ -76,10 +101,17 @@ describe('undo history', () => {
     act(() => {
       screen.getByText('go').click();
     });
+    const bar = screen.getByText('Removed B');
+    fireEvent.pointerEnter(bar, { pointerType: 'mouse' });
     act(() => {
-      vi.advanceTimersByTime(6000);
+      vi.advanceTimersByTime(8000);
     });
     expect(screen.getByRole('button', { name: 'Undo (2)' })).toBeVisible();
+    fireEvent.pointerLeave(bar, { pointerType: 'mouse' });
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
     vi.useRealTimers();
   });
 

@@ -12,7 +12,7 @@ namespace Nix.Domain.Views;
 /// <b>The prefix is reserved.</b> A schema declaration (<c>PropertySchemaRules</c>), a generic
 /// create (<c>CreateItem</c>) and a generic property write (<c>SetItemProperties</c>) refuse a
 /// client <c>$</c> key; the template draft edit, template capture and template and document
-/// import paths drop every <c>$</c> key but habit and finance content
+/// import paths drop every <c>$</c> key but habit content
 /// (<c>ReservedPropertyContent</c>). A <c>$</c> name in a rule can therefore only mean a
 /// field from this closed set, and one outside it is refused rather than read as a property.
 /// ADR-0060 records the ad-hoc query surface these fields belong to.

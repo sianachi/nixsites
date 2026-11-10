@@ -24,8 +24,8 @@ export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 );
 
 /**
- * The ten recipes a pet may create structure from (architecture 2.3). `drive` and `finances`
- * exist in `STRUCTURED_RECIPES` for the web wizard but are excluded here: a recipe's own list of
+ * The ten recipes a pet may create structure from (architecture 2.3). `drive`
+ * exists in `STRUCTURED_RECIPES` for the web wizard but is excluded here: a recipe's own list of
  * refusals (architecture 1.3) keeps them out of the pet surface by construction rather than by a
  * runtime check downstream. Kept as a plain tuple, not derived from `STRUCTURED_RECIPES`, for the
  * same reason `FIELD_SPEC_TYPES` is in `field.ts`; `spec.test.ts` ties the two lists together so a

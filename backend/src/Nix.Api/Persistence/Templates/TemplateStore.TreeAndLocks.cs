@@ -40,7 +40,7 @@ public sealed partial class TemplateStore
             // replace them at application time. Sensitive task fields are reset by the evaluator.
             // Who set a scheduled value is never template content: it is re-attributed to
             // whoever applies the template (CloneRegularItem). Of the reserved $ space only habit
-            // and finance content is captured; set-by stamps, calendar sync keys and any other $
+            // content is captured; set-by stamps, calendar sync keys and any other $
             // key are dropped (ReservedPropertyContent).
             Properties = ReservedPropertyContent.Strip(source.Properties, ReservedPropertyContent.ContentPrefixes),
             Schema = PropertySchemaJson.StripUnique(isRoot && rootSchema is not null ? rootSchema : source.Schema),

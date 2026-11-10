@@ -379,7 +379,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
               <Text variant="body" as="p" tone="muted" className="text-lg text-pretty">
                 A note, canvas or spreadsheet is separate from how its children are shown. The same
                 items can be a list, a board, a calendar, a timeline, a gallery, a chart, a habit
-                tracker or a finance ledger.
+                tracker or a checklist.
               </Text>
             </div>
             <div className="grid gap-8 md:grid-cols-3">

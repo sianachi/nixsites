@@ -2,8 +2,11 @@ import { runSyncPass } from '@nix/sync-core';
 import type { MirrorApi } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
-import { WORKSPACES_SETTING } from './mirror-fetch';
+import { PROTECTED_SETTING, WORKSPACES_SETTING } from './mirror-fetch';
 import type { NativeMirror } from './native-mirror';
+import { closedByPassword } from './workspace-closed';
+
+export { closedByPassword };
 
 /** One full sync of the signed-in account into the shell's mirror, then its files. */
 
@@ -19,7 +22,13 @@ export interface SyncDeps {
   readonly api: MirrorApi;
   readonly ownerId: string;
   readonly listWorkspaces: () => Promise<
-    readonly { id: string; name: string; lifecycleState: string }[]
+    readonly {
+      id: string;
+      name: string;
+      lifecycleState: string;
+      passwordProtected?: boolean | null;
+      unlockedUntil?: string | null;
+    }[]
   >;
   readonly capability: (itemId: string, versionId: string) => Promise<FileCapability>;
   readonly signal?: AbortSignal;
@@ -119,10 +128,22 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
     workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name })),
   );
   await deps.store.setSetting(WORKSPACES_SETTING, JSON.stringify(workspaces));
+  // Kept apart from the list so that, should the list ever be unreadable offline, the device still
+  // knows which workspaces to keep closed rather than guessing they are open.
+  await deps.store.setSetting(
+    PROTECTED_SETTING,
+    JSON.stringify(
+      workspaces
+        .filter((workspace) => workspace.passwordProtected === true)
+        .map((workspace) => workspace.id),
+    ),
+  );
   const failedWorkspaces: string[] = [];
   let unreachable = false;
   for (const workspace of workspaces) {
     if (deps.signal?.aborted === true) return { failedWorkspaces, failedFiles: 0, unreachable };
+    // Closed, not revoked: no pass, so nothing is wiped. The next pass after an unlock picks it up.
+    if (closedByPassword(workspace)) continue;
     // One workspace failing (a lost connection, a bad page) must not hold up the others.
     const result = await runSyncPass({
       workspaceId: workspace.id,
@@ -143,9 +164,11 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
     )
       deps.onReplayed?.();
   }
+  // Downloaded copies of a closed workspace's files go until it is unlocked: they are bytes of a
+  // workspace this session may not read. Queued edits live in the outbox and are not touched.
   const failedFiles = await syncFiles(
     deps,
-    workspaces.map((workspace) => workspace.id),
+    workspaces.filter((workspace) => !closedByPassword(workspace)).map((workspace) => workspace.id),
   );
   return { failedWorkspaces, failedFiles, unreachable };
 }

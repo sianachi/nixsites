@@ -17,6 +17,7 @@ internal static class NativeReplayEndpoints
             .Produces<NativeReplayResponse>()
             .ProducesProblem(400)
             .ProducesProblem(409)
+            .ProducesProblem(423)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         return endpoints;
     }
@@ -25,6 +26,12 @@ internal static class NativeReplayEndpoints
         [FromServices] NixDispatcher dispatcher)
     {
         context.Response.Headers.CacheControl = "no-store";
+        if (await WorkspaceSyncEndpoints.ClosedAsync(workspaceId, context).ConfigureAwait(false) is { } closed)
+        {
+            // 423, so the device keeps the queued change instead of recording it as refused.
+            return TypedResults.Problem(closed);
+        }
+
         var result = await dispatcher.SendAsync<NativeReplay, NativeReplayResponse>(
             new NativeReplay(WorkspaceId.From(workspaceId), request), context.RequestAborted).ConfigureAwait(false);
         return result.IsSuccess

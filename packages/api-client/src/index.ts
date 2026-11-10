@@ -197,6 +197,7 @@ export * as bookmarks from './resources/bookmarks.js';
 export * as locks from './resources/locks.js';
 export * as items from './resources/items.js';
 export * as workspaces from './resources/workspaces.js';
+export * as workspaceLocks from './resources/workspace-locks.js';
 export type { AssignableWorkspaceRole } from './resources/workspaces.js';
 export * as views from './resources/views.js';
 export * as structure from './resources/structure.js';
@@ -278,36 +279,6 @@ export type { Comment, CommentThread, CommentsResponse } from './schemas/comment
 export * as habits from './resources/habits.js';
 export { type HabitTracker } from './schemas/habits.js';
 export type { SetHabitInput } from './resources/habits.js';
-
-export * as finance from './resources/finance.js';
-export {
-  type Finance,
-  type FinanceAccountType,
-  type FinanceAccount,
-  type BudgetLine,
-  type FinanceTransaction,
-  type FinanceTransactions,
-  type BudgetCell,
-  type BudgetGrid,
-  type BudgetActual,
-  type FinanceAccounts,
-  type LoanSchedule,
-  type CashFlowMonth,
-  type CashFlow,
-  type Upcoming,
-  type FinanceDashboard,
-  type MonthChecklist,
-  type PostScheduled,
-  type FinanceImport,
-} from './schemas/finance.js';
-export type {
-  FinanceSettingsInput,
-  FinanceAccountInput,
-  BudgetLineInput,
-  FinanceTransactionInput,
-  BudgetActualInput,
-  FinanceImportInput,
-} from './resources/finance.js';
 
 export * as conversations from './resources/conversations.js';
 export * from './schemas/conversations.js';

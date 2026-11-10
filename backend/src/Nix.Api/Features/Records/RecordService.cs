@@ -25,7 +25,7 @@ internal sealed class RecordService(
     IItemTree tree,
     IPermissionResolver permissions,
     IRecordKeyStore store,
-    IFinanceLock topology,
+    IStructuralLock topology,
     INativeReplayStore receipts,
     NixDispatcher dispatcher)
 {

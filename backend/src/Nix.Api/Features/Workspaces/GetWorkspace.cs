@@ -12,6 +12,6 @@ public sealed class GetWorkspaceHandler(WorkspaceAdministrationStore store)
     public ValueTask<WorkspaceSnapshot?> HandleAsync(GetWorkspace query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return store.FindAsync(query.WorkspaceId, cancellationToken);
+        return store.FindForResponseAsync(query.WorkspaceId, cancellationToken);
     }
 }

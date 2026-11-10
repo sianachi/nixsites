@@ -165,20 +165,6 @@ function specificCapability(verb, path) {
     };
   }
 
-  if (path.startsWith('/api/v1/items/{itemId}/finance')) {
-    if (verb === 'GET' || verb === 'HEAD') {
-      return {
-        can: 'Read finance figures for the item.',
-        cannot: 'Post a transaction, change a budget, or edit a body.',
-      };
-    }
-    return {
-      can: 'Write the finance record the summary names. Finance rows are ordinary items under the finance root.',
-      cannot:
-        'Edit a note body. Deleting a finance item is the ordinary item delete, not a field on these routes.',
-    };
-  }
-
   if (path.includes('/calendar') && verb === 'GET') {
     return {
       can: 'Read calendar events or calendar-sync state in the window or list the summary names.',

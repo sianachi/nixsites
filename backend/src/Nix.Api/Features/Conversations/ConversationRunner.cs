@@ -151,7 +151,7 @@ public sealed class ConversationRunner(IIsolatedUnitOfWork units, IHostApplicati
     }
 }
 
-public sealed class ConversationHandlers(ConversationService service, ConversationRunner runner, INixSessionContextAccessor session)
+public sealed class ConversationHandlers(ConversationService service, ConversationRunner runner, INixSessionContextAccessor session, IWorkspaceLocks workspaceLocks)
     : ICommandHandler<CreateConversation, ConversationResponse>, ICommandHandler<ConfigureConversation, ConversationResponse>, IQueryHandler<GetConversation, Result<ConversationResponse>>,
       IQueryHandler<GetConversationMessages, Result<ConversationMessagesResponse>>, ICommandHandler<SendConversation, ConversationResponse>,
       ICommandHandler<CancelConversation, ConversationResponse>, ICommandHandler<ChangeConversationSources, ConversationResponse>
@@ -179,6 +179,20 @@ public sealed class ConversationHandlers(ConversationService service, Conversati
     public async ValueTask<Result<ConversationResponse>> HandleAsync(SendConversation command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // A turn runs after this request returns, in units of work that hold no browser session or
+        // token and so can never hold a workspace unlock. In a password-protected workspace it
+        // would fail with a missing conversation, so say why here instead, while the person is
+        // looking. Nothing is widened to make it work.
+        var found = await service.Find(command.ItemId, true, cancellationToken).ConfigureAwait(false);
+        if (found.IsSuccess
+            && (await workspaceLocks.GetStateAsync(found.Value.WorkspaceId, cancellationToken).ConfigureAwait(false)).PasswordProtected)
+        {
+            return Result.Failure<ConversationResponse>(new(
+                "conversations.workspace_protected",
+                "Chat is not available in a password-protected workspace. Remove the workspace password to use it."));
+        }
+
         return await runner.Send(session.Current!.Value, command.ItemId, command.Request, cancellationToken).ConfigureAwait(false);
     }
     public async ValueTask<Result<ConversationResponse>> HandleAsync(CancelConversation command, CancellationToken cancellationToken)

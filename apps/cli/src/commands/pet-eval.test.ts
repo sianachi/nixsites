@@ -202,29 +202,4 @@ describe('pet eval', () => {
     expect(calls.filter((call) => call.operation === 'reset')).toHaveLength(2);
     expect(process.exitCode).toBe(1);
   });
-
-  it('declines the finance scenario when the companion points to the Finances view', async () => {
-    server.use(
-      http.post(`${CORE}/api/v1/me/pets/runtime`, async ({ request }) => {
-        const body = (await request.json()) as Record<string, unknown>;
-        if (body.operation === 'read')
-          return HttpResponse.json(
-            connection({
-              messages: [
-                {
-                  id: 'a-1',
-                  role: 'assistant',
-                  text: 'Use the existing Finances view for accounts and transactions.',
-                },
-              ],
-            }),
-          );
-        return HttpResponse.json(connection());
-      }),
-    );
-    const [result] = await run('personal-finance-goals');
-    expect(result).toMatchObject({ outcome: 'declined', gate: true });
-    expect(result?.report.ok).toBe(true);
-    expect(result?.score.total).toBe(100);
-  });
 });

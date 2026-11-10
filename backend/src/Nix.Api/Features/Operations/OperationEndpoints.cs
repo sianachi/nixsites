@@ -26,6 +26,7 @@ internal static class OperationEndpoints
     private static async Task<Results<Ok<OperationResponse>, NotFound>> Get(
         Guid operationId,
         [FromServices] IWorkerJobStore jobs,
+        [FromServices] IWorkspaceLocks workspaceLocks,
         [FromServices] INixSessionContextAccessor session,
         CancellationToken cancellationToken)
     {
@@ -36,6 +37,15 @@ internal static class OperationEndpoints
             context.PrincipalId,
             operationId,
             cancellationToken).ConfigureAwait(false);
+
+        // A job's result and error text can name items; one about a workspace that is closed to this
+        // credential reads as not found until it is unlocked.
+        if (job?.WorkspaceId is { } jobWorkspace
+            && (await workspaceLocks.GetStateAsync(jobWorkspace, cancellationToken).ConfigureAwait(false)).Closed)
+        {
+            return TypedResults.NotFound();
+        }
+
         return job is null
             ? TypedResults.NotFound()
             : TypedResults.Ok(OperationMapping.ToResponse(job));

@@ -10,20 +10,6 @@ import type { StudioDraft } from './creation-studio-model';
 
 export function StudioPreview({ draft: live }: { readonly draft: StudioDraft }): ReactNode {
   const draft = useDeferredValue(live);
-  if (draft.view.kind === 'finance') {
-    return (
-      <Blueprint className="mt-3 flex flex-col gap-4 p-4">
-        <Text variant="h3" as="h2">
-          {draft.title || 'Finances'}
-        </Text>
-        <Text variant="bodySmall">Dashboard, Budget, Transactions, Accounts and Cash flow</Text>
-        <Text variant="note" tone="muted">
-          After creating this view, choose your currency and plan dates, then add accounts, budget
-          lines and transactions. Your dashboard will show their calculated figures.
-        </Text>
-      </Blueprint>
-    );
-  }
   const form = draft.view.interactiveForm;
   if (form !== null && form !== undefined) {
     return (

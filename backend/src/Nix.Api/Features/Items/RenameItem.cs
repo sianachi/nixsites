@@ -18,9 +18,6 @@ namespace Nix.Features.Items;
 /// </remarks>
 public sealed record RenameItem(ItemId ItemId, string Title) : ICommand<Item>
 {
-    /// <summary>Internal capability for validated finance feature dispatches; never request-bound.</summary>
-    internal bool FinanceWrite { get; init; }
-
     /// <summary>Internal capability for the calendar sync pull; never request-bound.</summary>
     internal bool CalendarWrite { get; init; }
 }
@@ -36,8 +33,7 @@ public sealed class RenameItemHandler(
     IFileStore files,
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
-    TimeProvider clock,
-    IFinanceMutationGuard? financeGuard = null)
+    TimeProvider clock)
     : ICommandHandler<RenameItem, Item>
 {
     private readonly IItemTree _tree = tree;
@@ -80,19 +76,6 @@ public sealed class RenameItemHandler(
                 "This event cannot be edited in its calendar, so it cannot be renamed here."));
         }
 
-        if (!command.FinanceWrite && financeGuard is not null)
-        {
-            var blocked = await financeGuard.CheckAsync(item.WorkspaceId, itemId, null, false, cancellationToken, allowOpenTransaction: true).ConfigureAwait(false);
-            if (blocked is not null)
-            {
-                return Result.Failure<Item>(blocked.Value);
-            }
-            item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.LifecycleState != ItemLifecycleState.Active)
-            {
-                return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
-            }
-        }
 
         var now = clock.GetUtcNow();
         var properties = ItemProperties.WithTitle(item.Properties, title);

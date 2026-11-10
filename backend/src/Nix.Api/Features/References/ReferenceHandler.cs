@@ -33,7 +33,7 @@ public sealed class ReferenceHandler(
     IPermissionResolver permissions,
     IItemLocks locks,
     IItemReferenceStore store,
-    IFinanceLock topology,
+    IStructuralLock topology,
     INixSessionContextAccessor session,
     TimeProvider clock) :
     ICommandHandler<AddReference, ItemReferenceResponse>,

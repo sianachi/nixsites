@@ -92,6 +92,45 @@ export function MobileNoteToolbar({
       window.dispatchEvent(new Event('nix-mobile-note-toolbar-resized'));
     };
   }, []);
+  // The dock floats over the bottom of the note, so the editor's own "keep the cursor in view" has
+  // to treat that strip as off screen: otherwise a line typed low enough ends up behind the dock.
+  // When the dock moves up (the keyboard opening, the dock growing) the cursor is brought back into
+  // view once, if the person is writing.
+  useEffect(() => {
+    if (!editor) return;
+    let clearance: number | null = null;
+    const apply = (): void => {
+      const dock = dockRef.current;
+      // The view exists only once the editor is mounted; `mount` and `create` call this again.
+      if (!dock || editor.isDestroyed || !editor.isInitialized) return;
+      const next = Math.max(0, Math.round(window.innerHeight - dock.getBoundingClientRect().top));
+      if (next === clearance) return;
+      const grew = clearance !== null && next > clearance;
+      clearance = next;
+      const bottom = next + 16;
+      editor.view.setProps({
+        scrollThreshold: { top: 0, right: 0, bottom, left: 0 },
+        scrollMargin: { top: 5, right: 5, bottom, left: 5 },
+      });
+      if (grew && editor.isFocused) editor.view.dispatch(editor.state.tr.scrollIntoView());
+    };
+    const remount = (): void => {
+      clearance = null;
+      apply();
+    };
+    editor.on('mount', remount);
+    editor.on('create', remount);
+    apply();
+    window.addEventListener('nix-mobile-note-toolbar-resized', apply);
+    return () => {
+      editor.off('mount', remount);
+      editor.off('create', remount);
+      window.removeEventListener('nix-mobile-note-toolbar-resized', apply);
+      if (!editor.isDestroyed && editor.isInitialized) {
+        editor.view.setProps({ scrollThreshold: 0, scrollMargin: 5 });
+      }
+    };
+  }, [editor]);
   const collapsed = visibility === 'while-writing' && hidden;
   const [actionsOpen, setActionsOpen] = useState(false);
   return (

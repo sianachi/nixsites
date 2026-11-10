@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createMirrorFetch,
+  PROTECTED_SETTING,
   rememberKey,
   WORKSPACES_SETTING,
   type MirrorReader,
@@ -532,5 +533,82 @@ describe('mirror fetch router', () => {
       expect(thumbnail.url).toBe(`blob:${location.origin}/abc`);
       expect(files.isOwnBlobUrl(thumbnail.url)).toBe(true);
     });
+  });
+});
+
+describe('a workspace a password has closed', () => {
+  const later = new Date(Date.now() + 60_000).toISOString();
+  const entry = (over: Record<string, unknown>) => ({
+    id: WS,
+    name: 'Home',
+    kind: 'personal',
+    lifecycleState: 'active',
+    ...over,
+  });
+  const status = async (settings: Record<string, string>, path: string) =>
+    (await setup({ bootOffline: true, store: fakeStore(settings) }).get(path)).status;
+
+  it('serves no items, search hits, files or writes, and lists only its name', async () => {
+    const settings = {
+      [WORKSPACES_SETTING]: JSON.stringify([
+        entry({ passwordProtected: true, unlockedUntil: null }),
+      ]),
+    };
+    expect(await status(settings, `/api/v1/workspaces/${WS}/items`)).toBe(404);
+    expect(await status(settings, `/api/v1/items/${CHILD}`)).toBe(404);
+    expect(await status(settings, `/api/v1/items/${FILE}/file`)).toBe(404);
+    const { get } = setup({ bootOffline: true, store: fakeStore(settings) });
+    const hits = (await (await get('/api/v1/search?q=11')).json()) as { results: unknown[] };
+    expect(hits.results).toEqual([]);
+    const listed = (await (await get(`/api/v1/workspaces/${WS}`)).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(listed).toMatchObject({
+      name: 'Home',
+      passwordProtected: true,
+      unlockedUntil: null,
+      canRename: false,
+    });
+    const write = await get(`/api/v1/items/${CHILD}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title: 'x' }),
+    });
+    expect(write.status).toBe(423);
+  });
+
+  it('serves a workspace whose unlock is still running, and closes one whose unlock ran out', async () => {
+    const open = {
+      [WORKSPACES_SETTING]: JSON.stringify([
+        entry({ passwordProtected: true, unlockedUntil: later }),
+      ]),
+    };
+    expect(await status(open, `/api/v1/items/${CHILD}`)).toBe(200);
+    const ended = {
+      [WORKSPACES_SETTING]: JSON.stringify([
+        entry({ passwordProtected: true, unlockedUntil: '2000-01-01T00:00:00Z' }),
+      ]),
+    };
+    expect(await status(ended, `/api/v1/items/${CHILD}`)).toBe(404);
+  });
+
+  it('keeps a recorded protected workspace closed when the cached list is unreadable, and ordinary ones open', async () => {
+    const path = `/api/v1/items/${CHILD}`;
+    expect(
+      await status(
+        { [WORKSPACES_SETTING]: '{not json', [PROTECTED_SETTING]: JSON.stringify([WS]) },
+        path,
+      ),
+    ).toBe(404);
+    expect(
+      await status(
+        { [WORKSPACES_SETTING]: '{not json', [PROTECTED_SETTING]: JSON.stringify([]) },
+        path,
+      ),
+    ).toBe(200);
+    expect(await status({ [WORKSPACES_SETTING]: '{not json' }, path)).toBe(200);
+    expect(
+      await status({ [WORKSPACES_SETTING]: '{not json', [PROTECTED_SETTING]: '{not json' }, path),
+    ).toBe(404);
   });
 });

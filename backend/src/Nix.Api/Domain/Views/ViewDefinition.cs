@@ -10,6 +10,7 @@ namespace Nix.Domain.Views;
 /// why it is stored on the container rather than being a route: "board" is something an item can
 /// be shown as, and the same item can be shown as a list a moment later without going anywhere.
 /// </remarks>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1027:Mark enums with FlagsAttribute", Justification = "Value 12 is retired, not a flag.")]
 public enum ViewKind
 {
     /// <summary>Rows and columns, one row per child.</summary>
@@ -125,8 +126,8 @@ public enum ViewKind
     /// </remarks>
     Drive = 11,
 
-    /// <summary>A financial plan, its accounts, transactions, and cash flow.</summary>
-    Finance = 12,
+    // 12 was the retired finance kind. Stored views are text, and the migration RetireFinanceViews
+    // rewrote them to sheet; never reuse the number.
 
     /// <summary>One line per child: a checkbox, the title and one optional property.</summary>
     /// <remarks>
@@ -277,10 +278,6 @@ public static class ViewKinds
         // Like a list, and by the list's own argument: with nothing configured a drive still has
         // titles, kinds and dates to draw from the effective schema and the items themselves.
         new ViewKindDescriptor(ViewKind.Drive, "drive", Requirement: null),
-
-        // The finance view owns its specialised data in the finance feature's child items and
-        // tables. Like a list, its existence does not depend on a property schema.
-        new ViewKindDescriptor(ViewKind.Finance, "finance", Requirement: null),
 
         // Like a list, and by the list's own argument: with nothing configured a checklist still
         // has titles to list, and it falls back to a "done" checkbox or the task completion.

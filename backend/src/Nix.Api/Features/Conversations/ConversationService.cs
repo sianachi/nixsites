@@ -18,7 +18,7 @@ namespace Nix.Features.Conversations;
 
 /// <summary>Durable conversation state is ordinary item data; private provider sessions are replaceable.</summary>
 public sealed class ConversationService(IItemTree tree, IPermissionResolver permissions,
-    INixSessionContextAccessor session, IFinanceLock gate, TimeProvider clock, NixDispatcher dispatcher, ISchemaResolver schemas, IIdentityDirectory identities, IItemLocks locks)
+    INixSessionContextAccessor session, IStructuralLock gate, TimeProvider clock, NixDispatcher dispatcher, ISchemaResolver schemas, IIdentityDirectory identities, IItemLocks locks)
 {
     internal const string ConfigurationKey = "$chat_config";
     private static NixError Missing => new("conversations.not_found", "The conversation is unavailable.");

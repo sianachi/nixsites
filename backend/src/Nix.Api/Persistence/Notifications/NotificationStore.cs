@@ -6,6 +6,7 @@ using Nix.Abstractions.Notifications;
 using Nix.Abstractions.Workers;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
+using Nix.Domain.Locks;
 using Nix.Domain.Notifications;
 using Nix.Domain.Tenancy;
 
@@ -27,14 +28,28 @@ public sealed class NotificationStore(
     INixSessionContextAccessor session,
     IPushSubscriptionStore pushSubscriptions,
     IWorkerJobStore workerJobs,
-    IConfiguration configuration) : INotificationStore, INotificationWriter
+    IConfiguration configuration,
+    CredentialSessionContext credential,
+    TimeProvider clock) : INotificationStore, INotificationWriter
 {
     private const string VapidPublicKeyConfigurationKey = "Nix:Push:VapidPublicKey";
     /// <inheritdoc />
     public async Task<NotificationPage> ListAsync(TenantId tenantId, PrincipalId principalId, long? afterSeq, bool unreadOnly, int limit, CancellationToken cancellationToken)
     {
+        // Notification text carries item titles. One about a workspace behind a password this
+        // credential has not opened is withheld, whatever the workspace was when it was written;
+        // an invitation names only the workspace, which the list shows anyway.
+        var credentialId = credential.CredentialId;
+        var now = clock.GetUtcNow();
         var query = db.Set<Notification>().AsNoTracking()
-            .Where(row => row.TenantId == tenantId && row.PrincipalId == principalId);
+            .Where(row => row.TenantId == tenantId && row.PrincipalId == principalId)
+            .Where(row => row.WorkspaceId == null
+                || row.Kind == NotificationKind.Invitation
+                || !db.Set<WorkspaceLock>().Any(closed => closed.TenantId == row.TenantId
+                    && closed.WorkspaceId == row.WorkspaceId
+                    && !(credentialId != null && db.Set<WorkspaceUnlock>().Any(opened =>
+                        opened.TenantId == closed.TenantId && opened.WorkspaceId == closed.WorkspaceId
+                        && opened.CredentialId == credentialId && opened.ExpiresAt > now))));
         if (unreadOnly)
         {
             query = query.Where(row => row.ReadAt == null);
@@ -62,7 +77,18 @@ public sealed class NotificationStore(
         var summary = await db.Database.SqlQuery<InboxSummary>($"""
             SELECT
                 (SELECT count(*)::int FROM notification
-                  WHERE tenant_id = {tenantId.Value} AND principal_id = {principalId.Value} AND read_at IS NULL) AS "Unread",
+                  WHERE tenant_id = {tenantId.Value} AND principal_id = {principalId.Value} AND read_at IS NULL
+                    AND (workspace_id IS NULL OR kind = 'invitation'
+                         OR NOT EXISTS (
+                            SELECT 1 FROM workspace_lock closed
+                            WHERE closed.tenant_id = notification.tenant_id
+                              AND closed.workspace_id = notification.workspace_id
+                              AND NOT EXISTS (
+                                SELECT 1 FROM workspace_unlock opened
+                                WHERE opened.tenant_id = closed.tenant_id
+                                  AND opened.workspace_id = closed.workspace_id
+                                  AND opened.credential_id = {credential.CredentialId ?? Guid.Empty}
+                                  AND opened.expires_at > {clock.GetUtcNow()})))) AS "Unread",
                 COALESCE((SELECT revision FROM notification_inbox
                   WHERE tenant_id = {tenantId.Value} AND principal_id = {principalId.Value}), 0) AS "Revision"
             """).SingleAsync(cancellationToken).ConfigureAwait(false);

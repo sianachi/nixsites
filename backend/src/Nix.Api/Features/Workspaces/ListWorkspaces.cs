@@ -14,6 +14,6 @@ public sealed class ListWorkspacesHandler(WorkspaceAdministrationStore store)
         ListWorkspaces query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return store.ListAsync(query.AfterCreatedAt, query.AfterId, query.Limit, cancellationToken);
+        return store.ListForResponseAsync(query.AfterCreatedAt, query.AfterId, query.Limit, cancellationToken);
     }
 }

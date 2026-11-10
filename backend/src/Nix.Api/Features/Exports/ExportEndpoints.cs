@@ -90,6 +90,7 @@ internal static class ExportEndpoints
         [FromServices] IItemTree tree,
         [FromServices] IPermissionResolver permissions,
         [FromServices] IItemLocks locks,
+        [FromServices] IWorkspaceLocks workspaceLocks,
         [FromServices] INixSessionContextAccessor session,
         [FromServices] S3CapabilitySigner signer,
         [FromServices] SelfIssuedTokenService tokens,
@@ -168,6 +169,19 @@ internal static class ExportEndpoints
                 scope == "subtree"
                     ? "This item or something under it is locked. Remove the lock, or export a part of the tree without it."
                     : "A locked item cannot be exported. Remove its lock first.");
+        }
+
+        // The export worker reads through an execution token, which never holds a workspace
+        // unlock, so every read it makes would be refused partway through. Say so now rather than
+        // leave a job that fails with a generic error. The token is not widened to make it work.
+        if ((await workspaceLocks.GetStateAsync(item.WorkspaceId, context.RequestAborted).ConfigureAwait(false)).PasswordProtected)
+        {
+            return Problem(
+                context,
+                409,
+                "exports.workspace_protected",
+                "Export unavailable in a protected workspace",
+                "Exports are not available in a password-protected workspace. Remove the workspace password to export.");
         }
 
         long? sourceSeq = null;

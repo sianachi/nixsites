@@ -1033,6 +1033,26 @@ describe('resumable sync engine with real SQLite', () => {
     expect(api.replayed).toEqual([]);
   });
 
+  it('keeps the item and its pending edits when the workspace closes in the middle of a pass', async () => {
+    const { store, api } = await setup();
+    await sync(store, api);
+    await store.requestBody(workspaceId, id(10));
+    api.syncBodies = (request) =>
+      Promise.resolve({
+        documents: request.documents.map((document) => ({
+          itemId: document.itemId,
+          status: 'unavailable',
+          code: 'workspace_locked',
+        })),
+      });
+    const before = await store.listItems(workspaceId);
+    expect(await sync(store, api)).toMatchObject({ status: 'partial' });
+    // A paused workspace is not a refusal: nothing is purged, so queued edits survive to be sent
+    // after an unlock.
+    expect(await store.listItems(workspaceId)).toEqual(before);
+    expect(before.some((entry) => entry.id === id(10))).toBe(true);
+  });
+
   it('removes only the revoked workspace while another workspace remains readable', async () => {
     const { store, api, path } = await setup();
     await sync(store, api);

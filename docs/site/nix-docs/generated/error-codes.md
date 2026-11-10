@@ -292,7 +292,6 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `comments.limit`
 - `comments.not_author`
 - `comments.not_found`
-- `finance.reserved_property`
 - `identity.principal_not_found`
 - `items.body_conflict`
 - `items.body_rate_limited`
@@ -377,11 +376,19 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `templates.source_locked`
 - `views.version_conflict`
 - `workspaces.arrangement_conflict`
+- `workspaces.credential_cannot_unlock`
 - `workspaces.invalid_arrangement`
 - `workspaces.invalid_daily_date`
 - `workspaces.invalid_daily_settings`
 - `workspaces.invitee_search_invalid`
+- `workspaces.join_refused`
+- `workspaces.password_busy`
+- `workspaces.password_exists`
+- `workspaces.password_invalid`
+- `workspaces.password_not_set`
 - `workspaces.principal_search_invalid`
+- `workspaces.too_many_attempts`
+- `workspaces.wrong_password`
 
 ## Properties
 

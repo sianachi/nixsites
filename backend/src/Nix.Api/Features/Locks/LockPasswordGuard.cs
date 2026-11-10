@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
 
@@ -45,7 +46,9 @@ public sealed class LockPasswordGuard : IDisposable
 
     private readonly TimeProvider _clock;
     private readonly SemaphoreSlim _slots;
-    private readonly ConcurrentDictionary<(TenantId Tenant, ItemId Item), Failures> _failures = new();
+    private readonly Lazy<string> _dummyVerifier =
+        new(() => LockPasswordHasher.Hash(Convert.ToHexString(RandomNumberGenerator.GetBytes(24))));
+    private readonly ConcurrentDictionary<(TenantId Tenant, Guid Target, Guid Actor), Failures> _failures = new();
 
     /// <summary>Initializes a new instance of the <see cref="LockPasswordGuard"/> class.</summary>
     /// <param name="clock">Judges the backoff.</param>
@@ -66,16 +69,66 @@ public sealed class LockPasswordGuard : IDisposable
         _slots = new SemaphoreSlim(concurrentDerivations, concurrentDerivations);
     }
 
-    /// <summary>Checks a password against a lock's verifier.</summary>
+    /// <summary>The shared actor key for strangers guessing at one workspace's join password.</summary>
+    public static readonly Guid OutsiderActor = new("0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f");
+
+    /// <summary>Whether a key is in backoff, without spending a derivation or recording anything.</summary>
+    /// <param name="tenantId">The tenant.</param>
+    /// <param name="target">The workspace or item.</param>
+    /// <param name="actor">The actor key.</param>
+    /// <returns>The throttled outcome, or <see langword="null"/>.</returns>
+    public PasswordCheck? ThrottleFor(TenantId tenantId, Guid target, Guid actor)
+    {
+        var now = _clock.GetUtcNow();
+        return _failures.TryGetValue((tenantId, target, actor), out var recorded) && recorded.RetryAt > now
+            ? PasswordCheck.Throttled(recorded.RetryAt - now)
+            : null;
+    }
+
+    /// <summary>Counts one wrong answer against a key.</summary>
+    /// <param name="tenantId">The tenant.</param>
+    /// <param name="target">The workspace or item.</param>
+    /// <param name="actor">The actor key.</param>
+    public void NoteFailure(TenantId tenantId, Guid target, Guid actor) =>
+        RecordFailure((tenantId, target, actor), _clock.GetUtcNow());
+
+    /// <summary>
+    /// A verifier no password a person types will match, derived once per process. A check that
+    /// has nothing real to compare against (join to a workspace that does not exist) runs against
+    /// it so the work done, and the backoff recorded, do not depend on whether the workspace does.
+    /// </summary>
+    public string DummyVerifier => _dummyVerifier.Value;
+
+    /// <summary>Checks a password against an item lock's verifier.</summary>
     /// <param name="tenantId">The lock's tenant.</param>
     /// <param name="itemId">The locked item.</param>
     /// <param name="password">The presented password.</param>
     /// <param name="verifier">The stored verifier.</param>
     /// <param name="cancellationToken">Cancels the wait for a slot.</param>
     /// <returns>Whether it matched, or why it was not checked.</returns>
-    public async ValueTask<PasswordCheck> VerifyAsync(
+    public ValueTask<PasswordCheck> VerifyAsync(
         TenantId tenantId,
         ItemId itemId,
+        string password,
+        string verifier,
+        CancellationToken cancellationToken) =>
+        VerifyAsync(tenantId, itemId.Value, Guid.Empty, password, verifier, cancellationToken);
+
+    /// <summary>
+    /// Checks a password against a verifier, counting failures against the target and, when
+    /// <paramref name="actor"/> is set, against that actor alone.
+    /// </summary>
+    /// <param name="tenantId">The lock's tenant.</param>
+    /// <param name="target">The locked item or workspace.</param>
+    /// <param name="actor">Narrows the backoff to one principal, or <see cref="Guid.Empty"/> for the whole lock.</param>
+    /// <param name="password">The presented password.</param>
+    /// <param name="verifier">The stored verifier.</param>
+    /// <param name="cancellationToken">Cancels the wait for a slot.</param>
+    /// <returns>Whether it matched, or why it was not checked.</returns>
+    public async ValueTask<PasswordCheck> VerifyAsync(
+        TenantId tenantId,
+        Guid target,
+        Guid actor,
         string password,
         string verifier,
         CancellationToken cancellationToken)
@@ -83,7 +136,7 @@ public sealed class LockPasswordGuard : IDisposable
         ArgumentNullException.ThrowIfNull(password);
         ArgumentNullException.ThrowIfNull(verifier);
 
-        var key = (tenantId, itemId);
+        var key = (tenantId, target, actor);
         var now = _clock.GetUtcNow();
         if (_failures.TryGetValue(key, out var recorded) && recorded.RetryAt > now)
         {
@@ -141,7 +194,7 @@ public sealed class LockPasswordGuard : IDisposable
     /// <inheritdoc />
     public void Dispose() => _slots.Dispose();
 
-    private void RecordFailure((TenantId, ItemId) key, DateTimeOffset now)
+    private void RecordFailure((TenantId, Guid, Guid) key, DateTimeOffset now)
     {
         if (_failures.Count >= SweepThreshold)
         {

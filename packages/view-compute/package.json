@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "description": "Core's computed view reads (query, chart, calendar, habit, finance) recalculated over the synced copy, for the iOS app offline",
+  "description": "Core's computed view reads (query, chart, calendar, habit) recalculated over the synced copy, for the iOS app offline",
   "exports": {
     ".": {
       "types": "./src/index.ts",

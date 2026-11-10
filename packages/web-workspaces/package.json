@@ -61,9 +61,25 @@
       "types": "./src/workspaces/workspace-invitation-notice.tsx",
       "default": "./src/workspaces/workspace-invitation-notice.tsx"
     },
+    "./workspaces/join-workspace-page": {
+      "types": "./src/workspaces/join-workspace-page.tsx",
+      "default": "./src/workspaces/join-workspace-page.tsx"
+    },
+    "./workspaces/settings/workspace-password-section": {
+      "types": "./src/workspaces/settings/workspace-password-section.tsx",
+      "default": "./src/workspaces/settings/workspace-password-section.tsx"
+    },
+    "./workspaces/workspace-lock-mark": {
+      "types": "./src/workspaces/workspace-lock-mark.tsx",
+      "default": "./src/workspaces/workspace-lock-mark.tsx"
+    },
     "./workspaces/workspace-management-section": {
       "types": "./src/workspaces/workspace-management-section.tsx",
       "default": "./src/workspaces/workspace-management-section.tsx"
+    },
+    "./workspaces/workspace-unlock-screen": {
+      "types": "./src/workspaces/workspace-unlock-screen.tsx",
+      "default": "./src/workspaces/workspace-unlock-screen.tsx"
     },
     "./workspaces/workspace-switcher": {
       "types": "./src/workspaces/workspace-switcher.tsx",

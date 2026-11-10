@@ -1,6 +1,7 @@
 using Nix.Abstractions;
 using Nix.Abstractions.Calendar;
 using Nix.Abstractions.Scheduling;
+using Nix.Domain.Authorization;
 using Nix.Domain.Calendar;
 using Nix.Domain.Items;
 using Nix.Domain.Scheduling;
@@ -97,6 +98,7 @@ public sealed class CalendarSyncFiring(
     ICalendarSyncStore store,
     CalendarSyncSupport support,
     IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     IPrincipalStatusChecker principals,
     IItemTree tree,
     IItemLocks locks,
@@ -145,6 +147,18 @@ public sealed class CalendarSyncFiring(
         // A7: the owner must still be able to write the container at every fire; a lost write
         // stops the link rather than pushing a workspace they no longer belong to.
         var container = await tree.FindAsync(link.ContainerItemId, cancellationToken).ConfigureAwait(false);
+        if (container is not null
+            && container.LifecycleState == ItemLifecycleState.Active
+            && container.WorkspaceId == link.WorkspaceId
+            && !await permissions.CanWriteWorkspaceAsync(link.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            && await membership.RoleIgnoringLockAsync(link.WorkspaceId, cancellationToken).ConfigureAwait(false) is { } held
+            && held.GrantsWrite())
+        {
+            // A workspace password closes the workspace to this unattended firing, which holds no
+            // credential. The owner has not lost access: nothing is pushed, and the link is kept.
+            return TriggerOutcome.Skipped("workspace_locked");
+        }
+
         if (container is null
             || container.LifecycleState != ItemLifecycleState.Active
             || container.WorkspaceId != link.WorkspaceId

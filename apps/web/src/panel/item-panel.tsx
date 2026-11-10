@@ -6,14 +6,12 @@ import {
   Link2,
   ListTree,
   MessageSquare,
-  PanelRightClose,
   SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
-import { settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { BacklinksPane } from '../links/backlinks-panel';
 import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { CommentsPane } from './comments-pane';
@@ -34,9 +32,7 @@ import { ViewEditor } from '@nix/web-views/core/view-editor';
  * the schema it gives its children - and they are different questions with the same answer only by
  * accident. "Details" is what this one holds. "Fields" is what the things inside it may hold.
  *
- * It replaces two ghost buttons that opened modals. A dialog is the wrong shape for configuring a
- * view: it covers the view you are configuring, so every change means closing it to look and
- * reopening it to continue.
+ * Shown in a dialog on desktop and in the right-hand drawer on touch screens (`item-panels.tsx`).
  */
 
 export type Pane = 'details' | 'fields' | 'views' | 'links' | 'outline' | 'comments' | 'site';
@@ -63,8 +59,8 @@ export interface ItemPanelProps {
   /** This item's own property values, from `useItemProperties`. */
   readonly details: ItemProperties;
 
+  /** Asked by the inline schema and view editors when they are done. */
   readonly onClose: () => void;
-  readonly overlay?: boolean;
 
   /** The pane to show, when the caller steers it (the Site menu entry does). */
   readonly pane?: Pane;
@@ -84,89 +80,10 @@ const PANE_ICONS: Record<Pane, LucideIcon> = {
   site: Globe,
 };
 
-const WIDTH_KEY = 'nix.itemPanelWidth';
-const WIDTH_DEFAULT = 340;
-const WIDTH_MIN = 280;
-const WIDTH_MAX = 560;
-const clampWidth = (width: number): number => Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, width));
-
-function readWidth(): number {
-  try {
-    const stored = Number(window.localStorage.getItem(WIDTH_KEY));
-    return stored > 0 ? clampWidth(stored) : WIDTH_DEFAULT;
-  } catch {
-    return WIDTH_DEFAULT;
-  }
-}
-
-/** The pinned panel's left edge: drag or use the arrow keys to resize, Home/End for the limits. */
-function PanelResizer({
-  width,
-  onChange,
-}: {
-  readonly width: number;
-  readonly onChange: (width: number) => void;
-}): ReactNode {
-  function commit(next: number): void {
-    onChange(clampWidth(next));
-  }
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-    const step = event.shiftKey ? 32 : 8;
-    const next =
-      event.key === 'ArrowLeft'
-        ? width + step
-        : event.key === 'ArrowRight'
-          ? width - step
-          : event.key === 'Home'
-            ? WIDTH_MIN
-            : event.key === 'End'
-              ? WIDTH_MAX
-              : null;
-    if (next === null) return;
-    event.preventDefault();
-    commit(next);
-  }
-  function onPointerDown(event: PointerEvent<HTMLDivElement>): void {
-    if (event.button !== 0) return;
-    const handle = event.currentTarget;
-    handle.setPointerCapture(event.pointerId);
-    const right = handle.parentElement?.getBoundingClientRect().right ?? 0;
-    const move = (moveEvent: globalThis.PointerEvent): void => {
-      commit(right - moveEvent.clientX);
-    };
-    const stop = (): void => {
-      handle.removeEventListener('pointermove', move);
-      handle.removeEventListener('pointerup', stop);
-      handle.removeEventListener('pointercancel', stop);
-    };
-    handle.addEventListener('pointermove', move);
-    handle.addEventListener('pointerup', stop);
-    handle.addEventListener('pointercancel', stop);
-  }
-  return (
-    // A focusable separator is the ARIA window splitter, as the explorer's own divider is.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-    <div
-      role="separator"
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-      tabIndex={0}
-      aria-orientation="vertical"
-      aria-label="Resize the details panel"
-      aria-valuenow={width}
-      aria-valuemin={WIDTH_MIN}
-      aria-valuemax={WIDTH_MAX}
-      onKeyDown={onKeyDown}
-      onPointerDown={onPointerDown}
-      className={`absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-accent/40 ${focusRing}`}
-    />
-  );
-}
-
 export function ItemPanel({
   container,
   details,
   onClose,
-  overlay = false,
   pane: steeredPane,
   onPaneChange,
   drawer = false,
@@ -186,16 +103,6 @@ export function ItemPanel({
       ? 'details'
       : requestedPane;
   const setPane = onPaneChange ?? setOwnPane;
-  const pinned = !overlay && !drawer;
-  const [width, setWidth] = useState(readWidth);
-  const resize = (next: number): void => {
-    setWidth(next);
-    try {
-      window.localStorage.setItem(WIDTH_KEY, String(next));
-    } catch {
-      // Storage can be blocked; the width then lasts until reload.
-    }
-  };
   const options = PANES.filter(
     (option) =>
       (sitesEnabled || option.value !== 'site') &&
@@ -215,15 +122,10 @@ export function ItemPanel({
     <aside
       aria-label="Item settings"
       className={cn(
-        'relative flex shrink-0 flex-col overflow-hidden bg-surface',
-        settingsPanelWidth,
-        overlay && 'min-h-0 w-full flex-1 shrink',
-        drawer &&
-          'min-h-0 w-full flex-1 shrink pt-[max(env(safe-area-inset-top),calc(var(--spacing)*3))]',
+        'relative flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-surface',
+        drawer && 'pt-[max(env(safe-area-inset-top),calc(var(--spacing)*3))]',
       )}
-      style={pinned ? { width } : undefined}
     >
-      {pinned ? <PanelResizer width={width} onChange={resize} /> : null}
       {drawer ? null : (
         <div className="flex shrink-0 items-center gap-2 px-3 py-3">
           <Segmented
@@ -234,18 +136,6 @@ export function ItemPanel({
             // One row: the seven tabs scroll sideways rather than wrapping onto a second line.
             className="min-w-0 flex-1 flex-nowrap overflow-x-auto bg-background *:shrink-0"
           />
-
-          {/* In a dialog the dialog's own close is the one way out; a second would be a duplicate. */}
-          {overlay ? null : (
-            <button
-              type="button"
-              aria-label="Hide the settings panel"
-              onClick={onClose}
-              className={`flex size-7 max-xl:min-h-11 max-xl:min-w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`}
-            >
-              <Icon icon={PanelRightClose} size="sm" />
-            </button>
-          )}
         </div>
       )}
 

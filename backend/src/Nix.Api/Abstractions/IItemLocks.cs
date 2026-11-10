@@ -44,6 +44,17 @@ public interface IItemLocks
     public ValueTask<bool> MayReadBodyAsync(ItemId itemId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// As <see cref="MayReadBodyAsync"/> but judging item locks only. For a surface its owner
+    /// published on purpose (a public note link), which is served under a service identity that
+    /// can never hold a workspace unlock.
+    /// </summary>
+    /// <param name="itemId">The item.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns><see langword="true"/> when no item lock withholds the body.</returns>
+    public ValueTask<bool> MayReadBodyIgnoringWorkspaceLockAsync(ItemId itemId, CancellationToken cancellationToken) =>
+        MayReadBodyAsync(itemId, cancellationToken);
+
+    /// <summary>
     /// Whether the item, any of its descendants, or any of its ancestors is locked, whoever has
     /// them unlocked.
     /// </summary>

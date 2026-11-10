@@ -327,11 +327,11 @@ public sealed partial class TemplateStore
             });
         }
 
-        // Habit and finance content is checked by its own validators before it is applied; a
+        // Habit content is checked by its own validators before it is applied; a
         // template only ever carries it because capture, import or a draft edit allowed it.
         foreach (var candidate in staged)
         {
-            if (ReservedPropertyContent.Refuse(candidate.Properties, ItemProperties.ReadTitle(candidate.Properties)) is { } refusal)
+            if (ReservedPropertyContent.Refuse(candidate.Properties) is { } refusal)
             {
                 return Result.Failure<TemplateApplicationPlan>(TemplateErrors.Invalid($"This template cannot be applied: {refusal}."));
             }

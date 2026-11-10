@@ -24,7 +24,7 @@ as a static site.
 ## What it does
 
 - **One tree, many views.** A body (note, canvas or spreadsheet) is separate from how its children are
-  shown: list, board, calendar, timeline, gallery, spreadsheet, chart, habit tracker, finance ledger.
+  shown: list, board, calendar, timeline, gallery, spreadsheet, chart, habit tracker.
 - **Structure you shape yourself.** Property schemas, formulas, rollups, templates and automations,
   plus a companion that builds structure on request, with every plan previewed before it runs.
 - **Real-time editing.** CRDT-synced notes with presence, version history and password-locked subtrees.
@@ -51,12 +51,34 @@ One tree of items, shown the way each job needs. All data here is made up.
 | ![Timeline](assets/screenshots/timeline.png)<br>**Timeline** | ![Calendar](assets/screenshots/calendar.png)<br>**Calendar** |
 | ![Spreadsheet](assets/screenshots/sheet.png)<br>**Spreadsheet** | ![List](assets/screenshots/list.png)<br>**List** |
 | ![Priority matrix](assets/screenshots/matrix.png)<br>**Matrix** | ![Notes](assets/screenshots/note.png)<br>**Rich notes** |
-| ![Finance](assets/screenshots/finance.png)<br>**Finance** | ![Habits](assets/screenshots/habits.png)<br>**Habits** |
-| ![Companion chat](assets/screenshots/chat.png)<br>**Companion chat** | ![Dark theme](assets/screenshots/dark.png)<br>**Dark theme** |
+| ![Habits](assets/screenshots/habits.png)<br>**Habits** | ![Companion chat](assets/screenshots/chat.png)<br>**Companion chat** |
+| ![Dark theme](assets/screenshots/dark.png)<br>**Dark theme** | |
 
 **On a phone.** Nix installs as an app, with the same views and a share target.
 
-<img src="assets/screenshots/mobile-board.png" alt="Board on a phone" width="150"> <img src="assets/screenshots/mobile-calendar.png" alt="Calendar on a phone" width="150"> <img src="assets/screenshots/mobile-note.png" alt="Note on a phone" width="150"> <img src="assets/screenshots/mobile-habits.png" alt="Habits on a phone" width="150"> <img src="assets/screenshots/mobile-finance.png" alt="Finance on a phone" width="150"> <img src="assets/screenshots/mobile-chat.png" alt="Companion chat on a phone" width="150">
+<img src="assets/screenshots/mobile-board.png" alt="Board on a phone" width="150"> <img src="assets/screenshots/mobile-calendar.png" alt="Calendar on a phone" width="150"> <img src="assets/screenshots/mobile-note.png" alt="Note on a phone" width="150"> <img src="assets/screenshots/mobile-habits.png" alt="Habits on a phone" width="150"> <img src="assets/screenshots/mobile-chat.png" alt="Companion chat on a phone" width="150">
+
+## Apps
+
+Every app talks to the same server. The iOS, Android and desktop apps ask for your server's address, then
+open that server's own web app, so they stay in step with it.
+
+| App | Runs on | What it does |
+| --- | --- | --- |
+| Web (`apps/web`) | Any modern browser | The full app, installable as a PWA with a share target |
+| iOS (`apps/mobile`) | iPhone and iPad | The web app with full offline sync: open it, edit notes, work with files, and create, rename, move or trash items with no connection. Changes sync when you are back online |
+| Android (`apps/mobile`) | Android phones and tablets | The web app in a native shell. No offline sync or passkey sign-in yet |
+| Desktop (`apps/desktop`) | macOS, Windows, Linux | The iOS app's offline sync on the desktop, with sign-in in your normal browser. Early: unsigned, no auto-update, and the Windows and Linux builds are untested |
+| `nixctl` (`apps/cli`) | Any machine with Node | A JSON CLI for scripts, and `nixctl mcp` for AI tools |
+
+The native apps are not in an app store yet, so build them from source. The iOS and desktop apps need a
+server newer than v0.5.1.
+
+```sh
+pnpm --filter @nix/mobile sync && pnpm --filter @nix/mobile open                  # iOS, in Xcode
+pnpm --filter @nix/mobile sync:android && pnpm --filter @nix/mobile open:android  # Android, in Android Studio
+pnpm --filter @nix/desktop package                                                # desktop, into apps/desktop/dist
+```
 
 ## How it compares
 
@@ -66,7 +88,7 @@ Nix is for a workspace you run yourself: structured views, and a copy of the dat
 | --- | --- | --- | --- |
 | Where it runs | Your machine or server, with Docker or Kubernetes | Notion's hosted service | A folder of Markdown on your devices. Sync is [Obsidian Sync](https://obsidian.md/sync) or your own |
 | Licence | [AGPL-3.0](LICENSE), with [permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for plugins and your content | Proprietary | Proprietary. Free for personal use |
-| Shape | One item tree: lists, boards, calendars, sheets, habits, finance and the rest | Pages and databases | Notes, plus a large plugin ecosystem |
+| Shape | One item tree: lists, boards, calendars, sheets, habits and the rest | Pages and databases | Notes, plus a large plugin ecosystem |
 | Editing together | Real-time CRDT editing, with presence, for a small group | Real-time collaboration | Files synced between devices |
 | Leaving | Lossless `.nix` archives, plus PDF, DOCX and Markdown. An Obsidian vault can be imported | Markdown, HTML and CSV export | The notes are already files |
 | Tools | [`nixctl`](docs/features.md) and an MCP server. Publish a subtree as a static site | The Notion API, and Notion Sites | Plugins, and [Obsidian Publish](https://obsidian.md/publish) or your own site |
@@ -75,7 +97,7 @@ Nix is for a workspace you run yourself: structured views, and a copy of the dat
 this. Anytype is local-first: the sync protocol is open source and a self-hosted node is
 [documented](https://tech.anytype.io/how-to/self-hosting), and the apps are source-available.
 AFFiNE is a self-hostable workspace of documents and a whiteboard. Nix keeps tasks, habits, journal,
-files, calendar and finance in that same tree, and adds the CLI, the MCP server and static-site
+files and calendar in that same tree, and adds the CLI, the MCP server and static-site
 publishing above.
 
 ## Run it for real
@@ -140,6 +162,8 @@ apps/collab      Collaboration service
 apps/companion   Pet companion (codex app-server)
 apps/node-host   One process for collab, companion and the sites worker
 apps/cli         nixctl and the MCP server
+apps/mobile      iOS and Android shell (Capacitor)
+apps/desktop     macOS, Windows and Linux shell (Electron)
 apps/sites       Static site builder and server
 backend/         Core API (ASP.NET) and the migrator
 packages/        Shared libraries

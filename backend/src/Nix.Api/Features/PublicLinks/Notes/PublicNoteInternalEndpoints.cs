@@ -139,8 +139,11 @@ public static class PublicNoteInternalEndpoints
         if (identity?.Status != PrincipalStatus.Active
             || item is null
             || item.WorkspaceId.Value != scope.WorkspaceId
-            || !await services.GetRequiredService<IPermissionResolver>().CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await services.GetRequiredService<IItemLocks>().MayReadBodyAsync(item.Id, cancellationToken).ConfigureAwait(false))
+            // The owner published this note on purpose, and this runs under a service identity that
+            // can never hold a workspace unlock. A workspace password therefore does not apply:
+            // membership is still required, item locks still withhold, and nothing else is opened.
+            || await services.GetRequiredService<IWorkspaceMembershipIgnoringLock>().RoleIgnoringLockAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false) is null
+            || !await services.GetRequiredService<IItemLocks>().MayReadBodyIgnoringWorkspaceLockAsync(item.Id, cancellationToken).ConfigureAwait(false))
         {
             return null;
         }

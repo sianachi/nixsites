@@ -32,6 +32,7 @@ import { readRecentWorkspaceIds } from './last-workspace';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { useWorkspace } from './workspace-context';
 import { WorkspaceGroupsSection } from './workspace-groups-section';
+import { WorkspaceLockMark } from './workspace-lock-mark';
 
 /**
  * The workspace switcher is also the workspace index: every accessible workspace has a direct
@@ -60,6 +61,7 @@ export function WorkspaceSwitcher(): ReactNode {
             className={`flex min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-xs text-muted hover:bg-foreground/7 hover:text-foreground pointer-coarse:min-h-11 ${focusRing}`}
           >
             <span className="truncate">{workspace.name}</span>
+            <WorkspaceLockMark workspace={workspace} />
             <Icon icon={ChevronDown} size="sm" />
           </button>
         )}
@@ -560,6 +562,7 @@ function WorkspaceRow({
       >
         <Icon icon={Check} size="sm" className={current ? 'text-accent-text' : 'invisible'} />
         <span className="truncate">{entry.name}</span>
+        <WorkspaceLockMark workspace={entry} />
         {entry.pendingInvitationId === null ? null : (
           <Text variant="caption" as="span" tone="muted" className="shrink-0">
             Invited

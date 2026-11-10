@@ -1,5 +1,5 @@
-import { dayNumber, dayText, localDay, validZone, weekday } from '../finance/dates';
-import { type Dec, ZERO, must, decOf, num, sum } from '../finance/dec';
+import { dayNumber, dayText, localDay, validZone, weekday } from '../shared/dates';
+import { type Dec, ZERO, must, decOf, num, sum } from '../shared/dec';
 import type { ViewAnswer, ViewCompute } from '../types';
 
 /** GET /items/{id}/habit?from&to, ported from HabitTracker.cs and Domain/Habits. */

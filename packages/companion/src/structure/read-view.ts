@@ -260,9 +260,9 @@ export async function readView(
     base.limits.push(
       'The saved sort names a computed field, so Core default query ordering is used.',
     );
-  if (['form', 'interactive_form', 'habit_tracker', 'finance', 'drive'].includes(view.kind))
+  if (['form', 'interactive_form', 'habit_tracker', 'drive'].includes(view.kind))
     base.limits.push(
-      'This result samples matching child items. Specialized submissions, habit check-ins, finance calculations and file previews are not read by this operation.',
+      'This result samples matching child items. Specialized submissions, habit check-ins and file previews are not read by this operation.',
     );
   if (!appliesSavedRules)
     base.limits.push(

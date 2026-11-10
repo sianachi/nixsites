@@ -165,7 +165,7 @@ public sealed class WorkspaceItemMoveTests(NixPostgresFixture fixture) : IAsyncL
         var alpha = M0SchemaSeed.Alpha;
         var sourceId = WorkspaceId.From(alpha.WorkspaceId);
         await using var blocking = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await blocking.Resolve<IFinanceLock>().AcquireWorkspaceTopologyAsync(sourceId, Cancellation);
+        await blocking.Resolve<IStructuralLock>().AcquireWorkspaceTopologyAsync(sourceId, Cancellation);
         await using var transfer = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         var pid = ((NpgsqlConnection)transfer.DbContext.Database.GetDbConnection()).ProcessID;
         var pending = transfer.Resolve<NixDispatcher>().SendAsync<MoveItem, Item>(

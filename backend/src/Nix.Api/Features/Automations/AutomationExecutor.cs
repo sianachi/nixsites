@@ -65,6 +65,7 @@ public sealed class AutomationExecutor(
     NixDispatcher dispatcher,
     IAutomationActionScope actionScope,
     IItemLocks locks,
+    IWorkspaceMembershipIgnoringLock membership,
     TimeProvider clock)
 {
     /// <summary>
@@ -303,7 +304,15 @@ public sealed class AutomationExecutor(
 
         if (!await permissions.CanReadWorkspaceAsync(rule.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
-            return Evaluation.Skip(rule, context, "access_lost");
+            // A workspace password closes it to the dispatcher, which holds no credential, so the
+            // rule waits rather than counting a failed run toward auto-disable. Recorded as a lock
+            // skip: no run row, so nothing says that something changed inside a closed workspace.
+            return Evaluation.Skip(
+                rule,
+                context,
+                await membership.RoleIgnoringLockAsync(rule.WorkspaceId, cancellationToken).ConfigureAwait(false) is not null
+                    ? "scope_locked"
+                    : "access_lost");
         }
 
         // 3. The triggering item and the scope: not under any lock, then present, active and in

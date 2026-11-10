@@ -32,6 +32,7 @@ internal static class NotificationDeliveryEndpoints
         [FromServices] IWorkerJobStore jobs,
         [FromServices] INotificationStore notifications,
         [FromServices] IPushSubscriptionStore pushSubscriptions,
+        [FromServices] IWorkspaceLocks workspaceLocks,
         [FromServices] INixSessionContextAccessor session)
     {
         var job = await ResolveJobAsync(notificationId, context, jobs, session).ConfigureAwait(false);
@@ -53,10 +54,17 @@ internal static class NotificationDeliveryEndpoints
         var devices = await notifications.ClaimPushAsync(scoped.TenantId, scoped.PrincipalId, notificationId, context.RequestAborted).ConfigureAwait(false)
             ? await pushSubscriptions.ListAsync(scoped.TenantId, scoped.PrincipalId, context.RequestAborted).ConfigureAwait(false)
             : [];
+        // A push goes to every device the person subscribed, not to a credential that has unlocked
+        // anything, so text about a workspace behind a password never leaves in it. The URL is ids
+        // only and stays, so a tap still opens the workspace's unlock screen. An invitation names
+        // only the workspace and is exempt.
+        var withheld = notification.WorkspaceId is { } notified
+            && notification.Kind != NotificationKind.Invitation
+            && (await workspaceLocks.GetStateAsync(notified, context.RequestAborted).ConfigureAwait(false)).PasswordProtected;
         var response = new NotificationDeliveryResponse(
             new NotificationDeliveryPayloadDto(
-                notification.Title,
-                notification.Body,
+                withheld ? "Nix" : notification.Title,
+                withheld ? "You have a notification in a protected workspace." : notification.Body,
                 BuildUrl(notification.WorkspaceId?.Value, notification.ItemId?.Value),
                 "nix-" + notification.Id.ToString("D", System.Globalization.CultureInfo.InvariantCulture)),
             [.. devices.Take(MaxSubscriptions).Select(device =>

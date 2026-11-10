@@ -25,7 +25,7 @@ namespace Nix.Persistence.Scheduling;
 public sealed class HabitReminderSource(
     IReminderCandidateFinder candidates,
     IItemTree tree,
-    IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     IMutedContainerChecker mutedContainers,
     IPrincipalStatusChecker principalStatus,
     INotificationWriter notifications,
@@ -179,7 +179,9 @@ public sealed class HabitReminderSource(
             return TriggerOutcome.Skipped("recipient_not_active");
         }
 
-        if (!await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        // Membership, not the lock: a workspace password withholds the item's text from the notification
+        // (the locked title below) but does not drop the reminder.
+        if (await membership.RoleIgnoringLockAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false) is null)
         {
             return TriggerOutcome.Skipped("access_lost");
         }

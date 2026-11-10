@@ -9,7 +9,9 @@ import {
   useCacheInvalidation,
 } from '@nix/web-platform/api/use-cache-invalidation';
 import { useOverlayDetails } from '@nix/web-foundation/layout/viewport';
+import { csvViewerPlugin } from '@nix/web-editor/plugins/csv-viewer';
 import { findBuiltInFileViewer } from '@nix/web-editor/plugins/built-in-file-viewers';
+import { CsvSheetViewer } from '@nix/web-views/sheet/csv-sheet-viewer';
 import { FileDetails } from './file-details';
 import { fileKindLabel, formatBytes } from '@nix/web-collections/items/file-facts';
 import { quietTopControl, useNearTopEdge } from '@nix/web-foundation/lib/use-near-top-edge';
@@ -64,6 +66,8 @@ export function FileViewer({
     null,
   );
   const [replacing, setReplacing] = useState(false);
+  // Core sends no per-item write flag; a refused write is how this page learns the file is read-only.
+  const [writeRefused, setWriteRefused] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const replacementRef = useRef<HTMLInputElement>(null);
@@ -182,8 +186,8 @@ export function FileViewer({
     }
   }
 
-  async function replace(file: File): Promise<void> {
-    if (visibleRecord === null) return;
+  async function replace(file: File): Promise<boolean> {
+    if (visibleRecord === null) return false;
     setReplacing(true);
     setError(null);
     try {
@@ -200,8 +204,11 @@ export function FileViewer({
       );
       const updated = await fileResources.uploadAndCompleteFile(client, upload, file);
       setRecord(updated);
+      return true;
     } catch (reason) {
       setError({ itemId, message: refusal(reason, 'The replacement was refused.') });
+      if (isNixApiError(reason) && reason.status === 403) setWriteRefused(true);
+      return false;
     } finally {
       setReplacing(false);
     }
@@ -361,6 +368,10 @@ export function FileViewer({
                 canPreview={canPreview}
                 downloading={downloading}
                 onDownload={() => void download()}
+                readOnly={writeRefused}
+                onSaveText={(text) =>
+                  replace(new File([text], file.fileName, { type: file.mediaType }))
+                }
               />
             </div>
           )}
@@ -400,7 +411,11 @@ function Stage({
   canPreview,
   downloading,
   onDownload,
+  readOnly,
+  onSaveText,
 }: {
+  readonly readOnly: boolean;
+  readonly onSaveText: (text: string) => Promise<boolean>;
   readonly itemId: string;
   readonly file: FileRecord['current'];
   readonly preview: Preview | null;
@@ -447,6 +462,17 @@ function Stage({
   if (viewer !== null) {
     const Viewer = viewer.Component;
     const source = (viewer.source ?? 'text') === 'text' ? preview.source : preview.url;
+    if (source !== null && viewer.id === csvViewerPlugin.id) {
+      return (
+        <CsvSheetViewer
+          key={file.id}
+          fileName={file.fileName}
+          source={source}
+          readOnly={readOnly}
+          onSave={onSaveText}
+        />
+      );
+    }
     if (source !== null) {
       return (
         <Viewer

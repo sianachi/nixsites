@@ -12,11 +12,11 @@ namespace Nix.Persistence;
 public sealed class PublicFormStore(
     NixDbContext database,
     ScopedNixSessionContextAccessor session,
-    IFinanceLock topology)
+    IStructuralLock topology)
     : IPublicFormStore
 {
     private readonly ScopedNixSessionContextAccessor _session = session;
-    private readonly IFinanceLock _topology = topology;
+    private readonly IStructuralLock _topology = topology;
 
     /// <inheritdoc />
     public async ValueTask<IPublicFormTransaction> BeginAsync(

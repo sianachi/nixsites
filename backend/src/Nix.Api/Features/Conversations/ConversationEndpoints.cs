@@ -43,7 +43,7 @@ internal static class ConversationEndpoints
     {
         context.Response.Headers.CacheControl = "no-store";
         return result.Match<Results<Ok<T>, ProblemHttpResult>>(value => TypedResults.Ok(value), error => TypedResults.Problem(ApiProblem.Create(context,
-            error.Code.EndsWith("not_found", StringComparison.Ordinal) ? 404 : error.Code is "conversations.busy" or "conversations.conflict" or "conversations.sources_unavailable" ? 409 : 422,
+            error.Code.EndsWith("not_found", StringComparison.Ordinal) ? 404 : error.Code is "conversations.busy" or "conversations.conflict" or "conversations.sources_unavailable" or "conversations.workspace_protected" ? 409 : 422,
             error.Code, "Conversation request failed", error.Message)));
     }
 }

@@ -36,6 +36,7 @@ public sealed record GetItemAuthorization(ItemId ItemId) : IQuery<Result<ItemAut
 public sealed class GetItemAuthorizationHandler(
     IItemTree tree,
     IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     INixSessionContextAccessor session,
     AccessTokenSessionContext scope,
     IItemLocks locks,
@@ -69,8 +70,15 @@ public sealed class GetItemAuthorizationHandler(
             .ConfigureAwait(false);
         if (!mayRead)
         {
-            return Result.Failure<ItemAuthorization>(
-                InternalErrors.NotFound($"No item {query.ItemId} is visible."));
+            // A member of a workspace closed to this credential by its password is told the body is
+            // locked, as for an item lock, so a live collaboration session closes as "locked" and a
+            // client keeps its unsynced edits instead of treating the close as revoked access.
+            // Anybody who is not a member still gets not found.
+            return await membership.RoleIgnoringLockAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false) is not null
+                ? Result.Failure<ItemAuthorization>(
+                    InternalErrors.WorkspaceLocked($"The workspace of item {query.ItemId} is locked to this session."))
+                : Result.Failure<ItemAuthorization>(
+                    InternalErrors.NotFound($"No item {query.ItemId} is visible."));
         }
 
         // Everything the collaboration service serves for one item - the live document, its

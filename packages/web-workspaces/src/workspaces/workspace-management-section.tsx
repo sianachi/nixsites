@@ -8,6 +8,7 @@ import { InviteSection } from './settings/invite-section';
 import { PeopleList } from './settings/people-list';
 import type { Confirmation } from './settings/shared';
 import { SharingSwitches } from './settings/sharing-switches';
+import { WorkspacePasswordSection } from './settings/workspace-password-section';
 import { WorkspaceOverview } from './settings/workspace-overview';
 import { useWorkspace } from './workspace-context';
 import { useWorkspaceAdministration } from './use-workspace-administration';
@@ -55,6 +56,8 @@ export function WorkspaceManagementSection({
           <Text variant="note">Only a workspace owner or an administrator can change these.</Text>
         )}
       </section>
+
+      <WorkspacePasswordSection />
 
       {!workspace.canManageMembers ? (
         <Text tone="muted">You can see this workspace, but you cannot manage its members.</Text>

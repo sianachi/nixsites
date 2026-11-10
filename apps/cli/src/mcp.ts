@@ -3,7 +3,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerTemplateDraftTools } from './mcp-template-drafts.ts';
 import { registerWorkspaceTools } from './mcp-workspaces.ts';
-import { registerFinanceTools } from './mcp-finance.ts';
 import { registerHabitAndCommentTools } from './mcp-habits-comments.ts';
 import { registerMemberTools } from './mcp-members.ts';
 import { registerDocumentAndFileTools } from './mcp-files.ts';
@@ -43,7 +42,6 @@ export async function createWorkspaceMcpServer(
 
   registerTemplateDraftTools(server, deps);
   registerWorkspaceTools(server, deps);
-  registerFinanceTools(server, deps);
   registerHabitAndCommentTools(server, deps);
   registerMemberTools(server, deps);
   hostOnly.push(...registerDocumentAndFileTools(server, deps));

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { findBuiltInFileViewer } from '../../plugins/built-in-file-viewers';
-import { CsvViewer, parseDelimited } from '../../plugins/csv-viewer';
+import { CsvViewer, parseDelimited, serializeDelimited } from '../../plugins/csv-viewer';
 import { MarkdownViewer } from '../../plugins/markdown-viewer';
 import { mediaKind } from '../../plugins/media-viewer';
 import { TextViewer, isTextFile } from '../../plugins/text-viewer';
@@ -62,6 +62,16 @@ describe('the delimited parser', () => {
       ['a', 'b'],
       ['1', '2'],
     ]);
+  });
+});
+
+describe('the delimited serialiser', () => {
+  it.each([',', '\t'] as const)('round-trips quotes, delimiters and newlines (%j)', (delimiter) => {
+    const rows = [
+      ['a', `x${delimiter}y`, 'say "hi"\nthere'],
+      ['', 'plain', 'line\r\nbreak'],
+    ];
+    expect(parseDelimited(serializeDelimited(rows, delimiter), delimiter)).toEqual(rows);
   });
 });
 

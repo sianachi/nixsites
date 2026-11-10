@@ -1270,7 +1270,12 @@ export function NoteEditor({
             ) : null}
             <PaneViewport
               scrollKey={`${workspaceId ?? ''}:${itemId}:${documentPath ?? 'body'}`}
-              className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-24 pt-4 sm:px-8 sm:pt-6 lg:pb-6"
+              // design-token-exempt: under the phone's floating dock, room to scroll the last line clear of it.
+              className={`min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-4 sm:px-8 sm:pt-6 ${
+                narrow && !hideToolbar
+                  ? 'pb-[calc(var(--mobile-note-toolbar-clearance,6rem)+var(--spacing)*4)]'
+                  : 'pb-24 lg:pb-6'
+              }`}
             >
               {dropActive ? (
                 <Text

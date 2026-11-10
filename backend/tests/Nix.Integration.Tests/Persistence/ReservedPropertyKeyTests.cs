@@ -11,8 +11,8 @@ namespace Nix.Integration.Tests.Persistence;
 /// <summary>
 /// The '$' property prefix belongs to the server and the structural query fields (queries plan,
 /// decision D2): a generic write may not set a '$' key, may still clear one stored before the rule
-/// existed. The trusted dispatches keep writing their own prefixes (<c>$habit_</c>, <c>$cal_</c>,
-/// <c>$fin_</c>); the habit, calendar sync and finance suites exercise those paths end to end.
+/// existed. The trusted dispatches keep writing their own prefixes (<c>$habit_</c> and <c>$cal_</c>);
+/// the habit and calendar sync suites exercise those paths end to end.
 /// </summary>
 [Collection(PostgresCollectionDefinition.Name)]
 public sealed class ReservedPropertyKeyTests(NixPostgresFixture fixture) : IAsyncLifetime

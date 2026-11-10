@@ -23,7 +23,8 @@ public sealed record WorkerJobRecord(
     int Attempts,
     bool CancellationRequested,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    WorkspaceId? WorkspaceId = null);
 
 /// <summary>An idempotency key was already bound to a different durable job request.</summary>
 public sealed class WorkerJobIdempotencyConflictException : InvalidOperationException

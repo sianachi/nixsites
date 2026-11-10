@@ -3,6 +3,31 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## Unreleased
+
+### Added
+
+- Workspace passwords. An owner can close a workspace behind one password in its settings. Until a member enters it, they see only the workspace's name and that it is locked: no items, titles, search, graph, views, files, comments, members, settings, agents, MCP or offline sync. An unlock lasts 15 minutes, belongs to the browser session or access token that entered it, and ends when the owner changes or removes the password or the member locks the workspace again. The same password lets anyone in the organization who signs in and opens the workspace's join link join as a viewer; every failed join answers alike, so links cannot be used to find workspaces. A forgotten password cannot be recovered. New routes: `PUT /api/v1/workspaces/{id}/password`, `POST .../password/remove`, `POST` and `DELETE .../unlock`, `POST .../join`; workspace responses gain `passwordProtected` and `unlockedUntil`, and a closed workspace's response carries only its name and kind. A member's device sync of a closed workspace answers 423 `workspaces.locked`, so an offline copy keeps its unsynced edits instead of being wiped as revoked access. `nixctl ws password|unlock|relock|join` read passwords from stdin; the pet and MCP catalog refuses all of them.
+
+### Removed
+
+- **Breaking:** the finance feature. The `finance` view kind, its `/api/v1/items/{itemId}/finance*`
+  routes, the `nixctl finance` commands and the finance MCP tools are gone; keep money records in
+  plain CSV files, which open in the sheet grid. Existing finance records stay as ordinary items
+  and any saved `finance` view becomes a `sheet` view on upgrade, but nothing converts the records
+  to CSV. Scripts that call the removed routes, commands or tools must stop.
+
+### Changed
+
+- CSV and TSV files open in the sheet grid instead of a read-only table. Edit cells and press Save
+  to write the grid back as a new version of the file; files past the sheet's limits keep the
+  read-only table.
+
+### Fixed
+
+- The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
+  history is kept, so Ctrl/Cmd+Z still works and the next action or undo shows the notice again.
+
 ## 0.6.0 - 2026-11-07
 
 ### Removed

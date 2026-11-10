@@ -22,7 +22,7 @@ public sealed class NativeReplayHandler(
     IItemLocks locks,
     IPermissionResolver permissions,
     AccessTokenSessionContext tokenScope,
-    IFinanceLock topology,
+    IStructuralLock topology,
     NixDispatcher dispatcher) : ICommandHandler<NativeReplay, NativeReplayResponse>
 {
     internal const string InvalidCode = "sync.invalid_replay";

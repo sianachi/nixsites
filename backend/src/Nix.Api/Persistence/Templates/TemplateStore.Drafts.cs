@@ -321,7 +321,7 @@ public sealed partial class TemplateStore
         }
 
         // Template content carries no set-by value (the applier is attributed at application
-        // time) and no reserved $ key beyond habit and finance content, so a client-supplied one
+        // time) and no reserved $ key beyond habit content, so a client-supplied one
         // is dropped here exactly as capture and import drop it.
         nextProperties = ReservedPropertyContent.Strip(nextProperties, ReservedPropertyContent.ContentPrefixes);
 

@@ -28,7 +28,13 @@ public sealed record WorkspaceSnapshot(
     bool MembershipLocked,
     bool Collaboration,
     bool AgentsMayApprove,
-    bool AgentsMayCreatePublicLinks);
+    bool AgentsMayCreatePublicLinks,
+    bool PasswordProtected = false,
+    DateTimeOffset? UnlockedUntil = null)
+{
+    /// <summary>Gets whether a workspace password closes this workspace to the calling credential.</summary>
+    public bool Closed => PasswordProtected && UnlockedUntil is null;
+}
 
 /// <summary>One active human with server-decided workspace invitation eligibility.</summary>
 public sealed record WorkspaceInviteeSnapshot(
@@ -125,7 +131,8 @@ public enum DailyNoteOutcome
 public sealed partial class WorkspaceAdministrationStore(
     NixSqlExecutor sql,
     INixSessionContextAccessor session,
-    CredentialSessionContext credential)
+    CredentialSessionContext credential,
+    IWorkspaceLocks workspaceLocks)
 {
     private static readonly string[] PresetKeys = ["seed.kanban", "seed.calendar", "seed.list"];
 
@@ -163,6 +170,76 @@ public sealed partial class WorkspaceAdministrationStore(
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// Adds each workspace's password state and, for one closed to the calling credential, strips
+    /// everything but its identifier, name and that state. The API boundary applies this to every
+    /// workspace it returns: a closed workspace shows its name and that it is locked, nothing else
+    /// (not members, settings, quota, counts or capabilities). A pending invitation id is the
+    /// caller's own and stays.
+    /// </summary>
+    public async ValueTask<IReadOnlyList<WorkspaceSnapshot>> WithLockStateAsync(
+        IReadOnlyList<WorkspaceSnapshot> rows,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        if (rows.Count == 0)
+        {
+            return rows;
+        }
+
+        var states = await workspaceLocks.GetStatesAsync([.. rows.Select(row => row.Id)], cancellationToken)
+            .ConfigureAwait(false);
+        if (states.Count == 0)
+        {
+            return rows;
+        }
+
+        var result = new List<WorkspaceSnapshot>(rows.Count);
+        foreach (var row in rows)
+        {
+            if (!states.TryGetValue(row.Id, out var state))
+            {
+                result.Add(row);
+            }
+            else if (state.Closed)
+            {
+                // CreatedAt stays on the snapshot only because the list cursor is built from it;
+                // the API response masks it, as it does every other field this clears.
+                result.Add(new WorkspaceSnapshot(
+                    row.Id, row.Name, 0, 0, row.CreatedAt, row.PersonalOwnerPrincipalId, false, false, false, false,
+                    row.PendingInvitationId, row.LifecycleState, null, false, false, false, false,
+                    PasswordProtected: true, UnlockedUntil: null));
+            }
+            else
+            {
+                result.Add(row with { PasswordProtected = true, UnlockedUntil = state.UnlockedUntil });
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Lists reachable workspaces as the API presents them: lock state added, closed ones stripped.</summary>
+    public async ValueTask<IReadOnlyList<WorkspaceSnapshot>> ListForResponseAsync(
+        DateTimeOffset? afterCreatedAt,
+        WorkspaceId? afterId,
+        int limit,
+        CancellationToken cancellationToken) =>
+        await WithLockStateAsync(
+            await ListAsync(afterCreatedAt, afterId, limit, cancellationToken).ConfigureAwait(false),
+            cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Gets one workspace as the API presents it: lock state added, a closed one stripped.</summary>
+    public async ValueTask<WorkspaceSnapshot?> FindForResponseAsync(
+        WorkspaceId workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var row = await FindAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        return row is null
+            ? null
+            : (await WithLockStateAsync([row], cancellationToken).ConfigureAwait(false))[0];
     }
 
     /// <summary>Gets one reachable workspace, returning null for absent and inaccessible alike.</summary>

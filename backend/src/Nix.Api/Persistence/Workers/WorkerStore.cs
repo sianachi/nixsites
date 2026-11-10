@@ -158,7 +158,7 @@ public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQue
                 .ConfigureAwait(false);
     }
 
-    private static WorkerJobRecord ToRecord(WorkerJob job) => new(job.Id.Value, job.Kind, job.Status, job.Payload, job.Result, job.ErrorCode, job.ErrorDetail, job.Attempts, job.CancellationRequested, job.CreatedAt, job.CompletedAt);
+    private static WorkerJobRecord ToRecord(WorkerJob job) => new(job.Id.Value, job.Kind, job.Status, job.Payload, job.Result, job.ErrorCode, job.ErrorDetail, job.Attempts, job.CancellationRequested, job.CreatedAt, job.CompletedAt, job.WorkspaceId);
 
     private static bool PayloadEquivalent(string kind, string left, string right)
     {

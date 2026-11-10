@@ -37,6 +37,7 @@ public sealed class ExpirySource(
     IReminderCandidateFinder candidates,
     IItemTree tree,
     IPermissionResolver permissions,
+    IWorkspaceMembershipIgnoringLock membership,
     IMutedContainerChecker mutedContainers,
     IPrincipalStatusChecker principalStatus,
     INotificationWriter notifications,
@@ -154,7 +155,9 @@ public sealed class ExpirySource(
             return TriggerOutcome.Skipped("recipient_not_active");
         }
 
-        var canRead = await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        // Membership, not the lock: a workspace password withholds the item's text from the notification (the
+        // locked title below) but does not stop the owner being told something expires.
+        var canRead = await membership.RoleIgnoringLockAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false) is not null;
         if (warning && !canRead)
         {
             return TriggerOutcome.Skipped("access_lost");

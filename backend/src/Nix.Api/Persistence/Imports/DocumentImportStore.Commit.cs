@@ -153,7 +153,7 @@ public sealed partial class DocumentImportStore
                 Seq = sequence,
                 // A planned set-by value comes from the imported file, not from anyone who acted
                 // here: the importing principal is attributed for every scheduled value. Of the
-                // reserved space carries habit, finance and sanitized native chat settings.
+                // reserved space carries habit and sanitized native chat settings.
                 Properties = ItemProperties.RestampCopiedSetBy(
                     ConversationNativeImportProperties.Restore(operation.Format == "nix" ? planned.Properties : null,
                         ReservedPropertyContent.Strip(
@@ -168,8 +168,8 @@ public sealed partial class DocumentImportStore
                 CreatedAt = now,
                 LastModifiedAt = now,
             };
-            // Habit and finance content is checked by its own validators before it is applied.
-            if (ReservedPropertyContent.Refuse(item.Properties, ItemProperties.ReadTitle(item.Properties)) is not null)
+            // Habit content is checked by its own validators before it is applied.
+            if (ReservedPropertyContent.Refuse(item.Properties) is not null)
             {
                 return null;
             }

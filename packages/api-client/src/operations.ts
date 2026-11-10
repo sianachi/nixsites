@@ -52,6 +52,9 @@ const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/\/approval\/(approve|reject)$/, 'any'],
   // Core refuses tokens here too; the policy governs what assistants may approve or publish.
   [/^\/api\/v1\/workspaces\/[^/]+\/agent-policy$/, 'any'],
+  // A workspace password is typed by a person: setting, changing or removing it, unlocking with
+  // it and joining by it are never run by an assistant, which must not be handed the password.
+  [/^\/api\/v1\/workspaces\/[^/]+\/(password|unlock|join)(\/|$)/, 'any'],
 ];
 
 export function isHumanOnlyOperation(entry: OperationEntry): boolean {
