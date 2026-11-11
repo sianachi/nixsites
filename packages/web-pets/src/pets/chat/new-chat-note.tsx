@@ -83,7 +83,9 @@ export function NewChatNote({
   function setParentId(id: string | null): void {
     setChosenDestination({ workspaceId, parentId: id });
   }
-  const [title, setTitle] = useState(initialTitle || initialPrompt || 'New chat');
+  const [title, setTitle] = useState(
+    initialTitle?.length ? initialTitle : initialPrompt || 'New chat',
+  );
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
