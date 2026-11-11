@@ -28,6 +28,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Pressing a result as the command palette refreshes opens the item shown on screen.
 - The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
   history is kept, so Ctrl/Cmd+Z still works and the next action or undo shows the notice again.
 - Text a pet writes into a note converts properly: `- [ ]` checklists become task lists (and survive a pet edit), `> [!note]` callouts work in their usual spelling, bold next to punctuation is bold, plain web addresses become links, `<br>` is a line break, and a reply wrapped in a Markdown code fence is unwrapped. The pet is told when any Markdown stayed as plain text. Markdown import gains the same task lists, callouts, links and line breaks.

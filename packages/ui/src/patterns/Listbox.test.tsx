@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Listbox, useListbox, type ListboxOption } from './Listbox';
@@ -198,6 +198,28 @@ describe('a listbox driven from a text field', () => {
     await user.click(screen.getByRole('option', { name: /Banana/ }));
 
     expect(chosen).toHaveBeenCalledWith(FRUIT[2], 2);
+  });
+
+  it('selects the displayed option as soon as the list updates', () => {
+    const chosen = vi.fn();
+    function UpdatingPicker({ updated }: { readonly updated: boolean }): ReactNode {
+      const options = updated ? FRUIT.slice(2) : FRUIT.slice(0, 1);
+      const controller = useListbox(options, chosen);
+      useLayoutEffect(() => {
+        if (updated) {
+          screen
+            .getByRole('option', { name: 'Banana' })
+            .dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        }
+      }, [updated]);
+      return (
+        <Listbox label="Fruit" options={options} controller={controller} emptyMessage="No fruit." />
+      );
+    }
+
+    const { rerender } = render(<UpdatingPicker updated={false} />);
+    rerender(<UpdatingPicker updated />);
+    expect(chosen).toHaveBeenCalledExactlyOnceWith(FRUIT[2], 0);
   });
 
   it('brings the highlight back into range when the list shrinks under it', async () => {
