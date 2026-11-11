@@ -135,7 +135,7 @@ export function TableSizePicker({
                   onKeyDown={onKeyDown}
                   onBlur={onBlur}
                   className={[
-                    'size-5 rounded-sm border',
+                    'size-(--control-sm) rounded-sm border sm:any-pointer-coarse:size-(--control-lg)',
                     'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
                     within ? 'border-accent-500 bg-accent/25' : 'border-divider bg-surface',
                   ].join(' ')}

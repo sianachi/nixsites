@@ -11,19 +11,16 @@ import {
   LayoutTemplate,
   Settings,
   Shapes,
-  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { ExploreDialog } from '../items/explore-dialog';
-import { NewItemDialog } from '../items/new-item-dialog';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { recentItems } from '@nix/web-foundation/lib/recent-items';
 import { useOpenItem } from '../tabs/use-open-item';
-import { useTemplateLibrary } from '@nix/web-templates/templates/template-library-context';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /** The ISO 8601 week number of a local date: weeks start on Monday, week 1 holds 4 January. */
@@ -62,15 +59,15 @@ interface Action {
 export function Homebase({
   tree,
   onImport,
+  onOpenStructured,
 }: {
   readonly tree: WorkspaceTree;
+  readonly onOpenStructured: () => void;
   readonly onImport: () => void;
 }): ReactNode {
   const { workspaceId, workspace } = useWorkspace();
   const { openPreview } = useOpenItem();
   const navigate = useNavigate();
-  const templateLibrary = useTemplateLibrary();
-  const [choosingStructure, setChoosingStructure] = useState(false);
   const [exploring, setExploring] = useState(false);
   const undo = useUndo();
   const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
@@ -122,9 +119,7 @@ export function Homebase({
       label: 'Structured note',
       detail: 'Board, list, tracker or form',
       icon: Columns2,
-      onSelect: () => {
-        setChoosingStructure(true);
-      },
+      onSelect: onOpenStructured,
     },
     {
       key: 'calendar',
@@ -146,13 +141,6 @@ export function Homebase({
       detail: 'Notes, documents or an archive',
       icon: FolderInput,
       onSelect: onImport,
-    },
-    {
-      key: 'automations',
-      label: 'Automations',
-      detail: 'Rules that run on their own',
-      icon: Zap,
-      to: `${home}/automations`,
     },
     {
       key: 'settings',
@@ -359,32 +347,6 @@ export function Homebase({
           onOpen={openPreview}
           onClose={() => {
             setExploring(false);
-          }}
-        />
-      ) : null}
-
-      {choosingStructure ? (
-        <NewItemDialog
-          mode={{ kind: 'structured' }}
-          childDestination={null}
-          templates={templateLibrary.templates}
-          templateStatus={templateLibrary.status}
-          onClose={() => {
-            setChoosingStructure(false);
-          }}
-          onStartStructured={(parentId, recipe) => {
-            const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-            void navigate(`${home}/new/${recipe}${search}`);
-          }}
-          // The structured mode offers neither a plain item nor an upload.
-          onCreate={() => undefined}
-          onUpload={() => undefined}
-          onStartTemplate={(parentId, templateId) => {
-            const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-            void navigate(`${home}/templates/${templateId}/create${search}`);
-          }}
-          onBrowseTemplates={() => {
-            void navigate(`${home}/templates`);
           }}
         />
       ) : null}

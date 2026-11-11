@@ -27,6 +27,12 @@ public sealed class PetSettingsTests
     [InlineData("demiurge")]
     [InlineData("cat")]
     [InlineData("fox")]
+    [InlineData("octopus")]
+    [InlineData("axolotl")]
+    [InlineData("moth")]
+    [InlineData("pangolin")]
+    [InlineData("phoenix-chick")]
+    [InlineData("mushroom-sprite")]
     public async Task New_appearances_can_be_saved_and_read(string appearance)
     {
         var session = new ScopedNixSessionContextAccessor();

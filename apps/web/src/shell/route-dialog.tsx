@@ -11,7 +11,6 @@ import {
 } from 'react-router';
 
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
-import { AutomationsPage } from '../automations/automations-page';
 import { AttachmentsPage } from '../pages/attachments-page';
 import { SettingsPage } from '../pages/settings-page';
 import { TrashPage } from '../pages/trash-page';
@@ -24,7 +23,7 @@ import {
 } from '@nix/web-foundation/layout/route-dialog-context';
 
 /**
- * Automations, workspaces, trash and settings: dialogs over the work on desktop, pages on phones
+ * Workspace screens: dialogs over the work on desktop, pages on phones
  * and tablets.
  *
  * Each keeps its own address (`/w/:id/settings` and so on), so a link, a refresh and system back
@@ -35,12 +34,11 @@ import {
  *
  * The screen inside the dialog reads the real address through React Router's location context,
  * which is why that one `UNSAFE_` export is used: `<Routes location>` gives the work its address,
- * and the screen needs the other one for its own search params (`?tab=`, `?rule=`).
+ * and the screen needs the other one for its own search params such as `?tab=`.
  */
 
 const KINDS: ReadonlySet<string> = new Set<RouteDialogKind>([
   'attachments',
-  'automations',
   'settings',
   'trash',
   'workspaces',
@@ -151,7 +149,6 @@ const SCREENS: Record<
   { readonly title: string; readonly width: string; readonly Screen: () => ReactNode }
 > = {
   attachments: { title: 'Attachments', width: 'sm:max-w-4xl', Screen: AttachmentsPage },
-  automations: { title: 'Automations', width: 'sm:max-w-5xl', Screen: AutomationsPage },
   settings: { title: 'Settings', width: 'sm:max-w-5xl', Screen: SettingsPage },
   trash: { title: 'Trash', width: 'sm:max-w-3xl', Screen: TrashPage },
   workspaces: { title: 'Workspaces', width: 'sm:max-w-2xl', Screen: WorkspacesPage },

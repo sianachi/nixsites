@@ -108,7 +108,18 @@ describe('pet configuration', () => {
     });
   });
 
-  it.each(['eye-of-ra', 'demiurge', 'fox', 'cat'])('offers and saves %s', async (appearance) => {
+  it.each([
+    'eye-of-ra',
+    'demiurge',
+    'fox',
+    'cat',
+    'octopus',
+    'axolotl',
+    'moth',
+    'pangolin',
+    'phoenix-chick',
+    'mushroom-sprite',
+  ])('offers and saves %s', async (appearance) => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);

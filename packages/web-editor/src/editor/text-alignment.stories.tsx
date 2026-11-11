@@ -15,7 +15,8 @@ export default { title: 'Nix/Editor/Text alignment', parameters: { layout: 'padd
 const POEM =
   '<p>At the edge of morning<br>the quiet holds its breath.</p>' +
   '<p style="text-align: center">A window fills with light<br>and lets the day begin.</p>' +
-  '<p style="text-align: right">The last star<br>takes its time.</p>';
+  '<p style="text-align: right">The last star<br>takes its time.</p>' +
+  '<p style="text-align: justify">By the time the first boats left the harbour, the wind had picked up and the morning fog had lifted. The path along the shore was still quiet.</p>';
 
 function Poem({
   compact = false,
@@ -71,6 +72,7 @@ export const MoreWritingTools = {
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole('button', { name: 'More tools' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Justify' }));
   },
 };
 export const InsertTablePicker = {

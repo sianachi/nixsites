@@ -9,7 +9,7 @@ import { ProfileMenu } from '../profile-menu';
 import type { ZenLayoutPreferences } from '../zen-layout-preview';
 
 export interface PhoneTopRowProps {
-  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
+  readonly layoutPreferences: ZenLayoutPreferences;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly sidebarVisible: boolean;
   /** Whether an item is open, so there are details to show. */

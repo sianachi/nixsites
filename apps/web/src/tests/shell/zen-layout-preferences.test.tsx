@@ -31,6 +31,9 @@ beforeEach(() => {
   signedIn();
   stubViewport(1280);
   localStorage.removeItem(storageKey);
+  localStorage.removeItem(`${storageKey}.preferences-seen`);
+  localStorage.removeItem('nix.theme');
+  localStorage.removeItem('nix.palette');
   stubCoreApi({
     items: [parent],
     views: {
@@ -48,6 +51,9 @@ beforeEach(() => {
 afterEach(() => {
   setZenMode(false);
   localStorage.removeItem(storageKey);
+  localStorage.removeItem(`${storageKey}.preferences-seen`);
+  localStorage.removeItem('nix.theme');
+  localStorage.removeItem('nix.palette');
 });
 
 async function openPreferences(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
@@ -57,6 +63,104 @@ async function openPreferences(user: ReturnType<typeof userEvent.setup>): Promis
 }
 
 describe('workspace layout preferences', () => {
+  it('asks an account once, even in a fresh browser', async () => {
+    await fetch(settingsPath, {
+      method: 'PATCH',
+      body: JSON.stringify({ settings: { 'shell.preferencesSeen': null } }),
+    });
+    const user = userEvent.setup();
+    const first = renderAt(<App />, route);
+    const prompt = within(await screen.findByRole('dialog', { name: 'Preferences' }));
+    expect(prompt.getByText('Make Nix yours')).toBeVisible();
+    await user.click(prompt.getByRole('button', { name: 'Keep current' }));
+    expect(screen.queryByRole('dialog', { name: 'Preferences' })).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const saved: unknown = await (await fetch(settingsPath)).json();
+      expect(saved).toHaveProperty(['settings', 'shell.preferencesSeen'], true);
+    });
+    expect(layoutWrites()).toEqual([]);
+
+    first.unmount();
+    localStorage.removeItem(`${storageKey}.preferences-seen`);
+    renderAt(<App />, route);
+    const reopened = within(await openPreferences(user));
+    expect(reopened.queryByText('Make Nix yours')).not.toBeInTheDocument();
+  });
+
+  it('previews sidebar and theme changes together, keeps required destinations, and supports undo', async () => {
+    const user = userEvent.setup();
+    renderAt(<App />, route);
+    let preferences = within(await openPreferences(user));
+    const rail = within(screen.getByRole('navigation', { name: 'Destinations' }));
+    await user.click(preferences.getByRole('button', { name: 'Sidebar' }));
+    for (const name of ['Homebase', 'Trash', 'Settings']) {
+      expect(preferences.getByRole('checkbox', { name })).toBeChecked();
+      expect(preferences.getByRole('checkbox', { name })).toBeDisabled();
+    }
+    await user.click(preferences.getByRole('checkbox', { name: 'Graph' }));
+    expect(rail.queryByRole('link', { name: 'Graph' })).not.toBeInTheDocument();
+    await user.click(preferences.getByRole('button', { name: 'Theme' }));
+    await user.click(preferences.getByRole('button', { name: 'Dark' }));
+    await user.selectOptions(preferences.getByRole('combobox', { name: 'Palette' }), 'pine');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement).toHaveAttribute('data-palette', 'pine');
+    expect(localStorage.getItem('nix.palette')).toBeNull();
+    await user.click(preferences.getByRole('button', { name: 'Cancel' }));
+    expect(document.documentElement).not.toHaveAttribute('data-palette');
+    expect(rail.getByRole('link', { name: 'Graph' })).toBeVisible();
+
+    preferences = within(await openPreferences(user));
+    await user.click(preferences.getByRole('button', { name: 'Sidebar' }));
+    await user.click(preferences.getByRole('checkbox', { name: 'Graph' }));
+    await user.click(preferences.getByRole('button', { name: 'Theme' }));
+    await user.selectOptions(preferences.getByRole('combobox', { name: 'Palette' }), 'rose');
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
+    await screen.findByText('Preferences applied');
+    expect(localStorage.getItem('nix.palette')).toBe('rose');
+    const saved: unknown = await (await fetch(settingsPath)).json();
+    expect(saved).toHaveProperty(['settings', 'shell.sidebarHidden'], { graph: true });
+    await user.click(screen.getByRole('button', { name: /^Undo$/ }));
+    await waitFor(() => {
+      expect(document.documentElement).not.toHaveAttribute('data-palette');
+      expect(rail.getByRole('link', { name: 'Graph' })).toBeVisible();
+    });
+  });
+
+  it('gives Workspace a shorter sidebar and no status bar, with options to restore both', async () => {
+    const user = userEvent.setup();
+    renderAt(<App />, route);
+    const preferences = within(await openPreferences(user));
+    const rail = within(screen.getByRole('navigation', { name: 'Destinations' }));
+    expect(rail.getByRole('link', { name: 'Graph' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Status bar' })).toBeVisible();
+
+    await user.click(preferences.getByRole('button', { name: 'Workspace' }));
+    expect(rail.queryByRole('link', { name: 'Graph' })).not.toBeInTheDocument();
+    expect(rail.getByRole('link', { name: 'Calendar' })).toBeVisible();
+    expect(screen.queryByRole('group', { name: 'Status bar' })).not.toBeInTheDocument();
+
+    await user.click(preferences.getByRole('button', { name: 'Sidebar' }));
+    await user.click(preferences.getByRole('checkbox', { name: 'Graph' }));
+    await user.click(preferences.getByRole('button', { name: 'Layout' }));
+    await user.click(preferences.getByRole('button', { name: 'Customize' }));
+    await user.selectOptions(preferences.getByLabelText('Status bar'), 'show');
+    expect(screen.getByRole('group', { name: 'Status bar' })).toBeVisible();
+    await user.click(preferences.getByRole('button', { name: 'Back' }));
+
+    await user.click(preferences.getByRole('button', { name: 'Essentials' }));
+    expect(preferences.queryByRole('button', { name: 'Sidebar' })).not.toBeInTheDocument();
+    await user.click(preferences.getByRole('button', { name: 'Workspace' }));
+    expect(
+      within(screen.getByRole('navigation', { name: 'Destinations' })).getByRole('link', {
+        name: 'Graph',
+      }),
+    ).toBeVisible();
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
+    await screen.findByText('Preferences applied');
+    const saved: unknown = await (await fetch(settingsPath)).json();
+    expect(saved).toHaveProperty(['settings', 'shell.sidebarHidden'], { graph: false });
+  });
+
   it('previews without saving and undoes an applied layout in the account', async () => {
     const user = userEvent.setup();
     renderAt(<App />, route);
@@ -83,7 +187,7 @@ describe('workspace layout preferences', () => {
     await user.click(preferences.getByRole('button', { name: 'Essentials' }));
     await user.click(preferences.getByRole('button', { name: 'Customize' }));
     await user.selectOptions(preferences.getByLabelText('Advanced note tools'), 'show');
-    await user.click(preferences.getByRole('button', { name: 'Apply layout' }));
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
     await screen.findByText('Applied Essentials layout');
     const layout = { preset: 'essentials', overrides: { advanced: true } };
     const write = { settings: { 'shell.layout': layout } };
@@ -101,11 +205,15 @@ describe('workspace layout preferences', () => {
     await fetch(settingsPath, {
       method: 'PATCH',
       body: JSON.stringify({
-        settings: { 'shell.layout': { preset: 'essentials', overrides: { advanced: true } } },
+        settings: {
+          'shell.layout': { preset: 'essentials', overrides: { advanced: true } },
+          'shell.preferencesSeen': null,
+        },
       }),
     });
     renderAt(<App />, route);
     await screen.findByRole('combobox', { name: 'View' });
+    expect(screen.queryByRole('dialog', { name: 'Preferences' })).not.toBeInTheDocument();
     act(() => {
       setZenMode(true);
     });
@@ -137,15 +245,17 @@ describe('workspace layout preferences', () => {
     renderAt(<App />, route);
     const preferences = within(await openPreferences(user));
     await user.click(preferences.getByRole('button', { name: 'Essentials' }));
-    await user.click(preferences.getByRole('button', { name: 'Apply layout' }));
-    expect(await preferences.findByRole('alert')).toHaveTextContent('Could not save your layout');
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
+    expect(await preferences.findByRole('alert')).toHaveTextContent(
+      'Could not save your preferences',
+    );
     expect(preferences.getByRole('button', { name: 'Essentials' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     expect(localStorage.getItem(storageKey)).toBeNull();
     expect(screen.queryByText('Applied Essentials layout')).toBeNull();
-    await user.click(preferences.getByRole('button', { name: 'Apply layout' }));
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
     await screen.findByText('Applied Essentials layout');
     expect(screen.queryByRole('dialog', { name: 'Preferences' })).toBeNull();
   });
@@ -155,7 +265,7 @@ describe('workspace layout preferences', () => {
     renderAt(<App />, route);
     const preferences = within(await openPreferences(user));
     await user.click(preferences.getByRole('button', { name: 'Essentials' }));
-    await user.click(preferences.getByRole('button', { name: 'Apply layout' }));
+    await user.click(preferences.getByRole('button', { name: 'Apply preferences' }));
     await screen.findByText('Applied Essentials layout');
     await fetch(settingsPath, {
       method: 'PATCH',

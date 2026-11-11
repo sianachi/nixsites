@@ -1,9 +1,8 @@
 import { Text, UndoProvider } from '@nix/ui';
 import { Suspense, lazy, type ReactElement } from 'react';
-import { Route, Routes } from 'react-router';
+import { Navigate, Route, Routes } from 'react-router';
 
 import { AuthProvider } from '@nix/web-platform/auth/auth-provider';
-import { AutomationsPage } from './automations/automations-page';
 import { ApiClientProvider } from '@nix/web-platform/api/api-client-provider';
 import { NativeSync } from '@nix/web-platform/offline/native-sync';
 import { AppErrorBoundary } from '@nix/web-foundation/components/error-boundary';
@@ -124,7 +123,7 @@ export function App(): ReactElement {
  * server-free demo mounts it under its own, in a memory router.
  */
 export function AppRoutes(): ReactElement {
-  // On desktop, automations, workspaces, trash and settings open as dialogs over the work: the app
+  // On desktop, workspaces, trash and settings open as dialogs over the work: the app
   // renders at the work's address and the dialog at its own (see `shell/route-dialog.tsx`).
   // Always passed, so the tree keeps one shape and nothing remounts when a dialog opens.
   const { mainLocation, dialog } = useRouteDialogRouting();
@@ -204,10 +203,7 @@ export function AppRoutes(): ReactElement {
                   element={<LegacyWorkspaceGroupRedirect />}
                 />
 
-                {/* The caller's own rules in this workspace (ADR-0051 section 6). A place of its
-            own rather than a settings tab: a rule has an editor and a run log, and the
-            address names the open rule so a link to it survives a refresh. */}
-                <Route path="automations" element={<AutomationsPage />} />
+                <Route path="automations" element={<Navigate to="../pet" replace />} />
 
                 {/* Where the installed app lands from a shortcut, the share sheet or an opened
             file. `/launch/...` outside a workspace is routed here by

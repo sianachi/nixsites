@@ -117,6 +117,36 @@ describe('the New tab button', () => {
     expect(screen.getByRole('tab', { name: 'Alpha' })).toBeInTheDocument();
   });
 
+  it('creates a structured item from the picker beside the current tab', async () => {
+    stubCoreApi({ items: [ALPHA] });
+    const user = userEvent.setup();
+    renderAt(<App />, `/?item=${ALPHA.id}`);
+    await user.click(await screen.findByRole('button', { name: 'New tab' }));
+    await user.click(await screen.findByRole('option', { name: 'New structured item' }));
+    const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(within(picker).getByRole('button', { name: /^Canvas/ }));
+    const canvas = await screen.findByRole('dialog', { name: 'New canvas' });
+    await user.type(within(canvas).getByRole('textbox', { name: 'Title' }), 'Launch{Enter}');
+    expect(await screen.findByRole('tab', { name: 'Launch', selected: true })).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Alpha' })).toBeVisible();
+  });
+
+  it('keeps the current note open when a guided view is created from New tab', async () => {
+    stubCoreApi({ items: [ALPHA] });
+    const user = userEvent.setup();
+    renderAt(<App />, `/?item=${ALPHA.id}`);
+    await user.click(await screen.findByRole('button', { name: 'New tab' }));
+    await user.click(await screen.findByRole('option', { name: 'New structured item' }));
+    const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(within(picker).getByRole('button', { name: /^Board/ }));
+    const name = await screen.findByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Launch board');
+    await user.click(screen.getByRole('button', { name: 'Create Board' }));
+    expect(await screen.findByRole('tab', { name: 'Launch board', selected: true })).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Alpha' })).toBeVisible();
+  });
+
   it('leaves no new tab behind when the picker is dismissed', async () => {
     stubCoreApi({ items: [ALPHA, BRAVO] });
     const user = userEvent.setup();

@@ -1,13 +1,13 @@
 import { Extension } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
 
-export const TEXT_ALIGNMENTS = ['left', 'center', 'right'] as const;
+export const TEXT_ALIGNMENTS = ['left', 'center', 'right', 'justify'] as const;
 export type TextAlignment = (typeof TEXT_ALIGNMENTS)[number];
 const ALIGNED_TEXT_BLOCKS = ['paragraph', 'heading', 'detailsSummary'] as const;
 
 /** Unknown values stay in the document, but never become arbitrary CSS. */
 export function readTextAlignment(value: unknown): TextAlignment | null {
-  return value === 'left' || value === 'center' || value === 'right' ? value : null;
+  return TEXT_ALIGNMENTS.find((alignment) => alignment === value) ?? null;
 }
 
 export const TextAlignmentAttributes = Extension.create({

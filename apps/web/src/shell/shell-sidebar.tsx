@@ -1,9 +1,6 @@
 import { MobileWorkspaceBrowser } from '../items/mobile-workspace-browser';
 import { focusPane } from '@nix/web-platform/panes/pane-params';
 import type { OpenItemControl } from '../tabs/use-open-item';
-import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
-import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
-import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
 import { SidebarDivider } from '@nix/web-foundation/layout/sidebar-divider';
 import { SidebarDrawer } from '@nix/web-foundation/layout/sidebar-drawer';
 import type { Sidebar } from '@nix/web-foundation/layout/use-sidebar';
@@ -23,11 +20,7 @@ export interface ShellSidebarProps {
     'openPreview' | 'openPinned' | 'openBeside' | 'canOpenBeside' | 'besideRefusal'
   >;
   readonly onDeleteItem: (item: TreeItem) => void;
-  readonly onStartStructured: (parentId: string | null, recipe: StructuredRecipeId) => void;
-  readonly templates: readonly TemplateSummary[];
-  readonly templateStatus: TemplateLibraryStatus;
-  readonly onStartTemplate: (parentId: string | null, templateId: string) => void;
-  readonly onBrowseTemplates: (parentId: string | null) => void;
+  readonly onAdd: () => void;
   readonly treeRegionRef: RefObject<HTMLDivElement | null>;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
 }
@@ -44,11 +37,7 @@ export function ShellSidebar({
   selectedId,
   openItem,
   onDeleteItem,
-  onStartStructured,
-  templates,
-  templateStatus,
-  onStartTemplate,
-  onBrowseTemplates,
+  onAdd,
   treeRegionRef,
   sidebarToggleRef,
 }: ShellSidebarProps): ReactNode {
@@ -84,11 +73,7 @@ export function ShellSidebar({
       canOpenBeside={openItem.canOpenBeside}
       besideRefusal={openItem.besideRefusal}
       onDeleteItem={onDeleteItem}
-      onStartStructured={onStartStructured}
-      templates={templates}
-      templateStatus={templateStatus}
-      onStartTemplate={onStartTemplate}
-      onBrowseTemplates={onBrowseTemplates}
+      onAdd={onAdd}
       treeRegionRef={treeRegionRef}
     />
   );

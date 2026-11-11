@@ -1,3 +1,4 @@
+import { sidebarDestinationSchema, type SidebarDestination } from '@nix/api-client';
 import { Button, Icon, Menu, Text, chromeSurface, focusRing, type MenuEntry } from '@nix/ui';
 import {
   Bookmark,
@@ -15,7 +16,6 @@ import {
   PawPrint,
   Settings,
   Trash2,
-  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
@@ -177,12 +177,24 @@ const ITEMS: readonly RailItem[] = [
   page('workspace', '/templates', 'Templates', LayoutTemplate, true),
   QUERIES_ITEM,
   page('utility', '/workspaces', 'Workspaces', Layers),
-  page('utility', '/automations', 'Automations', Zap),
   page('utility', '/attachments', 'Attachments', Paperclip),
   page('utility', '/trash', 'Trash', Trash2),
   { kind: 'action', action: 'import', label: 'Import', icon: FolderInput, group: 'utility' },
   page('utility', '/settings', 'Settings', Settings),
 ];
+
+function preferenceFor(item: RailItem): SidebarDestination | null {
+  const result = sidebarDestinationSchema.safeParse(
+    item.kind === 'action' ? item.action : item.to.slice(1),
+  );
+  return result.success ? result.data : null;
+}
+
+export const sidebarChoices = [...ITEMS, { ...PET_ITEM, label: 'Companion' }].map((item) => ({
+  id: preferenceFor(item),
+  label: item.label,
+  icon: item.icon,
+}));
 
 export interface NavRailProps {
   /**
@@ -194,14 +206,14 @@ export interface NavRailProps {
   /** Opens the workspace-level import flow. It is an action, so it does not change the address. */
   readonly onImport: () => void;
   readonly compact?: boolean;
-  readonly hideSettings?: boolean;
+  readonly hiddenDestinations?: readonly SidebarDestination[];
 }
 
 export function NavRail({
   onNavigate,
   onImport,
   compact = false,
-  hideSettings = false,
+  hiddenDestinations = [],
 }: NavRailProps): ReactNode {
   const { pathname } = useLocation();
   const { selectedId } = useSelectedItem();
@@ -235,9 +247,10 @@ export function NavRail({
   // page is Notes, whichever list it was reached from.
   const smartLists = useKnownSmartLists(workspaceId);
   useForgetDeletedSmartLists();
-  const destinations = hideSettings
-    ? petItems.filter((item) => item.kind !== 'destination' || item.to !== '/settings')
-    : petItems;
+  const destinations = petItems.filter((item) => {
+    const id = preferenceFor(item);
+    return id === null || !hiddenDestinations.includes(id);
+  });
   const items = withPinnedQueries(destinations, smartLists);
 
   // Which control is the rail's single tab stop. Null until somebody has actually put focus in here,

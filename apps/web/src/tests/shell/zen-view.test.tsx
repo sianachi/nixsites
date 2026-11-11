@@ -17,39 +17,32 @@ afterEach(() => {
 });
 
 describe('Zen on workspace pages', () => {
-  it.each([
-    '',
-    '/calendar',
-    '/settings',
-    '/pet',
-    '/graph',
-    '/bookmarks',
-    '/trash',
-    '/templates',
-    '/automations',
-  ])('focuses content and restores navigation on %s', async (path) => {
-    const user = userEvent.setup();
-    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}${path}`);
+  it.each(['', '/calendar', '/settings', '/pet', '/graph', '/bookmarks', '/trash', '/templates'])(
+    'focuses content and restores navigation on %s',
+    async (path) => {
+      const user = userEvent.setup();
+      renderAt(<App />, `/w/${STUB_WORKSPACE_ID}${path}`);
 
-    await screen.findByRole('main');
-    // Zen is in the note's menu and the command palette, not the title row: drive it directly.
-    await screen.findByRole('banner', { name: 'Workspace controls' });
-    act(() => {
-      toggleZenMode();
-    });
+      await screen.findByRole('main');
+      // Zen is in the note's menu and the command palette, not the title row: drive it directly.
+      await screen.findByRole('banner', { name: 'Workspace controls' });
+      act(() => {
+        toggleZenMode();
+      });
 
-    expect(screen.queryByRole('banner', { name: 'Workspace controls' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole('main').contains(document.activeElement)).toBe(true);
-    });
-    const exit = screen.getByRole('button', { name: 'Exit Zen mode' });
-    expect(exit).toBeVisible();
-    expect(exit).not.toHaveClass('opacity-0', 'pointer-events-none');
-    await user.click(exit);
+      expect(screen.queryByRole('banner', { name: 'Workspace controls' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('main').contains(document.activeElement)).toBe(true);
+      });
+      const exit = screen.getByRole('button', { name: 'Exit Zen mode' });
+      expect(exit).toBeVisible();
+      expect(exit).not.toHaveClass('opacity-0', 'pointer-events-none');
+      await user.click(exit);
 
-    expect(screen.getByRole('banner', { name: 'Workspace controls' })).toBeInTheDocument();
-  });
+      expect(screen.getByRole('banner', { name: 'Workspace controls' })).toBeInTheDocument();
+    },
+  );
 
   it('leaves the selected container view mounted while its controls step aside', async () => {
     const user = userEvent.setup();

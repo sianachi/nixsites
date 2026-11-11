@@ -1,10 +1,11 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { ProfileMenu } from '../../shell/profile-menu';
+import { useZenLayoutPreview } from '../../shell/zen-layout-preview';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import * as bodies from '@nix/web-foundation/lib/body-cache';
 import * as collaboration from '@nix/web-editor/editor/collab-sync';
@@ -72,10 +73,15 @@ const principal: CurrentPrincipalState = {
   reload: () => Promise.resolve(),
 };
 
+function TestProfile() {
+  const preview = useZenLayoutPreview(null, { explorer: true, navigation: true, status: true });
+  return <ProfileMenu principal={principal} layoutPreferences={{ preview, narrow: false }} />;
+}
+
 async function openMenu(): Promise<void> {
   render(
     <MemoryRouter>
-      <ProfileMenu principal={principal} />
+      <TestProfile />
     </MemoryRouter>,
   );
   await userEvent.setup().click(screen.getByRole('button', { name: /Ada Person/ }));
@@ -130,20 +136,21 @@ describe('ProfileMenu', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lets the keyboard reach and change appearance without dismissing the menu', async () => {
+  it('opens the combined preferences from the keyboard and restores focus to the account button', async () => {
     const user = userEvent.setup();
     await openMenu();
-    // Focus opens on the first workspace; the keyboard walk this checks starts at Settings.
-    expect(screen.getByRole('button', { name: 'Space 0' })).toHaveFocus();
     screen.getByRole('link', { name: 'Settings' }).focus();
     await user.tab({ shift: true });
-    expect(screen.getByRole('radio', { name: 'System' })).toHaveFocus();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('dialog', { name: 'Account' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Light' })).toHaveFocus();
-    expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked();
-    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Preferences' })).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Theme' })).not.toBeInTheDocument();
+    await user.keyboard('{Enter}');
+
     expect(screen.queryByRole('dialog', { name: 'Account' })).not.toBeInTheDocument();
+    const picker = within(screen.getByRole('dialog', { name: 'Preferences' }));
+    await user.click(picker.getByRole('button', { name: 'Theme' }));
+    expect(picker.getByRole('combobox', { name: 'Palette' })).toBeVisible();
+    await user.click(picker.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'Preferences' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ada Person/ })).toHaveFocus();
   });
 

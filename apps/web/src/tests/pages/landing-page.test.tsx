@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,14 +7,19 @@ import { LandingPage } from '../../pages/landing-page';
 const picture = (): string | null =>
   screen.getByRole('tabpanel').querySelector('img')?.getAttribute('src') ?? null;
 
-// The test environment's matchMedia says every query matches; this machine prefers light.
+let deviceAppearance: EventTarget & { matches: boolean };
+
 beforeEach(() => {
-  vi.stubGlobal('matchMedia', () => ({
-    matches: false,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-  }));
+  deviceAppearance = Object.assign(new EventTarget(), { matches: false });
+  vi.stubGlobal('matchMedia', () => deviceAppearance);
 });
+
+function setDarkAppearance(matches: boolean): void {
+  act(() => {
+    deviceAppearance.matches = matches;
+    deviceAppearance.dispatchEvent(Object.assign(new Event('change'), { matches }));
+  });
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -69,12 +74,12 @@ describe('the landing page view gallery', () => {
     expect(picture()).toBe('/landing/homebase.jpg');
   });
 
-  it('shows the picture for the theme chosen in the header, and swaps it live', async () => {
+  it('follows the device appearance until a mode is applied', async () => {
     const user = userEvent.setup();
     render(<LandingPage onSignIn={() => undefined} demo />);
     expect(picture()).toBe('/landing/homebase.jpg');
 
-    await user.click(screen.getByRole('radio', { name: 'Dark' }));
+    setDarkAppearance(true);
     expect(picture()).toBe('/landing/homebase-dark.jpg');
     // Pictures further down the page follow too, and only the shown variant is in the page.
     expect(document.querySelectorAll('img[src$="-dark.jpg"]').length).toBe(
@@ -84,8 +89,14 @@ describe('the landing page view gallery', () => {
     await user.click(screen.getByRole('tab', { name: 'Graph' }));
     expect(picture()).toBe('/landing/graph-dark.jpg');
 
-    await user.click(screen.getByRole('radio', { name: 'Light' }));
+    setDarkAppearance(false);
     expect(picture()).toBe('/landing/graph.jpg');
     expect(document.querySelectorAll('img[src$="-dark.jpg"]')).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Theme' }));
+    await user.click(screen.getByRole('button', { name: 'Dark' }));
+    expect(picture()).toBe('/landing/graph.jpg');
+    await user.click(screen.getByRole('button', { name: 'Apply theme' }));
+    expect(picture()).toBe('/landing/graph-dark.jpg');
   });
 });

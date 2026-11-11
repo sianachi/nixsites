@@ -97,6 +97,37 @@ describe('note chat page', () => {
     );
   });
 
+  it('sends the structured creation request once with workspace access and its destination', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: `/w/${WORKSPACE}/pet`,
+            state: {
+              structuredRequest: {
+                id: '55555555-5555-4555-8555-555555555555',
+                parentId: ROOT,
+                prompt: 'A BMI calculator',
+                initialTitle: 'Health calculator',
+              },
+            },
+          },
+        ]}
+      >
+        <PetPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mock.send).toHaveBeenCalledTimes(1);
+      const sent: unknown = mock.send.mock.calls[0]?.[0];
+      expect(sent).toHaveProperty('workspaceAccess', true);
+      expect(sent).toHaveProperty('text', expect.stringContaining(`?item=${ROOT}`));
+      expect(sent).toHaveProperty('text', expect.stringContaining('A BMI calculator'));
+      expect(sent).toHaveProperty('text', expect.stringContaining('Name it "Health calculator".'));
+    });
+  });
+
   it('defaults to read-only retrieval for the note and lets the user require approved edits', async () => {
     const user = userEvent.setup();
     renderNote();

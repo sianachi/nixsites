@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { contrast } from './contrast.test-helper.js';
-import { parseCustomProperties, splitByGround, themeCss } from './theme-sheet.js';
+import { parseCustomProperties, resolveProperty, splitByGround, themeCss } from './theme-sheet.js';
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -87,7 +87,7 @@ describe('base color roles', () => {
     expect(getProperty('color-bg')).toBe('#ffffff');
     expect(getProperty('color-surface')).toBe('#f6f7f9');
     expect(getProperty('color-text')).toBe('#1d1f20');
-    expect(getProperty('color-accent')).toBe('#5980a6');
+    expect(resolveProperty(properties, 'color-accent')).toBe('#5980a6');
     expect(getProperty('color-accent-2')).toBe('#728fab');
     expect(getProperty('color-divider')).toBe('color-mix(in srgb, #1d1f20 16%, transparent)');
   });

@@ -122,14 +122,22 @@ describe('what the toolbar offers', () => {
       { active: ['paragraph'] },
       { compact: true, writingMode: 'poetry' },
     );
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
     await userEvent.click(screen.getByRole('button', { name: 'Line break' }));
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
     await userEvent.click(screen.getByRole('button', { name: 'New stanza' }));
     expect(ran).toEqual(['setHardBreak', 'splitBlock']);
   });
 
-  it('keeps task and numbered lists visible while planning on a phone', async () => {
+  it('groups task and numbered lists with the other block types on a phone', async () => {
     const { ran } = renderToolbar({}, { compact: true, writingMode: 'planning' });
-    await userEvent.click(screen.getByRole('button', { name: 'Task list' }));
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Block type' })).getByRole('button', {
+        name: 'Task list',
+      }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
     await userEvent.click(screen.getByRole('button', { name: 'Numbered list' }));
     expect(ran).toEqual(['toggleTaskList', 'toggleOrderedList']);
   });
@@ -187,6 +195,7 @@ describe('what the toolbar offers', () => {
           'Align left',
           'Align center',
           'Align right',
+          'Justify',
           'Move up',
           'Move down',
         ],
@@ -319,12 +328,15 @@ describe('running a command', () => {
 
   it('inserts a three-by-three directly from the compact toolbar', async () => {
     const user = userEvent.setup();
-    const { ran } = renderToolbar({}, { compact: true });
+    const { ran, onUndo } = renderToolbar({}, { compact: true });
 
-    await user.click(screen.getByRole('button', { name: 'More' }));
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
     await user.click(screen.getByRole('button', { name: 'Insert table' }));
 
     expect(ran).toEqual(['insertTable({"rows":3,"cols":3,"withHeaderRow":true})']);
+    expect(screen.queryByRole('dialog', { name: 'Insert content' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Undo note edit' }));
+    expect(onUndo).toHaveBeenCalledOnce();
   });
 
   it('opens the image form instead of asking the browser for an address', async () => {
@@ -516,7 +528,7 @@ describe('the columns group', () => {
 });
 
 describe('text alignment', () => {
-  it('shows the saved alignment and offers all three choices', async () => {
+  it('shows the saved alignment and offers all four choices', async () => {
     const { ran } = renderToolbar({ alignment: 'center' });
     await userEvent.click(screen.getByRole('button', { name: 'More tools' }));
     expect(screen.getByRole('button', { name: 'Align center' })).toHaveAttribute(
@@ -527,14 +539,14 @@ describe('text alignment', () => {
       'aria-pressed',
       'false',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Align right' }));
-    expect(ran).toContain('setTextAlign("right")');
+    await userEvent.click(screen.getByRole('button', { name: 'Justify' }));
+    expect(ran).toContain('setTextAlign("justify")');
   });
   it('offers alignment in the mobile writing tools', async () => {
     const { ran } = renderToolbar({}, { compact: true });
     await userEvent.click(screen.getByRole('button', { name: 'More' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Align center' }));
-    expect(ran).toContain('setTextAlign("center")');
+    await userEvent.click(screen.getByRole('button', { name: 'Justify' }));
+    expect(ran).toContain('setTextAlign("justify")');
   });
   it('disables alignment where the selection has no text blocks', async () => {
     renderToolbar({ alignmentEnabled: false });

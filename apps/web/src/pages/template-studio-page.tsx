@@ -14,6 +14,8 @@ import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import type { CollabSync } from '@nix/web-editor/editor/collab-sync';
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../shell/shell-context';
+import { pinCreatedTab } from '../tabs/new-tab-picker';
+import { creationTitleFrom } from '../items/creation-title';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import {
   applyStoredTemplate,
@@ -78,6 +80,7 @@ function TemplateStudio(): ReactNode {
   const sourceItemId = searchParams.get('sourceItem');
   const parentItemId = searchParams.get('parent');
   const mode = modeFromPath(location.pathname);
+  const initialTitle = mode === 'create' ? creationTitleFrom(location.state) : null;
   const scope = draftScope(mode, templateId, sourceItemId, itemId, parentItemId);
   const key = storageKey(workspaceId, mode, scope);
   const { tree } = useOutletContext<ShellContext>();
@@ -97,7 +100,10 @@ function TemplateStudio(): ReactNode {
   const [step, setStep] = useState(0);
   const [recovery] = useState(() => readDraft(key, newDraft(sourceTitle, scope)));
   const recoveredDraft = recovery.recovered;
-  const initialDraft = recovery.draft;
+  const initialDraft =
+    initialTitle === null
+      ? recovery.draft
+      : { ...recovery.draft, title: initialTitle, titleOverridden: true };
   const [draft, setDraft] = useState<TemplateDraft>(initialDraft);
   const [resumeOperationId, setResumeOperationId] = useState(initialDraft.operationId);
   const [editAttemptKey, setEditAttemptKey] = useState(initialDraft.idempotencyKey);
@@ -130,6 +136,7 @@ function TemplateStudio(): ReactNode {
     scope,
     loadVersion,
     recoveredDraft,
+    initialTitle,
     initialDraft,
     resumeOperationId,
     editAttemptKey,
@@ -359,6 +366,7 @@ function TemplateStudio(): ReactNode {
         );
         if (first.fileTransferPending === true) setCopyingFiles(false);
         if (controller.signal.aborted || activeOperation.current !== controller) return;
+        pinCreatedTab(location.state, result.targetItemId);
         complete(`/w/${workspaceId}?item=${encodeURIComponent(result.targetItemId)}`);
       }
     } catch (reason) {

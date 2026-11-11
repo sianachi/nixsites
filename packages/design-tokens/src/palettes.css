@@ -1,0 +1,75 @@
+/* Alternate palettes share the same tonal steps so the semantic roles still work in either mode. */
+:is(:root, [data-theme-preview])[data-palette='graphite'] {
+  --palette-hue: 255;
+  --palette-saturation: 0.12;
+}
+:is(:root, [data-theme-preview])[data-palette='pine'] {
+  --palette-hue: 154;
+}
+:is(:root, [data-theme-preview])[data-palette='sand'] {
+  --palette-hue: 86;
+}
+:is(:root, [data-theme-preview])[data-palette='rose'] {
+  --palette-hue: 14;
+}
+:is(:root, [data-theme-preview])[data-palette='plum'] {
+  --palette-hue: 324;
+}
+
+:is(:root, [data-theme-preview])[data-palette] {
+  --palette-ink: 0.53;
+  --palette-ground: 0.988;
+  --palette-surface: 0.967;
+  --palette-raised: 0.995;
+  --palette-wash: 0.012;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-palette]:not([data-theme]) {
+    --palette-ink: 0.75;
+    --palette-ground: 0.21;
+    --palette-surface: 0.245;
+    --palette-raised: 0.29;
+    --palette-wash: 0.019;
+  }
+}
+:is(:root, [data-theme-preview])[data-palette][data-theme='dark'] {
+  --palette-ink: 0.75;
+  --palette-ground: 0.21;
+  --palette-surface: 0.245;
+  --palette-raised: 0.29;
+  --palette-wash: 0.019;
+}
+
+/* Match both the system ground and the more specific explicit mode. */
+:is(:root, [data-theme-preview])[data-palette],
+:is(:root, [data-theme-preview])[data-palette][data-theme] {
+  --palette-chroma: calc(0.1 * var(--palette-saturation, 1));
+  --palette-tint: calc(var(--palette-wash) * var(--palette-saturation, 1));
+
+  --color-bg: oklch(var(--palette-ground) var(--palette-tint) var(--palette-hue));
+  --color-surface: oklch(var(--palette-surface) var(--palette-tint) var(--palette-hue));
+  --color-surface-raised: oklch(var(--palette-raised) var(--palette-tint) var(--palette-hue));
+  --color-chrome-floating: color-mix(in srgb, var(--color-surface) 78%, transparent);
+
+  --color-accent: oklch(var(--palette-ink) var(--palette-chroma) var(--palette-hue));
+  --color-accent-2: var(--color-accent);
+  --color-accent-100: oklch(0.97 calc(0.02 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-200: oklch(0.92 calc(0.035 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-300: oklch(0.85 calc(0.055 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-400: oklch(0.77 calc(0.075 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-500: oklch(0.68 var(--palette-chroma) var(--palette-hue));
+  --color-accent-600: oklch(0.5 var(--palette-chroma) var(--palette-hue));
+  --color-accent-700: oklch(0.47 var(--palette-chroma) var(--palette-hue));
+  --color-accent-800: oklch(0.38 calc(0.075 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-900: oklch(0.29 calc(0.055 * var(--palette-saturation, 1)) var(--palette-hue));
+  --color-accent-2-100: var(--color-accent-100);
+  --color-accent-2-200: var(--color-accent-200);
+  --color-accent-2-300: var(--color-accent-300);
+  --color-accent-2-400: var(--color-accent-400);
+  --color-accent-2-500: var(--color-accent-500);
+  --color-accent-2-600: var(--color-accent-600);
+  --color-accent-2-700: var(--color-accent-700);
+  --color-accent-2-800: var(--color-accent-800);
+  --color-accent-2-900: var(--color-accent-900);
+}

@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "source": "axolotl-atlas.webp",
+  "columns": 8,
+  "rows": 11,
+  "cellWidth": 192,
+  "cellHeight": 208,
+  "imageWidth": 1536,
+  "imageHeight": 2288,
+  "frameDurationMs": 180,
+  "stateRows": {
+    "idle": 0,
+    "hover": 4,
+    "listening": 6,
+    "thinking": 8,
+    "working": 7,
+    "awaiting-approval": 6,
+    "speaking": 3,
+    "success": 8,
+    "error": 5
+  },
+  "frameCounts": [6, 0, 0, 4, 5, 8, 6, 6, 6, 0, 0]
+}

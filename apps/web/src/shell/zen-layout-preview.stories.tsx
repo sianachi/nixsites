@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { useZenLayoutPreview, ZenLayoutPreview } from './zen-layout-preview';
 
-export default { title: 'Nix/Shell/Layout preferences' };
+export default { title: 'Nix/Shell/Preferences' };
 
 function Example({ narrow }: { readonly narrow: boolean }): ReactNode {
   const preview = useZenLayoutPreview(null, { explorer: true, navigation: true, status: true });

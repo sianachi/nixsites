@@ -34,7 +34,14 @@ import {
 import { useParams } from 'react-router';
 import { TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import { Awareness } from 'y-protocols/awareness';
-import { redo, undo, yCursorPlugin, ySyncPluginKey, yUndoPlugin, ySyncPlugin } from 'y-prosemirror';
+import {
+  redo,
+  yCursorPlugin,
+  ySyncPluginKey,
+  yUndoPlugin,
+  yUndoPluginKey,
+  ySyncPlugin,
+} from 'y-prosemirror';
 import * as Y from 'yjs';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
@@ -50,7 +57,7 @@ import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { BubbleMenu } from './bubble-menu';
 import { CommentAnchors, captureAnchor, requestComment, useItemComments } from './comment-anchors';
 import { useCommentSync } from './use-comment-sync';
-import { CollaborationHistoryKeymap } from './collaboration-history-keymap';
+import { CollaborationHistoryKeymap, undoWithSelection } from './collaboration-history-keymap';
 import { EditorToolbar, SuggestingControl } from './toolbar';
 import { Suggesting, hasSuggestions, setSuggesting } from './suggesting';
 import { MARKDOWN_ORIGIN, snapshotMarkdown, type MarkdownSnapshot } from './markdown-mode';
@@ -440,6 +447,17 @@ function viewAcceptsEdits(view: EditorView): boolean {
   return view.editable;
 }
 
+function runSeparateEdit<T>(view: EditorView, edit: () => T): T {
+  // Undo a toolbar edit without also undoing nearby typing.
+  const history = yUndoPluginKey.getState(view.state)?.undoManager;
+  history?.stopCapturing();
+  try {
+    return edit();
+  } finally {
+    history?.stopCapturing();
+  }
+}
+
 function focusAfterDialog(editor: Editor): void {
   // A modal makes the editor inert, and Dialog hands focus back to its invoker - the toolbar
   // button - in the cleanup that runs when React unmounts it. Editor focus has to come after that,
@@ -459,6 +477,7 @@ function focusAfterDialog(editor: Editor): void {
     requestAnimationFrame(() => {
       if (!editor.isDestroyed) {
         editor.view.focus();
+        editor.commands.scrollIntoView();
       }
     });
   };
@@ -651,7 +670,9 @@ export function NoteEditor({
           }
           const caret = Math.min(afterNode + 1, transaction.doc.content.size);
           transaction.setSelection(TextSelection.near(transaction.doc.resolve(caret)));
-          view.dispatch(transaction.scrollIntoView());
+          runSeparateEdit(view, () => {
+            view.dispatch(transaction.scrollIntoView());
+          });
           insertionRef.current = caret;
           unattachedItemId = null;
           setRetryFiles(files.slice(index + 1));
@@ -1135,11 +1156,11 @@ export function NoteEditor({
 
   const formatting =
     readOnly || stale ? null : (
-      <div className={narrow ? 'flex items-center' : 'min-w-0 shrink-0 px-8'}>
+      <div className={narrow ? 'min-w-0' : 'min-w-0 shrink-0 px-8'}>
         <div
           className={
             narrow
-              ? 'flex items-center gap-2'
+              ? 'flex min-w-0 flex-wrap items-center gap-2'
               : `${noteColumn} flex min-w-0 flex-wrap items-center justify-between gap-2`
           }
         >
@@ -1147,7 +1168,7 @@ export function NoteEditor({
             compact={narrow}
             editor={editor}
             writingMode={writingMode}
-            writingModeControl={
+            writingModeControl={(closeTools) => (
               <>
                 <span
                   className="contents"
@@ -1168,6 +1189,7 @@ export function NoteEditor({
                       : undefined
                   }
                   onClick={() => {
+                    closeTools?.();
                     if (markdownMode !== null) {
                       setMarkdownMode(null);
                       awareness.setLocalStateField('markdownMode', false);
@@ -1206,7 +1228,7 @@ export function NoteEditor({
                   </span>
                 )}
               </>
-            }
+            )}
             textWidthControl={
               narrow ? undefined : (
                 <span className="contents" data-zen-tool="advanced">
@@ -1215,6 +1237,9 @@ export function NoteEditor({
               )
             }
             {...insertHandlers}
+            runSeparateEdit={(edit) => {
+              runSeparateEdit(editor.view, edit);
+            }}
             onInsertLink={() => {
               insertionRef.current = editor.state.selection.from;
               setAddressRequest('link');
@@ -1223,8 +1248,9 @@ export function NoteEditor({
             // rather than imported by the toolbar, which has no business knowing the document is a
             // CRDT.
             onUndo={() => {
-              if (undo(editor.state)) {
+              if (undoWithSelection(editor.view)) {
                 editor.view.focus();
+                editor.commands.scrollIntoView();
               }
             }}
             onRedo={() => {
@@ -1287,6 +1313,7 @@ export function NoteEditor({
             ) : null}
             <PaneViewport
               scrollKey={`${workspaceId ?? ''}:${itemId}:${documentPath ?? 'body'}`}
+              // Reserve room for both dock rows before the viewport measures their height.
               className={`min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-4 sm:px-8 sm:pt-6 ${
                 narrow && !hideToolbar
                   ? 'pb-[calc(var(--mobile-note-toolbar-clearance,calc(var(--control-lg)*2+var(--spacing)*2))+var(--spacing)*4)]'
@@ -1494,13 +1521,15 @@ export function NoteEditor({
                       : presentation === 'inline'
                         ? { type: 'reference', attrs: { kind: 'item', targetId: id, label } }
                         : { type: 'itemBlock', attrs: { targetId: id, presentation } };
-                  const inserted = editor
-                    .chain()
-                    .setTextSelection(position)
-                    .insertContent(
-                      presentation === 'inline' ? content : [content, { type: 'paragraph' }],
-                    )
-                    .run();
+                  const inserted = runSeparateEdit(editor.view, () =>
+                    editor
+                      .chain()
+                      .setTextSelection(position)
+                      .insertContent(
+                        presentation === 'inline' ? content : [content, { type: 'paragraph' }],
+                      )
+                      .run(),
+                  );
                   if (inserted) focusAfterDialog(editor);
                   return inserted;
                 }}
@@ -1554,11 +1583,13 @@ export function NoteEditor({
                     // Leave a text block after the image. Besides giving the writer somewhere obvious
                     // to continue, this keeps the collaborative selection inside an inline-capable
                     // node instead of forcing it onto the document boundary.
-                    editor
-                      .chain()
-                      .setImage({ src: address, alt: description })
-                      .createParagraphNear()
-                      .run();
+                    runSeparateEdit(editor.view, () => {
+                      editor
+                        .chain()
+                        .setImage({ src: address, alt: description })
+                        .createParagraphNear()
+                        .run();
+                    });
                   } else {
                     editor.chain().setLink({ href: address }).run();
                   }

@@ -1,3 +1,5 @@
+import { files, isNixApiError, items, type NixClient } from '@nix/api-client';
+
 /** Uploads in flight at once, as in the drive's bulk upload. */
 const MAX_CONCURRENT_UPLOADS = 3;
 
@@ -90,4 +92,43 @@ export async function uploadEntries(
   };
   await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, files.length) }, worker));
   return { folders, uploaded, failed: files.length - uploaded, error };
+}
+
+export function uploadWorkspaceEntries(
+  client: NixClient,
+  workspaceId: string,
+  dropped: readonly (File | FileSystemEntry)[],
+  parentId: string | null,
+): Promise<UploadOutcome> {
+  return uploadEntries(dropped, parentId, {
+    createFolder: async (title, parentId) =>
+      (
+        await client.execute(
+          items.createItem(workspaceId, {
+            type: 'note',
+            title,
+            parentId,
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        )
+      ).id,
+    uploadFile: async (file, parentId) => {
+      const upload = await client.execute(
+        files.beginUpload({
+          workspaceId,
+          parentId,
+          fileName: file.name,
+          mediaType: file.type || 'application/octet-stream',
+          byteLength: file.size,
+          idempotencyKey: `web-file:${crypto.randomUUID()}`,
+        }),
+      );
+      await files.uploadAndCompleteFile(client, upload, file);
+    },
+  });
+}
+
+export function uploadErrorText(error: unknown): string {
+  if (isNixApiError(error)) return error.detail ?? 'The file could not be uploaded.';
+  return error instanceof Error ? error.message : 'The file could not be uploaded.';
 }

@@ -27,6 +27,7 @@ export interface TemplateStudioLoad {
   readonly scope: string;
   readonly loadVersion: number;
   readonly recoveredDraft: boolean;
+  readonly initialTitle: string | null;
   readonly initialDraft: TemplateDraft;
   readonly resumeOperationId: string | null;
   readonly editAttemptKey: string;
@@ -49,6 +50,7 @@ export function useTemplateStudioLoad({
   scope,
   loadVersion,
   recoveredDraft,
+  initialTitle,
   initialDraft,
   resumeOperationId,
   editAttemptKey,
@@ -129,7 +131,8 @@ export function useTemplateStudioLoad({
             operationId: loadedEditDraft?.operationId ?? null,
             expiresAt: loadedEditDraft?.expiresAt ?? null,
             selectedSourceId: loadedEditDraft?.root.sourceId ?? null,
-            title: loadedEditDraft?.title ?? seeded.title,
+            title: loadedEditDraft?.title ?? initialTitle ?? seeded.title,
+            titleOverridden: initialTitle !== null,
             initialization,
             inputValues: Object.fromEntries(
               initialization.inputs.flatMap((input) =>
@@ -174,6 +177,7 @@ export function useTemplateStudioLoad({
     loadVersion,
     mode,
     recoveredDraft,
+    initialTitle,
     resumeOperationId,
     scope,
     templateId,

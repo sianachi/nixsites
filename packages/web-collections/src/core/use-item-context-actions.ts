@@ -12,7 +12,6 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { useAutomateEntry } from '../items/automate-entry';
 import { useOptionalItemCommands } from '../items/item-commands-context';
 import { useClickSelects } from './item-open-click';
 import { useOptionalItemSelection } from './item-selection-context';
@@ -43,7 +42,6 @@ export function useItemContextActions(
   const presentation = useContext(ZenPresentationContext);
   const showOpen = includeOpen ?? (presentation === null || clickSelects);
   const workspace = useOptionalWorkspace();
-  const automateEntry = useAutomateEntry(workspace?.workspaceId ?? null);
   const muteRemindersEntry = useMuteRemindersEntry();
   const visibility = useHiddenItems();
   const commands = useOptionalItemCommands();
@@ -146,7 +144,6 @@ export function useItemContextActions(
           ]),
       bookmarkEntry(itemId),
       ...(workspace === null ? [] : [copyLinkEntry(workspace.workspaceId, itemId, title)]),
-      ...(automateEntry === null ? [] : [automateEntry(itemId)]),
       ...(muteRemindersEntry === null ? [] : [muteRemindersEntry(itemId, title)]),
       ...destructive,
     ];

@@ -3,7 +3,7 @@ import { Blocks, FileText, House, Network, Search, type LucideIcon } from 'lucid
 import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react';
 
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
-import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
+import { ThemeButton } from '@nix/web-foundation/theme/theme-choice';
 import { findViewKind } from '@nix/web-views/core/view-kinds';
 
 export interface LandingPageProps {
@@ -39,11 +39,7 @@ function Kicker({ children }: { readonly children: ReactNode }): ReactNode {
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-/**
- * The ground the page is drawn on, read from where the theme lands: the root's `data-theme`, or
- * the machine's own setting when the visitor follows it. ThemeChoice and this page each own a
- * `useTheme` state that does not reach the other, so the root attribute is the shared signal.
- */
+/** The screenshots follow the applied mode, or the device appearance until a mode is chosen. */
 function useGround(): 'light' | 'dark' {
   const subscribe = (notify: () => void): (() => void) => {
     const observer = new MutationObserver(notify);
@@ -334,7 +330,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
             </a>
           </nav>
           <div className="flex items-center gap-3 sm:gap-6">
-            <ThemeChoice inline />
+            <ThemeButton />
             {signIn}
           </div>
         </div>

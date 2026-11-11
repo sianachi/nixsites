@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { STUB_WORKSPACE_ID, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
@@ -8,7 +9,7 @@ import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 import { App } from '../../app';
 
 /**
- * Automations, workspaces, trash and settings open as dialogs over the work on desktop, and as
+ * Workspaces, trash and settings open as dialogs over the work on desktop, and as
  * pages on phones and tablets. Driven through the whole app, because the claim is about routing:
  * the address changes, and on desktop what was on screen stays there underneath.
  */
@@ -32,7 +33,6 @@ describe('workspace screens as dialogs', () => {
   it.each([
     ['Settings', 'settings'],
     ['Trash', 'trash'],
-    ['Automations', 'automations'],
     ['Workspaces', 'workspaces'],
   ])('opens %s over the page on desktop, and closing returns to it', async (name, path) => {
     const user = userEvent.setup();
@@ -66,6 +66,22 @@ describe('workspace screens as dialogs', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('redirects a legacy automation link to the companion', async () => {
+    function CurrentPath() {
+      return <output>{useLocation().pathname}</output>;
+    }
+    renderAt(
+      <>
+        <App />
+        <CurrentPath />
+      </>,
+      `${WORKSPACE}/automations?new=1`,
+    );
+
+    expect(await screen.findByText(`${WORKSPACE}/pet`)).toBeVisible();
+    expect(screen.queryByRole('dialog', { name: 'Automations' })).not.toBeInTheDocument();
   });
 
   it('opens a deep link as a dialog over the workspace home on desktop', async () => {

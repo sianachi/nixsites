@@ -3,9 +3,8 @@ import { Button, Skeleton, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { fenced, fencedState, programIn, stateIn, storableState } from './fence';
+import { fencedState, programIn, stateIn, storableState } from './fence';
 import OpenUiBlock from './openui-block';
-import { ProgramEditor } from './program-editor';
 
 type Saved = ReturnType<typeof stateIn>;
 
@@ -24,28 +23,17 @@ type Loaded =
  * An artifact item drawn live: the first `openui-lang` program in its body, scoped to the
  * artifact's own workspace, starting from the values saved beside it in the same body (an
  * `openui-state` block), so everyone who opens it sees the same values and a lock covers them.
- * "Edit source" (`editable`) opens the program editor, which replaces only the program's passage
- * of the body; the values block is never touched. The pet changes it with its body-edit tools.
+ * The companion changes its program through the body-edit tools.
  */
-export default function ArtifactView({
-  itemId,
-  editable = false,
-}: {
-  readonly itemId: string;
-  /** Offers "Edit source", which saves through the same body-edit path as the saved values. */
-  readonly editable?: boolean;
-}): ReactNode {
+export default function ArtifactView({ itemId }: { readonly itemId: string }): ReactNode {
   const client = useApiClient();
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState('');
   // Changed values, kept here until the viewer chooses to share them (security fix M1).
   const [unsaved, setUnsaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (editing) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -65,7 +53,7 @@ export default function ArtifactView({
     return () => {
       controller.abort();
     };
-  }, [client, itemId, editing]);
+  }, [client, itemId]);
 
   /**
    * Values change on every click and keystroke, but they are shared with everyone who opens the
@@ -116,35 +104,6 @@ export default function ArtifactView({
     }
   }
 
-  async function saveProgram(program: string) {
-    if (loaded.status !== 'ready') return;
-    setSaving(true);
-    try {
-      await writeBlock(loaded.program, fenced(program), `${program.trimEnd()}\n`);
-      setNotice('');
-      setEditing(false);
-    } catch {
-      setNotice("This program can't be saved here: you can use this artifact but not edit it.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const toggle = editable ? (
-    <div>
-      <Button
-        variant="ghost"
-        onClick={() => {
-          if (!editing && loaded.status === 'ready') setDraft(loaded.program ?? '');
-          setNotice('');
-          setEditing(!editing);
-        }}
-      >
-        {editing ? 'Cancel' : 'Edit source'}
-      </Button>
-    </div>
-  ) : null;
-
   if (loaded.status === 'loading')
     return (
       <div className="p-4">
@@ -160,41 +119,10 @@ export default function ArtifactView({
         This artifact could not be loaded.
       </Text>
     );
-  if (editing)
-    return (
-      <div className="flex min-w-0 flex-col gap-2 p-4">
-        <ProgramEditor
-          value={draft}
-          onChange={setDraft}
-          workspaceId={loaded.item.workspaceId}
-          label="Program"
-        />
-        {notice ? (
-          <Text variant="note" role="alert">
-            {notice}
-          </Text>
-        ) : null}
-        <div className="flex gap-2">
-          <Button
-            variant="primary"
-            disabled={saving || draft.trim() === ''}
-            onClick={() => {
-              void saveProgram(draft);
-            }}
-          >
-            Save source
-          </Button>
-          {toggle}
-        </div>
-      </div>
-    );
   return (
     <div className="flex min-w-0 flex-col gap-2 p-4">
-      {toggle}
       {loaded.program === null ? (
-        <Text variant="note">
-          This artifact has no openui-lang program yet. Use Edit source to add one.
-        </Text>
+        <Text variant="note">This artifact has no program yet. Ask your companion to add one.</Text>
       ) : (
         <OpenUiBlock
           key={loaded.item.id}
@@ -202,7 +130,7 @@ export default function ArtifactView({
           workspaceIds={[loaded.item.workspaceId]}
           fallback={
             <Text variant="note" role="alert">
-              This artifact's program does not render. Use Edit source to fix it.
+              This artifact could not render. Ask your companion to fix it.
             </Text>
           }
           initialState={loaded.saved?.values}

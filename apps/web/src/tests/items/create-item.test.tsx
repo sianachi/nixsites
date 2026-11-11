@@ -31,27 +31,32 @@ const CHILD = item({
   parentId: PARENT.id,
 });
 
-/** Opens New, picks an entry, and returns the dialog it opened. */
+/** Opens the shared Add dialog, then its structured picker. */
 async function openNew(
   user: ReturnType<typeof userEvent.setup>,
   entry: string,
   dialogName: string,
+  initialTitle?: string,
 ): Promise<HTMLElement> {
-  // Canvas and sheet are chosen inside New view's dialog; the rest have buttons of their own.
-  const viaView = { 'New canvas': /^Canvas/, 'New sheet': /^Sheet/ }[entry];
-  if (viaView === undefined) {
-    await user.click(screen.getByRole('button', { name: entry }));
-  } else {
-    await user.click(screen.getByRole('button', { name: 'New view' }));
-    const view = await screen.findByRole('dialog', { name: 'New structured item' });
-    await user.click(within(view).getByRole('button', { name: viaView }));
-  }
+  await user.click(screen.getByRole('button', { name: 'Add note' }));
+  const capture = await screen.findByRole('dialog', { name: 'New note' });
+  if (initialTitle)
+    await user.type(within(capture).getByRole('textbox', { name: 'Note title' }), initialTitle);
+  await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
+  const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+  const choice = { 'New canvas': /^Canvas/, 'New sheet': /^Sheet/ }[entry];
+  if (choice === undefined) return picker;
+  await user.click(within(picker).getByRole('button', { name: choice }));
   return screen.findByRole('dialog', { name: dialogName });
 }
 
-/** Makes an untitled note at the top of the workspace, in one press. */
-async function createNote(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.click(screen.getByRole('button', { name: 'New note' }));
+async function createNote(user: ReturnType<typeof userEvent.setup>, title = ''): Promise<void> {
+  if (screen.queryByRole('dialog', { name: 'New note' }) === null)
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+  const dialog = await screen.findByRole('dialog', { name: 'New note' });
+  if (title !== '')
+    await user.type(within(dialog).getByRole('textbox', { name: 'Note title' }), title);
+  await user.click(within(dialog).getByRole('button', { name: 'Create note' }));
 }
 
 describe('creating an item', () => {
@@ -73,16 +78,16 @@ describe('creating an item', () => {
     });
   });
 
-  it('opens a new note in one press', async () => {
+  it('names a new note from Add before creating it', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    await createNote(user);
+    await createNote(user, 'Launch plan');
 
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Untitled note');
+      expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Launch plan');
     });
   });
 
@@ -93,9 +98,10 @@ describe('creating an item', () => {
 
     // Open the parent without expanding it, so the new child lands somewhere closed.
     await screen.findByRole('button', { name: 'Engineering' });
-    const dialog = await openNew(user, 'New canvas', 'New canvas');
+    const dialog = await openNew(user, 'New canvas', 'New canvas', 'Sketch');
     await user.click(within(dialog).getByRole('button', { name: 'Inside Engineering' }));
-    await user.type(within(dialog).getByRole('textbox', { name: 'Title' }), 'Sketch{Enter}');
+    expect(within(dialog).getByRole('textbox', { name: 'Title' })).toHaveValue('Sketch');
+    await user.click(within(dialog).getByRole('button', { name: 'Create canvas' }));
 
     expect(await screen.findByRole('button', { name: /expand engineering/i })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /expand engineering/i }));
@@ -146,17 +152,18 @@ describe('creating an item', () => {
 });
 
 describe('the new-item menu', () => {
-  it('offers chat and every kind of item as buttons, the note last', async () => {
+  it('offers note naming and the structured picker from the same Add button', async () => {
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />, `/?item=${PARENT.id}`);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const row = screen.getByRole('button', { name: 'New note' }).parentElement;
-    expect(
-      Array.from(row?.querySelectorAll('button') ?? []).map((button) =>
-        button.getAttribute('aria-label'),
-      ),
-    ).toEqual(['New chat', 'Upload files', 'New view', 'New note']);
+    const user = userEvent.setup();
+    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Planning chat');
+    expect(within(dialog).getByRole('button', { name: /^Upload/ })).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Inside Engineering' }));
+    await user.click(within(dialog).getByRole('button', { name: /^Chat/ }));
+    const chat = await screen.findByRole('dialog', { name: 'New chat' });
+    expect(within(chat).getByRole('textbox', { name: 'Chat title' })).toHaveValue('Planning chat');
   });
 
   it('names a new item in a dialog before creating it, and closes the menu', async () => {
@@ -205,7 +212,7 @@ describe('the new-item menu', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const dialog = await openNew(user, 'New view', 'New structured item');
+    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Launch planning');
     // Every recipe, under the headings the registry declares, rather than the old subset.
     const organise = within(dialog).getByRole('list', { name: 'Organise' });
     expect(within(organise).getAllByRole('button').length).toBeGreaterThan(3);
@@ -213,6 +220,8 @@ describe('the new-item menu', () => {
     expect(within(dialog).getByRole('list', { name: 'Analyse' })).toBeVisible();
     expect(within(dialog).getByRole('button', { name: /^chart/i })).toBeVisible();
     expect(within(dialog).getAllByRole('button', { name: /^calendar/i })[0]).toBeVisible();
+    await user.click(within(organise).getByRole('button', { name: /^Board/ }));
+    expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Launch planning');
   });
 
   it('creates from a library template through a reviewable wizard', async () => {
@@ -221,14 +230,14 @@ describe('the new-item menu', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const dialog = await openNew(user, 'New view', 'New structured item');
+    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Launch tracker');
     const templates = within(dialog).getByRole('list', { name: 'From a template' });
     await user.click(await within(templates).findByRole('button', { name: /^kanban/i }));
 
     expect(await screen.findByRole('heading', { name: /create from kanban/i })).toBeVisible();
     expect(screen.getByText(/destination: workspace root/i)).toBeVisible();
     expect(screen.getByRole('navigation', { name: /template steps/i })).toBeVisible();
-    expect(screen.getByRole('textbox', { name: /name/i })).toHaveValue('Kanban');
+    expect(screen.getByRole('textbox', { name: /name/i })).toHaveValue('Launch tracker');
 
     await user.click(screen.getByRole('button', { name: /continue/i }));
     expect(screen.getByRole('heading', { name: /what this template adds/i })).toBeVisible();
@@ -236,7 +245,7 @@ describe('the new-item menu', () => {
     expect(screen.getByRole('heading', { name: /review/i })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /create item/i }));
 
-    expect(await screen.findByDisplayValue('Kanban')).toBeVisible();
+    expect(await screen.findByDisplayValue('Launch tracker')).toBeVisible();
   });
 
   it('closes without creating anything', async () => {

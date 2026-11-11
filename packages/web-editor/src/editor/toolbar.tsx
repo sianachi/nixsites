@@ -1,5 +1,5 @@
 import { TEXT_ALIGNMENTS } from '@nix/editor-schema';
-import { Button, Dialog, Popover, Text, chromeSurface } from '@nix/ui';
+import { Button, Popover, Text, chromeSurface } from '@nix/ui';
 import type { ItemInsertKind } from './item-insert-dialog';
 import { TableSizePicker } from './table-size-picker';
 import type { WritingMode } from './writing-mode';
@@ -10,6 +10,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   ArrowDown,
   ArrowUp,
   Bold,
@@ -41,6 +42,7 @@ import {
   Trash2,
   Underline,
   Undo2,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useContext, useRef, useState, type ReactNode } from 'react';
@@ -91,13 +93,15 @@ export interface ToolbarProps {
   readonly editor: Editor;
   readonly compact?: boolean | undefined;
   readonly writingMode?: WritingMode;
-  readonly writingModeControl?: ReactNode;
+  readonly writingModeControl?: (closeTools?: () => void) => ReactNode;
   readonly textWidthControl?: ReactNode;
 
   /** Opens the editor-owned image form without making this toolbar own modal state. */
   readonly onInsertImage: () => void;
   readonly onInsertItem?: (kind: ItemInsertKind) => void;
   readonly onPageBreak?: () => void;
+  /** Runs an edit as its own step in the note's history. */
+  readonly runSeparateEdit?: (edit: () => void) => void;
 
   /** Opens the editor-owned link form for the current selection. */
   readonly onInsertLink: () => void;
@@ -122,6 +126,9 @@ export function EditorToolbar({
   onInsertImage,
   onInsertItem,
   onPageBreak,
+  runSeparateEdit = (edit) => {
+    edit();
+  },
   onInsertLink,
   onUndo,
   onRedo,
@@ -182,20 +189,33 @@ export function EditorToolbar({
     },
   ];
 
-  const alignmentIcons = { left: AlignLeft, center: AlignCenter, right: AlignRight };
+  const alignmentIcons = {
+    left: AlignLeft,
+    center: AlignCenter,
+    right: AlignRight,
+    justify: AlignJustify,
+  };
   const alignmentKeys = { left: 'L', center: 'E', right: 'R' };
   const alignment: readonly Control[] = TEXT_ALIGNMENTS.map((value) => ({
     id: `align-${value}`,
-    label: `Align ${value}`,
+    label: value === 'justify' ? 'Justify' : `Align ${value}`,
     icon: alignmentIcons[value],
     active:
       editor.isActive({ textAlign: value }) ||
       (value === 'left' && editor.isActive({ textAlign: null })),
     enabled: editor.can().setTextAlign(value),
-    shortcut: `${visibleModifier}+Shift+${alignmentKeys[value]}`,
-    ariaShortcut: `${ariaModifier}+Shift+${alignmentKeys[value]}`,
-    run: () =>
-      void editor.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(value).run(),
+    ...(value === 'justify'
+      ? {}
+      : {
+          shortcut: `${visibleModifier}+Shift+${alignmentKeys[value]}`,
+          ariaShortcut: `${ariaModifier}+Shift+${alignmentKeys[value]}`,
+        }),
+    run: () => {
+      runSeparateEdit(
+        () =>
+          void editor.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(value).run(),
+      );
+    },
   }));
 
   const lists: readonly Control[] = [
@@ -324,7 +344,9 @@ export function EditorToolbar({
       id: 'horizontalRule',
       label: 'Divider',
       icon: Minus,
-      run: () => void editor.chain().focus().setHorizontalRule().run(),
+      run: () => {
+        runSeparateEdit(() => void editor.chain().focus().setHorizontalRule().run());
+      },
     },
     {
       id: 'image',
@@ -334,14 +356,11 @@ export function EditorToolbar({
     },
   ];
 
-  /**
-   * The table insert, which in the full toolbar opens a size picker instead of inserting.
-   *
-   * The compact toolbar keeps the fixed three-by-three: its controls are a flat list in a
-   * dialog, where a grid to sweep with a pointer has neither the room nor the pointer.
-   */
-  const insertTable = (rows: number, cols: number): void =>
-    void editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+  const insertTable = (rows: number, cols: number): void => {
+    runSeparateEdit(
+      () => void editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(),
+    );
+  };
   const tableInsert: Control = {
     id: 'table',
     label: 'Insert table',
@@ -351,7 +370,7 @@ export function EditorToolbar({
     },
   };
 
-  const history: readonly Control[] = [
+  const history = [
     {
       id: 'undo',
       label: 'Undo',
@@ -368,7 +387,7 @@ export function EditorToolbar({
       ariaShortcut: `${ariaModifier}+Shift+Z ${ariaModifier}+Y`,
       run: onRedo,
     },
-  ];
+  ] satisfies readonly [Control, Control];
 
   /**
    * The keyboard's way to reorder a block, offered in the compact toolbar's sheet because there
@@ -491,127 +510,168 @@ export function EditorToolbar({
     },
   ];
 
+  const insertMenu = (
+    <Popover
+      label="Insert content"
+      open={insertOpen}
+      onOpenChange={(open) => {
+        setInsertOpen(open);
+        if (!open) setTablePickerOpen(false);
+      }}
+      trigger={(trigger) => (
+        <Button
+          variant="subtle"
+          data-zen-tool="insert"
+          {...trigger}
+          ref={(element) => {
+            trigger.ref.current = element;
+            insertTriggerRef.current = element;
+          }}
+        >
+          Insert
+          {compact ? null : <Icon icon={ChevronDown} size="sm" />}
+        </Button>
+      )}
+    >
+      <div role="group" aria-label="Insert content" className="flex flex-col gap-1">
+        {inserts.map((control) => (
+          <ControlOption
+            key={control.id}
+            control={control}
+            onSelect={() => {
+              setInsertOpen(false);
+              if (control.id === 'image') insertTriggerRef.current?.focus({ preventScroll: true });
+              control.run();
+            }}
+          />
+        ))}
+        <div ref={tableInsertRef}>
+          <ControlOption
+            control={tableInsert}
+            expanded={compact ? undefined : tablePickerOpen}
+            onSelect={() => {
+              if (compact) {
+                setInsertOpen(false);
+                tableInsert.run();
+              } else {
+                setTablePickerOpen(!tablePickerOpen);
+              }
+            }}
+          />
+          {tablePickerOpen ? (
+            <TableSizePicker
+              onPick={({ rows, cols }) => {
+                setTablePickerOpen(false);
+                setInsertOpen(false);
+                insertTable(rows, cols);
+              }}
+              onDismiss={() => {
+                setTablePickerOpen(false);
+                tableInsertRef.current?.querySelector('button')?.focus();
+              }}
+            />
+          ) : null}
+        </div>
+        {onInsertItem !== undefined ? (
+          <>
+            {(['attachment', 'embed', 'subpage'] as const).map((kind) => (
+              <Button
+                key={kind}
+                variant="subtle"
+                className="justify-start"
+                onClick={() => {
+                  setInsertOpen(false);
+                  insertTriggerRef.current?.focus({ preventScroll: true });
+                  onInsertItem(kind);
+                }}
+              >
+                {{ attachment: 'Attachment', embed: 'Embed note', subpage: 'New subpage' }[kind]}
+              </Button>
+            ))}
+          </>
+        ) : null}
+        {onPageBreak !== undefined ? (
+          <Button
+            variant="subtle"
+            className="justify-start"
+            disabled={editor.state.selection.$from.depth > 1}
+            onClick={() => {
+              setInsertOpen(false);
+              runSeparateEdit(onPageBreak);
+            }}
+          >
+            Page break
+          </Button>
+        ) : null}
+      </div>
+    </Popover>
+  );
+
+  const blockChoices = [...blocks, ...lists];
+
   if (compact) {
-    const inlineLists =
-      writingMode === 'poetry'
-        ? []
-        : lists.filter((control) =>
-            writingMode === 'planning'
-              ? ['taskList', 'orderedList'].includes(control.id)
-              : control.id === 'bulletList',
-          );
-    const more = [
-      ...blocks,
-      ...(presentation === null
-        ? lists
-        : lists.filter((control) => !inlineLists.includes(control))),
-      ...(showAdvanced ? alignment : []),
-      ...marks.filter((control) =>
-        showAdvanced ? !['bold', 'italic'].includes(control.id) : control.id === 'link',
-      ),
-      ...(showInsert ? [...inserts, tableInsert] : []),
-      ...history,
-      ...(showAdvanced ? move : []),
-      ...(inColumns ? columns : []),
-      ...(inTable ? table : []),
-    ];
+    const [undo, redo] = history;
     return (
       <div
         role="toolbar"
         aria-label="Formatting"
-        className={`flex w-max items-center gap-1 ${chromeSurface}`}
+        className={`flex min-w-0 flex-wrap items-center gap-1 ${chromeSurface}`}
       >
-        <Group controls={marks.filter((control) => ['bold', 'italic'].includes(control.id))} />
-        {writingMode === 'poetry' ? (
-          <Group controls={poetry} label="Poetry tools" />
-        ) : (
-          <Group controls={inlineLists} />
-        )}
-        {writingModeControl}
+        {showInsert ? insertMenu : null}
         <Button
           variant="subtle"
-          className="shrink-0 whitespace-nowrap"
-          onClick={() => {
-            setMoreOpen(true);
-          }}
+          aria-label="Undo note edit"
+          aria-keyshortcuts={undo.ariaShortcut}
+          title={`Undo (${undo.shortcut})`}
+          onClick={undo.run}
         >
-          More
+          Undo
         </Button>
-        {moreOpen ? (
-          <Dialog
-            open
-            swipeToClose
-            title="Writing tools"
-            onClose={() => {
-              setMoreOpen(false);
-            }}
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {more.map((control) => (
-                <Button
-                  key={control.id}
-                  variant="subtle"
-                  className="h-auto min-h-(--control-lg) min-w-0 justify-start whitespace-normal text-left any-pointer-coarse:h-auto"
-                  disabled={control.enabled === false}
-                  aria-pressed={control.active}
-                  onClick={() => {
-                    setMoreOpen(false);
-                    control.run();
-                  }}
+        <ControlPopover
+          label="Writing tools"
+          triggerLabel="More"
+          compact
+          open={moreOpen}
+          onOpenChange={setMoreOpen}
+          sections={[
+            { label: 'Block type', controls: blockChoices },
+            ...(writingMode === 'poetry' ? [{ label: 'Poetry', controls: poetry }] : []),
+            {
+              label: 'Text formatting',
+              controls: showAdvanced
+                ? marks
+                : marks.filter(({ id }) => ['bold', 'italic', 'link'].includes(id)),
+            },
+            ...(showAdvanced
+              ? [
+                  { label: 'Text alignment', controls: alignment },
+                  { label: 'Move block', controls: move },
+                ]
+              : []),
+            ...(inColumns ? [{ label: 'Columns', controls: columns }] : []),
+            ...(inTable ? [{ label: 'Table', controls: table }] : []),
+            { label: 'History', controls: [redo] },
+          ]}
+        >
+          {writingModeControl
+            ? (close) => (
+                <div
+                  role="group"
+                  aria-label="Writing mode and review"
+                  className="flex flex-col gap-1"
                 >
-                  <Icon icon={control.icon} size="sm" />
-                  {control.label}
-                </Button>
-              ))}
-              {showInsert && onInsertItem ? (
-                <>
-                  <Button
-                    variant="subtle"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      onInsertItem('attachment');
-                    }}
-                  >
-                    Attachment
-                  </Button>
-                  <Button
-                    variant="subtle"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      onInsertItem('embed');
-                    }}
-                  >
-                    Embed note
-                  </Button>
-                  <Button
-                    variant="subtle"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      onInsertItem('subpage');
-                    }}
-                  >
-                    New subpage
-                  </Button>
-                  <Button
-                    variant="subtle"
-                    disabled={editor.state.selection.$from.depth > 1}
-                    onClick={() => {
-                      setMoreOpen(false);
-                      onPageBreak?.();
-                    }}
-                  >
-                    Page break
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </Dialog>
-        ) : null}
+                  <Text variant="caption" tone="muted">
+                    Writing mode and review
+                  </Text>
+                  <div className="flex flex-wrap gap-1">{writingModeControl(close)}</div>
+                </div>
+              )
+            : undefined}
+        </ControlPopover>
       </div>
     );
   }
 
-  const blockChoices = [...blocks, ...lists];
   const currentBlock =
     lists.find((control) => control.active) ??
     blocks.find((control) => control.active) ??
@@ -641,97 +701,9 @@ export function EditorToolbar({
         />
       ) : null}
       {writingMode === 'poetry' ? <Group controls={poetry} label="Poetry tools" /> : null}
-      {writingModeControl}
+      {writingModeControl?.()}
       {textWidthControl}
-      <Popover
-        label="Insert content"
-        open={insertOpen}
-        onOpenChange={(open) => {
-          setInsertOpen(open);
-          if (!open) setTablePickerOpen(false);
-        }}
-        trigger={(trigger) => (
-          <Button
-            variant="subtle"
-            data-zen-tool="insert"
-            {...trigger}
-            ref={(element) => {
-              trigger.ref.current = element;
-              insertTriggerRef.current = element;
-            }}
-          >
-            Insert
-            <Icon icon={ChevronDown} size="sm" />
-          </Button>
-        )}
-      >
-        <div role="group" aria-label="Insert content" className="flex flex-col gap-1">
-          {inserts.map((control) => (
-            <ControlOption
-              key={control.id}
-              control={control}
-              onSelect={() => {
-                setInsertOpen(false);
-                if (control.id === 'image') insertTriggerRef.current?.focus();
-                control.run();
-              }}
-            />
-          ))}
-          <div ref={tableInsertRef}>
-            <ControlOption
-              control={tableInsert}
-              expanded={tablePickerOpen}
-              onSelect={() => {
-                setTablePickerOpen(!tablePickerOpen);
-              }}
-            />
-            {tablePickerOpen ? (
-              <TableSizePicker
-                onPick={({ rows, cols }) => {
-                  setTablePickerOpen(false);
-                  setInsertOpen(false);
-                  insertTable(rows, cols);
-                }}
-                onDismiss={() => {
-                  setTablePickerOpen(false);
-                  tableInsertRef.current?.querySelector('button')?.focus();
-                }}
-              />
-            ) : null}
-          </div>
-          {onInsertItem !== undefined ? (
-            <>
-              {(['attachment', 'embed', 'subpage'] as const).map((kind) => (
-                <Button
-                  key={kind}
-                  variant="subtle"
-                  className="justify-start"
-                  onClick={() => {
-                    setInsertOpen(false);
-                    insertTriggerRef.current?.focus();
-                    onInsertItem(kind);
-                  }}
-                >
-                  {{ attachment: 'Attachment', embed: 'Embed note', subpage: 'New subpage' }[kind]}
-                </Button>
-              ))}
-            </>
-          ) : null}
-          {onPageBreak !== undefined ? (
-            <Button
-              variant="subtle"
-              className="justify-start"
-              disabled={editor.state.selection.$from.depth > 1}
-              onClick={() => {
-                setInsertOpen(false);
-                onPageBreak();
-              }}
-            >
-              Page break
-            </Button>
-          ) : null}
-        </div>
-      </Popover>
+      {insertMenu}
       <ControlPopover
         label="More writing tools"
         triggerLabel="More tools"
@@ -760,19 +732,30 @@ function ControlPopover({
   controls,
   sections,
   advanced,
+  compact = false,
+  open: controlledOpen,
+  onOpenChange,
+  children,
 }: {
   readonly label: string;
   readonly advanced?: boolean;
   readonly triggerLabel?: string;
   readonly controls?: readonly Control[];
   readonly sections?: readonly { readonly label: string; readonly controls: readonly Control[] }[];
+  readonly compact?: boolean;
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
+  readonly children?: ((close: () => void) => ReactNode) | undefined;
 }): ReactNode {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = onOpenChange ?? setOwnOpen;
   const groups = sections ?? [{ label, controls: controls ?? [] }];
 
   return (
     <Popover
       label={label}
+      {...(compact ? { className: 'scroll-pt-(--control-lg)' } : {})}
       open={open}
       onOpenChange={setOpen}
       trigger={(trigger) => (
@@ -783,36 +766,58 @@ function ControlPopover({
           {...trigger}
         >
           {triggerLabel}
-          <Icon icon={ChevronDown} size="sm" />
+          {compact ? null : <Icon icon={ChevronDown} size="sm" />}
         </Button>
       )}
     >
-      {groups.map((group) => (
-        <div
-          key={group.label}
-          role="group"
-          aria-label={group.label}
-          className="flex flex-col gap-1"
-        >
-          {sections !== undefined ? (
-            <Text variant="caption" tone="muted">
-              {group.label}
-            </Text>
+      {({ close }) => (
+        <>
+          {compact ? (
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-background">
+              <Text variant="h4" as="h2">
+                {label}
+              </Text>
+              <Button
+                variant="subtle"
+                aria-label="Close writing tools"
+                title="Close writing tools"
+                onClick={close}
+              >
+                <Icon icon={X} size="sm" />
+              </Button>
+            </div>
           ) : null}
-          {group.controls.map((control) => (
-            <ControlOption
-              key={control.id}
-              control={control}
-              onSelect={() => {
-                // The command restores editor focus. Popover.close returns focus to the trigger,
-                // so reserve that path for Escape and close controlled state on a selection.
-                setOpen(false);
-                control.run();
-              }}
-            />
+          {groups.map((group) => (
+            <div
+              key={group.label}
+              role="group"
+              aria-label={group.label}
+              className="flex flex-col gap-1"
+            >
+              {sections !== undefined ? (
+                <Text variant="caption" tone="muted">
+                  {group.label}
+                </Text>
+              ) : null}
+              <div className={compact ? 'grid grid-cols-2 gap-1' : 'flex flex-col gap-1'}>
+                {group.controls.map((control) => (
+                  <ControlOption
+                    key={control.id}
+                    control={control}
+                    onSelect={() => {
+                      // The command restores editor focus. Popover.close returns focus to the trigger,
+                      // so reserve that path for Escape and close controlled state on a selection.
+                      setOpen(false);
+                      control.run();
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
-        </div>
-      ))}
+          {children?.(close)}
+        </>
+      )}
     </Popover>
   );
 }
@@ -823,14 +828,14 @@ function ControlOption({
   onSelect,
 }: {
   readonly control: Control;
-  readonly expanded?: boolean;
+  readonly expanded?: boolean | undefined;
   readonly onSelect: () => void;
 }): ReactNode {
   return (
     <Button
       variant="subtle"
       className={[
-        'w-full justify-start',
+        'h-auto min-h-(--control-md) w-full min-w-0 justify-start whitespace-normal text-left any-pointer-coarse:h-auto any-pointer-coarse:min-h-(--control-lg)',
         control.active === true ? 'bg-accent/18 text-foreground' : '',
       ].join(' ')}
       disabled={control.enabled === false}

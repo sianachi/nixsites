@@ -15,7 +15,7 @@ export interface MobileNoteDetails {
   readonly onToggle: () => void;
 }
 
-/** One quiet action surface, with horizontal scrolling instead of wrapped rows. */
+/** The note actions stay within the dock, even when the visual viewport narrows. */
 export function MobileNoteToolbar({
   formatting,
   actions,
@@ -101,8 +101,8 @@ export function MobileNoteToolbar({
     let clearance: number | null = null;
     const apply = (): void => {
       const dock = dockRef.current;
-      // The view exists only once the editor is mounted; `mount` and `create` call this again.
-      if (!dock || editor.isDestroyed || !editor.isInitialized) return;
+      // TipTap has a live view at mount, before it marks the editor initialized.
+      if (!dock || editor.isDestroyed) return;
       const next = Math.max(0, Math.round(window.innerHeight - dock.getBoundingClientRect().top));
       if (next === clearance) return;
       const grew = clearance !== null && next > clearance;
@@ -119,14 +119,12 @@ export function MobileNoteToolbar({
       apply();
     };
     editor.on('mount', remount);
-    editor.on('create', remount);
     apply();
     window.addEventListener('nix-mobile-note-toolbar-resized', apply);
     return () => {
       editor.off('mount', remount);
-      editor.off('create', remount);
       window.removeEventListener('nix-mobile-note-toolbar-resized', apply);
-      if (!editor.isDestroyed && editor.isInitialized) {
+      if (!editor.isDestroyed) {
         editor.view.setProps({ scrollThreshold: 0, scrollMargin: 5 });
       }
     };
@@ -157,7 +155,7 @@ export function MobileNoteToolbar({
           {editor ? <NoteStatsFooter editor={editor} className="px-2 pb-1" /> : null}
           <div className="flex min-w-0 items-center gap-1">
             <div
-              className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
+              className="min-w-0 flex-1"
               role="group"
               aria-label="Formatting actions"
               onMouseDownCapture={(event) => {

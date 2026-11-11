@@ -1,4 +1,3 @@
-import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
 import {
   Button,
   ContextMenu,
@@ -9,11 +8,9 @@ import {
   cn,
   focusRing,
   useFlash,
-  useUndo,
 } from '@nix/ui';
-import { files as fileResources, isNixApiError, items as coreItems } from '@nix/api-client';
-import { collectDropped, uploadEntries } from './drop-upload';
-import { FilePlus, LayoutGrid, MessageSquare, Upload, type LucideIcon } from 'lucide-react';
+import { collectDropped, uploadErrorText, uploadWorkspaceEntries } from './drop-upload';
+import { FilePlus } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -21,11 +18,7 @@ import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
 import { useBookmarksStore } from '@nix/web-collections/items/use-bookmarks';
 import { type OpenBesideRefusal } from '../tabs/use-open-item';
-import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
-import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
-import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
-import { NewItemDialog, type NewItemDialogMode } from './new-item-dialog';
 import { TreeRow } from './tree-row';
 import { handleRowMoveKey } from './tree-row-keys';
 import { useRowDragDrop } from './use-row-drag-drop';
@@ -111,13 +104,7 @@ export interface WorkspaceSidebarProps {
    */
   readonly treeRegionRef: RefObject<HTMLDivElement | null>;
 
-  /** Opens the shell's guided setup route for a structured item. */
-  readonly onStartStructured?: (parentId: string | null, recipe: StructuredRecipeId) => void;
-
-  readonly templates?: readonly TemplateSummary[];
-  readonly templateStatus?: TemplateLibraryStatus;
-  readonly onStartTemplate?: (parentId: string | null, templateId: string) => void;
-  readonly onBrowseTemplates?: (parentId: string | null) => void;
+  readonly onAdd?: () => void;
 }
 
 export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
@@ -134,14 +121,13 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   } = props;
   const [dragged, setDragged] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // The row that just moved or was created, tinted once where it landed (`useFlash` in the row).
+  // The row that just moved, tinted once where it landed (`useFlash` in the row).
   const [flashed, setFlashed] = useState<{ readonly id: string; readonly n: number } | null>(null);
   const flash = (id: string): void => {
     setFlashed((current) => ({ id, n: (current?.n ?? 0) + 1 }));
   };
   // "Move to..." for one row: the destination-then-position dialog the phone already uses.
   const [movingId, setMovingId] = useState<string | null>(null);
-  const undo = useUndo();
   // Several rows at once (requirement 7): Shift+click or the row menu's Select, then one move.
   const selection = useItemSelection();
   const commands = useOptionalItemCommands();
@@ -175,9 +161,6 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     if (selection.selected.size > 0) setShownCount(shownRows().length);
   });
   useSelectionShortcuts(asideRef, selection, shownRows);
-  const [uploading, setUploading] = useState(false);
-  const uploadInputRef = useRef<HTMLInputElement>(null);
-  const uploadParentRef = useRef<string | null>(null);
   const client = useApiClient();
   const { workspaceId } = useWorkspace();
   const landmarks = useItemLandmarks();
@@ -206,36 +189,9 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     parentId: string | null,
   ): Promise<void> {
     if (dropped.length === 0) return;
-    setUploading(true);
     setRefusal(null);
     try {
-      const outcome = await uploadEntries(dropped, parentId, {
-        createFolder: async (title, folderParentId) =>
-          (
-            await client.execute(
-              coreItems.createItem(workspaceId, {
-                type: 'note',
-                title,
-                parentId: folderParentId,
-                // Core binds this key as a Guid, so no prefix.
-                idempotencyKey: crypto.randomUUID(),
-              }),
-            )
-          ).id,
-        uploadFile: async (file, fileParentId) => {
-          const upload = await client.execute(
-            fileResources.beginUpload({
-              workspaceId,
-              parentId: fileParentId,
-              fileName: file.name,
-              mediaType: file.type || 'application/octet-stream',
-              byteLength: file.size,
-              idempotencyKey: `web-file:${crypto.randomUUID()}`,
-            }),
-          );
-          await fileResources.uploadAndCompleteFile(client, upload, file);
-        },
-      });
+      const outcome = await uploadWorkspaceEntries(client, workspaceId, dropped, parentId);
       const { folders, uploaded, failed, error } = outcome;
       if (failed > 0) {
         setRefusal(
@@ -250,40 +206,6 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       setRefusal(uploadErrorText(error));
     } finally {
       await tree.reload();
-      setUploading(false);
-      if (uploadInputRef.current !== null) uploadInputRef.current.value = '';
-    }
-  }
-
-  /** The explicit child destination offered alongside the workspace-level create actions. */
-  const selectedItem = selectedId === null ? null : tree.find(selectedId);
-  const childDestination =
-    selectedItem === null ? null : { id: selectedItem.id, name: selectedItem.title || 'Untitled' };
-
-  async function create(parentId: string | null, title: string, type: string): Promise<void> {
-    setRefusal(null);
-    const { id: created, refusal: reason } = await tree.create(parentId, title, type);
-
-    if (reason !== null) {
-      // Shown here, beside the control that was pressed. The refusal names the property at fault,
-      // and a message that names a field is only useful next to the thing that has fields.
-      setRefusal(reason);
-      return;
-    }
-
-    // Selected on creation, so the thing that just appeared is the thing in front of you and its
-    // name is ready to be typed over. Creating something and leaving it unfound in a tree is how
-    // people end up with six items called "Untitled note".
-    if (created !== null) {
-      onSelect(created);
-      flash(created);
-      const parent = parentId === null ? null : tree.find(parentId);
-      undo.push(
-        `Created "${title}"${parent === null ? '' : ` in "${parent.title || 'Untitled'}"`}`,
-        async () => {
-          await tree.remove(created);
-        },
-      );
     }
   }
 
@@ -304,55 +226,20 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       }}
       className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-0.5 px-3 pt-3 pb-3">
-        <CreateMenu
-          childDestination={childDestination}
-          disabled={tree.status !== 'ready' || tree.isCreating}
-          onCreate={(parentId, title, type) => {
-            void create(parentId, title, type);
-          }}
-          onStartStructured={(parentId, recipe) => {
-            props.onStartStructured?.(parentId, recipe);
-          }}
-          templates={props.templates ?? []}
-          templateStatus={props.templateStatus ?? 'loading'}
-          onStartTemplate={(parentId, templateId) => {
-            props.onStartTemplate?.(parentId, templateId);
-          }}
-          onBrowseTemplates={(parentId) => {
-            props.onBrowseTemplates?.(parentId);
-          }}
-          onUpload={(parentId) => {
-            uploadParentRef.current = parentId;
-            uploadInputRef.current?.click();
-          }}
-        />
-        {/* Rightmost: the one-press note is the most used. */}
-        {/* One press, like Homebase's tile: an untitled note at the root, selected to be named. */}
-        <Button
-          variant="ghost"
-          aria-label="New note"
-          title="New note"
-          className="p-1.5"
-          disabled={tree.status !== 'ready' || tree.isCreating}
-          onClick={() => {
-            void create(null, 'Untitled note', 'note');
-          }}
-        >
-          <Icon icon={FilePlus} size="md" />
-        </Button>
-        <input
-          ref={uploadInputRef}
-          type="file"
-          multiple
-          className="sr-only"
-          aria-label="Upload files"
-          disabled={uploading}
-          onChange={(event) => {
-            void uploadFiles(Array.from(event.currentTarget.files ?? []), uploadParentRef.current);
-          }}
-        />
-      </div>
+      {props.onAdd ? (
+        <div className="flex shrink-0 justify-center px-3 py-3">
+          <Button
+            variant="ghost"
+            aria-label="Add note"
+            title="Add note"
+            className="p-1.5"
+            disabled={tree.status !== 'ready' || tree.isCreating}
+            onClick={props.onAdd}
+          >
+            <Icon icon={FilePlus} size="md" />
+          </Button>
+        </div>
+      ) : null}
 
       {refusal === null ? null : (
         <Text
@@ -492,102 +379,6 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   );
 }
 
-/**
- * The New menu's six entries: the three body kinds this client can draw, upload, and one entry
- * each for structured items and templates. Every entry opens `NewItemDialog`, which asks where the
- * item goes (and, for a plain item, its title) before anything is made.
- *
- * `item.type` is an open string on the server - there is one kind of item, and the type only says
- * how its body renders - so the kinds here are the client's vocabulary, not the schema's.
- *
- * Recording a meeting is not in this menu; it is in the command palette, beside the other actions
- * that are not "make an item here".
- */
-const CREATE_ENTRIES: readonly {
-  readonly key: string;
-  readonly label: string;
-  readonly icon: LucideIcon;
-  readonly mode: NewItemDialogMode;
-}[] = [
-  { key: 'upload', label: 'Upload files', icon: Upload, mode: { kind: 'upload' } },
-  { key: 'structured', label: 'New view', icon: LayoutGrid, mode: { kind: 'structured' } },
-];
-
-interface CreateMenuProps {
-  readonly childDestination: { readonly id: string; readonly name: string } | null;
-  readonly disabled: boolean;
-  readonly onCreate: (parentId: string | null, title: string, type: string) => void;
-  readonly onStartStructured: (parentId: string | null, recipe: StructuredRecipeId) => void;
-  readonly templates: readonly TemplateSummary[];
-  readonly templateStatus: TemplateLibraryStatus;
-  readonly onStartTemplate: (parentId: string | null, templateId: string) => void;
-  readonly onBrowseTemplates: (parentId: string | null) => void;
-  readonly onUpload: (parentId: string | null) => void;
-}
-
-/** Chat and every other kind of item as a row of icon buttons, each of which opens a dialog. */
-function CreateMenu({ childDestination, disabled, ...actions }: CreateMenuProps): ReactNode {
-  const [mode, setMode] = useState<NewItemDialogMode | null>(null);
-  const [newChat, setNewChat] = useState(false);
-  const { workspaceId } = useWorkspace();
-
-  return (
-    <>
-      {newChat ? (
-        <NewChatNote
-          sourceWorkspaceIds={[workspaceId]}
-          onClose={() => {
-            setNewChat(false);
-          }}
-        />
-      ) : null}
-      <Button
-        variant="ghost"
-        aria-label="New chat"
-        title="New chat"
-        className="p-1.5"
-        disabled={disabled}
-        onClick={() => {
-          setNewChat(true);
-        }}
-      >
-        <Icon icon={MessageSquare} size="md" />
-      </Button>
-      {CREATE_ENTRIES.map((entry) => (
-        <Button
-          key={entry.key}
-          variant="ghost"
-          aria-label={entry.label}
-          title={entry.label}
-          className="p-1.5"
-          disabled={disabled}
-          onClick={() => {
-            setMode(entry.mode);
-          }}
-        >
-          <Icon icon={entry.icon} size="md" />
-        </Button>
-      ))}
-      {mode === null ? null : (
-        <NewItemDialog
-          mode={mode}
-          childDestination={childDestination}
-          templates={actions.templates}
-          templateStatus={actions.templateStatus}
-          onClose={() => {
-            setMode(null);
-          }}
-          onCreate={actions.onCreate}
-          onUpload={actions.onUpload}
-          onStartStructured={actions.onStartStructured}
-          onStartTemplate={actions.onStartTemplate}
-          onBrowseTemplates={actions.onBrowseTemplates}
-        />
-      )}
-    </>
-  );
-}
-
 interface TreeBodyProps {
   readonly tree: WorkspaceTree;
   readonly selectedId: string | null;
@@ -603,7 +394,7 @@ interface TreeBodyProps {
 
   /** Deletes an item and starts its undo window. */
   readonly onDeleteItem: (item: TreeItem) => void;
-  /** The row to tint now, and how to name one (after a move or a create). */
+  /** The row to tint now, and how to name one after a move. */
   readonly flashed: { readonly id: string; readonly n: number } | null;
   readonly onFlash: (itemId: string) => void;
   readonly onMoveItem: (itemId: string) => void;
@@ -658,7 +449,7 @@ function TreeBody(props: TreeBodyProps): ReactNode {
       <Text variant="note" tone="muted" className="px-3 py-2">
         {tree.childrenOf(null).length > 0
           ? 'Items here are hidden for you. Open Hidden items to show them.'
-          : 'Nothing here yet. New note creates the first item.'}
+          : 'Nothing here yet. Use Add note to get started.'}
       </Text>
     );
   }
@@ -703,11 +494,6 @@ function TreeBody(props: TreeBodyProps): ReactNode {
 interface TreeNodeProps extends TreeBodyProps {
   readonly item: TreeItem;
   readonly depth: number;
-}
-
-function uploadErrorText(error: unknown): string {
-  if (isNixApiError(error)) return error.detail ?? 'The file could not be uploaded.';
-  return error instanceof Error ? error.message : 'The file could not be uploaded.';
 }
 
 export { ROW_INDENT, CHILD_NOTICE_INDENT, indentAt, dropZoneAt } from './tree-geometry';

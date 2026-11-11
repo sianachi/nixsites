@@ -1,4 +1,4 @@
-import { fireEvent, render as renderUi, screen } from '@testing-library/react';
+import { render as renderUi, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
@@ -59,27 +59,16 @@ describe('the view editor', () => {
     expect(setViews).not.toHaveBeenCalled();
   });
 
-  it('adds a custom view with the starter program, which the editor edits and saves', async () => {
+  it('keeps custom views visible and leaves their management to the companion', async () => {
     const user = userEvent.setup();
-    const setViews = vi.fn((next: readonly View[]) => {
-      void next;
-      return Promise.resolve(null);
-    });
+    const program = viewOf({ id: 'calculator', name: 'Calculator', kind: 'custom' });
+    render(<ViewEditor container={containerOf([program])} open onClose={vi.fn()} />);
 
-    render(<ViewEditor container={containerOf([], setViews)} open onClose={vi.fn()} />);
-
+    expect(screen.getByText('Managed by your companion')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Configure' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove Calculator' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /add a view/i }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'View type' }), 'custom');
-    await user.click(await screen.findByRole('button', { name: 'Code' }));
-    const program = await screen.findByLabelText('Program for Custom');
-    expect((program as HTMLTextAreaElement).value).toContain('Query("list_items"');
-    fireEvent.change(program, { target: { value: 'root = Stack([t])\nt = Text("Mine")' } });
-    await user.click(screen.getByRole('button', { name: 'Save views' }));
-
-    expect(setViews).toHaveBeenCalledTimes(1);
-    expect(setViews.mock.calls[0]?.[0]).toMatchObject([
-      { id: 'custom', kind: 'custom', program: 'root = Stack([t])\nt = Text("Mine")' },
-    ]);
+    expect(screen.queryByRole('option', { name: /custom/i })).not.toBeInTheDocument();
   });
 
   it.each([

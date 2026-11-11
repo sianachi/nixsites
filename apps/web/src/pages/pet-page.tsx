@@ -1,7 +1,7 @@
 import { items, locks, type Item, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Text, focusRing } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 
@@ -138,6 +138,15 @@ function ConversationScope({
   return <WorkspaceChatPane workspaceId={workspaceId} pet={pet} settings={settings} />;
 }
 
+const structuredRequestState = z.object({
+  structuredRequest: z.object({
+    id: z.uuid(),
+    parentId: z.uuid().nullable(),
+    prompt: z.string().trim().min(1).max(2000),
+    initialTitle: z.string().trim().min(1).max(240).optional(),
+  }),
+});
+
 function WorkspaceChatPane({
   workspaceId,
   pet,
@@ -148,6 +157,13 @@ function WorkspaceChatPane({
   readonly settings: PetSettings;
 }): ReactElement {
   const runtimeApi = usePetRuntime(workspaceId, pet.id, true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = structuredRequestState.safeParse(location.state);
+  const request = state.success ? state.data.structuredRequest : null;
+  const destination = request?.parentId
+    ? `inside [the selected item](/w/${workspaceId}?item=${request.parentId})`
+    : 'at the top of the workspace';
   return (
     <div className={paneColumn}>
       <Text variant="h1" as="h1" className="sr-only">
@@ -160,6 +176,29 @@ function WorkspaceChatPane({
         layout="page"
         runtimeApi={runtimeApi}
         onNeedsDecisionChange={ignoreDecisions}
+        {...(request
+          ? {
+              creationRequest: {
+                id: request.id,
+                text: [
+                  `Create a structured item ${destination} in this workspace for the request below.`,
+                  ...(request.initialTitle
+                    ? [`Name it ${JSON.stringify(request.initialTitle)}.`]
+                    : []),
+                  'Use a built-in view when one fits. For a calculator or another interactive program, create a note, then add a custom view and make it the default.',
+                  'Keep any changes within the requested destination. Link to the item when it is ready.',
+                  '',
+                  request.prompt,
+                ].join('\n'),
+                onStarted: () => {
+                  void navigate(location.pathname + location.search, {
+                    replace: true,
+                    state: null,
+                  });
+                },
+              },
+            }
+          : {})}
       />
     </div>
   );

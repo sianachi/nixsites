@@ -37,6 +37,42 @@ export const petCatalog = [
     personality: 'calm',
     description: 'A thoughtful lion-headed serpent with patient, considered guidance.',
   },
+  {
+    appearance: 'octopus',
+    name: 'Octopus',
+    personality: 'playful',
+    description: 'A curious lavender octopus with restless tentacles.',
+  },
+  {
+    appearance: 'axolotl',
+    name: 'Axolotl',
+    personality: 'calm',
+    description: 'A gentle pink axolotl with feathery gills.',
+  },
+  {
+    appearance: 'moth',
+    name: 'Moth',
+    personality: 'calm',
+    description: 'A quiet silk moth with russet wings and feathery antennae.',
+  },
+  {
+    appearance: 'pangolin',
+    name: 'Pangolin',
+    personality: 'concise',
+    description: 'A shy golden pangolin with a curled tail.',
+  },
+  {
+    appearance: 'phoenix-chick',
+    name: 'Phoenix Chick',
+    personality: 'encouraging',
+    description: 'An eager young phoenix with an ember-red crest.',
+  },
+  {
+    appearance: 'mushroom-sprite',
+    name: 'Mushroom Sprite',
+    personality: 'playful',
+    description: 'A cheerful woodland sprite with a spotted red cap.',
+  },
 ] as const;
 
 export function newPet(): PetProfile {

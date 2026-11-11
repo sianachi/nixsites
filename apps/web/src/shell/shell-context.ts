@@ -16,6 +16,7 @@ import type { useWorkspaceTree } from '@nix/web-collections/items/use-workspace-
 export interface ShellContext {
   readonly tree: ReturnType<typeof useWorkspaceTree>;
   readonly selectedId: string | null;
+  readonly openStructured: () => void;
   /** Opens the shell's workspace Import dialog, the one the side rail's Import opens. */
   readonly openImport: () => void;
 }
