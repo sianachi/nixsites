@@ -1,5 +1,6 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
-import { ScrollRegion, Blueprint, Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { ScrollRegion, Blueprint, Button, Icon, Select, Text, cn, focusRing } from '@nix/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
@@ -85,6 +86,7 @@ import { TimelineTable } from './timeline-table';
 
 export function TimelineView(props: ViewRendererProps): ReactNode {
   const { container, view, onOpen } = props;
+  const compact = useCompactCollection();
   const viewState = useViewState();
   const { mode: urlMode, setMode } = viewState;
 
@@ -228,28 +230,46 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
           {/* aria-current rather than a tablist, following the calendar and the view switcher: these
             are three ways of looking at one thing, and claiming to be tabs would owe arrow-key
             navigation nobody asked for. */}
-          <nav aria-label="Timeline scale" className="flex items-center gap-0.5">
-            {SCALES.map((grain) => (
-              <button
-                key={grain}
-                type="button"
-                aria-current={scale === grain ? 'page' : undefined}
-                onClick={() => {
-                  setMode(grain);
-                }}
-                className={cn(
-                  // The view tabs' height and radius, as on the calendar's grain switcher.
-                  'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
-                  focusRing,
-                  scale === grain
-                    ? 'border-divider bg-foreground/7 text-foreground'
-                    : 'border-transparent text-muted hover:bg-foreground/5',
-                )}
-              >
-                {grain}
-              </button>
-            ))}
-          </nav>
+          {compact ? (
+            <Select
+              aria-label="Timeline scale"
+              className="w-auto capitalize"
+              value={scale}
+              onChange={(event) => {
+                const grain = SCALES.find((entry) => entry === event.target.value);
+                if (grain !== undefined) setMode(grain);
+              }}
+            >
+              {SCALES.map((grain) => (
+                <option key={grain} value={grain}>
+                  {grain}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <nav aria-label="Timeline scale" className="flex items-center gap-0.5">
+              {SCALES.map((grain) => (
+                <button
+                  key={grain}
+                  type="button"
+                  aria-current={scale === grain ? 'page' : undefined}
+                  onClick={() => {
+                    setMode(grain);
+                  }}
+                  className={cn(
+                    // The view tabs' height and radius, as on the calendar's grain switcher.
+                    'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
+                    focusRing,
+                    scale === grain
+                      ? 'border-divider bg-foreground/7 text-foreground'
+                      : 'border-transparent text-muted hover:bg-foreground/5',
+                  )}
+                >
+                  {grain}
+                </button>
+              ))}
+            </nav>
+          )}
 
           <div className="ml-auto flex items-center gap-1">
             <Button
@@ -265,9 +285,10 @@ export function TimelineView(props: ViewRendererProps): ReactNode {
 
             <Button
               variant="secondary"
-              className="py-1"
+              className="py-1 aria-disabled:opacity-45"
+              aria-disabled={(compact && dayText(anchor) === dayText(todayDay())) || undefined}
               onClick={() => {
-                setAnchor(todayDay());
+                if (!compact || dayText(anchor) !== dayText(todayDay())) setAnchor(todayDay());
               }}
             >
               Today

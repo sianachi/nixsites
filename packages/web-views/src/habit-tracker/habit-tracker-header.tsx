@@ -1,4 +1,5 @@
-import { Button, cn, focusRing, Text } from '@nix/ui';
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
+import { Button, cn, focusRing, Select, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
 
 /** The tracker's title, Today/Week/Insights switch, display options and week stepper. */
@@ -49,6 +50,7 @@ export function HabitTrackerHeader({
   readonly onShiftWeek: (delta: -1 | 1) => void;
   readonly onThisWeek: () => void;
 }): ReactNode {
+  const compact = useCompactCollection();
   return (
     <header className="flex flex-col gap-4 border-b border-divider pb-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -76,7 +78,7 @@ export function HabitTrackerHeader({
           {showSetup ? 'Close setup' : 'Add a habit'}
         </Button>
       </div>
-      {screen === 'checkins' && todayOnly ? (
+      {!compact && screen === 'checkins' && todayOnly ? (
         <div
           role="progressbar"
           aria-label="Habits done"
@@ -92,33 +94,50 @@ export function HabitTrackerHeader({
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav
-          className="flex max-w-full flex-wrap gap-1 rounded-lg bg-surface-raised p-1"
-          aria-label="Habit screens"
-        >
-          <Button
-            variant={screen === 'checkins' && todayOnly ? 'primary' : 'ghost'}
-            aria-pressed={screen === 'checkins' && todayOnly}
-            onClick={onToday}
+        {compact ? (
+          <Select
+            aria-label="Habit screen"
+            className="w-auto"
+            value={screen === 'insights' ? 'insights' : todayOnly ? 'day' : 'week'}
+            onChange={(event) => {
+              if (event.target.value === 'day') onToday();
+              else if (event.target.value === 'week') onWeek();
+              else onInsights();
+            }}
           >
-            Day
-          </Button>
-          <Button
-            variant={screen === 'checkins' && !todayOnly ? 'primary' : 'ghost'}
-            aria-label="Show week"
-            aria-pressed={screen === 'checkins' && !todayOnly}
-            onClick={onWeek}
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="insights">Insights</option>
+          </Select>
+        ) : (
+          <nav
+            className="flex max-w-full flex-wrap gap-1 rounded-lg bg-surface-raised p-1"
+            aria-label="Habit screens"
           >
-            Week
-          </Button>
-          <Button
-            variant={screen === 'insights' ? 'primary' : 'ghost'}
-            aria-pressed={screen === 'insights'}
-            onClick={onInsights}
-          >
-            Insights
-          </Button>
-        </nav>
+            <Button
+              variant={screen === 'checkins' && todayOnly ? 'primary' : 'ghost'}
+              aria-pressed={screen === 'checkins' && todayOnly}
+              onClick={onToday}
+            >
+              Day
+            </Button>
+            <Button
+              variant={screen === 'checkins' && !todayOnly ? 'primary' : 'ghost'}
+              aria-label="Show week"
+              aria-pressed={screen === 'checkins' && !todayOnly}
+              onClick={onWeek}
+            >
+              Week
+            </Button>
+            <Button
+              variant={screen === 'insights' ? 'primary' : 'ghost'}
+              aria-pressed={screen === 'insights'}
+              onClick={onInsights}
+            >
+              Insights
+            </Button>
+          </nav>
+        )}
         <details>
           <summary
             className={cn(
@@ -194,9 +213,11 @@ export function HabitTrackerHeader({
           >
             Next
           </Button>
-          <Text as="span" variant="caption" tone="muted">
-            Tap a day to check in or correct it.
-          </Text>
+          {!compact && (
+            <Text as="span" variant="caption" tone="muted">
+              Tap a day to check in or correct it.
+            </Text>
+          )}
         </div>
       ) : null}
     </header>

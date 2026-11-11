@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { ContextMenu, Icon, Text, cn, focusRing } from '@nix/ui';
 import { ArrowDown, ArrowUp, ChevronsUpDown, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -27,6 +28,8 @@ export function DriveTable(
     onDragEnd,
     onDrop,
   } = props;
+  const compact = useCompactCollection();
+  const showModified = !compact || sort.key === 'modified';
   const selection = useOptionalItemSelection();
   const openBeside = selection?.openBeside;
   const order = rows.map((item) => item.id);
@@ -41,14 +44,16 @@ export function DriveTable(
               {selection === null ? null : <span className="sr-only">Select</span>}
             </th>
             <SortableHeader label="Name" columnKey="name" sort={sort} onChangeSort={onChangeSort} />
-            <SortableHeader
-              label="Modified"
-              columnKey="modified"
-              sort={sort}
-              onChangeSort={onChangeSort}
-              align="end"
-              className="hidden @2xl/drive:table-cell"
-            />
+            {showModified && (
+              <SortableHeader
+                label="Modified"
+                columnKey="modified"
+                sort={sort}
+                onChangeSort={onChangeSort}
+                align="end"
+                className="hidden @2xl/drive:table-cell"
+              />
+            )}
             <th scope="col" className="w-14 border-b border-divider p-0">
               <span className="sr-only">Actions</span>
             </th>
@@ -116,17 +121,21 @@ export function DriveTable(
                         </Text>
                       </button>
                       {/* Modified, where the column is dropped for room. */}
-                      <div className="pl-7 @2xl/drive:hidden">
-                        <Text variant="caption" as="span" tone="muted">
+                      {showModified && (
+                        <div className="pl-7 @2xl/drive:hidden">
+                          <Text variant="caption" as="span" tone="muted">
+                            {formatWhen(item.updatedAt)}
+                          </Text>
+                        </div>
+                      )}
+                    </td>
+                    {showModified && (
+                      <td className="hidden border-b border-divider p-2 text-right @2xl/drive:table-cell">
+                        <Text variant="body" as="span" tone="muted">
                           {formatWhen(item.updatedAt)}
                         </Text>
-                      </div>
-                    </td>
-                    <td className="hidden border-b border-divider p-2 text-right @2xl/drive:table-cell">
-                      <Text variant="body" as="span" tone="muted">
-                        {formatWhen(item.updatedAt)}
-                      </Text>
-                    </td>
+                      </td>
+                    )}
                     <td className="border-b border-divider p-1">
                       <DriveRowActions item={item} rowContextMenu={rowContextMenu} />
                     </td>

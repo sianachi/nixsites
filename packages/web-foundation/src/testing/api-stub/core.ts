@@ -670,6 +670,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
   const known = [...items];
   let knownWorkspaces = [...workspaces];
   let heldUiSettings = uiSettings;
+  let uiSettingsRevision = 0;
   let heldPreferences = preferences;
   let heldArrangement = workspaceArrangement;
   const preferencesWrites: { expectedRevision: number; preferences: Record<string, unknown> }[] =
@@ -1357,8 +1358,9 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
           heldUiSettings = Object.fromEntries(
             Object.entries({ ...heldUiSettings, ...body.settings }).filter(([, v]) => v !== null),
           );
+          uiSettingsRevision += 1;
         }
-        return Promise.resolve(json({ settings: heldUiSettings, revision: 0 }));
+        return Promise.resolve(json({ settings: heldUiSettings, revision: uiSettingsRevision }));
       }
 
       if (parsedUrl.pathname === '/api/v1/me/preferences') {

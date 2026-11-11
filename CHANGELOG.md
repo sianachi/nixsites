@@ -28,6 +28,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Pressing a result as the command palette refreshes opens the item shown on screen.
 - The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
   history is kept, so Ctrl/Cmd+Z still works and the next action or undo shows the notice again.
 - Text a pet writes into a note converts properly: `- [ ]` checklists become task lists (and survive a pet edit), `> [!note]` callouts work in their usual spelling, bold next to punctuation is bold, plain web addresses become links, `<br>` is a line break, and a reply wrapped in a Markdown code fence is unwrapped. The pet is told when any Markdown stayed as plain text. Markdown import gains the same task lists, callouts, links and line breaks.
@@ -52,6 +53,8 @@ follows semantic versioning (`0.x` pre-1.0).
 - Web Push delivery runs inside Core: the `notify` worker role and its container are gone, and Core now needs `Nix:Push:VapidPrivateKey` and `Nix:Push:VapidSubject` (Compose: `NIX_PUSH_VAPID_PRIVATE_KEY` and `NIX_PUSH_VAPID_SUBJECT`, already in the env file; Kubernetes: the `nix-push-vapid` secret, already present). A notification's push is handed to the worker once, so a restart mid-delivery can never push the same notification twice. Jobs Core was running when it restarted are marked `failed` with `interrupted_by_restart` and can be retried.
 
 ### Added
+
+- Account → Preferences previews and applies three Zen layouts across the workspace and collection views. Essentials simplifies navigation and view controls, Workspace restores planning and insertion tools, and Full toolkit adds the advanced note tools. Nix remembers your applied layout and overrides across devices. Undo restores the previous layout across devices too.
 
 - Tenant administrators can switch MCP and public links on or off in Settings > Administrators, taking effect at once (`GET`/`PUT /api/v1/tenant/settings`, `nixctl tenant settings`). The deployment setting stays the ceiling. Turning public links off stops existing links from serving without revoking them, and turning them back on restores them. With MCP off, the remote MCP endpoint refuses requests for that organisation.
 - "Share public link" on a note's menu in the sidebar creates, copies and revokes the note's public link, and lists attachments held back for lack of an approved version.
@@ -161,6 +164,8 @@ follows semantic versioning (`0.x` pre-1.0).
   item routes no longer declare a 501 response either.
 
 ### Fixed
+
+- Form entries can be undone even when the collection has not finished refreshing.
 
 - Public forms were not reachable behind the bundled reverse proxy configurations: `/public/v1/forms/*` fell through to the web app.
 - Creating an item with invalid properties answered 404; it now answers 422 with the reason.

@@ -194,9 +194,15 @@ export interface NavRailProps {
   /** Opens the workspace-level import flow. It is an action, so it does not change the address. */
   readonly onImport: () => void;
   readonly compact?: boolean;
+  readonly hideSettings?: boolean;
 }
 
-export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps): ReactNode {
+export function NavRail({
+  onNavigate,
+  onImport,
+  compact = false,
+  hideSettings = false,
+}: NavRailProps): ReactNode {
   const { pathname } = useLocation();
   const { selectedId } = useSelectedItem();
   const { workspaceId, workspace } = useWorkspace();
@@ -229,7 +235,10 @@ export function NavRail({ onNavigate, onImport, compact = false }: NavRailProps)
   // page is Notes, whichever list it was reached from.
   const smartLists = useKnownSmartLists(workspaceId);
   useForgetDeletedSmartLists();
-  const items: readonly RailItem[] = withPinnedQueries(petItems, smartLists);
+  const destinations = hideSettings
+    ? petItems.filter((item) => item.kind !== 'destination' || item.to !== '/settings')
+    : petItems;
+  const items = withPinnedQueries(destinations, smartLists);
 
   // Which control is the rail's single tab stop. Null until somebody has actually put focus in here,
   // so the entry point is the current destination by default - derived from the URL rather than

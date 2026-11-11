@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, Checkbox, Text, useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -95,6 +96,7 @@ function writeDraft(viewId: string, answers: Record<string, PropertyValue>): voi
 }
 
 export function InteractiveFormView({ container, view }: ViewRendererProps): ReactNode {
+  const compact = useCompactCollection();
   const form = view.interactiveForm;
   const undo = useUndo();
   const [initial] = useState(() => readDraft(view.id));
@@ -351,7 +353,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
             ? 'No required answers.'
             : `${String(answeredCount)} of ${String(requiredBlocks.length)} required answered`}
         </Text>
-        {requiredBlocks.length === 0 ? null : (
+        {compact || requiredBlocks.length === 0 ? null : (
           <progress
             aria-label="Required answers"
             className="h-1.5 w-full"

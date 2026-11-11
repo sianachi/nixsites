@@ -1,6 +1,7 @@
-import { Button, Icon, Text } from '@nix/ui';
+import { Button, Icon, Select, Text } from '@nix/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 
 import {
   dayLabel,
@@ -12,7 +13,8 @@ import {
 import { agendaDayLabel } from '@nix/web-collections/core/day-math';
 import { CreateItemControl } from '../../core/create-item-control';
 
-type Mode = 'month' | 'week' | 'day';
+const calendarModes = ['month', 'week', 'day'] as const;
+type Mode = (typeof calendarModes)[number];
 
 interface CalendarToolbarProps {
   readonly mode: Mode;
@@ -45,6 +47,9 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
     onStep,
     onToday,
   } = props;
+  const presentation = useContext(ZenPresentationContext);
+  const alreadyToday =
+    presentation?.collectionTools === false && mode === 'day' && addDay === todayText;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -59,28 +64,46 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
       {/* aria-current rather than a tablist, following the view switcher: these are three ways of
             looking at one thing, and claiming to be tabs would owe arrow-key navigation nobody
             asked for. */}
-      <nav aria-label="Calendar grain" className="flex items-center gap-0.5">
-        {(['month', 'week', 'day'] as const).map((grain) => (
-          <button
-            key={grain}
-            type="button"
-            aria-current={mode === grain ? 'page' : undefined}
-            onClick={() => {
-              onMode(grain);
-            }}
-            className={[
-              // The view tabs' height and radius, so the grain switcher lines up with them.
-              'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
-              'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
-              mode === grain
-                ? 'border-divider bg-foreground/7 text-foreground'
-                : 'border-transparent text-muted hover:bg-foreground/5',
-            ].join(' ')}
-          >
-            {grain}
-          </button>
-        ))}
-      </nav>
+      {presentation?.collectionTools === false ? (
+        <Select
+          aria-label="Calendar period"
+          className="w-auto capitalize"
+          value={mode}
+          onChange={(event) => {
+            const chosen = calendarModes.find((grain) => grain === event.target.value);
+            if (chosen !== undefined) onMode(chosen);
+          }}
+        >
+          {calendarModes.map((grain) => (
+            <option key={grain} value={grain}>
+              {grain}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        <nav aria-label="Calendar grain" className="flex items-center gap-0.5">
+          {calendarModes.map((grain) => (
+            <button
+              key={grain}
+              type="button"
+              aria-current={mode === grain ? 'page' : undefined}
+              onClick={() => {
+                onMode(grain);
+              }}
+              className={[
+                // The view tabs' height and radius, so the grain switcher lines up with them.
+                'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
+                'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
+                mode === grain
+                  ? 'border-divider bg-foreground/7 text-foreground'
+                  : 'border-transparent text-muted hover:bg-foreground/5',
+              ].join(' ')}
+            >
+              {grain}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* Always visible, never gated behind a hover, and dated: it says which day it adds to and
             writes that day, so adding to a day is one tap and a name on every width. */}
@@ -105,9 +128,10 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
 
         <Button
           variant="secondary"
-          className="py-1"
+          className="py-1 aria-disabled:opacity-45"
+          aria-disabled={alreadyToday || undefined}
           onClick={() => {
-            onToday();
+            if (!alreadyToday) onToday();
           }}
         >
           Today

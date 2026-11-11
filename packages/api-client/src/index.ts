@@ -169,7 +169,8 @@ export type {
   WorkspaceArrangementResponse,
 } from './schemas/workspace-arrangement.js';
 export * as uiSettings from './resources/ui-settings.js';
-export type { UiSettings, UiSettingsPatch } from './schemas/ui-settings.js';
+export { workspaceLayoutSchema } from './schemas/ui-settings.js';
+export type { UiSettings, UiSettingsPatch, WorkspaceLayout } from './schemas/ui-settings.js';
 export * as notifications from './resources/notifications.js';
 export type {
   PreferencesInput,

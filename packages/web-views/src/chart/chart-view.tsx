@@ -1,6 +1,7 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import type { ItemChart } from '@nix/api-client';
 import type { Item } from '@nix/web-collections/core/container-model';
-import { Button, Segmented, Text, cn, focusRing } from '@nix/ui';
+import { Button, Segmented, Select, Text, cn, focusRing } from '@nix/ui';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import {
@@ -156,6 +157,7 @@ export function ChartBody({
   partial = false,
   onOpen,
 }: ChartBodyProps): ReactNode {
+  const compact = useCompactCollection();
   const panel = useRef<HTMLElement>(null);
   const [chosenKind, setChosenKind] = useState<ChartKind | null>(null);
   const [chosenPick, setChosenPick] = useState<ChartPick | null>(null);
@@ -231,7 +233,10 @@ export function ChartBody({
     // The key handler is Escape-to-clear for the selection; every pick also has a visible Clear.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
-      className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_calc(var(--spacing)*80)] lg:items-start"
+      className={cn(
+        'grid min-w-0 gap-4 lg:items-start',
+        (!compact || pick !== null) && 'lg:grid-cols-[minmax(0,1fr)_calc(var(--spacing)*80)]',
+      )}
       onKeyDown={onKeyDown}
     >
       <div className="flex min-w-0 flex-col gap-3">
@@ -239,12 +244,30 @@ export function ChartBody({
           {caption}
         </Text>
 
-        <Segmented
-          label="Chart type"
-          options={offered.map((offer) => ({ value: offer, label: CHART_KIND_LABELS[offer] }))}
-          value={kind}
-          onChange={changeKind}
-        />
+        {compact ? (
+          <Select
+            aria-label="Chart type"
+            className="w-auto self-start"
+            value={kind}
+            onChange={(event) => {
+              const next = offered.find((option) => option === event.target.value);
+              if (next !== undefined) changeKind(next);
+            }}
+          >
+            {offered.map((option) => (
+              <option key={option} value={option}>
+                {CHART_KIND_LABELS[option]}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Segmented
+            label="Chart type"
+            options={offered.map((offer) => ({ value: offer, label: CHART_KIND_LABELS[offer] }))}
+            value={kind}
+            onChange={changeKind}
+          />
+        )}
         <span role="status" className="sr-only">
           {`Showing ${CHART_KIND_LABELS[kind].toLowerCase()}`}
         </span>
@@ -276,7 +299,7 @@ export function ChartBody({
         </Text>
       </div>
 
-      {picking === undefined ? null : (
+      {picking === undefined || (compact && pick === null) ? null : (
         <aside
           ref={panel}
           aria-label="Items"

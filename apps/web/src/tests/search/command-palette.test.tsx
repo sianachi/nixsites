@@ -160,9 +160,11 @@ describe('open in a new tab mode', () => {
     stubCoreApi({ items: [NOTE] });
     const user = userEvent.setup();
     const onSelectItem = vi.fn();
-    render(<NewTabHarness onSelectItem={onSelectItem} onCreateNote={vi.fn()} />);
+    const onCreateNote = vi.fn();
+    render(<NewTabHarness onSelectItem={onSelectItem} onCreateNote={onCreateNote} />);
     await user.type(await screen.findByRole('combobox'), 'acquisition');
     await user.click(await screen.findByRole('option', { name: 'Acquisition memo' }));
+    expect(onCreateNote).not.toHaveBeenCalled();
     expect(onSelectItem).toHaveBeenCalledWith(NOTE.id);
   });
 

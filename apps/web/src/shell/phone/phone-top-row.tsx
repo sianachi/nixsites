@@ -6,8 +6,10 @@ import type { CurrentPrincipalState } from '@nix/web-platform/session/use-curren
 
 import { TOGGLE_ITEM_PANEL_EVENT } from '../../panel/panel-state';
 import { ProfileMenu } from '../profile-menu';
+import type { ZenLayoutPreferences } from '../zen-layout-preview';
 
 export interface PhoneTopRowProps {
+  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly sidebarVisible: boolean;
   /** Whether an item is open, so there are details to show. */
@@ -30,6 +32,7 @@ export function PhoneTopRow({
   hasItem,
   onToggleSidebar,
   principal,
+  layoutPreferences,
 }: PhoneTopRowProps): ReactNode {
   return (
     // design-token-exempt: device safe-area inset keeps the row below the status bar.
@@ -58,7 +61,7 @@ export function PhoneTopRow({
             <Icon icon={PanelRight} size="sm" />
           </button>
         ) : null}
-        <ProfileMenu principal={principal} />
+        <ProfileMenu principal={principal} layoutPreferences={layoutPreferences} />
       </div>
     </header>
   );

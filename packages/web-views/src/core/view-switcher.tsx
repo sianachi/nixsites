@@ -1,9 +1,18 @@
 import { Icon, Select, focusRing } from '@nix/ui';
 import { FileText, List as ListIcon, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { createContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { DOCUMENT_VIEW, type View } from '@nix/web-collections/core/container-model';
 import { findViewKind } from './view-kinds';
 
@@ -105,8 +114,20 @@ export function ViewSwitcher(props: ViewSwitcherProps): ReactNode {
 function ViewStrip(props: ViewSwitcherProps): ReactNode {
   const { trailing, tools } = props;
   const narrow = useNarrowViewport();
+  const presentation = useContext(ZenPresentationContext);
   const [below, setBelow] = useState<HTMLElement | null>(null);
-  const strip = narrow ? <ViewSelect {...props} /> : <ViewTabs {...props} />;
+  const compact = presentation?.collectionTools === false;
+  const only = props.views.length === 1 ? props.views[0] : undefined;
+  const hasOneChoice =
+    compact &&
+    only?.id === props.activeViewId &&
+    (props.documentLabel === undefined || props.documentHidden === true) &&
+    !props.unrenderable.includes(only.id);
+  const strip = hasOneChoice ? null : narrow || compact ? (
+    <ViewSelect {...props} compactDesktop={!narrow} />
+  ) : (
+    <ViewTabs {...props} />
+  );
   if (trailing === undefined && tools === undefined) return strip;
   // Wraps so a tool's second line (an open phone search field) can drop below the row. The strip
   // gives up width first: tabs scroll and the picker shrinks, the tools and item controls do not.
@@ -122,8 +143,8 @@ function ViewStrip(props: ViewSwitcherProps): ReactNode {
   );
 }
 
-/** The phone's picker: one native select, so six long view names never push into the item controls. */
-function ViewSelect(props: ViewSwitcherProps): ReactNode {
+/** One picker keeps long view names out of the item controls on phones and in Essentials. */
+function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolean }): ReactNode {
   const {
     views,
     unrenderable,
@@ -136,7 +157,7 @@ function ViewSelect(props: ViewSwitcherProps): ReactNode {
   const mark = (name: string, id: string): string =>
     `${name}${id === defaultViewId ? ' (default)' : ''}${unrenderable.includes(id) ? ' (needs attention)' : ''}`;
   return (
-    <div className="min-w-0 px-4 py-1.5">
+    <div className={props.compactDesktop ? 'min-w-40 w-fit px-8 py-1.5' : 'min-w-0 px-4 py-1.5'}>
       <Select
         aria-label="View"
         value={activeViewId ?? ''}

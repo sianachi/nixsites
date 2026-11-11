@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import {
   Button,
   Checkbox,
@@ -58,6 +59,7 @@ const QueryByExamplePanel = lazy(() => import('./query-by-example'));
  * run after the saved view changes.
  */
 export function QueryView(props: ViewRendererProps): ReactNode {
+  const compact = useCompactCollection();
   const { container, view, onOpen } = props;
   const openProps = useItemOpenProps(onOpen);
   const visibility = useHiddenItems();
@@ -195,46 +197,48 @@ export function QueryView(props: ViewRendererProps): ReactNode {
 
   return (
     <div className="flex min-w-0 flex-col gap-2" aria-busy={run.refreshing}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          aria-pressed={picking}
-          onClick={() => {
-            if (picking) {
-              stopPicking();
-            } else {
-              setPicking(true);
-            }
-          }}
-        >
-          Suggest filters from examples
-        </Button>
-        {picking ? (
-          <>
-            <Text
-              variant="note"
-              tone="muted"
-              as="span"
-              className="min-w-0 max-w-full wrap-anywhere"
-            >
-              {examples.size === 0
-                ? 'Tick the items this list is meant to hold.'
-                : `${String(examples.size)} ${examples.size === 1 ? 'example' : 'examples'} ticked.`}
-            </Text>
-            <Button
-              variant="secondary"
-              aria-disabled={examples.size === 0}
-              onClick={() => {
-                if (examples.size > 0) {
-                  suggestFromExamples();
-                }
-              }}
-            >
-              Suggest filters
-            </Button>
-          </>
-        ) : null}
-      </div>
+      {(!compact || picking || proposal !== null) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            aria-pressed={picking}
+            onClick={() => {
+              if (picking) {
+                stopPicking();
+              } else {
+                setPicking(true);
+              }
+            }}
+          >
+            Suggest filters from examples
+          </Button>
+          {picking ? (
+            <>
+              <Text
+                variant="note"
+                tone="muted"
+                as="span"
+                className="min-w-0 max-w-full wrap-anywhere"
+              >
+                {examples.size === 0
+                  ? 'Tick the items this list is meant to hold.'
+                  : `${String(examples.size)} ${examples.size === 1 ? 'example' : 'examples'} ticked.`}
+              </Text>
+              <Button
+                variant="secondary"
+                aria-disabled={examples.size === 0}
+                onClick={() => {
+                  if (examples.size > 0) {
+                    suggestFromExamples();
+                  }
+                }}
+              >
+                Suggest filters
+              </Button>
+            </>
+          ) : null}
+        </div>
+      )}
 
       {proposal === null ? null : (
         <Suspense

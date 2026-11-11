@@ -9,7 +9,10 @@ describe('the ui-settings resource', () => {
   });
 
   it('patchSettings is a PATCH whose body wraps the patch, null deleting a key', () => {
-    const patch = { 'editor.keyboardMode': 'vim', 'graph.openMode': null } as const;
+    const patch = {
+      'shell.layout': { preset: 'workspace', overrides: { advanced: true } },
+      'graph.openMode': null,
+    } as const;
     expect(patchSettings(patch)).toMatchObject({
       kind: 'command',
       method: 'PATCH',
@@ -32,5 +35,16 @@ describe('the ui-settings schemas', () => {
     expect(uiSettingsPatchSchema.safeParse({ 'editor.pageGuides': 'yes' }).success).toBe(false);
     expect(uiSettingsPatchSchema.safeParse({ 'editor.keyboardMode': 'nano' }).success).toBe(false);
     expect(uiSettingsPatchSchema.safeParse({ 'editor.keyboardMode': null }).success).toBe(true);
+  });
+
+  it('validates the complete layout when saving or reading it', () => {
+    const layout = { preset: 'essentials', overrides: { view: true } };
+    const settings = { 'shell.layout': layout };
+    expect(uiSettingsPatchSchema.parse(settings)).toEqual(settings);
+    expect(uiSettingsResponseSchema.parse({ settings, revision: 2 }).settings).toEqual(settings);
+    expect(uiSettingsPatchSchema.parse({ 'shell.layout': null })).toEqual({ 'shell.layout': null });
+    expect(() =>
+      uiSettingsPatchSchema.parse({ 'shell.layout': { ...layout, overrides: { unknown: true } } }),
+    ).toThrow();
   });
 });

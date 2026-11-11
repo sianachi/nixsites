@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -24,6 +25,8 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
     private static NixSessionContext Alpha => TestTenants.AlphaContext;
+
+    private static string CurrentUtcDay => DateTimeOffset.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     public async ValueTask InitializeAsync()
     {
@@ -427,7 +430,8 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     {
         var link = await _host.LinkAsync(Alpha, await _host.ConnectAsync(Alpha));
         var (job, execution) = await _host.ClaimJobAsync(Alpha, link);
-        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", "2026-10-10", DateTimeOffset.UtcNow)).ToArray();
+        var eventDay = CurrentUtcDay;
+        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", eventDay, DateTimeOffset.UtcNow)).ToArray();
         await PullAsync(link, job, execution, events);
 
         // A full round that saw two of the three.
@@ -439,7 +443,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
 
         // Twenty-five more, then a full round that sees none: nothing is trashed.
         var (nextJob, nextExecution) = await _host.ClaimJobAsync(Alpha, link);
-        await PullAsync(link, nextJob, nextExecution, [.. Enumerable.Range(10, 25).Select(index => Event($"evt-{index}", "v1", $"E{index}", "2026-10-11", DateTimeOffset.UtcNow))]);
+        await PullAsync(link, nextJob, nextExecution, [.. Enumerable.Range(10, 25).Select(index => Event($"evt-{index}", "v1", $"E{index}", eventDay, DateTimeOffset.UtcNow))]);
         var (emptyJob, emptyExecution) = await _host.ClaimJobAsync(Alpha, link, full: true);
         await CursorAsync(link, emptyJob, emptyExecution, full: true);
         Assert.Equal(27, await CountAsync($"SELECT count(*) FROM item WHERE parent_id = '{link.ContainerItemId.Value}' AND lifecycle_state = 'active'"));
@@ -452,7 +456,8 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     {
         var link = await _host.LinkAsync(Alpha, await _host.ConnectAsync(Alpha));
         var (job, execution) = await _host.ClaimJobAsync(Alpha, link);
-        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", "2026-10-10", DateTimeOffset.UtcNow)).ToArray();
+        var eventDay = CurrentUtcDay;
+        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", eventDay, DateTimeOffset.UtcNow)).ToArray();
         await PullAsync(link, job, execution, events);
         var moved = await GuidAsync($"SELECT item_id FROM calendar_event_map WHERE link_id = '{link.Id}' AND external_event_id = 'evt-2'");
         var sibling = await CreateFolderAsync("Elsewhere");
@@ -473,7 +478,8 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     {
         var link = await _host.LinkAsync(Alpha, await _host.ConnectAsync(Alpha));
         var (job, execution) = await _host.ClaimJobAsync(Alpha, link, full: true);
-        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", "2026-10-10", DateTimeOffset.UtcNow)).ToArray();
+        var eventDay = CurrentUtcDay;
+        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", eventDay, DateTimeOffset.UtcNow)).ToArray();
         await PullAsync(link, job, execution, full: true, events);
         await CursorAsync(link, job, execution, full: true);
 
@@ -513,7 +519,8 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
     {
         var link = await _host.LinkAsync(Alpha, await _host.ConnectAsync(Alpha));
         var (job, execution) = await _host.ClaimJobAsync(Alpha, link);
-        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", "2026-10-10", DateTimeOffset.UtcNow)).ToArray();
+        var eventDay = CurrentUtcDay;
+        var events = Enumerable.Range(0, 3).Select(index => Event($"evt-{index}", "v1", $"E{index}", eventDay, DateTimeOffset.UtcNow)).ToArray();
         await PullAsync(link, job, execution, events);
         var locked = await GuidAsync($"SELECT item_id FROM calendar_event_map WHERE link_id = '{link.Id}' AND external_event_id = 'evt-2'");
         await LockAsync(locked);

@@ -4,6 +4,7 @@ import { useContext, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { FilterRulesEditor } from './filter-rules-editor';
 import { TITLE_COLUMN_KEY } from '@nix/web-collections/core/columns';
 import { BelowRowSlot } from './view-switcher';
@@ -53,6 +54,8 @@ export function ViewTools({
   onSave,
 }: ViewToolsProps): ReactNode {
   const narrow = useNarrowViewport();
+  const presentation = useContext(ZenPresentationContext);
+  const compactSearch = narrow || presentation?.collectionTools === false;
   const searchInput = useRef<HTMLInputElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   // The draft lives here, not in the popover, so dismissing the popover never loses an edit.
@@ -60,7 +63,7 @@ export function ViewTools({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const savedCount = view?.filters.length ?? 0;
-  const showSearch = !narrow || searchOpen || viewState.search.length > 0;
+  const showSearch = !compactSearch || searchOpen || viewState.search.length > 0;
 
   function discard(): void {
     setDraft(null);
@@ -103,7 +106,7 @@ export function ViewTools({
       type="search"
       aria-label="Search titles"
       placeholder="Search titles"
-      className={narrow ? 'min-w-0 flex-1' : 'w-48'}
+      className={compactSearch ? 'min-w-0 flex-1' : 'w-48'}
       value={viewState.search}
       onChange={(event) => {
         viewState.setSearch(event.target.value);
@@ -124,7 +127,7 @@ export function ViewTools({
         Clear link filters ({String(viewState.filters.length)})
       </Button>
     );
-  const secondLine = narrow && (showSearch || clearLinkFilters !== null);
+  const secondLine = compactSearch && (showSearch || clearLinkFilters !== null);
   const below = useContext(BelowRowSlot);
   const line = (
     <div
@@ -138,7 +141,7 @@ export function ViewTools({
 
   const tools = (
     <>
-      {narrow ? (
+      {compactSearch ? (
         <Button
           variant="icon"
           aria-label="Search titles"
@@ -158,13 +161,18 @@ export function ViewTools({
       ) : (
         search
       )}
-      {!narrow && hasSearch ? clearSearch : null}
+      {!compactSearch && hasSearch ? clearSearch : null}
       <Popover
         label="View options"
         trigger={(trigger) => (
           <Button
             {...trigger}
             variant="icon"
+            data-zen-tool={
+              savedCount === 0 && viewState.filters.length === 0 && viewState.sortBy === null
+                ? 'view'
+                : undefined
+            }
             aria-label={`View options${savedCount === 0 ? '' : `, ${String(savedCount)} saved filters`}`}
             className="w-auto gap-1 px-2"
           >

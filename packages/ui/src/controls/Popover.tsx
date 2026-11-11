@@ -54,6 +54,8 @@ export interface PopoverProps {
   /** Open from outside - a cell editor opened by a keystroke rather than a click. */
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
+  /** Keep a live preview open while the person interacts with the page behind it. */
+  readonly dismissOnOutside?: boolean;
   /** Layout only - the panel's own width, never a restyle of the frame. */
   readonly className?: string;
 }
@@ -122,6 +124,7 @@ export function Popover(props: PopoverProps): ReactNode {
           className={className}
           triggerRef={triggerRef}
           onClose={close}
+          dismissOnOutside={props.dismissOnOutside ?? true}
         >
           {typeof children === 'function'
             ? // Justification: `close` reads `openRef` when an event or a late promise calls it, never
@@ -145,11 +148,12 @@ interface PopoverPanelProps {
   readonly className: string | undefined;
   readonly triggerRef: RefObject<HTMLButtonElement | null>;
   readonly onClose: (returnFocus: boolean) => void;
+  readonly dismissOnOutside: boolean;
   readonly children: ReactNode;
 }
 
 function PopoverPanel(props: PopoverPanelProps): ReactNode {
-  const { id, label, className, triggerRef, onClose, children } = props;
+  const { id, label, className, triggerRef, onClose, dismissOnOutside, children } = props;
   const panelRef = useRef<HTMLDivElement>(null);
 
   const latest = useRef(onClose);
@@ -180,6 +184,7 @@ function PopoverPanel(props: PopoverPanelProps): ReactNode {
   // An outside pointerdown closes it, as every other disclosure in this package does. The trigger
   // is not "outside": its own click toggles the panel, and closing here first would reopen it.
   useEffect(() => {
+    if (!dismissOnOutside) return;
     function onPointerDown(event: PointerEvent): void {
       const target = event.target as Node;
       if (triggerRef.current?.contains(target) === true) return;
@@ -196,7 +201,27 @@ function PopoverPanel(props: PopoverPanelProps): ReactNode {
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [triggerRef]);
+  }, [dismissOnOutside, triggerRef]);
+
+  useEffect(() => {
+    if (dismissOnOutside) return;
+    function onWorkspaceEscape(event: KeyboardEvent): void {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('dialog[open], [popover]:popover-open')
+      ) {
+        return;
+      }
+      event.preventDefault();
+      latest.current(true);
+    }
+
+    document.addEventListener('keydown', onWorkspaceEscape);
+    return () => {
+      document.removeEventListener('keydown', onWorkspaceEscape);
+    };
+  }, [dismissOnOutside]);
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key !== 'Escape') return;

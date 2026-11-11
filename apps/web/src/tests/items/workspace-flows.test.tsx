@@ -259,8 +259,9 @@ describe('deleting an item', () => {
     // A refused delete leaves the tree exactly as it was, and no toast asserts a deletion that
     // never happened - only the tree's own foot-of-sidebar error does, which the tree already
     // renders for every other kind of failure.
-    expect(await screen.findByRole('button', { name: 'Engineering' })).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(await screen.findByText('The item could not be deleted.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Engineering' })).toBeInTheDocument();
+    expect(screen.queryByText(/Deleted "Engineering"/)).not.toBeInTheDocument();
   });
 
   it('says an undo could not be completed, rather than letting the toast disappear as if it had worked', async () => {
@@ -320,14 +321,14 @@ describe('deleting an item', () => {
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
   });
 
-  it('keeps Undo available after the message fades', async () => {
+  it('keeps keyboard Undo available after the message and button fade', async () => {
     const user = deleteUser();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
     await user.click(screen.getByRole('button', { name: /delete engineering/i }));
-    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeVisible();
 
     // `act` rather than a bare `await`: the state update the timeout produces is not inside any
     // React-tracked event, so nothing else here forces React to flush it before the assertion.
@@ -335,9 +336,10 @@ describe('deleting an item', () => {
       await vi.advanceTimersByTimeAsync(8000);
     });
 
-    // The sentence fades; the Undo button stays for as long as there is history.
-    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Engineering' })).not.toBeInTheDocument();
+    await user.keyboard('{Control>}z{/Control}');
+    expect(await screen.findByRole('button', { name: 'Engineering' })).toBeInTheDocument();
   });
 
   it('undoes two deletions in a row, newest first, from one Undo button or Ctrl+Z', async () => {

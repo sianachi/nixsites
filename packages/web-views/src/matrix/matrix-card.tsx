@@ -9,6 +9,8 @@ import type {
 } from '@nix/web-collections/core/container-model';
 import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
+import { CardPropertySummary } from '../core/card-property-summary';
 import { ValuePopover } from '@nix/web-collections/properties/value-popover';
 import { ListCell } from '../list/list-cell';
 import { cellValue, type CellAddress } from './matrix-axes';
@@ -57,6 +59,7 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
     onOpen,
   } = props;
   const flash = useFlash(item.updatedAt);
+  const compact = useCompactCollection();
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
   const title = item.title.length > 0 ? item.title : 'Untitled';
@@ -94,7 +97,10 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
                   icon={GripVertical}
                   size="sm"
                   aria-hidden
-                  className="mt-0.5 shrink-0 text-muted opacity-0 group-hover:opacity-80 group-focus-within:opacity-80 any-pointer-coarse:opacity-60"
+                  className={cn(
+                    'mt-0.5 shrink-0 text-muted opacity-0 group-hover:opacity-80 group-focus-within:opacity-80',
+                    compact ? 'any-pointer-coarse:hidden' : 'any-pointer-coarse:opacity-60',
+                  )}
                 />
                 <button
                   ref={titleRef}
@@ -132,7 +138,9 @@ export function MatrixCard(props: MatrixCardProps): ReactNode {
               </Menu>
             </div>
 
-            {fields.length === 0 ? null : (
+            {compact ? (
+              <CardPropertySummary item={item} fields={fields} />
+            ) : fields.length === 0 ? null : (
               <div className="-mx-2 flex flex-col">
                 {fields.map((field) => (
                   <ValuePopover

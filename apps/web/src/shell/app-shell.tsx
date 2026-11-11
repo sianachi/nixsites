@@ -48,7 +48,9 @@ import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
 import { useIconStripPreference } from '@nix/web-foundation/lib/icon-strip-preference';
 import { useDrawerNavigation, useLayoutKind } from '@nix/web-foundation/layout/viewport';
-import { useSidebar } from '@nix/web-foundation/layout/use-sidebar';
+import { readCollapsed, useSidebar } from '@nix/web-foundation/layout/use-sidebar';
+import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import type { StructuredRecipeId } from '@nix/web-views/wizard/structured-recipes';
 import { useTemplates } from '@nix/web-templates/templates/use-templates';
@@ -64,6 +66,8 @@ import { useRouteDialog } from '@nix/web-foundation/layout/route-dialog-context'
 import { KeyboardShortcutsDialog } from '@nix/web-foundation/keyboard/keyboard-shortcuts-dialog';
 import { useRevealOpenPanes, useShellShortcuts, useZenEscape } from './shell-effects';
 import { ZenExit } from './zen-exit';
+import { ProfileMenu } from './profile-menu';
+import { useZenLayoutPreview } from './zen-layout-preview';
 import { StatusBar } from './status-bar';
 import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { NotificationInboxPanel } from './notifications/notification-inbox-panel';
@@ -185,8 +189,19 @@ export function AppShell(): ReactNode {
   useBookmarksLoader();
   const toggleBookmark = useBookmarksStore((state) => state.toggle);
   const selectedIsKept = useIsKept(selectedId);
-  const sidebar = useSidebar(narrow);
+  const nativeSidebar = useSidebar(narrow);
   const iconStrip = useIconStripPreference((state) => state.enabled);
+  const statusBarOn = useStatusBarPreference((state) => state.enabled);
+  const subject = useSessionStore((state) => state.profile?.subject ?? null);
+  const zenLayout = useZenLayoutPreview(subject, {
+    explorer: narrow ? !readCollapsed(browserStorage()) : nativeSidebar.visible,
+    navigation: iconStrip,
+    status: statusBarOn,
+  });
+  const sidebar =
+    (!zenLayout.active && zenLayout.draft === null) || narrow
+      ? nativeSidebar
+      : { ...nativeSidebar, visible: zenLayout.explorer, toggle: zenLayout.toggleExplorer };
   useEdgeSwipeOpen('left', narrow && !sidebar.visible, sidebar.toggle);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
@@ -340,7 +355,6 @@ export function AppShell(): ReactNode {
   // ways that happens - left a short, content-free summary behind for this workspace (see
   // `import-interrupted-notice.ts`). This is where it finally gets read: once, on arrival in the
   // workspace it names, as an ordinary shell toast rather than a special screen of its own.
-  const subject = useSessionStore((state) => state.profile?.subject ?? null);
   useEffect(() => {
     if (subject === null) {
       return;
@@ -538,11 +552,16 @@ export function AppShell(): ReactNode {
   // never survives past the layout it was measured for.
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
   const navRendered = narrow && !keyboardVisible && !zen;
-  const statusBarOn = useStatusBarPreference((state) => state.enabled);
-  const statusBarShown = statusBarOn && !narrow && !keyboardVisible && !zen;
+  const statusBarShown =
+    (zenLayout.active ? zenLayout.visible('status') : statusBarOn) &&
+    !narrow &&
+    !keyboardVisible &&
+    !zen;
   // What the phone's bottom bar and top row share: the destinations that have no room of their own.
   const phoneMenu = {
     workspaceId,
+    hideSettings: zenLayout.active,
+    workspaceDestinationsInExplorer: zenLayout.active,
     unreadNotifications: notificationsInbox.unread,
     pet: petEntry && {
       label: petEntry.label,
@@ -595,11 +614,36 @@ export function AppShell(): ReactNode {
     },
   };
 
+  const compactNavigation = zenLayout.active && !zenLayout.visible('navigation');
+  const showRail = zenLayout.active ? !compactNavigation : iconStrip;
+  const layoutPreferences = { preview: zenLayout, narrow };
+  const compactDestinations =
+    compactNavigation && !narrow ? (
+      <NavRail
+        compact
+        hideSettings
+        onImport={() => {
+          setWorkspaceImportOpen(true);
+        }}
+      />
+    ) : null;
+  const presentation = !zenLayout.active
+    ? null
+    : {
+        collectionTools: zenLayout.visible('view'),
+        noteInsert: zenLayout.visible('insert'),
+        noteAdvanced: zenLayout.visible('advanced'),
+        statusBar: statusBarShown,
+      };
+
   return (
     // design-token-exempt: device safe-area insets protect content in portrait and landscape.
     <div
       style={visibleHeight === null ? undefined : { height: visibleHeight }} // design-token-exempt: the keyboard-reduced visual viewport height is measured at runtime.
-      className="flex h-dvh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] font-body text-foreground"
+      className="flex h-dvh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] font-body text-foreground data-[zen-insert=hide]:[&_[data-zen-tool=insert]]:hidden data-[zen-advanced=hide]:[&_[data-zen-tool=advanced]]:hidden data-[zen-view=hide]:[&_[data-zen-tool=view]]:hidden"
+      data-zen-insert={presentation?.noteInsert === false ? 'hide' : undefined}
+      data-zen-advanced={presentation?.noteAdvanced === false ? 'hide' : undefined}
+      data-zen-view={presentation?.collectionTools === false ? 'hide' : undefined}
     >
       {/* First focusable thing in the document, for everybody, on every screen. It used to live in
           a layout element that the route tree had stopped rendering, so in practice the app had no
@@ -651,7 +695,9 @@ export function AppShell(): ReactNode {
           with the rail, tree and header gone there is nothing between the top of the page and the
           content for it to skip. */}
       {zen ? (
-        <ZenExit />
+        <ZenExit>
+          <ProfileMenu principal={principal} compactTrigger layoutPreferences={layoutPreferences} />
+        </ZenExit>
       ) : (
         <a
           href="#main"
@@ -694,8 +740,9 @@ export function AppShell(): ReactNode {
           `min-h-0` so this row can shrink inside the `h-dvh` column, which is what gives the pane
           row underneath a definite height to scroll against. */}
       <div className="flex min-h-0 flex-1">
-        {!zen && !narrow && iconStrip ? (
+        {!zen && !narrow && showRail ? (
           <NavRail
+            hideSettings={zenLayout.active}
             onImport={() => {
               setWorkspaceImportOpen(true);
             }}
@@ -707,6 +754,7 @@ export function AppShell(): ReactNode {
             <div hidden={keyboardVisible}>
               {phone ? (
                 <PhoneTopRow
+                  layoutPreferences={layoutPreferences}
                   principal={principal}
                   sidebarToggleRef={sidebarToggleRef}
                   sidebarVisible={sidebar.visible}
@@ -715,6 +763,8 @@ export function AppShell(): ReactNode {
                 />
               ) : (
                 <ShellHeader
+                  compactDestinations={compactDestinations}
+                  layoutPreferences={layoutPreferences}
                   sidebarVisible={sidebar.visible}
                   sidebarToggleRef={sidebarToggleRef}
                   onToggleSidebar={sidebar.toggle}
@@ -750,6 +800,7 @@ export function AppShell(): ReactNode {
                     mobileDestinations={
                       <NavRail
                         compact
+                        hideSettings={zenLayout.active}
                         onImport={() => {
                           // Keep one Back entry while the drawer hands off to Import.
                           sidebarToggleRef.current?.focus();
@@ -820,20 +871,22 @@ export function AppShell(): ReactNode {
                     <TemplateLibraryProvider library={templateLibrary}>
                       <CapabilitiesProvider value={capabilities}>
                         <ItemDialogProvider tree={tree}>
-                          <Outlet
-                            context={
-                              {
-                                tree,
-                                selectedId,
-                                openImport: () => {
-                                  setWorkspaceImportOpen(true);
-                                },
-                              } satisfies ShellContext
-                            }
-                          />
-                          {/* Desktop's automations, workspaces, trash and settings. Inside
+                          <ZenPresentationContext value={presentation}>
+                            <Outlet
+                              context={
+                                {
+                                  tree,
+                                  selectedId,
+                                  openImport: () => {
+                                    setWorkspaceImportOpen(true);
+                                  },
+                                } satisfies ShellContext
+                              }
+                            />
+                            {/* Desktop's automations, workspaces, trash and settings. Inside
                             `<main>` for the providers; a modal dialog sits in the top layer. */}
-                          <RouteDialog />
+                            <RouteDialog />
+                          </ZenPresentationContext>
                         </ItemDialogProvider>
                       </CapabilitiesProvider>
                     </TemplateLibraryProvider>

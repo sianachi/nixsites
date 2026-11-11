@@ -24,6 +24,8 @@ public static class UiSettingsValidation
     /// <summary>Stable code for a patch over <see cref="MaximumBytes"/>.</summary>
     public const string TooLargeCode = "me.ui_settings_too_large";
 
+    private const string LayoutKey = "shell.layout";
+
     // A null value list means a boolean; otherwise the key takes one of the listed strings. The
     // enum values mirror the web stores that hold each setting today (keyboard-mode-store.ts,
     // text-width-preference.ts, suggestion-preferences.ts for viewSuggestions and choiceOrder); graph.openMode and
@@ -68,7 +70,7 @@ public static class UiSettingsValidation
 
         foreach (var (key, value) in patch)
         {
-            if (!Rules.TryGetValue(key, out var allowed))
+            if (key != LayoutKey && !Rules.ContainsKey(key))
             {
                 // A key retired from the allow-list can still be deleted, so a stored row never becomes unrepairable.
                 if (value.ValueKind == JsonValueKind.Null && KeyShape.IsMatch(key))
@@ -79,7 +81,7 @@ public static class UiSettingsValidation
                 return new NixError(InvalidCode, $"'{key}' is not a setting that can be saved.");
             }
 
-            if (!IsValid(allowed, value))
+            if (!IsValid(key, value))
             {
                 return new NixError(InvalidCode, $"'{key}' has a value of the wrong type or an unknown option.");
             }
@@ -88,11 +90,30 @@ public static class UiSettingsValidation
         return null;
     }
 
-    private static bool IsValid(string[]? allowed, JsonElement value) =>
+    private static bool IsValid(string key, JsonElement value) =>
         value.ValueKind == JsonValueKind.Null
-        || (allowed is null
-            ? value.ValueKind is JsonValueKind.True or JsonValueKind.False
-            : value.ValueKind == JsonValueKind.String && allowed.Contains(value.GetString(), StringComparer.Ordinal));
+        || (key == LayoutKey
+            ? IsValidLayout(value)
+            : Rules.TryGetValue(key, out var allowed) && (allowed is null
+                ? value.ValueKind is JsonValueKind.True or JsonValueKind.False
+                : value.ValueKind == JsonValueKind.String && allowed.Contains(value.GetString(), StringComparer.Ordinal)));
+
+    private static bool IsValidLayout(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.Object || value.EnumerateObject().Count() != 2
+            || !value.TryGetProperty("preset", out var preset) || preset.ValueKind != JsonValueKind.String
+            || preset.GetString() is not ("essentials" or "workspace" or "full")
+            || !value.TryGetProperty("overrides", out var overrides) || overrides.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return overrides.EnumerateObject().All(option =>
+            option.Name is "explorer" or "navigation" or "status" or "view" or "insert" or "advanced"
+            && option.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            && seen.Add(option.Name));
+    }
 
     // Only stored keys whose value passes today's rules are returned, so a key or option retired
     // from the allow-list can never make the client's strict parse of the response fail.
@@ -102,7 +123,7 @@ public static class UiSettingsValidation
             ? []
             : JsonSerializer.Deserialize(settingsJson, MeJsonContext.Default.DictionaryStringJsonElement) ?? [];
         return new(
-            stored.Where(pair => pair.Value.ValueKind != JsonValueKind.Null && Rules.TryGetValue(pair.Key, out var allowed) && IsValid(allowed, pair.Value))
+            stored.Where(pair => pair.Value.ValueKind != JsonValueKind.Null && IsValid(pair.Key, pair.Value))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             revision);
     }

@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, ContextMenu, cn, focusRing, Icon, Input, Text, useFlash, useUndo } from '@nix/ui';
 import { Check, CheckCircle2, Circle, CircleAlert, Clock3, Pencil } from 'lucide-react';
 import { useState, type ComponentProps, type ReactNode } from 'react';
@@ -71,6 +72,7 @@ export function HabitRow({
   ) => Promise<string | null>;
 }): ReactNode {
   const undo = useUndo();
+  const essentials = useCompactCollection();
   const itemActions = useItemContextActions(onOpen);
   const openProps = useItemOpenProps(onOpen);
   const [message, setMessage] = useState<string | null>(null);
@@ -144,9 +146,11 @@ export function HabitRow({
         <ContextMenu
           label={`${title || 'Untitled habit'} actions`}
           items={() =>
-            itemActions(itemId, title, [
-              { kind: 'action', label: 'Edit schedule', onSelect: onEdit },
-            ])
+            itemActions(
+              itemId,
+              title,
+              essentials ? [] : [{ kind: 'action', label: 'Edit schedule', onSelect: onEdit }],
+            )
           }
         >
           {(contextTarget) => (
@@ -164,11 +168,13 @@ export function HabitRow({
                 >
                   {title || 'Untitled habit'}
                 </Button>
-                <Text variant="caption" tone="muted">
-                  {tracker.target === 1 && tracker.unit === 'times'
-                    ? 'Check-in'
-                    : `Goal: ${String(tracker.target)} ${tracker.unit}`}
-                </Text>
+                {(!essentials || tracker.target !== 1 || tracker.unit !== 'times') && (
+                  <Text variant="caption" tone="muted">
+                    {tracker.target === 1 && tracker.unit === 'times'
+                      ? 'Check-in'
+                      : `Goal: ${String(tracker.target)} ${tracker.unit}`}
+                  </Text>
+                )}
               </div>
               {lifecycle !== 'active' ? (
                 <Text variant="caption" tone="muted" className="capitalize">

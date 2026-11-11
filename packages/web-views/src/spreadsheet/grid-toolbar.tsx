@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, Icon, Popover, Text, cn, focusRing } from '@nix/ui';
 import { ArrowDownToLine, BoxSelect, Check, X } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -35,6 +36,7 @@ interface GridToolbarProps {
 }
 
 export function GridToolbar(props: GridToolbarProps): ReactNode {
+  const compact = useCompactCollection();
   const { activeColumnLabel, activeItemTitle } = props;
   const editLabel = `Edit ${activeColumnLabel ?? 'property'} for ${(activeItemTitle ?? '') || 'Untitled'}`;
 
@@ -54,25 +56,27 @@ export function GridToolbar(props: GridToolbarProps): ReactNode {
           and opening - a second tap on the already-active cell edits it, and this button opens
           it - so the keyboard ladder below is a shortcut, not the only door. */}
       <div className="mb-1 flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <details className="min-w-0 flex-1 pointer-coarse:hidden">
-          <summary
-            className={cn(
-              'inline-flex min-h-(--control-md) cursor-default items-center any-pointer-coarse:min-h-(--control-lg)',
-              focusRing,
-            )}
-          >
-            <Text as="span" variant="note" tone="muted">
-              Keyboard
+        {!compact && (
+          <details className="min-w-0 flex-1 pointer-coarse:hidden">
+            <summary
+              className={cn(
+                'inline-flex min-h-(--control-md) cursor-default items-center any-pointer-coarse:min-h-(--control-lg)',
+                focusRing,
+              )}
+            >
+              <Text as="span" variant="note" tone="muted">
+                Keyboard
+              </Text>
+            </summary>
+            <Text as="p" variant="note" tone="muted">
+              Arrows move, Shift extends. Type to replace text and numbers. Enter edits a property
+              or opens the item on a title. Click a choice, checkbox, date or number cell to use its
+              typed control. Ctrl/Cmd+C copies and Ctrl/Cmd+V pastes tab-separated text, Ctrl/Cmd+D
+              fills down, Ctrl/Cmd+Shift+D continues a series, Delete clears. Escape, then Tab,
+              leaves the grid.
             </Text>
-          </summary>
-          <Text as="p" variant="note" tone="muted">
-            Arrows move, Shift extends. Type to replace text and numbers. Enter edits a property or
-            opens the item on a title. Click a choice, checkbox, date or number cell to use its
-            typed control. Ctrl/Cmd+C copies and Ctrl/Cmd+V pastes tab-separated text, Ctrl/Cmd+D
-            fills down, Ctrl/Cmd+Shift+D continues a series, Delete clears. Escape, then Tab, leaves
-            the grid.
-          </Text>
-        </details>
+          </details>
+        )}
 
         {props.editing ? (
           <div className="flex shrink-0 gap-1">
@@ -110,16 +114,18 @@ export function GridToolbar(props: GridToolbarProps): ReactNode {
           <span className="truncate">Select range</span>
         </Button>
 
-        <Button
-          variant="secondary"
-          className="min-w-0 max-w-full"
-          disabled={!props.canFillDown}
-          aria-label="Fill down: copy the first selected row into the rows below"
-          onClick={props.onFillDown}
-        >
-          <Icon icon={ArrowDownToLine} size="sm" />
-          <span className="truncate">Fill down</span>
-        </Button>
+        {(!compact || props.selecting || props.canFillDown) && (
+          <Button
+            variant="secondary"
+            className="min-w-0 max-w-full"
+            disabled={!props.canFillDown}
+            aria-label="Fill down: copy the first selected row into the rows below"
+            onClick={props.onFillDown}
+          >
+            <Icon icon={ArrowDownToLine} size="sm" />
+            <span className="truncate">Fill down</span>
+          </Button>
+        )}
 
         {props.selectionLabel === null ? null : (
           <Text as="span" variant="note" tone="muted" className="self-center">

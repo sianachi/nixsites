@@ -1,3 +1,5 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
+import { PropertyValueDisplay } from '@nix/web-collections/properties/property-value-display';
 import { isNixApiError, structure as coreStructure } from '@nix/api-client';
 import { useUndo } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
@@ -20,6 +22,7 @@ export function QueryRowValue(props: {
   readonly onSaved: () => void;
 }): ReactNode {
   const { itemId, title, properties, property, onSaved } = props;
+  const compact = useCompactCollection();
   const client = useApiClient();
   const [refusal, setRefusal] = useState<string | null>(null);
   const undo = useUndo();
@@ -50,6 +53,15 @@ export function QueryRowValue(props: {
       );
       return false;
     }
+  }
+
+  if (
+    compact &&
+    refusal === null &&
+    property.type !== 'checkbox' &&
+    property.type !== 'completion'
+  ) {
+    return <PropertyValueDisplay item={owner} property={property} />;
   }
 
   return (

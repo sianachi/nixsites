@@ -25,6 +25,8 @@ export interface PhoneMenuProps {
   readonly icon?: LucideIcon;
   readonly label?: string;
   readonly className?: string;
+  readonly hideSettings?: boolean;
+  readonly workspaceDestinationsInExplorer?: boolean;
 }
 
 /** Calendar, Inbox, Pet, Workspaces, Settings, Import and Zen: what the phone's bottom bar has no room for. */
@@ -37,6 +39,8 @@ export function PhoneMenu({
   icon = MenuIcon,
   label = 'Menu',
   className,
+  hideSettings = false,
+  workspaceDestinationsInExplorer = false,
 }: PhoneMenuProps): ReactNode {
   const navigate = useNavigate();
   const go = (path: string) => (): void => {
@@ -44,13 +48,15 @@ export function PhoneMenu({
   };
   const unread = unreadNotifications > 0;
   const items: MenuEntry[] = [
-    { label: 'Calendar', icon: CalendarDays, onSelect: go('/calendar') },
+    ...(workspaceDestinationsInExplorer
+      ? []
+      : [{ label: 'Calendar', icon: CalendarDays, onSelect: go('/calendar') }]),
     {
       label: unread ? `Inbox, ${String(unreadNotifications)} unread` : 'Inbox',
       icon: Bell,
       onSelect: onOpenInbox,
     },
-    ...(pet
+    ...(pet && !workspaceDestinationsInExplorer
       ? [
           {
             label: pet.attention === null ? pet.label : `${pet.label}, ${pet.attention}`,
@@ -59,9 +65,13 @@ export function PhoneMenu({
           },
         ]
       : []),
-    { label: 'Workspaces', icon: Layers, onSelect: go('/workspaces') },
-    { label: 'Settings', icon: Settings, onSelect: go('/settings') },
-    { label: 'Import', icon: FolderInput, onSelect: onImport },
+    ...(workspaceDestinationsInExplorer
+      ? []
+      : [{ label: 'Workspaces', icon: Layers, onSelect: go('/workspaces') }]),
+    ...(hideSettings ? [] : [{ label: 'Settings', icon: Settings, onSelect: go('/settings') }]),
+    ...(workspaceDestinationsInExplorer
+      ? []
+      : [{ label: 'Import', icon: FolderInput, onSelect: onImport }]),
     { label: 'Enter Zen mode', icon: Maximize2, onSelect: toggleZenMode },
   ];
   return (

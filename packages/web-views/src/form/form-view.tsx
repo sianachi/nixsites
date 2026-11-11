@@ -1,6 +1,7 @@
+import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { items as coreItems } from '@nix/api-client';
 import { Button, Checkbox, Field, Input, Text, useUndo } from '@nix/ui';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import { resolveConfiguredColumns } from '@nix/web-collections/core/columns';
@@ -120,7 +121,10 @@ function EntryForm({
   readonly container: ContainerData;
   readonly view: View;
 }): ReactNode {
+  const presentation = useContext(ZenPresentationContext);
+  const compact = presentation?.collectionTools === false;
   const [title, setTitle] = useState('');
+  const [optionalOpen, setOptionalOpen] = useState(false);
   const [bag, setBag] = useState<Record<string, PropertyValue>>({});
   const [saveChoice, setSaveChoice] = useState<boolean | null>(null);
   const saveResponse = saveChoice ?? view.mode !== 'temporary';
@@ -151,13 +155,6 @@ function EntryForm({
   const [added, setAdded] = useState<readonly { id: string; title: string; leaving: boolean }[]>(
     [],
   );
-  // Read after `create` resolves: the reload it awaits has re-rendered by then, so this holds the
-  // new child and lets the add find its id for Undo.
-  const childrenRef = useRef(container.children);
-  useEffect(() => {
-    childrenRef.current = container.children;
-  });
-
   const titleRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const fieldsRef = useRef<HTMLDivElement>(null);
@@ -187,10 +184,10 @@ function EntryForm({
     if (key === undefined) {
       return;
     }
-    fieldBoxes.current
-      .get(key)
-      ?.querySelector<HTMLElement>('select, input, textarea, button')
-      ?.focus();
+    const box = fieldBoxes.current.get(key);
+    const details = box?.closest('details');
+    if (details !== null && details !== undefined) details.open = true;
+    box?.querySelector<HTMLElement>('select, input, textarea, button')?.focus();
   }
 
   function pendingHabit(key: string): UsualValue | undefined {
@@ -303,8 +300,10 @@ function EntryForm({
     setSending(true);
 
     try {
-      const knownIds = new Set(container.children.map((child) => child.id));
-      const refusal = await container.create(title.trim(), sent);
+      const receipt: { id?: string } = {};
+      const refusal = await container.create(title.trim(), sent, (id) => {
+        receipt.id = id;
+      });
 
       if (refusal !== null) {
         setOutcome({ kind: 'refused', text: refusal });
@@ -318,27 +317,26 @@ function EntryForm({
         setUsual(usualValues(workspace.workspaceId, view.id, offered));
       }
       const label = title.trim();
-      const created = childrenRef.current.find((child) => !knownIds.has(child.id));
+
       setTitle('');
       setBag({});
       setSubmissions((current) => current + 1);
       setOutcome({ kind: 'saved', text: 'Entry added.' });
-      if (created !== undefined) {
-        setAdded((current) => [{ id: created.id, title: label, leaving: false }, ...current]);
+      const id = receipt.id;
+      if (id !== undefined) {
+        setAdded((current) => [{ id, title: label, leaving: false }, ...current]);
         if (client !== null && workspace !== null) {
           const { workspaceId } = workspace;
           undo.push(`Added ${label}`, async () => {
-            await client.execute(coreItems.deleteItem(workspaceId, created.id));
+            await client.execute(coreItems.deleteItem(workspaceId, id));
             notifyItemChildrenChanged(workspaceId, container.itemId, {
-              removedItemIds: [created.id],
+              removedItemIds: [id],
             });
             setAdded((current) =>
-              current.map((entry) =>
-                entry.id === created.id ? { ...entry, leaving: true } : entry,
-              ),
+              current.map((entry) => (entry.id === id ? { ...entry, leaving: true } : entry)),
             );
             window.setTimeout(() => {
-              setAdded((current) => current.filter((entry) => entry.id !== created.id));
+              setAdded((current) => current.filter((entry) => entry.id !== id));
             }, 150);
             titleRef.current?.focus();
           });
@@ -425,8 +423,8 @@ function EntryForm({
           ) : null}
 
           <MemberNames enabled={canName}>
-            {(memberName) =>
-              offered.map((definition) => {
+            {(memberName) => {
+              const field = (definition: PropertyDefinition): ReactNode => {
                 const habit = summarise ? undefined : pendingHabit(definition.key);
                 return (
                   <div
@@ -464,8 +462,45 @@ function EntryForm({
                     )}
                   </div>
                 );
-              })
-            }
+              };
+              if (presentation === null) return offered.map(field);
+              const required = offered.filter((definition) => definition.required);
+              const optional = offered.filter((definition) => !definition.required);
+              return (
+                <>
+                  {required.map(field)}
+                  {optional.length === 0 ? null : (
+                    <details
+                      open={
+                        !compact ||
+                        !saveResponse ||
+                        optionalOpen ||
+                        optional.some((definition) => fieldErrors[definition.key])
+                      }
+                      onToggle={(event) => {
+                        if (compact && saveResponse) setOptionalOpen(event.currentTarget.open);
+                      }}
+                      onInvalidCapture={(event) => {
+                        event.currentTarget.open = true;
+                      }}
+                    >
+                      <summary
+                        className={
+                          compact
+                            ? 'mb-3 min-h-(--control-md) cursor-pointer pointer-coarse:min-h-(--control-lg)'
+                            : 'hidden'
+                        }
+                      >
+                        <Text as="span" variant="note" tone="muted">
+                          More fields
+                        </Text>
+                      </summary>
+                      <div className="flex flex-col gap-4">{optional.map(field)}</div>
+                    </details>
+                  )}
+                </>
+              );
+            }}
           </MemberNames>
         </div>
 

@@ -80,8 +80,10 @@ it('names the first failure and its reason when part of a selection is refused',
   const dialog = await screen.findByRole('dialog', { name: 'Delete 3 items?' });
   await user.click(within(dialog).getByRole('button', { name: 'Delete 3 items' }));
 
-  expect(await screen.findByRole('status')).toHaveTextContent(
+  const notice = await screen.findByText(
     'Deleted 0 of 3 items. "Alpha" could not be deleted: The item could not be deleted.',
+    { selector: '[role="status"] p' },
   );
+  expect(notice).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
 });

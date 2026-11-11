@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { type LucideIcon } from 'lucide-react';
 
 import { cn } from '../lib/cn';
@@ -167,7 +175,8 @@ export function useListbox(
   // and without a stable identity that listener is torn down and re-added on every keystroke.
   const latest = useRef({ select, onKeyDown });
 
-  useEffect(() => {
+  // A newly rendered option can receive a press before passive effects run.
+  useLayoutEffect(() => {
     latest.current = { select, onKeyDown };
   });
 

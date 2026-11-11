@@ -379,13 +379,21 @@ describe('companion workflow', () => {
       provider: 'anthropic',
       models: [claudeModel],
     });
-    let finishWatch: ((value: unknown) => void) | undefined;
-    client.query.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishWatch = resolve;
-        }),
-    );
+    const claude = {
+      ...connected,
+      provider: 'anthropic',
+      revision: 1,
+      messages: [{ id: 'claude-message', role: 'assistant', text: 'Claude conversation' }],
+    };
+    let finishWatch: ((value: typeof claude) => void) | undefined;
+    client.query
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishWatch = resolve;
+          }),
+      )
+      .mockResolvedValue(claude);
     rerender(
       <MemoryRouter>
         <PetCompanion />
@@ -394,12 +402,10 @@ describe('companion workflow', () => {
     await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
     expect(screen.queryByText('ChatGPT conversation')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Connecting');
-    finishWatch?.({
-      ...connected,
-      provider: 'anthropic',
-      revision: 1,
-      messages: [{ id: 'claude-message', role: 'assistant', text: 'Claude conversation' }],
+    await waitFor(() => {
+      expect(finishWatch).toBeDefined();
     });
+    finishWatch?.(claude);
     expect(await screen.findByText('Claude conversation')).toBeVisible();
     await openSettings(user);
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
@@ -881,11 +887,12 @@ describe('companion workflow', () => {
   it('shows the live conversation title and renames it from the actions menu', async () => {
     const named = {
       ...connected,
+      revision: 1,
       title: 'Weekly plan',
       messages: [{ id: 'first', role: 'user', text: 'What is due?' }],
     };
     client.query.mockResolvedValue(named);
-    client.execute.mockResolvedValue({ ...named, title: 'Sprint review' });
+    client.execute.mockResolvedValue({ ...named, revision: 2, title: 'Sprint review' });
     const user = userEvent.setup();
     render(
       <MemoryRouter>

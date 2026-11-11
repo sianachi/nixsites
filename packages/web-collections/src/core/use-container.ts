@@ -95,8 +95,13 @@ export interface ContainerData {
    * implementation would get wrong: it puts the new item into the store the sidebar reads, and it
    * expands the parent so a child made inside a collapsed item is not invisible. So the screen
    * wires this to `tree.create`, and there is one create path rather than two that drift.
+   * Undo can use the created id before the collection refreshes.
    */
-  readonly create: (title: string, properties?: Record<string, unknown>) => Promise<string | null>;
+  readonly create: (
+    title: string,
+    properties?: Record<string, unknown>,
+    onCreated?: (itemId: string) => void,
+  ) => Promise<string | null>;
 
   /**
    * Writes property values onto one child and refreshes it in place.
@@ -285,10 +290,7 @@ const PAGE_SIZE = 200;
  * Supplied by the screen rather than built here, because creation belongs to the item tree - see
  * `ContainerData.create`.
  */
-export type CreateChild = (
-  title: string,
-  properties?: Record<string, unknown>,
-) => Promise<string | null>;
+export type CreateChild = ContainerData['create'];
 
 export function useContainer(containerId: string | null, createChild?: CreateChild): ContainerData {
   const client = useApiClient();
@@ -942,12 +944,18 @@ export function useContainer(containerId: string | null, createChild?: CreateChi
   );
 
   const create = useCallback(
-    async (title: string, properties?: Record<string, unknown>): Promise<string | null> => {
+    async (
+      title: string,
+      properties?: Record<string, unknown>,
+      onCreated?: (itemId: string) => void,
+    ): Promise<string | null> => {
       if (createChild === undefined) {
         return 'This container cannot hold items.';
       }
 
-      const refusal = await createChild(title, properties);
+      const refusal = await (onCreated === undefined
+        ? createChild(title, properties)
+        : createChild(title, properties, onCreated));
 
       // Reloaded here rather than by the caller, because this hook owns the children a view is
       // drawing and the tree's own store is a different list. Skipped on a refusal: nothing

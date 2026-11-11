@@ -19,9 +19,12 @@ import { WorkspaceLockMark } from '@nix/web-workspaces/workspaces/workspace-lock
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { NotificationBell } from './notifications/notification-bell';
 import { ProfileMenu } from './profile-menu';
+import type { ZenLayoutPreferences } from './zen-layout-preview';
 
 export interface ShellHeaderProps {
   readonly sidebarVisible: boolean;
+  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
+  readonly compactDestinations?: ReactNode;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly onToggleSidebar: () => void;
   /** The pinned Explorer's width, so the tabs start where the page does; null when it is not pinned. */
@@ -79,6 +82,8 @@ export function ShellHeader({
   onToggleSidebar,
   explorerWidth,
   account,
+  layoutPreferences,
+  compactDestinations,
 }: ShellHeaderProps): ReactNode {
   const navigate = useNavigate();
   const { workspace } = useWorkspace();
@@ -161,8 +166,13 @@ export function ShellHeader({
             {SEARCH_KEYS.map((keys) => formatShortcut(keys)).join(' ')}
           </kbd>
         </button>
+        {compactDestinations}
         <NotificationBell unread={account.unreadNotifications} onClick={account.onOpenInbox} />
-        <ProfileMenu principal={account.principal} />
+        <ProfileMenu
+          principal={account.principal}
+          layoutPreferences={layoutPreferences}
+          showWorkspaceMenu={layoutPreferences?.preview.active !== true}
+        />
       </div>
     </header>
   );

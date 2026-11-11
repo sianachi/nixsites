@@ -1,3 +1,4 @@
+import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, Text, useUndo } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
@@ -39,6 +40,7 @@ function ChangeList({ changes }: { readonly changes: readonly ProgramChange[] })
  * collection never reaches here (the container view stops at its lock first).
  */
 export default function CustomView({ container, view }: ViewRendererProps): ReactNode {
+  const compact = useCompactCollection();
   const { workspaceId } = useWorkspace();
   const undo = useUndo();
   const program = view.program ?? '';
@@ -147,17 +149,23 @@ export default function CustomView({ container, view }: ViewRendererProps): Reac
 
   return (
     <div className="flex min-w-0 flex-col gap-2 p-4">
-      <div className="sticky top-0 z-10 flex justify-end bg-background py-1">
-        <Button
-          variant="primary"
-          onClick={() => {
-            setSaved(null);
-            setDraft(program);
-          }}
+      {!compact || program.trim() === '' ? (
+        <div
+          className={
+            compact ? 'flex justify-end' : 'sticky top-0 z-10 flex justify-end bg-background py-1'
+          }
         >
-          Edit view
-        </Button>
-      </div>
+          <Button
+            variant={compact ? 'subtle' : 'primary'}
+            onClick={() => {
+              setSaved(null);
+              setDraft(program);
+            }}
+          >
+            Edit view
+          </Button>
+        </div>
+      ) : null}
       {saved === null ? null : (
         <div role="status" data-enter="" className="flex flex-col gap-1">
           <Text variant="note">
@@ -191,9 +199,22 @@ export default function CustomView({ container, view }: ViewRendererProps): Reac
           workspaceIds={[workspaceId]}
           stateKey={`view:${container.itemId ?? 'root'}:${view.id}`}
           fallback={
-            <Text variant="note" role="alert">
-              This view's program does not render. Use Edit view to fix it.
-            </Text>
+            <div className="flex flex-col items-start gap-2">
+              <Text variant="note" role="alert">
+                This view's program does not render. Use Edit view to fix it.
+              </Text>
+              {compact ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSaved(null);
+                    setDraft(program);
+                  }}
+                >
+                  Edit view
+                </Button>
+              ) : null}
+            </div>
           }
         />
       )}

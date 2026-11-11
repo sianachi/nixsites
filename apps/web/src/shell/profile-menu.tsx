@@ -1,6 +1,15 @@
 import { Icon, Menu, Text, focusRing, type MenuEntry } from '@nix/ui';
-import { ChevronDown, Download, KeyRound, LogOut, Server, Settings, User } from 'lucide-react';
-import { type ReactNode } from 'react';
+import {
+  ChevronDown,
+  Download,
+  KeyRound,
+  LogOut,
+  Server,
+  Settings,
+  SlidersHorizontal,
+  User,
+} from 'lucide-react';
+import { type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
@@ -9,6 +18,7 @@ import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
+import { ZenLayoutPreview, type ZenLayoutPreferences } from './zen-layout-preview';
 import { usePendingSignOut } from './use-pending-sign-out';
 import { useHiddenItemsEntry } from '../items/hidden-items-panel';
 
@@ -30,9 +40,16 @@ export interface ProfileMenuProps {
 
   /** An icon-only trigger, for the rail: the name stays as the accessible label. */
   readonly compactTrigger?: boolean;
+  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
+  readonly showWorkspaceMenu?: boolean;
 }
 
-export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuProps): ReactNode {
+export function ProfileMenu({
+  principal,
+  compactTrigger = false,
+  layoutPreferences,
+  showWorkspaceMenu = true,
+}: ProfileMenuProps): ReactNode {
   const { accountUrl } = useAuth();
   const pendingSignOut = usePendingSignOut();
   const { workspaceId } = useWorkspace();
@@ -67,10 +84,22 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
       ),
     },
     { kind: 'separator' },
-    ...workspaceMenu.entries,
+    ...(showWorkspaceMenu ? workspaceMenu.entries : []),
     ...(hiddenItems.entry === null ? [] : [hiddenItems.entry]),
     { kind: 'separator' },
     { kind: 'content', content: <ThemeChoice /> },
+    ...(layoutPreferences === undefined
+      ? []
+      : [
+          {
+            kind: 'action',
+            label: 'Preferences',
+            icon: SlidersHorizontal,
+            onSelect: () => {
+              if (layoutPreferences.preview.draft === null) layoutPreferences.preview.open();
+            },
+          } satisfies MenuEntry,
+        ]),
     // Kept here as well as on the nav rail. The rail makes workspace administration findable from
     // anywhere; this path keeps personal access tokens beside the identity they belong to.
     { kind: 'link', label: 'Settings', icon: Settings, href: `/w/${workspaceId}/settings` },
@@ -118,41 +147,55 @@ export function ProfileMenu({ principal, compactTrigger = false }: ProfileMenuPr
     },
   ];
 
+  const accountMenu = (anchor?: RefObject<HTMLButtonElement | null>): ReactNode => (
+    <Menu
+      label="Account"
+      items={items}
+      renderLink={({ href, children, ...rest }) => (
+        <Link to={href} {...rest}>
+          {children}
+        </Link>
+      )}
+    >
+      {(trigger) => (
+        <button
+          {...trigger}
+          onClick={() => {
+            if (layoutPreferences?.preview.draft) layoutPreferences.preview.cancel();
+            trigger.onClick();
+          }}
+          ref={(element) => {
+            trigger.ref.current = element;
+            if (anchor !== undefined) anchor.current = element;
+          }}
+          title={compactTrigger ? name : undefined}
+          className={
+            compactTrigger
+              ? `flex size-(--rail-control) items-center justify-center rounded-md text-muted any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`
+              : [
+                  'flex items-center gap-1.5 border border-transparent px-2 py-1',
+                  'text-xs text-muted pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg)',
+                  `hover:bg-foreground/7 ${focusRing}`,
+                ].join(' ')
+          }
+        >
+          <Icon icon={User} size={compactTrigger ? 'md' : 'sm'} />
+          <span className={compactTrigger ? 'sr-only' : 'max-w-[16ch] truncate max-lg:sr-only'}>
+            {name}
+          </span>
+          {compactTrigger ? null : <Icon icon={ChevronDown} size="sm" className="max-lg:hidden" />}
+        </button>
+      )}
+    </Menu>
+  );
+
   return (
     <>
-      <Menu
-        label="Account"
-        items={items}
-        renderLink={({ href, children, ...rest }) => (
-          <Link to={href} {...rest}>
-            {children}
-          </Link>
-        )}
-      >
-        {(trigger) => (
-          <button
-            {...trigger}
-            title={compactTrigger ? name : undefined}
-            className={
-              compactTrigger
-                ? `flex size-(--rail-control) items-center justify-center rounded-md text-muted hover:bg-foreground/7 hover:text-foreground ${focusRing}`
-                : [
-                    'flex items-center gap-1.5 border border-transparent px-2 py-1',
-                    'text-xs text-muted pointer-coarse:min-h-(--control-lg) pointer-coarse:min-w-(--control-lg)',
-                    `hover:bg-foreground/7 ${focusRing}`,
-                  ].join(' ')
-            }
-          >
-            <Icon icon={User} size={compactTrigger ? 'md' : 'sm'} />
-            <span className={compactTrigger ? 'sr-only' : 'max-w-[16ch] truncate max-lg:sr-only'}>
-              {name}
-            </span>
-            {compactTrigger ? null : (
-              <Icon icon={ChevronDown} size="sm" className="max-lg:hidden" />
-            )}
-          </button>
-        )}
-      </Menu>
+      {layoutPreferences === undefined ? (
+        accountMenu()
+      ) : (
+        <ZenLayoutPreview {...layoutPreferences} anchor={accountMenu} />
+      )}
       {pendingSignOut.error ? (
         <Text as="p" variant="note" role="alert">
           {pendingSignOut.error}
