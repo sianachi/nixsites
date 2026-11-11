@@ -669,7 +669,7 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
   // opposite of what a creation test means to.
   const known = [...items];
   let knownWorkspaces = [...workspaces];
-  let heldUiSettings = uiSettings;
+  let heldUiSettings: Record<string, unknown> = { 'shell.preferencesSeen': true, ...uiSettings };
   let uiSettingsRevision = 0;
   let heldPreferences = preferences;
   let heldArrangement = workspaceArrangement;

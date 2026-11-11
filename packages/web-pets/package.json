@@ -29,14 +29,6 @@
       "types": "./src/openui/openui-block.tsx",
       "default": "./src/openui/openui-block.tsx"
     },
-    "./openui/program-designer": {
-      "types": "./src/openui/program-designer.tsx",
-      "default": "./src/openui/program-designer.tsx"
-    },
-    "./openui/program-editor": {
-      "types": "./src/openui/program-editor.tsx",
-      "default": "./src/openui/program-editor.tsx"
-    },
     "./openui/save-artifact": {
       "types": "./src/openui/save-artifact.tsx",
       "default": "./src/openui/save-artifact.tsx"

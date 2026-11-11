@@ -5,7 +5,7 @@ import { readTextAlignment, setTextAlignTr } from './text-alignment.js';
 import { requiredSchemaVersion } from './versions.js';
 
 describe('poem alignment', () => {
-  it('aligns selected stanzas together without changing their words or line breaks', () => {
+  it('justifies selected blocks together without changing their words or line breaks', () => {
     const doc = nixSchema.nodeFromJSON({
       type: 'doc',
       content: [
@@ -31,9 +31,9 @@ describe('poem alignment', () => {
     expect(setTextAlignTr(dryRun, 'center', false)).toBe(true);
     expect(dryRun.docChanged).toBe(false);
     const tr = state.tr;
-    expect(setTextAlignTr(tr, 'center', true)).toBe(true);
-    expect(tr.doc.child(0).attrs.textAlign).toBe('center');
-    expect(tr.doc.child(1).attrs.textAlign).toBe('center');
+    expect(setTextAlignTr(tr, 'justify', true)).toBe(true);
+    expect(tr.doc.child(0).attrs.textAlign).toBe('justify');
+    expect(tr.doc.child(1).attrs.textAlign).toBe('justify');
     expect(tr.doc.child(2).attrs.textAlign).toBeNull();
     expect(tr.doc.textContent).toBe(doc.textContent);
     expect(tr.doc.child(0).child(1).type.name).toBe('hardBreak');

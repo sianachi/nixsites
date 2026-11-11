@@ -27,6 +27,8 @@ export function NewChatNote({
   sourceWorkspaceIds,
   groupId,
   initialPrompt = '',
+  initialParentId,
+  initialTitle,
   messages,
   existingItemId,
   onClose,
@@ -34,6 +36,8 @@ export function NewChatNote({
   readonly sourceWorkspaceIds: readonly string[];
   readonly groupId?: string;
   readonly initialPrompt?: string;
+  readonly initialParentId?: string | null;
+  readonly initialTitle?: string;
   readonly messages?: CreateConversationInput['messages'];
   readonly existingItemId?: string;
   readonly onClose: () => void;
@@ -72,14 +76,14 @@ export function NewChatNote({
       ? chosenDestination.parentId
       : !current && rememberedWorkspace
         ? (remembered?.lastDestinationParentId ?? null)
-        : null;
+        : (initialParentId ?? null);
   function setWorkspaceId(id: string): void {
     setChosenDestination({ workspaceId: id, parentId: null });
   }
   function setParentId(id: string | null): void {
     setChosenDestination({ workspaceId, parentId: id });
   }
-  const [title, setTitle] = useState(initialPrompt || 'New chat');
+  const [title, setTitle] = useState(initialTitle || initialPrompt || 'New chat');
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

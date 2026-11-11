@@ -686,6 +686,26 @@ describe('collaborative history keys', () => {
     );
   });
 
+  it('shares justified text and undoes the alignment without removing nearby typing', async () => {
+    const user = userEvent.setup();
+    const document = await open();
+    const body = screen.getByRole('textbox', { name: 'Note body' });
+    body.focus();
+    await user.keyboard('Keep this text');
+
+    await user.click(screen.getByRole('button', { name: 'More tools' }));
+    await user.click(screen.getByRole('button', { name: 'Justify' }));
+    expect(body.querySelector('p')).toHaveStyle({ textAlign: 'justify' });
+    const sharedParagraph = document.getXmlFragment('default').get(0);
+    expect(
+      sharedParagraph instanceof Y.XmlElement && sharedParagraph.getAttribute('textAlign'),
+    ).toBe('justify');
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(body.querySelector('p')).not.toHaveStyle({ textAlign: 'justify' });
+    expect(body).toHaveTextContent('Keep this text');
+  });
+
   it('returns focus to the note after toolbar undo', async () => {
     const user = userEvent.setup();
     await open();

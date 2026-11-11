@@ -23,7 +23,7 @@ import type { ZenLayoutPreferences } from './zen-layout-preview';
 
 export interface ShellHeaderProps {
   readonly sidebarVisible: boolean;
-  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
+  readonly layoutPreferences: ZenLayoutPreferences;
   readonly compactDestinations?: ReactNode;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly onToggleSidebar: () => void;
@@ -171,7 +171,7 @@ export function ShellHeader({
         <ProfileMenu
           principal={account.principal}
           layoutPreferences={layoutPreferences}
-          showWorkspaceMenu={layoutPreferences?.preview.active !== true}
+          showWorkspaceMenu={!layoutPreferences.preview.active}
         />
       </div>
     </header>

@@ -1,9 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ThemeChoice } from '../../theme/theme-choice';
-import { STORAGE_KEY } from '../../theme/theme-store';
+import { ThemeButton } from '../../theme/theme-choice';
+import { MODE_STORAGE_KEY, PALETTE_STORAGE_KEY } from '../../theme/theme-store';
 
 /**
  * Choosing the ground, driven the way somebody uses it.
@@ -48,91 +48,77 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
+  document.documentElement.removeAttribute('data-palette');
   document.documentElement.removeAttribute('data-theme');
 });
 
-describe('the appearance control', () => {
-  it('offers the machine and the two grounds', () => {
-    render(<ThemeChoice />);
-
-    expect(screen.getByRole('radio', { name: /system/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /light/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /dark/i })).toBeInTheDocument();
-  });
-
-  it('follows the machine until somebody says otherwise', () => {
-    render(<ThemeChoice />);
-
-    expect(screen.getByRole('radio', { name: /system/i })).toBeChecked();
-
-    // No attribute at all, so the sheet's media query is what decides. Written as "light" here,
-    // somebody on a dark machine would be pinned to light without ever having chosen it.
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-  });
-
-  it('puts the chosen ground on the document', async () => {
+describe('the theme picker', () => {
+  it('starts with the device appearance and saves an explicit mode and palette on apply', async () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
     const user = userEvent.setup();
-    render(<ThemeChoice />);
+    const { unmount } = render(<ThemeButton />);
+    await user.click(screen.getByRole('button', { name: 'Theme' }));
 
-    await user.click(screen.getByRole('radio', { name: /dark/i }));
+    const picker = within(screen.getByRole('dialog', { name: 'Theme' }));
+    expect(picker.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-current', 'true');
+    expect(picker.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Nix',
+      'Graphite',
+      'Pine',
+      'Sand',
+      'Rose',
+      'Plum',
+    ]);
+    await user.selectOptions(picker.getByRole('combobox', { name: 'Palette' }), 'plum');
 
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    const preview = picker.getByRole('region', { name: 'Theme preview' });
+    const sample = within(preview).getByText('Launch brief').closest('[data-theme-preview]');
+    expect(sample).toHaveAttribute('data-theme', 'dark');
+    await user.click(picker.getByRole('button', { name: 'Light' }));
+    expect(sample).toHaveAttribute('data-theme', 'light');
+    expect(sample).toHaveAttribute('data-palette', 'plum');
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
+    expect(document.documentElement).not.toHaveAttribute('data-palette');
+    expect(stored.has(MODE_STORAGE_KEY)).toBe(false);
+    expect(stored.has(PALETTE_STORAGE_KEY)).toBe(false);
+
+    await user.click(picker.getByRole('button', { name: 'Apply theme' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(document.documentElement).toHaveAttribute('data-palette', 'plum');
+    expect(screen.queryByRole('dialog', { name: 'Theme' })).not.toBeInTheDocument();
+
+    unmount();
+    render(<ThemeButton />);
+    await user.click(screen.getByRole('button', { name: 'Theme' }));
+    const reopened = within(screen.getByRole('dialog', { name: 'Theme' }));
+    expect(reopened.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-current', 'true');
+    expect(reopened.getByRole('combobox', { name: 'Palette' })).toHaveValue('plum');
   });
 
-  it('remembers the choice', async () => {
+  it('discards previews on cancel and restores focus', async () => {
     const user = userEvent.setup();
-    render(<ThemeChoice />);
+    stored.set(MODE_STORAGE_KEY, 'dark');
+    stored.set(PALETTE_STORAGE_KEY, 'pine');
+    render(<ThemeButton />);
 
-    await user.click(screen.getByRole('radio', { name: /dark/i }));
+    const trigger = screen.getByRole('button', { name: 'Theme' });
+    await user.click(trigger);
+    let picker = within(screen.getByRole('dialog', { name: 'Theme' }));
+    await user.click(picker.getByRole('button', { name: 'Light' }));
+    await user.selectOptions(picker.getByRole('combobox', { name: 'Palette' }), 'rose');
+    await user.click(picker.getByRole('button', { name: 'Cancel' }));
 
-    expect(stored.get(STORAGE_KEY) ?? null).toBe('dark');
-  });
+    expect(trigger).toHaveFocus();
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement).toHaveAttribute('data-palette', 'pine');
 
-  it('goes back to following the machine, and stops naming a ground', async () => {
-    const user = userEvent.setup();
-    render(<ThemeChoice />);
-
-    await user.click(screen.getByRole('radio', { name: /dark/i }));
-    await user.click(screen.getByRole('radio', { name: /system/i }));
-
-    // The attribute has to come off, not change to the resolved ground. Left set, the media query
-    // would never apply again and the machine turning dark at dusk would move nothing.
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-    expect(stored.get(STORAGE_KEY) ?? null).toBeNull();
-  });
-
-  it('starts on the stored choice rather than on the machine', () => {
-    stored.set(STORAGE_KEY, 'light');
-
-    render(<ThemeChoice />);
-
-    expect(screen.getByRole('radio', { name: /light/i })).toBeChecked();
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-  });
-
-  it('is one choice from a set rather than three separate buttons', () => {
-    render(<ThemeChoice />);
-
-    // A radio group announces the set, which member is current and its position, and moves between
-    // members on the arrow keys. Three buttons would give none of that without being told to
-    // imitate exactly this.
-    const radios = screen.getAllByRole('radio');
-
-    expect(radios).toHaveLength(3);
-    expect(radios.filter((radio) => (radio as HTMLInputElement).checked)).toHaveLength(1);
-  });
-
-  it('is reachable and operable from the keyboard', async () => {
-    const user = userEvent.setup();
-    render(<ThemeChoice />);
-
-    await user.tab();
-
-    // The radio is off-screen rather than hidden, precisely so it keeps its place in the tab order
-    // and in the accessibility tree - `display: none` would take both away.
-    expect(screen.getByRole('radio', { name: /system/i })).toHaveFocus();
-
-    await user.keyboard('{ArrowRight}');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    await user.click(trigger);
+    picker = within(screen.getByRole('dialog', { name: 'Theme' }));
+    expect(picker.getByRole('combobox', { name: 'Palette' })).toHaveValue('pine');
   });
 });

@@ -52,32 +52,38 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-qzYt63qWJpMm2Kfb4Wr8UDbUtUgweR4Gv4rs133db2w='; style-src 'self' 'unsafe-inline'; img-src 'self' http: https: data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'sha256-x6R7oXXV7iZmzJKQHUidIlBlydeS0qsIuGzmbKhi2jE='; style-src 'self' 'unsafe-inline'; img-src 'self' http: https: data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
       data-nix-csp-fallback
     />
 
     <!--
-      The chosen ground, applied before the first paint.
-
-      Everything else about theming lives in the token sheet and in src/theme, and this is the one
-      piece that cannot: the application's own code runs after the browser has already painted, so
-      somebody who chose dark on a light machine would see a white page flash first. That flash is
-      not a polish problem - it is the whole screen, on every load.
-
-      Blocking and inline for the same reason: a deferred or external script paints first and
-      corrects afterwards, which is the flash it exists to prevent. It reads the same key and the
-      same values as theme-store.ts, which is the duplication the comment there points back at.
+      Apply saved theme choices before the first paint. When no mode is saved, the token sheet
+      follows the device's color scheme. Keep the palette names and aliases in sync with theme-store.ts.
     -->
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem('nix.theme');
-          if (stored === 'light' || stored === 'dark') {
-            document.documentElement.setAttribute('data-theme', stored);
+          var mode = localStorage.getItem('nix.theme');
+          if (mode === 'light' || mode === 'dark') {
+            document.documentElement.setAttribute('data-theme', mode);
+          }
+          var palette = localStorage.getItem('nix.palette');
+          var aliases = {
+            ocean: 'nix',
+            teal: 'pine',
+            moss: 'pine',
+            copper: 'sand',
+            iris: 'plum',
+            indigo: 'nix',
+          };
+          if (Object.hasOwn(aliases, palette)) {
+            palette = aliases[palette];
+          }
+          if (/^(graphite|pine|sand|rose|plum)$/.test(palette)) {
+            document.documentElement.setAttribute('data-palette', palette);
           }
         } catch (error) {
-          // Storage refused - private browsing, or policy. The media query in the token sheet is
-          // still in force, so the page follows the machine rather than failing to load.
+          // Blocked storage falls back to the device appearance and default palette.
         }
       })();
     </script>

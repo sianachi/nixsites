@@ -70,7 +70,7 @@
 		# the same object-store origin connect-src names, so signed audio and video URLs play and
 		# nothing wider does; media does not inherit from img-src and would otherwise fall back to
 		# default-src 'self'.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-qzYt63qWJpMm2Kfb4Wr8UDbUtUgweR4Gv4rs133db2w='; style-src 'self' 'unsafe-inline'; img-src 'self' http: https: data: blob:; font-src 'self'; connect-src 'self' {$NIX_OBJECT_STORE_PUBLIC_ORIGIN}; media-src 'self' blob: {$NIX_OBJECT_STORE_PUBLIC_ORIGIN}; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-x6R7oXXV7iZmzJKQHUidIlBlydeS0qsIuGzmbKhi2jE='; style-src 'self' 'unsafe-inline'; img-src 'self' http: https: data: blob:; font-src 'self'; connect-src 'self' {$NIX_OBJECT_STORE_PUBLIC_ORIGIN}; media-src 'self' blob: {$NIX_OBJECT_STORE_PUBLIC_ORIGIN}; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 		# Belt to the CSP's braces for older user agents.
 		X-Frame-Options "DENY"

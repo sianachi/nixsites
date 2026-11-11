@@ -14,7 +14,6 @@ import { Link } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { inNativeShell, switchServer, useInstallNix } from '@nix/web-platform/pwa/install-nix';
-import { ThemeChoice } from '@nix/web-foundation/theme/theme-choice';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
@@ -26,13 +25,8 @@ import { useHiddenItemsEntry } from '../items/hidden-items-panel';
  * The profile menu, top right: who you are, and the things that belong to you rather than to the
  * document you are looking at.
  *
- * Built on `<Menu>` - the account header and the appearance switcher travel in as a `content`
- * entry, exactly as they were laid out before, since neither is a command the arrow keys should
- * walk past. Settings and Sign out are the menu's actual items, which is also what fixed this
- * menu's phone behaviour for free: the panel used to be a literal `w-[240px]` box that ran off a
- * narrow screen, and the trigger below was never given the coarse-pointer touch target every
- * other control in the library gets. Both are `<Menu>`'s problem to solve once now, not this
- * component's to solve again.
+ * The account header is informational. Preferences opens from a menu action so it shares
+ * keyboard navigation with Settings and Sign out.
  */
 
 export interface ProfileMenuProps {
@@ -40,7 +34,7 @@ export interface ProfileMenuProps {
 
   /** An icon-only trigger, for the rail: the name stays as the accessible label. */
   readonly compactTrigger?: boolean;
-  readonly layoutPreferences?: ZenLayoutPreferences | undefined;
+  readonly layoutPreferences: ZenLayoutPreferences;
   readonly showWorkspaceMenu?: boolean;
 }
 
@@ -87,19 +81,14 @@ export function ProfileMenu({
     ...(showWorkspaceMenu ? workspaceMenu.entries : []),
     ...(hiddenItems.entry === null ? [] : [hiddenItems.entry]),
     { kind: 'separator' },
-    { kind: 'content', content: <ThemeChoice /> },
-    ...(layoutPreferences === undefined
-      ? []
-      : [
-          {
-            kind: 'action',
-            label: 'Preferences',
-            icon: SlidersHorizontal,
-            onSelect: () => {
-              if (layoutPreferences.preview.draft === null) layoutPreferences.preview.open();
-            },
-          } satisfies MenuEntry,
-        ]),
+    {
+      kind: 'action',
+      label: 'Preferences',
+      icon: SlidersHorizontal,
+      onSelect: () => {
+        if (layoutPreferences.preview.draft === null) layoutPreferences.preview.open();
+      },
+    },
     // Kept here as well as on the nav rail. The rail makes workspace administration findable from
     // anywhere; this path keeps personal access tokens beside the identity they belong to.
     { kind: 'link', label: 'Settings', icon: Settings, href: `/w/${workspaceId}/settings` },
@@ -161,7 +150,7 @@ export function ProfileMenu({
         <button
           {...trigger}
           onClick={() => {
-            if (layoutPreferences?.preview.draft) layoutPreferences.preview.cancel();
+            if (layoutPreferences.preview.draft) layoutPreferences.preview.cancel();
             trigger.onClick();
           }}
           ref={(element) => {
@@ -191,11 +180,7 @@ export function ProfileMenu({
 
   return (
     <>
-      {layoutPreferences === undefined ? (
-        accountMenu()
-      ) : (
-        <ZenLayoutPreview {...layoutPreferences} anchor={accountMenu} />
-      )}
+      <ZenLayoutPreview {...layoutPreferences} anchor={accountMenu} />
       {pendingSignOut.error ? (
         <Text as="p" variant="note" role="alert">
           {pendingSignOut.error}

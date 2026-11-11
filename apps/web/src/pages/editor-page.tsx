@@ -42,7 +42,7 @@ export { OpenItem } from './editor/open-item';
  * rather than part of this screen.
  */
 export function EditorPage(): ReactNode {
-  const { tree, openImport } = useOutletContext<ShellContext>();
+  const { tree, openImport, openStructured } = useOutletContext<ShellContext>();
   const templateLibrary = useTemplateLibrary();
   const { panes, split, sizes, requested, closePane, setSplit, setSizes } = usePanes();
   const paneClosed = useTabStore((state) => state.paneClosed);
@@ -117,7 +117,7 @@ export function EditorPage(): ReactNode {
             Loading the workspace…
           </Text>
         ) : (
-          <Homebase tree={tree} onImport={openImport} />
+          <Homebase tree={tree} onImport={openImport} onOpenStructured={openStructured} />
         )}
       </div>
     );

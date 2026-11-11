@@ -22,6 +22,7 @@
   },
   "files": [
     "src/theme.css",
+    "src/palettes.css",
     "dist"
   ],
   "scripts": {

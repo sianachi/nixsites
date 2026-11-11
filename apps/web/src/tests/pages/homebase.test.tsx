@@ -43,10 +43,7 @@ describe('Homebase', () => {
       'href',
       `${HOME}/templates`,
     );
-    expect(within(more).getByRole('link', { name: /automations/i })).toHaveAttribute(
-      'href',
-      `${HOME}/automations`,
-    );
+    expect(within(more).queryByRole('link', { name: /automations/i })).not.toBeInTheDocument();
     expect(within(more).getByRole('link', { name: /settings/i })).toHaveAttribute(
       'href',
       `${HOME}/settings`,

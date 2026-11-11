@@ -1,5 +1,4 @@
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { useAutomateEntry } from '@nix/web-collections/items/automate-entry';
 import { useMuteRemindersEntry } from '@nix/web-settings/settings/notifications/mute-reminders-entry';
 import {
   bookmarkEntry,
@@ -76,7 +75,6 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
   } = args;
   const { workspaceId } = useWorkspace();
   const { publicLinks } = useCapabilities();
-  const automateEntry = useAutomateEntry(workspaceId);
   const muteRemindersEntry = useMuteRemindersEntry();
   const treeChildren = useHiddenItems('tree-children');
   const visibility = useHiddenItems();
@@ -171,7 +169,6 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
             },
           ]
         : []),
-      ...(automateEntry === null ? [] : [automateEntry(item.id)]),
       ...(muteRemindersEntry === null ? [] : [muteRemindersEntry(item.id, title)]),
       {
         kind: 'action',

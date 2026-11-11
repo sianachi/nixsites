@@ -40,6 +40,8 @@
  *   fills and for pressed states. Prefer ramp steps over ad-hoc color-mix().
  */
 
+@import './palettes.css';
+
 @theme {
   /* ══ Reset — only Industry tokens may exist ═══════════════════════════ */
   --color-*: initial;
@@ -50,7 +52,7 @@
   --color-bg: #ffffff;
   --color-surface: #f6f7f9;
   --color-text: #1d1f20;
-  --color-accent: #5980a6;
+  --color-accent: var(--nix-accent);
   --color-accent-2: #728fab;
   --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
 
@@ -317,6 +319,15 @@
    Outside `@theme`, which accepts custom properties and nothing else. */
 :root {
   color-scheme: light;
+  --nix-accent: #5980a6;
+}
+
+/* Preview colors resolve in the sample, independent of the applied theme on the root. */
+[data-theme-preview] {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-accent: var(--nix-accent);
+  --palette-saturation: 1;
 }
 
 /* ══ Dark ground ═══════════════════════════════════════════════════════
@@ -399,6 +410,7 @@
    operating system. The attribute wins over the media query in both
    directions, which is what lets somebody on a dark desktop read a document
    on a light ground without changing their machine's setting. */
+[data-theme-preview][data-theme='dark'],
 :root[data-theme='dark'] {
   color-scheme: dark;
 
@@ -440,6 +452,7 @@
     0 16px 40px color-mix(in srgb, #000000 52%, transparent);
 }
 
+[data-theme-preview][data-theme='light'],
 :root[data-theme='light'] {
   color-scheme: light;
 

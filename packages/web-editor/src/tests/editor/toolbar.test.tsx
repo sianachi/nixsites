@@ -195,6 +195,7 @@ describe('what the toolbar offers', () => {
           'Align left',
           'Align center',
           'Align right',
+          'Justify',
           'Move up',
           'Move down',
         ],
@@ -527,7 +528,7 @@ describe('the columns group', () => {
 });
 
 describe('text alignment', () => {
-  it('shows the saved alignment and offers all three choices', async () => {
+  it('shows the saved alignment and offers all four choices', async () => {
     const { ran } = renderToolbar({ alignment: 'center' });
     await userEvent.click(screen.getByRole('button', { name: 'More tools' }));
     expect(screen.getByRole('button', { name: 'Align center' })).toHaveAttribute(
@@ -538,14 +539,14 @@ describe('text alignment', () => {
       'aria-pressed',
       'false',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Align right' }));
-    expect(ran).toContain('setTextAlign("right")');
+    await userEvent.click(screen.getByRole('button', { name: 'Justify' }));
+    expect(ran).toContain('setTextAlign("justify")');
   });
   it('offers alignment in the mobile writing tools', async () => {
     const { ran } = renderToolbar({}, { compact: true });
     await userEvent.click(screen.getByRole('button', { name: 'More' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Align center' }));
-    expect(ran).toContain('setTextAlign("center")');
+    await userEvent.click(screen.getByRole('button', { name: 'Justify' }));
+    expect(ran).toContain('setTextAlign("justify")');
   });
   it('disables alignment where the selection has no text blocks', async () => {
     renderToolbar({ alignmentEnabled: false });

@@ -60,6 +60,11 @@ export interface ConversationProps {
   readonly layout: ConversationLayout;
   readonly runtimeApi: UsePetRuntimeResult;
   readonly onNeedsDecisionChange: (toolIds: readonly string[]) => void;
+  readonly creationRequest?: {
+    readonly id: string;
+    readonly text: string;
+    readonly onStarted: () => void;
+  };
   readonly noteScope?: {
     readonly rootItemId: string;
     readonly title: string;
@@ -82,6 +87,7 @@ export function Conversation({
   onClose,
   onOpenAsPage,
   noteScope,
+  creationRequest,
 }: ConversationProps): ReactElement {
   const fullscreen = layout === 'fullscreen';
   const smallScreen = useNarrowViewport();
@@ -205,6 +211,23 @@ export function Conversation({
     contextFields: context.contextFields,
     onSent: closeEditor,
   });
+
+  const startedCreation = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !creationRequest ||
+      startedCreation.current === creationRequest.id ||
+      !connected ||
+      running ||
+      busy ||
+      approvalPending
+    )
+      return;
+    void submit(creationRequest.text, () => {
+      startedCreation.current = creationRequest.id;
+      creationRequest.onStarted();
+    });
+  }, [creationRequest, connected, running, busy, approvalPending, submit]);
 
   const rename = useRename({
     workspaceId,

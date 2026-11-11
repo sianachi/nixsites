@@ -1,4 +1,9 @@
-import { MobileNoteCapture } from '../items/mobile-note-capture';
+import { LayoutGrid } from 'lucide-react';
+import { NewItemDialog } from '../items/new-item-dialog';
+import { uploadErrorText, uploadWorkspaceEntries } from '../items/drop-upload';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
+import { NoteCapture } from '../items/note-capture';
 import {
   useMobileKeyboard,
   useVisualViewportHeight,
@@ -26,7 +31,6 @@ import type { ShellContext } from './shell-context';
 import { focusPane } from '@nix/web-platform/panes/pane-params';
 import { usePanes } from '@nix/web-platform/panes/pane-state';
 import { useSelectedItem } from '@nix/web-platform/routing/selected-item';
-import { automationsHref } from '@nix/web-collections/items/automation-url';
 import { CommandPalette } from '../search/command-palette';
 import { OPEN_NEW_TAB_PICKER_EVENT, OPEN_TAB_SWITCHER_EVENT } from '../tabs/new-tab-picker';
 import { builtInCommands } from '../search/commands';
@@ -140,6 +144,7 @@ export function AppShell(): ReactNode {
   const [captureOpen, setCaptureOpen] = useState(false);
   const { getAccessToken } = useAuth();
   const tree = useWorkspaceTree();
+  const client = useApiClient();
   const principal = useCurrentPrincipal();
   const capabilities = useMemo(
     () =>
@@ -233,6 +238,18 @@ export function AppShell(): ReactNode {
   const routeDialogOpen = useRouteDialog() !== null;
   const [tabsOpen, setTabsOpen] = useState(false);
   const [newTabOpen, setNewTabOpen] = useState(false);
+  const [structuredOpen, setStructuredOpen] = useState<{
+    readonly source: 'picker' | 'tab';
+    readonly title?: string;
+    readonly parentId?: string | null;
+  } | null>(null);
+  const [chatDestination, setChatDestination] = useState<{
+    readonly parentId: string | null;
+    readonly title: string;
+  } | null>(null);
+  const uploadInput = useRef<HTMLInputElement>(null);
+  const uploadParent = useRef<string | null>(null);
+  const uploading = useRef(false);
   useEffect(() => {
     const open = (): void => {
       setNewTabOpen(true);
@@ -280,17 +297,24 @@ export function AppShell(): ReactNode {
   // drawer took it.
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
 
-  function openFlow(path: string, parentId: string | null): void {
+  function openFlow(path: string, parentId: string | null, creating = false): void {
     const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
-    void navigate(`/w/${workspaceId}/${path}${search}`);
+    const newTab = creating && structuredOpen?.source === 'tab';
+    const initialTitle = creating ? structuredOpen?.title : undefined;
+    void navigate(`/w/${workspaceId}/${path}${search}`, {
+      state: {
+        ...(newTab ? { newTab: true, previousItemId: selectedId } : {}),
+        ...(initialTitle ? { initialTitle } : {}),
+      },
+    });
     if (narrow && sidebar.visible) sidebar.toggle();
   }
 
   const startStructured = (parentId: string | null, recipe: StructuredRecipeId): void => {
-    openFlow(`new/${recipe}`, parentId);
+    openFlow(`new/${recipe}`, parentId, true);
   };
   const startTemplate = (parentId: string | null, templateId: string): void => {
-    openFlow(`templates/${templateId}/create`, parentId);
+    openFlow(`templates/${templateId}/create`, parentId, true);
   };
   const browseTemplates = (parentId: string | null): void => {
     openFlow('templates', parentId);
@@ -621,12 +645,20 @@ export function AppShell(): ReactNode {
     compactNavigation && !narrow ? (
       <NavRail
         compact
-        hideSettings
+        hiddenDestinations={zenLayout.hiddenDestinations}
         onImport={() => {
           setWorkspaceImportOpen(true);
         }}
       />
     ) : null;
+  const structuredParentId = structuredOpen?.parentId ?? selectedId;
+  const structuredDestination =
+    structuredParentId === null
+      ? null
+      : {
+          id: structuredParentId,
+          name: tree.find(structuredParentId)?.title ?? 'Current item',
+        };
   const presentation = !zenLayout.active
     ? null
     : {
@@ -742,7 +774,7 @@ export function AppShell(): ReactNode {
       <div className="flex min-h-0 flex-1">
         {!zen && !narrow && showRail ? (
           <NavRail
-            hideSettings={zenLayout.active}
+            hiddenDestinations={zenLayout.hiddenDestinations}
             onImport={() => {
               setWorkspaceImportOpen(true);
             }}
@@ -800,7 +832,7 @@ export function AppShell(): ReactNode {
                     mobileDestinations={
                       <NavRail
                         compact
-                        hideSettings={zenLayout.active}
+                        hiddenDestinations={zenLayout.hiddenDestinations}
                         onImport={() => {
                           // Keep one Back entry while the drawer hands off to Import.
                           sidebarToggleRef.current?.focus();
@@ -822,13 +854,9 @@ export function AppShell(): ReactNode {
                     onDeleteItem={(item) => {
                       void requestDelete(item);
                     }}
-                    onStartStructured={startStructured}
-                    templates={templateLibrary.templates.filter(
-                      (template) => template.capabilities.canApply,
-                    )}
-                    templateStatus={templateLibrary.status}
-                    onStartTemplate={startTemplate}
-                    onBrowseTemplates={browseTemplates}
+                    onAdd={() => {
+                      setCaptureOpen(true);
+                    }}
                     treeRegionRef={treeRegionRef}
                     sidebarToggleRef={sidebarToggleRef}
                   />
@@ -877,13 +905,16 @@ export function AppShell(): ReactNode {
                                 {
                                   tree,
                                   selectedId,
+                                  openStructured: () => {
+                                    setStructuredOpen({ source: 'picker' });
+                                  },
                                   openImport: () => {
                                     setWorkspaceImportOpen(true);
                                   },
                                 } satisfies ShellContext
                               }
                             />
-                            {/* Desktop's automations, workspaces, trash and settings. Inside
+                            {/* Desktop's workspaces, trash and settings. Inside
                             `<main>` for the providers; a modal dialog sits in the top layer. */}
                             <RouteDialog />
                           </ZenPresentationContext>
@@ -965,15 +996,130 @@ export function AppShell(): ReactNode {
         />
       ) : null}
 
-      <MobileNoteCapture
+      <NoteCapture
         key={`capture:${workspaceId}`}
         open={captureOpen}
         tree={tree}
         onClose={() => {
           setCaptureOpen(false);
         }}
-        onCreated={openPreview}
+        onCreated={(id, title, parentId) => {
+          openPreview(id);
+          const parent = parentId === null ? null : tree.find(parentId);
+          undo.push(
+            `Created "${title}"${parent === null ? '' : ` in "${parent.title || 'Untitled'}"`}`,
+            async () => {
+              await tree.remove(id);
+            },
+          );
+        }}
+        onOpenStructured={(title, parentId) => {
+          setCaptureOpen(false);
+          setStructuredOpen({ source: 'picker', title, parentId });
+        }}
       />
+
+      <input
+        ref={uploadInput}
+        type="file"
+        multiple
+        hidden
+        aria-label="Upload files"
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = '';
+          if (files.length === 0 || uploading.current) return;
+          const parentId = uploadParent.current;
+          uploading.current = true;
+          void uploadWorkspaceEntries(client, workspaceId, files, parentId)
+            .then(
+              ({ uploaded, failed, error }) => {
+                const message =
+                  failed > 0
+                    ? `${String(uploaded)} uploaded, ${String(failed)} failed: ${uploadErrorText(error)}`
+                    : uploaded === 1
+                      ? 'File uploaded.'
+                      : `${String(uploaded)} files uploaded.`;
+                shellToasts.push({ key: 'structured-upload', message });
+                announce(message);
+              },
+              (error: unknown) => {
+                const message = uploadErrorText(error);
+                shellToasts.push({ key: 'structured-upload', message });
+                announce(message);
+              },
+            )
+            .finally(() => {
+              uploading.current = false;
+              void tree.reload();
+            });
+        }}
+      />
+      {structuredOpen ? (
+        <NewItemDialog
+          initialTitle={structuredOpen.title ?? ''}
+          insideByDefault={structuredOpen.parentId != null}
+          childDestination={structuredDestination}
+          templates={templateLibrary.templates.filter((template) => template.capabilities.canApply)}
+          templateStatus={templateLibrary.status}
+          onClose={() => {
+            setStructuredOpen(null);
+          }}
+          onStartStructured={startStructured}
+          onStartTemplate={startTemplate}
+          onBrowseTemplates={browseTemplates}
+          onChat={(parentId) => {
+            setChatDestination({ parentId, title: structuredOpen.title ?? '' });
+          }}
+          onUpload={(parentId) => {
+            if (uploading.current) {
+              shellToasts.push({
+                key: 'structured-upload',
+                message: 'An upload is already in progress.',
+              });
+              return;
+            }
+            uploadParent.current = parentId;
+            uploadInput.current?.click();
+          }}
+          onRequest={(parentId, prompt) => {
+            void navigate(`/w/${workspaceId}/pet`, {
+              state: {
+                structuredRequest: {
+                  id: crypto.randomUUID(),
+                  parentId,
+                  prompt,
+                  ...(structuredOpen.title ? { initialTitle: structuredOpen.title } : {}),
+                },
+              },
+            });
+          }}
+          onCreate={(parentId, title, type) => {
+            void tree.create(parentId, title, type).then(({ id, refusal }) => {
+              if (id === null) {
+                const message = refusal ?? 'The item could not be created.';
+                announce(message);
+                shellToasts.push({ key: 'structured-create', message });
+                return;
+              }
+              openInNewTab(id);
+              undo.push(`Created "${title}"`, async () => {
+                await tree.remove(id);
+              });
+            });
+          }}
+        />
+      ) : null}
+      {chatDestination ? (
+        <NewChatNote
+          sourceWorkspaceIds={[workspaceId]}
+          initialParentId={chatDestination.parentId}
+          initialTitle={chatDestination.title}
+          onClose={() => {
+            setChatDestination(null);
+          }}
+        />
+      ) : null}
 
       {workspaceImportOpen ? (
         <ImportDialog
@@ -1025,17 +1171,6 @@ export function AppShell(): ReactNode {
             setShortcutsOpen(true);
           },
           toggleZen: toggleZenMode,
-          openAutomations: () => {
-            void navigate(automationsHref(workspaceId, { kind: 'list' }));
-          },
-          automateOpenItem:
-            selectedId === null
-              ? null
-              : () => {
-                  void navigate(
-                    automationsHref(workspaceId, { kind: 'new', scopeItemId: selectedId }),
-                  );
-                },
         })}
         onSelectItem={openPreview}
         onClose={() => {
@@ -1046,7 +1181,18 @@ export function AppShell(): ReactNode {
       <CommandPalette
         key={`new-tab:${workspaceId}`}
         open={newTabOpen}
-        commands={[]}
+        commands={[
+          {
+            id: 'new-structured-item',
+            label: 'New structured item',
+            icon: LayoutGrid,
+            keywords: ['view', 'structured', 'board', 'create'],
+            run: () => {
+              setTabsOpen(false);
+              setStructuredOpen({ source: 'tab' });
+            },
+          },
+        ]}
         onSelectItem={openInNewTab}
         onCreateNote={createNoteInNewTab}
         onClose={() => {

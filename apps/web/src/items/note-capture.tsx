@@ -1,19 +1,22 @@
-import { Button, Dialog, Field, Input, Text } from '@nix/ui';
+import { LayoutGrid } from 'lucide-react';
+import { Button, Dialog, Field, Icon, Input, Text } from '@nix/ui';
 import { useRef, useState, type ReactNode } from 'react';
 import { MobileDestinationPicker } from '@nix/web-collections/items/mobile-destination-picker';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 
-/** Kept mounted by the workspace shell so closing the sheet retains an unfinished title. */
-export function MobileNoteCapture({
+/** Kept mounted by the workspace shell so closing the dialog retains an unfinished title. */
+export function NoteCapture({
   open,
   tree,
   onClose,
   onCreated,
+  onOpenStructured,
 }: {
   readonly open: boolean;
   readonly tree: WorkspaceTree;
   readonly onClose: () => void;
-  readonly onCreated: (id: string) => void;
+  readonly onOpenStructured: (title: string, parentId: string | null) => void;
+  readonly onCreated: (id: string, title: string, parentId: string | null) => void;
 }): ReactNode {
   const [title, setTitle] = useState('');
   const [parentId, setParentId] = useState<string | null>(null);
@@ -28,7 +31,8 @@ export function MobileNoteCapture({
     setSaving(true);
     setError(null);
     try {
-      const outcome = await tree.create(parentId, title.trim() || 'Untitled note');
+      const name = title.trim() || 'Untitled note';
+      const outcome = await tree.create(parentId, name);
       if (outcome.id === null) {
         setError(outcome.refusal ?? 'The note could not be created.');
         return;
@@ -36,7 +40,7 @@ export function MobileNoteCapture({
       setTitle('');
       setChoosing(false);
       onClose();
-      onCreated(outcome.id);
+      onCreated(outcome.id, name, parentId);
     } catch {
       setError('The note could not be created. Check the workspace before retrying.');
     } finally {
@@ -54,14 +58,27 @@ export function MobileNoteCapture({
         if (!pending.current) onClose();
       }}
       actions={
-        <Button
-          disabled={saving}
-          onClick={() => {
-            void create();
-          }}
-        >
-          {saving ? 'Creating…' : 'Create note'}
-        </Button>
+        <>
+          <Button
+            variant="secondary"
+            disabled={saving}
+            onClick={() => {
+              onOpenStructured(title.trim(), parentId);
+              setTitle('');
+            }}
+          >
+            <Icon icon={LayoutGrid} size="sm" />
+            Structured item
+          </Button>
+          <Button
+            disabled={saving}
+            onClick={() => {
+              void create();
+            }}
+          >
+            {saving ? 'Creating…' : 'Create note'}
+          </Button>
+        </>
       }
     >
       <form
@@ -78,6 +95,7 @@ export function MobileNoteCapture({
               ref={input}
               value={title}
               disabled={saving}
+              maxLength={240}
               placeholder="Untitled note"
               enterKeyHint="done"
               onChange={(event) => {

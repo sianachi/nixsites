@@ -64,7 +64,6 @@ describe('the navigation rail', () => {
       'Templates',
       'Smart lists',
       'Workspaces',
-      'Automations',
       'Attachments',
       'Trash',
       'Import',
@@ -78,10 +77,7 @@ describe('the navigation rail', () => {
       'href',
       '/w/00000000-0000-4000-8000-000000000001/calendar',
     );
-    expect(within(rail()).getByRole('link', { name: 'Automations' })).toHaveAttribute(
-      'href',
-      '/w/00000000-0000-4000-8000-000000000001/automations',
-    );
+    expect(within(rail()).queryByRole('link', { name: 'Automations' })).not.toBeInTheDocument();
     expect(within(rail()).getByRole('link', { name: 'Trash' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001/trash',
@@ -146,7 +142,6 @@ describe('the navigation rail', () => {
     const bookmarks = within(rail()).getByRole('link', { name: 'Bookmarks' });
     const templates = within(rail()).getByRole('link', { name: 'Templates' });
     const queries = within(rail()).getByRole('button', { name: 'Smart lists' });
-    const automations = within(rail()).getByRole('link', { name: 'Automations' });
     const attachments = within(rail()).getByRole('link', { name: 'Attachments' });
     const trash = within(rail()).getByRole('link', { name: 'Trash' });
     const importControl = within(rail()).getByRole('button', { name: 'Import' });
@@ -159,7 +154,6 @@ describe('the navigation rail', () => {
     expect(bookmarks).toHaveAttribute('tabindex', '-1');
     expect(templates).toHaveAttribute('tabindex', '-1');
     expect(queries).toHaveAttribute('tabindex', '-1');
-    expect(automations).toHaveAttribute('tabindex', '-1');
     expect(attachments).toHaveAttribute('tabindex', '-1');
     expect(trash).toHaveAttribute('tabindex', '-1');
     expect(importControl).toHaveAttribute('tabindex', '-1');
@@ -188,7 +182,6 @@ describe('the navigation rail', () => {
     const templates = within(rail()).getByRole('link', { name: 'Templates' });
     const queries = within(rail()).getByRole('button', { name: 'Smart lists' });
     const workspaces = within(rail()).getByRole('link', { name: 'Workspaces' });
-    const automations = within(rail()).getByRole('link', { name: 'Automations' });
     const attachments = within(rail()).getByRole('link', { name: 'Attachments' });
     const trash = within(rail()).getByRole('link', { name: 'Trash' });
     const importControl = within(rail()).getByRole('button', { name: 'Import' });
@@ -222,9 +215,6 @@ describe('the navigation rail', () => {
     // The Smart lists menu's trigger is one of the rail's stops, not a trap: the arrows pass it by.
     await user.keyboard('{ArrowDown}');
     expect(workspaces).toHaveFocus();
-
-    await user.keyboard('{ArrowDown}');
-    expect(automations).toHaveFocus();
 
     await user.keyboard('{ArrowDown}');
     expect(attachments).toHaveFocus();
@@ -309,7 +299,6 @@ describe('the navigation rail', () => {
       'Graph',
       'Bookmarks',
       'Templates',
-      'Automations',
       'Attachments',
       'Trash',
       'Settings',
@@ -418,7 +407,7 @@ describe('the navigation rail on a narrow screen', () => {
     // Ten destinations and "New smart list", which the Smart lists section folds into this one menu.
     expect(
       screen.getByRole('menu', { name: 'Workspace pages' }).querySelectorAll('a'),
-    ).toHaveLength(12);
+    ).toHaveLength(11);
     expect(screen.getByRole('menuitem', { name: 'New smart list' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001/new/query',

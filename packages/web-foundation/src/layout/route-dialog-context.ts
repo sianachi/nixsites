@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { Location, NavigationType } from 'react-router';
 
 /** The workspace screens that open over the work on desktop and as pages everywhere else. */
-export type RouteDialogKind = 'attachments' | 'automations' | 'settings' | 'trash' | 'workspaces';
+export type RouteDialogKind = 'attachments' | 'settings' | 'trash' | 'workspaces';
 
 export interface RouteDialogState {
   readonly kind: RouteDialogKind;

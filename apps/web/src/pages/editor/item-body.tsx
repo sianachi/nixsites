@@ -126,7 +126,7 @@ export function ItemBody({
             itemControls={editorHostsControls ? mobileItemControls : undefined}
           />
         ) : bodyKind === 'artifact' ? (
-          // An artifact's body holds one program: drawn live, with its own program editor.
+          // An artifact draws the program stored in its body.
           <Suspense
             fallback={
               <span role="status" className="sr-only">
@@ -134,7 +134,7 @@ export function ItemBody({
               </span>
             }
           >
-            <ArtifactView itemId={itemId} editable />
+            <ArtifactView itemId={itemId} />
           </Suspense>
         ) : (
           // Every kind this build has not heard of is prose - the same open-set rule

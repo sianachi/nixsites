@@ -25,6 +25,11 @@ public static class UiSettingsValidation
     public const string TooLargeCode = "me.ui_settings_too_large";
 
     private const string LayoutKey = "shell.layout";
+    private const string SidebarKey = "shell.sidebarHidden";
+    private static readonly FrozenSet<string> OptionalDestinations = new[]
+    {
+        "daily", "calendar", "graph", "bookmarks", "templates", "queries", "workspaces", "attachments", "import", "pet",
+    }.ToFrozenSet(StringComparer.Ordinal);
 
     // A null value list means a boolean; otherwise the key takes one of the listed strings. The
     // enum values mirror the web stores that hold each setting today (keyboard-mode-store.ts,
@@ -44,6 +49,7 @@ public static class UiSettingsValidation
         ["graph.openMode"] = ["page", "dialog", "beside", "tab"],
         ["shell.statusBar"] = null,
         ["shell.iconStrip"] = null,
+        ["shell.preferencesSeen"] = null,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     // The shape of a setting name such as "editor.pageGuides"; a null patch value may delete any name of this shape.
@@ -70,7 +76,7 @@ public static class UiSettingsValidation
 
         foreach (var (key, value) in patch)
         {
-            if (key != LayoutKey && !Rules.ContainsKey(key))
+            if (key is not (LayoutKey or SidebarKey) && !Rules.ContainsKey(key))
             {
                 // A key retired from the allow-list can still be deleted, so a stored row never becomes unrepairable.
                 if (value.ValueKind == JsonValueKind.Null && KeyShape.IsMatch(key))
@@ -92,11 +98,24 @@ public static class UiSettingsValidation
 
     private static bool IsValid(string key, JsonElement value) =>
         value.ValueKind == JsonValueKind.Null
-        || (key == LayoutKey
-            ? IsValidLayout(value)
-            : Rules.TryGetValue(key, out var allowed) && (allowed is null
+        || (key switch
+        {
+            LayoutKey => IsValidLayout(value),
+            SidebarKey => IsValidSidebar(value),
+            _ => Rules.TryGetValue(key, out var allowed) && (allowed is null
                 ? value.ValueKind is JsonValueKind.True or JsonValueKind.False
-                : value.ValueKind == JsonValueKind.String && allowed.Contains(value.GetString(), StringComparer.Ordinal)));
+                : value.ValueKind == JsonValueKind.String && allowed.Contains(value.GetString(), StringComparer.Ordinal)),
+        });
+
+    private static bool IsValidSidebar(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Array => value.GetArrayLength() <= OptionalDestinations.Count
+            && value.EnumerateArray().All(entry => entry.ValueKind == JsonValueKind.String && OptionalDestinations.Contains(entry.GetString()!)),
+        JsonValueKind.Object => value.EnumerateObject().Count() <= OptionalDestinations.Count
+            && value.EnumerateObject().All(entry => OptionalDestinations.Contains(entry.Name)
+                && entry.Value.ValueKind is JsonValueKind.True or JsonValueKind.False),
+        _ => false,
+    };
 
     private static bool IsValidLayout(JsonElement value)
     {

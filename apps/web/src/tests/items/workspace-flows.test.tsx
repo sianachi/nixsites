@@ -42,8 +42,9 @@ describe('creating an item', () => {
 
     await screen.findByRole('button', { name: 'Engineering' });
 
-    expect(screen.getByRole('button', { name: 'New view' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'New view' }));
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    const capture = await screen.findByRole('dialog', { name: 'New note' });
+    await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
     const view = await screen.findByRole('dialog', { name: 'New structured item' });
     await user.click(within(view).getByRole('button', { name: /^Canvas/ }));
     const dialog = await screen.findByRole('dialog', { name: 'New canvas' });
@@ -58,19 +59,12 @@ describe('creating an item', () => {
     await screen.findByRole('button', { name: 'Engineering' });
 
     // Root is the stable default; one choice in the dialog moves the destination, for every kind.
-    for (const [entry, title] of [
-      ['New view', 'New structured item'],
-      ['Upload files', 'Upload files'],
-    ] as const) {
-      await user.click(screen.getByRole('button', { name: entry }));
-      const dialog = await screen.findByRole('dialog', { name: title });
-      const where = within(dialog).getByRole('group', { name: 'Where' });
-      expect(within(where).getByRole('button', { name: 'Inside Engineering' })).toBeVisible();
-      await user.click(within(dialog).getByRole('button', { name: 'Close' }));
-      await waitFor(() => {
-        expect(dialog).not.toBeInTheDocument();
-      });
-    }
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    const capture = await screen.findByRole('dialog', { name: 'New note' });
+    await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New structured item' });
+    const where = within(dialog).getByRole('group', { name: 'Where' });
+    expect(within(where).getByRole('button', { name: 'Inside Engineering' })).toBeVisible();
   });
 
   it('puts it inside a nested item too, rather than beside it', async () => {
@@ -82,7 +76,9 @@ describe('creating an item', () => {
       expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Roadmap');
     });
 
-    await user.click(screen.getByRole('button', { name: 'New view' }));
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    const capture = await screen.findByRole('dialog', { name: 'New note' });
+    await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
     const view = await screen.findByRole('dialog', { name: 'New structured item' });
     await user.click(within(view).getByRole('button', { name: /^Canvas/ }));
     const dialog = await screen.findByRole('dialog', { name: 'New canvas' });

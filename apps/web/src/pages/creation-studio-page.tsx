@@ -1,9 +1,17 @@
 import { Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router';
+import {
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useParams,
+  useSearchParams,
+} from 'react-router';
 
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../shell/shell-context';
+import { pinCreatedTab } from '../tabs/new-tab-picker';
+import { creationTitleFrom } from '../items/creation-title';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { uniqueIdentifier } from '@nix/web-collections/core/container-model';
 import { useContainer } from '@nix/web-collections/core/use-container';
@@ -37,14 +45,18 @@ function CreationStudio(): ReactNode {
   const { tree } = useOutletContext<ShellContext>();
   const { workspaceId } = useWorkspace();
   const targetContainer = useContainer(itemId ?? null);
+  const storedView = targetContainer.views?.views.find((view) => view.id === viewId);
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(0);
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<StudioDraft>(() =>
-    recipe === null ? draftFor(FALLBACK_RECIPE) : readDraft(recipe, draftScope),
-  );
+  const [draft, setDraft] = useState<StudioDraft>(() => {
+    const saved = recipe === null ? draftFor(FALLBACK_RECIPE) : readDraft(recipe, draftScope);
+    const initialTitle = itemId === undefined ? creationTitleFrom(location.state) : null;
+    return initialTitle === null ? saved : { ...saved, title: initialTitle };
+  });
   const seededEdit = useRef<string | null>(null);
 
   useEffect(() => {
@@ -85,8 +97,8 @@ function CreationStudio(): ReactNode {
       return;
     }
 
-    const stored = targetContainer.views?.views.find((view) => view.id === viewId);
-    if (stored === undefined) return;
+    const stored = storedView;
+    if (stored === undefined || stored.kind === 'custom') return;
     const companion = targetContainer.views?.views.find(
       (view) => view.id === stored.companionViewId,
     );
@@ -108,6 +120,7 @@ function CreationStudio(): ReactNode {
     draftScope,
     itemId,
     recipe,
+    storedView,
     targetContainer.schema,
     targetContainer.status,
     targetContainer.views,
@@ -138,6 +151,21 @@ function CreationStudio(): ReactNode {
       <div className="flex flex-1 items-center justify-center p-8">
         <Text variant="bodySmall" tone="muted">
           This guided setup is not available.
+        </Text>
+      </div>
+    );
+  }
+
+  if (
+    viewId !== undefined &&
+    (targetContainer.status === 'loading' || storedView?.kind === 'custom')
+  ) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <Text variant="bodySmall" tone="muted">
+          {storedView?.kind === 'custom'
+            ? 'Ask your companion to change this view.'
+            : 'Loading view…'}
         </Text>
       </div>
     );
@@ -207,6 +235,7 @@ function CreationStudio(): ReactNode {
       return;
     }
     browserSessionStorage()?.removeItem(draftKey(recipe ?? FALLBACK_RECIPE, draftScope));
+    pinCreatedTab(location.state, result.id);
     const next = new URLSearchParams({ item: result.id, view: draft.view.id });
     void navigate(`/w/${workspaceId}?${next.toString()}`);
   }

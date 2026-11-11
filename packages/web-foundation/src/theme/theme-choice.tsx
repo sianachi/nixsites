@@ -1,85 +1,153 @@
-import { Icon } from '@nix/ui';
-import { Monitor, Moon, Sun } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Button, Dialog, Icon, Segmented, Select, Text } from '@nix/ui';
+import { FileText, Palette } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
-import type { ThemePreference } from './theme-store';
-import { useTheme } from './use-theme';
+import { ThemePaletteSchema, type Ground, type ThemePalette } from './theme-store';
+import { useTheme, type Theme } from './use-theme';
 
-/**
- * Choosing the ground: follow the machine, or pick one.
- *
- * **Three options rather than a two-state switch.** Following the machine is a real choice, not
- * the absence of one - somebody whose desktop turns dark at dusk wants this to turn with it. A
- * toggle cannot say that: it can only record whichever ground they were on when they last touched
- * it, and then stop following.
- *
- * Rendered as a radio group rather than three buttons, because that is what it is: one choice from
- * a fixed set, exactly one of which is current. A screen reader announces the set, the current
- * member and its position, and arrow keys move between them - none of which three buttons would
- * give without being told to imitate a radio group.
- */
-
-const OPTIONS: readonly { value: ThemePreference; label: string; icon: typeof Sun }[] = [
-  { value: 'system', label: 'System', icon: Monitor },
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
+const MODES: readonly { value: Ground; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ];
 
-/** `inline` drops the menu section's rule and visible heading, for a toolbar such as the landing nav. */
-export function ThemeChoice({ inline = false }: { readonly inline?: boolean }): ReactNode {
-  const { preference, setPreference } = useTheme();
+export function ThemeButton(): ReactNode {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        variant="ghost"
+        aria-haspopup="dialog"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        <Icon icon={Palette} size="sm" />
+        Theme
+      </Button>
+      <ThemeChoice
+        open={open}
+        onClose={() => {
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+}
+
+export function ThemeChoice({
+  open,
+  onClose,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+}): ReactNode {
+  const theme = useTheme();
+  return open ? <ThemeDraft theme={theme} onClose={onClose} /> : null;
+}
+
+function ThemeDraft({ theme, onClose }: { theme: Theme; onClose: () => void }): ReactNode {
+  const [mode, setMode] = useState(theme.mode);
+  const [palette, setPalette] = useState(theme.palette);
+  const ground = mode ?? theme.ground;
 
   return (
-    <fieldset className={inline ? '' : 'border-t border-divider px-3 py-2'}>
-      <legend className="sr-only">Appearance</legend>
+    <Dialog
+      open
+      title="Theme"
+      onClose={onClose}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={mode === theme.mode && palette === theme.palette}
+            onClick={() => {
+              theme.setTheme(mode, palette);
+              onClose();
+            }}
+          >
+            Apply theme
+          </Button>
+        </>
+      }
+    >
+      <ThemeFields ground={ground} palette={palette} onMode={setMode} onPalette={setPalette} />
+    </Dialog>
+  );
+}
 
-      {/* text-primitive-exempt: the published `fieldLabel` look on a paragraph, since it names a
-          group rather than one field. It once sat a step smaller, at 10px, which is below the 11px
-          floor for visible text; caps and tracking already set it apart from the options. */}
-      {inline ? null : (
-        <p
-          aria-hidden="true"
-          className="mb-1.5 font-heading text-xs uppercase tracking-wider text-muted"
-        >
-          Appearance
-        </p>
-      )}
-
-      <div className="flex gap-1">
-        {OPTIONS.map((option) => {
-          const current = option.value === preference;
-
-          return (
-            <label
-              key={option.value}
-              className={[
-                'flex flex-1 cursor-default items-center justify-center gap-1 border px-2 py-1 pointer-coarse:min-h-(--control-lg)',
-                'text-xs',
-                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
-                current
-                  ? 'border-divider bg-foreground/7 text-foreground'
-                  : 'border-transparent text-muted hover:bg-foreground/5',
-              ].join(' ')}
-            >
-              {/* The radio itself carries the semantics and the keyboard behaviour; it is placed
-                  off-screen rather than hidden, because `display: none` would take it out of the
-                  tab order and out of the accessibility tree along with it. */}
-              <input
-                type="radio"
-                name="appearance"
-                value={option.value}
-                checked={current}
-                onChange={() => {
-                  setPreference(option.value);
-                }}
-                className="sr-only"
-              />
-              <Icon icon={option.icon} size="sm" />
-              {option.label}
-            </label>
-          );
-        })}
+export function ThemeFields({
+  ground,
+  palette,
+  onMode,
+  onPalette,
+}: {
+  readonly ground: Ground;
+  readonly palette: ThemePalette;
+  readonly onMode: (mode: Ground) => void;
+  readonly onPalette: (palette: ThemePalette) => void;
+}): ReactNode {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="min-w-0 space-y-1">
+          <Text variant="caption" tone="muted">
+            Mode
+          </Text>
+          <Segmented label="Mode" options={MODES} value={ground} onChange={onMode} />
+        </div>
+        <label className="min-w-0 space-y-1">
+          <Text as="span" variant="caption" tone="muted" className="block">
+            Palette
+          </Text>
+          <Select
+            value={palette}
+            onChange={(event) => {
+              const parsed = ThemePaletteSchema.safeParse(event.currentTarget.value);
+              if (parsed.success) onPalette(parsed.data);
+            }}
+          >
+            {ThemePaletteSchema.options.map((option) => (
+              <option key={option} value={option}>
+                {option.charAt(0).toUpperCase() + option.slice(1)}
+              </option>
+            ))}
+          </Select>
+        </label>
       </div>
-    </fieldset>
+
+      <section aria-label="Theme preview" className="space-y-1">
+        <Text variant="caption" tone="muted">
+          Preview
+        </Text>
+        <div
+          data-theme-preview=""
+          data-theme={ground}
+          data-palette={palette === 'nix' ? undefined : palette}
+          className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] overflow-hidden rounded-md border border-divider bg-background"
+        >
+          <div className="space-y-2 border-r border-divider bg-surface p-3">
+            <Text variant="caption" tone="muted">
+              Workspace
+            </Text>
+            <div className="flex items-center gap-1.5 rounded-sm border-l-2 border-accent bg-background px-1.5 py-1">
+              <Icon icon={FileText} size="sm" className="text-foreground" />
+              <Text as="span" variant="bodySmall">
+                Notes
+              </Text>
+            </div>
+          </div>
+          <div className="space-y-1 p-3">
+            <Text as="p" variant="h4">
+              Launch brief
+            </Text>
+            <Text variant="bodySmall" tone="muted">
+              Plan the work and keep the details together.
+            </Text>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

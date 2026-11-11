@@ -144,6 +144,18 @@ it('keeps Hide behind item actions and provides an explicit close control', asyn
   expect(screen.getByRole('button', { name: 'Show the Explorer' })).toHaveFocus();
 });
 
+it('opens the structured picker from mobile capture', async () => {
+  stubCoreApi({ items: [root] });
+  const user = userEvent.setup();
+  renderAt(<App />, `/?item=${root.id}`);
+  await screen.findByRole('textbox', { name: 'Note title' });
+  await user.click(screen.getByRole('button', { name: 'New note' }));
+  await user.click(screen.getByRole('button', { name: 'Structured item' }));
+  const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+  expect(within(picker).getByRole('textbox', { name: 'Create with your companion' })).toBeVisible();
+  expect(within(picker).getByRole('button', { name: /^Chat/ })).toBeVisible();
+});
+
 it('retains the capture title and reports a refused create without navigating', async () => {
   stubCoreApi({ items: [root], createRefusal: 'You cannot create here.' });
   renderAt(<App />, `/?item=${root.id}`);

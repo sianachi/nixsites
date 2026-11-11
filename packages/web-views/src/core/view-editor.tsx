@@ -1,39 +1,15 @@
 import { Button, Field, Icon, Select, Text } from '@nix/ui';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { Suspense, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { STRUCTURED_RECIPES } from '@nix/structure-spec';
-import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { uniqueIdentifier, type View } from '@nix/web-collections/core/container-model';
+import { type View } from '@nix/web-collections/core/container-model';
 import { EditorShell } from './editor-shell';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 import { viewConfigureHref } from '@nix/web-collections/core/view-configure-route';
 import { OpensAsSection } from './opens-as-section';
-import { ProgramEditorSlot, starterProgram } from './program-editor-slot';
 import { findViewKind } from './view-kinds';
-
-/** A custom view with the starter program, which lists the collection's children. */
-function newCustomView(taken: ReadonlySet<string>): View {
-  return {
-    id: uniqueIdentifier('custom', taken),
-    name: 'Custom',
-    kind: 'custom',
-    columns: [],
-    groupBy: null,
-    groupOrder: [],
-    dateProperty: null,
-    sortBy: null,
-    sortDescending: false,
-    mode: null,
-    coverProperty: null,
-    endDateProperty: null,
-    cardSize: null,
-    layout: null,
-    filters: [],
-    program: starterProgram(),
-  };
-}
 
 /**
  * Adding and configuring the ways a folder can be looked at.
@@ -68,8 +44,6 @@ export function ViewEditor({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [programOf, setProgramOf] = useState<string | null>(null);
-  const workspaceId = useOptionalWorkspace()?.workspaceId ?? '';
   const navigate = useNavigate();
 
   const [openedWith, setOpenedWith] = useState(open);
@@ -170,91 +144,71 @@ export function ViewEditor({
                 </Text>
               </div>
 
-              <Button
-                variant="secondary"
-                disabled={viewConfigureHref(container.itemId, view) === null}
-                onClick={() => {
-                  const href = viewConfigureHref(container.itemId, view);
-                  if (href !== null) {
-                    void navigate(href);
-                  }
-                }}
-              >
-                Configure
-              </Button>
-
               {view.kind === 'custom' ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setProgramOf(programOf === view.id ? null : view.id);
-                  }}
-                >
-                  {programOf === view.id ? 'Close program' : 'Edit program'}
-                </Button>
-              ) : null}
+                <Text variant="caption" tone="muted">
+                  Managed by your companion
+                </Text>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    disabled={viewConfigureHref(container.itemId, view) === null}
+                    onClick={() => {
+                      const href = viewConfigureHref(container.itemId, view);
+                      if (href !== null) {
+                        void navigate(href);
+                      }
+                    }}
+                  >
+                    Configure
+                  </Button>
 
-              <Button
-                variant="icon"
-                aria-label={`Move ${view.name} earlier`}
-                disabled={index === 0}
-                onClick={() => {
-                  move(index, -1);
-                }}
-              >
-                <Icon icon={ChevronUp} size="sm" />
-              </Button>
+                  <Button
+                    variant="icon"
+                    aria-label={`Move ${view.name} earlier`}
+                    disabled={index === 0}
+                    onClick={() => {
+                      move(index, -1);
+                    }}
+                  >
+                    <Icon icon={ChevronUp} size="sm" />
+                  </Button>
 
-              <Button
-                variant="icon"
-                aria-label={`Move ${view.name} later`}
-                disabled={index === draft.length - 1}
-                onClick={() => {
-                  move(index, 1);
-                }}
-              >
-                <Icon icon={ChevronDown} size="sm" />
-              </Button>
+                  <Button
+                    variant="icon"
+                    aria-label={`Move ${view.name} later`}
+                    disabled={index === draft.length - 1}
+                    onClick={() => {
+                      move(index, 1);
+                    }}
+                  >
+                    <Icon icon={ChevronDown} size="sm" />
+                  </Button>
 
-              <Button
-                variant="icon"
-                aria-label={`Remove ${view.name}`}
-                onClick={() => {
-                  setDraft((current) =>
-                    current
-                      .filter((_, position) => position !== index)
-                      .map((candidate) =>
-                        candidate.companionViewId === view.id
-                          ? {
-                              ...candidate,
-                              companionViewId: null,
-                              companionPlacement: null,
-                            }
-                          : candidate,
-                      ),
-                  );
-                }}
-              >
-                <Icon icon={Trash2} size="sm" />
-              </Button>
+                  <Button
+                    variant="icon"
+                    aria-label={`Remove ${view.name}`}
+                    onClick={() => {
+                      setDraft((current) =>
+                        current
+                          .filter((_, position) => position !== index)
+                          .map((candidate) =>
+                            candidate.companionViewId === view.id
+                              ? {
+                                  ...candidate,
+                                  companionViewId: null,
+                                  companionPlacement: null,
+                                }
+                              : candidate,
+                          ),
+                      );
+                    }}
+                  >
+                    <Icon icon={Trash2} size="sm" />
+                  </Button>
+                </>
+              )}
             </div>
-            {view.kind === 'custom' && programOf === view.id ? (
-              <Suspense fallback={<Text role="status">Loading the editor…</Text>}>
-                <ProgramEditorSlot
-                  value={view.program ?? ''}
-                  workspaceId={workspaceId}
-                  label={`Program for ${view.name}`}
-                  containerId={container.itemId}
-                  onChange={(program) => {
-                    setDraft((current) =>
-                      current.map((candidate) =>
-                        candidate.id === view.id ? { ...candidate, program } : candidate,
-                      ),
-                    );
-                  }}
-                />
-              </Suspense>
-            ) : null}
           </div>
         ))}
 
@@ -275,13 +229,6 @@ export function ViewEditor({
                 value=""
                 disabled={container.itemId === null}
                 onChange={(event) => {
-                  if (event.target.value === 'custom') {
-                    const view = newCustomView(new Set(draft.map((candidate) => candidate.id)));
-                    setDraft([...draft, view]);
-                    setProgramOf(view.id);
-                    setAdding(false);
-                    return;
-                  }
                   const recipe = STRUCTURED_RECIPES.find(
                     (entry) => entry.id === event.target.value,
                   );
@@ -291,7 +238,6 @@ export function ViewEditor({
                 }}
               >
                 <option value="">Choose a view type</option>
-                <option value="custom">Custom (a program)</option>
                 {STRUCTURED_RECIPES.filter(
                   (recipe, index, all) =>
                     all.findIndex((candidate) => candidate.viewKind === recipe.viewKind) === index,

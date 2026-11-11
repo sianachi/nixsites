@@ -34,7 +34,7 @@ export function useTurns({
   /** Called when a turn starts, so a message being edited closes. */
   readonly onSent: () => void;
 }): {
-  readonly submit: () => Promise<void>;
+  readonly submit: (creationRequest?: string, onStarted?: () => void) => Promise<void>;
   readonly resendTurn: (text: string, replaceFromMessageId: string) => Promise<boolean>;
   readonly retryLastTurn: () => void;
   readonly retryLabel: () => string | null;
@@ -43,16 +43,24 @@ export function useTurns({
 } {
   const { runtime, busy, errorKind, regenerateRequestId, send, reload, retryWatch } = runtimeApi;
   const preparing = useRef(false);
+  const lastCreation = useRef<string | undefined>(undefined);
 
-  async function submit() {
-    if (!draft.trim() || busy || preparing.current || runtime?.status !== 'connected') return;
+  async function submit(creationRequest?: string, onStarted?: () => void) {
+    const text = creationRequest ?? draft;
+    if (!text.trim() || busy || preparing.current || runtime?.status !== 'connected') return;
+    const access = workspaceAccess || creationRequest !== undefined;
+    lastCreation.current = creationRequest;
+    if (onStarted !== undefined) {
+      regenerateRequestId();
+      onStarted();
+    }
     // Plan B.2: a conversation's first message carries a map of the workspace's main
     // containers, so the pet can use their ids without listing the tree first. Only with
     // workspace access on: without it the pet has no tools to use the ids with. `preparing`
     // keeps a second press from starting another send while the map is read.
     const firstMessage = !messages.some((message) => message.role === 'user');
     let workspaceMap: Awaited<ReturnType<typeof buildWorkspaceMap>> = undefined;
-    if (firstMessage && workspaceAccess && !hasNoteScope) {
+    if (firstMessage && access && !hasNoteScope) {
       preparing.current = true;
       try {
         workspaceMap = await buildWorkspaceMap(client, workspaceId, new AbortController().signal);
@@ -62,15 +70,13 @@ export function useTurns({
     }
     onSent();
     const ok = await send({
-      text: draft,
+      text,
       model,
-      workspaceAccess,
-      ...contextFields(),
+      workspaceAccess: access,
+      ...(creationRequest === undefined ? contextFields() : {}),
       ...(workspaceMap?.length ? { workspaceMap } : {}),
     });
-    if (ok) {
-      setDraft('');
-    }
+    if (ok && creationRequest === undefined) setDraft('');
   }
 
   /** Sends `text` as a new turn that replaces the user message `replaceFromMessageId` and
@@ -80,12 +86,13 @@ export function useTurns({
   function resendTurn(text: string, replaceFromMessageId: string) {
     onSent();
     regenerateRequestId();
+    const creation = text === lastCreation.current;
     return send({
       text,
       model,
-      workspaceAccess,
+      workspaceAccess: workspaceAccess || creation,
       replaceFromMessageId,
-      ...contextFields(),
+      ...(creation ? {} : contextFields()),
     });
   }
 
@@ -107,7 +114,7 @@ export function useTurns({
    * fixed since a failed `send` never regenerates it), `load` wakes the watch loop, and
    * `command` retries whatever one-off request (interrupt, reset, an explicit reload) failed. */
   function retryError() {
-    if (errorKind === 'send') void submit();
+    if (errorKind === 'send') void submit(lastCreation.current);
     else if (errorKind === 'load') retryWatch();
     else if (errorKind === 'command') void reload();
   }

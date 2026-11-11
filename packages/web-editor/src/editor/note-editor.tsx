@@ -447,12 +447,12 @@ function viewAcceptsEdits(view: EditorView): boolean {
   return view.editable;
 }
 
-function runBlockInsert<T>(view: EditorView, insert: () => T): T {
-  // Undo should remove the block without also deleting nearby typing.
+function runSeparateEdit<T>(view: EditorView, edit: () => T): T {
+  // Undo a toolbar edit without also undoing nearby typing.
   const history = yUndoPluginKey.getState(view.state)?.undoManager;
   history?.stopCapturing();
   try {
-    return insert();
+    return edit();
   } finally {
     history?.stopCapturing();
   }
@@ -670,7 +670,7 @@ export function NoteEditor({
           }
           const caret = Math.min(afterNode + 1, transaction.doc.content.size);
           transaction.setSelection(TextSelection.near(transaction.doc.resolve(caret)));
-          runBlockInsert(view, () => {
+          runSeparateEdit(view, () => {
             view.dispatch(transaction.scrollIntoView());
           });
           insertionRef.current = caret;
@@ -1237,8 +1237,8 @@ export function NoteEditor({
               )
             }
             {...insertHandlers}
-            runBlockInsert={(insert) => {
-              runBlockInsert(editor.view, insert);
+            runSeparateEdit={(edit) => {
+              runSeparateEdit(editor.view, edit);
             }}
             onInsertLink={() => {
               insertionRef.current = editor.state.selection.from;
@@ -1521,7 +1521,7 @@ export function NoteEditor({
                       : presentation === 'inline'
                         ? { type: 'reference', attrs: { kind: 'item', targetId: id, label } }
                         : { type: 'itemBlock', attrs: { targetId: id, presentation } };
-                  const inserted = runBlockInsert(editor.view, () =>
+                  const inserted = runSeparateEdit(editor.view, () =>
                     editor
                       .chain()
                       .setTextSelection(position)
@@ -1583,7 +1583,7 @@ export function NoteEditor({
                     // Leave a text block after the image. Besides giving the writer somewhere obvious
                     // to continue, this keeps the collaborative selection inside an inline-capable
                     // node instead of forcing it onto the document boundary.
-                    runBlockInsert(editor.view, () => {
+                    runSeparateEdit(editor.view, () => {
                       editor
                         .chain()
                         .setImage({ src: address, alt: description })

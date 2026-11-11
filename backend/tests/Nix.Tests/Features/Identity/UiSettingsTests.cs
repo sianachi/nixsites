@@ -23,7 +23,8 @@ public sealed class UiSettingsTests
              "editor.phraseSuggestions":true,"editor.unlinkedMentionUnderline":true,
              "editor.viewSuggestions":"off","editor.choiceOrder":"on","dailyNotes.openTodayOnStart":true,
              "sites.publishingEnabled":false,"graph.openMode":"beside","shell.statusBar":false,
-             "shell.layout":{"preset":"workspace","overrides":{"explorer":false,"advanced":true}}}
+             "shell.layout":{"preset":"workspace","overrides":{"explorer":false,"advanced":true}},
+             "shell.preferencesSeen":true,"shell.sidebarHidden":{"calendar":true,"graph":false}}
             """)));
         Assert.Null(UiSettingsValidation.Check(Patch("""{"editor.keyboardMode":null,"editor.pageGuides":null,"graph.openMode":null,"shell.layout":null}""")));
         Assert.Null(UiSettingsValidation.Check(Patch("{}")));
@@ -50,6 +51,12 @@ public sealed class UiSettingsTests
     [InlineData("""{"shell.layout":{"preset":"full","overrides":{"sidebar":true}}}""")]
     [InlineData("""{"shell.layout":{"preset":"full","overrides":{"view":"true"}}}""")]
     [InlineData("""{"shell.layout":{"preset":"full","overrides":{"view":false,"view":true}}}""")]
+    [InlineData("""{"shell.sidebarHidden":["home"]}""")]
+    [InlineData("""{"shell.sidebarHidden":{"settings":false}}""")]
+    [InlineData("""{"shell.sidebarHidden":{"graph":"hidden"}}""")]
+    [InlineData("""{"shell.sidebarHidden":["trash"]}""")]
+    [InlineData("""{"shell.sidebarHidden":["settings"]}""")]
+    [InlineData("""{"shell.preferencesSeen":"true"}""")]
     public void A_value_of_the_wrong_type_or_an_unknown_option_is_refused(string json) =>
         Assert.Equal(UiSettingsValidation.InvalidCode, UiSettingsValidation.Check(Patch(json))?.Code);
 

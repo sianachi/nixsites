@@ -12,6 +12,29 @@ export const workspaceLayoutSchema = z.strictObject({
 
 export type WorkspaceLayout = z.infer<typeof workspaceLayoutSchema>;
 
+export const sidebarDestinationSchema = z.enum([
+  'daily',
+  'calendar',
+  'graph',
+  'bookmarks',
+  'templates',
+  'queries',
+  'workspaces',
+  'attachments',
+  'import',
+  'pet',
+]);
+export type SidebarDestination = z.infer<typeof sidebarDestinationSchema>;
+export type SidebarOverrides = Partial<Record<SidebarDestination, boolean>>;
+// The earlier picker saved only hidden entries. Read them as explicit hides.
+const sidebarHiddenSchema = z.union([
+  z.partialRecord(sidebarDestinationSchema, z.boolean()),
+  z
+    .array(sidebarDestinationSchema)
+    .max(sidebarDestinationSchema.options.length)
+    .transform((ids): SidebarOverrides => Object.fromEntries(ids.map((id) => [id, true]))),
+]);
+
 /** The allow-list the server enforces; a key outside it is refused with 422. */
 const settingShapes = {
   'editor.keyboardMode': z.enum(['standard', 'vim', 'emacs']),
@@ -27,6 +50,8 @@ const settingShapes = {
   'shell.statusBar': z.boolean(),
   'shell.iconStrip': z.boolean(),
   'shell.layout': workspaceLayoutSchema,
+  'shell.preferencesSeen': z.boolean(),
+  'shell.sidebarHidden': sidebarHiddenSchema,
 } as const;
 
 /** Stored settings: a key the person never set is absent, and keys a newer server adds are dropped. */
@@ -49,6 +74,8 @@ export const uiSettingsPatchSchema = z.object({
   'shell.statusBar': settingShapes['shell.statusBar'].nullable().optional(),
   'shell.iconStrip': settingShapes['shell.iconStrip'].nullable().optional(),
   'shell.layout': settingShapes['shell.layout'].nullable().optional(),
+  'shell.preferencesSeen': settingShapes['shell.preferencesSeen'].nullable().optional(),
+  'shell.sidebarHidden': settingShapes['shell.sidebarHidden'].nullable().optional(),
 });
 
 export const uiSettingsResponseSchema = z.object({

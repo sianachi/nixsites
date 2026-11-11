@@ -10,6 +10,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   ArrowDown,
   ArrowUp,
   Bold,
@@ -99,8 +100,8 @@ export interface ToolbarProps {
   readonly onInsertImage: () => void;
   readonly onInsertItem?: (kind: ItemInsertKind) => void;
   readonly onPageBreak?: () => void;
-  /** Runs a block insertion as its own step in the note's history. */
-  readonly runBlockInsert?: (insert: () => void) => void;
+  /** Runs an edit as its own step in the note's history. */
+  readonly runSeparateEdit?: (edit: () => void) => void;
 
   /** Opens the editor-owned link form for the current selection. */
   readonly onInsertLink: () => void;
@@ -125,8 +126,8 @@ export function EditorToolbar({
   onInsertImage,
   onInsertItem,
   onPageBreak,
-  runBlockInsert = (insert) => {
-    insert();
+  runSeparateEdit = (edit) => {
+    edit();
   },
   onInsertLink,
   onUndo,
@@ -188,20 +189,33 @@ export function EditorToolbar({
     },
   ];
 
-  const alignmentIcons = { left: AlignLeft, center: AlignCenter, right: AlignRight };
+  const alignmentIcons = {
+    left: AlignLeft,
+    center: AlignCenter,
+    right: AlignRight,
+    justify: AlignJustify,
+  };
   const alignmentKeys = { left: 'L', center: 'E', right: 'R' };
   const alignment: readonly Control[] = TEXT_ALIGNMENTS.map((value) => ({
     id: `align-${value}`,
-    label: `Align ${value}`,
+    label: value === 'justify' ? 'Justify' : `Align ${value}`,
     icon: alignmentIcons[value],
     active:
       editor.isActive({ textAlign: value }) ||
       (value === 'left' && editor.isActive({ textAlign: null })),
     enabled: editor.can().setTextAlign(value),
-    shortcut: `${visibleModifier}+Shift+${alignmentKeys[value]}`,
-    ariaShortcut: `${ariaModifier}+Shift+${alignmentKeys[value]}`,
-    run: () =>
-      void editor.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(value).run(),
+    ...(value === 'justify'
+      ? {}
+      : {
+          shortcut: `${visibleModifier}+Shift+${alignmentKeys[value]}`,
+          ariaShortcut: `${ariaModifier}+Shift+${alignmentKeys[value]}`,
+        }),
+    run: () => {
+      runSeparateEdit(
+        () =>
+          void editor.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(value).run(),
+      );
+    },
   }));
 
   const lists: readonly Control[] = [
@@ -331,7 +345,7 @@ export function EditorToolbar({
       label: 'Divider',
       icon: Minus,
       run: () => {
-        runBlockInsert(() => void editor.chain().focus().setHorizontalRule().run());
+        runSeparateEdit(() => void editor.chain().focus().setHorizontalRule().run());
       },
     },
     {
@@ -343,7 +357,7 @@ export function EditorToolbar({
   ];
 
   const insertTable = (rows: number, cols: number): void => {
-    runBlockInsert(
+    runSeparateEdit(
       () => void editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(),
     );
   };
@@ -583,7 +597,7 @@ export function EditorToolbar({
             disabled={editor.state.selection.$from.depth > 1}
             onClick={() => {
               setInsertOpen(false);
-              runBlockInsert(onPageBreak);
+              runSeparateEdit(onPageBreak);
             }}
           >
             Page break

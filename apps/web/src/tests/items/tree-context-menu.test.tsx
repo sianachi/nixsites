@@ -231,7 +231,6 @@ describe('the sidebar row context menu', () => {
       'Hide children from tree',
       'Bookmark',
       'Copy link',
-      'Automate…',
       'Mute reminders',
       'Move to…',
       'Protect from deletion',

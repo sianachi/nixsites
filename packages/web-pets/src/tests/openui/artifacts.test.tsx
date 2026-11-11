@@ -102,8 +102,9 @@ describe('an artifact', () => {
   it('adds a values block on the first save', async () => {
     bodies.append.mockResolvedValue({});
     open();
-    fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save values for everyone' }));
+    await screen.findByText('0');
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save values for everyone' }));
     await waitFor(() => {
       expect(bodies.append).toHaveBeenCalledTimes(1);
     });
@@ -112,30 +113,14 @@ describe('an artifact', () => {
     );
   });
 
-  it('edits only the program passage from Edit source, leaving the values block alone', async () => {
+  it('runs a saved program without offering source editing', async () => {
     bodies.read.mockResolvedValue({
       markdown: `Intro\n\n${fenced(counter)}\n${fencedState('{"$count":3}')}`,
     });
-    bodies.planEdit.mockResolvedValue({ fingerprint: 'body-2' });
-    bodies.applyEdit.mockResolvedValue({});
-    render(
-      <MemoryRouter>
-        <ArtifactView itemId={artifactId} editable />
-      </MemoryRouter>,
-    );
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit source' }));
-    const next = 'root = Stack([t])\nt = Text("Edited")';
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }));
-    fireEvent.change(screen.getByLabelText('Program'), { target: { value: next } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save source' }));
-    await waitFor(() => {
-      expect(bodies.applyEdit).toHaveBeenCalledTimes(1);
-    });
-    const edit = { kind: 'passage', find: `${counter}\n`, replace: `${next}\n` };
-    expect(bodies.planEdit).toHaveBeenCalledWith(artifactId, edit, expect.anything());
-    expect(bodies.applyEdit).toHaveBeenCalledWith(artifactId, edit, 'body-2', expect.anything());
-    expect(edit.find).not.toContain('openui-state');
-    expect(bodies.append).not.toHaveBeenCalled();
+    open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit source' })).not.toBeInTheDocument();
   });
 
   it('keeps working for a viewer who cannot save, and says so', async () => {

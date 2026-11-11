@@ -5,14 +5,24 @@ import {
   Icon,
   Input,
   Segmented,
+  Textarea,
   Text,
   cn,
   fieldLabel,
   focusRing,
 } from '@nix/ui';
-import { LayoutTemplate } from 'lucide-react';
+import {
+  LayoutTemplate,
+  MessageSquare,
+  PencilRuler,
+  Sheet,
+  Sparkles,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 
+import { findViewKind } from '@nix/web-views/core/view-kinds';
 import type { TemplateLibraryStatus } from '@nix/web-templates/templates/use-templates';
 import type { TemplateSummary } from '@nix/web-templates/templates/template-api';
 import {
@@ -21,47 +31,30 @@ import {
   type StructuredRecipeId,
 } from '@nix/web-views/wizard/structured-recipes';
 
-/**
- * The dialog behind each entry of the sidebar's New menu.
- *
- * The menu used to be the whole flow: a destination checkbox, every body kind, upload,
- * every structured recipe and three templates in one long list, with an item created the moment
- * its row was chosen and named "Untitled" until somebody renamed it. The menu now names six
- * things, and each opens this dialog, which asks the two questions that decide what gets made -
- * where it goes and, for a plain item, what it is called - before anything is created.
- *
- * **Where it goes** is the same choice in every mode, so it is one control at the top. The top of
- * the workspace is the default every time the dialog opens: a previous creation inside an item
- * must not quietly turn the next one into another child.
- *
- * **Structured items and templates** are listed in full, each with the sentence that says what it
- * is - the detail the menu could not show.
- */
+type NewItemKind = 'canvas' | 'spreadsheet';
 
-export type NewItemKind = 'note' | 'canvas' | 'spreadsheet';
-
-export type NewItemDialogMode =
-  | { readonly kind: 'item'; readonly type: NewItemKind }
-  | { readonly kind: 'upload' }
-  | { readonly kind: 'structured' };
+type NewItemDialogMode =
+  { readonly kind: 'item'; readonly type: NewItemKind } | { readonly kind: 'structured' };
 
 /** What each plain kind is called, in the dialog's title and button and as its default title. */
-export const NEW_ITEM_KINDS: Readonly<
+const NEW_ITEM_KINDS: Readonly<
   Record<NewItemKind, { readonly noun: string; readonly untitled: string }>
 > = {
-  note: { noun: 'note', untitled: 'Untitled note' },
   canvas: { noun: 'canvas', untitled: 'Untitled canvas' },
   spreadsheet: { noun: 'sheet', untitled: 'Untitled spreadsheet' },
 };
 
 export interface NewItemDialogProps {
-  readonly mode: NewItemDialogMode;
   /** The item selected in the tree, offered as a place to create inside; null when none is. */
   readonly childDestination: { readonly id: string; readonly name: string } | null;
+  readonly initialTitle: string;
+  readonly insideByDefault: boolean;
   readonly templates: readonly TemplateSummary[];
   readonly templateStatus: TemplateLibraryStatus;
   readonly onClose: () => void;
   readonly onCreate: (parentId: string | null, title: string, type: NewItemKind) => void;
+  readonly onChat: (parentId: string | null) => void;
+  readonly onRequest: (parentId: string | null, prompt: string) => void;
   readonly onUpload: (parentId: string | null) => void;
   readonly onStartStructured: (parentId: string | null, recipe: StructuredRecipeId) => void;
   readonly onStartTemplate: (parentId: string | null, templateId: string) => void;
@@ -74,8 +67,6 @@ function titleOf(mode: NewItemDialogMode): string {
   switch (mode.kind) {
     case 'item':
       return `New ${NEW_ITEM_KINDS[mode.type].noun}`;
-    case 'upload':
-      return 'Upload files';
     case 'structured':
       return 'New structured item';
   }
@@ -85,6 +76,7 @@ function titleOf(mode: NewItemDialogMode): string {
 function Choice(props: {
   readonly label: string;
   readonly detail: string | null;
+  readonly icon?: LucideIcon;
   readonly onChoose: () => void;
 }): ReactNode {
   return (
@@ -97,7 +89,7 @@ function Choice(props: {
           focusRing,
         )}
       >
-        <Icon icon={LayoutTemplate} size="sm" className="mt-0.5 shrink-0" />
+        <Icon icon={props.icon ?? LayoutTemplate} size="sm" className="mt-0.5 shrink-0" />
         <span className="flex min-w-0 flex-col gap-0.5">
           <Text as="span" variant="body" className="break-words">
             {props.label}
@@ -116,10 +108,12 @@ function Choice(props: {
 export function NewItemDialog(props: NewItemDialogProps): ReactNode {
   const { childDestination, onClose } = props;
   // A canvas or sheet chosen from the structured list moves on to naming it, in the same dialog.
-  const [mode, setMode] = useState(props.mode);
-  const [place, setPlace] = useState<Place>('root');
-  const [title, setTitle] = useState('');
+  const [mode, setMode] = useState<NewItemDialogMode>({ kind: 'structured' });
+  const [place, setPlace] = useState<Place>(props.insideByDefault ? 'inside' : 'root');
+  const [title, setTitle] = useState(props.initialTitle);
+  const [prompt, setPrompt] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLFormElement>(null);
   // Naming starts at once, including after a canvas or sheet is picked from the structured list.
   useEffect(() => {
     if (mode.kind === 'item') titleRef.current?.focus();
@@ -187,6 +181,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
                 {...control}
                 ref={titleRef}
                 value={title}
+                maxLength={240}
                 placeholder={kind.untitled}
                 onChange={(event) => {
                   setTitle(event.currentTarget.value);
@@ -200,40 +195,6 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
     );
   }
 
-  if (mode.kind === 'upload') {
-    return (
-      <Dialog
-        open
-        title={titleOf(mode)}
-        onClose={onClose}
-        actions={
-          <>
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                done(() => {
-                  props.onUpload(parentId);
-                });
-              }}
-            >
-              Choose files
-            </Button>
-          </>
-        }
-      >
-        <div className="flex min-w-0 flex-col gap-4">
-          <Text variant="body">
-            Each file becomes an item you can open, preview and link to. You can also drop files
-            onto the tree or into a note.
-          </Text>
-          {placeControl}
-        </div>
-      </Dialog>
-    );
-  }
-
   // Structured recipes and the workspace's templates in one dialog: both start a structured item.
   const { templates, templateStatus } = props;
   return (
@@ -241,6 +202,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
       open
       title={titleOf(mode)}
       onClose={onClose}
+      initialFocus={pickerRef}
       actions={
         <Button
           variant="ghost"
@@ -255,14 +217,47 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
       }
     >
       <div className="flex min-w-0 flex-col gap-4">
+        <form
+          ref={pickerRef}
+          tabIndex={-1}
+          className="flex flex-col gap-2 rounded-md border border-divider bg-surface p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const request = prompt.trim();
+            if (request)
+              done(() => {
+                props.onRequest(parentId, request);
+              });
+          }}
+        >
+          <Field label="Create with your companion">
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={2}
+                maxLength={2000}
+                placeholder="A BMI calculator"
+                value={prompt}
+                onChange={(event) => {
+                  setPrompt(event.currentTarget.value);
+                }}
+              />
+            )}
+          </Field>
+          <Button type="submit" disabled={!prompt.trim()} className="self-end">
+            <Icon icon={Sparkles} size="sm" />
+            Ask companion
+          </Button>
+        </form>
         {placeControl}
         <div className="flex min-w-0 flex-col gap-1">
           <Text as="h3" variant="kicker" tone="muted" id="new-structured-canvas">
-            Canvas and sheet
+            Create or add
           </Text>
           <ul aria-labelledby="new-structured-canvas" className="-mx-3 flex flex-col">
             <Choice
               label="Canvas"
+              icon={PencilRuler}
               detail="A freeform board for shapes, notes and drawings"
               onChoose={() => {
                 setMode({ kind: 'item', type: 'canvas' });
@@ -270,9 +265,30 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
             />
             <Choice
               label="Sheet"
+              icon={Sheet}
               detail="A spreadsheet with formulas"
               onChoose={() => {
                 setMode({ kind: 'item', type: 'spreadsheet' });
+              }}
+            />
+            <Choice
+              label="Chat"
+              icon={MessageSquare}
+              detail="Start a saved companion conversation."
+              onChoose={() => {
+                done(() => {
+                  props.onChat(parentId);
+                });
+              }}
+            />
+            <Choice
+              label="Upload"
+              icon={Upload}
+              detail="Add files from your device."
+              onChoose={() => {
+                done(() => {
+                  props.onUpload(parentId);
+                });
               }}
             />
           </ul>
@@ -290,6 +306,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
                   <Choice
                     key={recipe.id}
                     label={recipe.label}
+                    icon={findViewKind(recipe.viewKind)?.icon ?? LayoutTemplate}
                     detail={recipe.detail}
                     onChoose={() => {
                       done(() => {

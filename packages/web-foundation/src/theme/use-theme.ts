@@ -1,35 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { browserStorage } from '../lib/browser-storage';
 import { syncStatusBar } from '../native/native-shell';
 import {
-  applyGround,
-  readStoredPreference,
-  resolveGround,
-  storePreference,
+  readStoredMode,
+  readStoredPalette,
+  storeMode,
+  storePalette,
   type Ground,
-  type ThemePreference,
+  type ThemePalette,
 } from './theme-store';
-
-/**
- * The ground the application is drawn on.
- *
- * Reads the stored preference, watches the machine's own setting, and keeps the document's
- * `data-theme` attribute in step with both. Everything visual follows from that one attribute,
- * because the token sheet defines the grounds and every component resolves its colours through
- * the roles - so nothing here touches a colour, and nothing else needs to know a theme exists.
- */
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-export interface Theme {
-  /** What was chosen: follow the machine, or one of the two grounds. */
-  readonly preference: ThemePreference;
+export interface ThemeSelection {
+  readonly mode: Ground | null;
+  readonly palette: ThemePalette;
+}
 
-  /** What that means right now. */
+export interface Theme extends ThemeSelection {
   readonly ground: Ground;
-
-  readonly setPreference: (preference: ThemePreference) => void;
+  readonly setTheme: (mode: Ground | null, palette: ThemePalette) => void;
 }
 
 /**
@@ -47,10 +38,9 @@ function systemPrefersDark(): boolean {
     : false;
 }
 
-export function useTheme(): Theme {
-  const [preference, setStored] = useState<ThemePreference>(() =>
-    readStoredPreference(browserStorage()),
-  );
+export function useTheme(preview: ThemeSelection | null = null): Theme {
+  const [mode, setStoredMode] = useState(() => readStoredMode(browserStorage()));
+  const [palette, setStoredPalette] = useState(() => readStoredPalette(browserStorage()));
 
   // Tracked rather than read during render, because it changes without React: somebody switching
   // their machine to dark at dusk has to move the application with it, and a value read once at
@@ -75,17 +65,29 @@ export function useTheme(): Theme {
     };
   }, []);
 
-  const ground = resolveGround(preference, prefersDark);
+  const shownMode = preview === null ? mode : preview.mode;
+  const shownPalette = preview?.palette ?? palette;
+  const ground = shownMode ?? (prefersDark ? 'dark' : 'light');
+  useEffect(() => {
+    const root = document.documentElement;
+    if (shownMode === null) root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', shownMode);
+    syncStatusBar(ground);
+  }, [ground, shownMode]);
 
   useEffect(() => {
-    applyGround(document.documentElement, preference, ground);
-    syncStatusBar(ground);
-  }, [ground, preference]);
+    const root = document.documentElement;
+    if (shownPalette === 'nix') root.removeAttribute('data-palette');
+    else root.setAttribute('data-palette', shownPalette);
+  }, [shownPalette]);
 
-  const setPreference = useCallback((next: ThemePreference): void => {
-    setStored(next);
-    storePreference(browserStorage(), next);
-  }, []);
+  function setTheme(nextMode: Ground | null, nextPalette: ThemePalette): void {
+    const storage = browserStorage();
+    setStoredMode(nextMode);
+    setStoredPalette(nextPalette);
+    storeMode(storage, nextMode);
+    storePalette(storage, nextPalette);
+  }
 
-  return { preference, ground, setPreference };
+  return { palette, ground, mode, setTheme };
 }

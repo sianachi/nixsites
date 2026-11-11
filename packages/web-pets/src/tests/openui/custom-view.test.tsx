@@ -1,7 +1,6 @@
 import { createParser } from '@openuidev/react-lang';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { UndoProvider, UndoBar } from '@nix/ui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { View } from '@nix/web-collections/core/container-model';
@@ -51,21 +50,16 @@ function customView(program: string | null): View {
   };
 }
 
-function open(view: View, setViews = vi.fn().mockResolvedValue(null)) {
+function open(view: View) {
   const container = {
     itemId: collection,
     views: { views: [view] },
-    setViews,
   } as unknown as ContainerData;
   render(
     <MemoryRouter>
-      <UndoProvider>
-        <CustomView container={container} view={view} onOpen={vi.fn()} />
-        <UndoBar />
-      </UndoProvider>
+      <CustomView container={container} view={view} onOpen={vi.fn()} />
     </MemoryRouter>,
   );
-  return setViews;
 }
 
 const stored = new Map<string, string>();
@@ -121,70 +115,9 @@ describe('a custom view', () => {
     expect(stored.get(`nix.openui.state.view:${collection}:mine`)).toContain('"$count":1');
   });
 
-  it('says when the program does not render and offers Edit view', async () => {
+  it('points to the companion if a program does not render', async () => {
     open(customView('root = Marquee("nope")'));
-    expect(await screen.findByText(/does not render/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit view' })).toBeInTheDocument();
-  });
-
-  it('saves an edited program through the view set', async () => {
-    const setViews = open(customView(STARTER_PROGRAM));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit view' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }));
-    fireEvent.change(screen.getByLabelText('Program for Mine'), {
-      target: { value: 'root = Stack([t])\nt = Text("Hi")' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => {
-      expect(setViews).toHaveBeenCalledTimes(1);
-    });
-    const saved = (setViews.mock.calls[0] as [View[]])[0];
-    expect(saved).toHaveLength(1);
-    expect(saved[0]).toMatchObject({ id: 'mine', program: 'root = Stack([t])\nt = Text("Hi")' });
-  });
-
-  it('keeps Save off until something changed, then counts and lists the changes', async () => {
-    open(customView('root = Stack([t])\nt = Text("Hi")'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit view' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }));
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Program for Mine'), {
-      target: { value: 'root = Stack([t])\nt = Text("Bye")' },
-    });
-    expect(screen.getByText('1 change not saved.')).toBeInTheDocument();
-    expect(screen.getByText('Changes since last save (1)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
-  });
-
-  it('reports what a save changed and undoes it', async () => {
-    const setViews = open(customView('root = Stack([t])\nt = Text("Hi")'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit view' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }));
-    fireEvent.change(screen.getByLabelText('Program for Mine'), {
-      target: { value: 'root = Stack([t])\nt = Text("Bye")' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText(/Saved 1 change\./)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
-    await waitFor(() => {
-      expect(setViews).toHaveBeenCalledTimes(2);
-    });
-    expect((setViews.mock.calls[1] as [View[]])[0][0]).toMatchObject({
-      program: 'root = Stack([t])\nt = Text("Hi")',
-    });
-  });
-
-  it('cancel discards without asking and undo brings the edit back', async () => {
-    open(customView('root = Stack([t])\nt = Text("Hi")'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit view' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }));
-    fireEvent.change(screen.getByLabelText('Program for Mine'), {
-      target: { value: 'root = Stack([t])\nt = Text("Bye")' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByLabelText('Program for Mine')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Code' }));
-    expect(screen.getByLabelText<HTMLTextAreaElement>('Program for Mine').value).toContain('Bye');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ask your companion to fix it.');
+    expect(screen.queryByRole('button', { name: 'Edit view' })).not.toBeInTheDocument();
   });
 });
