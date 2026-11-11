@@ -112,7 +112,7 @@ describe('undo history', () => {
     expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
 
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
     expect(onUndo).toHaveBeenCalledTimes(2);

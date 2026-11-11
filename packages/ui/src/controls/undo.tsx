@@ -181,7 +181,7 @@ export function UndoBar(): ReactNode {
           )}
           <Button
             variant="icon"
-            aria-label="Dismiss"
+            aria-label="Dismiss notice"
             onClick={() => {
               setExpiredId(message.id);
             }}
