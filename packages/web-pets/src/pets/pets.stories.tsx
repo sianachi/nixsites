@@ -124,6 +124,17 @@ export const Settings = {
   },
 };
 
+export const AppearanceGallery = {
+  render: (): ReactElement => settingsStory('chatgpt'),
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    canvas.getByRole('button', { name: 'Add pet' }).click();
+    const gallery = within(await canvas.findByRole('dialog', { name: 'Choose a pet' }));
+    gallery.getByText('Fox', { selector: 'label span', exact: true }).click();
+    await gallery.findByRole('heading', { name: 'Fox' });
+  },
+};
+
 function keySettingsPlay(label: string, otherLabel: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);

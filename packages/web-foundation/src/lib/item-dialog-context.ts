@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 
-export const ItemDialogContext = createContext<((itemId: string) => void) | null>(null);
-export function useItemDialog(): ((itemId: string) => void) | null {
+type OpenItemDialog = (itemId: string, options?: { readonly showComments: boolean }) => void;
+
+export const ItemDialogContext = createContext<OpenItemDialog | null>(null);
+export function useItemDialog(): OpenItemDialog | null {
   return useContext(ItemDialogContext);
 }

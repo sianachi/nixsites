@@ -74,7 +74,11 @@ export function ContainerView({
   // A mode whose host is absent (`tab` inside a dialog, say) falls back to `onOpen`.
   const open = {
     page: onOpen,
-    dialog: openDialog ?? onOpen,
+    dialog: (itemId: string) => {
+      if (openDialog === null) onOpen(itemId);
+      else if (view?.kind === 'board') openDialog(itemId, { showComments: true });
+      else openDialog(itemId);
+    },
     beside: onOpenBeside ?? onOpen,
     tab: onOpenPinned ?? onOpen,
     // Not what a click does (it selects); the double-click, Enter and menu Open target.

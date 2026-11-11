@@ -1,5 +1,11 @@
-import { Icon, Select, focusRing } from '@nix/ui';
-import { FileText, List as ListIcon, TriangleAlert } from 'lucide-react';
+import { Button, Icon, Menu, Select, focusRing, type MenuEntry } from '@nix/ui';
+import {
+  FileText,
+  List as ListIcon,
+  MessageSquare,
+  MoreHorizontal,
+  TriangleAlert,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
   createContext,
@@ -41,6 +47,7 @@ import { findViewKind } from './view-kinds';
  * so DOM and focus order match the visual order. Null outside a switcher row.
  */
 export const BelowRowSlot = createContext<HTMLElement | null>(null);
+export const COMMENTS_VIEW = '$comments';
 
 export interface ViewSwitcherProps {
   readonly views: readonly View[];
@@ -50,6 +57,9 @@ export interface ViewSwitcherProps {
 
   /** What to call the item's own body. Omit to leave the document out entirely. */
   readonly documentLabel?: string;
+  readonly comments?: boolean;
+  readonly addView?: ReactNode;
+  readonly viewActions?: ((id: string) => readonly MenuEntry[]) | undefined;
 
   /**
    * Whether the item has chosen to leave its document tab out. The body is still there; only the
@@ -77,37 +87,8 @@ export interface ViewSwitcherProps {
 }
 
 export function ViewSwitcher(props: ViewSwitcherProps): ReactNode {
-  const {
-    views,
-    unrenderable,
-    activeViewId,
-    onSelect,
-    documentLabel,
-    documentHidden,
-    defaultViewId,
-    trailing,
-    tools,
-  } = props;
-
-  // Nothing to choose between. An item nobody has configured a view on shows its body and no
-  // chrome at all, which is every plain note - a lone "Document" tab would be a control with one
-  // option, taking up a row to say what the screen already shows.
-  if (views.length === 0) {
-    return null;
-  }
-
-  return (
-    <ViewStrip
-      views={views}
-      unrenderable={unrenderable}
-      activeViewId={activeViewId}
-      onSelect={onSelect}
-      {...(documentLabel === undefined ? {} : { documentLabel })}
-      {...(documentHidden === undefined ? {} : { documentHidden })}
-      {...(defaultViewId === undefined ? {} : { defaultViewId })}
-      {...(trailing === undefined ? {} : { trailing })}
-      {...(tools === undefined ? {} : { tools })}
-    />
+  return props.views.length === 0 && !props.comments && props.addView == null ? null : (
+    <ViewStrip {...props} />
   );
 }
 
@@ -120,6 +101,8 @@ function ViewStrip(props: ViewSwitcherProps): ReactNode {
   const only = props.views.length === 1 ? props.views[0] : undefined;
   const hasOneChoice =
     compact &&
+    !props.comments &&
+    props.addView == null &&
     only?.id === props.activeViewId &&
     (props.documentLabel === undefined || props.documentHidden === true) &&
     !props.unrenderable.includes(only.id);
@@ -129,14 +112,15 @@ function ViewStrip(props: ViewSwitcherProps): ReactNode {
     <ViewTabs {...props} />
   );
   if (trailing === undefined && tools === undefined) return strip;
-  // Wraps so a tool's second line (an open phone search field) can drop below the row. The strip
-  // gives up width first: tabs scroll and the picker shrinks, the tools and item controls do not.
+  const splitControls = narrow && (props.addView != null || props.viewActions !== undefined);
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1 pr-3 sm:pr-8">
-      <div className="min-w-0 flex-1">{strip}</div>
+      <div className={splitControls ? 'min-w-0 basis-full' : 'min-w-0 flex-1'}>{strip}</div>
       <BelowRowSlot value={below}>{tools}</BelowRowSlot>
       {trailing === undefined ? null : (
-        <div className="flex shrink-0 items-center gap-1">{trailing}</div>
+        <div className={`flex shrink-0 items-center gap-1 ${splitControls ? 'ml-auto' : ''}`}>
+          {trailing}
+        </div>
       )}
       <div ref={setBelow} className="basis-full empty:hidden" />
     </div>
@@ -156,25 +140,41 @@ function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolea
   } = props;
   const mark = (name: string, id: string): string =>
     `${name}${id === defaultViewId ? ' (default)' : ''}${unrenderable.includes(id) ? ' (needs attention)' : ''}`;
+  const selected =
+    views.some((view) => view.id === activeViewId) ||
+    (activeViewId === COMMENTS_VIEW && props.comments === true) ||
+    (activeViewId === DOCUMENT_VIEW && documentLabel !== undefined && !documentHidden);
   return (
-    <div className={props.compactDesktop ? 'min-w-40 w-fit px-8 py-1.5' : 'min-w-0 px-4 py-1.5'}>
+    <div
+      className={`flex items-center gap-1 ${props.compactDesktop ? 'w-fit min-w-40 px-8 py-1.5' : 'min-w-0 px-4 py-1.5'}`}
+    >
       <Select
         aria-label="View"
+        className="min-w-0 flex-1"
         value={activeViewId ?? ''}
         onChange={(event) => {
           onSelect(event.target.value);
         }}
       >
-        {activeViewId === '' || activeViewId === null ? <option value="" hidden disabled /> : null}
+        {!selected ? (
+          <option value={activeViewId ?? ''} hidden disabled>
+            {activeViewId === DOCUMENT_VIEW ? documentLabel : 'Choose view'}
+          </option>
+        ) : null}
         {documentLabel === undefined || documentHidden === true ? null : (
           <option value={DOCUMENT_VIEW}>{mark(documentLabel, DOCUMENT_VIEW)}</option>
         )}
+        {props.comments ? (
+          <option value={COMMENTS_VIEW}>{mark('Comments', COMMENTS_VIEW)}</option>
+        ) : null}
         {views.map((view) => (
           <option key={view.id} value={view.id}>
             {mark(view.name, view.id)}
           </option>
         ))}
       </Select>
+      {props.addView}
+      <ViewActions label="Manage view" items={props.viewActions?.(activeViewId ?? '')} />
     </div>
   );
 }
@@ -214,46 +214,64 @@ function ViewTabs(props: ViewSwitcherProps): ReactNode {
     // push the strip onto three lines above the content it switches between. The row now scrolls
     // sideways, snapping to tabs, and the current tab is brought into view when it changes - so a
     // view chosen at the far end is not selected somewhere off screen.
-    <nav
-      ref={stripRef}
-      aria-label="Views"
-      className="flex min-w-0 max-w-full snap-x items-center gap-1 overflow-x-auto px-4 py-1.5 sm:px-8"
-    >
-      {documentLabel === undefined || documentHidden === true ? null : (
-        <SwitcherTab
-          icon={FileText}
-          label={documentLabel}
-          active={activeViewId === DOCUMENT_VIEW}
-          isDefault={defaultViewId === DOCUMENT_VIEW}
-          broken={false}
-          onSelect={() => {
-            onSelect(DOCUMENT_VIEW);
-          }}
-        />
-      )}
-
-      {views.map((view) => {
-        const active = view.id === activeViewId;
-        const broken = unrenderable.includes(view.id);
-        // A kind this build does not know still gets a tab - the view exists and hiding it would
-        // make it unreachable - but it borrows the list icon, since there is no glyph for it.
-        const icon = findViewKind(view.kind)?.icon ?? ListIcon;
-
-        return (
+    <div className="flex min-w-0 items-center gap-1 px-3 sm:px-7">
+      <nav
+        ref={stripRef}
+        aria-label="Views"
+        className="flex min-w-0 max-w-full snap-x items-center gap-1 overflow-x-auto px-1 py-1.5"
+      >
+        {documentLabel === undefined || documentHidden === true ? null : (
           <SwitcherTab
-            key={view.id}
-            icon={icon}
-            label={view.name}
-            active={active}
-            isDefault={view.id === defaultViewId}
-            broken={broken}
+            icon={FileText}
+            label={documentLabel}
+            active={activeViewId === DOCUMENT_VIEW}
+            isDefault={defaultViewId === DOCUMENT_VIEW}
+            broken={false}
+            actions={props.viewActions?.(DOCUMENT_VIEW)}
             onSelect={() => {
-              onSelect(view.id);
+              onSelect(DOCUMENT_VIEW);
             }}
           />
-        );
-      })}
-    </nav>
+        )}
+        {props.comments ? (
+          <SwitcherTab
+            icon={MessageSquare}
+            label="Comments"
+            active={activeViewId === COMMENTS_VIEW}
+            isDefault={defaultViewId === COMMENTS_VIEW}
+            broken={false}
+            actions={props.viewActions?.(COMMENTS_VIEW)}
+            onSelect={() => {
+              onSelect(COMMENTS_VIEW);
+            }}
+          />
+        ) : null}
+
+        {views.map((view) => {
+          const active = view.id === activeViewId;
+          const broken = unrenderable.includes(view.id);
+          // A kind this build does not know still gets a tab - the view exists and hiding it would
+          // make it unreachable - but it borrows the list icon, since there is no glyph for it.
+          const icon = findViewKind(view.kind)?.icon ?? ListIcon;
+
+          return (
+            <SwitcherTab
+              key={view.id}
+              icon={icon}
+              label={view.name}
+              active={active}
+              isDefault={view.id === defaultViewId}
+              broken={broken}
+              actions={props.viewActions?.(view.id)}
+              onSelect={() => {
+                onSelect(view.id);
+              }}
+            />
+          );
+        })}
+      </nav>
+      {props.addView}
+    </div>
   );
 }
 
@@ -264,6 +282,7 @@ interface SwitcherTabProps {
   readonly isDefault: boolean;
   readonly broken: boolean;
   readonly onSelect: () => void;
+  readonly actions?: readonly MenuEntry[] | undefined;
 }
 
 function SwitcherTab({
@@ -273,51 +292,86 @@ function SwitcherTab({
   isDefault,
   broken,
   onSelect,
+  actions,
 }: SwitcherTabProps): ReactNode {
   const descriptionId = useId();
   return (
-    <button
-      type="button"
-      // aria-current rather than aria-selected: these are not tabs in the ARIA sense - each one is
-      // a destination within the item, and the pattern a screen reader should announce is
-      // "current", not a tablist we would then owe arrow-key navigation.
-      aria-current={active ? 'page' : undefined}
-      // The default is a description, not part of the name: a name that changes with state breaks
-      // voice control ("click Body") and exact-name queries, while a description is read after it.
-      aria-describedby={isDefault ? descriptionId : undefined}
-      onClick={onSelect}
-      className={[
-        // Shrink-free and snapping, so a scrolled strip stops on a tab rather than half of one, and
-        // a full touch target on a coarse pointer, where 28px is smaller than a fingertip. The
-        // control height and frame radius every other control in this row takes, so the tabs and
-        // the search field beside them line up.
-        'relative flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-sm min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
-        focusRing,
-        active
-          ? 'border-divider bg-foreground/7 text-foreground'
-          : 'border-transparent text-muted hover:bg-foreground/5',
-      ].join(' ')}
-    >
-      <Icon icon={icon} size="sm" />
-      {label}
-      {isDefault ? (
-        <>
-          {/* Absolutely placed in the tab's corner so marking one never changes its width. The dot
+    <div className="group/view-tab flex shrink-0 snap-start items-center">
+      <button
+        type="button"
+        // aria-current rather than aria-selected: these are not tabs in the ARIA sense - each one is
+        // a destination within the item, and the pattern a screen reader should announce is
+        // "current", not a tablist we would then owe arrow-key navigation.
+        aria-current={active ? 'page' : undefined}
+        // The default is a description, not part of the name: a name that changes with state breaks
+        // voice control ("click Body") and exact-name queries, while a description is read after it.
+        aria-describedby={isDefault ? descriptionId : undefined}
+        onClick={onSelect}
+        className={[
+          // Shrink-free and snapping, so a scrolled strip stops on a tab rather than half of one, and
+          // a full touch target on a coarse pointer, where 28px is smaller than a fingertip. The
+          // control height and frame radius every other control in this row takes, so the tabs and
+          // the search field beside them line up.
+          'relative flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-sm min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
+          focusRing,
+          active
+            ? 'border-divider bg-foreground/7 text-foreground'
+            : 'border-transparent text-muted hover:bg-foreground/5',
+        ].join(' ')}
+      >
+        <Icon icon={icon} size="sm" />
+        {label}
+        {isDefault ? (
+          <>
+            {/* Absolutely placed in the tab's corner so marking one never changes its width. The dot
               is the eye's cue; the button's description is the same fact for a screen reader. */}
-          <span aria-hidden className="absolute right-1 top-1 size-1 rounded-full bg-muted" />
-          <span id={descriptionId} hidden>
-            Opens by default
-          </span>
-        </>
-      ) : null}
-      {broken ? (
-        <>
-          <Icon icon={TriangleAlert} size="sm" />
-          {/* The mark is not colour alone, and it is not icon alone either: a name a screen reader
+            <span aria-hidden className="absolute right-1 top-1 size-1 rounded-full bg-muted" />
+            <span id={descriptionId} hidden>
+              Opens by default
+            </span>
+          </>
+        ) : null}
+        {broken ? (
+          <>
+            <Icon icon={TriangleAlert} size="sm" />
+            {/* The mark is not colour alone, and it is not icon alone either: a name a screen reader
               reads out has to carry the same warning the eye gets. */}
-          <span className="sr-only">(needs attention)</span>
-        </>
-      ) : null}
-    </button>
+            <span className="sr-only">(needs attention)</span>
+          </>
+        ) : null}
+      </button>
+      <ViewActions label={`${label} options`} items={actions} reveal />
+    </div>
+  );
+}
+
+function ViewActions({
+  label,
+  items,
+  reveal = false,
+}: {
+  readonly label: string;
+  readonly items?: readonly MenuEntry[] | undefined;
+  readonly reveal?: boolean;
+}): ReactNode {
+  if (items === undefined || items.length === 0) return null;
+  return (
+    <Menu label={label} items={items}>
+      {(trigger) => (
+        <Button
+          {...trigger}
+          variant="icon"
+          aria-label={label}
+          title={label}
+          className={
+            reveal
+              ? 'pointer-fine:pointer-events-none pointer-fine:opacity-0 any-pointer-coarse:pointer-events-auto any-pointer-coarse:opacity-100 group-hover/view-tab:pointer-events-auto group-hover/view-tab:opacity-100 group-focus-within/view-tab:pointer-events-auto group-focus-within/view-tab:opacity-100 aria-expanded:opacity-100'
+              : ''
+          }
+        >
+          <Icon icon={MoreHorizontal} size="sm" />
+        </Button>
+      )}
+    </Menu>
   );
 }

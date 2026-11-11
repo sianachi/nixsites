@@ -8,6 +8,7 @@ import {
 import {
   Button,
   Checkbox,
+  Dialog,
   Field,
   Icon,
   Input,
@@ -17,7 +18,7 @@ import {
   Textarea,
   useUndo,
 } from '@nix/ui';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { Check, MoreHorizontal, Plus } from 'lucide-react';
 import { useId, useState, type ReactElement } from 'react';
 import { newPet, petCatalog } from './catalog';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
@@ -69,6 +70,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     initial.settings.activePetId ?? initial.settings.profiles[0]?.id ?? null,
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [picker, setPicker] = useState<'add' | 'edit' | null>(null);
   const tiles = useId();
   const undo = useUndo();
   if (initial !== previousInitial) {
@@ -243,8 +245,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
               aria-label="Add pet"
               disabled={draft.profiles.length >= 12}
               onClick={() => {
-                const fresh = newPet();
-                add(fresh, `Added ${fresh.name}`);
+                setPicker('add');
               }}
             >
               <Icon icon={Plus} size="sm" />
@@ -308,25 +309,19 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                   />
                 )}
               </Field>
-              <Field label="Appearance">
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={pet.appearance}
-                    onChange={(event) => {
-                      updatePet({
-                        appearance: event.currentTarget.value as PetProfile['appearance'],
-                      });
-                    }}
-                  >
-                    {petCatalog.map((entry) => (
-                      <option key={entry.appearance} value={entry.appearance}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
+              <div className="flex flex-col gap-1">
+                <Text variant="caption">Appearance</Text>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-label="Change appearance"
+                  onClick={() => {
+                    setPicker('edit');
+                  }}
+                >
+                  {petCatalog.find((entry) => entry.appearance === pet.appearance)?.name}
+                </Button>
+              </div>
               <Field label="Personality">
                 {(control) => (
                   <Select
@@ -451,6 +446,35 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
           }}
         />
       </fieldset>
+      {picker === null ? null : (
+        <PetAppearancePicker
+          initial={picker === 'edit' ? (pet?.appearance ?? 'owl') : 'owl'}
+          adding={picker === 'add'}
+          motion={draft.motion}
+          onClose={() => {
+            setPicker(null);
+          }}
+          onChoose={(appearance) => {
+            setPicker(null);
+            if (picker === 'add') {
+              const profile = newPet(appearance);
+              add(profile, `Added ${profile.name}`);
+            } else if (pet !== null && pet.appearance !== appearance) {
+              updatePet({ appearance });
+              undo.push(`Changed ${pet.name || 'pet'}’s appearance`, () => {
+                setDraft((current) => ({
+                  ...current,
+                  profiles: current.profiles.map((profile) =>
+                    profile.id === pet.id && profile.appearance === appearance
+                      ? { ...profile, appearance: pet.appearance }
+                      : profile,
+                  ),
+                }));
+              });
+            }
+          }}
+        />
+      )}
       {message ? (
         <Text role="status" variant="note">
           {message}
@@ -467,6 +491,102 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         </div>
       ) : null}
     </form>
+  );
+}
+
+function PetAppearancePicker({
+  initial,
+  adding,
+  motion,
+  onClose,
+  onChoose,
+}: {
+  readonly initial: PetProfile['appearance'];
+  readonly adding: boolean;
+  readonly motion: PetSettings['motion'];
+  readonly onClose: () => void;
+  readonly onChoose: (appearance: PetProfile['appearance']) => void;
+}): ReactElement {
+  const [appearance, setAppearance] = useState(initial);
+  const radioName = useId();
+  const selected = petCatalog.find((entry) => entry.appearance === appearance) ?? petCatalog[0];
+  return (
+    <Dialog
+      open
+      title={adding ? 'Choose a pet' : 'Change appearance'}
+      onClose={onClose}
+      className="sm:max-w-3xl"
+      actions={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              onChoose(appearance);
+            }}
+          >
+            {adding ? `Add ${selected.name}` : 'Use this appearance'}
+          </Button>
+        </>
+      }
+    >
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <fieldset className="grid min-w-0 grid-cols-3 content-start gap-2 lg:grid-cols-4">
+          <legend className="sr-only">Available pets</legend>
+          {petCatalog.map((entry, index) => {
+            // gallery.webp holds one idle frame per catalog entry, in catalog order.
+            const portraitStyle = {
+              backgroundImage: 'url(/pets/gallery.webp)',
+              backgroundSize: `${String(petCatalog.length * 100)}% 100%`,
+              backgroundPosition: `${String((index * 100) / (petCatalog.length - 1))}% 0`,
+            };
+            return (
+              <label
+                key={entry.appearance}
+                className="relative flex min-w-0 cursor-pointer flex-col items-center gap-1 rounded-md border border-divider bg-surface p-1 text-center hover:border-accent has-checked:border-accent has-checked:bg-accent/10 has-focus-visible:outline-2 has-focus-visible:outline-accent"
+              >
+                <input
+                  type="radio"
+                  className="sr-only"
+                  name={radioName}
+                  checked={appearance === entry.appearance}
+                  onChange={() => {
+                    setAppearance(entry.appearance);
+                  }}
+                />
+                <span aria-hidden className="size-14 shrink-0 bg-no-repeat" style={portraitStyle} />
+                <Text as="span" variant="caption" className="wrap-anywhere">
+                  {entry.name}
+                </Text>
+                {appearance === entry.appearance ? (
+                  <span className="absolute right-1 top-1 text-accent-text" aria-hidden>
+                    <Icon icon={Check} size="sm" />
+                  </span>
+                ) : null}
+              </label>
+            );
+          })}
+        </fieldset>
+        <div className="order-first flex flex-col gap-2 rounded-md border border-divider bg-surface p-3 sm:order-none">
+          <div className="flex justify-center">
+            <PetAvatar
+              appearance={appearance}
+              size="preview"
+              motion={motion}
+              label={`${selected.name} preview`}
+            />
+          </div>
+          <Text as="h3" variant="h4">
+            {selected.name}
+          </Text>
+          <Text variant="bodySmall" tone="muted">
+            {selected.description}
+          </Text>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 

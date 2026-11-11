@@ -2,6 +2,7 @@ import type { MenuAction } from '@nix/ui';
 import {
   Clock,
   Download,
+  FileText,
   Globe,
   LayoutTemplate,
   Lock,
@@ -41,6 +42,7 @@ export interface ItemActionArgs {
   readonly openSitePane: () => void;
   /** Opens the comments pane; absent for bodies that cannot be commented on. */
   readonly openCommentsPane: (() => void) | undefined;
+  readonly openDocument?: (() => void) | undefined;
   readonly canApplyTemplates: boolean;
   readonly canManageTemplates: boolean;
   readonly historyOpen: boolean;
@@ -65,6 +67,7 @@ export function itemActionEntries({
   hasSite,
   openSitePane,
   openCommentsPane,
+  openDocument,
   canApplyTemplates,
   canManageTemplates,
   historyOpen,
@@ -134,6 +137,9 @@ export function itemActionEntries({
     ...(openCommentsPane === undefined
       ? []
       : [{ key: 'comments', label: 'Comments', icon: MessageSquare, onSelect: openCommentsPane }]),
+    ...(openDocument === undefined
+      ? []
+      : [{ key: 'document', label: 'Open document', icon: FileText, onSelect: openDocument }]),
     {
       key: 'export',
       label: 'Export',

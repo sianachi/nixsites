@@ -31,23 +31,23 @@ function ItemDialogSession({
   readonly tree: WorkspaceTree;
   readonly children: ReactNode;
 }): ReactNode {
-  const [stack, setStack] = useState<string[]>([]);
+  const [stack, setStack] = useState<{ itemId: string; showComments: boolean }[]>([]);
   const { openPreview } = useOpenItem();
-  function open(itemId: string): void {
-    setStack((current) =>
-      current.includes(itemId)
-        ? current.slice(0, current.indexOf(itemId) + 1)
-        : [...current, itemId],
-    );
+  function open(itemId: string, { showComments = false } = {}): void {
+    setStack((current) => {
+      const index = current.findIndex((entry) => entry.itemId === itemId);
+      return index === -1 ? [...current, { itemId, showComments }] : current.slice(0, index + 1);
+    });
     void tree.reveal(itemId);
   }
   return (
     <ItemDialogContext value={open}>
       {children}
-      {stack.map((itemId, index) => (
+      {stack.map(({ itemId, showComments }, index) => (
         <ItemDialog
           key={itemId}
           itemId={itemId}
+          showComments={showComments}
           tree={tree}
           onClose={() => {
             setStack((current) => current.slice(0, index));
@@ -68,6 +68,7 @@ function ItemDialogSession({
 
 function ItemDialog({
   itemId,
+  showComments,
   tree,
   onClose,
   onOpen,
@@ -75,6 +76,7 @@ function ItemDialog({
   onNavigateAway,
 }: {
   readonly itemId: string;
+  readonly showComments: boolean;
   readonly tree: WorkspaceTree;
   readonly onClose: () => void;
   readonly onOpen: (itemId: string) => void;
@@ -129,6 +131,7 @@ function ItemDialog({
                 itemId={item.id}
                 title={item.title}
                 bodyKind={item.type}
+                defaultToComments={showComments}
                 canManageTemplates={templates.capabilities.canManage}
                 canApplyTemplates={templates.templates.some(
                   (template) => template.capabilities.canApply,

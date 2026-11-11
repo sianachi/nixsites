@@ -1,8 +1,9 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PetSettingsEditor } from '../../pets/pet-settings-section';
 import type { PetProfile, PetProviderKey, PetSettingsResponse } from '@nix/api-client';
+import { petCatalog } from '../../pets/catalog';
 
 const client = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn() }));
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
@@ -56,6 +57,14 @@ async function choosePetAction(user: ReturnType<typeof userEvent.setup>, name: s
   await user.click(screen.getByRole('menuitem', { name }));
 }
 
+async function addPet(user: ReturnType<typeof userEvent.setup>, name = 'Owl') {
+  await user.click(screen.getByRole('button', { name: 'Add pet' }));
+  const gallery = within(screen.getByRole('dialog', { name: 'Choose a pet' }));
+  await user.click(gallery.getByText(name, { exact: true, selector: 'label span' }));
+  expect(gallery.getByRole('radio', { name })).toBeChecked();
+  await user.click(gallery.getByRole('button', { name: `Add ${name}` }));
+}
+
 describe('pet configuration', () => {
   beforeEach(() => {
     providerKeys = [];
@@ -91,11 +100,11 @@ describe('pet configuration', () => {
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     expect(screen.queryByRole('checkbox', { name: /read a reply aloud/i })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add pet' }));
+    await addPet(user);
     await user.clear(screen.getByRole('textbox', { name: 'Name' }));
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Pip');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Personality' }), 'playful');
-    expect(screen.getByRole('combobox', { name: 'Appearance' })).toHaveValue('owl');
+    expect(screen.getByRole('button', { name: 'Change appearance' })).toHaveTextContent('Owl');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
@@ -108,23 +117,11 @@ describe('pet configuration', () => {
     });
   });
 
-  it.each([
-    'eye-of-ra',
-    'demiurge',
-    'fox',
-    'cat',
-    'octopus',
-    'axolotl',
-    'moth',
-    'pangolin',
-    'phoenix-chick',
-    'mushroom-sprite',
-  ])('offers and saves %s', async (appearance) => {
+  it.each(petCatalog)('offers and saves $name', async ({ name, appearance }) => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
-    await user.click(screen.getByRole('button', { name: 'Add pet' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Appearance' }), appearance);
+    await addPet(user, name);
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
@@ -134,11 +131,28 @@ describe('pet configuration', () => {
     });
   });
 
+  it('previews an appearance change, allows cancellation and saves only a confirmed choice', async () => {
+    const save = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
+    for (const action of ['Cancel', 'Use this appearance']) {
+      await user.click(screen.getByRole('button', { name: 'Change appearance' }));
+      const gallery = within(screen.getByRole('dialog', { name: 'Change appearance' }));
+      await user.click(gallery.getByText('Fox', { exact: true, selector: 'label span' }));
+      expect(gallery.getByRole('heading', { name: 'Fox' })).toBeVisible();
+      await user.click(gallery.getByRole('button', { name: action }));
+    }
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      profiles: [expect.objectContaining({ name: 'Pip', appearance: 'fox', personality: 'calm' })],
+    });
+  });
+
   it('duplicates with a distinct identity and clears active references when the last pet is removed', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
-    await user.click(screen.getByRole('button', { name: 'Add pet' }));
+    await addPet(user);
     await choosePetAction(user, 'Duplicate pet');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
@@ -159,7 +173,7 @@ describe('pet configuration', () => {
     render(
       <PetSettingsEditor initial={initial} saving={false} onSave={() => Promise.resolve(false)} />,
     );
-    await user.click(screen.getByRole('button', { name: 'Add pet' }));
+    await addPet(user);
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(screen.queryByText('Pet settings saved.')).not.toBeInTheDocument();
     expect(screen.getByText('Unsaved changes')).toBeVisible();
@@ -169,7 +183,7 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     const view = render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
-    await user.click(screen.getByRole('button', { name: 'Add pet' }));
+    await addPet(user);
     await choosePetAction(user, 'Duplicate pet');
     const selected = screen.getByRole<HTMLInputElement>('radio', { checked: true });
     await user.click(screen.getByRole('button', { name: 'Save' }));

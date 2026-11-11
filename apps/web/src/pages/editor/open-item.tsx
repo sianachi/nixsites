@@ -1,6 +1,6 @@
 import { Button, Dialog, Icon, Menu, Text, type MenuEntry } from '@nix/ui';
 import { useBookmarksStore, useIsKept } from '@nix/web-collections/items/use-bookmarks';
-import { MoreHorizontal, Settings2, Maximize2, Star } from 'lucide-react';
+import { MoreHorizontal, Settings2, Maximize2, Plus, Sparkles, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -10,7 +10,7 @@ import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
-import { paneClip } from '@nix/web-foundation/layout/regions';
+import { paneClip, paneScroller } from '@nix/web-foundation/layout/regions';
 import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
@@ -29,9 +29,10 @@ import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '@nix/web-views/core/container-view';
 import { useContainer } from '@nix/web-collections/core/use-container';
 import { useViewState } from '@nix/web-collections/core/view-state';
-import { ViewSwitcher } from '@nix/web-views/core/view-switcher';
+import { COMMENTS_VIEW, ViewSwitcher } from '@nix/web-views/core/view-switcher';
 import { useRememberSmartList } from '@nix/web-views/query/known-smart-lists';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { STRUCTURED_RECIPES } from '@nix/structure-spec';
 import { itemActionEntries } from './item-actions';
 import { resolveActiveView } from './active-view';
 import { ItemBody } from './item-body';
@@ -39,7 +40,15 @@ import { ItemDialogs, type ItemDialogName } from './item-dialogs';
 import { ItemHeader } from './item-header';
 import { ItemPanels } from './item-panels';
 import { InlineCommentCard } from '../../panel/inline-comment-card';
+import { CommentsPane } from '../../panel/comments-pane';
 import { bodyNoun, clockTime } from './lock-copy';
+import { useItemViewActions } from './use-item-view-actions';
+import { ItemViewSuggestions } from './item-view-suggestions';
+
+const addableViews = STRUCTURED_RECIPES.filter(
+  (recipe, index, all) =>
+    all.findIndex((candidate) => candidate.viewKind === recipe.viewKind) === index,
+);
 
 interface OpenItemProps {
   readonly tree: ShellContext['tree'];
@@ -48,6 +57,7 @@ interface OpenItemProps {
 
   /** The item's `type`: how its own body is drawn. Never gates what it may contain. */
   readonly bodyKind: string;
+  readonly defaultToComments?: boolean;
   readonly canManageTemplates: boolean;
   readonly canApplyTemplates: boolean;
   readonly onOpen: (itemId: string) => void;
@@ -72,6 +82,7 @@ export function OpenItem({
   itemId,
   title,
   bodyKind,
+  defaultToComments = false,
   canManageTemplates,
   canApplyTemplates,
   onOpen,
@@ -111,7 +122,31 @@ export function OpenItem({
   // An item whose default view is a query is a smart list, which the rail's Queries section lists.
   const workspace = useOptionalWorkspace();
   useRememberSmartList(workspace?.workspaceId ?? null, itemId, title, container.views);
+  const {
+    hidden,
+    entries: viewActions,
+    add: addSuggestedView,
+  } = useItemViewActions(itemId, workspace?.workspaceId);
   const { viewId, selectView } = useViewState();
+  const commentsAvailable = bodyKind === 'note';
+  const storedViews = container.views;
+  const documentTabHidden =
+    hidden.has(DOCUMENT_VIEW) ||
+    (storedViews?.hideDocument === true &&
+      storedViews.views.some((view) => !storedViews.unrenderable.includes(view.id)));
+  const visibleViews = (storedViews?.views ?? []).filter((view) => !hidden.has(view.id));
+  function fallbackView(excluding?: string): string {
+    if (!documentTabHidden && excluding !== DOCUMENT_VIEW) return DOCUMENT_VIEW;
+    return (
+      visibleViews.find(
+        (view) => view.id !== excluding && !storedViews?.unrenderable.includes(view.id),
+      )?.id ?? (commentsAvailable ? COMMENTS_VIEW : DOCUMENT_VIEW)
+    );
+  }
+  const requested =
+    viewId ?? (hidden.has(storedViews?.default ?? DOCUMENT_VIEW) ? fallbackView() : null);
+  const showingComments =
+    commentsAvailable && (requested === COMMENTS_VIEW || (viewId === null && defaultToComments));
   const overlayDetails = useOverlayDetails();
   // The settings open over the page - a dialog, or a drawer on touch screens - so each note starts
   // with them closed rather than reopening them on every visit.
@@ -122,6 +157,7 @@ export function OpenItem({
   // and a closed one keeps no half-chosen format from last time.
   const [dialog, setDialog] = useState<ItemDialogName | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const { getAccessToken } = useAuth();
 
@@ -198,16 +234,25 @@ export function OpenItem({
   const dailyMarker = details.item?.properties.$daily;
   const dailyDate = typeof dailyMarker === 'string' ? parseDailyNoteDate(dailyMarker) : null;
 
-  const {
-    views,
-    unrenderable,
-    documentHidden,
-    storedDefault,
-    active,
-    activeId,
-    showChildren,
-    showingDocument,
-  } = useMemo(() => resolveActiveView(container.views, viewId), [container.views, viewId]);
+  const { views, unrenderable, storedDefault, active, activeId, showChildren, showingDocument } =
+    useMemo(
+      () => resolveActiveView(container.views, requested === COMMENTS_VIEW ? null : requested),
+      [container.views, requested],
+    );
+  const selectedViewId = showingComments
+    ? COMMENTS_VIEW
+    : showingDocument
+      ? DOCUMENT_VIEW
+      : showChildren
+        ? ''
+        : activeId;
+  const canManageViews = lock.open && workspace !== null && container.status === 'ready';
+  const hiddenViews = [
+    ...(documentTabHidden && (hidden.has(DOCUMENT_VIEW) || canManageViews)
+      ? [{ id: DOCUMENT_VIEW, name: 'Document' }]
+      : []),
+    ...views.filter((view) => hidden.has(view.id)),
+  ];
 
   // On a phone, a note's writing dock carries Details and the item actions itself (see
   // `MobileNoteToolbar`), so the section row under the title is only drawn for the bodies that have
@@ -217,7 +262,7 @@ export function OpenItem({
   // strip, when the item has views (it also carries Body, so it is the one place for all three);
   // otherwise the writing dock of a note, or the bar a canvas, sheet or file draws for itself. Only
   // a body that cannot be shown - locked, or failed to load - falls back to the row.
-  const viewsHostControls = narrow && views.length > 0;
+  const viewsHostControls = narrow && (views.length > 0 || showingComments);
   const editorKind = bodyKind === 'canvas' || bodyKind === 'spreadsheet' || bodyKind === 'file';
   const noteDocked =
     narrow &&
@@ -263,7 +308,16 @@ export function OpenItem({
     sitesEnabled,
     hasSite,
     openSitePane,
-    openCommentsPane: lock.open && showingDocument && !editorKind ? openCommentsPane : undefined,
+    openCommentsPane:
+      lock.open && showingDocument && !showingComments && !editorKind
+        ? openCommentsPane
+        : undefined,
+    openDocument:
+      lock.open && documentTabHidden && selectedViewId !== DOCUMENT_VIEW
+        ? () => {
+            selectView(DOCUMENT_VIEW);
+          }
+        : undefined,
     canApplyTemplates,
     canManageTemplates,
     historyOpen,
@@ -351,6 +405,35 @@ export function OpenItem({
     </div>
   );
 
+  const addView = canManageViews ? (
+    <Menu
+      label="Add view"
+      items={[
+        {
+          label: 'Suggest views',
+          icon: Sparkles,
+          onSelect: () => {
+            setSuggestionsOpen(true);
+          },
+        },
+        { kind: 'separator' },
+        ...addableViews.map((recipe) => ({
+          label: recipe.label,
+          onSelect: () => {
+            onNavigateAway?.();
+            void navigate(`/items/${itemId}/views/new/${recipe.id}`);
+          },
+        })),
+      ]}
+    >
+      {(trigger) => (
+        <Button {...trigger} variant="secondary" className="shrink-0 whitespace-nowrap">
+          <Icon icon={Plus} size="sm" /> Add view
+        </Button>
+      )}
+    </Menu>
+  ) : undefined;
+
   // The prose editor, for notes and every kind this build has not heard of.
   const proseEditor = (
     <NoteEditor
@@ -374,7 +457,7 @@ export function OpenItem({
           bodyKind={bodyKind}
           onNavigate={onOpen}
           onCommit={onCommit}
-          reading={showingDocument && !editorKind}
+          reading={showingDocument && !showingComments && !editorKind}
           trailing={narrow || zen ? undefined : desktopControls}
         />
       </div>
@@ -386,7 +469,7 @@ export function OpenItem({
         >
           {/* Body only when it is a way back: from a listing of the item's children. With views,
               the views strip carries it; on the body itself it would select what is showing. */}
-          {showingDocument || documentHidden ? null : (
+          {showingDocument || documentTabHidden ? null : (
             <Button
               variant="ghost"
               className="mr-auto"
@@ -400,16 +483,37 @@ export function OpenItem({
           {mobileItemControls}
         </nav>
       ) : null}
-      {views.length > 0 && !zen ? (
+      {(views.length > 0 || commentsAvailable || addView !== undefined) && !zen ? (
         <ViewSwitcher
-          views={views}
+          views={visibleViews}
           unrenderable={unrenderable}
-          activeViewId={showingDocument ? DOCUMENT_VIEW : showChildren ? '' : activeId}
-          trailing={narrow ? mobileItemControls : undefined}
+          activeViewId={selectedViewId}
+          comments={commentsAvailable}
+          addView={addView}
+          viewActions={
+            lock.open
+              ? (id) =>
+                  viewActions({
+                    id,
+                    view: views.find((view) => view.id === id),
+                    stored: storedViews,
+                    canHide:
+                      commentsAvailable ||
+                      visibleViews.some((view) => view.id !== id) ||
+                      (id !== DOCUMENT_VIEW && !documentTabHidden),
+                    canWrite: canManageViews,
+                    leave: () => {
+                      if (id === selectedViewId) selectView(fallbackView(id));
+                    },
+                    restoreViews: hiddenViews,
+                  })
+              : undefined
+          }
+          trailing={viewsHostControls ? mobileItemControls : undefined}
           tools={
             // An empty fragment, not undefined: a defined slot keeps the row's markup (and so the
             // tabs) from being rebuilt every time the document is chosen.
-            showingDocument ? (
+            showingDocument || showingComments ? (
               <></>
             ) : (
               <ContainerViewTools
@@ -420,10 +524,30 @@ export function OpenItem({
             )
           }
           documentLabel={narrow ? 'Body' : 'Document'}
-          documentHidden={documentHidden}
-          defaultViewId={storedDefault}
+          documentHidden={documentTabHidden}
+          defaultViewId={commentsAvailable && defaultToComments ? COMMENTS_VIEW : storedDefault}
           onSelect={(chosen) => {
             selectView(chosen);
+          }}
+        />
+      ) : null}
+      {suggestionsOpen && lock.open && workspace !== null ? (
+        <ItemViewSuggestions
+          key={itemId}
+          itemId={itemId}
+          workspaceId={workspace.workspaceId}
+          container={container}
+          onApply={async (view) => {
+            const saved = await addSuggestedView(view);
+            if (saved) await container.reload();
+            return saved;
+          }}
+          onClose={() => {
+            setSuggestionsOpen(false);
+          }}
+          onSaved={(view) => {
+            setSuggestionsOpen(false);
+            selectView(view.id);
           }}
         />
       ) : null}
@@ -475,6 +599,15 @@ export function OpenItem({
           container={container}
           paneIndex={paneIndex}
           proseEditor={proseEditor}
+          commentsView={
+            showingComments ? (
+              <section aria-label="Comments" className={paneScroller}>
+                <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-8">
+                  <CommentsPane key={itemId} itemId={itemId} conversation />
+                </div>
+              </section>
+            ) : undefined
+          }
           editorHostsControls={editorHostsControls}
           mobileItemControls={mobileItemControls}
           onOpen={onOpen}

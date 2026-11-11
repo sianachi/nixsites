@@ -138,10 +138,14 @@ export function ThreadCard({
   canComment,
   act,
   inline = false,
+  conversation = false,
+  canJump = true,
   onClose,
 }: {
   /** Shown at the text itself, where the quote is already highlighted behind the card. */
   readonly inline?: boolean;
+  readonly conversation?: boolean;
+  readonly canJump?: boolean;
   /** The card's own close control, drawn beside Resolve in the first comment's row. */
   readonly onClose?: (() => void) | undefined;
   readonly itemId: string;
@@ -153,6 +157,7 @@ export function ThreadCard({
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
 }): ReactNode {
   const client = useApiClient();
+  const [replying, setReplying] = useState(false);
   const isResolved = thread.resolvedAt !== null;
   const header = (
     <>
@@ -173,10 +178,16 @@ export function ThreadCard({
     <article
       aria-label={`Comment thread${thread.quote === null ? '' : ` on ${thread.quote}`}`}
       className={`flex flex-col gap-3 ${
-        inline ? '' : `rounded-sm border p-2 ${active ? 'border-accent' : 'border-divider'}`
+        inline || conversation
+          ? ''
+          : `rounded-sm border p-2 ${active ? 'border-accent' : 'border-divider'}`
       }`}
     >
-      {thread.quote === null || (inline && !detached) ? null : (
+      {thread.quote === null || (inline && !detached) ? null : !canJump ? (
+        <Text variant="caption" tone="muted" className="border-l-2 border-divider pl-2">
+          {thread.quote}
+        </Text>
+      ) : (
         <button
           type="button"
           onClick={() => {
@@ -200,6 +211,7 @@ export function ThreadCard({
           comment={comment}
           me={me}
           act={act}
+          conversation={conversation}
           trailing={index === 0 ? header : null}
         />
       ))}
@@ -210,8 +222,20 @@ export function ThreadCard({
         </Text>
       ) : null}
 
-      {canComment ? (
-        <div className="sticky bottom-0 -mb-1 bg-background pb-1">
+      {canComment && conversation ? (
+        <Button
+          variant="ghost"
+          className="self-start"
+          aria-expanded={replying}
+          onClick={() => {
+            setReplying(!replying);
+          }}
+        >
+          Reply
+        </Button>
+      ) : null}
+      {canComment && (!conversation || replying) ? (
+        <div className={conversation ? undefined : 'sticky bottom-0 -mb-1 bg-background pb-1'}>
           <Composer
             compact
             label="Reply"
@@ -232,12 +256,14 @@ function CommentRow({
   me,
   act,
   trailing,
+  conversation,
 }: {
   readonly itemId: string;
   readonly comment: Comment;
   readonly me: string | null;
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
   readonly trailing: ReactNode;
+  readonly conversation: boolean;
 }): ReactNode {
   const client = useApiClient();
   const [editing, setEditing] = useState(false);
@@ -255,10 +281,16 @@ function CommentRow({
   }
 
   return (
-    <div className="group flex flex-col gap-1">
+    <div
+      className={
+        conversation
+          ? `group flex w-fit max-w-full flex-col gap-1 rounded-lg border border-divider px-3 py-2 ${mine ? 'self-end bg-accent/10' : 'bg-surface'}`
+          : 'group flex flex-col gap-1'
+      }
+    >
       <div className="-my-1.5 flex items-center gap-2">
         <Text variant="bodySmall" className="min-w-0 flex-1">
-          <span className="font-medium">{authorLabel(comment)}</span>
+          <span className="font-medium">{conversation && mine ? 'You' : authorLabel(comment)}</span>
           <span className="text-muted">
             {' · '}
             {formatRelativeTime(new Date(comment.createdAt))}
@@ -317,7 +349,7 @@ function CommentRow({
           }}
         />
       ) : (
-        <Text variant="bodySmall" className="whitespace-pre-wrap">
+        <Text variant="bodySmall" className="whitespace-pre-wrap wrap-anywhere">
           {comment.body}
         </Text>
       )}

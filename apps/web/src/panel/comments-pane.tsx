@@ -29,7 +29,13 @@ const KIND_LABELS: Readonly<Record<SuggestionEntry['kind'], string>> = {
   block: 'Block change',
 };
 
-export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode {
+export function CommentsPane({
+  itemId,
+  conversation = false,
+}: {
+  readonly itemId: string;
+  readonly conversation?: boolean;
+}): ReactNode {
   useCommentFeed(itemId);
   const state = useItemComments(itemId);
   const { principal } = useCurrentPrincipal();
@@ -51,8 +57,19 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
       detached={state.detached.includes(thread.id)}
       canComment={state.canComment === true}
       act={act}
+      conversation={conversation}
+      canJump={state.editor !== null}
     />
   );
+  const composer =
+    state.canComment === true ? (
+      <Composer
+        compact={conversation}
+        label={conversation ? 'Write a comment' : 'New comment'}
+        submitLabel={conversation ? 'Post' : 'Comment'}
+        onSubmit={(body, mentionIds) => addThread(body, mentionIds, null)}
+      />
+    ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -63,9 +80,11 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
       )}
 
       <section aria-label="Comment threads" className="flex flex-col gap-3">
-        <Text variant="kicker" tone="muted">
-          Threads
-        </Text>
+        {conversation ? null : (
+          <Text variant="kicker" tone="muted">
+            Threads
+          </Text>
+        )}
 
         {state.status === 'error' ? (
           <Text variant="note" tone="muted" role="status">
@@ -79,13 +98,7 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
           </Text>
         ) : null}
 
-        {state.canComment !== true ? null : (
-          <Composer
-            label="New comment"
-            submitLabel="Comment"
-            onSubmit={(body, mentionIds) => addThread(body, mentionIds, null)}
-          />
-        )}
+        {conversation ? null : composer}
 
         {open.length === 0 && state.status === 'ready' ? (
           <Text variant="note" tone="muted">
@@ -110,28 +123,32 @@ export function CommentsPane({ itemId }: { readonly itemId: string }): ReactNode
         )}
       </section>
 
-      <section aria-label="Suggestions" className="flex flex-col gap-2">
-        <Text variant="kicker" tone="muted">
-          Suggestions
-        </Text>
-        {state.suggestions.length === 0 ? (
-          <Text variant="note" tone="muted">
-            No suggestions.
-            {state.editor?.editable === true
-              ? ' Turn on suggestion mode in the toolbar to propose edits.'
-              : ''}
+      {conversation ? (
+        composer
+      ) : (
+        <section aria-label="Suggestions" className="flex flex-col gap-2">
+          <Text variant="kicker" tone="muted">
+            Suggestions
           </Text>
-        ) : (
-          state.suggestions.map((suggestion) => (
-            <SuggestionRow
-              key={suggestion.id}
-              itemId={itemId}
-              suggestion={suggestion}
-              editor={state.editor}
-            />
-          ))
-        )}
-      </section>
+          {state.suggestions.length === 0 ? (
+            <Text variant="note" tone="muted">
+              No suggestions.
+              {state.editor?.editable === true
+                ? ' Turn on suggestion mode in the toolbar to propose edits.'
+                : ''}
+            </Text>
+          ) : (
+            state.suggestions.map((suggestion) => (
+              <SuggestionRow
+                key={suggestion.id}
+                itemId={itemId}
+                suggestion={suggestion}
+                editor={state.editor}
+              />
+            ))
+          )}
+        </section>
+      )}
     </div>
   );
 }

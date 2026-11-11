@@ -45,13 +45,13 @@ describe('adding a view by hand', () => {
     // Building your first view and having the screen not change is the whole of the bug this
     // covers. At the moment it is made, "the document" was never a choice - it was the only option
     // - so the first view an item is given is what it opens on.
+    const switcher = within(await screen.findByRole('navigation', { name: 'Views' }));
     await waitFor(() => {
-      expect(screen.getByRole('navigation', { name: /views/i })).toBeInTheDocument();
+      expect(switcher.getByRole('button', { name: 'Untitled list' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
     });
-
-    const switcher = screen.getByRole('navigation', { name: /views/i });
-    expect(within(switcher).getByRole('button', { name: /document/i })).not.toHaveAttribute(
-      'aria-current',
-    );
+    expect(switcher.getByRole('button', { name: 'Document' })).not.toHaveAttribute('aria-current');
   });
 });

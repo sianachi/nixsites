@@ -7,6 +7,16 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Notes have a Comments view. Opening a note from a board in a dialog starts on Comments, with
+  Document available in the view switcher.
+- Add views from the view switcher, including on a note with no saved views. Hover or focus a view
+  for its options, or use the options beside the phone picker. Hide tabs in this browser, restore
+  them from the view menu, or remove a saved view with Undo. Open a hidden Document from Item actions.
+- Browse the built-in pets in a gallery with an animated preview when adding a pet or changing its
+  appearance.
+- Use Add view → Suggest views to ask your connected companion for views based on the note’s fields
+  and saved views. Preview a suggestion with your items before adding it. This uses the existing
+  inline AI opt-in.
 - Use Add note in Explorer or the add control on mobile to name a note or open the structured item picker.
   The picker is also available from a new tab. Pick Chat, Upload or another built-in option, or
   describe what to create and ask your workspace companion. Names entered in Add note carry

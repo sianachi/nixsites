@@ -35,12 +35,23 @@ export function resolveActiveView(
 
   // The request (possibly from a shared link) wins over the stored default.
   const storedDefault = containerViews?.default ?? DOCUMENT_VIEW;
-  const requestedId = requested ?? storedDefault;
+  const requestedId =
+    requested !== null &&
+    (requested === DOCUMENT_VIEW ||
+      requested === CHILDREN_VIEW ||
+      views.some((view) => view.id === requested))
+      ? requested
+      : storedDefault;
 
-  // A hidden document can never be what shows; fall back to the first view, as Core does.
+  // The item menu can explicitly open the document even while its tab is hidden.
   const found = views.find((view) => view.id === requestedId) ?? null;
   const active: View | null =
-    found !== null || !documentHidden || requestedId === CHILDREN_VIEW ? found : (views[0] ?? null);
+    found !== null ||
+    !documentHidden ||
+    requested === DOCUMENT_VIEW ||
+    requestedId === CHILDREN_VIEW
+      ? found
+      : (views[0] ?? null);
   const activeId = active?.id ?? requestedId;
 
   const showChildren = activeId === CHILDREN_VIEW;

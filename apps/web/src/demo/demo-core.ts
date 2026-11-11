@@ -1,4 +1,5 @@
 import { computeView, type ViewSource } from '@nix/view-compute';
+import type { Comment, CommentThread } from '@nix/api-client';
 
 import { createDemoAi } from './demo-ai';
 import { seededUpdate } from './demo-collab';
@@ -305,8 +306,36 @@ export function createDemoFetch(): typeof fetch {
   const items = new Map(sampleItems().map((entry) => [entry.id, entry]));
   let uiSettings: Json = { 'editor.viewSuggestions': 'off' };
   let uiSettingsRevision = 0;
+  const demoComment = (authorName: string, body: string): Comment => ({
+    id: nextId(),
+    authorId: nextId(),
+    authorName,
+    importedAuthor: null,
+    body,
+    mentionIds: [],
+    createdAt: CREATED,
+    editedAt: null,
+    deleted: false,
+  });
+  const firstComment = demoComment('Maya Chen', 'Can we use the new hero image here?');
+  const landingDiscussion: CommentThread = {
+    id: firstComment.id,
+    anchorStart: null,
+    anchorEnd: null,
+    quote: null,
+    resolvedAt: null,
+    resolvedBy: null,
+    resolvedByName: null,
+    comments: [
+      firstComment,
+      demoComment('Ada Okafor', 'Yes, the wide crop is in the design file.'),
+    ],
+  };
   const trashed = new Set<string>();
-  const structure = new Map(
+  const structure = new Map<
+    string,
+    { properties: Json[]; views: Json[]; default: string; hideDocument?: boolean }
+  >(
     Object.entries(STRUCTURE).map(([id, { properties, views }]) => [
       id,
       {
@@ -389,12 +418,12 @@ export function createDemoFetch(): typeof fetch {
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
   const viewsOf = (id: string | undefined): Json => {
-    const { views, default: defaultView } = structureOf(id);
+    const { views, default: defaultView, hideDocument } = structureOf(id);
     return {
       views,
       unrenderable: [],
       default: views.length === 0 ? 'document' : defaultView,
-      hideDocument: views.length > 0,
+      hideDocument: views.length > 0 && (hideDocument ?? true),
       version: '1',
     };
   };
@@ -882,6 +911,48 @@ export function createDemoFetch(): typeof fetch {
         return json({ properties, declared: properties, inherit: true });
       },
     ],
+    [
+      'GET',
+      /^\/api\/v1\/items\/([^/]+)\/comments(?:\/watch)?$/,
+      (_, [, id]) =>
+        json({
+          revision: 1,
+          threads: id === LANDING_PAGE ? [landingDiscussion] : [],
+          canComment: false,
+        }),
+    ],
+    [
+      'POST',
+      /^\/api\/v1\/me\/pets\/inline$/,
+      ({ body }) => {
+        if (!text(body, 'instruction', '').startsWith('Suggest up to two useful new ways'))
+          return null;
+        const suggestions =
+          field(body, 'itemId') === PRODUCT_LAUNCH
+            ? [
+                {
+                  name: 'Open deadlines',
+                  kind: 'list',
+                  reason: 'See unfinished tasks in due date order.',
+                  sortBy: 'due_date',
+                  filter: { key: 'status', values: ['To do', 'In progress'] },
+                },
+                {
+                  name: 'Work by priority',
+                  kind: 'board',
+                  reason: 'Group launch tasks by Priority.',
+                  groupBy: 'priority',
+                },
+              ]
+            : [];
+        return new Response(
+          `event: done\ndata: ${JSON.stringify({ text: JSON.stringify(suggestions) })}\n\n`,
+          {
+            headers: { 'content-type': 'text/event-stream' },
+          },
+        );
+      },
+    ],
     ['GET', /^\/api\/v1\/items\/([^/]+)\/views$/, (_, [, id]) => json(viewsOf(id))],
     [
       'PUT',
@@ -889,10 +960,12 @@ export function createDemoFetch(): typeof fetch {
       ({ body }, [, id]) => {
         if (id === undefined) return null;
         const current = structureOf(id);
+        const hideDocument = field(body, 'hideDocument');
         structure.set(id, {
           ...current,
           views: (field(body, 'views') as Json[] | undefined) ?? current.views,
           default: text(body, 'default', current.default),
+          ...(typeof hideDocument === 'boolean' ? { hideDocument } : {}),
         });
         return json(viewsOf(id));
       },

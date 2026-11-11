@@ -75,12 +75,12 @@ export const petCatalog = [
   },
 ] as const;
 
-export function newPet(): PetProfile {
-  const preset = petCatalog[0];
+export function newPet(appearance: PetProfile['appearance'] = 'owl'): PetProfile {
+  const preset = petCatalog.find((entry) => entry.appearance === appearance) ?? petCatalog[0];
   return {
     id: crypto.randomUUID(),
     name: preset.name,
-    appearance: 'owl',
+    appearance: preset.appearance,
     personality: preset.personality,
     responseLength: 'balanced',
     instructions: '',

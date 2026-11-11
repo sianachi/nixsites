@@ -13,8 +13,7 @@ import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
  * The application used to fork here: a folder opened into its views and could not hold a document,
  * a note opened into an editor and could not hold anything. Neither restriction was ever in the
  * schema. What these tests hold is that the fork is gone and that its absence did not cost the
- * plain case anything - a note nobody has configured still opens straight into its body, with no
- * chrome asking it to choose between one option.
+ * plain case anything - a note nobody has configured still opens straight into its body.
  */
 
 beforeEach(() => {
@@ -51,18 +50,16 @@ const BOARD = {
 };
 
 describe('an item nobody has configured', () => {
-  it('opens straight into its body, with nothing to choose between', async () => {
+  it('opens straight into its document and offers Comments', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
     // The editor is what is on screen.
     expect(await screen.findByRole('textbox', { name: /note title/i })).toHaveValue('Roadmap');
 
-    // And no switcher at all. A lone "Document" tab would be a control with one option, spending a
-    // row of the screen to say what the screen already shows.
-    await waitFor(() => {
-      expect(screen.queryByRole('navigation', { name: /views/i })).not.toBeInTheDocument();
-    });
+    const views = within(await screen.findByRole('navigation', { name: 'Views' }));
+    expect(views.getByRole('button', { name: 'Document' })).toHaveAttribute('aria-current', 'page');
+    expect(views.getByRole('button', { name: 'Comments' })).toBeVisible();
   });
 
   it('offers its own properties and views to configure, even so', async () => {
@@ -188,8 +185,8 @@ describe('an item with views', () => {
 
     const switcher = await screen.findByRole('navigation', { name: /views/i });
 
-    expect(within(switcher).getByRole('button', { name: /document/i })).toBeVisible();
-    expect(within(switcher).getByRole('button', { name: /by status/i })).toBeVisible();
+    expect(within(switcher).getByRole('button', { name: 'Document' })).toBeVisible();
+    expect(await within(switcher).findByRole('button', { name: 'By status' })).toBeVisible();
   });
 
   it('opens on the one it says it opens on', async () => {
@@ -202,7 +199,7 @@ describe('an item with views', () => {
     const switcher = await screen.findByRole('navigation', { name: /views/i });
 
     await waitFor(() => {
-      expect(within(switcher).getByRole('button', { name: /by status/i })).toHaveAttribute(
+      expect(within(switcher).getByRole('button', { name: 'By status' })).toHaveAttribute(
         'aria-current',
         'page',
       );
@@ -221,10 +218,10 @@ describe('an item with views', () => {
     renderAt(<App />, `/?item=${NOTES.id}`);
 
     const switcher = await screen.findByRole('navigation', { name: /views/i });
-    await user.click(within(switcher).getByRole('button', { name: /document/i }));
+    await user.click(within(switcher).getByRole('button', { name: 'Document' }));
 
     await waitFor(() => {
-      expect(within(switcher).getByRole('button', { name: /document/i })).toHaveAttribute(
+      expect(within(switcher).getByRole('button', { name: 'Document' })).toHaveAttribute(
         'aria-current',
         'page',
       );

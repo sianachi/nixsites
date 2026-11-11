@@ -196,7 +196,7 @@ function CreationStudio(): ReactNode {
           ? await targetContainer.appendViewSetup(
               namedDraft.properties,
               compiledViews(namedDraft),
-              true,
+              (targetContainer.views?.views.length ?? 0) === 0,
               namedDraft.publish && namedDraft.view.kind === 'interactive_form'
                 ? namedDraft.view.id
                 : null,

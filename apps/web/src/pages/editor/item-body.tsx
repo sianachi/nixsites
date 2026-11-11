@@ -37,6 +37,7 @@ interface ItemBodyProps {
   readonly container: ReturnType<typeof useContainer>;
   readonly paneIndex: number;
   readonly proseEditor: ReactNode;
+  readonly commentsView?: ReactNode;
   readonly editorHostsControls: boolean;
   readonly mobileItemControls: ReactNode;
   /** The view switcher's row carries the search and options, so the primary view omits them. */
@@ -62,6 +63,7 @@ export function ItemBody({
   container,
   paneIndex,
   proseEditor,
+  commentsView,
   editorHostsControls,
   mobileItemControls,
   toolsInRow,
@@ -96,6 +98,8 @@ export function ItemBody({
             onUnlock={unlockAndFocus}
           />
         )
+      ) : commentsView !== undefined ? (
+        commentsView
       ) : showingDocument ? (
         bodyKind === 'canvas' ? (
           <Suspense
