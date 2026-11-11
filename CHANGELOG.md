@@ -35,6 +35,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The notice that offers Undo after an action now closes after 5 seconds instead of 8, and has a
+  Dismiss button. Ctrl/Cmd+Z still undoes after it has gone.
 - Manage automations and custom programs by asking your companion. Existing custom views and
   artifacts still open and run.
 - The phone and portrait tablet note dock keeps Insert and Undo visible without sideways scrolling.

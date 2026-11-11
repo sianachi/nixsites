@@ -91,6 +91,34 @@ describe('undo history', () => {
     vi.useRealTimers();
   });
 
+  it('goes after five seconds, or at once from Dismiss, keeping the history', () => {
+    vi.useFakeTimers();
+    const onUndo = vi.fn();
+    render(
+      <UndoProvider>
+        <Harness onUndo={onUndo} />
+      </UndoProvider>,
+    );
+    act(() => {
+      screen.getByText('go').click();
+    });
+    act(() => {
+      vi.advanceTimersByTime(4999);
+    });
+    expect(screen.getByRole('button', { name: 'Undo (2)' })).toBeVisible();
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
+
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    expect(onUndo).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
   it('stays while a mouse is over it, then goes once the mouse leaves', () => {
     vi.useFakeTimers();
     render(

@@ -1,4 +1,4 @@
-import { Toast } from '@nix/ui';
+import { Toast, UNDO_VISIBLE_MS } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
 export function insertAt<T>(list: readonly T[], index: number, item: T): T[] {
@@ -25,6 +25,7 @@ export function useUndoRemove<S>(
         <Toast
           key={pending.key}
           message={`Removed ${pending.label}`}
+          duration={UNDO_VISIBLE_MS}
           action={{
             label: 'Undo',
             onAction: () => {

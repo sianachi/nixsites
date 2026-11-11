@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -10,6 +11,7 @@ import {
 } from 'react';
 
 import { Button } from './Button';
+import { Icon } from '../primitives/Icon';
 import { Text } from '../primitives/Text';
 
 /**
@@ -112,12 +114,13 @@ export function useUndo(): UndoApi {
   return useContext(UndoContext).api;
 }
 
-const VISIBLE_MS = 8000;
+/** How long the undo bar stays; shared with `useUndoRemove`'s notice so both feel the same. */
+export const UNDO_VISIBLE_MS = 5000;
 
 /**
  * The visible face of the history: a polite `role="status"` notice saying what happened, with an
- * Undo button. It goes away on its own after a few seconds, unless a mouse is over it or the
- * keyboard is on it; the history stays, so Ctrl/Cmd+Z keeps working and the next action or undo
+ * Undo button and a Dismiss button. It goes away on its own after a few seconds, unless a mouse is
+ * over it or the keyboard is on it; the history stays, so Ctrl/Cmd+Z keeps working and the next action or undo
  * brings the bar back. Mount once, inside the fixed toast stack (`ShellToasts`), so it sits with
  * the other notices and above the mobile nav.
  */
@@ -136,12 +139,12 @@ export function UndoBar(): ReactNode {
     function expire(): void {
       // Asked at expiry rather than tracked: focus left by a mouse click or a touch must not hold it.
       if (mouseOverRef.current || barRef.current?.querySelector(':focus-visible')) {
-        timer = setTimeout(expire, VISIBLE_MS);
+        timer = setTimeout(expire, UNDO_VISIBLE_MS);
         return;
       }
       setExpiredId(messageId);
     }
-    timer = setTimeout(expire, VISIBLE_MS);
+    timer = setTimeout(expire, UNDO_VISIBLE_MS);
     return () => {
       clearTimeout(timer);
     };
@@ -176,6 +179,15 @@ export function UndoBar(): ReactNode {
               {api.depth > 1 ? `Undo (${String(api.depth)})` : 'Undo'}
             </Button>
           )}
+          <Button
+            variant="icon"
+            aria-label="Dismiss"
+            onClick={() => {
+              setExpiredId(message.id);
+            }}
+          >
+            <Icon icon={X} size="sm" />
+          </Button>
         </div>
       )}
     </div>
