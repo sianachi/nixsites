@@ -61,7 +61,7 @@ public sealed class SiteManifestTests
             "42",
             Now,
             Now,
-            JsonDocument.Parse("""{"title":"Home"}""").RootElement.Clone(),
+            JsonElement.Parse("""{"title":"Home"}"""),
             null,
             null,
             null,

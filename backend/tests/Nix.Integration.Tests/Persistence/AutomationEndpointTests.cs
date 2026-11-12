@@ -126,8 +126,8 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
         {
             name = "Later",
             enabled = true,
-            trigger = JsonDocument.Parse(PropertyTrigger).RootElement,
-            actions = JsonDocument.Parse("""[{"type":"create_from_template","templateId":"0199a000-0000-7000-8000-000000000001"}]""").RootElement,
+            trigger = JsonElement.Parse(PropertyTrigger),
+            actions = JsonElement.Parse("""[{"type":"create_from_template","templateId":"0199a000-0000-7000-8000-000000000001"}]"""),
         });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, unavailable.StatusCode);
         Assert.Equal("automation.action_unavailable", await ProblemCodeAsync(unavailable));
@@ -192,9 +192,9 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
         name,
         enabled = true,
         scopeItemId = (Guid?)null,
-        trigger = JsonDocument.Parse(trigger).RootElement,
-        conditions = JsonDocument.Parse("[]").RootElement,
-        actions = JsonDocument.Parse("""[{"type":"notify","title":"Done: {item.title}"}]""").RootElement,
+        trigger = JsonElement.Parse(trigger),
+        conditions = JsonElement.Parse("[]"),
+        actions = JsonElement.Parse("""[{"type":"notify","title":"Done: {item.title}"}]"""),
     };
 
     private async Task<string> AccessTokenAsync(string name, string[] scopes)

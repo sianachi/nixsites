@@ -119,7 +119,7 @@ internal static class ImportFixtures
 
     public static object NoteBody(int schemaVersion = 3) => new { schemaVersion, prosemirror = new { type = "doc", content = Array.Empty<object>() } };
 
-    public static JsonElement Element(string json) => JsonDocument.Parse(json).RootElement.Clone();
+    public static JsonElement Element(string json) => JsonElement.Parse(json);
 
     public static FileVersionEntry PdfDescriptor(string itemId, int version, bool current, byte[] body) =>
         new(itemId, version, current, "report.pdf", "application/pdf", body.Length, Convert.ToHexStringLower(SHA256.HashData(body)), true, null, null);

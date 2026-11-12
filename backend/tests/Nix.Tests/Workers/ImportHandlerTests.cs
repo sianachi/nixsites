@@ -95,7 +95,7 @@ public sealed class ImportHandlerTests
             }
             else if (path == prefix + "/stage")
             {
-                staged = JsonDocument.Parse(body).RootElement.Clone();
+                staged = JsonElement.Parse(body);
                 response = ScriptedCore.Json(new { importId = ImportId, rootItemId = RootTarget, items = new[] { new { sourceId = plan.Items[0].SourceId, targetItemId = RootTarget, itemType = "note", bodyRequired = true, objectReady = true }, new { sourceId = fileSourceId, targetItemId = ChildTarget, itemType = "file", bodyRequired = false, objectReady = false } }, fileTransfers = Array.Empty<object>() });
             }
             else if (path == prefix + "/objects/capability")
@@ -110,7 +110,7 @@ public sealed class ImportHandlerTests
             }
             else if (path == $"/internal/imports/{ImportId:D}/bodies")
             {
-                bodies = JsonDocument.Parse(body).RootElement.Clone();
+                bodies = JsonElement.Parse(body);
                 response = ScriptedCore.Json(new { written = 1 });
             }
             else if (path == prefix + "/finalize")
@@ -215,17 +215,17 @@ public sealed class ImportHandlerTests
             }
             else if (path == prefix + "/stage")
             {
-                staged = JsonDocument.Parse(body).RootElement.Clone();
+                staged = JsonElement.Parse(body);
                 response = ScriptedCore.Json(new { importId = ImportId, operationId = OperationId, templateId = TemplateId, stableKey = "team.project", digest = archive.Sha256, unchanged = false, itemMappings = Mappings("note", "canvas"), bodyWrites = Mappings("note", "canvas"), fileTransfers = Array.Empty<object>() });
             }
             else if (path == prefix + "/bodies")
             {
-                bodies = JsonDocument.Parse(body).RootElement.Clone();
+                bodies = JsonElement.Parse(body);
                 response = ScriptedCore.Json(new { writtenTargetItemIds = new[] { ChildTarget, RootTarget } });
             }
             else if (path == prefix + "/complete")
             {
-                completion = JsonDocument.Parse(body).RootElement.Clone();
+                completion = JsonElement.Parse(body);
                 response = ScriptedCore.Json(new { importId = ImportId, operationId = OperationId, templateId = TemplateId, stableKey = "team.project", digest = archive.Sha256, unchanged = false, itemCount = 2, bodyCount = 2, writtenTargetItemIds = new[] { ChildTarget, RootTarget } });
             }
             return Task.FromResult(response);
@@ -277,7 +277,7 @@ public sealed class ImportHandlerTests
         var result = await handler.HandleAsync(ScriptedCore.Execution("template.commit", Payload), TestContext.Current.CancellationToken);
 
         Assert.Single(core.Requests);
-        Assert.Equal(2, JsonDocument.Parse(result!).RootElement.GetProperty("bodyCount").GetInt32());
+        Assert.Equal(2, JsonElement.Parse(result!).GetProperty("bodyCount").GetInt32());
     }
 
     [Theory]
@@ -323,7 +323,7 @@ public sealed class ImportHandlerTests
             }
             else if (path.EndsWith("/reject", StringComparison.Ordinal))
             {
-                rejection = JsonDocument.Parse(body).RootElement.GetProperty("code").GetString();
+                rejection = JsonElement.Parse(body).GetProperty("code").GetString();
                 response = ScriptedCore.Status(HttpStatusCode.NoContent);
             }
             return Task.FromResult(response);
@@ -405,7 +405,7 @@ public sealed class ImportHandlerTests
 
     private static HttpResponseMessage CaptureJson(out JsonElement target, byte[] body)
     {
-        target = JsonDocument.Parse(body).RootElement.Clone();
+        target = JsonElement.Parse(body);
         return ScriptedCore.Status(HttpStatusCode.NoContent);
     }
 }

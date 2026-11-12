@@ -253,7 +253,7 @@ public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
         var response = await _client.SendAsync(request, Cancellation);
         var body = await response.Content.ReadAsStringAsync(Cancellation);
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"authz answered {(int)response.StatusCode}: {body}");
-        return JsonDocument.Parse(body).RootElement.Clone();
+        return JsonElement.Parse(body);
     }
 
     private async Task<IssuedAccessToken> MintAsync(string name, IReadOnlyList<string> scopes, int days)
