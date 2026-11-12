@@ -48,10 +48,7 @@ import { useTurns } from './state/use-turns';
 
 type ConversationPanel = 'chat' | 'settings' | 'history';
 
-/** How the conversation sits on screen. `floating` is the bordered panel beside the launcher;
- * `fullscreen` is the fixed phone dialog that covers the page; `page` fills whatever parent it is
- * given, with no border, no fixed positioning and no scroll lock. */
-export type ConversationLayout = 'floating' | 'fullscreen' | 'page';
+export type ConversationLayout = 'floating' | 'drawer' | 'fullscreen' | 'page';
 
 export interface ConversationProps {
   readonly workspaceId: string;
@@ -256,6 +253,7 @@ export function Conversation({
     input,
     panel,
     fullscreen,
+    drawer: layout === 'drawer',
     touchLikeComposer,
     onClose,
     goBackFromPanel,
@@ -587,7 +585,10 @@ export function Conversation({
   );
 }
 
-function dialogClass(layout: 'floating' | 'fullscreen' | 'page'): string {
+function dialogClass(layout: ConversationLayout): string {
+  if (layout === 'drawer') {
+    return '@container fixed right-0 top-[var(--phone-dialog-top,0)] flex h-[var(--phone-dialog-height,100dvh)] w-128 max-w-full flex-col overflow-hidden border-l border-divider bg-background text-foreground shadow-lg outline-none motion-safe:transition-transform motion-safe:duration-200 motion-safe:starting:translate-x-full';
+  }
   return layout === 'fullscreen'
     ? '@container fixed inset-x-0 top-[var(--phone-dialog-top,0)] z-40 flex h-[var(--phone-dialog-height,100dvh)] min-w-0 w-full flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground outline-none'
     : layout === 'page'

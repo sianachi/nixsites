@@ -1,6 +1,6 @@
 import { nixSchema } from '@nix/editor-schema';
 import { cleanModelMarkdown, markdownToDocument } from '@nix/markdown';
-import { Button, Icon, Text } from '@nix/ui';
+import { Button, Icon, ScrollRegion, Text, focusRing } from '@nix/ui';
 import type { Node as DocumentNode } from '@tiptap/pm/model';
 import { Check, Copy, X } from 'lucide-react';
 import {
@@ -81,15 +81,20 @@ function CodeBlock({
   }, [code, language]);
   return (
     <div className="relative">
-      <pre className="max-w-full overflow-x-auto rounded-sm border border-divider bg-surface p-3 pr-12 [&_.hljs-built_in]:text-accent-text [&_.hljs-comment]:text-muted [&_.hljs-keyword]:text-accent-text [&_.hljs-literal]:text-accent-text [&_.hljs-title]:text-accent-text [&_.hljs-type]:text-accent-text">
-        <Text as="span" className="font-mono">
-          {html?.code === code ? (
-            <code dangerouslySetInnerHTML={{ __html: html.html }} />
-          ) : (
-            <code>{code}</code>
-          )}
-        </Text>
-      </pre>
+      <ScrollRegion
+        aria-label={language === null ? 'Code block' : `${language} code block`}
+        className={`max-w-full overflow-x-auto rounded-sm border border-divider bg-surface p-3 pr-12 [&_.hljs-built_in]:text-accent-text [&_.hljs-comment]:text-muted [&_.hljs-keyword]:text-accent-text [&_.hljs-literal]:text-accent-text [&_.hljs-title]:text-accent-text [&_.hljs-type]:text-accent-text ${focusRing}`}
+      >
+        <pre>
+          <Text as="span" className="font-mono">
+            {html?.code === code ? (
+              <code dangerouslySetInnerHTML={{ __html: html.html }} />
+            ) : (
+              <code>{code}</code>
+            )}
+          </Text>
+        </pre>
+      </ScrollRegion>
       <Button
         variant="icon"
         className="absolute right-1 top-1"

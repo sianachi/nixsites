@@ -9,6 +9,7 @@ export function useDialogBehaviour({
   input,
   panel,
   fullscreen,
+  drawer,
   touchLikeComposer,
   onClose,
   goBackFromPanel,
@@ -18,6 +19,7 @@ export function useDialogBehaviour({
   readonly input: RefObject<HTMLTextAreaElement | null>;
   readonly panel: string;
   readonly fullscreen: boolean;
+  readonly drawer: boolean;
   readonly touchLikeComposer: boolean;
   readonly onClose: (() => void) | undefined;
   readonly goBackFromPanel: () => void;
@@ -104,7 +106,7 @@ export function useDialogBehaviour({
   // onto the element so the composer at its bottom edge stays above the keyboard rather than
   // being covered by it.
   useEffect(() => {
-    if (!fullscreen) return;
+    if (!fullscreen && !(drawer && touchLikeComposer)) return;
     const node = dialog.current;
     const viewport = window.visualViewport;
     if (!node) return;
@@ -127,10 +129,10 @@ export function useDialogBehaviour({
       viewport?.removeEventListener('scroll', measure);
       window.removeEventListener('resize', measure);
     };
-  }, [dialog, fullscreen]);
+  }, [dialog, drawer, fullscreen, touchLikeComposer]);
 
   useEffect(() => {
-    if (fullscreen) dialog.current?.focus();
-    else if (!touchLikeComposer) input.current?.focus();
-  }, [dialog, input, fullscreen, touchLikeComposer]);
+    if (fullscreen || (drawer && touchLikeComposer)) dialog.current?.focus();
+    else if (!touchLikeComposer) (input.current ?? dialog.current)?.focus();
+  }, [dialog, input, fullscreen, drawer, touchLikeComposer]);
 }

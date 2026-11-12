@@ -20,6 +20,10 @@ import {
   PhoneFrame,
 } from './pet-story-fixtures';
 import { PetCompanion } from './pet-companion';
+import {
+  readDevicePreference,
+  writeDevicePreference,
+} from '@nix/web-foundation/lib/device-preferences';
 import { PetHistory } from './pet-history';
 import { PetChatViewport } from './pet-chat-viewport';
 import { PetMessageText } from './pet-message-text';
@@ -128,8 +132,8 @@ export const AppearanceGallery = {
   render: (): ReactElement => settingsStory('chatgpt'),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    canvas.getByRole('button', { name: 'Add pet' }).click();
-    const gallery = within(await canvas.findByRole('dialog', { name: 'Choose a pet' }));
+    canvas.getByRole('button', { name: 'Change appearance' }).click();
+    const gallery = within(await canvas.findByRole('dialog', { name: 'Change appearance' }));
     gallery.getByText('Fox', { selector: 'label span', exact: true }).click();
     await gallery.findByRole('heading', { name: 'Fox' });
   },
@@ -1003,6 +1007,26 @@ export const EmptyChat = {
   ),
 };
 export const DarkEmptyChat = { ...EmptyChat, globals: { ground: 'dark' } };
+
+function OpenDrawer(): ReactElement {
+  useEffect(() => {
+    const previous = readDevicePreference('surface');
+    writeDevicePreference('surface', 'drawer');
+    return () => {
+      writeDevicePreference('surface', previous);
+    };
+  }, []);
+  return <AutoOpenCompanion />;
+}
+
+export const RightDrawer = {
+  render: (): ReactElement => (
+    <DesktopFrame connection={emptyChatConnection}>
+      <OpenDrawer />
+    </DesktopFrame>
+  ),
+  play: expectChatControls,
+};
 
 export const ConversationControlsDesktop = {
   render: (): ReactElement => (

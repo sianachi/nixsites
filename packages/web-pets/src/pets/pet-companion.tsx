@@ -5,7 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { useMediaQuery, useNarrowViewport } from '@nix/web-foundation/layout/viewport';
+import { WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT } from '@nix/web-foundation/layout/regions';
 import { useMobileKeyboard } from '@nix/web-foundation/layout/use-mobile-keyboard';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { openPanelPosition } from './panel-position';
@@ -140,13 +141,17 @@ function Companion({
   const returnFocus = useRef(false);
   const narrow = useNarrowViewport();
   const surface = usePetSurface();
+  const drawer = surface === 'drawer';
+  const wideEnoughForDrawer = useMediaQuery(WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT);
+  const fullscreen = drawer ? !wideEnoughForDrawer : narrow;
+  const floatingPosition = drawer ? null : position;
   const opensAsPage = chatOpensAsPage(surface, narrow);
   // A tab in the open pane where tabs are drawn, the companion page elsewhere.
   const openChat = useOpenChat();
   const openPage = () => {
     openChat(null);
   };
-  useBackDismiss(open && narrow, () => {
+  useBackDismiss(open && fullscreen, () => {
     setOpen(false);
     returnFocus.current = true;
   });
@@ -261,7 +266,7 @@ function Companion({
   // depends on the viewport (`h-[calc(100dvh-...)]`), and re-measured on a window resize or when
   // the aside's own size changes. A narrow viewport shows the panel as a full-screen dialog and is
   // left alone.
-  const dragged = position !== null;
+  const dragged = floatingPosition !== null;
   useLayoutEffect(() => {
     const element = aside.current;
     const from = openedFrom.current;
@@ -305,12 +310,12 @@ function Companion({
     <aside
       ref={aside}
       aria-label={`${pet.name} companion`}
-      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats ? 'flex' : 'hidden'} ${position ? '' : `${narrowOffset} ${wideOffset} ${placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
+      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats ? 'flex' : 'hidden'} ${floatingPosition ? '' : `${narrowOffset} ${wideOffset} ${!drawer && placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
       style={
-        position
+        floatingPosition
           ? open && panelPosition && !narrow
             ? panelPosition
-            : { left: position.x, top: position.y }
+            : { left: floatingPosition.x, top: floatingPosition.y }
           : undefined
       }
     >
@@ -320,7 +325,7 @@ function Companion({
           workspaceId={workspaceId}
           pet={pet}
           settings={settings}
-          layout={narrow ? 'fullscreen' : 'floating'}
+          layout={fullscreen ? 'fullscreen' : drawer ? 'drawer' : 'floating'}
           runtimeApi={runtimeApi}
           onNeedsDecisionChange={setNeedsDecisionIds}
           {...(pageIsAvailable(surface, narrow) ? { onOpenAsPage: openPage } : {})}
@@ -351,7 +356,7 @@ function Companion({
         ref={launcher}
         variant="ghost"
         // No card and no wash behind the pet: it stands on the page; its hover pose is the feedback.
-        className={`relative h-auto touch-none p-1 hover:bg-transparent active:bg-transparent ${launcherHidden ? 'hidden' : ''}`}
+        className={`relative h-auto p-1 hover:bg-transparent active:bg-transparent ${drawer ? '' : 'touch-none'} ${launcherHidden ? 'hidden' : ''}`}
         aria-expanded={opensAsPage ? undefined : open}
         aria-label={`${open ? `Close ${pet.name}` : opensAsPage ? `Open ${pet.name}` : `Talk with ${pet.name}`}${
           !open && toolPending ? ' (needs approval)' : !open && unseenReply ? ' (new reply)' : ''
@@ -363,7 +368,7 @@ function Companion({
           setHover(false);
         }}
         onClick={(event) => {
-          if (suppressClick.current) {
+          if (!drawer && suppressClick.current) {
             suppressClick.current = false;
             return;
           }
@@ -372,12 +377,13 @@ function Companion({
             return;
           }
           const nextOpen = !open;
-          openedFrom.current = nextOpen ? event.currentTarget.getBoundingClientRect() : null;
+          openedFrom.current =
+            nextOpen && !drawer ? event.currentTarget.getBoundingClientRect() : null;
           if (!nextOpen) setPanelPosition(null);
           setOpen(nextOpen);
         }}
         onPointerDown={(event) => {
-          if (event.button !== 0) return;
+          if (drawer || event.button !== 0) return;
           // A drag that ends past the tap slop, on touch, dispatches no `click` at all: the flag
           // `onClick` would otherwise clear stays set, and the very next real tap is swallowed
           // silently. Starting every new pointer-down clean is what keeps a stale flag from a
@@ -397,7 +403,7 @@ function Companion({
         }}
         onPointerMove={(event) => {
           const active = drag.current;
-          if (active?.pointerId !== event.pointerId) return;
+          if (drawer || active?.pointerId !== event.pointerId) return;
           // Cumulative distance from where the pointer went down, rather than the per-event
           // `movementX`/`movementY` delta: some engines never populate a non-zero delta for a
           // touch pointer, which would otherwise make a drag never register as one at all.
@@ -426,7 +432,7 @@ function Companion({
         onPointerCancel={() => {
           drag.current = null;
         }}
-        title="Drag to move companion"
+        title={drawer ? `Talk with ${pet.name}` : 'Drag to move companion'}
       >
         <span className="flex items-center justify-center p-1">
           <PetAvatar

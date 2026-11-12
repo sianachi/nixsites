@@ -14,9 +14,9 @@ function readLocal(key: string): string | null {
 
 export type PetPlacement = 'left' | 'right';
 
-/** Where the chat opens: the floating panel, its own page, or both. A device preference because
+/** Where the chat opens: a floating panel, a right drawer, or its own page. A device preference because
  * the right answer depends on the screen in front of the owner, not on the pet. */
-export type PetSurface = 'floating' | 'page-on-phones' | 'page' | 'both';
+export type PetSurface = 'floating' | 'drawer' | 'page-on-phones' | 'page' | 'both';
 
 export const PET_SURFACE_DEFAULT: PetSurface = 'page-on-phones';
 
@@ -25,6 +25,7 @@ export const PET_SURFACE_OPTIONS: readonly {
   readonly label: string;
 }[] = [
   { value: 'floating', label: 'Floating panel everywhere' },
+  { value: 'drawer', label: 'Right-side drawer' },
   { value: 'page-on-phones', label: 'Its own page on phones, floating elsewhere' },
   { value: 'page', label: 'Its own page everywhere, with no floating pet' },
   { value: 'both', label: 'Both: floating panel, and a page in the navigation' },

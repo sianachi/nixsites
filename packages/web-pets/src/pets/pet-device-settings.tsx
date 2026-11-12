@@ -53,7 +53,7 @@ export function PetDeviceSettings({
               </Select>
             )}
           </Field>
-          {surface !== 'page' ? (
+          {surface !== 'page' && surface !== 'drawer' ? (
             <Field label="Position">
               {(control) => (
                 <Select
