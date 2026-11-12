@@ -7,8 +7,21 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
-- Notes have a Comments view. Opening a note from a board in a dialog starts on Comments, with
-  Document available in the view switcher.
+- Open companion chat in a right-side drawer from the device’s Chat opens setting.
+- Drag a document tab to a pane edge, or hover over that tab for its dock and pin controls.
+- Drag across calendar days or hours to prepare a new entry. Move entries from the All day row
+  into an hour slot when their calendar accepts dates and times.
+- Open List, Spreadsheet and Smart list records to edit the view's fields and step through its
+  results in place.
+- Open calendar entries for an event brief with the schedule, meeting link, prep fields and
+  rescheduling.
+- Link Timeline prerequisites and preview how a proposed date affects dependent items.
+- Review Gallery assets at full size, compare two assets, and save a selection or request changes.
+- Review Form submissions by status, assign a reviewer, and turn a response into a follow-up task.
+- Hide or show the mobile navigation bar from the top row. The demo notice can also be dismissed.
+- Tap Home beside Explorer on phones and portrait tablets to return to the workspace's Homebase.
+- Board card dialogs start on Comments, with Document available in the view switcher. Open Comments
+  beside a note from its Settings panel on desktop.
 - Add views from the view switcher, including on a note with no saved views. Hover or focus a view
   for its options, or use the options beside the phone picker. Hide tabs in this browser, restore
   them from the view menu, or remove a saved view with Undo. Open a hidden Document from Item actions.
@@ -17,10 +30,10 @@ follows semantic versioning (`0.x` pre-1.0).
 - Use Add view → Suggest views to ask your connected companion for views based on the note’s fields
   and saved views. Preview a suggestion with your items before adding it. This uses the existing
   inline AI opt-in.
-- Use Add note in Explorer or the add control on mobile to name a note or open the structured item picker.
-  The picker is also available from a new tab. Pick Chat, Upload or another built-in option, or
-  describe what to create and ask your workspace companion. Names entered in Add note carry
-  into structured creation.
+- Use the circled plus in the desktop Explorer or the add control on mobile to name a note or open the
+  structured item picker. The picker is also available from a new tab. Pick Chat, Upload or another
+  built-in option, or describe what to create and ask your workspace companion. The name entered in
+  the new-note dialog carries into structured creation.
 - Justify text in notes from More tools (More on phones), under Text alignment.
 - Open Preferences in the account menu to preview your layout, sidebar and one of six palettes in
   Light or Dark. Nix follows your device's appearance until you choose a mode. Accounts that have
@@ -45,6 +58,27 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- **Breaking:** Accounts can save one companion. Clients saving pet settings must send zero or
+  one profile. Existing accounts keep their active companion and its conversation identity.
+
+- Homebase's Explore button opens the workspace Explorer, which now has its own item search.
+- Bookmarked items appear at the top of the Explorer list with a pin icon.
+- The desktop Explorer shows a circled plus for creating notes.
+- The desktop Explorer has a visible divider along its right edge.
+- Pinned document tabs appear once, at the start of their pane’s tab strip. Tab controls appear on
+  hover and keyboard focus, and horizontal strips have a bottom divider.
+- Note details and Comments open beside the note on wide screens. Bookmarking and tree visibility
+  live in Explorer, and Item actions groups commands that open a dialog.
+- Chat notes center the transcript and composer, show who sent each message and when, and offer
+  Copy reply and a shortcut back to the latest reply.
+- The Chat about this note button opens a right-side drawer and keeps the note in place.
+- The writing toolbar keeps Markdown and Suggesting under Writing mode and Text width under More tools.
+- The phone and tablet Explorer shows only item browsing and actions. Workspace pages are
+  available from the main navigation menu. Bottom navigation actions close the Explorer.
+
+- Explorer uses the default view's icon for structured items and the body type's icon for other
+  items. A custom icon still takes precedence.
+- Mobile view controls have labelled Search and Filter buttons aligned with the view picker.
 - The notice that offers Undo after an action now closes after 5 seconds instead of 8, and has a
   Dismiss button. Ctrl/Cmd+Z still undoes after it has gone.
 - Manage automations and custom programs by asking your companion. Existing custom views and
@@ -56,6 +90,21 @@ follows semantic versioning (`0.x` pre-1.0).
   read-only table.
 
 ### Fixed
+
+- Workspace calendar events can be dragged between days in Month view, including across weeks.
+
+- Calendar Agenda shows each date below its day heading, keeping dates and Add buttons readable
+  on tablet and desktop.
+- The mobile writing toolbar no longer covers the note and can be hidden or shown while editing.
+- The Comments view puts a text field and a visible Post button above the discussion, so adding
+  the first comment is easy. The demo supports posting comments.
+- Tablet header controls align with the Home icon.
+- Tablet document tabs align with the workspace controls and keep the active tab in view.
+- When a note begins with a heading identical to its title, the header shows a Rename control and
+  the document shows its heading once.
+- Tablets keep a direct Homebase link when the navigation rail is hidden. View tabs use their
+  compact spacing and expand to reveal options on hover or keyboard focus. On touch, options
+  appear beside the selected view.
 
 - Pressing a result as the command palette refreshes opens the item shown on screen.
 - The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
