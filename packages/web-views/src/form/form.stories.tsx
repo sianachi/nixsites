@@ -7,7 +7,9 @@ import type {
   PropertyDefinition,
   View,
 } from '@nix/web-collections/core/container-model';
-import { storyContainer } from '@nix/web-collections/core/story-container';
+import { storyContainer, storyItem } from '@nix/web-collections/core/story-container';
+import { FormWithSubmissions } from './form-with-submissions';
+import { FORM_SOURCE, SUBMISSION_STATUS } from './submission-fields';
 import { FormView } from './form-view';
 import { InteractiveFormEditor } from './interactive-form-editor';
 import { InteractiveFormView } from './interactive-form-view';
@@ -87,6 +89,31 @@ const VIEW: View = {
   cardSize: null,
   layout: null,
   filters: [],
+};
+
+export const SubmissionReview = {
+  render: (): ReactNode => (
+    <MemoryRouter>
+      <FormWithSubmissions
+        container={storyContainer(
+          [
+            storyItem('response', 'Launch feedback', 1, {
+              [FORM_SOURCE.key]: VIEW.id,
+              mood: 'Good',
+            }),
+          ],
+          [...SCHEMA, FORM_SOURCE, SUBMISSION_STATUS],
+        )}
+        view={VIEW}
+        onOpen={() => undefined}
+      />
+    </MemoryRouter>
+  ),
+  play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    canvas.getByRole('button', { name: 'Submissions' }).click();
+    await canvas.findByRole('button', { name: 'Launch feedback' });
+  },
 };
 
 function EntryFormExample(): ReactNode {

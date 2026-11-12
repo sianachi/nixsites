@@ -63,6 +63,7 @@ internal sealed record SubmitPublicFormRequest(
 public static class PublicFormEndpoints
 {
     private const string PublicFormSubjectPrefix = "nix:public-form:";
+    private const string SubmissionFormKey = "nix_submission_form";
 
     internal static IEndpointRouteBuilder MapPublicFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -384,6 +385,7 @@ public static class PublicFormEndpoints
         SubmitPublicFormRequest request,
         HttpContext httpContext,
         [FromServices] IItemTree tree,
+        [FromServices] ISchemaResolver schemas,
         [FromServices] IPublicFormStore store,
         [FromServices] NixDispatcher dispatcher,
         [FromServices] PublicFormTokenService tokens,
@@ -447,6 +449,12 @@ public static class PublicFormEndpoints
 
         var form = resolved.Value.View.InteractiveForm;
         var title = GenerateResponseTitle(form, resolved.Value.View.Name, values, clock.GetUtcNow());
+        var responseSchema = await schemas.ResolveForChildrenAsync(resolved.Value.Item.Id, httpContext.RequestAborted)
+            .ConfigureAwait(false);
+        if (responseSchema.Find(SubmissionFormKey)?.Type == PropertyType.Text)
+        {
+            properties[SubmissionFormKey] = resolved.Value.View.Id;
+        }
 
         var result = await dispatcher.SendAsync<CreateItem, Item>(
             new CreateItem(

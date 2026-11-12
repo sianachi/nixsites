@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,11 @@ using Nix.Authentication;
 using Nix.Domain.Authorization;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
+using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Items;
+using Nix.Features.Properties;
 using Nix.Features.Tokens;
 using Nix.Features.Views;
 using Nix.Integration.Tests.Harness;
@@ -40,6 +43,29 @@ public sealed class PublicFormSubmissionConcurrencyTests(NixPostgresFixture fixt
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    [Fact]
+    public async Task A_tracked_public_submission_records_its_form()
+    {
+        var link = await CreatePublishedFormAsync();
+        await using (var setup = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
+        {
+            var result = await setup.Resolve<NixDispatcher>().SendAsync<SetItemSchema, PropertySchema>(
+                new(link.ItemId, PropertySchema.Empty with
+                {
+                    Properties = [new("nix_submission_form", "Submission form", PropertyType.Text, [], false)],
+                }), Cancellation);
+            Assert.True(result.IsSuccess);
+            await setup.CommitAsync(Cancellation);
+        }
+
+        using var response = await SubmitAsync(link, new SubmissionLockInterceptor(pauseAfterLock: false), Cancellation);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var saved = await work.DbContext.Items.SingleAsync(item => item.ParentId == link.ItemId, Cancellation);
+        using var properties = JsonDocument.Parse(Assert.IsType<string>(saved.Properties));
+        Assert.Equal(link.ViewId, properties.RootElement.GetProperty("nix_submission_form").GetString());
+    }
 
     [Fact]
     public async Task A_submission_waits_for_an_in_flight_mode_change_and_does_not_save_a_temporary_form()

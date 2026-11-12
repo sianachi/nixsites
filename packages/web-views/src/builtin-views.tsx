@@ -41,9 +41,8 @@ import { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from './gallery/card-siz
 import { GalleryView } from './gallery/gallery-view';
 import { DEFAULT_DRIVE_LAYOUT, DRIVE_LAYOUTS, type DriveLayout } from './drive/drive-layout';
 import { DriveView } from './drive/drive-view';
-import { FormView } from './form/form-view';
+import { FormWithSubmissions } from './form/form-with-submissions';
 import { InteractiveFormEditor } from './form/interactive-form-editor';
-import { InteractiveFormView } from './form/interactive-form-view';
 import { ListView } from './list/list-view';
 import { QueryView } from './query/query-view';
 import { SpreadsheetView } from './spreadsheet/spreadsheet-view';
@@ -312,7 +311,7 @@ const BUILTIN_VIEW_KINDS: readonly ViewKindDescriptor[] = [
     kind: 'form',
     label: 'Form',
     icon: ClipboardList,
-    render: (props) => <FormView {...props} />,
+    render: (props) => <FormWithSubmissions {...props} />,
     configures: [],
     chooses: [],
   },
@@ -335,7 +334,7 @@ const BUILTIN_VIEW_KINDS: readonly ViewKindDescriptor[] = [
     kind: 'interactive_form',
     label: 'Interactive form',
     icon: MousePointerClick,
-    render: (props) => <InteractiveFormView {...props} />,
+    render: (props) => <FormWithSubmissions {...props} />,
     configures: [],
     chooses: [],
     configurationEditor: ({ view, fields, onChange }) =>
