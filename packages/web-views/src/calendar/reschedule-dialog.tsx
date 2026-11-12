@@ -1,4 +1,4 @@
-import { Button, Dialog, Field, Input } from '@nix/ui';
+import { Button, Checkbox, Dialog, Field, Input } from '@nix/ui';
 import { DateTime } from 'luxon';
 import { useRef, useState, type ReactNode } from 'react';
 
@@ -50,6 +50,7 @@ export interface RescheduleDialogProps {
    * capability the pointer has and the keyboard does not is the thing ADR-0009 removed.
    */
   readonly placesByTime: boolean;
+  readonly allowChangeTime?: boolean;
 
   /** The reader's zone, which a typed wall-clock time means what it says in. */
   readonly zone: string;
@@ -133,7 +134,8 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
   const {
     item,
     dateProperty,
-    placesByTime,
+    placesByTime: initiallyTimed,
+    allowChangeTime = false,
     zone,
     onCancel,
     onMove,
@@ -144,6 +146,7 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
     onPickOnCalendar,
     todayText,
   } = props;
+  const [placesByTime, setPlacesByTime] = useState(initiallyTimed);
   const [draft, setDraft] = useState(() => readDraft(item, dateProperty, placesByTime, zone));
   const [error, setError] = useState<string | null>(null);
   const [endDraft, setEndDraft] = useState(() =>
@@ -266,6 +269,22 @@ export function RescheduleDialog(props: RescheduleDialogProps): ReactNode {
         }}
         className="flex flex-col gap-3"
       >
+        {allowChangeTime ? (
+          <Checkbox
+            label="All day"
+            checked={!placesByTime}
+            onChange={(event) => {
+              const timed = !event.currentTarget.checked;
+              const convert = (value: string): string =>
+                value === '' ? '' : timed ? `${value.slice(0, 10)}T09:00` : value.slice(0, 10);
+              setDraft(convert(draft));
+              setEndDraft(convert(endDraft));
+              setPlacesByTime(timed);
+              setError(null);
+              setEndError(null);
+            }}
+          />
+        ) : null}
         {onDay === undefined || todayText === undefined ? null : (
           <div role="group" aria-label="Quick dates" className="flex flex-wrap items-center gap-1">
             {(

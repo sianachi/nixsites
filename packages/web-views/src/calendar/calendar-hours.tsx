@@ -62,7 +62,7 @@ export interface HourGridProps {
   /** Today, as `yyyy-MM-dd` in the reader's zone, for marking the column. */
   readonly today: string;
 
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, item?: Item) => void;
   /**
    * Adds an item to the day or slot it is offered on.
    *
@@ -93,7 +93,11 @@ export interface HourGridProps {
    * Optional, and absent means the grid accepts no drops. Paired with `dragged`, which is null for
    * the same caller - a grid that took a drop it could not write would silently discard it.
    */
-  readonly onMove?: ((itemId: string, values: Record<string, string | null>) => void) | undefined;
+  readonly onMove?:
+    ((itemId: string, values: Record<string, string | null>, item?: Item) => void) | undefined;
+  readonly onRescheduleAllDay?: ((item: Item) => void) | undefined;
+  readonly allowAllDayTiming?: boolean;
+  readonly onMoveAllDay?: ((item: Item, day: string) => void) | undefined;
 
   /**
    * Items this grid draws but may not move: no drag, no stretch, no reschedule control. The
@@ -131,6 +135,9 @@ export function HourGrid(props: HourGridProps): ReactNode {
     onCreate,
     dragged,
     onMove,
+    onRescheduleAllDay,
+    allowAllDayTiming = true,
+    onMoveAllDay,
     siblings,
     fixedItemIds,
     onAddEndProperty,
@@ -151,6 +158,7 @@ export function HourGrid(props: HourGridProps): ReactNode {
   // week has seven `DayColumn`s and the dialog is one modal, not seven that would have to agree
   // which of them owns it.
   const [rescheduling, setRescheduling] = useState<string | null>(null);
+  const [allDayDrag, setAllDayDrag] = useState<Item | null>(null);
   const reschedulingItem =
     rescheduling === null ? null : (items.find((item) => item.id === rescheduling) ?? null);
 
@@ -222,6 +230,18 @@ export function HourGrid(props: HourGridProps): ReactNode {
               dateProperty={dateProperty}
               onOpen={onOpen}
               onCreate={onCreate}
+              dragged={allDayDrag}
+              onDrag={setAllDayDrag}
+              canMove={adjustable}
+              onMove={
+                onMove === undefined
+                  ? undefined
+                  : (onMoveAllDay ??
+                    ((item, day) => {
+                      onMove(item.id, { [dateProperty]: day }, item);
+                    }))
+              }
+              onReschedule={onRescheduleAllDay}
             />
           </div>
 
@@ -261,8 +281,15 @@ export function HourGrid(props: HourGridProps): ReactNode {
                 zone={zone}
                 onOpen={onOpen}
                 onCreate={onCreate}
-                dragged={dragged}
-                onMove={onMove}
+                dragged={allowAllDayTiming ? (allDayDrag?.id ?? dragged) : dragged}
+                onMove={
+                  onMove === undefined
+                    ? undefined
+                    : (id, values) => {
+                        setAllDayDrag(null);
+                        onMove(id, values, allDayDrag?.id === id ? allDayDrag : undefined);
+                      }
+                }
                 onReschedule={onMove === undefined ? undefined : setRescheduling}
                 onAddEnd={onAddEndProperty}
                 endless={(item) =>

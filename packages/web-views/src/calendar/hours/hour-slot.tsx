@@ -1,7 +1,7 @@
 import { cn } from '@nix/ui';
 import { useState, type DragEvent, type ReactNode } from 'react';
 
-import { dayLabel, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
+import { dayLabel, dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { CreateItemControl } from '../../core/create-item-control';
 import { ROW_HEIGHT } from './geometry';
 import { writeSlot } from './placement';
@@ -52,10 +52,11 @@ export function HourSlot(props: {
       // of the 168 create controls in the tab order. See use-roving-grid.ts.
       data-roving-row={hour}
       data-roving-column={dayIndex}
+      data-calendar-pick={`${dayText(day)}T${at}`}
       onDragOver={(event: DragEvent<HTMLDivElement>) => {
-        // Without this the browser refuses the drop outright, so it runs whether or not this
-        // calendar started the drag - the highlight below is what is conditional.
+        if (dragged === null || onMove === undefined) return;
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
         setOver(true);
       }}
       onDragLeave={() => {

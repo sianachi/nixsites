@@ -1,4 +1,6 @@
-import { Text, cn } from '@nix/ui';
+import { Button, Icon, Text, cn } from '@nix/ui';
+import { CalendarClock, GripVertical } from 'lucide-react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { dayLabel, dayText, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
@@ -7,6 +9,8 @@ import { CreateItemControl } from '../../core/create-item-control';
 import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { CalendarEntryMenu } from '../calendar-entry-menu';
 import { DAY_COLUMN, HOUR_GUTTER } from './geometry';
+
+const ALL_DAY_DRAG = 'application/x-nix-all-day-entry';
 
 /**
  * The band above the hours, for items that have a date rather than a moment.
@@ -18,7 +22,12 @@ export function AllDayBand(props: {
   readonly days: readonly CalendarDay[];
   readonly items: readonly Item[];
   readonly dateProperty: string;
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, item?: Item) => void;
+  readonly dragged: Item | null;
+  readonly onDrag: (item: Item | null) => void;
+  readonly canMove: (item: Item) => boolean;
+  readonly onMove: ((item: Item, day: string) => void) | undefined;
+  readonly onReschedule: ((item: Item) => void) | undefined;
   /**
    * Adds an item to the day or slot it is offered on.
    *
@@ -29,7 +38,19 @@ export function AllDayBand(props: {
   readonly onCreate?:
     ((title: string, properties?: Record<string, unknown>) => Promise<string | null>) | undefined;
 }): ReactNode {
-  const { days, items, dateProperty, onOpen, onCreate } = props;
+  const {
+    days,
+    items,
+    dateProperty,
+    onOpen,
+    onCreate,
+    dragged,
+    onDrag,
+    canMove,
+    onMove,
+    onReschedule,
+  } = props;
+  const [over, setOver] = useState<string | null>(null);
   const openProps = useItemOpenProps(onOpen);
 
   return (
@@ -48,6 +69,37 @@ export function AllDayBand(props: {
           <div
             key={wanted}
             aria-label={`All day on ${dayLabel(day)}`}
+            data-calendar-pick={wanted}
+            onDragOver={(event) => {
+              if (
+                dragged === null ||
+                onMove === undefined ||
+                !event.dataTransfer.types.includes(ALL_DAY_DRAG)
+              )
+                return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              setOver(wanted);
+            }}
+            onDragLeave={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              )
+                setOver(null);
+            }}
+            onDrop={(event) => {
+              if (
+                dragged === null ||
+                onMove === undefined ||
+                event.dataTransfer.getData(ALL_DAY_DRAG) !== dragged.id
+              )
+                return;
+              event.preventDefault();
+              setOver(null);
+              onDrag(null);
+              if (dragged.properties[dateProperty] !== wanted) onMove(dragged, wanted);
+            }}
             // `flex flex-col gap-2` rather than a plain block: the chips below extend their hit
             // area 3.4px past each edge, so two stacked chips with no gap between them would
             // overlap by 6.8px and the later sibling would paint over it - the bottom of every
@@ -58,6 +110,9 @@ export function AllDayBand(props: {
             // inside the same gap.
             className={cn(
               DAY_COLUMN,
+              dragged !== null && over === wanted
+                ? 'outline-2 -outline-offset-2 outline-accent'
+                : '',
               // The "bordered group -> p-3" role names a *panel* - a bordered box standing on the
               // page, like the board's column or the timeline's off-axis list. This is a cell in a
               // band of seven, and its `border-l` is the rule between two columns rather than a
@@ -75,21 +130,52 @@ export function AllDayBand(props: {
                 onOpen={onOpen}
               >
                 {(contextTarget) => (
-                  /* `relative before:*`: the drawn chip is about 19px tall (`text-xs` at its 1.4 line
-                 height plus `py-0.5`), under WCAG 2.5.8's 24px floor, and making it taller would
-                 push the band's rows apart. The pseudo-element widens what a pointer has to hit
-                 without widening what the eye sees - the same technique, with the same reasoning,
-                 as @nix/ui's PaneDivider grab band. `-inset-y-1` is one spacing step (3.4px) past
-                 each edge, which clears the floor with room for the density to tighten. The
-                 column's `gap-2` is what gives those extensions somewhere to go; see it above. */
-                  <button
-                    {...contextTarget}
-                    type="button"
-                    {...openProps(item.id)}
-                    className="relative block w-full truncate rounded-sm bg-accent/18 px-1.5 py-0.5 text-left text-xs before:absolute before:inset-x-0 before:-inset-y-1 hover:bg-accent/25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-                  >
-                    {readPropertyText(item, 'title')}
-                  </button>
+                  <div className="group/all-day-entry relative">
+                    {/* The pseudo-element gives the chip a pointer target without enlarging the band. */}
+                    <button
+                      {...contextTarget}
+                      type="button"
+                      {...openProps(item.id, item)}
+                      draggable={onMove !== undefined && canMove(item)}
+                      onDragStart={(event) => {
+                        if (onMove === undefined || !canMove(item)) return;
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData(ALL_DAY_DRAG, item.id);
+                        onDrag(item);
+                      }}
+                      onDragEnd={() => {
+                        onDrag(null);
+                        setOver(null);
+                      }}
+                      className={cn(
+                        'relative block w-full truncate rounded-sm bg-accent/18 px-1.5 py-0.5 text-left text-xs before:absolute before:inset-x-0 before:-inset-y-1 hover:bg-accent/25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
+                        onMove !== undefined &&
+                          canMove(item) &&
+                          'cursor-grab active:cursor-grabbing',
+                      )}
+                    >
+                      {onMove !== undefined && canMove(item) ? (
+                        <Icon
+                          icon={GripVertical}
+                          size="sm"
+                          className="mr-0.5 inline-block align-middle opacity-0 group-hover/all-day-entry:opacity-100 group-focus-within/all-day-entry:opacity-100 pointer-coarse:hidden"
+                        />
+                      ) : null}
+                      {readPropertyText(item, 'title')}
+                    </button>
+                    {onReschedule !== undefined && canMove(item) ? (
+                      <Button
+                        variant="subtle"
+                        aria-label={`Reschedule ${item.title || 'Untitled'}`}
+                        className="absolute inset-y-0 right-0 rounded-sm bg-background px-0.5 py-0 opacity-0 focus-visible:opacity-100 group-hover/all-day-entry:opacity-100 pointer-coarse:opacity-100"
+                        onClick={() => {
+                          onReschedule(item);
+                        }}
+                      >
+                        <Icon icon={CalendarClock} size="sm" />
+                      </Button>
+                    ) : null}
+                  </div>
                 )}
               </CalendarEntryMenu>
             ))}

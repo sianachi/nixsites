@@ -378,6 +378,20 @@ describe('filtering the calendar by note', () => {
  * until the next reload, and the reader would have lost a time they never agreed to lose.
  */
 describe('rescheduling by dragging', () => {
+  function dragTo(chip: HTMLElement, target: HTMLElement): void {
+    const values = new Map<string, string>();
+    const dataTransfer = {
+      get types() {
+        return [...values.keys()];
+      },
+      setData: (key: string, value: string) => values.set(key, value),
+      getData: (key: string) => values.get(key) ?? '',
+    };
+    fireEvent.dragStart(chip, { dataTransfer });
+    fireEvent.dragOver(target, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+  }
+
   function chipFor(name: RegExp): HTMLElement {
     return screen.getByRole('button', { name });
   }
@@ -400,8 +414,7 @@ describe('rescheduling by dragging', () => {
     await screen.findByRole('button', { name: /^Filing deadline/i });
 
     const chip = chipFor(/^Filing deadline/i);
-    fireEvent.dragStart(chip);
-    fireEvent.drop(cellFor(container, '19 March 2026'));
+    dragTo(chip, cellFor(container, '19 March 2026'));
 
     await waitFor(() => {
       expect(writes.properties).toHaveLength(1);
@@ -419,8 +432,7 @@ describe('rescheduling by dragging', () => {
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Standup/i });
 
-    fireEvent.dragStart(chipFor(/^Standup/i));
-    fireEvent.drop(cellFor(container, '19 March 2026'));
+    dragTo(chipFor(/^Standup/i), cellFor(container, '19 March 2026'));
 
     await waitFor(() => {
       expect(writes.properties).toHaveLength(1);
@@ -442,8 +454,7 @@ describe('rescheduling by dragging', () => {
     await screen.findByRole('heading', { name: 'Calendar' });
     await screen.findByRole('button', { name: /^Filing deadline/i });
 
-    fireEvent.dragStart(chipFor(/^Filing deadline/i));
-    fireEvent.drop(cellFor(container, '12 March 2026'));
+    dragTo(chipFor(/^Filing deadline/i), cellFor(container, '12 March 2026'));
 
     // A no-op drag is a no-op write. Sending the same value would bump the item's modified stamp
     // and, in a collaborative document, look like somebody had changed something.

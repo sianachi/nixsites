@@ -397,6 +397,8 @@ describe('the all-day create control by keyboard', () => {
     const person = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     screen.getByRole('button', { name: 'Offsite' }).focus();
     await person.tab();
+    expect(screen.getByRole('button', { name: 'Reschedule Offsite' })).toHaveFocus();
+    await person.tab();
 
     expect(
       screen.getByRole('button', { name: 'Add an all-day item on Monday 16 March 2026' }),

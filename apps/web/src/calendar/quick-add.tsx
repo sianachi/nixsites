@@ -1,6 +1,7 @@
 import { Button, Field, Icon, Input, Select, Text } from '@nix/ui';
 import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { CalendarPick } from './use-calendar-create-drag';
 
 /**
  * Adding a dated entry from the collated calendar, in place.
@@ -25,10 +26,16 @@ export interface QuickAddProps {
   readonly day: string;
 
   /** A day chosen elsewhere on the page ("+ Add" on an agenda day); a new object each time. */
-  readonly pick?: { readonly day: string } | null | undefined;
+  readonly pick?: CalendarPick | null | undefined;
+  readonly showTime?: boolean;
 
   /** Makes the item and writes its date. Answers the refusal, or null when it stuck. */
-  readonly onCreate: (containerId: string, title: string, day: string) => Promise<string | null>;
+  readonly onCreate: (
+    containerId: string,
+    title: string,
+    start: string,
+    end?: string,
+  ) => Promise<string | null>;
 }
 
 /** What a reader is told instead of an empty menu. */
@@ -37,12 +44,14 @@ const NO_ELIGIBLE_CONTAINER =
   'and a date property, and it will appear here as somewhere a new entry can land.';
 
 export function QuickAdd(props: QuickAddProps): ReactNode {
-  const { destinations, day, pick = null, onCreate } = props;
+  const { destinations, day, pick = null, showTime = false, onCreate } = props;
 
   const [containerId, setContainerId] = useState('');
   const [title, setTitle] = useState('');
   // Null follows `day` (where the reader is looking); a typed or picked day overrides it.
   const [dayDraft, setDayDraft] = useState<string | null>(null);
+  const [time, setTime] = useState('');
+  const [end, setEnd] = useState('');
   const [seenPick, setSeenPick] = useState(pick);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,6 +61,8 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
     setSeenPick(pick);
     if (pick !== null) {
       setDayDraft(pick.day);
+      setTime(pick.time ?? '');
+      setEnd(pick.end ?? '');
     }
   }
 
@@ -82,7 +93,13 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
 
     setSaving(true);
     setRefusal(null);
-    const reason = await onCreate(chosen, named, dayDraft ?? day);
+    const timed = showTime && time !== '';
+    const start = `${dayDraft ?? day}${timed ? `T${time}` : ''}`;
+    const finish = timed ? end : end.slice(0, 10);
+    const reason =
+      finish === ''
+        ? await onCreate(chosen, named, start)
+        : await onCreate(chosen, named, start, finish);
     setSaving(false);
 
     if (reason !== null) {
@@ -132,6 +149,37 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
             disabled={saving}
             onChange={(event) => {
               setDayDraft(event.target.value);
+            }}
+          />
+        )}
+      </Field>
+
+      {showTime ? (
+        <Field label="Time">
+          {(control) => (
+            <Input
+              {...control}
+              type="time"
+              value={time}
+              disabled={saving}
+              onChange={(event) => {
+                if ((time === '') !== (event.target.value === '')) setEnd('');
+                setTime(event.target.value);
+              }}
+            />
+          )}
+        </Field>
+      ) : null}
+
+      <Field label="Ends">
+        {(control) => (
+          <Input
+            {...control}
+            type={showTime && time !== '' ? 'datetime-local' : 'date'}
+            value={showTime && time !== '' ? end : end.slice(0, 10)}
+            disabled={saving}
+            onChange={(event) => {
+              setEnd(event.target.value);
             }}
           />
         )}

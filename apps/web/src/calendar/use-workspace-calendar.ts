@@ -14,12 +14,16 @@ import { addEndTimes as addEndTimesTo } from '@nix/web-views/calendar/add-end-ti
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { onItemChildrenChanged } from '@nix/web-foundation/lib/item-children-changed';
+import { readerZone, writeTimestampValue } from '@nix/web-collections/core/timestamps';
+import { isDailyNote, noteOptions } from './collated-entries';
+import type { CalendarDestination } from './quick-add';
 
 export type CalendarStatus = 'loading' | 'ready' | 'error';
 
 export interface WorkspaceCalendarState {
   readonly status: CalendarStatus;
   readonly calendar: WorkspaceCalendar | null;
+  readonly knownDestinations: readonly CalendarDestination[];
   readonly error: string | null;
   readonly reload: () => Promise<void>;
   readonly reschedule: (itemId: string, dateProperty: string, value: string) => Promise<boolean>;
@@ -38,6 +42,7 @@ export interface WorkspaceCalendarState {
     title: string,
     day: string,
     onCreated?: (itemId: string) => void,
+    end?: string,
   ) => Promise<string | null>;
 
   /** Soft-deletes an item (the undo of a create), then reloads. */
@@ -71,6 +76,10 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
   const operations = useRef(new Set<AbortController>());
   const [status, setStatus] = useState<CalendarStatus>('loading');
   const [calendar, setCalendar] = useState<WorkspaceCalendar | null>(null);
+  const [known, setKnown] = useState<{
+    workspace: string;
+    destinations: readonly CalendarDestination[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
@@ -87,6 +96,16 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
       );
       if (controller.signal.aborted || activeLoad.current !== controller) return;
       setCalendar(next);
+      setKnown((current) => {
+        const destinations = new Map<string, CalendarDestination>();
+        if (current?.workspace === workspaceId) {
+          for (const note of current.destinations) destinations.set(note.id, note);
+        }
+        for (const note of noteOptions(next.entries.filter((entry) => !isDailyNote(entry)))) {
+          destinations.set(note.id, note);
+        }
+        return { workspace: workspaceId, destinations: [...destinations.values()] };
+      });
       setStatus('ready');
     } catch (reason) {
       if (controller.signal.aborted || activeLoad.current !== controller || isCanceledError(reason))
@@ -162,6 +181,7 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
       title: string,
       day: string,
       onCreated?: (itemId: string) => void,
+      end?: string,
     ): Promise<string | null> => {
       const controller = new AbortController();
       operations.current.add(controller);
@@ -173,18 +193,51 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
             forceRefresh: true,
           },
         );
-        const dateProperty =
-          configuredViews.views.find((view) => view.kind === 'calendar')?.dateProperty ?? null;
+        const calendar = configuredViews.views.find((view) => view.kind === 'calendar');
+        const dateProperty = calendar?.dateProperty ?? null;
         if (dateProperty === null) {
           return "This note's calendar no longer names a date property, so nothing can be placed there.";
         }
+
+        const timed = day.includes('T');
+        const properties: Record<string, string> = {};
+        if (timed || end !== undefined) {
+          const { properties: fields } = await client.query(
+            coreStructure.effectiveSchema(containerId),
+            {
+              signal: controller.signal,
+            },
+          );
+          const acceptsTime = (key: string): boolean =>
+            fields.some(
+              (field) =>
+                field.key === key && (field.type === 'datetime' || field.type === 'timestamp'),
+            );
+          if (timed && !acceptsTime(dateProperty)) {
+            return 'This calendar uses a date-only field. Clear Time to create an all-day entry.';
+          }
+          if (end !== undefined) {
+            const endKey = calendar?.endDateProperty;
+            if (endKey === null || endKey === undefined)
+              return 'This calendar has no end field. Clear Ends to create a single entry.';
+            if (end < day || (timed && end === day)) return 'Choose an end after the start.';
+            if (timed && !acceptsTime(endKey))
+              return 'This calendar’s end field only accepts a date. Clear Ends to create the entry.';
+            const endValue = timed ? writeTimestampValue(end, readerZone()) : end;
+            if (endValue === null) return 'Choose a valid end time.';
+            properties[endKey] = endValue;
+          }
+        }
+        const start = timed ? writeTimestampValue(day, readerZone()) : day;
+        if (start === null) return 'Choose a valid start time.';
+        properties[dateProperty] = start;
 
         const created = await client.execute(
           coreItems.createItem(workspaceId, {
             type: 'note',
             title,
             parentId: containerId,
-            properties: { [dateProperty]: day },
+            properties,
           }),
           { signal: controller.signal },
         );
@@ -263,6 +316,7 @@ export function useWorkspaceCalendar(from: string, to: string): WorkspaceCalenda
   return {
     status,
     calendar,
+    knownDestinations: known?.workspace === workspaceId ? known.destinations : [],
     error,
     reload: load,
     reschedule,

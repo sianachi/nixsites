@@ -602,7 +602,18 @@ export function CalendarView(props: CalendarViewProps): ReactNode {
               onOpen={onOpen}
               onCreate={container.create}
               dragged={dragged?.id ?? null}
-              onMove={moveTo}
+              onMove={container.locked ? undefined : moveTo}
+              allowAllDayTiming={startDefinition?.type === 'datetime'}
+              onMoveAllDay={(item, day) => {
+                dropOnDate(item.id, readDayValue(item, dateProperty, zone), day);
+              }}
+              onRescheduleAllDay={
+                container.locked
+                  ? undefined
+                  : (item) => {
+                      setRescheduling(item.id);
+                    }
+              }
               onAddEndProperty={
                 canAddEnd
                   ? () => {

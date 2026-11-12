@@ -7,13 +7,17 @@ import {
   addDays,
   dayLabel,
   dayText,
+  monthEntry,
+  monthLabel,
+  WEEKDAY_NAMES,
+  weekdayIndex,
   type CalendarDay,
 } from '@nix/web-collections/core/calendar-dates';
 import { readTimestampValue, readerZone } from '@nix/web-collections/core/timestamps';
 import { isDailyNote } from './collated-entries';
 
-// design-token-exempt: a day card's minimum width, below which its title and time no longer sit on one line.
-const AGENDA_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-3'; // design-token-exempt: see above
+// design-token-exempt: the preferred card width gives event rows room for a time, title and action.
+const AGENDA_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3'; // design-token-exempt: see above
 
 /** The time of day a timed entry is at, in the reader's zone, or nothing if it cannot be read. */
 export function timeOf(entry: CalendarEntry): string {
@@ -26,7 +30,7 @@ export interface AgendaViewProps {
   readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
   readonly anchor: CalendarDay;
   readonly today: CalendarDay;
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, entry?: CalendarEntry) => void;
   readonly onReschedule: (itemId: string) => void;
   readonly onAdd?: ((day: string) => void) | undefined;
   readonly onComplete?: ((entry: CalendarEntry, occurredOn: string) => void) | undefined;
@@ -47,32 +51,35 @@ export function AgendaView(props: AgendaViewProps): ReactNode {
       {Array.from({ length: 7 }, (_, i) => addDays(anchor, i)).map((day) => {
         const text = dayText(day);
         const entries = [...(byDay.get(text) ?? [])].sort((a, b) => a.value.localeCompare(b.value));
-        const heading = text === todayText ? 'Today' : text === tomorrowText ? 'Tomorrow' : null;
+        const label = dayLabel(day);
+        const weekday = monthEntry(WEEKDAY_NAMES, weekdayIndex(day.year, day.month, day.day));
+        const heading = text === todayText ? 'Today' : text === tomorrowText ? 'Tomorrow' : weekday;
 
         return (
           <section
             key={text}
-            aria-label={dayLabel(day)}
+            data-calendar-pick={text}
+            aria-label={label}
             aria-current={text === todayText ? 'date' : undefined}
             className={cn(
               'flex flex-col gap-1.5 rounded-lg border p-2',
               text === todayText ? 'border-accent' : 'border-border',
             )}
           >
-            <header className="flex items-baseline gap-2">
-              <Text as="h2" variant="h6">
-                {heading ?? dayLabel(day)}
-              </Text>
-              {heading === null ? null : (
-                <Text as="span" variant="note" tone="muted">
-                  {dayLabel(day)}
+            <header className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <Text as="h2" variant="h6">
+                  {heading}
                 </Text>
-              )}
+                <Text as="p" variant="bodySmall" tone="muted">
+                  {day.day} {monthLabel(day)}
+                </Text>
+              </div>
               {onAdd === undefined ? null : (
                 <Button
                   variant="secondary"
-                  className="ml-auto py-0.5 text-sm pointer-coarse:min-h-11"
-                  aria-label={`Add entry on ${dayLabel(day)}`}
+                  className="shrink-0 py-0.5 text-sm whitespace-nowrap pointer-coarse:min-h-11"
+                  aria-label={`Add entry on ${label}`}
                   onClick={() => {
                     onAdd(text);
                   }}
@@ -109,7 +116,7 @@ export function AgendaView(props: AgendaViewProps): ReactNode {
 
 function AgendaRow(props: {
   readonly entry: CalendarEntry;
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, entry?: CalendarEntry) => void;
   readonly onReschedule: (itemId: string) => void;
   readonly onComplete?: ((entry: CalendarEntry, occurredOn: string) => void) | undefined;
 }): ReactNode {
@@ -123,7 +130,7 @@ function AgendaRow(props: {
       <button
         type="button"
         onClick={() => {
-          onOpen(entry.itemId);
+          onOpen(entry.itemId, entry);
         }}
         aria-label={`${title}, in ${container}`}
         className={cn(

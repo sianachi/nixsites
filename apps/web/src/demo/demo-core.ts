@@ -236,14 +236,15 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
     properties: [
       select('priority', 'Priority', ['Low', 'Medium', 'High']),
       date('start', 'Start'),
-      date('due_date', 'Due'),
+      { ...date('due_date', 'Due'), type: 'datetime' },
+      { ...date('calendar_end', 'Calendar end'), type: 'datetime' },
       select('status', 'Status', ['To do', 'In progress', 'Done']),
       { key: 'done', label: 'Done', type: 'checkbox', options: [], required: false },
     ],
     views: [
       view('board', 'board', { groupBy: 'status', columns: ['priority', 'due_date'] }),
       view('list', 'list', { columns: ['status', 'priority', 'due_date'] }),
-      view('calendar', 'calendar', { dateProperty: 'due_date' }),
+      view('calendar', 'calendar', { dateProperty: 'due_date', endDateProperty: 'calendar_end' }),
       view('timeline', 'timeline', { dateProperty: 'start', endDateProperty: 'due_date' }),
       view('sheet', 'sheet'),
       view('checklist', 'checklist', { columns: ['due_date'] }),
@@ -663,7 +664,9 @@ export function createDemoFetch(): typeof fetch {
               containerTitle: itemAt(entry.parentId ?? undefined)?.title ?? null,
               dateProperty: 'due_date',
               value: entry.properties.due_date,
-              kind: 'date',
+              kind: String(entry.properties.due_date).includes('T') ? 'timestamp' : 'date',
+              endProperty: 'calendar_end',
+              endValue: entry.properties.calendar_end ?? null,
               generated: false,
               completed: entry.properties.done === true,
             })),
@@ -942,8 +945,21 @@ export function createDemoFetch(): typeof fetch {
       'GET',
       /^\/api\/v1\/items\/([^/]+)\/schema$/,
       (_, [, id]) => {
-        const { properties } = structureOf(id);
-        return json({ properties, declared: properties, inherit: true });
+        const { properties: declared } = structureOf(id);
+        const effective = new Map<string, Json>();
+        const visited = new Set<string>();
+        for (
+          let current = id;
+          current !== undefined && !visited.has(current);
+          current = itemAt(current)?.parentId ?? undefined
+        ) {
+          visited.add(current);
+          for (const property of structureOf(current).properties) {
+            if (typeof property.key === 'string' && !effective.has(property.key))
+              effective.set(property.key, property);
+          }
+        }
+        return json({ properties: [...effective.values()], declared, inherit: true });
       },
     ],
     [

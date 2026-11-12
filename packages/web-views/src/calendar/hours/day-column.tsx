@@ -28,7 +28,7 @@ export function DayColumn(props: {
   readonly placed: readonly Placed[];
   readonly dateProperty: string;
   readonly zone: string;
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, item?: Item) => void;
   /**
    * Adds an item to the day or slot it is offered on.
    *
@@ -197,13 +197,13 @@ export function DayColumn(props: {
                           beginGesture(event, entry, dayIndex, 'move');
                         }
                   }
-                  {...openProps(entry.item.id)}
+                  {...openProps(entry.item.id, entry.item)}
                   onClick={(event) => {
                     if (suppressClick.current) {
                       suppressClick.current = false;
                       return;
                     }
-                    openProps(entry.item.id).onClick(event);
+                    openProps(entry.item.id, entry.item).onClick(event);
                   }}
                   className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-sm px-1.5 py-1 text-left text-xs hover:bg-accent/25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
                 >

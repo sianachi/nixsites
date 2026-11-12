@@ -1,6 +1,13 @@
 import type { CalendarEntry } from '@nix/api-client';
 import { Blueprint, Button, Icon, Segmented, Text, cn, focusRing } from '@nix/ui';
-import { CalendarClock, CircleCheck, Repeat, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CalendarClock,
+  CircleCheck,
+  Repeat,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+} from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { HourGrid } from '@nix/web-views/calendar/calendar-hours';
@@ -34,10 +41,15 @@ import {
   toGridItems,
 } from './collated-entries';
 import { AgendaView, timeOf } from './agenda-view';
-import { QuickAdd } from './quick-add';
+import { QuickAdd, type CalendarDestination } from './quick-add';
 import { shiftedEnd, valueForDay } from './reschedule';
+import { useCalendarCreateDrag, type CalendarPick } from './use-calendar-create-drag';
 
-/** How many entries a month cell shows before it collapses the rest, matching `DayCell`'s own. */
+const CALENDAR_DRAG = 'application/x-nix-calendar-entry';
+
+function entryKey(entry: CalendarEntry): string {
+  return JSON.stringify([entry.itemId, entry.containerId, entry.dateProperty, entry.value]);
+}
 
 /**
  * Every calendar in the workspace, drawn as one.
@@ -78,7 +90,7 @@ export interface CollatedCalendarProps {
   readonly today: CalendarDay;
 
   /** Opens an item. Wired to the same `useOpenItem` the tree and the palette use. */
-  readonly onOpen: (itemId: string) => void;
+  readonly onOpen: (itemId: string, entry?: CalendarEntry) => void;
 
   /**
    * Writes an entry's own date property.
@@ -86,6 +98,8 @@ export interface CollatedCalendarProps {
    * Answerable because the entry carries the key its own container placed it by.
    */
   readonly onReschedule: (entry: CalendarEntry, value: string) => void;
+  readonly onChangeTime?:
+    ((entry: CalendarEntry, value: string, end?: string | null) => void) | undefined;
 
   /**
    * Writes several of an entry's own properties together - its start and its end - under the keys
@@ -110,7 +124,9 @@ export interface CollatedCalendarProps {
    * writes it; this view only asks which container and which day.
    */
   readonly onCreate?:
-    ((containerId: string, title: string, day: string) => Promise<string | null>) | undefined;
+    | ((containerId: string, title: string, start: string, end?: string) => Promise<string | null>)
+    | undefined;
+  readonly fallbackDestinations?: readonly CalendarDestination[];
 
   /**
    * Marks one occurrence of a repeating entry done.
@@ -141,9 +157,11 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
     today,
     onOpen,
     onReschedule,
+    onChangeTime,
     onWrite,
     onAddEndTimes,
     onCreate,
+    fallbackDestinations = [],
     onComplete,
   } = props;
 
@@ -195,7 +213,9 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // The containers a new entry may land in - the same notes the filter above offers, since every
   // one of them is already known to place by a real property (an entry could not exist otherwise).
   // Not memoised: it is a map and a sort over what is already in hand, not a cost worth guarding.
-  const destinations = noteOptions(entries);
+  const visibleDestinations = noteOptions(entries.filter((entry) => !isDailyNote(entry)));
+  const destinations =
+    visibleDestinations.length === 0 ? fallbackDestinations : visibleDestinations;
 
   // One clock reading for the whole grid rather than one per cell: the answer cannot change halfway
   // through a render, and forty-two of them would be forty-two allocations for one fact.
@@ -209,10 +229,15 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // Which day the pointer is over, so exactly one cell can show it will take the drop. A boolean
   // per cell would mean forty-two pieces of state for one fact.
   const [over, setOver] = useState<string | null>(null);
-  const draggedEntry = entries.find((entry) => entry.itemId === dragged) ?? null;
+  const draggedEntry =
+    dragged === null
+      ? null
+      : (entries.find(
+          (entry) => !entry.generated && !isDailyNote(entry) && entryKey(entry) === dragged,
+        ) ?? null);
 
-  const dropOn = (day: string): void => {
-    if (draggedEntry === null) {
+  const dropOn = (day: string, key: string): void => {
+    if (draggedEntry === null || key !== dragged) {
       return;
     }
 
@@ -231,10 +256,19 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // screen alike cannot perform.
   // A day chosen with an agenda "+ Add": a new object each time, so choosing the same day twice
   // still moves focus to the bar.
-  const [pick, setPick] = useState<{ readonly day: string } | null>(null);
+  const [pick, setPick] = useState<CalendarPick | null>(null);
+  const createDrag = useCalendarCreateDrag(
+    onCreate !== undefined && destinations.length > 0,
+    setPick,
+  );
 
   const [rescheduling, setRescheduling] = useState<string | null>(null);
-  const reschedulingEntry = entries.find((entry) => entry.itemId === rescheduling) ?? null;
+  const reschedulingEntry =
+    rescheduling === null
+      ? null
+      : (entries.find(
+          (entry) => entry.itemId === rescheduling || entryKey(entry) === rescheduling,
+        ) ?? null);
 
   const step = (delta: number): void => {
     if (grain === 'agenda') {
@@ -262,7 +296,15 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           : dayLabel(anchor);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      {...createDrag}
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-3 [&_[data-calendar-selection]]:bg-accent/20',
+        onCreate !== undefined &&
+          destinations.length > 0 &&
+          '[&_[data-calendar-pick]]:cursor-crosshair',
+      )}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
           label="Calendar grain"
@@ -316,6 +358,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           destinations={destinations}
           day={dayText(anchor)}
           pick={pick}
+          showTime={grain === 'day' || grain === 'week'}
           onCreate={onCreate}
         />
       )}
@@ -348,21 +391,23 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
               name={name}
               isToday={isToday}
               entries={byDay.get(cell.date) ?? []}
-              over={over === cell.date && dragged !== null}
+              canDrop={draggedEntry !== null}
+              over={over === cell.date && draggedEntry !== null}
               onDragOver={() => {
                 setOver(cell.date);
               }}
               onDragLeave={() => {
                 setOver((current) => (current === cell.date ? null : current));
               }}
-              onDrop={() => {
+              onDrop={(key) => {
                 setOver(null);
-                dropOn(cell.date);
+                dropOn(cell.date, key);
               }}
               onOpen={onOpen}
               onDragStart={setDragged}
               onDragEnd={() => {
                 setDragged(null);
+                setOver(null);
               }}
               onReschedule={setRescheduling}
               onComplete={onComplete}
@@ -370,7 +415,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           )}
         />
       ) : (
-        <Blueprint className="flex min-h-[520px] flex-col overflow-hidden p-0">
+        <Blueprint className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
           <HourGrid
             days={grain === 'week' ? weekOf(anchor) : [anchor]}
             items={items}
@@ -393,21 +438,46 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
             }
             zone={zone}
             today={todayText}
-            onOpen={onOpen}
+            onOpen={(itemId, item) => {
+              onOpen(
+                itemId,
+                entries.find(
+                  (entry) =>
+                    entry.itemId === itemId &&
+                    (item === undefined ||
+                      (entry.value === item.properties[COLLATED_DATE_KEY] &&
+                        entry.containerId === item.parentId)),
+                ),
+              );
+            }}
             // Still no per-slot create here: `HourGrid`'s own control takes one property bag and
             // has nowhere to ask which container, and this view has no cell-sized way to add a
             // destination picker to a shared control other views also use. The toolbar's
             // `CreateEntryButton` above is where creating lives in every grain instead. Moving is
             // unaffected either way, because the entry carries its own property key.
-            dragged={dragged}
+            dragged={null}
             fixedItemIds={fixedIds}
-            onMove={(itemId, values) => {
+            onRescheduleAllDay={(item) => {
+              const entry = entries.find(
+                (candidate) =>
+                  candidate.itemId === item.id &&
+                  candidate.containerId === item.parentId &&
+                  candidate.value === item.properties[COLLATED_DATE_KEY],
+              );
+              if (entry !== undefined) setRescheduling(entryKey(entry));
+            }}
+            onMove={(itemId, values, item) => {
               // The bag holds the start, the end, or both, each under the collated key it was
               // given: a move writes the start and carries the end, a stretch writes the end alone.
               const value = values[COLLATED_DATE_KEY] ?? null;
               const end = values[COLLATED_END_KEY];
-              const entry = entries.find((candidate) => candidate.itemId === itemId);
-              setDragged(null);
+              const entry = entries.find(
+                (candidate) =>
+                  candidate.itemId === itemId &&
+                  (item === undefined ||
+                    (candidate.containerId === item.parentId &&
+                      candidate.value === item.properties[COLLATED_DATE_KEY])),
+              );
               if (entry === undefined) {
                 return;
               }
@@ -436,6 +506,10 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
               // The grid hands back a moment in the reader's zone, to the minute it was dropped
               // or dragged to. An all-day item keeps only the day of it, so it stays all-day
               // rather than becoming a moment its property cannot hold.
+              if (entry.kind === 'date' && value.includes('T') && onChangeTime !== undefined) {
+                onChangeTime(entry, value);
+                return;
+              }
               const written = entry.kind === 'date' ? value.slice(0, 10) : value;
 
               if (written !== entry.value) {
@@ -462,6 +536,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
               : null
           }
           placesByTime={reschedulingEntry.kind === 'timestamp'}
+          allowChangeTime={onChangeTime !== undefined}
           zone={zone}
           todayText={todayText}
           onDay={(day) => {
@@ -480,6 +555,13 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
             const end = values[COLLATED_END_KEY];
             setRescheduling(null);
             if (value === null) {
+              return;
+            }
+            if (
+              onChangeTime !== undefined &&
+              value.includes('T') !== (reschedulingEntry.kind === 'timestamp')
+            ) {
+              onChangeTime(reschedulingEntry, value, end);
               return;
             }
 
@@ -516,11 +598,12 @@ interface CollatedDayCellProps {
   readonly entries: readonly CalendarEntry[];
 
   /** Whether a drop here right now would be taken. */
+  readonly canDrop: boolean;
   readonly over: boolean;
   readonly onDragOver: () => void;
   readonly onDragLeave: () => void;
-  readonly onDrop: () => void;
-  readonly onOpen: (itemId: string) => void;
+  readonly onDrop: (key: string) => void;
+  readonly onOpen: (itemId: string, entry?: CalendarEntry) => void;
   readonly onDragStart: (itemId: string) => void;
   readonly onDragEnd: () => void;
   readonly onReschedule: (itemId: string) => void;
@@ -543,6 +626,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
     name,
     isToday,
     entries,
+    canDrop,
     over,
     onDragOver,
     onDragLeave,
@@ -560,17 +644,25 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
   return (
     <td
       aria-label={name}
+      data-calendar-pick={cell.date}
       aria-current={isToday ? 'date' : undefined}
       onDragOver={(event) => {
-        // Without this the browser refuses the drop outright, so it runs whether or not this
-        // calendar started the drag; the highlight below is what is conditional.
+        if (!canDrop || !event.dataTransfer.types.includes(CALENDAR_DRAG)) return;
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
         onDragOver();
       }}
-      onDragLeave={onDragLeave}
+      onDragLeave={(event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        )
+          onDragLeave();
+      }}
       onDrop={(event) => {
+        if (!canDrop || !event.dataTransfer.types.includes(CALENDAR_DRAG)) return;
         event.preventDefault();
-        onDrop();
+        onDrop(event.dataTransfer.getData(CALENDAR_DRAG));
       }}
       className={cn(
         MONTH_CELL,
@@ -598,7 +690,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
                     <button
                       type="button"
                       onClick={() => {
-                        onOpen(entry.itemId);
+                        onOpen(entry.itemId, entry);
                       }}
                       aria-label={`${title}, in ${container}, repeats`}
                       className={cn(
@@ -646,7 +738,7 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
                     <button
                       type="button"
                       onClick={() => {
-                        onOpen(entry.itemId);
+                        onOpen(entry.itemId, entry);
                       }}
                       aria-label={`${title}, in ${container}`}
                       className={`${focusRing} min-w-0 flex-1 truncate rounded-sm bg-accent/18 px-1.5 py-0.5 text-left text-xs hover:bg-accent/25`}
@@ -662,19 +754,27 @@ function CollatedDayCell(props: CollatedDayCellProps): ReactNode {
                   <button
                     type="button"
                     draggable
-                    onDragStart={() => {
-                      onDragStart(entry.itemId);
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData(CALENDAR_DRAG, entryKey(entry));
+                      onDragStart(entryKey(entry));
                     }}
                     onDragEnd={onDragEnd}
                     onClick={() => {
-                      onOpen(entry.itemId);
+                      onOpen(entry.itemId, entry);
                     }}
                     // The container's name is in the accessible name rather than on screen: a day
                     // cell is two centimetres wide, and a reader who needs to know where something
                     // came from needs it said rather than truncated.
                     aria-label={`${title}, in ${container}`}
-                    className={`${focusRing} min-w-0 flex-1 truncate rounded-sm bg-accent/18 px-1.5 py-0.5 text-left text-xs hover:bg-accent/25`}
+                    title="Drag to another day"
+                    className={`${focusRing} min-w-0 flex-1 cursor-grab truncate rounded-sm bg-accent/18 px-1.5 py-0.5 text-left text-xs hover:bg-accent/25 active:cursor-grabbing`}
                   >
+                    <Icon
+                      icon={GripVertical}
+                      size="sm"
+                      className="mr-0.5 inline-block align-middle opacity-0 group-hover/chip:opacity-100 group-focus-within/chip:opacity-100 pointer-coarse:hidden"
+                    />
                     {entry.kind === 'timestamp' ? (
                       <span className="mr-1 text-muted">{timeOf(entry)}</span>
                     ) : null}

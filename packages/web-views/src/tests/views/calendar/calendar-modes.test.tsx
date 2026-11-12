@@ -177,7 +177,7 @@ describe('placing a moment', () => {
     // avoid.
     const band = screen.getByLabelText('All day on Tuesday 17 March 2026');
 
-    expect(within(band).getByRole('button', { name: /review/i })).toBeInTheDocument();
+    expect(within(band).getByRole('button', { name: 'Review' })).toBeInTheDocument();
   });
 });
 

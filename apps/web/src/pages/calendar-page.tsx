@@ -3,7 +3,7 @@ import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 import { Button, Text, useUndo } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router';
+import { useOutletContext, useSearchParams } from 'react-router';
 
 import { anchorOf, anchorText, grainOf, windowFor } from '../calendar/calendar-window';
 import { CollatedCalendar } from '../calendar/collated-calendar';
@@ -25,9 +25,13 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useOpenItem } from '../tabs/use-open-item';
-import type { CalendarEntry } from '@nix/api-client';
+import { structure as coreStructure, type CalendarEntry } from '@nix/api-client';
+import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { readerZone, writeTimestampValue } from '@nix/web-collections/core/timestamps';
+import { shiftedEnd } from '../calendar/reschedule';
 import { dayFromText, dayLabel, type CalendarDay } from '@nix/web-collections/core/calendar-dates';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import type { ShellContext } from '../shell/shell-context';
 
 /**
  * The calendar destination: every calendar in the workspace, drawn as one.
@@ -73,6 +77,8 @@ function todayHere(): CalendarDay {
 }
 
 export function CalendarPage(): ReactElement {
+  const client = useApiClient();
+  const { tree } = useOutletContext<ShellContext>();
   const visibility = useHiddenItems();
   const { workspace } = useWorkspace();
   const [params, setParams] = useSearchParams();
@@ -90,6 +96,7 @@ export function CalendarPage(): ReactElement {
   const {
     status,
     calendar,
+    knownDestinations,
     error,
     reload,
     write: writeEntry,
@@ -125,9 +132,66 @@ export function CalendarPage(): ReactElement {
         undo.push(label, async () => {
           await writeEntry(entry.itemId, before);
         });
+      } else {
+        publishNotice({
+          key: `calendar-move:${entry.itemId}`,
+          message: `Could not reschedule ${title}.`,
+        });
       }
     });
   };
+
+  async function changeTime(
+    entry: CalendarEntry,
+    value: string,
+    draftEnd?: string | null,
+  ): Promise<void> {
+    const timed = value.includes('T');
+    try {
+      const schema = await client.query(coreStructure.effectiveSchema(entry.itemId));
+      const start = schema.properties.find((field) => field.key === entry.dateProperty);
+      if (start?.type !== 'datetime') {
+        publishNotice({
+          key: `calendar-move:${entry.itemId}`,
+          message: timed
+            ? 'This entry uses a date-only field. Move it in the All day row.'
+            : 'This entry uses a time-only field. Choose an hour slot.',
+        });
+        return;
+      }
+      const values: Record<string, string | null> = { [entry.dateProperty]: value };
+      if (entry.endProperty !== null) {
+        const field = schema.properties.find((property) => property.key === entry.endProperty);
+        const end = draftEnd === undefined ? shiftedEnd(entry, value, readerZone()) : draftEnd;
+        if (
+          end !== null &&
+          timed &&
+          !end.includes('T') &&
+          (field?.type === 'datetime' || field?.type === 'timestamp')
+        ) {
+          values[entry.endProperty] = writeTimestampValue(
+            `${end}T${value.slice(11, 19)}`,
+            readerZone(),
+          );
+        } else if (
+          end !== null &&
+          end.includes('T') &&
+          field?.type !== 'datetime' &&
+          field?.type !== 'timestamp'
+        ) {
+          values[entry.endProperty] = end.slice(0, 10);
+        } else {
+          values[entry.endProperty] = end;
+        }
+      }
+      moveEntry(entry, values);
+    } catch {
+      publishNotice({
+        key: `calendar-move:${entry.itemId}`,
+        message: 'The calendar field could not be loaded.',
+      });
+    }
+  }
 
   // Both replace rather than push: moving through a calendar is not a navigation, and a reader who
   // stepped through six weeks should not have to press Back six times to leave.
@@ -193,6 +257,11 @@ export function CalendarPage(): ReactElement {
   const unplaceableNotices = describeUnplaceable(unplaceable);
   const options = noteOptions(visible);
   const shown = filterByNotes(visible, notes);
+  const fallback = new Map(knownDestinations.map((note) => [note.id, note]));
+  for (const item of tree.items) {
+    if (item.defaultViewKind === 'calendar' && !item.noChildren)
+      fallback.set(item.id, { id: item.id, title: item.title || 'Untitled' });
+  }
 
   return (
     <CalendarFrame>
@@ -234,6 +303,9 @@ export function CalendarPage(): ReactElement {
 
       <CollatedCalendar
         entries={shown}
+        fallbackDestinations={[...fallback.values()].filter(
+          (note) => !visibility.hiddenSet.has(note.id) && (notes.size === 0 || notes.has(note.id)),
+        )}
         grain={grain}
         onGrain={(next) => {
           write({ grain: next });
@@ -243,11 +315,14 @@ export function CalendarPage(): ReactElement {
           write({ on: anchorText(next) });
         }}
         today={today}
-        onOpen={openDialog ?? openPreview}
+        onOpen={(id) => (openDialog ?? openPreview)(id)}
         onReschedule={(entry, value) => {
           moveEntry(entry, { [entry.dateProperty]: value });
         }}
         onWrite={moveEntry}
+        onChangeTime={(entry, value, end) => {
+          void changeTime(entry, value, end);
+        }}
         onAddEndTimes={(entry) => {
           void addEndTimes(entry.containerId).then((refusal) => {
             publishNotice({
@@ -258,13 +333,22 @@ export function CalendarPage(): ReactElement {
             });
           });
         }}
-        onCreate={(containerId, title, day) =>
-          create(containerId, title, day, (itemId) => {
-            const when = dayFromText(day);
-            undo.push(`Added ${title}${when === null ? '' : ` on ${dayLabel(when)}`}`, async () => {
-              await remove(itemId);
-            });
-          })
+        onCreate={(containerId, title, day, end) =>
+          create(
+            containerId,
+            title,
+            day,
+            (itemId) => {
+              const when = dayFromText(day.slice(0, 10));
+              undo.push(
+                `Added ${title}${when === null ? '' : ` on ${dayLabel(when)}`}`,
+                async () => {
+                  await remove(itemId);
+                },
+              );
+            },
+            end,
+          )
         }
         onComplete={(entry, occurredOn) => {
           void complete(entry.itemId, occurredOn);
