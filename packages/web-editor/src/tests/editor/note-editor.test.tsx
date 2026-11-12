@@ -195,6 +195,8 @@ it('changes text width without replacing the editor or its collaborative documen
   const body = screen.getByRole('textbox', { name: 'Note body' });
   body.focus();
   await userEvent.type(body, 'Keep this work', { skipClick: true });
+  expect(screen.queryByRole('button', { name: 'Text width' })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'More tools' }));
   await userEvent.click(screen.getByRole('button', { name: 'Text width' }));
   await userEvent.click(screen.getByRole('button', { name: 'Full pane width' }));
   expect(body.closest('[data-text-width]')).toHaveAttribute('data-text-width', 'full');

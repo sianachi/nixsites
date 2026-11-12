@@ -4,9 +4,16 @@ import { useState, type ReactNode } from 'react';
 
 import { useWritingModePreference, WritingModeSchema, WRITING_MODES } from './writing-mode';
 
-export function WritingModeControl(): ReactNode {
+export function WritingModeControl({
+  activeLabel,
+  reviewControls,
+}: {
+  readonly activeLabel?: 'Markdown' | 'Suggesting' | undefined;
+  readonly reviewControls?: ((close: () => void) => ReactNode) | undefined;
+} = {}): ReactNode {
   const [open, setOpen] = useState(false);
   const { mode, saved, setMode } = useWritingModePreference();
+  const label = activeLabel ?? WRITING_MODES[mode].label;
 
   return (
     <Popover
@@ -19,16 +26,25 @@ export function WritingModeControl(): ReactNode {
           variant="subtle"
           className="shrink-0 whitespace-nowrap"
           {...trigger}
-          aria-label={`Writing mode: ${WRITING_MODES[mode].label}`}
+          aria-label={`Writing mode: ${label}`}
         >
           <Icon icon={PenLine} size="sm" />
-          {WRITING_MODES[mode].label}
+          {label}
           <Icon icon={ChevronDown} size="sm" />
         </Button>
       )}
     >
       {({ close }) => (
         <div role="group" aria-label="Writing mode" className="flex w-full shrink-0 flex-col gap-1">
+          {reviewControls && (
+            <div
+              role="group"
+              aria-label="Editing mode"
+              className="flex flex-wrap gap-1 border-b border-divider pb-2"
+            >
+              {reviewControls(close)}
+            </div>
+          )}
           {WritingModeSchema.options.map((choice) => (
             <Button
               key={choice}

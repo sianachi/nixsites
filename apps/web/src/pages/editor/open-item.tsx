@@ -169,6 +169,7 @@ export function OpenItem({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [leadingHeading, setLeadingHeading] = useState<string | null>(null);
   const { getAccessToken } = useAuth();
 
   // Whether the body and views may be drawn. Core refuses a locked body, and the children every
@@ -456,6 +457,7 @@ export function OpenItem({
   const proseEditor = (
     <NoteEditor
       itemId={itemId}
+      onLeadingHeadingChange={setLeadingHeading}
       cacheBody={!lock.locked}
       hideToolbar={zen}
       mobileActions={noteDocked && !zen ? itemActions : undefined}
@@ -476,6 +478,16 @@ export function OpenItem({
           onNavigate={onOpen}
           onCommit={onCommit}
           reading={showingDocument && !showingComments && !editorKind}
+          titleInBody={
+            lock.open &&
+            showingDocument &&
+            !showingComments &&
+            !editorKind &&
+            contextualView === undefined &&
+            leadingHeading !== null &&
+            leadingHeading !== '' &&
+            leadingHeading === title.trim()
+          }
           trailing={narrow || zen ? undefined : desktopControls}
         />
       </div>

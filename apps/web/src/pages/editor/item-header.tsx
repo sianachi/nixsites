@@ -1,4 +1,5 @@
-import { Button, Text, focusRing, useFlash, useUndo } from '@nix/ui';
+import { Button, Icon, Text, focusRing, useFlash, useUndo } from '@nix/ui';
+import { Pencil } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { noteColumn } from '@nix/web-foundation/layout/regions';
@@ -8,6 +9,7 @@ import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 
 interface ItemHeaderProps {
   readonly reading: boolean;
+  readonly titleInBody?: boolean;
   readonly trailing: ReactNode;
   readonly tree: ShellContext['tree'];
   readonly itemId: string;
@@ -27,6 +29,7 @@ export function ItemHeader({
   onNavigate,
   onCommit,
   reading,
+  titleInBody = false,
   trailing,
 }: ItemHeaderProps): ReactNode {
   const narrow = useNarrowViewport();
@@ -40,6 +43,8 @@ export function ItemHeader({
   const titleRef = useRef<HTMLInputElement>(null);
   const cancelled = useRef(false);
   const [needsTitle, setNeedsTitle] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const renameButton = useRef<HTMLButtonElement>(null);
   const undo = useUndo();
   const flash = useFlash(title);
 
@@ -73,6 +78,12 @@ export function ItemHeader({
       titleRef.current?.select();
     }
   }, [itemId, title]);
+  useEffect(() => {
+    if (renaming) {
+      titleRef.current?.focus();
+      titleRef.current?.select();
+    }
+  }, [renaming]);
 
   return (
     <header className={`min-w-0 flex-1 px-3 py-2 sm:px-5 sm:py-3 ${zen ? 'pr-16 sm:pr-16' : ''}`}>
@@ -124,37 +135,56 @@ export function ItemHeader({
 
         <div className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-col" {...flash}>
-            <input
-              ref={titleRef}
-              aria-label={`${bodyKind === 'canvas' ? 'Canvas' : bodyKind === 'spreadsheet' ? 'Spreadsheet' : 'Note'} title`}
-              value={draft}
-              placeholder="Untitled"
-              title="Rename"
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setNeedsTitle(false);
-                onCommit();
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.currentTarget.blur();
-                } else if (event.key === 'Escape') {
-                  event.stopPropagation();
-                  cancelled.current = true;
-                  setDraft(title);
-                  event.currentTarget.blur();
-                }
-              }}
-              // On blur rather than on every keystroke: a rename is a write to the item row, and one
-              // per character would be a request per character.
-              onBlur={commitTitle}
-              // No `outline-none` beside the ring. In Tailwind v4 that utility sets `--tw-outline-style:
-              // none` on the element, and `focus-visible:outline-2` resolves its style through the same
-              // variable - so the two together left the field that renames an item with no visible focus
-              // at all. `focusRing` replaces the UA outline rather than removing it, which is the whole
-              // point of the primitive.
-              className={`min-h-(--control-sm) min-w-0 flex-1 bg-transparent font-heading text-lg font-semibold leading-snug sm:text-xl ${focusRing}`}
-            />
+            {titleInBody && !renaming && !needsTitle ? (
+              <Button
+                ref={renameButton}
+                variant="icon"
+                className="self-start"
+                aria-label="Rename note"
+                title="Rename note"
+                onClick={() => {
+                  setRenaming(true);
+                }}
+              >
+                <Icon icon={Pencil} size="sm" />
+              </Button>
+            ) : (
+              <input
+                ref={titleRef}
+                aria-label={`${bodyKind === 'canvas' ? 'Canvas' : bodyKind === 'spreadsheet' ? 'Spreadsheet' : 'Note'} title`}
+                value={draft}
+                placeholder="Untitled"
+                title="Rename"
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setNeedsTitle(false);
+                  onCommit();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur();
+                  } else if (event.key === 'Escape') {
+                    event.stopPropagation();
+                    cancelled.current = true;
+                    setDraft(title);
+                    event.currentTarget.blur();
+                    if (titleInBody) requestAnimationFrame(() => renameButton.current?.focus());
+                  }
+                }}
+                // On blur rather than on every keystroke: a rename is a write to the item row, and one
+                // per character would be a request per character.
+                onBlur={() => {
+                  commitTitle();
+                  setRenaming(false);
+                }}
+                // No `outline-none` beside the ring. In Tailwind v4 that utility sets `--tw-outline-style:
+                // none` on the element, and `focus-visible:outline-2` resolves its style through the same
+                // variable - so the two together left the field that renames an item with no visible focus
+                // at all. `focusRing` replaces the UA outline rather than removing it, which is the whole
+                // point of the primitive.
+                className={`min-h-(--control-sm) min-w-0 flex-1 bg-transparent font-heading text-lg font-semibold leading-snug sm:text-xl ${focusRing}`}
+              />
+            )}
             {needsTitle ? (
               <span role="status">
                 <Text as="span" variant="caption" className="text-danger">

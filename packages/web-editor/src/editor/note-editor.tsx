@@ -139,6 +139,7 @@ export interface NoteEditorProps {
   readonly mobileDetails?: MobileNoteDetails | undefined;
   readonly documentPath?: string | undefined;
   readonly onSync?: ((sync: CollabSync | null) => void) | undefined;
+  readonly onLeadingHeadingChange?: ((heading: string | null) => void) | undefined;
   /**
    * Keep a local copy of this body so reopening it paints at once (see `body-cache.ts`). Off
    * unless the page says so: only a page that has read the item's lock state knows the body
@@ -488,6 +489,7 @@ export function NoteEditor({
   itemId,
   documentPath,
   onSync,
+  onLeadingHeadingChange,
   mobileActions,
   mobileDetails,
   cacheBody = false,
@@ -842,6 +844,18 @@ export function NoteEditor({
     selector: ({ editor: current }) =>
       keyboardMode === 'emacs' ? emacsStatus(current.state) : null,
   });
+  const leadingHeading = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const first = current.state.doc.firstChild;
+      return first?.type.name === 'heading' && first.attrs.level === 1
+        ? first.textContent.trim()
+        : null;
+    },
+  });
+  useEffect(() => {
+    onLeadingHeadingChange?.(leadingHeading);
+  }, [leadingHeading, onLeadingHeadingChange]);
   // One status line for whichever keyboard preset is on: its mode, recording, feedback and keys.
   const presetStatus =
     activeVim !== null
@@ -1154,6 +1168,67 @@ export function NoteEditor({
     },
   };
 
+  const activeEditingMode =
+    markdownMode?.phase === 'open' ? 'Markdown' : suggesting ? 'Suggesting' : undefined;
+  function reviewControls(closeTools?: () => void): ReactNode {
+    return (
+      <>
+        <Button
+          variant="subtle"
+          className={`shrink-0 whitespace-nowrap ${markdownMode?.phase === 'open' ? 'bg-accent/18 text-foreground' : ''}`}
+          data-zen-tool={markdownMode === null ? 'advanced' : undefined}
+          aria-pressed={markdownMode?.phase === 'open'}
+          // A round trip through Markdown would silently apply every suggestion.
+          disabled={suggestionsPending && markdownMode === null}
+          title={
+            suggestionsPending && markdownMode === null
+              ? 'Accept or reject the suggestions to use Markdown mode'
+              : undefined
+          }
+          onClick={() => {
+            closeTools?.();
+            if (markdownMode !== null) {
+              setMarkdownMode(null);
+              awareness.setLocalStateField('markdownMode', false);
+              return;
+            }
+            const snapshot = snapshotMarkdown(fragment);
+            if (snapshot.losses.length > 0) {
+              setMarkdownMode({ phase: 'confirming', snapshot });
+            } else {
+              setMarkdownMode({ phase: 'open', snapshot });
+              awareness.setLocalStateField('markdownMode', true);
+            }
+          }}
+        >
+          Markdown
+        </Button>
+        {subject === undefined ? null : (
+          <span
+            className="contents"
+            data-zen-tool={suggesting || suggestionsPending ? undefined : 'advanced'}
+          >
+            <SuggestingControl
+              editor={editor}
+              suggesting={suggesting}
+              pending={suggestionsPending}
+              onToggle={() => {
+                closeTools?.();
+                setSuggestingOn(!suggesting);
+                try {
+                  if (suggesting) localStorage.removeItem(suggestingKey);
+                  else localStorage.setItem(suggestingKey, '1');
+                } catch {
+                  // Not remembered; the switch still works for this session.
+                }
+              }}
+            />
+          </span>
+        )}
+      </>
+    );
+  }
+
   const formatting =
     readOnly || stale ? null : (
       <div className={narrow ? 'min-w-0' : 'min-w-0 shrink-0 px-8'}>
@@ -1172,61 +1247,20 @@ export function NoteEditor({
               <>
                 <span
                   className="contents"
-                  data-zen-tool={writingMode === 'prose' ? 'insert' : undefined}
-                >
-                  <WritingModeControl />
-                </span>
-                <Button
-                  variant="subtle"
-                  className={`shrink-0 whitespace-nowrap ${markdownMode?.phase === 'open' ? 'bg-accent/18 text-foreground' : ''}`}
-                  data-zen-tool={markdownMode === null ? 'advanced' : undefined}
-                  aria-pressed={markdownMode?.phase === 'open'}
-                  // A round trip through Markdown would silently apply every suggestion.
-                  disabled={suggestionsPending && markdownMode === null}
-                  title={
-                    suggestionsPending && markdownMode === null
-                      ? 'Accept or reject the suggestions to use Markdown mode'
+                  data-zen-tool={
+                    writingMode === 'prose' &&
+                    activeEditingMode === undefined &&
+                    !suggestionsPending
+                      ? 'insert'
                       : undefined
                   }
-                  onClick={() => {
-                    closeTools?.();
-                    if (markdownMode !== null) {
-                      setMarkdownMode(null);
-                      awareness.setLocalStateField('markdownMode', false);
-                      return;
-                    }
-                    const snapshot = snapshotMarkdown(fragment);
-                    if (snapshot.losses.length > 0) {
-                      setMarkdownMode({ phase: 'confirming', snapshot });
-                    } else {
-                      setMarkdownMode({ phase: 'open', snapshot });
-                      awareness.setLocalStateField('markdownMode', true);
-                    }
-                  }}
                 >
-                  Markdown
-                </Button>
-                {subject === undefined ? null : (
-                  <span
-                    className="contents"
-                    data-zen-tool={suggesting || suggestionsPending ? undefined : 'advanced'}
-                  >
-                    <SuggestingControl
-                      editor={editor}
-                      suggesting={suggesting}
-                      pending={suggestionsPending}
-                      onToggle={() => {
-                        setSuggestingOn(!suggesting);
-                        try {
-                          if (suggesting) localStorage.removeItem(suggestingKey);
-                          else localStorage.setItem(suggestingKey, '1');
-                        } catch {
-                          // Not remembered; the switch still works for this session.
-                        }
-                      }}
-                    />
-                  </span>
-                )}
+                  <WritingModeControl
+                    activeLabel={activeEditingMode}
+                    reviewControls={narrow ? undefined : reviewControls}
+                  />
+                </span>
+                {narrow ? reviewControls(closeTools) : null}
               </>
             )}
             textWidthControl={

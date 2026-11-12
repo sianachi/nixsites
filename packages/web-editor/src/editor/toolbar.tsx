@@ -702,7 +702,6 @@ export function EditorToolbar({
       ) : null}
       {writingMode === 'poetry' ? <Group controls={poetry} label="Poetry tools" /> : null}
       {writingModeControl?.()}
-      {textWidthControl}
       {insertMenu}
       <ControlPopover
         label="More writing tools"
@@ -716,7 +715,9 @@ export function EditorToolbar({
           { label: 'Text alignment', controls: alignment },
           { label: 'Move block', controls: move },
         ]}
-      />
+      >
+        {textWidthControl === undefined ? undefined : () => textWidthControl}
+      </ControlPopover>
       <Separator />
       <Group controls={history} label="History" />
       {inColumns ? <ControlPopover label="Columns" controls={columns} /> : null}

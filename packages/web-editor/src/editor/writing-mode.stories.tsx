@@ -170,6 +170,7 @@ export const FullPaneWidth = {
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
     const body = canvas.getByRole('textbox', { name: 'Note body' });
+    await userEvent.click(canvas.getByRole('button', { name: 'More tools' }));
     await userEvent.click(canvas.getByRole('button', { name: 'Text width' }));
     await userEvent.click(canvas.getByRole('button', { name: 'Full pane width' }));
     const surface = body.closest('[data-text-width]');
