@@ -1,4 +1,4 @@
-import { Button, Icon, Menu, Select, focusRing, type MenuEntry } from '@nix/ui';
+import { Button, Icon, Menu, Select, cn, focusRing, focusRingInset, type MenuEntry } from '@nix/ui';
 import {
   FileText,
   List as ListIcon,
@@ -111,10 +111,12 @@ function ViewStrip(props: ViewSwitcherProps): ReactNode {
   ) : (
     <ViewTabs {...props} />
   );
-  if (trailing === undefined && tools === undefined) return strip;
+  if (!narrow && trailing === undefined && tools === undefined) return strip;
   const splitControls = narrow && (props.addView != null || props.viewActions !== undefined);
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1 pr-3 sm:pr-8">
+    <div
+      className={`flex min-w-0 flex-wrap items-center gap-1 ${narrow ? 'px-4 pb-2' : 'pr-3 sm:pr-8'}`}
+    >
       <div className={splitControls ? 'min-w-0 basis-full' : 'min-w-0 flex-1'}>{strip}</div>
       <BelowRowSlot value={below}>{tools}</BelowRowSlot>
       {trailing === undefined ? null : (
@@ -146,7 +148,7 @@ function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolea
     (activeViewId === DOCUMENT_VIEW && documentLabel !== undefined && !documentHidden);
   return (
     <div
-      className={`flex items-center gap-1 ${props.compactDesktop ? 'w-fit min-w-40 px-8 py-1.5' : 'min-w-0 px-4 py-1.5'}`}
+      className={`flex items-center gap-1 py-1.5 ${props.compactDesktop ? 'w-fit min-w-40 px-8' : 'min-w-0'}`}
     >
       <Select
         aria-label="View"
@@ -340,7 +342,11 @@ function SwitcherTab({
           </>
         ) : null}
       </button>
-      <ViewActions label={`${label} options`} items={actions} reveal />
+      <ViewActions
+        label={`${label} options`}
+        items={actions}
+        reveal={active ? 'active-tab' : 'tab'}
+      />
     </div>
   );
 }
@@ -348,14 +354,14 @@ function SwitcherTab({
 function ViewActions({
   label,
   items,
-  reveal = false,
+  reveal = 'always',
 }: {
   readonly label: string;
   readonly items?: readonly MenuEntry[] | undefined;
-  readonly reveal?: boolean;
+  readonly reveal?: 'always' | 'active-tab' | 'tab';
 }): ReactNode {
   if (items === undefined || items.length === 0) return null;
-  return (
+  const menu = (
     <Menu label={label} items={items}>
       {(trigger) => (
         <Button
@@ -363,15 +369,26 @@ function ViewActions({
           variant="icon"
           aria-label={label}
           title={label}
-          className={
-            reveal
-              ? 'pointer-fine:pointer-events-none pointer-fine:opacity-0 any-pointer-coarse:pointer-events-auto any-pointer-coarse:opacity-100 group-hover/view-tab:pointer-events-auto group-hover/view-tab:opacity-100 group-focus-within/view-tab:pointer-events-auto group-focus-within/view-tab:opacity-100 aria-expanded:opacity-100'
-              : ''
-          }
+          className={reveal === 'always' ? '' : focusRingInset}
         >
           <Icon icon={MoreHorizontal} size="sm" />
         </Button>
       )}
     </Menu>
+  );
+  return reveal === 'always' ? (
+    menu
+  ) : (
+    <div
+      className={cn(
+        'flex max-w-0 shrink-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-150 motion-reduce:transition-none',
+        'group-hover/view-tab:max-w-(--control-lg) group-hover/view-tab:opacity-100',
+        'group-has-[:focus-visible]/view-tab:max-w-(--control-lg) group-has-[:focus-visible]/view-tab:opacity-100 group-has-[:focus-visible]/view-tab:transition-none',
+        'has-aria-expanded:max-w-(--control-lg) has-aria-expanded:opacity-100',
+        reveal === 'active-tab' && 'pointer-coarse:max-w-(--control-lg) pointer-coarse:opacity-100',
+      )}
+    >
+      {menu}
+    </div>
   );
 }

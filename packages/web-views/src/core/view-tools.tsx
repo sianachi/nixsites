@@ -42,7 +42,7 @@ const DIRECTIONS = [
 ] as const;
 
 /**
- * Search, sort and saved filters as one compact row of icons. Sort and saved filters live in the
+ * Search, sort and saved filters in a compact toolbar. Sort and saved filters live in the
  * "View options" popover; on a phone the search field opens only when asked for, so the row costs
  * one line rather than the stack of label, field, hint and button it used to.
  */
@@ -64,6 +64,7 @@ export function ViewTools({
   const [error, setError] = useState<string | null>(null);
   const savedCount = view?.filters.length ?? 0;
   const showSearch = !compactSearch || searchOpen || viewState.search.length > 0;
+  const phoneButton = 'min-h-(--control-lg) shrink-0 gap-1.5 px-2';
 
   function discard(): void {
     setDraft(null);
@@ -131,7 +132,7 @@ export function ViewTools({
   const below = useContext(BelowRowSlot);
   const line = (
     <div
-      className={`flex basis-full items-center gap-2 ${below === null ? 'order-last' : ''} ${placement === 'row' ? 'pb-1 pl-4 sm:pl-8' : ''}`}
+      className={`flex basis-full items-center gap-2 ${below === null ? 'order-last' : ''} ${placement === 'row' && !narrow ? 'pb-1 pl-4 sm:pl-8' : ''}`}
     >
       {showSearch ? search : null}
       {showSearch && hasSearch ? clearSearch : null}
@@ -143,8 +144,10 @@ export function ViewTools({
     <>
       {compactSearch ? (
         <Button
-          variant="icon"
+          variant={narrow ? 'secondary' : 'icon'}
           aria-label="Search titles"
+          title="Search titles"
+          className={narrow ? phoneButton : ''}
           aria-expanded={showSearch}
           onClick={() => {
             // An empty field closes again; one holding text stays, so a search is never hidden.
@@ -157,6 +160,7 @@ export function ViewTools({
           }}
         >
           <Icon icon={Search} size="sm" />
+          {narrow ? 'Search' : null}
         </Button>
       ) : (
         search
@@ -167,16 +171,18 @@ export function ViewTools({
         trigger={(trigger) => (
           <Button
             {...trigger}
-            variant="icon"
+            variant={narrow ? 'secondary' : 'icon'}
             data-zen-tool={
               savedCount === 0 && viewState.filters.length === 0 && viewState.sortBy === null
                 ? 'view'
                 : undefined
             }
-            aria-label={`View options${savedCount === 0 ? '' : `, ${String(savedCount)} saved filters`}`}
-            className="w-auto gap-1 px-2"
+            aria-label={`${narrow ? 'Filter and sort' : 'View options'}${savedCount === 0 ? '' : `, ${String(savedCount)} saved filters`}`}
+            title="Filter and sort"
+            className={narrow ? phoneButton : 'w-auto gap-1 px-2'}
           >
             <Icon icon={SlidersHorizontal} size="sm" />
+            {narrow ? 'Filter' : null}
             {savedCount === 0 ? null : (
               <Text as="span" variant="caption">
                 {savedCount}
