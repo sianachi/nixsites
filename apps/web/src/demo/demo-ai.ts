@@ -1,5 +1,7 @@
 // The AI companion for the server-free demo: one pet, a conversation that already happened, and
 // scripted replies. No model is involved, so the same message always gets the same answer.
+import { petSettingsSchema } from '@nix/api-client';
+
 type Json = Record<string, unknown>;
 
 export interface DemoAiEnv {
@@ -248,7 +250,10 @@ export function createDemoAi(env: DemoAiEnv): Route[] {
       'PUT',
       /^\/api\/v1\/me\/pets\/settings$/,
       ({ body }) => {
-        settings = { ...settings, ...(field(body, 'settings') as Json) };
+        const next = petSettingsSchema.safeParse(field(body, 'settings'));
+        if (!next.success)
+          return env.json({ detail: 'Check your companion settings before saving.' }, 422);
+        settings = { ...settings, ...next.data };
         settingsRevision += 1;
         return env.json({ revision: settingsRevision, settings });
       },

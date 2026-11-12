@@ -37,7 +37,6 @@ describe('CopyBox', () => {
 });
 
 const first = '11111111-1111-4111-8111-111111111111';
-const second = '22222222-2222-4222-8222-222222222222';
 const pet = (id: string, name: string) => ({
   id,
   name,
@@ -55,7 +54,7 @@ const saved: PetSettingsResponse = {
     activePetId: first,
     motion: 'system',
     inlineWriting: false,
-    profiles: [pet(first, 'Hoot'), pet(second, 'Wren')],
+    profiles: [pet(first, 'Hoot')],
   },
 };
 
@@ -64,7 +63,7 @@ describe('Pet settings undo', () => {
     client.query.mockReset();
   });
 
-  it('brings a removed pet back where it was', async () => {
+  it('restores the removed companion and its enabled state', async () => {
     client.query.mockResolvedValue({ keys: [] });
     const user = userEvent.setup();
     render(
@@ -73,15 +72,12 @@ describe('Pet settings undo', () => {
         <UndoBar />
       </UndoProvider>,
     );
-    await user.click(screen.getByRole('radio', { name: /Hoot/ }));
-    await user.click(screen.getByRole('button', { name: 'Pet actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Remove pet' }));
-    expect(screen.queryByRole('radio', { name: /Hoot/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Remove pet' }));
+    expect(screen.getByRole('button', { name: 'Add pet' })).toBeVisible();
     expect(screen.getByText('Removed Hoot')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    const tiles = screen.getAllByRole('radio');
-    expect(tiles[0]).toHaveAccessibleName(/Hoot/);
-    expect(tiles[0]).toBeChecked();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Hoot');
+    expect(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' })).toBeChecked();
   });
 });

@@ -148,7 +148,7 @@ function Example({ multiple = false }: { readonly multiple?: boolean }): ReactNo
 
 async function openDialog(): Promise<void> {
   await userEvent.click(within(document.body).getByRole('button', { name: 'New chat' }));
-  await within(document.body).findByRole('option', { name: 'Owl' });
+  await within(document.body).findByText('Companion: Owl');
 }
 
 export const CurrentWorkspace = {

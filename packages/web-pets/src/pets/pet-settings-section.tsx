@@ -12,16 +12,17 @@ import {
   Field,
   Icon,
   Input,
-  Menu,
   Select,
   Text,
   Textarea,
+  UndoBar,
   useUndo,
 } from '@nix/ui';
-import { Check, MoreHorizontal, Plus } from 'lucide-react';
-import { useId, useState, type ReactElement } from 'react';
+import { Check, Plus } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactElement } from 'react';
 import { newPet, petCatalog } from './catalog';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
+import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 import { PetAvatar } from './pet-avatar';
 import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';
@@ -32,12 +33,13 @@ import { SettingsSection } from '@nix/web-settings/settings/shared/settings-sect
 
 export function PetSettingsSection(): ReactElement {
   const state = usePetSettings();
+  const inDialog = useInRouteDialog();
   return (
     <SettingsSection
-      title="Your companions"
-      summary="Pick a provider, character and tone; pets follow your account across workspaces"
+      title="Your companion"
+      summary="Choose a provider, character and tone for your companion across workspaces"
     >
-      {state.loading ? <Text role="status">Loading your pets…</Text> : null}
+      {state.loading ? <Text role="status">Loading your companion…</Text> : null}
       {state.error ? (
         <div className="flex flex-col gap-2">
           <Text role="alert">{state.error}</Text>
@@ -53,6 +55,7 @@ export function PetSettingsSection(): ReactElement {
           onSave={state.save}
         />
       ) : null}
+      {inDialog ? <UndoBar /> : null}
     </SettingsSection>
   );
 }
@@ -66,92 +69,60 @@ interface EditorProps {
 export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): ReactElement {
   const [previousInitial, setPreviousInitial] = useState(initial);
   const [draft, setDraft] = useState(initial.settings);
-  const [selectedId, setSelectedId] = useState(
-    initial.settings.activePetId ?? initial.settings.profiles[0]?.id ?? null,
-  );
   const [message, setMessage] = useState<string | null>(null);
   const [picker, setPicker] = useState<'add' | 'edit' | null>(null);
-  const tiles = useId();
+  const nameInput = useRef<HTMLInputElement>(null);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef(false);
   const undo = useUndo();
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
     if (JSON.stringify(draft) !== JSON.stringify(initial.settings)) {
       setDraft(initial.settings);
-      setSelectedId(
-        initial.settings.profiles.some((profile) => profile.id === selectedId)
-          ? selectedId
-          : (initial.settings.activePetId ?? initial.settings.profiles[0]?.id ?? null),
-      );
       setMessage(null);
     }
   }
-  const pet = draft.profiles.find((profile) => profile.id === selectedId) ?? null;
+  const pet = draft.profiles[0] ?? null;
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial.settings);
+
+  useEffect(() => {
+    if (!restoreFocus.current) return;
+    restoreFocus.current = false;
+    (pet === null ? addButton.current : nameInput.current)?.focus();
+  }, [pet]);
 
   function change(next: PetSettings): void {
     setDraft(next);
     setMessage(null);
   }
   function updatePet(update: Partial<PetProfile>): void {
-    change({
-      ...draft,
-      profiles: draft.profiles.map((profile) =>
-        profile.id === selectedId ? { ...profile, ...update } : profile,
-      ),
-    });
+    if (pet !== null) change({ ...draft, profiles: [{ ...pet, ...update }] });
   }
-  function add(profile: PetProfile, label: string): void {
-    const wasActive = draft.activePetId;
-    const wasSelected = selectedId;
-    change({
-      ...draft,
-      activePetId: draft.activePetId ?? profile.id,
-      profiles: [...draft.profiles, profile],
-    });
-    setSelectedId(profile.id);
-    // Undo takes out only this pet; later edits to other pets stay.
-    undo.push(label, () => {
-      setDraft((cur) => ({
-        ...cur,
-        activePetId: cur.activePetId === profile.id ? wasActive : cur.activePetId,
-        profiles: cur.profiles.filter((entry) => entry.id !== profile.id),
-      }));
-      setSelectedId((cur) => (cur === profile.id ? wasSelected : cur));
+  function add(profile: PetProfile): void {
+    if (pet !== null) return;
+    restoreFocus.current = true;
+    change({ ...draft, activePetId: profile.id, profiles: [profile] });
+    undo.push(`Added ${profile.name}`, () => {
+      setDraft((cur) =>
+        cur.profiles[0]?.id === profile.id
+          ? { ...cur, activePetId: null, enabled: false, profiles: [] }
+          : cur,
+      );
     });
   }
   function remove(): void {
     if (pet === null) return;
+    restoreFocus.current = true;
     const gone = pet;
-    const index = draft.profiles.indexOf(gone);
-    const wasActive = draft.activePetId === gone.id;
+    const wasActive = draft.activePetId;
     const wasEnabled = draft.enabled;
-    const profiles = draft.profiles.filter((profile) => profile.id !== selectedId);
-    change({
-      ...draft,
-      profiles,
-      enabled: profiles.length > 0 && draft.enabled,
-      activePetId: wasActive ? (profiles[0]?.id ?? null) : draft.activePetId,
-    });
-    setSelectedId(profiles[0]?.id ?? null);
+    change({ ...draft, profiles: [], enabled: false, activePetId: null });
     undo.push(`Removed ${gone.name || 'pet'}`, () => {
-      setDraft((cur) => {
-        const restored = [...cur.profiles];
-        restored.splice(Math.min(index, restored.length), 0, gone);
-        return {
-          ...cur,
-          profiles: restored,
-          activePetId: wasActive ? gone.id : cur.activePetId,
-          enabled: cur.enabled || (wasEnabled && cur.profiles.length === 0),
-        };
-      });
-      setSelectedId(gone.id);
-    });
-  }
-  function makeActive(target: PetProfile): void {
-    const previous = draft.activePetId;
-    change({ ...draft, activePetId: target.id });
-    undo.push(`Switched to ${target.name || 'pet'}`, () => {
-      setDraft((cur) => (cur.activePetId === target.id ? { ...cur, activePetId: previous } : cur));
+      setDraft((cur) =>
+        cur.profiles.length === 0
+          ? { ...cur, profiles: [gone], activePetId: wasActive, enabled: wasEnabled }
+          : cur,
+      );
     });
   }
 
@@ -162,7 +133,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
       memories: draft.memories?.filter((memory) => memory.text.trim() !== ''),
     });
     if (!parsed.success) {
-      setMessage('Check the name and settings of each pet before saving.');
+      setMessage('Check the name and settings of your companion before saving.');
       return false;
     }
     if (!dirty) return true;
@@ -201,97 +172,35 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
       }}
     >
       <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
-        <legend className="sr-only">Saved pets</legend>
+        <legend className="sr-only">Companion settings</legend>
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <div
-            role="radiogroup"
-            aria-label="Companions"
-            className="flex min-w-0 flex-wrap items-center gap-2"
-          >
-            {draft.profiles.map((profile) => (
-              <label
-                key={profile.id}
-                className="relative flex w-24 min-w-0 cursor-pointer flex-col items-center gap-1 border border-divider p-2 has-checked:border-accent has-focus-visible:outline-2 has-focus-visible:outline-accent"
-              >
-                <input
-                  type="radio"
-                  name={tiles}
-                  className="sr-only"
-                  checked={profile.id === selectedId}
-                  onChange={() => {
-                    setSelectedId(profile.id);
-                  }}
-                />
-                <span aria-hidden>
-                  <PetAvatar appearance={profile.appearance} motion="reduced" size="compact" />
-                </span>
-                <Text as="span" variant="caption" truncate>
-                  {profile.name || 'Unnamed pet'}
-                </Text>
-                {profile.id === draft.activePetId ? (
-                  <>
-                    <span
-                      aria-hidden
-                      className="absolute right-1 top-1 size-2 rounded-full bg-accent-fill"
-                    />
-                    <span className="sr-only">, active</span>
-                  </>
-                ) : null}
-              </label>
-            ))}
+          {pet === null ? (
             <Button
+              ref={addButton}
               type="button"
-              variant="icon"
-              aria-label="Add pet"
-              disabled={draft.profiles.length >= 12}
+              variant="secondary"
               onClick={() => {
                 setPicker('add');
               }}
             >
               <Icon icon={Plus} size="sm" />
+              Add pet
             </Button>
-          </div>
-          {pet ? (
-            <div className="flex items-center gap-2">
-              {pet.id === draft.activePetId ? null : (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    makeActive(pet);
-                  }}
-                >
-                  Use this pet
-                </Button>
-              )}
-              <Menu
-                label="Pet actions"
-                items={[
-                  {
-                    label: 'Duplicate pet',
-                    disabled: draft.profiles.length >= 12,
-                    onSelect: () => {
-                      add(
-                        {
-                          ...pet,
-                          id: crypto.randomUUID(),
-                          name: `${pet.name.slice(0, 75)} copy`,
-                        },
-                        `Duplicated ${pet.name}`,
-                      );
-                    },
-                  },
-                  { label: 'Remove pet', destructive: true, onSelect: remove },
-                ]}
-              >
-                {(trigger) => (
-                  <Button {...trigger} variant="icon" aria-label="Pet actions">
-                    <Icon icon={MoreHorizontal} size="sm" />
-                  </Button>
-                )}
-              </Menu>
-            </div>
-          ) : null}
+          ) : (
+            <>
+              <div className="flex min-w-0 items-center gap-2">
+                <span aria-hidden>
+                  <PetAvatar appearance={pet.appearance} motion="reduced" size="compact" />
+                </span>
+                <Text variant="body" truncate>
+                  {pet.name || 'Unnamed pet'}
+                </Text>
+              </div>
+              <Button type="button" variant="ghost" onClick={remove}>
+                Remove pet
+              </Button>
+            </>
+          )}
         </div>
         {pet ? (
           <>
@@ -300,6 +209,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                 {(control) => (
                   <Input
                     {...control}
+                    ref={nameInput}
                     required
                     maxLength={80}
                     value={pet.name}
@@ -406,7 +316,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
           </>
         ) : (
           <Text variant="note" tone="muted">
-            Add your first pet to choose its appearance and personality.
+            Choose your companion’s appearance and personality.
           </Text>
         )}
         <Text variant="h5" as="h3">
@@ -415,9 +325,13 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         <Checkbox
           label="Show companion in my workspaces"
           checked={draft.enabled}
-          disabled={draft.activePetId === null}
+          disabled={pet === null}
           onChange={(event) => {
-            change({ ...draft, enabled: event.currentTarget.checked });
+            change({
+              ...draft,
+              enabled: event.currentTarget.checked,
+              activePetId: pet?.id ?? null,
+            });
           }}
         />
         <div className="flex flex-col gap-1">
@@ -458,7 +372,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
             setPicker(null);
             if (picker === 'add') {
               const profile = newPet(appearance);
-              add(profile, `Added ${profile.name}`);
+              add(profile);
             } else if (pet !== null && pet.appearance !== appearance) {
               updatePet({ appearance });
               undo.push(`Changed ${pet.name || 'pet'}’s appearance`, () => {

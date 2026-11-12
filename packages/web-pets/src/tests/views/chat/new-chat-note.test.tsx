@@ -197,7 +197,7 @@ function setup({
     closed,
     open: async () => {
       await user.click(screen.getByRole('button', { name: 'Add chat' }));
-      await screen.findByRole('option', { name: 'Owl' });
+      await screen.findByText('Companion: Owl');
     },
   };
 }

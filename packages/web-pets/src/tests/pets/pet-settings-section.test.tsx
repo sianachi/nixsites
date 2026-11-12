@@ -52,11 +52,6 @@ const savedClaudeKey = {
 } satisfies PetProviderKey;
 let providerKeys: readonly PetProviderKey[] = [];
 
-async function choosePetAction(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole('button', { name: 'Pet actions' }));
-  await user.click(screen.getByRole('menuitem', { name }));
-}
-
 async function addPet(user: ReturnType<typeof userEvent.setup>, name = 'Owl') {
   await user.click(screen.getByRole('button', { name: 'Add pet' }));
   const gallery = within(screen.getByRole('dialog', { name: 'Choose a pet' }));
@@ -148,24 +143,18 @@ describe('pet configuration', () => {
     });
   });
 
-  it('duplicates with a distinct identity and clears active references when the last pet is removed', async () => {
+  it('offers Add pet only when the account has no companion', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
-    await addPet(user);
-    await choosePetAction(user, 'Duplicate pet');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledOnce();
-    });
-    const value = save.mock.calls[0]?.[0] as PetSettingsResponse['settings'];
-    expect(value.profiles).toHaveLength(2);
-    expect(value.profiles[0]?.id).not.toBe(value.profiles[1]?.id);
-    await choosePetAction(user, 'Remove pet');
-    await choosePetAction(user, 'Remove pet');
+    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
+    expect(screen.queryByRole('button', { name: 'Add pet' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove pet' }));
+    expect(screen.getByRole('button', { name: 'Add pet' })).toHaveFocus();
     expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false, activePetId: null, profiles: [] }),
+    );
   });
 
   it('does not announce success after a failed save', async () => {
@@ -179,21 +168,19 @@ describe('pet configuration', () => {
     expect(screen.getByText('Unsaved changes')).toBeVisible();
   });
 
-  it('keeps the selected pet and save confirmation when the server advances the revision', async () => {
+  it('keeps the companion and save confirmation when the server advances the revision', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     const view = render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     await addPet(user);
-    await choosePetAction(user, 'Duplicate pet');
-    const selected = screen.getByRole<HTMLInputElement>('radio', { checked: true });
+    const name = screen.getByRole('textbox', { name: 'Name' });
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Pet settings saved.')).toBeVisible();
     const settings = save.mock.calls[0]?.[0] as PetSettingsResponse['settings'];
     view.rerender(
       <PetSettingsEditor initial={{ revision: 1, settings }} saving={false} onSave={save} />,
     );
-    expect(screen.getAllByRole('radio')).toHaveLength(2);
-    expect(screen.getByRole('radio', { checked: true })).toBe(selected);
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBe(name);
     expect(screen.getByText('Pet settings saved.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
@@ -378,7 +365,7 @@ describe('pet configuration', () => {
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
 
     expect(
-      await screen.findByText('Check the name and settings of each pet before saving.'),
+      await screen.findByText('Check the name and settings of your companion before saving.'),
     ).toBeVisible();
     expect(save).not.toHaveBeenCalled();
     expect(client.execute).not.toHaveBeenCalled();
@@ -527,32 +514,6 @@ describe('pet configuration', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Chat opens' }), 'floating');
     expect(screen.getByRole('combobox', { name: 'Position' })).toHaveValue('left');
     expect(localStorage.getItem('nix.pet.placement')).toBe('left');
-  });
-
-  it('selects a pet with its tile, marks the active one and hides Save until something changes', async () => {
-    const two = savedPet('anthropic');
-    const first = two.settings.profiles[0] as PetProfile;
-    const second = { ...first, id: '55555555-5555-4555-8555-555555555555', name: 'Sage' };
-    const save = vi.fn().mockResolvedValue(true);
-    const user = userEvent.setup();
-    render(
-      <PetSettingsEditor
-        initial={{ ...two, settings: { ...two.settings, profiles: [first, second] } }}
-        saving={false}
-        onSave={save}
-      />,
-    );
-    expect(screen.getByRole('radiogroup', { name: 'Companions' })).toBeVisible();
-    expect(screen.getByRole('radio', { name: 'Pip, active' })).toBeChecked();
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Use this pet' })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('radio', { name: 'Sage' }));
-    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Sage');
-    await user.click(screen.getByRole('button', { name: 'Use this pet' }));
-    expect(screen.getByRole('radio', { name: 'Sage, active' })).toBeChecked();
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(save.mock.calls[0]?.[0]).toMatchObject({ activePetId: second.id });
   });
 
   it('keeps instructions in a disclosure that opens only when they already have text', () => {

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Nix.Abstractions;
 using Nix.Domain.Content;
 using Nix.Domain.Identity;
@@ -49,6 +50,7 @@ public sealed class PetSettingsTests
     public void Invalid_profiles_and_dangling_active_references_are_refused()
     {
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl, Owl] }));
+        Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl, Owl with { Id = Guid.NewGuid() }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Name = " " }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "unknown" }] }));
         Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "fox" }] }));
@@ -59,6 +61,40 @@ public sealed class PetSettingsTests
         Assert.False(PetSettingsValidation.IsValid(Settings with { Enabled = true, ActivePetId = null }));
         Assert.True(PetSettingsValidation.IsValid(PetSettingsValidation.Empty));
         Assert.False(PetSettingsValidation.IsValid(null));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Legacy_settings_keep_one_companion_and_reject_saving_two(bool hasActivePet)
+    {
+        var session = new ScopedNixSessionContextAccessor();
+        var context = new NixSessionContext(TenantId.Create(), null, PrincipalId.Create());
+        session.Set(context);
+        var store = new MemoryStore();
+        var fox = Owl with { Id = Guid.NewGuid(), Name = "Fox", Appearance = "fox" };
+        var legacy = Settings with { Enabled = hasActivePet, ActivePetId = hasActivePet ? fox.Id : null, Profiles = [Owl, fox] };
+        await store.SaveAsync(new PetPreferences
+        {
+            TenantId = context.TenantId,
+            PrincipalId = context.PrincipalId,
+            SettingsJson = JsonSerializer.Serialize(legacy, JsonSerializerOptions.Web),
+            Revision = 1,
+        }, 0, Cancellation);
+
+        var read = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
+        Assert.Equal(1, read.Revision);
+        Assert.Equal(hasActivePet ? fox : Owl, Assert.Single(read.Settings.Profiles));
+        Assert.Equal(hasActivePet ? fox.Id : Owl.Id, read.Settings.ActivePetId);
+        Assert.Equal(hasActivePet, read.Settings.Enabled);
+
+        var save = new SavePetSettingsHandler(store, session);
+        var refused = await save.HandleAsync(new(read.Revision, legacy), Cancellation);
+        Assert.True(refused.IsFailure);
+        Assert.Equal("pets.invalid_settings", refused.Error.Code);
+        var accepted = await save.HandleAsync(new(read.Revision, read.Settings), Cancellation);
+        Assert.True(accepted.IsSuccess);
+        Assert.Equal(2, accepted.Value.Revision);
     }
 
     [Fact]

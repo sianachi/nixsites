@@ -51,16 +51,15 @@ public static class PetSettingsValidation
     /// <summary>Refuses unknown presets, invalid active references, duplicate identities, and unbounded text.</summary>
     public static bool IsValid(PetSettings? settings)
     {
-        if (settings is null || settings.Profiles is null || settings.Profiles.Count > 12
+        if (settings is null || settings.Profiles is null || settings.Profiles.Count > 1
             || settings.Motion is not ("system" or "reduced" or "full"))
         {
             return false;
         }
 
-        var ids = new HashSet<Guid>();
         foreach (var profile in settings.Profiles)
         {
-            if (profile is null || profile.Id == Guid.Empty || !ids.Add(profile.Id)
+            if (profile is null || profile.Id == Guid.Empty
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
                 || profile.Appearance is not ("owl" or "cat" or "fox" or "eye-of-ra" or "demiurge"
                     or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite")
@@ -87,7 +86,7 @@ public static class PetSettingsValidation
         return memoryIds.Count <= MaxMemories
             && settings.MemoryMode is PetMemoryModes.Off or PetMemoryModes.Ask or PetMemoryModes.Always
             && (!settings.Enabled || settings.ActivePetId is not null)
-            && (settings.ActivePetId is null || ids.Contains(settings.ActivePetId.Value))
+            && (settings.ActivePetId is null || settings.Profiles.Count == 1 && settings.ActivePetId == settings.Profiles[0].Id)
             && Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(settings, PetJsonContext.Default.PetSettings)) <= 60000;
     }
 }
@@ -100,9 +99,21 @@ public sealed class GetPetSettingsHandler(IPetPreferencesStore store, INixSessio
     {
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
         var row = await store.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
-        return row is null ? new(0, PetSettingsValidation.Empty) : new(row.Revision,
-            JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings)
-                ?? throw new InvalidOperationException("Stored pet settings are invalid."));
+        if (row is null)
+        {
+            return new(0, PetSettingsValidation.Empty);
+        }
+
+        var settings = JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings)
+            ?? throw new InvalidOperationException("Stored pet settings are invalid.");
+        if (settings.Profiles.Count > 1)
+        {
+            // Keep the active ID so the existing conversation still opens after upgrading.
+            var pet = settings.Profiles.FirstOrDefault(profile => profile.Id == settings.ActivePetId) ?? settings.Profiles[0];
+            settings = settings with { ActivePetId = pet.Id, Profiles = [pet] };
+        }
+
+        return new(row.Revision, settings);
     }
 }
 
@@ -113,13 +124,15 @@ public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessi
     public async ValueTask<Result<PetSettingsResponse>> HandleAsync(SavePetSettings command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command.ExpectedRevision < 0 || command.ExpectedRevision >= 9007199254740991 || !PetSettingsValidation.IsValid(command.Settings))
+        var settings = command.Settings;
+        if (settings is null || command.ExpectedRevision < 0 || command.ExpectedRevision >= 9007199254740991 || !PetSettingsValidation.IsValid(settings))
         {
-            return Result.Failure<PetSettingsResponse>(new NixError("pets.invalid_settings", "Check the pet names, presets, and active pet, then save again."));
+            var detail = settings?.Profiles is { Count: > 1 } ? "An account can only have one companion."
+                : "Check the companion's name and settings, then save again.";
+            return Result.Failure<PetSettingsResponse>(new NixError("pets.invalid_settings", detail));
         }
 
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
-        var settings = command.Settings;
         if (settings.Memories is null)
         {
             // A client built before memory existed sends none; keeping the stored ones stops its
