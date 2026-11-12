@@ -41,6 +41,7 @@ import { ItemHeader } from './item-header';
 import { ItemPanels } from './item-panels';
 import { InlineCommentCard } from '../../panel/inline-comment-card';
 import { CommentsPane } from '../../panel/comments-pane';
+import type { ItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import { bodyNoun, clockTime } from './lock-copy';
 import { useItemViewActions } from './use-item-view-actions';
 import { ItemViewSuggestions } from './item-view-suggestions';
@@ -58,6 +59,7 @@ interface OpenItemProps {
   /** The item's `type`: how its own body is drawn. Never gates what it may contain. */
   readonly bodyKind: string;
   readonly defaultToComments?: boolean;
+  readonly renderContext?: ((details: ItemProperties) => ReactNode) | undefined;
   readonly canManageTemplates: boolean;
   readonly canApplyTemplates: boolean;
   readonly onOpen: (itemId: string) => void;
@@ -83,6 +85,7 @@ export function OpenItem({
   title,
   bodyKind,
   defaultToComments = false,
+  renderContext,
   canManageTemplates,
   canApplyTemplates,
   onOpen,
@@ -269,10 +272,13 @@ export function OpenItem({
   // strip, when the item has views (it also carries Body, so it is the one place for all three);
   // otherwise the writing dock of a note, or the bar a canvas, sheet or file draws for itself. Only
   // a body that cannot be shown - locked, or failed to load - falls back to the row.
-  const viewsHostControls = narrow && (views.length > 0 || showingComments);
+  const contextualView = renderContext === undefined || zen ? undefined : renderContext(details);
+  const viewsHostControls =
+    narrow && contextualView === undefined && (views.length > 0 || showingComments);
   const editorKind = bodyKind === 'canvas' || bodyKind === 'spreadsheet' || bodyKind === 'file';
   const noteDocked =
     narrow &&
+    contextualView === undefined &&
     !viewsHostControls &&
     // Still loading counts: most notes open, and drawing the row only to remove it once the lock
     // answers would make it flicker. A note that turns out locked has no dock, so it gets the row.
@@ -280,7 +286,12 @@ export function OpenItem({
     showingDocument &&
     !editorKind;
   const editorHostsControls =
-    narrow && !viewsHostControls && lock.open && showingDocument && editorKind;
+    narrow &&
+    contextualView === undefined &&
+    !viewsHostControls &&
+    lock.open &&
+    showingDocument &&
+    editorKind;
   const sectionRowShown = narrow && !viewsHostControls && !noteDocked && !editorHostsControls;
 
   const mobileItemControls = (
@@ -476,7 +487,7 @@ export function OpenItem({
         >
           {/* Body only when it is a way back: from a listing of the item's children. With views,
               the views strip carries it; on the body itself it would select what is showing. */}
-          {showingDocument || documentTabHidden ? null : (
+          {showingDocument || contextualView !== undefined || documentTabHidden ? null : (
             <Button
               variant="ghost"
               className="mr-auto"
@@ -490,7 +501,9 @@ export function OpenItem({
           {mobileItemControls}
         </nav>
       ) : null}
-      {(views.length > 0 || commentsTab || addView !== undefined) && !zen ? (
+      {(views.length > 0 || commentsTab || addView !== undefined) &&
+      !zen &&
+      contextualView === undefined ? (
         <ViewSwitcher
           views={visibleViews}
           unrenderable={unrenderable}
@@ -606,14 +619,15 @@ export function OpenItem({
           container={container}
           paneIndex={paneIndex}
           proseEditor={proseEditor}
-          commentsView={
-            showingComments ? (
+          contextView={
+            contextualView ??
+            (showingComments ? (
               <section aria-label="Comments" className={paneScroller}>
                 <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-8">
                   <CommentsPane key={itemId} itemId={itemId} conversation />
                 </div>
               </section>
-            ) : undefined
+            ) : undefined)
           }
           editorHostsControls={editorHostsControls}
           mobileItemControls={mobileItemControls}

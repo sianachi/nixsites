@@ -25,6 +25,7 @@ export interface ViewRendererProps {
   readonly container: ContainerData;
   readonly view: View;
   readonly onOpen: (itemId: string) => void;
+  readonly onOpenWithRows?: ((itemId: string, rows: readonly string[]) => void) | undefined;
 }
 
 /** What a kind's own configuration block is handed, beside the shared controls. */

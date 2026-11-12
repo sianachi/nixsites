@@ -117,6 +117,7 @@ function renderQueryView(
   onOpen = vi.fn(),
   url = '/',
   container = aContainer({ itemId: SMART_LIST }),
+  onOpenWithRows?: (id: string, rows: readonly string[]) => void,
 ): ReturnType<typeof vi.fn> {
   const client = createNixClient({
     baseUrl: window.location.origin,
@@ -130,7 +131,12 @@ function renderQueryView(
     return (
       <>
         <ViewTools view={view} schema={[]} viewState={state} onSave={() => Promise.resolve(null)} />
-        <QueryView container={container} view={view} onOpen={onOpen} />
+        <QueryView
+          container={container}
+          view={view}
+          onOpen={onOpen}
+          onOpenWithRows={onOpenWithRows}
+        />
       </>
     );
   }
@@ -291,6 +297,22 @@ describe('the smart list', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Water plants' }));
 
     expect(onOpen).toHaveBeenCalledWith(ROW_ONE);
+  });
+
+  it('opens record detail in the visible order after searching', async () => {
+    stubRun(
+      results([
+        row(ROW_TWO, 'Email Sam', '2026-08-08'),
+        row('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Water plants', '2026-08-09'),
+        row(ROW_ONE, 'Email Ada', '2026-08-10'),
+      ]),
+    );
+    const openRecord = vi.fn();
+    renderQueryView(OVERDUE_VIEW, vi.fn(), '/?search=Email', undefined, openRecord);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Email Ada' }));
+
+    expect(openRecord).toHaveBeenCalledWith(ROW_ONE, [ROW_TWO, ROW_ONE]);
   });
 
   it('says nothing matches today, rather than claiming the list is empty of items', async () => {

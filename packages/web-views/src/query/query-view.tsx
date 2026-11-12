@@ -60,8 +60,7 @@ const QueryByExamplePanel = lazy(() => import('./query-by-example'));
  */
 export function QueryView(props: ViewRendererProps): ReactNode {
   const compact = useCompactCollection();
-  const { container, view, onOpen } = props;
-  const openProps = useItemOpenProps(onOpen);
+  const { container, view, onOpen, onOpenWithRows } = props;
   const visibility = useHiddenItems();
   const viewState = useViewState();
   const undo = useUndo();
@@ -71,6 +70,19 @@ export function QueryView(props: ViewRendererProps): ReactNode {
   // The itemId this view runs against is the smart list itself - the container's own id, not its
   // children. Every child the container may incidentally hold stays untouched by this view.
   const run = useQueryResults(container.itemId ?? '', view.id);
+  const unhidden = (run.results?.results ?? []).filter(
+    (item) => !visibility.hiddenSet.has(item.id),
+  );
+  const visible = applyTitleSearch(unhidden, viewState.search);
+  function openRow(id: string): void {
+    if (onOpenWithRows === undefined) onOpen(id);
+    else
+      onOpenWithRows(
+        id,
+        visible.map((item) => item.id),
+      );
+  }
+  const openProps = useItemOpenProps(openRow);
   const rowSchemas = useRowSchemas(
     (run.results?.results ?? []).flatMap((row) =>
       row.containerId === null ? [] : [row.containerId],
@@ -141,8 +153,6 @@ export function QueryView(props: ViewRendererProps): ReactNode {
 
   const { results } = run;
   const schema = container.schema?.properties ?? [];
-  const unhidden = results.results.filter((item) => !visibility.hiddenSet.has(item.id));
-  const visible = applyTitleSearch(unhidden, viewState.search);
 
   if (results.results.length === 0) {
     return (
@@ -346,7 +356,7 @@ export function QueryView(props: ViewRendererProps): ReactNode {
                 {
                   label: 'Open',
                   onSelect: () => {
-                    onOpen(row.id);
+                    openRow(row.id);
                   },
                 },
                 {

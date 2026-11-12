@@ -315,7 +315,19 @@ export function CalendarPage(): ReactElement {
           write({ on: anchorText(next) });
         }}
         today={today}
-        onOpen={(id) => (openDialog ?? openPreview)(id)}
+        onOpen={(id, entry) => {
+          if (openDialog === null) openPreview(id);
+          else if (entry === undefined || isDailyNote(entry)) openDialog(id);
+          else
+            openDialog(id, {
+              kind: 'event',
+              startKey: entry.dateProperty,
+              endKey: entry.endProperty,
+              ...(entry.generated
+                ? { occurrence: { start: entry.value, end: entry.endValue } }
+                : {}),
+            });
+        }}
         onReschedule={(entry, value) => {
           moveEntry(entry, { [entry.dateProperty]: value });
         }}

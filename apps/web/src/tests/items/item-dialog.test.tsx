@@ -23,8 +23,14 @@ it('opens a child over its parent and closes back to the same view', async () =>
     title: 'Plan',
     parentId: root.id,
   });
+  const sibling = item({
+    id: 'dddddddd-4444-4444-8444-dddddddddddd',
+    title: 'Draft',
+    parentId: root.id,
+    seq: 2000,
+  });
   stubCoreApi({
-    items: [root, child],
+    items: [root, child, sibling],
     views: { [root.id]: { views: [aView({ name: 'List' })], default: 'document' } },
   });
   const user = userEvent.setup();
@@ -37,18 +43,24 @@ it('opens a child over its parent and closes back to the same view', async () =>
   );
   const dialog = await screen.findByRole('dialog', { name: 'Plan' });
   expect(within(dialog).getByRole('textbox', { name: 'Note title' })).toHaveValue('Plan');
+  expect(await within(dialog).findByRole('region', { name: 'Record detail' })).toBeVisible();
+  expect(within(dialog).queryByRole('button', { name: 'Comments' })).not.toBeInTheDocument();
   expect(within(dialog).getByRole('button', { name: 'Open as page' })).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Next record' }));
+  const draft = await screen.findByRole('dialog', { name: 'Draft' });
+  await user.click(within(draft).getByRole('button', { name: 'Previous record' }));
+  const returned = await screen.findByRole('dialog', { name: 'Plan' });
   expect(
     within(screen.getByRole('tree', { name: 'Items' })).queryByRole('button', { name: 'Plan' }),
   ).not.toBeInTheDocument();
-  await user.click(within(dialog).getByRole('button', { name: 'Item actions' }));
+  await user.click(within(returned).getByRole('button', { name: 'Item actions' }));
   await user.click(await screen.findByRole('menuitem', { name: 'Bookmark' }));
   expect(
     await within(screen.getByRole('tree', { name: 'Items' })).findByRole('button', {
       name: 'Plan',
     }),
   ).toBeInTheDocument();
-  await user.click(within(dialog).getByRole('button', { name: 'Close item' }));
+  await user.click(within(returned).getByRole('button', { name: 'Close item' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Project');
   expect(

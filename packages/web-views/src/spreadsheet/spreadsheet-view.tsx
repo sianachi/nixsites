@@ -32,10 +32,11 @@ export interface SpreadsheetViewProps {
   readonly container: ContainerData;
   readonly view: View;
   readonly onOpen: (itemId: string) => void;
+  readonly onOpenWithRows?: ((itemId: string, rows: readonly string[]) => void) | undefined;
 }
 
 export function SpreadsheetView(props: SpreadsheetViewProps): ReactNode {
-  const { container, view, onOpen } = props;
+  const { container, view, onOpen, onOpenWithRows } = props;
   const viewState = useViewState();
 
   // The URL wins, the stored view is the starting point - the list's rule, verbatim.
@@ -89,7 +90,14 @@ export function SpreadsheetView(props: SpreadsheetViewProps): ReactNode {
         }}
         onWrite={(itemId, bag) => container.setProperties(itemId, bag)}
         onWriteMany={(writes) => container.setPropertiesMany(writes)}
-        onOpen={onOpen}
+        onOpen={(itemId) => {
+          if (onOpenWithRows === undefined) onOpen(itemId);
+          else
+            onOpenWithRows(
+              itemId,
+              chrome.items.map((item) => item.id),
+            );
+        }}
         viewId={view.id}
       />
 

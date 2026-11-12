@@ -72,7 +72,7 @@ import { GalleryGrid } from './gallery-grid';
  */
 
 export function GalleryView(props: ViewRendererProps): ReactNode {
-  const { container, view, onOpen } = props;
+  const { container, view, onOpen, onOpenWithRows } = props;
   const viewState = useViewState();
   const client = useApiClient();
   const { workspaceId } = useWorkspace();
@@ -336,7 +336,14 @@ export function GalleryView(props: ViewRendererProps): ReactNode {
         size={size}
         secondary={secondary}
         schema={schema}
-        onOpen={onOpen}
+        onOpen={(id) => {
+          if (onOpenWithRows === undefined) onOpen(id);
+          else
+            onOpenWithRows(
+              id,
+              chrome.items.map((item) => item.id),
+            );
+        }}
         onWrite={(itemId, propertyKey, value) =>
           writeUndoable(
             itemId,

@@ -62,10 +62,10 @@ it('chooses and retains a personal landmark from mobile item actions', async () 
   await user.click(screen.getByRole('menuitem', { name: 'Choose icon…' }));
   expect(screen.getByRole('button', { name: 'Briefcase' })).toHaveAttribute('aria-pressed', 'true');
 });
-it('opens list items as pages, and the parent button returns to the parent', async () => {
+it('honors a list set to open items as pages, and the parent button returns to the parent', async () => {
   stubCoreApi({
     items: [root, child],
-    views: { [root.id]: { views: [aView({ name: 'List' })], default: 'document' } },
+    views: { [root.id]: { views: [aView({ name: 'List', open: 'page' })], default: 'document' } },
   });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });

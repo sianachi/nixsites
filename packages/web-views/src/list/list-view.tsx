@@ -103,10 +103,11 @@ export interface ListViewProps {
    * split pane, or a story.
    */
   readonly onOpen: (itemId: string) => void;
+  readonly onOpenWithRows?: ((itemId: string, rows: readonly string[]) => void) | undefined;
 }
 
 export function ListView(props: ListViewProps): ReactNode {
-  const { container, view, onOpen } = props;
+  const { container, view, onOpen, onOpenWithRows } = props;
   const narrow = useNarrowViewport();
   const viewState = useViewState();
   const [refusals, setRefusals] = useState<ReadonlyMap<string, string>>(() => new Map());
@@ -340,6 +341,23 @@ export function ListView(props: ListViewProps): ReactNode {
     },
   };
   const orderIds = chrome.items.map((item) => item.id);
+  // Sections (plan 3.3). A grouping that cannot be resolved does not cost the list its rows: the
+  // list is what every container falls back to, so it draws flat and says why the headings are
+  // missing rather than refusing to draw at all, which is what a board does without its columns.
+  const settingsHref = view === null ? null : viewConfigureHref(container.itemId, view);
+  const sectioning = resolveViewAxis(container.schema?.properties ?? [], view?.groupBy, {
+    allowType: true,
+  });
+  const sections =
+    sectioning.kind === 'ready'
+      ? groupItems(sectioning.axis, chrome.items, view?.groupOrder ?? [])
+      : null;
+  const visibleOrder =
+    sections === null
+      ? orderIds
+      : sections.flatMap((section) =>
+          collapsed.has(section.group) ? [] : section.items.map((item) => item.id),
+        );
   const besideOf = selection?.openBeside;
   const gesturesFor = (item: Item): RowGestures =>
     rowGestures(
@@ -347,7 +365,8 @@ export function ListView(props: ListViewProps): ReactNode {
       item.id,
       orderIds,
       () => {
-        onOpen(item.id);
+        if (onOpenWithRows === undefined) onOpen(item.id);
+        else onOpenWithRows(item.id, visibleOrder);
       },
       besideOf === undefined
         ? undefined
@@ -431,17 +450,6 @@ export function ListView(props: ListViewProps): ReactNode {
     viewState.setSort(next.columnKey, next.direction);
   };
 
-  // Sections (plan 3.3). A grouping that cannot be resolved does not cost the list its rows: the
-  // list is what every container falls back to, so it draws flat and says why the headings are
-  // missing rather than refusing to draw at all, which is what a board does without its columns.
-  const settingsHref = view === null ? null : viewConfigureHref(container.itemId, view);
-  const sectioning = resolveViewAxis(container.schema?.properties ?? [], view?.groupBy, {
-    allowType: true,
-  });
-  const sections =
-    sectioning.kind === 'ready'
-      ? groupItems(sectioning.axis, chrome.items, view?.groupOrder ?? [])
-      : null;
   const sectionNotice =
     sectioning.kind === 'missing' || sectioning.kind === 'wrongType' ? (
       <PartialNotice
@@ -532,7 +540,7 @@ export function ListView(props: ListViewProps): ReactNode {
         moveFocusedCell(cell, event.key);
       }}
     >
-      {selection === null ? null : <ShownItems ids={orderIds} />}
+      {selection === null ? null : <ShownItems ids={visibleOrder} />}
       {chrome.notice}
       {sectionNotice}
       {progress}

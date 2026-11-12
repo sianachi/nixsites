@@ -16,6 +16,7 @@ import { VIEW_GUTTER } from '@nix/web-collections/core/view-gutter';
 import { ClickSelectsContext } from '@nix/web-collections/core/item-open-click';
 import { ItemSelectionContext } from '@nix/web-collections/core/item-selection-context';
 import { resolveOpenMode } from '@nix/web-collections/core/open-policy';
+import { ruleConditions } from '@nix/web-collections/core/filter-rules';
 import { SelectionBar } from './selection-bar';
 import {
   useItemSelection,
@@ -71,19 +72,10 @@ export function ContainerView({
     narrow,
     canOpenBeside: roomForPane && onOpenBeside !== undefined,
   });
-  // A mode whose host is absent (`tab` inside a dialog, say) falls back to `onOpen`.
-  const open = {
-    page: onOpen,
-    dialog: (itemId: string) => {
-      if (openDialog === null) onOpen(itemId);
-      else if (view?.kind === 'board') openDialog(itemId, { showComments: true });
-      else openDialog(itemId);
-    },
-    beside: onOpenBeside ?? onOpen,
-    tab: onOpenPinned ?? onOpen,
-    // Not what a click does (it selects); the double-click, Enter and menu Open target.
-    none: onOpen,
-  }[mode];
+  const recordView = view?.kind === 'list' || view?.kind === 'sheet' || view?.kind === 'query';
+  const calendarView = view?.kind === 'calendar' && view.dateProperty !== null;
+  const timelineView = view?.kind === 'timeline' && view.dateProperty !== null;
+  const galleryView = view?.kind === 'gallery' && container.itemId !== null;
   const [grid, setGrid] = useState(false);
 
   // One selection for whatever the view draws (requirement 7). Rows that leave the container -
@@ -101,6 +93,49 @@ export function ContainerView({
   const selecting = capabilities.select && !container.locked;
   // What the view says it draws, for Select all and Cmd/Ctrl-A: filters live in the view, so it reports.
   const [shown, setShown] = useState<readonly string[]>([]);
+  // A mode whose host is absent (`tab` inside a dialog, say) falls back to `onOpen`.
+  const openInDialog: (itemId: string, rows?: readonly string[]) => void = (itemId, rows) => {
+    if (openDialog === null) onOpen(itemId);
+    else if (view?.kind === 'board') openDialog(itemId, { kind: 'comments' });
+    else if (recordView) {
+      const fields =
+        view.kind === 'query' && view.columns.length === 0
+          ? [...new Set(ruleConditions(view.filters).map((rule) => rule.property))]
+          : view.columns;
+      openDialog(itemId, { kind: 'record', fields, rows: rows ?? shown });
+    } else if (calendarView && view.dateProperty !== null) {
+      openDialog(itemId, {
+        kind: 'event',
+        startKey: view.dateProperty,
+        endKey: view.endDateProperty,
+      });
+    } else if (timelineView && view.dateProperty !== null && container.itemId !== null) {
+      openDialog(itemId, {
+        kind: 'dependencies',
+        containerId: container.itemId,
+        startKey: view.dateProperty,
+        endKey: view.endDateProperty,
+      });
+    } else if (galleryView) {
+      openDialog(itemId, {
+        kind: 'review',
+        containerId: container.itemId,
+        coverKey: view.coverProperty,
+        rows: rows ?? shown,
+      });
+    } else openDialog(itemId);
+  };
+  const open = {
+    page:
+      narrow && (recordView || calendarView || timelineView || galleryView) && view.open == null
+        ? openInDialog
+        : onOpen,
+    dialog: openInDialog,
+    beside: onOpenBeside ?? onOpen,
+    tab: onOpenPinned ?? onOpen,
+    // Not what a click does (it selects); the double-click, Enter and menu Open target.
+    none: onOpen,
+  }[mode];
   const [trayActions, setTrayActions] = useState<ReactNode>(null);
   const show = useCallback((ids: readonly string[]): void => {
     setShown((current) =>
@@ -188,11 +223,20 @@ export function ContainerView({
         </Button>
         {grid ? (
           <ViewItemVisibility container={container} view={view}>
-            {(visible) => renderContent(visible, view, open)}
+            {(visible) =>
+              renderContent(visible, view, open, open === openInDialog ? open : undefined)
+            }
           </ViewItemVisibility>
         ) : (
           <ViewItemVisibility container={container} view={view}>
-            {(visible) => findViewKind('list')?.render({ container: visible, view, onOpen: open })}
+            {(visible) =>
+              findViewKind('list')?.render({
+                container: visible,
+                view,
+                onOpen: open,
+                onOpenWithRows: open === openInDialog ? open : undefined,
+              })
+            }
           </ViewItemVisibility>
         )}
       </div>
@@ -207,7 +251,9 @@ export function ContainerView({
           {tools}
           {dragHint}
           <ViewItemVisibility container={container} view={view}>
-            {(visible) => renderContent(visible, view, open)}
+            {(visible) =>
+              renderContent(visible, view, open, open === openInDialog ? open : undefined)
+            }
           </ViewItemVisibility>
           {selectionBar}
         </div>
@@ -264,6 +310,7 @@ function renderContent(
   container: ContainerData,
   view: View | null,
   onOpen: (itemId: string) => void,
+  onOpenWithRows?: (itemId: string, rows: readonly string[]) => void,
 ): ReactNode {
   // Before any view: a lock withholds the children every view draws from, and a view drawn over
   // nothing would read as an empty item.
@@ -300,5 +347,5 @@ function renderContent(
     );
   }
 
-  return descriptor.render({ container, view, onOpen });
+  return descriptor.render({ container, view, onOpen, onOpenWithRows });
 }

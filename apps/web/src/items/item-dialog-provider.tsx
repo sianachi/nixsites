@@ -7,7 +7,15 @@ import { useOpenItem } from '../tabs/use-open-item';
 import { useTemplateLibrary } from '@nix/web-templates/templates/template-library-context';
 import { LocalViewStateContext } from '@nix/web-collections/core/view-state';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
-import { ItemDialogContext } from '@nix/web-foundation/lib/item-dialog-context';
+import {
+  ItemDialogContext,
+  type ItemDialogContextView,
+} from '@nix/web-foundation/lib/item-dialog-context';
+import { paneScroller } from '@nix/web-foundation/layout/regions';
+import { ContextFields } from './context-fields';
+import { EventBrief } from './event-brief';
+import { DependenciesPanel } from './dependencies-panel';
+import { GalleryReview } from './gallery-review';
 
 export function ItemDialogProvider({
   tree,
@@ -31,28 +39,34 @@ function ItemDialogSession({
   readonly tree: WorkspaceTree;
   readonly children: ReactNode;
 }): ReactNode {
-  const [stack, setStack] = useState<{ itemId: string; showComments: boolean }[]>([]);
+  const [stack, setStack] = useState<{ itemId: string; view: ItemDialogContextView | undefined }[]>(
+    [],
+  );
   const { openPreview } = useOpenItem();
-  function open(itemId: string, { showComments = false } = {}): void {
+  function open(itemId: string, view?: ItemDialogContextView): void {
     setStack((current) => {
       const index = current.findIndex((entry) => entry.itemId === itemId);
-      return index === -1 ? [...current, { itemId, showComments }] : current.slice(0, index + 1);
+      return index === -1 ? [...current, { itemId, view }] : current.slice(0, index + 1);
     });
     void tree.reveal(itemId);
   }
   return (
     <ItemDialogContext value={open}>
       {children}
-      {stack.map(({ itemId, showComments }, index) => (
+      {stack.map(({ itemId, view }, index) => (
         <ItemDialog
           key={itemId}
           itemId={itemId}
-          showComments={showComments}
+          view={view}
           tree={tree}
           onClose={() => {
             setStack((current) => current.slice(0, index));
           }}
           onOpen={open}
+          onStep={(nextId) => {
+            setStack((current) => [...current.slice(0, index), { itemId: nextId, view }]);
+            void tree.reveal(nextId);
+          }}
           onNavigateAway={() => {
             setStack([]);
           }}
@@ -68,25 +82,47 @@ function ItemDialogSession({
 
 function ItemDialog({
   itemId,
-  showComments,
+  view,
   tree,
   onClose,
   onOpen,
+  onStep,
   onPage,
   onNavigateAway,
 }: {
   readonly itemId: string;
-  readonly showComments: boolean;
+  readonly view: ItemDialogContextView | undefined;
   readonly tree: WorkspaceTree;
   readonly onClose: () => void;
   readonly onOpen: (itemId: string) => void;
+  readonly onStep: (itemId: string) => void;
   readonly onPage: () => void;
   readonly onNavigateAway: () => void;
 }): ReactNode {
   const [params, setParams] = useState(() => new URLSearchParams());
+  const [showContext, setShowContext] = useState(true);
   const templates = useTemplateLibrary();
   const item = tree.find(itemId);
   const reveal = tree.revealOf(itemId);
+  const record = view?.kind === 'record' ? view : null;
+  const event = view?.kind === 'event' ? view : null;
+  const dependencies = view?.kind === 'dependencies' ? view : null;
+  const review = view?.kind === 'review' ? view : null;
+  const contextLabel =
+    record !== null
+      ? 'Record detail'
+      : event !== null
+        ? 'Event brief'
+        : dependencies !== null
+          ? 'Dependencies'
+          : review !== null
+            ? 'Gallery review'
+            : null;
+  const rows = record?.rows ?? review?.rows ?? [];
+  const position = rows.indexOf(itemId);
+  const previous = position > 0 ? rows[position - 1] : undefined;
+  const next = position >= 0 ? rows[position + 1] : undefined;
+  const noun = review === null ? 'record' : 'asset';
   return (
     <Dialog
       open
@@ -96,9 +132,42 @@ function ItemDialog({
       presentation="workspace"
       titleHidden
       actions={
-        <Button variant="secondary" onClick={onPage}>
-          Open as page
-        </Button>
+        <>
+          {previous === undefined ? null : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onStep(previous);
+              }}
+            >
+              Previous {noun}
+            </Button>
+          )}
+          {next === undefined ? null : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onStep(next);
+              }}
+            >
+              Next {noun}
+            </Button>
+          )}
+          {contextLabel === null ? null : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (showContext) setParams(new URLSearchParams({ view: 'document' }));
+                setShowContext(!showContext);
+              }}
+            >
+              {showContext ? 'Document' : contextLabel}
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onPage}>
+            Open as page
+          </Button>
+        </>
       }
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -131,7 +200,36 @@ function ItemDialog({
                 itemId={item.id}
                 title={item.title}
                 bodyKind={item.type}
-                defaultToComments={showComments}
+                defaultToComments={view?.kind === 'comments'}
+                renderContext={
+                  contextLabel !== null && showContext
+                    ? (details) => (
+                        <section aria-label={contextLabel} className={paneScroller}>
+                          <div
+                            className={`mx-auto flex w-full flex-col gap-4 p-4 sm:p-6 ${review === null ? 'max-w-3xl' : 'max-w-6xl'}`}
+                          >
+                            <Text as="h2" variant="h5">
+                              {contextLabel}
+                            </Text>
+                            {record !== null ? (
+                              <ContextFields details={details} fields={record.fields} />
+                            ) : null}
+                            {event !== null ? <EventBrief details={details} view={event} /> : null}
+                            {dependencies !== null ? (
+                              <DependenciesPanel
+                                details={details}
+                                view={dependencies}
+                                onOpen={onStep}
+                              />
+                            ) : null}
+                            {review !== null ? (
+                              <GalleryReview details={details} view={review} />
+                            ) : null}
+                          </div>
+                        </section>
+                      )
+                    : undefined
+                }
                 canManageTemplates={templates.capabilities.canManage}
                 canApplyTemplates={templates.templates.some(
                   (template) => template.capabilities.canApply,

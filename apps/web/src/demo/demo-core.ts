@@ -112,6 +112,9 @@ export const DEMO_NOTES: Readonly<Record<string, string>> = {
 export const DEMO_ENTRY = `/w/${DEMO_WORKSPACE}?item=${PRODUCT_LAUNCH}`;
 
 function sampleItems(): DemoItem[] {
+  const asset = (path: string): string =>
+    new URL(path, typeof window === 'undefined' ? 'https://demo.invalid' : window.location.origin)
+      .href;
   const item = (
     parentId: string | null,
     title: string,
@@ -131,7 +134,13 @@ function sampleItems(): DemoItem[] {
     ...HABIT_LIST.map((habit, index) =>
       item(HABITS, HABIT_TITLES[index] ?? 'Habit', index + 1, {}, habit.id),
     ),
-    task('Press kit', 1, { priority: 'Low', start: day(4), due_date: day(12), status: 'To do' }),
+    task('Press kit', 1, {
+      priority: 'Low',
+      start: day(4),
+      due_date: day(12),
+      status: 'To do',
+      launch_cover: asset('/landing/homebase.jpg'),
+    }),
     task('Email announcement', 2, {
       priority: 'Medium',
       start: day(8),
@@ -149,7 +158,13 @@ function sampleItems(): DemoItem[] {
       PRODUCT_LAUNCH,
       'Landing page design',
       4,
-      { priority: 'High', start: day(-6), due_date: day(-1), status: 'In progress' },
+      {
+        priority: 'High',
+        start: day(-6),
+        due_date: day(-1),
+        status: 'In progress',
+        launch_cover: asset('/landing/homebase-dark.jpg'),
+      },
       LANDING_PAGE,
     ),
     task('Pricing page', 5, {
@@ -157,6 +172,8 @@ function sampleItems(): DemoItem[] {
       start: day(-4),
       due_date: day(0),
       status: 'In progress',
+      location: 'Design studio',
+      prep_notes: 'Bring the current pricing draft and the launch brief.',
     }),
     item(
       PRODUCT_LAUNCH,
@@ -240,6 +257,9 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
       { ...date('calendar_end', 'Calendar end'), type: 'datetime' },
       select('status', 'Status', ['To do', 'In progress', 'Done']),
       { key: 'done', label: 'Done', type: 'checkbox', options: [], required: false },
+      { key: 'launch_cover', label: 'Launch cover', type: 'image', options: [], required: false },
+      { key: 'location', label: 'Location', type: 'text', options: [], required: false },
+      { key: 'prep_notes', label: 'Prep notes', type: 'long_text', options: [], required: false },
     ],
     views: [
       view('board', 'board', { groupBy: 'status', columns: ['priority', 'due_date'] }),
@@ -248,7 +268,10 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
       view('timeline', 'timeline', { dateProperty: 'start', endDateProperty: 'due_date' }),
       view('sheet', 'sheet'),
       view('checklist', 'checklist', { columns: ['due_date'] }),
-      view('gallery', 'gallery', { columns: ['status', 'priority'] }),
+      view('gallery', 'gallery', {
+        columns: ['status', 'priority'],
+        coverProperty: 'launch_cover',
+      }),
       view('chart', 'chart', { groupBy: 'status', chart: { kind: 'column' } }),
       view('outline', 'outline'),
       view('form', 'form', { columns: ['priority', 'due_date', 'status'] }),
@@ -723,6 +746,37 @@ export function createDemoFetch(): typeof fetch {
     ],
     ['GET', /^\/api\/v1\/workspaces$/, () => json(page([WORKSPACE]))],
     ['GET', /^\/api\/v1\/workspaces\/[^/]+$/, () => json(WORKSPACE)],
+    [
+      'GET',
+      /^\/api\/v1\/workspaces\/[^/]+\/members$/,
+      () =>
+        json(
+          page([
+            {
+              subjectType: 'principal',
+              subjectId: DEMO_PRINCIPAL,
+              subjectDisplayName: DEMO_PROFILE.name,
+              email: null,
+              role: 'owner',
+              grantedAt: CREATED,
+              canChangeRole: false,
+              canRemove: false,
+              assignableRoles: [],
+            },
+            {
+              subjectType: 'principal',
+              subjectId: '0199a000-0000-7000-8000-0000000000ab',
+              subjectDisplayName: 'Maya Chen',
+              email: null,
+              role: 'editor',
+              grantedAt: CREATED,
+              canChangeRole: false,
+              canRemove: false,
+              assignableRoles: [],
+            },
+          ]),
+        ),
+    ],
     [
       'GET',
       /^\/api\/v1\/workspaces\/[^/]+\/templates$/,
