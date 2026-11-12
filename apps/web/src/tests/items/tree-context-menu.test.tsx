@@ -117,7 +117,6 @@ function renderSidebar(
                         onParent={vi.fn()}
                         onOpen={callbacks.onSelect ?? vi.fn()}
                         onClose={vi.fn()}
-                        destinations={null}
                       />
                     ) : (
                       <WorkspaceSidebar

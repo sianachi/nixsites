@@ -98,6 +98,28 @@ describe('the shell', () => {
     }
   });
 
+  it('opens Homebase from a phone note and dismisses the Explorer', async () => {
+    stubViewport(false);
+    stubCoreApi({ items: [NOTE] });
+    const user = userEvent.setup();
+    const homePath = `/w/${STUB_WORKSPACE_ID}`;
+    renderAt(<App />, `${homePath}?item=${NOTE.id}`);
+
+    await screen.findByRole('textbox', { name: 'Note title' });
+    const home = screen.getByRole('link', { name: 'Home' });
+    expect(home).toHaveAttribute('href', homePath);
+    expect(home).not.toHaveAttribute('aria-current');
+    await user.click(screen.getByRole('button', { name: 'Show the Explorer' }));
+    expect(screen.getByRole('button', { name: 'Hide the Explorer' })).toBeVisible();
+
+    home.focus();
+    await user.keyboard('{Enter}');
+
+    expect(await screen.findByRole('region', { name: 'Start something' })).toBeVisible();
+    expect(home).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Show the Explorer' })).toBeVisible();
+  });
+
   it('opens search over whatever is on screen, from a control that is always there', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [NOTE] });

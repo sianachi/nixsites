@@ -46,9 +46,11 @@ const workspace: Workspace = {
 function Example({
   compact = false,
   empty = false,
+  phone = false,
 }: {
   readonly compact?: boolean;
   readonly empty?: boolean;
+  readonly phone?: boolean;
 }): ReactNode {
   useKnownSmartListsStore.setState({
     known: empty
@@ -79,7 +81,11 @@ function Example({
                 }}
               >
                 <div className="flex h-dvh">
-                  <NavRail onImport={noop} compact={compact} />
+                  <NavRail
+                    onImport={noop}
+                    compact={compact}
+                    phoneMenu={phone ? { unreadNotifications: 2, onOpenInbox: noop } : undefined}
+                  />
                 </div>
               </WorkspaceProvider>
             }
@@ -92,6 +98,7 @@ function Example({
 
 export const WithQueries = { render: (): ReactNode => <Example /> };
 export const CompactWithQueries = { render: (): ReactNode => <Example compact /> };
+export const PhoneMenu = { render: (): ReactNode => <Example phone /> };
 export const NoSmartListsYet = { render: (): ReactNode => <Example empty /> };
 export const DarkNoSmartListsYet = { ...NoSmartListsYet, globals: { ground: 'dark' } };
 export const DarkWithQueries = { ...WithQueries, globals: { ground: 'dark' } };

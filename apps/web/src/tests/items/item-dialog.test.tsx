@@ -44,7 +44,7 @@ it('opens a child over its parent and closes back to the same view', async () =>
   await user.click(within(dialog).getByRole('button', { name: 'Item actions' }));
   await user.click(await screen.findByRole('menuitem', { name: 'Bookmark' }));
   expect(
-    await within(screen.getByRole('region', { name: 'Pinned items' })).findByRole('button', {
+    await within(screen.getByRole('tree', { name: 'Items' })).findByRole('button', {
       name: 'Plan',
     }),
   ).toBeInTheDocument();

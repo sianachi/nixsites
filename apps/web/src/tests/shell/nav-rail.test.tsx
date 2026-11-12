@@ -394,20 +394,26 @@ describe('the Workspaces destination', () => {
   });
 });
 
-describe('the navigation rail on a narrow screen', () => {
-  it('reclaims the rail space until workspace navigation is opened', async () => {
+describe('workspace pages on a phone', () => {
+  function menuButton(): HTMLElement {
+    return within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole(
+      'button',
+      { name: 'Menu' },
+    );
+  }
+
+  it('offers workspace pages from the bottom menu without adding a destination picker to Explorer', async () => {
     stubViewport(false);
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
     expect(screen.queryByRole('navigation', { name: /destinations/i })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: /show the explorer/i }));
-    expect(within(rail()).queryByRole('link')).not.toBeInTheDocument();
-    await userEvent.click(within(rail()).getByRole('button', { name: 'Homebase' }));
+    const explorer = screen.getByRole('complementary', { name: 'Explorer' });
+    expect(within(explorer).queryByRole('navigation', { name: 'Destinations' })).toBeNull();
+    await userEvent.click(menuButton());
     // Ten destinations and "New smart list", which the Smart lists section folds into this one menu.
-    expect(
-      screen.getByRole('menu', { name: 'Workspace pages' }).querySelectorAll('a'),
-    ).toHaveLength(11);
+    expect(screen.getByRole('menu', { name: 'Menu' }).querySelectorAll('a')).toHaveLength(11);
     expect(screen.getByRole('menuitem', { name: 'New smart list' })).toHaveAttribute(
       'href',
       '/w/00000000-0000-4000-8000-000000000001/new/query',
@@ -429,7 +435,7 @@ describe('the navigation rail on a narrow screen', () => {
     await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
 
-    await user.click(within(rail()).getByRole('button', { name: 'Homebase' }));
+    await user.click(menuButton());
     await user.click(screen.getByRole('menuitem', { name: 'Graph' }));
 
     expect(await screen.findByRole('heading', { name: 'Graph' })).toBeInTheDocument();
@@ -445,7 +451,7 @@ describe('the navigation rail on a narrow screen', () => {
     await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     expect(await screen.findByRole('complementary', { name: /explorer/i })).toBeVisible();
 
-    await user.click(within(rail()).getByRole('button', { name: 'Homebase' }));
+    await user.click(menuButton());
     await user.click(screen.getByRole('menuitem', { name: 'Import' }));
 
     expect(screen.getByRole('dialog', { name: 'Import' })).toBeInTheDocument();

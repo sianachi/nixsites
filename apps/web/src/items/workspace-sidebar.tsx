@@ -1,22 +1,12 @@
-import {
-  Button,
-  ContextMenu,
-  Skeleton,
-  chromeSurface,
-  Icon,
-  Text,
-  cn,
-  focusRing,
-  useFlash,
-} from '@nix/ui';
+import { Button, ContextMenu, Icon, Skeleton, chromeSurface, Text, cn, useFlash } from '@nix/ui';
+import { CirclePlus } from 'lucide-react';
 import { collectDropped, uploadErrorText, uploadWorkspaceEntries } from './drop-upload';
-import { FilePlus } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { BookmarkButton } from '../bookmarks/bookmark-button';
-import { useBookmarksStore } from '@nix/web-collections/items/use-bookmarks';
+import { ExplorerPin, useExplorerPins } from './explorer-pins';
+import { ExplorerSearch } from './explorer-search';
 import { type OpenBesideRefusal } from '../tabs/use-open-item';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { TreeRow } from './tree-row';
@@ -39,7 +29,7 @@ import {
 import { capabilitiesOf } from '@nix/web-collections/core/view-capabilities';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { useItemLandmarks } from './use-item-landmarks';
-import { ItemLandmarkDialog, ItemLandmarkIcon } from './item-landmark-dialog';
+import { ItemLandmarkDialog } from './item-landmark-dialog';
 import { SharePublicLinkDialog } from './share-public-link-dialog';
 import type { ItemLandmarks } from '@nix/web-foundation/lib/item-landmarks';
 
@@ -105,6 +95,7 @@ export interface WorkspaceSidebarProps {
   readonly treeRegionRef: RefObject<HTMLDivElement | null>;
 
   readonly onAdd?: () => void;
+  readonly searchRef?: RefObject<HTMLInputElement | null>;
 }
 
 export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
@@ -215,6 +206,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     <aside
       ref={asideRef}
       aria-label="Explorer"
+      tabIndex={-1}
       // Rows handle their own OS drops; whatever reaches here landed on empty space: the root.
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault();
@@ -226,106 +218,110 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
       }}
       className={cn('@container flex w-full flex-col overflow-hidden bg-surface', chromeSurface)}
     >
-      {props.onAdd ? (
-        <div className="flex shrink-0 justify-center px-3 py-3">
-          <Button
-            variant="ghost"
-            aria-label="Add note"
-            title="Add note"
-            className="p-1.5"
-            disabled={tree.status !== 'ready' || tree.isCreating}
-            onClick={props.onAdd}
+      <ExplorerSearch
+        tree={tree}
+        landmarks={landmarks.landmarks}
+        onOpen={onSelect}
+        searchRef={props.searchRef}
+        action={
+          props.onAdd ? (
+            <Button
+              variant="icon"
+              aria-label="New note in Explorer"
+              title="New note"
+              disabled={tree.status !== 'ready' || tree.isCreating}
+              onClick={props.onAdd}
+            >
+              <Icon icon={CirclePlus} size="md" />
+            </Button>
+          ) : null
+        }
+      >
+        {refusal === null ? null : (
+          <Text
+            variant="caption"
+            as="p"
+            role="alert"
+            className="mx-2 mb-2 rounded-md bg-background px-3 py-2"
           >
-            <Icon icon={FilePlus} size="md" />
-          </Button>
-        </div>
-      ) : null}
+            {refusal}
+          </Text>
+        )}
 
-      {refusal === null ? null : (
-        <Text
-          variant="caption"
-          as="p"
-          role="alert"
-          className="mx-2 mb-2 rounded-md bg-background px-3 py-2"
-        >
-          {refusal}
-        </Text>
-      )}
-
-      {/* `tabIndex={-1}`: not in the tab order on its own, but a legitimate script-focusable
+        {/* `tabIndex={-1}`: not in the tab order on its own, but a legitimate script-focusable
           landing spot - see `treeRegionRef`'s own comment on why the delete toast returns focus
           here rather than to the row it deleted, which is gone by the time that matters. */}
-      {selection.selected.size === 0 ? null : (
-        <div className="mx-2 mb-2">
-          <SelectionBar
-            compact
-            count={selection.selected.size}
-            shownCount={selection.selected.size < shownCount ? shownCount : 0}
-            onSelectAll={() => {
-              selection.setAll(shownRows());
-            }}
-            onMove={
-              commands === null
-                ? undefined
-                : () => {
-                    commands.moveItems([...selection.selected]);
-                  }
-            }
-            onDelete={
-              commands === null
-                ? undefined
-                : () => {
-                    void commands
-                      .deleteItems(tree.items.filter((item) => selection.selected.has(item.id)))
-                      .then((deleted) => {
-                        const gone = new Set(deleted);
-                        selection.setAll([...selection.selected].filter((id) => !gone.has(id)));
+        {selection.selected.size === 0 ? null : (
+          <div className="mx-2 mb-2">
+            <SelectionBar
+              compact
+              count={selection.selected.size}
+              shownCount={selection.selected.size < shownCount ? shownCount : 0}
+              onSelectAll={() => {
+                selection.setAll(shownRows());
+              }}
+              onMove={
+                commands === null
+                  ? undefined
+                  : () => {
+                      commands.moveItems([...selection.selected]);
+                    }
+              }
+              onDelete={
+                commands === null
+                  ? undefined
+                  : () => {
+                      void commands
+                        .deleteItems(tree.items.filter((item) => selection.selected.has(item.id)))
+                        .then((deleted) => {
+                          const gone = new Set(deleted);
+                          selection.setAll([...selection.selected].filter((id) => !gone.has(id)));
+                        });
+                    }
+              }
+              onClear={selection.clear}
+            />
+          </div>
+        )}
+        <div ref={treeRegionRef} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto">
+          <ItemSelectionContext value={selectionValue}>
+            <TreeBody
+              tree={tree}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onOpenBeside={onOpenBeside}
+              onOpenPinned={onOpenPinned}
+              canOpenBeside={canOpenBeside}
+              besideRefusal={besideRefusal}
+              dragged={dragged}
+              setDragged={setDragged}
+              onDropFiles={(dropped, parentId) => {
+                void uploadFiles(dropped, parentId);
+              }}
+              onDeleteItem={onDeleteItem}
+              flashed={flashed}
+              onFlash={flash}
+              onMoveItem={setMovingId}
+              landmarks={landmarks.landmarks}
+              onSharePublicLink={(item) => {
+                setSharing({ id: item.id, title: item.title || 'Untitled' });
+              }}
+              onChooseIcon={
+                landmarks.enabled
+                  ? (item, invoker) => {
+                      iconReturnFocus.current = invoker;
+                      setIconItem({
+                        scope: landmarks.scope,
+                        id: item.id,
+                        title: item.title || 'Untitled',
                       });
-                  }
-            }
-            onClear={selection.clear}
-          />
+                    }
+                  : undefined
+              }
+            />
+          </ItemSelectionContext>
         </div>
-      )}
-      <div ref={treeRegionRef} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto">
-        <SidebarPins onSelect={onSelect} selectedId={selectedId} landmarks={landmarks.landmarks} />
-        <ItemSelectionContext value={selectionValue}>
-          <TreeBody
-            tree={tree}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onOpenBeside={onOpenBeside}
-            onOpenPinned={onOpenPinned}
-            canOpenBeside={canOpenBeside}
-            besideRefusal={besideRefusal}
-            dragged={dragged}
-            setDragged={setDragged}
-            onDropFiles={(dropped, parentId) => {
-              void uploadFiles(dropped, parentId);
-            }}
-            onDeleteItem={onDeleteItem}
-            flashed={flashed}
-            onFlash={flash}
-            onMoveItem={setMovingId}
-            landmarks={landmarks.landmarks}
-            onSharePublicLink={(item) => {
-              setSharing({ id: item.id, title: item.title || 'Untitled' });
-            }}
-            onChooseIcon={
-              landmarks.enabled
-                ? (item, invoker) => {
-                    iconReturnFocus.current = invoker;
-                    setIconItem({
-                      scope: landmarks.scope,
-                      id: item.id,
-                      title: item.title || 'Untitled',
-                    });
-                  }
-                : undefined
-            }
-          />
-        </ItemSelectionContext>
-      </div>
+      </ExplorerSearch>
 
       {/* The error lives at the foot rather than replacing the tree: a failed rename must not take
           away the items that loaded perfectly well. It is also where a failed delete surfaces -
@@ -408,7 +404,7 @@ const TREE_SKELETON_WIDTHS = ['w-3/4', 'w-1/2', 'w-2/3', 'w-5/12', 'w-3/5'] as c
 
 function TreeBody(props: TreeBodyProps): ReactNode {
   const { tree, dragged, setDragged } = props;
-  const visibility = useHiddenItems();
+  const { roots, shortcuts } = useExplorerPins(tree);
   const move = useUndoableMove(tree, props.onFlash);
   const [overTop, setOverTop] = useState(false);
 
@@ -443,19 +439,30 @@ function TreeBody(props: TreeBodyProps): ReactNode {
     );
   }
 
-  const roots = tree.childrenOf(null).filter((item) => !visibility.hiddenSet.has(item.id));
-  if (roots.length === 0) {
+  if (roots.length === 0 && shortcuts.length === 0) {
     return (
       <Text variant="note" tone="muted" className="px-3 py-2">
         {tree.childrenOf(null).length > 0
           ? 'Items here are hidden for you. Open Hidden items to show them.'
-          : 'Nothing here yet. Use Add note to get started.'}
+          : 'Nothing here yet. Select new to create a note.'}
       </Text>
     );
   }
 
   return (
     <ul role="tree" aria-label="Items" className="px-2 pb-3">
+      {shortcuts.map((pin) => (
+        <li key={pin.itemId} role="treeitem" aria-selected={props.selectedId === pin.itemId}>
+          <ExplorerPin
+            pin={pin}
+            tree={tree}
+            landmarks={props.landmarks}
+            selected={props.selectedId === pin.itemId}
+            className="pl-6"
+            onOpen={props.onSelect}
+          />
+        </li>
+      ))}
       {roots.map((item) => (
         <TreeNode key={item.id} item={item} depth={0} {...props} />
       ))}
@@ -708,77 +715,5 @@ function TreeNode(props: TreeNodeProps): ReactNode {
         </ul>
       ) : null}
     </li>
-  );
-}
-
-function SidebarPins({
-  onSelect,
-  selectedId,
-  landmarks,
-}: {
-  readonly onSelect: (itemId: string) => void;
-  readonly selectedId: string | null;
-  readonly landmarks: ItemLandmarks;
-}): ReactNode {
-  const { workspaceId } = useWorkspace();
-  const items = useBookmarksStore((state) => state.items);
-  const status = useBookmarksStore((state) => state.status);
-  const error = useBookmarksStore((state) => state.error);
-  const visibility = useHiddenItems();
-  const pins = items.filter(
-    (item) => item.workspaceId === workspaceId && !visibility.hiddenSet.has(item.itemId),
-  );
-  return (
-    <section aria-label="Pinned items" className="mx-2 mb-3 border-b border-divider px-2 pb-3">
-      <Text as="p" variant="note" tone="muted" className="mb-2">
-        Pinned items
-      </Text>
-      {status === 'loading' ? (
-        <Text as="p" variant="caption">
-          Loading pins…
-        </Text>
-      ) : null}
-      {error ? (
-        <Text as="p" variant="caption" role="status">
-          Pins are unavailable. Open Bookmarks to retry.
-        </Text>
-      ) : null}
-      {status === 'ready' && pins.length === 0 ? (
-        <Text as="p" variant="caption" tone="muted">
-          Bookmark an item to pin it here.
-        </Text>
-      ) : null}
-      <ul>
-        {pins.map((item) => (
-          <li
-            key={item.itemId}
-            className={cn(
-              'group flex min-w-0 items-center gap-2 rounded-md px-2',
-              selectedId === item.itemId ? 'bg-accent/14' : 'hover:bg-accent/8',
-            )}
-          >
-            <button
-              type="button"
-              aria-current={selectedId === item.itemId ? 'page' : undefined}
-              className={`flex min-w-0 flex-1 items-center gap-2 py-2 text-left ${focusRing}`}
-              onClick={() => {
-                onSelect(item.itemId);
-              }}
-            >
-              <ItemLandmarkIcon landmark={landmarks[item.itemId]} />
-              <Text as="span" variant="bodySmall" truncate>
-                {item.title !== null && item.title.length > 0 ? item.title : 'Untitled'}
-              </Text>
-            </button>
-            <BookmarkButton
-              itemId={item.itemId}
-              title={item.title ?? ''}
-              compact
-              className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:pointer-events-auto max-sm:opacity-100 max-sm:pointer-events-auto"
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

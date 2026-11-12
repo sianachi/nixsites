@@ -19,12 +19,14 @@ import { WorkspaceLockMark } from '@nix/web-workspaces/workspaces/workspace-lock
 import { useWorkspaceMenuEntries } from '@nix/web-workspaces/workspaces/workspace-switcher';
 import { NotificationBell } from './notifications/notification-bell';
 import { ProfileMenu } from './profile-menu';
+import { WorkspaceHomeLink, type WorkspaceHomeLinkProps } from './workspace-home-link';
 import type { ZenLayoutPreferences } from './zen-layout-preview';
 
 export interface ShellHeaderProps {
   readonly sidebarVisible: boolean;
   readonly layoutPreferences: ZenLayoutPreferences;
   readonly compactDestinations?: ReactNode;
+  readonly home?: Omit<WorkspaceHomeLinkProps, 'className'> | undefined;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly onToggleSidebar: () => void;
   /** The pinned Explorer's width, so the tabs start where the page does; null when it is not pinned. */
@@ -68,7 +70,7 @@ const TITLE_BAR_OVERLAY = [
   '[@media(display-mode:window-controls-overlay)]:[&_:is(a,button,input,select,[role=button],[role=combobox],[tabindex])]:[-webkit-app-region:no-drag]',
 ].join(' ');
 
-const TITLE_BUTTON = `mb-0.5 flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`;
+const TITLE_BUTTON = `mb-0.5 flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted max-lg:mb-0 pointer-coarse:mb-0 any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg) hover:bg-foreground/7 hover:text-foreground ${focusRing}`;
 
 /**
  * The title row: the explorer toggle, back and forward, and the first pane's tabs, all on the
@@ -84,6 +86,7 @@ export function ShellHeader({
   account,
   layoutPreferences,
   compactDestinations,
+  home,
 }: ShellHeaderProps): ReactNode {
   const navigate = useNavigate();
   const { workspace } = useWorkspace();
@@ -91,11 +94,11 @@ export function ShellHeader({
   return (
     <header
       aria-label="Workspace controls"
-      className={`flex min-w-0 shrink-0 items-end bg-surface px-2 pt-1.5 ${chromeSurface} ${TITLE_BAR_OVERLAY}`}
+      className={`flex min-w-0 shrink-0 items-end bg-surface px-2 pt-1.5 max-lg:items-center max-lg:pb-1.5 pointer-coarse:items-center pointer-coarse:pb-1.5 ${chromeSurface} ${TITLE_BAR_OVERLAY}`}
     >
       <div
         id={TITLE_ROW_LEAD_ID}
-        className="flex shrink-0 items-end gap-1 pr-1"
+        className={`flex shrink-0 gap-1 pr-1 max-lg:items-center pointer-coarse:items-center ${home ? 'items-center' : 'items-end'}`}
         style={explorerWidth === null ? undefined : { width: `${String(explorerWidth)}px` }} // design-token-exempt: the Explorer's runtime width.
       >
         {/* Next to the tree it opens and closes, rather than inside it - a control that vanishes
@@ -110,6 +113,12 @@ export function ShellHeader({
         >
           <Icon icon={sidebarVisible ? PanelLeftClose : PanelLeftOpen} size="sm" />
         </button>
+        {home ? (
+          <WorkspaceHomeLink
+            {...home}
+            className={`${TITLE_BUTTON} min-h-(--control-lg) min-w-(--control-lg) active:bg-foreground/10`}
+          />
+        ) : null}
 
         <button
           type="button"
@@ -138,7 +147,7 @@ export function ShellHeader({
             <button
               {...trigger}
               type="button"
-              className={`mb-0.5 ml-1 flex min-w-0 items-center gap-1 rounded-md px-2 py-1 text-foreground hover:bg-foreground/7 ${focusRing}`}
+              className={`mb-0.5 ml-1 flex min-w-0 items-center gap-1 rounded-md px-2 py-1 text-foreground hover:bg-foreground/7 max-lg:mb-0 pointer-coarse:mb-0 ${focusRing}`}
             >
               <Text as="span" variant="bodySmall" truncate>
                 {workspace.name}
@@ -152,7 +161,7 @@ export function ShellHeader({
       </div>
 
       <div id={TITLE_ROW_TABS_ID} className="flex min-w-0 flex-1" />
-      <div className="ml-2 flex shrink-0 items-center gap-1 self-center pb-1">
+      <div className="ml-2 flex shrink-0 items-center gap-1 self-center pb-1 max-lg:pb-0 pointer-coarse:pb-0">
         <button
           type="button"
           onClick={account.onOpenSearch}

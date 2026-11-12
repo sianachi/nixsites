@@ -331,6 +331,7 @@ export function createDemoFetch(): typeof fetch {
       demoComment('Ada Okafor', 'Yes, the wide crop is in the design file.'),
     ],
   };
+  const bookmarks = new Map<string, string>();
   const trashed = new Set<string>();
   const structure = new Map<
     string,
@@ -478,7 +479,44 @@ export function createDemoFetch(): typeof fetch {
           features: { sites: false, mcpUrl: null, operator: false, siteApprover: false },
         }),
     ],
-    ['GET', /^\/api\/v1\/me\/bookmarks$/, () => json({ items: [], hidden: 0 })],
+    [
+      'GET',
+      /^\/api\/v1\/me\/bookmarks$/,
+      () => {
+        const kept = [...bookmarks].reverse().flatMap(([id, keptAt]) => {
+          const item = itemAt(id);
+          return item === undefined || trashed.has(id)
+            ? []
+            : [
+                {
+                  itemId: id,
+                  title: item.title,
+                  type: item.type,
+                  workspaceId: DEMO_WORKSPACE,
+                  keptAt,
+                },
+              ];
+        });
+        return json({ items: kept, hidden: bookmarks.size - kept.length });
+      },
+    ],
+    [
+      'PUT',
+      /^\/api\/v1\/items\/([^/]+)\/bookmark$/,
+      (_, [, id]) => {
+        if (id === undefined || itemAt(id) === undefined || trashed.has(id)) return null;
+        if (!bookmarks.has(id)) bookmarks.set(id, now());
+        return new Response(null, { status: 204 });
+      },
+    ],
+    [
+      'DELETE',
+      /^\/api\/v1\/items\/([^/]+)\/bookmark$/,
+      (_, [, id]) => {
+        if (id !== undefined) bookmarks.delete(id);
+        return new Response(null, { status: 204 });
+      },
+    ],
     [
       'GET',
       /^\/api\/v1\/me\/preferences$/,

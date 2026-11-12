@@ -162,7 +162,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
         onKeyUp={gestures.onKeyUp}
         className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
-        <ItemLandmarkIcon landmark={landmark} />
+        <ItemLandmarkIcon landmark={landmark} item={item} />
         <Text as="span" variant="body" truncate>
           {item.title || 'Untitled'}
         </Text>
@@ -243,6 +243,7 @@ export function TreeRow(props: TreeRowProps): ReactNode {
             what its controls look like. */}
       <BookmarkButton
         compact
+        pin
         itemId={item.id}
         title={item.title}
         className={`flex size-5 max-sm:size-(--control-sm) items-center justify-center text-muted opacity-0 pointer-events-none hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-coarse:size-(--control-lg) ${keptIds.has(item.id) ? 'opacity-100 pointer-events-auto' : 'sm:pointer-coarse:hidden'} ${focusRing}`}

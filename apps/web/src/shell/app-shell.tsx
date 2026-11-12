@@ -210,6 +210,7 @@ export function AppShell(): ReactNode {
   useEdgeSwipeOpen('left', narrow && !sidebar.visible, sidebar.toggle);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const homePath = `/w/${workspaceId}`;
   // The companion page owns a phone screen: chrome would otherwise squeeze the message list to a
   // sliver.
   const chatOwnsScreen = narrow && /^\/w\/[^/]+\/pet\/?$/.test(location.pathname);
@@ -235,6 +236,7 @@ export function AppShell(): ReactNode {
   const [workspaceImportOpen, setWorkspaceImportOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const phone = usePhone();
+  const [phoneNavHidden, setPhoneNavHidden] = useState(false);
   const routeDialogOpen = useRouteDialog() !== null;
   const [tabsOpen, setTabsOpen] = useState(false);
   const [newTabOpen, setNewTabOpen] = useState(false);
@@ -296,6 +298,7 @@ export function AppShell(): ReactNode {
   // belongs on the control that reopens the drawer, the same place it already was before the
   // drawer took it.
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
+  const explorerSearchRef = useRef<HTMLInputElement>(null);
 
   function openFlow(path: string, parentId: string | null, creating = false): void {
     const search = parentId === null ? '' : `?parent=${encodeURIComponent(parentId)}`;
@@ -581,23 +584,6 @@ export function AppShell(): ReactNode {
     !narrow &&
     !keyboardVisible &&
     !zen;
-  // What the phone's bottom bar and top row share: the destinations that have no room of their own.
-  const phoneMenu = {
-    workspaceId,
-    hideSettings: zenLayout.active,
-    workspaceDestinationsInExplorer: zenLayout.active,
-    unreadNotifications: notificationsInbox.unread,
-    pet: petEntry && {
-      label: petEntry.label,
-      attention: petEntry.attention && petAttentionText(petEntry.attention),
-    },
-    onOpenInbox: () => {
-      setInboxOpen(true);
-    },
-    onImport: () => {
-      setWorkspaceImportOpen(true);
-    },
-  };
   useEffect(() => {
     const node = bottomChromeRef.current;
     if (!navRendered || !node) {
@@ -624,7 +610,7 @@ export function AppShell(): ReactNode {
       document.documentElement.style.removeProperty('--mobile-nav-height');
       window.dispatchEvent(new Event('nix-mobile-nav-resized'));
     };
-  }, [navRendered]);
+  }, [navRendered, phoneNavHidden]);
 
   // The wide layout's Search, bell and profile, at the right of the title row.
   const account: HeaderAccount = {
@@ -640,15 +626,54 @@ export function AppShell(): ReactNode {
 
   const compactNavigation = zenLayout.active && !zenLayout.visible('navigation');
   const showRail = zenLayout.active ? !compactNavigation : iconStrip;
+  const homeCurrent =
+    panes.length === 0 && (location.pathname === homePath || location.pathname === `${homePath}/`);
+  const homeInHeader = narrow || !showRail;
+  function closeWorkspaceDrawer(): void {
+    if (narrow && sidebar.visible) sidebar.toggle();
+  }
+
+  function focusWorkspaceContent(): void {
+    closeWorkspaceDrawer();
+    focusPane(0);
+  }
+
+  function openBottomSearch(): void {
+    closeWorkspaceDrawer();
+    setSearchOpen(true);
+  }
+
+  function openBottomCapture(): void {
+    closeWorkspaceDrawer();
+    setCaptureOpen(true);
+  }
+
+  function openBottomInbox(): void {
+    closeWorkspaceDrawer();
+    setInboxOpen(true);
+  }
+
+  function openWorkspaceImport(): void {
+    if (narrow && sidebar.visible) {
+      // Keep one Back entry while the drawer hands off to Import.
+      sidebarToggleRef.current?.focus();
+      flushSync(() => {
+        sidebar.toggle();
+        setWorkspaceImportOpen(true);
+      });
+      return;
+    }
+    setWorkspaceImportOpen(true);
+  }
+
   const layoutPreferences = { preview: zenLayout, narrow };
   const compactDestinations =
-    compactNavigation && !narrow ? (
+    !phone && (compactNavigation || narrow) ? (
       <NavRail
         compact
         hiddenDestinations={zenLayout.hiddenDestinations}
-        onImport={() => {
-          setWorkspaceImportOpen(true);
-        }}
+        onImport={openWorkspaceImport}
+        onNavigate={narrow ? focusWorkspaceContent : undefined}
       />
     ) : null;
   const structuredParentId = structuredOpen?.parentId ?? selectedId;
@@ -775,9 +800,7 @@ export function AppShell(): ReactNode {
         {!zen && !narrow && showRail ? (
           <NavRail
             hiddenDestinations={zenLayout.hiddenDestinations}
-            onImport={() => {
-              setWorkspaceImportOpen(true);
-            }}
+            onImport={openWorkspaceImport}
           />
         ) : null}
 
@@ -786,16 +809,29 @@ export function AppShell(): ReactNode {
             <div hidden={keyboardVisible}>
               {phone ? (
                 <PhoneTopRow
-                  layoutPreferences={layoutPreferences}
-                  principal={principal}
+                  profile={
+                    <ProfileMenu principal={principal} layoutPreferences={layoutPreferences} />
+                  }
                   sidebarToggleRef={sidebarToggleRef}
                   sidebarVisible={sidebar.visible}
+                  homePath={homePath}
+                  homeCurrent={homeCurrent}
+                  onHome={focusWorkspaceContent}
+                  navigationHidden={phoneNavHidden}
+                  onToggleNavigation={() => {
+                    setPhoneNavHidden((hidden) => !hidden);
+                  }}
                   hasItem={selectedId !== null}
                   onToggleSidebar={sidebar.toggle}
                 />
               ) : (
                 <ShellHeader
                   compactDestinations={compactDestinations}
+                  home={
+                    homeInHeader
+                      ? { to: homePath, current: homeCurrent, onActivate: focusWorkspaceContent }
+                      : undefined
+                  }
                   layoutPreferences={layoutPreferences}
                   sidebarVisible={sidebar.visible}
                   sidebarToggleRef={sidebarToggleRef}
@@ -829,24 +865,6 @@ export function AppShell(): ReactNode {
                   <ShellSidebar
                     key={workspaceId}
                     narrow={narrow}
-                    mobileDestinations={
-                      <NavRail
-                        compact
-                        hiddenDestinations={zenLayout.hiddenDestinations}
-                        onImport={() => {
-                          // Keep one Back entry while the drawer hands off to Import.
-                          sidebarToggleRef.current?.focus();
-                          flushSync(() => {
-                            sidebar.toggle();
-                            setWorkspaceImportOpen(true);
-                          });
-                        }}
-                        onNavigate={() => {
-                          sidebar.toggle();
-                          focusPane(0);
-                        }}
-                      />
-                    }
                     sidebar={sidebar}
                     tree={tree}
                     selectedId={selectedId}
@@ -859,6 +877,7 @@ export function AppShell(): ReactNode {
                     }}
                     treeRegionRef={treeRegionRef}
                     sidebarToggleRef={sidebarToggleRef}
+                    searchRef={explorerSearchRef}
                   />
                 )}
 
@@ -905,6 +924,13 @@ export function AppShell(): ReactNode {
                                 {
                                   tree,
                                   selectedId,
+                                  openExplorer: () => {
+                                    if (!sidebar.visible) sidebar.toggle();
+                                    requestAnimationFrame(() => {
+                                      if (narrow) sidebarToggleRef.current?.focus();
+                                      else explorerSearchRef.current?.focus();
+                                    });
+                                  },
                                   openStructured: () => {
                                     setStructuredOpen({ source: 'picker' });
                                   },
@@ -941,17 +967,26 @@ export function AppShell(): ReactNode {
         {zen ? null : <PwaControls />}
         {navRendered && phone ? (
           <PhoneNavbar
-            {...phoneMenu}
+            hidden={phoneNavHidden}
+            explorerOpen={sidebar.visible}
+            onCloseExplorer={closeWorkspaceDrawer}
+            menu={
+              <NavRail
+                phoneMenu={{
+                  unreadNotifications: notificationsInbox.unread,
+                  onOpenInbox: openBottomInbox,
+                }}
+                hiddenDestinations={zenLayout.hiddenDestinations}
+                onImport={openWorkspaceImport}
+                onNavigate={focusWorkspaceContent}
+              />
+            }
             creating={tree.isCreating}
             tabCount={phoneTabs.length}
-            onSearch={() => {
-              setSearchOpen(true);
-            }}
-            onCreate={() => {
-              if (sidebar.visible) sidebar.toggle();
-              setCaptureOpen(true);
-            }}
+            onSearch={openBottomSearch}
+            onCreate={openBottomCapture}
             onTabs={() => {
+              closeWorkspaceDrawer();
               setTabsOpen(true);
             }}
           />
@@ -968,16 +1003,10 @@ export function AppShell(): ReactNode {
               }
             }
             onTree={sidebar.toggle}
-            onSearch={() => {
-              setSearchOpen(true);
-            }}
-            onCreate={() => {
-              if (sidebar.visible) sidebar.toggle();
-              setCaptureOpen(true);
-            }}
-            onOpenInbox={() => {
-              setInboxOpen(true);
-            }}
+            onSearch={openBottomSearch}
+            onCreate={openBottomCapture}
+            onOpenInbox={openBottomInbox}
+            onDestination={focusWorkspaceContent}
           />
         ) : null}
       </div>

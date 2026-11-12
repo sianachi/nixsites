@@ -85,8 +85,9 @@ describe('Homebase', () => {
     expect(within(bar).getByRole('button', { name: 'Undo' })).toBeVisible();
   });
 
-  it('explores the files: into a folder, back up the path, filtered, and open', async () => {
+  it('opens the existing Explorer and searches even unexpanded folders', async () => {
     const user = userEvent.setup();
+    localStorage.setItem('nix.sidebar', 'collapsed');
     const projects = item({
       id: '4b4b4b4b-4444-4444-8444-4b4b4b4b4b4b',
       title: 'Projects',
@@ -105,26 +106,19 @@ describe('Homebase', () => {
     stubCoreApi({ items: [ROADMAP, projects, launch, budget] });
     renderAt(<App />, HOME);
 
-    await user.click(await screen.findByRole('button', { name: 'Explore' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Explore' });
-    const top = within(dialog).getByRole('list', { name: 'All items' });
-    expect(await within(top).findByRole('button', { name: 'Roadmap' })).toBeVisible();
-
-    await user.click(within(dialog).getByRole('button', { name: 'Browse Projects' }));
-    const inside = await within(dialog).findByRole('list', { name: 'Items in Projects' });
-    expect(await within(inside).findByRole('button', { name: 'Launch plan' })).toBeVisible();
-    expect(within(inside).getByRole('button', { name: 'Budget' })).toBeVisible();
-
-    await user.type(within(dialog).getByRole('searchbox', { name: 'Filter Projects' }), 'laun');
-    expect(within(inside).queryByRole('button', { name: 'Budget' })).not.toBeInTheDocument();
-
-    const path = within(dialog).getByRole('navigation', { name: 'Folder path' });
-    await user.click(within(path).getByRole('button', { name: 'All items' }));
-    expect(within(dialog).getByRole('list', { name: 'All items' })).toBeVisible();
-    await user.click(within(dialog).getByRole('button', { name: 'Browse Projects' }));
-
-    await user.click(await within(dialog).findByRole('button', { name: 'Launch plan' }));
+    const explore = await screen.findByRole('button', { name: 'Explore' });
+    expect(screen.queryByRole('complementary', { name: 'Explorer' })).not.toBeInTheDocument();
+    await user.click(explore);
+    const explorer = within(await screen.findByRole('complementary', { name: 'Explorer' }));
+    expect(explorer.getByRole('button', { name: 'Roadmap' })).toBeVisible();
+    expect(explorer.queryByRole('button', { name: 'Launch plan' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Explore' })).not.toBeInTheDocument();
+
+    const search = explorer.getByRole('searchbox', { name: 'Search Explorer' });
+    await user.type(search, 'laun');
+    const results = within(await explorer.findByRole('list', { name: 'Explorer search results' }));
+    expect(results.queryByRole('button', { name: 'Budget' })).not.toBeInTheDocument();
+    await user.click(results.getByRole('button', { name: 'Launch plan' }));
     expect(await screen.findByRole('textbox', { name: 'Note title' })).toHaveValue('Launch plan');
   });
 

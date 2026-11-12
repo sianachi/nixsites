@@ -443,10 +443,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
   });
 
-  it('closes search on Escape without closing the drawer around it', async () => {
-    // Same bug, same fix, for the third document-level Escape handler reachable from behind the
-    // drawer: search (`command-palette.tsx`) opens from the header's own control, which also stays
-    // interactive while the drawer is open.
+  it('closes the drawer when Find opens search and keeps it closed after Escape', async () => {
     const user = userEvent.setup();
     stubViewport(false);
     stubCoreApi({ items: [NOTE] });
@@ -455,6 +452,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
     await user.click(await screen.findByRole('button', { name: 'Find' }));
     expect(screen.getByRole('dialog', { name: /search/i })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
 
     fireEvent(
       screen.getByRole('dialog', { name: /search/i }),
@@ -462,7 +460,7 @@ describe('the workspace tree, as a drawer on a narrow screen', () => {
     );
 
     expect(screen.queryByRole('dialog', { name: /search/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: /explorer/i })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
   });
 
   it('closes once an item is selected, moving focus to the pane rather than the toggle', async () => {

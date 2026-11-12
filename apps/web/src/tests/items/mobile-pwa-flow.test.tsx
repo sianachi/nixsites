@@ -22,14 +22,17 @@ beforeEach(() => {
   signedIn();
   stubViewport(false);
 });
-it('returns focus to the workspace control after importing from the mobile drawer', async () => {
+it('moves from the Explorer to Import through the mobile navigation without adding a Back step', async () => {
   const user = userEvent.setup();
   stubCoreApi({ items: [root] });
   renderAt(<App />, `/?item=${root.id}`);
   await screen.findByRole('textbox', { name: 'Note title' });
   const workspace = screen.getByRole('button', { name: 'Show the Explorer' });
   await user.click(workspace);
-  await user.click(screen.getByRole('button', { name: /^Workspace pages$/ }));
+  const explorer = screen.getByRole('complementary', { name: 'Explorer' });
+  expect(within(explorer).queryByRole('navigation', { name: 'Destinations' })).toBeNull();
+  const navigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+  await user.click(within(navigation).getByRole('button', { name: 'Menu' }));
   const back = vi.spyOn(window.history, 'back');
   await user.click(screen.getByRole('menuitem', { name: 'Import' }));
   const dialog = await screen.findByRole('dialog', { name: /^Import$/ });

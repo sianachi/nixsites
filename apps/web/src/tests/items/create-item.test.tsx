@@ -38,7 +38,7 @@ async function openNew(
   dialogName: string,
   initialTitle?: string,
 ): Promise<HTMLElement> {
-  await user.click(screen.getByRole('button', { name: 'Add note' }));
+  await user.click(screen.getByRole('button', { name: 'New note in Explorer' }));
   const capture = await screen.findByRole('dialog', { name: 'New note' });
   if (initialTitle)
     await user.type(within(capture).getByRole('textbox', { name: 'Note title' }), initialTitle);
@@ -52,7 +52,7 @@ async function openNew(
 
 async function createNote(user: ReturnType<typeof userEvent.setup>, title = ''): Promise<void> {
   if (screen.queryByRole('dialog', { name: 'New note' }) === null)
-    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await user.click(screen.getByRole('button', { name: 'New note in Explorer' }));
   const dialog = await screen.findByRole('dialog', { name: 'New note' });
   if (title !== '')
     await user.type(within(dialog).getByRole('textbox', { name: 'Note title' }), title);

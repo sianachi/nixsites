@@ -11,7 +11,6 @@ import { TITLE_ROW_LEAD_ID } from '../tabs/title-row-slot';
 
 export interface ShellSidebarProps {
   readonly narrow: boolean;
-  readonly mobileDestinations: ReactNode;
   readonly sidebar: Sidebar;
   readonly tree: WorkspaceTree;
   readonly selectedId: string | null;
@@ -23,6 +22,7 @@ export interface ShellSidebarProps {
   readonly onAdd: () => void;
   readonly treeRegionRef: RefObject<HTMLDivElement | null>;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
+  readonly searchRef: RefObject<HTMLInputElement | null>;
 }
 
 /**
@@ -31,7 +31,6 @@ export interface ShellSidebarProps {
  */
 export function ShellSidebar({
   narrow,
-  mobileDestinations,
   sidebar,
   tree,
   selectedId,
@@ -40,6 +39,7 @@ export function ShellSidebar({
   onAdd,
   treeRegionRef,
   sidebarToggleRef,
+  searchRef,
 }: ShellSidebarProps): ReactNode {
   const [browseParent, setBrowseParent] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -75,6 +75,7 @@ export function ShellSidebar({
       onDeleteItem={onDeleteItem}
       onAdd={onAdd}
       treeRegionRef={treeRegionRef}
+      searchRef={searchRef}
     />
   );
 
@@ -82,16 +83,12 @@ export function ShellSidebar({
     <>
       {!sidebar.visible ? null : narrow ? (
         <SidebarDrawer fill onClose={closeDrawer}>
-          {/* One browser owns the whole width on phones and portrait tablets. Occasional item and
-              destination actions are disclosed from it instead of competing in a second
-              navigation column. */}
           <MobileWorkspaceBrowser
             tree={tree}
             parentId={browseParent}
             onParent={setBrowseParent}
             onOpen={closeDrawerAfter(openItem.openPreview)}
             onClose={closeDrawer}
-            destinations={mobileDestinations}
           />
         </SidebarDrawer>
       ) : (

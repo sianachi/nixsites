@@ -176,8 +176,7 @@ export function SidebarDivider({ width, onPreview, onCommit }: SidebarDividerPro
         aria-hidden="true"
         className={[
           'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2',
-          // No resting line, so the Explorer blends into the page; it shows on hover and focus.
-          'bg-transparent transition-colors',
+          'bg-divider transition-colors',
           'group-hover:bg-accent group-focus-visible:bg-accent',
         ].join(' ')}
       />

@@ -13,6 +13,7 @@ export function MobileNavigation({
   onSearch,
   onCreate,
   onOpenInbox,
+  onDestination,
 }: {
   readonly workspaceId: string;
   readonly treeOpen: boolean;
@@ -25,6 +26,7 @@ export function MobileNavigation({
   readonly onSearch: () => void;
   readonly onCreate: () => void;
   readonly onOpenInbox: () => void;
+  readonly onDestination?: () => void;
 }): ReactNode {
   const control = `flex min-h-(--control-lg) min-w-0 flex-1 flex-col items-center justify-center gap-1 sm:flex-row sm:gap-2 rounded-md px-1 py-2 hover:bg-surface ${focusRing}`;
   // A tab bar's selected item is told apart by a fill and ink, the others stay muted - glyph and
@@ -55,6 +57,7 @@ export function MobileNavigation({
       </button>
       <NavLink
         to={`/w/${workspaceId}/calendar`}
+        onClick={onDestination}
         className={({ isActive }) => `${control} ${tone(isActive)}`}
       >
         {({ isActive }) => (
@@ -88,6 +91,7 @@ export function MobileNavigation({
         // the accessible name, so the pet is still announced by name.
         <NavLink
           to={`/w/${workspaceId}/pet`}
+          onClick={onDestination}
           className={({ isActive }) => `${control} flex-none w-(--control-lg) ${tone(isActive)}`}
         >
           <span className="relative">

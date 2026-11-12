@@ -42,7 +42,7 @@ describe('creating an item', () => {
 
     await screen.findByRole('button', { name: 'Engineering' });
 
-    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await user.click(screen.getByRole('button', { name: 'New note in Explorer' }));
     const capture = await screen.findByRole('dialog', { name: 'New note' });
     await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
     const view = await screen.findByRole('dialog', { name: 'New structured item' });
@@ -59,7 +59,7 @@ describe('creating an item', () => {
     await screen.findByRole('button', { name: 'Engineering' });
 
     // Root is the stable default; one choice in the dialog moves the destination, for every kind.
-    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await user.click(screen.getByRole('button', { name: 'New note in Explorer' }));
     const capture = await screen.findByRole('dialog', { name: 'New note' });
     await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
     const dialog = await screen.findByRole('dialog', { name: 'New structured item' });
@@ -76,7 +76,7 @@ describe('creating an item', () => {
       expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Roadmap');
     });
 
-    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await user.click(screen.getByRole('button', { name: 'New note in Explorer' }));
     const capture = await screen.findByRole('dialog', { name: 'New note' });
     await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
     const view = await screen.findByRole('dialog', { name: 'New structured item' });

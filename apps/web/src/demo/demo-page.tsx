@@ -1,5 +1,6 @@
 import { createNixClient } from '@nix/api-client';
-import { Text } from '@nix/ui';
+import { Button, Icon, Text } from '@nix/ui';
+import { X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
@@ -47,6 +48,7 @@ export async function prepareDemo(): Promise<void> {
  * and a reload starts over.
  */
 export function DemoPage(): ReactNode {
+  const [bannerVisible, setBannerVisible] = useState(true);
   const [client] = useState(() => {
     installDemoCollab(DEMO_NOTES);
     useSessionStore.setState({ status: 'authenticated', profile: DEMO_PROFILE, error: null });
@@ -68,20 +70,34 @@ export function DemoPage(): ReactNode {
             <MemoryRouter initialEntries={[DEMO_ENTRY]}>
               <AppRoutes />
             </MemoryRouter>
-            <aside
-              aria-label="Demo"
-              className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-divider bg-background px-4 py-2 sm:bottom-4"
-            >
-              <Text variant="note" as="p" tone="muted">
-                Demo · nothing is saved
-              </Text>
-              <a
-                href="/"
-                className="flex items-center text-sm font-bold whitespace-nowrap text-accent-text pointer-coarse:min-h-11"
+            {bannerVisible ? (
+              <aside
+                aria-label="Demo"
+                className="fixed bottom-[calc(var(--mobile-nav-height,0%)+var(--spacing)*2)] left-1/2 z-50 flex w-max max-w-[calc(100%-var(--spacing)*6)] -translate-x-1/2 items-center gap-2 rounded-lg border border-divider bg-background px-3 py-1"
               >
-                Back to Nix
-              </a>
-            </aside>
+                <Text variant="note" as="p" tone="muted">
+                  Demo · nothing is saved
+                </Text>
+                <a
+                  href="/"
+                  className="flex items-center text-sm font-bold whitespace-nowrap text-accent-text pointer-coarse:min-h-11"
+                >
+                  Back to Nix
+                </a>
+                <Button
+                  variant="subtle"
+                  aria-label="Dismiss demo banner"
+                  title="Dismiss demo banner"
+                  className="size-(--control-lg) shrink-0"
+                  onClick={() => {
+                    setBannerVisible(false);
+                    document.getElementById('main')?.focus();
+                  }}
+                >
+                  <Icon icon={X} size="sm" />
+                </Button>
+              </aside>
+            ) : null}
           </ApiClientOverrideProvider>
         </AuthOverrideProvider>
       </AppErrorBoundary>

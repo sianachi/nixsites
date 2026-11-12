@@ -13,10 +13,9 @@ import {
   Shapes,
   type LucideIcon,
 } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { ExploreDialog } from '../items/explore-dialog';
 import type { WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { recentItems } from '@nix/web-foundation/lib/recent-items';
@@ -60,15 +59,16 @@ export function Homebase({
   tree,
   onImport,
   onOpenStructured,
+  onExplore,
 }: {
   readonly tree: WorkspaceTree;
   readonly onOpenStructured: () => void;
   readonly onImport: () => void;
+  readonly onExplore: () => void;
 }): ReactNode {
   const { workspaceId, workspace } = useWorkspace();
   const { openPreview } = useOpenItem();
   const navigate = useNavigate();
-  const [exploring, setExploring] = useState(false);
   const undo = useUndo();
   const recents = useMemo(() => recentItems(workspaceId), [workspaceId]);
 
@@ -293,13 +293,7 @@ export function Homebase({
             {workspace.name}
           </Text>
           <div className="flex shrink-0 items-center gap-2">
-            {/* A way into the files from here, which a phone otherwise only has in the drawer. */}
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setExploring(true);
-              }}
-            >
+            <Button variant="secondary" onClick={onExplore}>
               <Icon icon={FolderTree} size="sm" />
               Explore
             </Button>
@@ -340,16 +334,6 @@ export function Homebase({
         ) : null}
         <div className="min-w-0 md:col-start-2">{moreActions}</div>
       </div>
-
-      {exploring ? (
-        <ExploreDialog
-          tree={tree}
-          onOpen={openPreview}
-          onClose={() => {
-            setExploring(false);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

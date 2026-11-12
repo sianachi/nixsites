@@ -3,9 +3,11 @@ import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { PhoneMenu, type PhoneMenuProps } from './phone-menu';
-
-export interface PhoneNavbarProps extends Omit<PhoneMenuProps, 'icon' | 'label' | 'className'> {
+export interface PhoneNavbarProps {
+  readonly hidden: boolean;
+  readonly explorerOpen: boolean;
+  readonly onCloseExplorer: () => void;
+  readonly menu: ReactNode;
   readonly creating: boolean;
   readonly tabCount: number;
   readonly onSearch: () => void;
@@ -20,20 +22,30 @@ const button = cn(
 
 /** Obsidian's floating bottom pill: history, find, new, tabs and a menu for the rest. */
 export function PhoneNavbar({
+  hidden,
+  explorerOpen,
+  onCloseExplorer,
   creating,
   tabCount,
   onSearch,
   onCreate,
   onTabs,
-  ...menu
+  menu,
 }: PhoneNavbarProps): ReactNode {
   const navigate = useNavigate();
   // The entry the app was opened on has React Router's 'default' key; going back from it would
   // leave the app (to a sign-in redirect or the server picker), so Back is off there.
   const atStart = useLocation().key === 'default';
+  function moveHistory(delta: -1 | 1): void {
+    // The drawer already owns a history entry. Close it before walking the page history.
+    if (explorerOpen) onCloseExplorer();
+    else void navigate(delta);
+  }
   return (
     // design-token-exempt: device safe-area inset keeps the pill above the home indicator.
     <nav
+      id="phone-navigation"
+      hidden={hidden}
       aria-label="Mobile navigation"
       className="px-3 pb-[max(env(safe-area-inset-bottom),var(--spacing)*2)] pt-1"
     >
@@ -42,9 +54,9 @@ export function PhoneNavbar({
           type="button"
           aria-label="Back"
           className={button}
-          disabled={atStart}
+          disabled={atStart && !explorerOpen}
           onClick={() => {
-            void navigate(-1);
+            moveHistory(-1);
           }}
         >
           <Icon icon={ChevronLeft} size="sm" />
@@ -54,7 +66,7 @@ export function PhoneNavbar({
           aria-label="Forward"
           className={button}
           onClick={() => {
-            void navigate(1);
+            moveHistory(1);
           }}
         >
           <Icon icon={ChevronRight} size="sm" />
@@ -85,7 +97,7 @@ export function PhoneNavbar({
             {tabCount}
           </Text>
         </button>
-        <PhoneMenu {...menu} />
+        {menu}
       </div>
     </nav>
   );

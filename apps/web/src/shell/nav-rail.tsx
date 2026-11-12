@@ -1,6 +1,7 @@
 import { sidebarDestinationSchema, type SidebarDestination } from '@nix/api-client';
 import { Button, Icon, Menu, Text, chromeSurface, focusRing, type MenuEntry } from '@nix/ui';
 import {
+  Bell,
   Bookmark,
   Paperclip,
   CalendarClock,
@@ -12,6 +13,8 @@ import {
   LayoutTemplate,
   ListFilter,
   ListFilterPlus,
+  Maximize2,
+  Menu as MenuIcon,
   Network,
   PawPrint,
   Settings,
@@ -20,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { toggleZenMode } from '@nix/web-foundation/lib/zen-mode';
 
 import {
   useForgetDeletedSmartLists,
@@ -42,7 +46,7 @@ import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
  * them as the tree's own destination, so the upper group names a complete set of ways into the
  * workspace rather than three extras bolted beside an unlabelled default. Import and Settings sit
  * at the foot: persistent workspace operations rather than views. Desktop keeps a strip beside
- * the tree; compact layouts use one destination menu inside the workspace drawer.
+ * the tree; compact layouts use a destination menu in the workspace controls.
  *
  * ## Why this lives in the app and not in `packages/ui`
  *
@@ -201,11 +205,17 @@ export interface NavRailProps {
    * Called after a destination is followed. The shell uses it to dismiss the narrow-viewport
    * drawer, which would otherwise stay open over the destination it was just asked to leave for.
    */
-  readonly onNavigate?: () => void;
+  readonly onNavigate?: (() => void) | undefined;
 
   /** Opens the workspace-level import flow. It is an action, so it does not change the address. */
   readonly onImport: () => void;
   readonly compact?: boolean;
+  readonly phoneMenu?:
+    | {
+        readonly unreadNotifications: number;
+        readonly onOpenInbox: () => void;
+      }
+    | undefined;
   readonly hiddenDestinations?: readonly SidebarDestination[];
 }
 
@@ -213,6 +223,7 @@ export function NavRail({
   onNavigate,
   onImport,
   compact = false,
+  phoneMenu,
   hiddenDestinations = [],
 }: NavRailProps): ReactNode {
   const { pathname } = useLocation();
@@ -308,7 +319,7 @@ export function NavRail({
     controlRefs.current[next]?.focus();
   }
 
-  if (compact) {
+  if (compact || phoneMenu) {
     const currentItem = items[currentIndex];
     const currentHref =
       currentItem?.kind === 'destination' ? `${workspaceRoot}${currentItem.to}` : null;
@@ -337,24 +348,62 @@ export function NavRail({
       { kind: 'separator' },
       ...queriesMenuEntries(workspaceId, workspaceRoot, smartLists, onNavigate),
     ];
-    return (
-      <nav aria-label="Destinations">
-        <Menu
-          label="Workspace pages"
-          items={entries}
-          renderLink={({ href, ...props }) => (
-            <Link to={href} {...props} aria-current={href === currentHref ? 'page' : undefined} />
-          )}
-        >
-          {(trigger) => (
+    const unread = phoneMenu?.unreadNotifications ?? 0;
+    if (phoneMenu) {
+      entries.unshift(
+        {
+          label: unread > 0 ? `Inbox, ${String(unread)} unread` : 'Inbox',
+          icon: Bell,
+          onSelect: phoneMenu.onOpenInbox,
+        },
+        { kind: 'separator' },
+      );
+      entries.push(
+        { kind: 'separator' },
+        {
+          label: 'Enter Zen mode',
+          icon: Maximize2,
+          onSelect: () => {
+            onNavigate?.();
+            toggleZenMode();
+          },
+        },
+      );
+    }
+    const menu = (
+      <Menu
+        label={phoneMenu ? 'Menu' : 'Workspace pages'}
+        items={entries}
+        renderLink={({ href, ...props }) => (
+          <Link to={href} {...props} aria-current={href === currentHref ? 'page' : undefined} />
+        )}
+      >
+        {(trigger) =>
+          phoneMenu ? (
+            <button
+              {...trigger}
+              aria-label={unread > 0 ? `Menu, ${String(unread)} unread` : 'Menu'}
+              title="Menu"
+              className={`relative flex size-(--control-lg) shrink-0 items-center justify-center rounded-full text-foreground hover:bg-foreground/7 active:bg-foreground/10 ${focusRing}`}
+            >
+              <Icon icon={MenuIcon} size="sm" />
+              {unread > 0 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-2 top-2 size-2 rounded-full bg-accent-fill"
+                />
+              ) : null}
+            </button>
+          ) : (
             <Button {...trigger} variant="subtle" className="w-full justify-between">
               {items[currentIndex]?.label ?? 'Workspace pages'}
               <Icon icon={ChevronDown} size="sm" />
             </Button>
-          )}
-        </Menu>
-      </nav>
+          )
+        }
+      </Menu>
     );
+    return phoneMenu ? menu : <nav aria-label="Destinations">{menu}</nav>;
   }
 
   return (
@@ -580,6 +629,7 @@ function queriesMenuEntries(
         : `Pin ${named(list)} to this browser's rail`,
       onSelect: () => {
         setPinned(workspaceId, list.id, !list.pinned);
+        onNavigate?.();
       },
     })),
     { kind: 'separator' },
