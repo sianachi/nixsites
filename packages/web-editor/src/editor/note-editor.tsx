@@ -134,7 +134,7 @@ import { useTextWidthPreference } from './text-width-preference';
 
 export interface NoteEditorProps {
   readonly itemId: string;
-  readonly mobileActions?: ReactNode;
+  readonly mobileActions?: ((close: () => void) => ReactNode) | undefined;
   /** The details panel's toggle, docked with the writing tools on a phone. */
   readonly mobileDetails?: MobileNoteDetails | undefined;
   readonly documentPath?: string | undefined;

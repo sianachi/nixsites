@@ -157,18 +157,19 @@ describe('the settings panel', () => {
     expect(within(panel).queryByRole('button', { name: /kanban board/i })).not.toBeInTheDocument();
   });
 
-  it('opens as a dialog over the page on desktop, and starts closed on the next note', async () => {
+  it('opens beside the note on a wide desktop and starts closed on the next note', async () => {
     const user = userEvent.setup();
     stubCoreApi({ items: [NOTE] });
     const first = renderAt(<App />, `/?item=${NOTE.id}`);
 
     await user.click(await screen.findByRole('button', { name: /settings/i }));
-    const dialog = await screen.findByRole('dialog', { name: 'Item details' });
-    expect(within(dialog).getByRole('complementary', { name: /item settings/i })).toBeVisible();
+    const sidebar = await screen.findByRole('complementary', { name: /item settings/i });
+    expect(sidebar).toBeVisible();
+    expect(sidebar.closest('dialog')).toBeNull();
 
     first.unmount();
     renderAt(<App />, `/?item=${NOTE.id}`);
     await screen.findByRole('button', { name: /settings/i });
-    expect(screen.queryByRole('dialog', { name: 'Item details' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /item settings/i })).not.toBeInTheDocument();
   });
 });

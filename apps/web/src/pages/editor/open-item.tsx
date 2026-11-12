@@ -1,7 +1,17 @@
-import { Button, Dialog, Icon, Menu, Text, type MenuEntry } from '@nix/ui';
+import { Button, Dialog, Icon, Menu, Text, type MenuAction, type MenuEntry } from '@nix/ui';
 import { useBookmarksStore, useIsKept } from '@nix/web-collections/items/use-bookmarks';
-import { MoreHorizontal, Settings2, Maximize2, Plus, Sparkles, Star } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Settings2,
+  Maximize2,
+  MessageCircle,
+  MessageSquare,
+  Plus,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
@@ -11,6 +21,7 @@ import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { paneClip, paneScroller } from '@nix/web-foundation/layout/regions';
+import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { useNarrowViewport, useOverlayDetails } from '@nix/web-foundation/layout/viewport';
 import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
@@ -24,7 +35,6 @@ import type { ShellContext } from '../../shell/shell-context';
 
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
 import { useItemHasSite } from '@nix/web-sites/sites/use-item-site';
-import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
 import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '@nix/web-views/core/container-view';
 import { useContainer } from '@nix/web-collections/core/use-container';
@@ -45,11 +55,13 @@ import type { ItemProperties } from '@nix/web-collections/properties/use-item-pr
 import { bodyNoun, clockTime } from './lock-copy';
 import { useItemViewActions } from './use-item-view-actions';
 import { ItemViewSuggestions } from './item-view-suggestions';
+import { NoteChatDrawer } from '../pet-page';
 
 const addableViews = STRUCTURED_RECIPES.filter(
   (recipe, index, all) =>
     all.findIndex((candidate) => candidate.viewKind === recipe.viewKind) === index,
 );
+const DIALOG_ACTIONS = new Set(['move', 'export', 'import', 'lock']);
 
 interface OpenItemProps {
   readonly tree: ShellContext['tree'];
@@ -96,11 +108,9 @@ export function OpenItem({
   onNavigateAway,
 }: OpenItemProps): ReactNode {
   const visibility = useHiddenItems();
-  const treeChildren = useHiddenItems('tree-children');
   const navigate = useNavigate();
   const kept = useIsKept(itemId);
   const toggleBookmark = useBookmarksStore((state) => state.toggle);
-  const openChat = useOpenChat();
   const narrow = useNarrowViewport();
   // Zen draws the item and its sync state alone. Everything it removes below is not rendered
   // rather than hidden, and every removal is a sibling of the body in a fixed position, never a
@@ -157,9 +167,8 @@ export function OpenItem({
   }
   const requested =
     viewId ?? (hidden.has(storedViews?.default ?? DOCUMENT_VIEW) ? fallbackView() : null);
-  const overlayDetails = useOverlayDetails();
-  // The settings open over the page - a dialog, or a drawer on touch screens - so each note starts
-  // with them closed rather than reopening them on every visit.
+  const compactDetails = useOverlayDetails();
+  const overlayDetails = compactDetails || onClose !== undefined || onNavigateAway !== undefined;
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelPane, setPanelPane] = useState<Pane>('details');
 
@@ -169,6 +178,11 @@ export function OpenItem({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [noteChatOpen, setNoteChatOpen] = useState(false);
+  const closeNoteChat = (): void => {
+    setNoteChatOpen(false);
+  };
+  useBackDismiss(narrow && noteChatOpen, closeNoteChat);
   const [leadingHeading, setLeadingHeading] = useState<string | null>(null);
   const { getAccessToken } = useAuth();
 
@@ -183,8 +197,9 @@ export function OpenItem({
 
   // A dialog opened on an open body goes when the body closes - a relock or an expiry - rather
   // than reappearing, with its fields reset, the next time the body opens.
-  if (dialog === 'lock' && !lock.open && lock.status !== 'loading') {
-    setDialog(null);
+  if (!lock.open && lock.status !== 'loading') {
+    if (dialog === 'lock') setDialog(null);
+    if (noteChatOpen) setNoteChatOpen(false);
   }
 
   // The prompt unmounts when the right password is given; focus goes to the lock control that now
@@ -215,6 +230,7 @@ export function OpenItem({
   const paneIndex = usePaneIndex();
 
   const togglePanel = useCallback((): void => {
+    setHistoryOpen(false);
     setPanelOpen((current) => !current);
   }, []);
 
@@ -228,14 +244,24 @@ export function OpenItem({
   }, [paneIndex, togglePanel]);
 
   function openSitePane(): void {
+    setHistoryOpen(false);
     setPanelPane('site');
-    if (!panelOpen) togglePanel();
+    setPanelOpen(true);
     focusSitePaneHeading();
   }
   function openCommentsPane(): void {
+    setHistoryOpen(false);
     setPanelPane('comments');
-    if (!panelOpen) togglePanel();
+    setPanelOpen(!panelOpen || panelPane !== 'comments');
   }
+  function openDetailsPane(): void {
+    setHistoryOpen(false);
+    if (panelPane === 'comments') {
+      setPanelPane('details');
+      setPanelOpen(true);
+    } else setPanelOpen(!panelOpen);
+  }
+  const canOpenComments = lock.open && bodyKind === 'note' && !commentsTab;
   const sitesEnabled = useSitesVisible();
   const hasSite = useItemHasSite(itemId, sitesEnabled);
 
@@ -319,18 +345,15 @@ export function OpenItem({
     lock,
     workspace,
     visibility,
-    treeChildren,
     navigate,
-    openChat,
+    openChat: () => {
+      setNoteChatOpen(true);
+    },
     onNavigateAway,
     onClose,
     sitesEnabled,
     hasSite,
     openSitePane,
-    openCommentsPane:
-      lock.open && showingDocument && !showingComments && !editorKind
-        ? openCommentsPane
-        : undefined,
     openDocument:
       lock.open && documentTabHidden && selectedViewId !== DOCUMENT_VIEW
         ? () => {
@@ -340,12 +363,15 @@ export function OpenItem({
     canApplyTemplates,
     canManageTemplates,
     historyOpen,
-    setHistoryOpen,
+    setHistoryOpen: (open) => {
+      if (open) setPanelOpen(false);
+      setHistoryOpen(open);
+    },
     openDialog: setDialog,
   });
 
   const zenAvailable = lock.open;
-  const bookmarkEntry: MenuEntry = {
+  const bookmarkEntry: MenuAction = {
     kind: 'action',
     label: kept ? 'Remove bookmark' : 'Bookmark',
     icon: Star,
@@ -353,36 +379,63 @@ export function OpenItem({
       void toggleBookmark(itemId);
     },
   };
-  // Two controls beside the title: the item's settings and "...". Bookmarking lives in the menu.
+  const commentEntry: MenuEntry = {
+    kind: 'action',
+    label: 'Comments',
+    icon: MessageSquare,
+    onSelect: openCommentsPane,
+  };
+  const headerChat =
+    onNavigateAway === undefined
+      ? actionEntries.find((entry) => entry.key === 'note-chat')
+      : undefined;
+  const contextItems: MenuEntry[] = [
+    ...(onNavigateAway === undefined ? [] : [bookmarkEntry]),
+    ...(onNavigateAway !== undefined && canOpenComments ? [commentEntry] : []),
+    ...actionEntries.filter(
+      (entry) => entry !== headerChat && !DIALOG_ACTIONS.has(entry.key ?? ''),
+    ),
+  ];
+  const menuItems: MenuEntry[] = [
+    ...contextItems,
+    ...(contextItems.length > 0 ? [{ kind: 'separator' as const }] : []),
+    ...actionEntries.filter((entry) => DIALOG_ACTIONS.has(entry.key ?? '')),
+    ...(zenAvailable
+      ? [
+          { kind: 'separator' as const },
+          {
+            kind: 'action' as const,
+            label: 'Enter Zen mode',
+            icon: Maximize2,
+            onSelect: toggleZenMode,
+          },
+        ]
+      : []),
+  ];
   const desktopControls = (
     <div className="flex shrink-0 items-center gap-1">
+      {headerChat && (
+        <Button
+          variant="icon"
+          aria-label={headerChat.label}
+          title={headerChat.label}
+          aria-haspopup="dialog"
+          aria-expanded={noteChatOpen}
+          onClick={headerChat.onSelect}
+        >
+          <Icon icon={MessageCircle} size="sm" />
+        </Button>
+      )}
       <Button
         variant="icon"
         aria-label="Settings"
         title="Item settings"
-        aria-expanded={panelOpen}
-        onClick={togglePanel}
+        aria-expanded={panelOpen && panelPane !== 'comments'}
+        onClick={openDetailsPane}
       >
         <Icon icon={Settings2} size="sm" />
       </Button>
-      <Menu
-        label="Item actions"
-        items={
-          zenAvailable
-            ? [
-                bookmarkEntry,
-                ...actionEntries,
-                // The phone's sheet carries its own Zen button, so the entry is added here only.
-                {
-                  kind: 'action',
-                  label: 'Enter Zen mode',
-                  icon: Maximize2,
-                  onSelect: toggleZenMode,
-                },
-              ]
-            : [bookmarkEntry, ...actionEntries]
-        }
-      >
+      <Menu label="Item actions" items={menuItems}>
         {(trigger) => (
           <Button
             {...trigger}
@@ -402,27 +455,51 @@ export function OpenItem({
   );
 
   // Phone actions share the same commands, in the writing dock's existing sheet.
-  const itemActions = (
-    <div className="grid grid-cols-2 gap-2">
-      <BookmarkButton compact itemId={itemId} title={title} />
-      {actionEntries.map((entry) => (
-        <Button key={entry.key} variant="ghost" className="justify-start" onClick={entry.onSelect}>
-          {entry.icon === undefined ? null : <Icon icon={entry.icon} size="sm" />}
-          {entry.label}
+  function itemActions(close: () => void): ReactNode {
+    const select = (action: () => void) => () => {
+      close();
+      action();
+    };
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {onNavigateAway === undefined ? null : (
+          <BookmarkButton
+            compact
+            itemId={itemId}
+            title={title}
+            onToggle={select(bookmarkEntry.onSelect)}
+          />
+        )}
+        {canOpenComments && (
+          <Button variant="ghost" className="justify-start" onClick={select(openCommentsPane)}>
+            <Icon icon={MessageSquare} size="sm" />
+            Comments
+          </Button>
+        )}
+        {actionEntries.map((entry) => (
+          <Button
+            key={entry.key}
+            variant="ghost"
+            className="justify-start"
+            onClick={select(entry.onSelect)}
+          >
+            {entry.icon === undefined ? null : <Icon icon={entry.icon} size="sm" />}
+            {entry.label}
+          </Button>
+        ))}
+        {zenAvailable ? (
+          <Button variant="ghost" aria-label="Enter Zen mode" onClick={select(toggleZenMode)}>
+            <Icon icon={Maximize2} size="sm" />
+            Zen
+          </Button>
+        ) : null}
+        <Button variant="ghost" aria-expanded={panelOpen} onClick={select(togglePanel)}>
+          <Icon icon={Settings2} size="sm" />
+          Settings
         </Button>
-      ))}
-      {zenAvailable ? (
-        <Button variant="ghost" aria-label="Enter Zen mode" onClick={toggleZenMode}>
-          <Icon icon={Maximize2} size="sm" />
-          Zen
-        </Button>
-      ) : null}
-      <Button variant="ghost" aria-expanded={panelOpen} onClick={togglePanel}>
-        <Icon icon={Settings2} size="sm" />
-        Settings
-      </Button>
-    </div>
-  );
+      </div>
+    );
+  }
 
   const addView = canManageViews ? (
     <Menu
@@ -592,14 +669,11 @@ export function OpenItem({
             setActionsOpen(false);
           }}
         >
-          <div
-            onClickCapture={(event) => {
-              if (event.target instanceof Element && event.target.closest('button'))
-                setActionsOpen(false);
-            }}
-          >
-            {itemActions}
-          </div>
+          {itemActions(() => {
+            flushSync(() => {
+              setActionsOpen(false);
+            });
+          })}
         </Dialog>
       ) : null}
 
@@ -654,7 +728,7 @@ export function OpenItem({
             itemId={itemId}
             container={container}
             details={details}
-            panelOpen={panelOpen}
+            panelOpen={panelOpen && (panelPane !== 'comments' || lock.open)}
             overlayDetails={overlayDetails}
             panelPane={panelPane}
             onPanelPaneChange={setPanelPane}
@@ -679,6 +753,13 @@ export function OpenItem({
         lock={lock}
         getAccessToken={getAccessToken}
       />
+      {noteChatOpen && lock.open && workspace !== null ? (
+        <NoteChatDrawer
+          workspaceId={workspace.workspaceId}
+          rootItemId={itemId}
+          onClose={closeNoteChat}
+        />
+      ) : null}
     </>
   );
 }

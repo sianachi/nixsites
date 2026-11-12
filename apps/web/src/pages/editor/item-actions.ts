@@ -8,7 +8,7 @@ import {
   Lock,
   LockOpen,
   MessageCircle,
-  MessageSquare,
+  Network,
   PanelRightClose,
   Save,
   Share2,
@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import type { NavigateFunction } from 'react-router';
 
-import { treeChildrenEntry } from '@nix/web-collections/items/item-menu-entries';
 import type { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import type { useItemLock } from '../../locks/use-item-lock';
 import type { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
@@ -32,16 +31,13 @@ export interface ItemActionArgs {
   readonly lock: ReturnType<typeof useItemLock>;
   readonly workspace: ReturnType<typeof useOptionalWorkspace>;
   readonly visibility: ReturnType<typeof useHiddenItems>;
-  readonly treeChildren: ReturnType<typeof useHiddenItems>;
   readonly navigate: NavigateFunction;
-  readonly openChat: (itemId: string) => void;
+  readonly openChat: () => void;
   readonly onNavigateAway: (() => void) | undefined;
   readonly onClose: (() => void) | undefined;
   readonly sitesEnabled: boolean;
   readonly hasSite: boolean | null;
   readonly openSitePane: () => void;
-  /** Opens the comments pane; absent for bodies that cannot be commented on. */
-  readonly openCommentsPane: (() => void) | undefined;
   readonly openDocument?: (() => void) | undefined;
   readonly canApplyTemplates: boolean;
   readonly canManageTemplates: boolean;
@@ -58,7 +54,6 @@ export function itemActionEntries({
   lock,
   workspace,
   visibility,
-  treeChildren,
   navigate,
   openChat,
   onNavigateAway,
@@ -66,7 +61,6 @@ export function itemActionEntries({
   sitesEnabled,
   hasSite,
   openSitePane,
-  openCommentsPane,
   openDocument,
   canApplyTemplates,
   canManageTemplates,
@@ -75,21 +69,18 @@ export function itemActionEntries({
   openDialog,
 }: ItemActionArgs): MenuAction[] {
   return [
-    treeChildrenEntry(treeChildren, itemId, title),
     ...(workspace && lock.open
       ? [
           {
             key: 'note-chat',
             label: 'Chat about this note',
             icon: MessageCircle,
-            onSelect: () => {
-              onNavigateAway?.();
-              openChat(itemId);
-            },
+            onSelect: openChat,
           },
           {
             key: 'focus-graph',
             label: 'Focus in graph',
+            icon: Network,
             onSelect: () => {
               onNavigateAway?.();
               void navigate(
@@ -115,14 +106,13 @@ export function itemActionEntries({
             : []),
         ]
       : []),
-    ...(visibility.enabled
+    ...(visibility.enabled && visibility.hiddenSet.has(itemId)
       ? [
           {
             key: 'visibility',
-            label: visibility.hiddenSet.has(itemId) ? 'Show for me' : 'Hide for me',
+            label: 'Show for me',
             onSelect: () => {
-              if (visibility.hiddenSet.has(itemId)) visibility.show(itemId, title);
-              else visibility.hide(itemId, title);
+              visibility.show(itemId, title);
             },
           },
         ]
@@ -134,9 +124,6 @@ export function itemActionEntries({
         openDialog('move');
       },
     },
-    ...(openCommentsPane === undefined
-      ? []
-      : [{ key: 'comments', label: 'Comments', icon: MessageSquare, onSelect: openCommentsPane }]),
     ...(openDocument === undefined
       ? []
       : [{ key: 'document', label: 'Open document', icon: FileText, onSelect: openDocument }]),

@@ -1,5 +1,5 @@
 import { items, locks, type Item, type PetProfile, type PetSettings } from '@nix/api-client';
-import { Text, focusRing } from '@nix/ui';
+import { Dialog, Text, focusRing } from '@nix/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
@@ -66,6 +66,29 @@ function ChatTabRedirect({
       replace
       to={`/w/${encodeURIComponent(workspaceId)}?item=${rootItemId}&chat=${rootItemId}`}
     />
+  );
+}
+
+export function NoteChatDrawer({
+  workspaceId,
+  rootItemId,
+  onClose,
+}: {
+  readonly workspaceId: string;
+  readonly rootItemId: string;
+  readonly onClose: () => void;
+}): ReactElement {
+  return (
+    <Dialog
+      open
+      title="Chat about this note"
+      closeLabel="Close note chat"
+      onClose={onClose}
+      presentation="workspace"
+      className="rounded-none sm:ml-auto sm:mr-0 sm:mb-auto sm:mt-[var(--sheet-viewport-top,0%)] sm:h-[var(--sheet-viewport-height,100dvh)] sm:w-128 sm:max-w-full motion-safe:transition-transform motion-safe:duration-200 motion-safe:starting:translate-x-full"
+    >
+      <PetConversationPane workspaceId={workspaceId} rootItemId={rootItemId} />
+    </Dialog>
   );
 }
 

@@ -50,7 +50,7 @@ const BOARD = {
 };
 
 describe('an item nobody has configured', () => {
-  it('opens the document without a default Comments tab', async () => {
+  it('opens into its document and offers Comments beside it', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
@@ -60,6 +60,10 @@ describe('an item nobody has configured', () => {
     const views = within(await screen.findByRole('navigation', { name: 'Views' }));
     expect(views.getByRole('button', { name: 'Document' })).toHaveAttribute('aria-current', 'page');
     expect(views.queryByRole('button', { name: 'Comments' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const settings = within(await screen.findByRole('complementary', { name: 'Item settings' }));
+    await userEvent.click(settings.getByRole('button', { name: 'Comments' }));
+    expect(await settings.findByRole('textbox', { name: 'New comment' })).toBeVisible();
   });
 
   it('offers its own properties and views to configure, even so', async () => {
@@ -73,21 +77,25 @@ describe('an item nobody has configured', () => {
     expect(await screen.findByRole('button', { name: /settings/i })).toBeVisible();
   });
 
-  it('keeps two controls beside the title: settings, and "..." with bookmarking in it', async () => {
+  it('keeps note chat and Settings beside the title and focused commands in Item actions', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
-    const actions = await screen.findByRole('button', { name: 'Item actions' });
+    await screen.findByRole('button', { name: 'Chat about this note' });
+    const actions = screen.getByRole('button', { name: 'Item actions' });
     const controls = actions.parentElement;
     if (controls === null) throw new Error('The item actions control must sit in a group');
     expect(
       within(controls)
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
-    ).toEqual(['Settings', 'Item actions']);
+    ).toEqual(['Chat about this note', 'Settings', 'Item actions']);
 
     await userEvent.click(actions);
-    expect(screen.getByRole('menuitem', { name: 'Bookmark' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: 'Bookmark' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitem', { name: 'Hide children from tree' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Export' })).toBeVisible();
   });
 

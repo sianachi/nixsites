@@ -24,7 +24,7 @@ export function MobileNoteToolbar({
 }: {
   readonly formatting: ReactNode;
   readonly editor?: Editor;
-  readonly actions?: ReactNode;
+  readonly actions?: ReactNode | ((close: () => void) => ReactNode);
   readonly details?: MobileNoteDetails | undefined;
 }): ReactNode {
   const visibility = useMobileToolbarPreference((state) => state.visibility);
@@ -200,7 +200,13 @@ export function MobileNoteToolbar({
               Details
             </Button>
           ) : null}
-          {actions}
+          {typeof actions === 'function'
+            ? actions(() => {
+                flushSync(() => {
+                  setActionsOpen(false);
+                });
+              })
+            : actions}
         </Dialog>
       ) : null}
     </div>

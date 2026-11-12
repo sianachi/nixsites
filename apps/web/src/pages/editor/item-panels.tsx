@@ -1,12 +1,13 @@
-import { Dialog } from '@nix/ui';
-import { useEffect, type ReactNode } from 'react';
+import { Button, Dialog, Icon, Text } from '@nix/ui';
+import { X } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { SidebarDrawer } from '@nix/web-foundation/layout/sidebar-drawer';
 import { useEdgeSwipeOpen } from '@nix/web-foundation/layout/use-edge-swipe';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
 import { useLayoutKind, useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { DocumentHistory } from '../../history/document-history';
-import { historyPanelWidth } from '@nix/web-foundation/layout/regions';
+import { historyPanelWidth, settingsPanelWidth } from '@nix/web-foundation/layout/regions';
 import { ItemPanel, type Pane } from '../../panel/item-panel';
 import type { useItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import type { useContainer } from '@nix/web-collections/core/use-container';
@@ -25,8 +26,7 @@ interface ItemPanelsProps {
 }
 
 /**
- * The settings panel, as a drawer on touch screens and a dialog on desktop, and the revision
- * history, beside the body on a wide window and over it on a narrow one.
+ * Contextual panels sit beside a wide note and open over a compact or split note.
  */
 export function ItemPanels({
   itemId,
@@ -47,21 +47,21 @@ export function ItemPanels({
   useEdgeSwipeOpen('right', phone && !panelOpen, togglePanel);
   // Always mounted, like the shell's own: a hook that mounts with the drawer would race its own cleanup.
   useBackDismiss(phone && panelOpen, togglePanel);
+  const itemPanel = panelOpen ? (
+    <ItemPanel
+      container={container}
+      details={details}
+      onClose={togglePanel}
+      drawer={phone}
+      pane={panelPane}
+      onPaneChange={setPanelPane}
+    />
+  ) : null;
   return (
     <>
       {panelOpen && phone ? (
-        <PhonePanelDrawer onClose={togglePanel}>
-          <ItemPanel
-            container={container}
-            details={details}
-            onClose={togglePanel}
-            drawer
-            pane={panelPane}
-            onPaneChange={setPanelPane}
-          />
-        </PhonePanelDrawer>
-      ) : panelOpen ? (
-        // A dialog over the page on desktop, at every width, rather than a column beside it.
+        <PhonePanelDrawer onClose={togglePanel}>{itemPanel}</PhonePanelDrawer>
+      ) : panelOpen && overlayDetails ? (
         <Dialog
           open
           title="Item details"
@@ -69,14 +69,10 @@ export function ItemPanels({
           presentation="workspace"
           className="sm:max-w-xl"
         >
-          <ItemPanel
-            container={container}
-            details={details}
-            onClose={togglePanel}
-            pane={panelPane}
-            onPaneChange={setPanelPane}
-          />
+          {itemPanel}
         </Dialog>
+      ) : panelOpen ? (
+        <InlineItemPanel onClose={togglePanel}>{itemPanel}</InlineItemPanel>
       ) : null}
 
       {/* The document's revisions, beside it on a wide window and over it on a narrow one - the
@@ -113,6 +109,45 @@ export function ItemPanels({
         )
       ) : null}
     </>
+  );
+}
+
+function InlineItemPanel({
+  children,
+  onClose,
+}: {
+  readonly children: ReactNode;
+  readonly onClose: () => void;
+}): ReactNode {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement;
+    const closeButton = closeRef.current;
+    closeButton?.focus({ preventScroll: true });
+    return () => {
+      if (
+        opener instanceof HTMLElement &&
+        opener.isConnected &&
+        (document.activeElement === document.body || document.activeElement === closeButton)
+      ) {
+        opener.focus({ preventScroll: true });
+      }
+    };
+  }, []);
+  return (
+    <div
+      className={`flex min-h-0 shrink-0 flex-col overflow-hidden border-l border-divider bg-surface ${settingsPanelWidth}`}
+    >
+      <div className="flex shrink-0 items-center justify-between border-b border-divider px-3 py-2">
+        <Text as="h2" variant="h6">
+          Item details
+        </Text>
+        <Button ref={closeRef} variant="icon" aria-label="Close item details" onClick={onClose}>
+          <Icon icon={X} size="sm" />
+        </Button>
+      </div>
+      {children}
+    </div>
   );
 }
 

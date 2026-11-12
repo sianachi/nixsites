@@ -32,7 +32,7 @@ import { ViewEditor } from '@nix/web-views/core/view-editor';
  * the schema it gives its children - and they are different questions with the same answer only by
  * accident. "Details" is what this one holds. "Fields" is what the things inside it may hold.
  *
- * Shown in a dialog on desktop and in the right-hand drawer on touch screens (`item-panels.tsx`).
+ * Shown beside a wide note and in an overlay on compact layouts (`item-panels.tsx`).
  */
 
 export type Pane = 'details' | 'fields' | 'views' | 'links' | 'outline' | 'comments' | 'site';
