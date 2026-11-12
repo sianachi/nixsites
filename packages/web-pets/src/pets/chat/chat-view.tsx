@@ -1,4 +1,3 @@
-import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
 import { NewChatNote } from './new-chat-note';
 import { ChatMessage } from './chat-message';
 import { SaveInsightNote, type SavedInsight } from './save-insight-note';
@@ -9,8 +8,8 @@ import {
   type Conversation,
   type ConversationMessage,
 } from '@nix/api-client';
-import { Button, Text, Textarea, Checkbox, useUndo } from '@nix/ui';
-import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Button, Text, Textarea, Checkbox, ScrollRegion, useUndo } from '@nix/ui';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PetChatViewport } from '../pet-chat-viewport';
 import { PetMessageText } from '../pet-message-text';
@@ -25,7 +24,6 @@ export function ChatView({
   readonly itemId: string;
   readonly workspaceId: string;
 }): ReactNode {
-  const presentation = useContext(ZenPresentationContext);
   const client = useApiClient();
   const { workspaces } = useAccessibleWorkspaces();
   const [needsSetup, setNeedsSetup] = useState(false);
@@ -34,8 +32,6 @@ export function ChatView({
   const [insight, setInsight] = useState<ConversationMessage | null>(null);
   const [saved, setSaved] = useState<Readonly<Record<string, SavedInsight>>>({});
   const [chat, setChat] = useState<Conversation | null>(null);
-  const compact =
-    presentation?.collectionTools === false || (presentation !== null && chat?.canEdit === false);
   const [messages, setMessages] = useState<readonly ConversationMessage[]>([]);
   // Each message's view of the generated-UI blocks before it, so a patch can find what it changes.
   const piecesBefore = useMemo(() => earlierPieces(messages), [messages]);
@@ -218,15 +214,9 @@ export function ChatView({
         <Text role="status">Loading conversation…</Text>
       ) : (
         <>
-          <div
-            className={`mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col gap-2 ${compact ? '' : '@5xl:flex-row @5xl:gap-6'}`}
-          >
-            <div
-              className={`flex min-w-0 flex-col gap-2 ${compact ? '' : '@5xl:w-64 @5xl:shrink-0'}`}
-            >
-              <div
-                className={`flex min-w-0 items-center gap-2 px-3 @sm:px-4 ${compact ? '' : '@5xl:hidden'}`}
-              >
+          <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col gap-2">
+            <div className="flex min-w-0 shrink-0 flex-col gap-2">
+              <div className="flex min-w-0 items-center gap-2 border-b border-divider px-3 @sm:px-4">
                 <Text variant="note" tone="muted" className="min-w-0 flex-1 truncate">
                   Sources: {chat.sourceWorkspaceIds.map(nameOf).join(', ')}
                 </Text>
@@ -244,55 +234,58 @@ export function ChatView({
                   </Button>
                 ) : null}
               </div>
-              {chat.canEdit ? (
-                <fieldset
-                  aria-label="Pet answers from"
-                  className={`${editingSources ? 'flex' : compact ? 'hidden' : 'hidden @5xl:flex'} flex-col gap-2 px-3 @sm:px-4 ${compact ? '' : '@5xl:px-0'}`}
+              {chat.canEdit && editingSources ? (
+                <ScrollRegion
+                  aria-label="Chat sources"
+                  className="max-h-48 overflow-y-auto px-3 pb-2 @sm:px-4"
                 >
-                  <legend>
-                    <Text as="span" variant="h5">
-                      Sources for future turns
+                  <fieldset aria-label="Pet answers from" className="flex flex-col gap-2">
+                    <legend>
+                      <Text as="span" variant="h5">
+                        Sources for future turns
+                      </Text>
+                    </legend>
+                    {workspaces
+                      .filter((entry) => entry.lifecycleState === 'active')
+                      .map((entry) => (
+                        <Checkbox
+                          key={entry.id}
+                          label={entry.name}
+                          checked={checked.includes(entry.id)}
+                          onChange={(event) => {
+                            setSources(
+                              event.currentTarget.checked
+                                ? [...checked, entry.id]
+                                : checked.filter((id) => id !== entry.id),
+                            );
+                          }}
+                        />
+                      ))}
+                    <Text variant="note" tone="muted">
+                      {running ? 'Applies to your next question.' : 'Your pet reads these only.'}
                     </Text>
-                  </legend>
-                  {workspaces
-                    .filter((entry) => entry.lifecycleState === 'active')
-                    .map((entry) => (
-                      <Checkbox
-                        key={entry.id}
-                        label={entry.name}
-                        checked={checked.includes(entry.id)}
-                        onChange={(event) => {
-                          setSources(
-                            event.currentTarget.checked
-                              ? [...checked, entry.id]
-                              : checked.filter((id) => id !== entry.id),
-                          );
-                        }}
-                      />
-                    ))}
-                  <Text variant="note" tone="muted">
-                    {running ? 'Applies to your next question.' : 'Your pet reads these only.'}
-                  </Text>
-                  <Button
-                    disabled={
-                      busy ||
-                      !checked.length ||
-                      (checked.length === currentSources.length &&
-                        checked.every((id) => currentSources.includes(id)))
-                    }
-                    onClick={() => {
-                      applySources(checked, chat.sourceWorkspaceIds, chat.revision);
-                    }}
-                  >
-                    Apply sources
-                  </Button>
-                </fieldset>
+                    <Button
+                      disabled={
+                        busy ||
+                        !checked.length ||
+                        (checked.length === currentSources.length &&
+                          checked.every((id) => currentSources.includes(id)))
+                      }
+                      onClick={() => {
+                        applySources(checked, chat.sourceWorkspaceIds, chat.revision);
+                      }}
+                    >
+                      Apply sources
+                    </Button>
+                  </fieldset>
+                </ScrollRegion>
               ) : null}
             </div>
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
               <PetChatViewport
                 // Not the streamed length: the reply grows in place and the viewport must not re-anchor per token.
                 latestKey={`${messages.at(-1)?.id ?? ''}:${String(streaming)}`}
+                showLatestOnScroll
               >
                 {messages.map((message, index) => {
                   const kept = saved[message.id];
@@ -347,7 +340,14 @@ export function ChatView({
                   </Button>
                 ) : null}
                 {streaming ? (
-                  <article data-pet-latest-message="" aria-live="off">
+                  <article
+                    data-pet-latest-message=""
+                    aria-live="off"
+                    className="flex shrink-0 flex-col gap-1"
+                  >
+                    <Text as="span" variant="caption" tone="muted">
+                      Companion
+                    </Text>
                     <PetMessageText
                       text={streamedText}
                       workspaceId={workspaceId}
@@ -394,6 +394,7 @@ export function ChatView({
                 >
                   <Textarea
                     aria-label="Message"
+                    placeholder="Ask a follow-up…"
                     value={draft}
                     maxLength={8000}
                     onChange={(event) => {

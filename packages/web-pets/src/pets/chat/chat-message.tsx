@@ -1,10 +1,22 @@
 import { type ConversationMessage } from '@nix/api-client';
 import { Button, Icon, Text } from '@nix/ui';
-import { FilePlus } from 'lucide-react';
+import { Copy, FilePlus } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { type ProgramPiece } from '../../openui/fence';
 import { PetMessageText } from '../pet-message-text';
+import { publishNotice } from '@nix/web-foundation/lib/notices';
+
+const messageTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+
+async function copyReply(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    publishNotice({ key: 'chat-copy', message: 'Reply copied.' });
+  } catch {
+    publishNotice({ key: 'chat-copy', message: 'Could not copy the reply.' });
+  }
+}
 
 /** One saved message, laid out like the live chat: your words in a bubble on the right, the pet's
  * reply full width, a quiet icon to keep a reply as a note. */
@@ -43,15 +55,25 @@ export function ChatMessage({
       </div>
     );
   const fromUser = message.role === 'user';
+  const sentAt = Date.parse(message.createdAt);
   return (
     <article
       data-pet-latest-message={latest ? '' : undefined}
       data-pet-from-user={fromUser ? '' : undefined}
       className={`flex min-w-0 shrink-0 flex-col gap-1 ${fromUser ? 'items-end' : 'items-start'}`}
     >
-      <Text as="span" variant="note" className="sr-only">
-        {fromUser ? 'You said' : 'Pet said'}
-      </Text>
+      <div className="flex items-center gap-2">
+        <Text as="span" variant="caption" tone="muted">
+          {fromUser ? 'You' : 'Companion'}
+        </Text>
+        {Number.isFinite(sentAt) && (
+          <time dateTime={message.createdAt}>
+            <Text as="span" variant="caption" tone="muted">
+              {messageTime.format(sentAt)}
+            </Text>
+          </time>
+        )}
+      </div>
       {sourceNames.length ? (
         <Text variant="caption" tone="muted">
           Answered from {sourceNames.join(', ')}
@@ -81,6 +103,17 @@ export function ChatMessage({
       </div>
       {message.role === 'assistant' ? (
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            className="w-(--control-md) px-0 any-pointer-coarse:w-(--control-lg)"
+            aria-label="Copy reply"
+            title="Copy reply"
+            onClick={() => {
+              void copyReply(message.text);
+            }}
+          >
+            <Icon icon={Copy} size="sm" />
+          </Button>
           <Button
             variant="ghost"
             className="w-(--control-md) px-0 any-pointer-coarse:w-(--control-lg)"

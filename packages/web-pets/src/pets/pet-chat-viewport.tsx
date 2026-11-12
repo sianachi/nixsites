@@ -6,11 +6,13 @@ import { useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } 
 export function PetChatViewport({
   latestKey,
   quiet = false,
+  showLatestOnScroll = false,
   children,
 }: {
   readonly latestKey: string;
   /** The conversation has its own announcer, so the log itself stays silent. */
   readonly quiet?: boolean;
+  readonly showLatestOnScroll?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   const viewport = useRef<HTMLDivElement | null>(null);
@@ -61,6 +63,7 @@ export function PetChatViewport({
             node.scrollHeight - node.scrollTop - node.clientHeight <= 48 ||
             (top !== undefined && top >= box.top - 1 && top < box.bottom);
           if (following.current) setUnread(false);
+          else if (showLatestOnScroll) setUnread(true);
         }}
       >
         {children}

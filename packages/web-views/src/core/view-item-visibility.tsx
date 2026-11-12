@@ -26,7 +26,7 @@ export function ViewItemVisibility({
   if (
     !visibility.enabled ||
     container.locked ||
-    (view !== null && ['chart', 'query', 'form', 'interactive_form'].includes(view.kind))
+    (view !== null && ['chart', 'query', 'form', 'interactive_form', 'chat'].includes(view.kind))
   )
     return children(container);
   const count = container.children.length - visible.length;

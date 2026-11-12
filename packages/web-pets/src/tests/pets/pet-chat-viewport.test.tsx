@@ -103,6 +103,21 @@ describe('pet conversation viewport', () => {
       expect(screen.queryByRole('button', { name: 'Show latest reply' })).not.toBeInTheDocument();
     });
 
+    it('can show a shortcut when reading older messages in a saved chat', async () => {
+      mockLayout();
+      render(
+        <PetChatViewport latestKey="one" showLatestOnScroll>
+          <p>Earlier reply</p>
+          <p data-pet-latest-message="">Latest reply</p>
+        </PetChatViewport>,
+      );
+      const log = screen.getByRole('log');
+      log.scrollTop = 0;
+      fireEvent.scroll(log);
+      await userEvent.click(screen.getByRole('button', { name: 'Show latest reply' }));
+      expect(log.scrollTop).toBe(600);
+    });
+
     it('scrolls to your own message from further up, with the pill as an overlay', () => {
       mockLayout();
       const view = render(

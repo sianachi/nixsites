@@ -200,7 +200,10 @@ export function ContainerView({
   return (
     <ClickSelectsContext value={mode === 'none'}>
       <ItemSelectionContext value={selecting ? selectionValue : null}>
-        <div ref={paneRef} className={VIEW_GUTTER}>
+        <div
+          ref={paneRef}
+          className={view?.kind === 'chat' ? `${VIEW_GUTTER} h-full` : VIEW_GUTTER}
+        >
           {tools}
           {dragHint}
           <ViewItemVisibility container={container} view={view}>
