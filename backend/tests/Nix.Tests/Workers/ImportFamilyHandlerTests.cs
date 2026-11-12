@@ -32,7 +32,7 @@ public sealed class ImportFamilyHandlerTests
         var result = await handler.HandleAsync(ScriptedCore.Execution("object.cleanup", payload), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, deleted);
-        Assert.Equal(2, JsonDocument.Parse(result!).RootElement.GetProperty("deleted").GetInt32());
+        Assert.Equal(2, JsonElement.Parse(result!).GetProperty("deleted").GetInt32());
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class ImportFamilyHandlerTests
             if (path == $"/internal/worker-executions/template-file-transfers/{ScriptedCore.JobId:D}/complete")
             {
                 Assert.NotNull(uploaded);
-                acknowledged.AddRange(JsonDocument.Parse(body).RootElement.GetProperty("transferIds").EnumerateArray().Select(id => id.GetGuid()));
+                acknowledged.AddRange(JsonElement.Parse(body).GetProperty("transferIds").EnumerateArray().Select(id => id.GetGuid()));
                 return ScriptedCore.Json(new { jobId = ScriptedCore.JobId, completed = true });
             }
             if (path == "/source")
@@ -104,7 +104,7 @@ public sealed class ImportFamilyHandlerTests
 
         Assert.Equal(bytes, uploaded);
         Assert.Equal([transfer], acknowledged);
-        Assert.Equal(1, JsonDocument.Parse(result!).RootElement.GetProperty("transfersVerified").GetInt32());
+        Assert.Equal(1, JsonElement.Parse(result!).GetProperty("transfersVerified").GetInt32());
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed class ImportFamilyHandlerTests
             }
             if (path == $"/internal/worker-executions/files/uploads/{upload:D}/publish")
             {
-                published = JsonDocument.Parse(content).RootElement.Clone();
+                published = JsonElement.Parse(content);
                 return Task.FromResult<HttpResponseMessage?>(ScriptedCore.Json(new { itemId = Guid.NewGuid(), workspaceId = Guid.NewGuid(), current = Version(), versions = new[] { Version() } }));
             }
             return Task.FromResult<HttpResponseMessage?>(null);

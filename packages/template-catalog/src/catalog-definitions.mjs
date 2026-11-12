@@ -1,3 +1,5 @@
+import { COLLECTIONS } from './collection-definitions.mjs';
+
 /** Readable authored definitions for the built-in, managed Nix templates. */
 export const CATALOG = [
   {
@@ -567,4 +569,5 @@ export const CATALOG = [
       { target: 'follow-ups', key: 'due_date', kind: 'relativeDate', input: 'date', offset: 7 },
     ],
   },
+  ...COLLECTIONS,
 ];

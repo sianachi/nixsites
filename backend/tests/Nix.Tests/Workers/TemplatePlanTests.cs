@@ -182,15 +182,42 @@ public sealed class TemplatePlanTests
     {
         var directory = Path.Combine(RepoRoot(), "packages", "template-catalog", "templates");
         var names = Directory.GetFiles(directory, "*.nix").Order(StringComparer.Ordinal).ToList();
-        Assert.Equal(10, names.Count);
+        Assert.Equal(22, names.Count);
+        var validator = new Nix.Domain.Templates.TemplateDefinitionValidator();
         foreach (var path in names)
         {
             var name = Path.GetFileName(path);
             var plan = await TemplatePlanner.ParseAsync(FileSource(path, "nix", name, name, "application/x-nix-template"), Limits, Token);
             Assert.Equal(Path.GetFileNameWithoutExtension(name), plan.Profile.Key);
             Assert.True(plan.ItemCount >= 5 && plan.BodyCount > 0 && plan.ViewCount > 0, name);
-            Assert.Contains(plan.Items, item => item.Schema is { ValueKind: JsonValueKind.Object } schema && schema.GetRawText().Contains("\"type\":\"assignee\"", StringComparison.Ordinal));
+
+            // The work templates keep their tasks under a container; the personal ones are a
+            // collection at the root, which is what the library card previews.
+            if (plan.Items.Any(item => item.Title == "Action items"))
+            {
+                Assert.Contains(plan.Items, item => item.Schema is { ValueKind: JsonValueKind.Object } schema && schema.GetRawText().Contains("\"type\":\"assignee\"", StringComparison.Ordinal));
+            }
+            else
+            {
+                Assert.True(plan.Items[0].Views is { ValueKind: JsonValueKind.Object }, name);
+            }
+
+            // Core's strict import rules: every view must be readable and point at declared
+            // properties of the right type, and habit settings must parse.
+            foreach (var item in plan.Items)
+            {
+                var properties = Raw(item.Properties);
+                Assert.Null(Nix.Domain.Items.ReservedPropertyContent.Refuse(properties));
+                if (Raw(item.Schema) is { } schema)
+                {
+                    var refusal = validator.ValidateEnvelope(properties, schema, Raw(item.Views));
+                    Assert.True(refusal is null, $"{name}/{item.Title}: {refusal}");
+                }
+            }
         }
+
+        static string? Raw(JsonElement? value) =>
+            value is { ValueKind: not (JsonValueKind.Null or JsonValueKind.Undefined) } element ? element.GetRawText() : null;
     }
 
     private static readonly string[] NativeTypes =

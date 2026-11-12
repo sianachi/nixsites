@@ -1,12 +1,18 @@
 import type { RenderRequest, RenderedView } from './types.js';
 import {
   drawBoard,
+  drawChart,
   drawChat,
   drawCalendar,
+  drawChecklist,
+  drawDrive,
   drawForm,
   drawGallery,
+  drawHabitGrid,
   drawInteractiveForm,
   drawList,
+  drawMatrix,
+  drawOutline,
   drawQuery,
   drawSheet,
   drawTimeline,
@@ -15,7 +21,7 @@ import {
 import { document } from './svg.js';
 
 function drawHabitTracker(request: RenderRequest): Drawing {
-  const drawing = drawList(request);
+  const drawing = drawHabitGrid(request);
   return {
     ...drawing,
     notes: [
@@ -46,6 +52,11 @@ const DRAWERS: Readonly<Record<string, (request: RenderRequest) => Drawing>> = {
   interactive_form: drawInteractiveForm,
   query: drawQuery,
   habit_tracker: drawHabitTracker,
+  matrix: drawMatrix,
+  chart: drawChart,
+  checklist: drawChecklist,
+  outline: drawOutline,
+  drive: drawDrive,
 };
 
 export const DRAWN_VIEW_KINDS: readonly string[] = Object.keys(DRAWERS);

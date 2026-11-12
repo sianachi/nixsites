@@ -15,7 +15,9 @@ const textEncoder = new TextEncoder();
 await mkdir(outputDirectory, { recursive: true });
 for (const definition of CATALOG) {
   validateDefinition(definition);
-  const archive = await makeTemplate(definition);
+  const archive = await (definition.rows === undefined
+    ? makeTemplate(definition)
+    : makeCollection(definition));
   await writeFile(resolve(outputDirectory, `${definition.key}.nix`), archive);
 }
 
@@ -190,7 +192,7 @@ async function makeTemplate(definition) {
     ]);
   const initialization = {
     version: 1,
-    inputs: definition.inputs.map(([key, label, type]) => ({ key, label, type, required: true })),
+    inputs: initializationInputs(definition),
     rules: initializationRules,
     references: definition.references ?? [],
   };
@@ -201,6 +203,18 @@ async function makeTemplate(definition) {
       : textEncoder.encode(
           'Nix onboarding quick start\n\n1. Sign in and configure multi-factor authentication.\n2. Read the team overview and ask your manager where to get help.\n3. Make one small change with a teammate.\n',
         );
+  return await pack({ definition, initialization, itemIds, bundlesById, file, fileBytes });
+}
+
+async function pack({
+  definition,
+  initialization,
+  itemIds,
+  bundlesById,
+  file = null,
+  fileBytes = null,
+}) {
+  const rootId = itemIds[0];
   const files =
     fileBytes === null
       ? undefined
@@ -269,7 +283,141 @@ async function makeTemplate(definition) {
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
 }
 
+/**
+ * A template whose root is the collection: one schema, several views over the same sample rows.
+ * The library card draws the root's default view, so this shape is what gives a template a preview.
+ */
+async function makeCollection(definition) {
+  const rootId = stableId(definition.key, 'root');
+  const dateInput = definition.inputs.find(([, , type]) => type === 'date')?.[0];
+  const properties = definition.properties.map(([key, label, type, options = []]) => ({
+    key,
+    label,
+    type,
+    options,
+    required: false,
+  }));
+  const rules = [];
+  const rows = definition.rows.map(([title, values, prompt], index) => {
+    const id = stableId(definition.key, `row:${title}`);
+    const resolved = {};
+    for (const [key, value] of Object.entries(values)) {
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        resolved[key] = value;
+        continue;
+      }
+      // { day: n } is a sample date: drawn n days after the sample base in the preview, and
+      // re-anchored on the person's own date input when the template is applied.
+      if (dateInput === undefined || properties.find((p) => p.key === key)?.type !== 'date')
+        throw new Error(
+          `${definition.key} row "${title}" has a relative ${key} with no date input.`,
+        );
+      resolved[key] = sampleDay(value.day);
+      rules.push({
+        sourceId: id,
+        propertyKey: key,
+        kind: 'relativeDate',
+        inputKey: dateInput,
+        offsetDays: value.day,
+      });
+    }
+    return { id, title, properties: resolved, prompt, seq: String(1000 + index * 1000) };
+  });
+  if (new Set(rows.map((row) => row.id)).size !== rows.length)
+    throw new Error(`${definition.key} repeats a row title.`);
+
+  const snapshots = definition.views.map(({ kind, name, ...fields }, index) => ({
+    id: `${kind}-${index + 1}`,
+    name,
+    kind,
+    columns: [],
+    groupBy: null,
+    groupOrder: [],
+    dateProperty: null,
+    sortBy: null,
+    sortDescending: false,
+    mode: null,
+    coverProperty: null,
+    endDateProperty: null,
+    cardSize: null,
+    filters: [],
+    companionViewId: null,
+    companionPlacement: null,
+    interactiveForm: null,
+    ...fields,
+  }));
+  const bundlesById = new Map([
+    [
+      rootId,
+      makeBundle({
+        id: rootId,
+        parentId: null,
+        title: `{{${definition.inputs[0][0]}}}`,
+        type: 'note',
+        seq: '1000',
+        schema: { properties, declared: properties, inherit: true },
+        views: { views: snapshots, default: snapshots[0].id },
+        viewRows: rows.map(({ id, title, properties: values }) => ({
+          id,
+          title,
+          properties: values,
+        })),
+        body: prose(definition.description),
+      }),
+    ],
+    ...rows.map((row) => [
+      row.id,
+      makeBundle({
+        id: row.id,
+        parentId: rootId,
+        title: row.title,
+        type: 'note',
+        seq: row.seq,
+        properties: row.properties,
+        body: prose(row.prompt),
+      }),
+    ]),
+  ]);
+  const initialization = {
+    version: 1,
+    inputs: initializationInputs(definition),
+    rules,
+    references: [],
+  };
+  return await pack({
+    definition,
+    initialization,
+    itemIds: [rootId, ...rows.map((row) => row.id)],
+    bundlesById,
+  });
+}
+
+/** `[key, label, type, default?]`: a default lets a person apply the template without typing. */
+function initializationInputs(definition) {
+  return definition.inputs.map(([key, label, type, defaultValue]) => ({
+    key,
+    label,
+    type,
+    required: true,
+    ...(defaultValue === undefined ? {} : { defaultValue }),
+  }));
+}
+
+/** A fixed Monday, so sample dates fall inside one month and builds stay byte-identical. */
+function sampleDay(offset) {
+  return new Date(Date.UTC(2026, 9, 5 + offset)).toISOString().slice(0, 10);
+}
+
 function validateDefinition(definition) {
+  if (definition.rows !== undefined) {
+    if (
+      definition.inputs.length === 0 ||
+      definition.rows.length < 4 ||
+      definition.views.length === 0
+    )
+      throw new Error(`${definition.key} must declare inputs, views and sample rows.`);
+    return;
+  }
   if (definition.inputs.length === 0 || definition.children.length === 0)
     throw new Error(`${definition.key} must declare inputs and useful child nodes.`);
   const keys = new Set();

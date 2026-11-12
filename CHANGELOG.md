@@ -7,6 +7,12 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Twelve personal templates in the template library: Habit tracker, Priority matrix, Goals, Trip
+  plan, Reading list, People, Daily journal, Document vault, Inbox, Job hunt, Meal plan and Personal
+  dashboard. Each opens with sample rows and several views, and its library card previews the
+  first one.
+- Template files and exports now carry Matrix, Chart, Checklist, Outline, Drive, Habit tracker and
+  Custom views, and exported documents draw them instead of falling back to a list.
 - Open companion chat in a right-side drawer from the device’s Chat opens setting.
 - Drag a document tab to a pane edge, or hover over that tab for its dock and pin controls.
 - Drag across calendar days or hours to prepare a new entry. Move entries from the All day row

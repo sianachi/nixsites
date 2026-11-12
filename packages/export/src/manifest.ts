@@ -202,6 +202,22 @@ export interface ViewSnapshot {
 
   /** Added after archive v1 shipped; present only for an Interactive Form view. */
   readonly interactiveForm?: InteractiveFormSnapshot | null;
+
+  /** Added after archive v1 shipped; a chart's measure (`count` or `sum`) and the summed property. */
+  readonly measure?: string | null;
+  readonly measureProperty?: string | null;
+
+  /** Added after archive v1 shipped; a drive's `list` or `grid`. */
+  readonly layout?: string | null;
+
+  /** Added after archive v1 shipped; the checkbox a checklist ticks. */
+  readonly doneProperty?: string | null;
+
+  /** Added after archive v1 shipped; the property a matrix lays its rows out by. */
+  readonly rowBy?: string | null;
+
+  /** Added after archive v1 shipped; a custom view's program text. */
+  readonly program?: string | null;
 }
 
 export interface FilterRuleSnapshot {

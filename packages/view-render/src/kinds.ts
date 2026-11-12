@@ -270,7 +270,8 @@ export function drawBoard(request: RenderRequest): Drawing {
 }
 
 export function drawGallery(request: RenderRequest): Drawing {
-  const { view, rows, palette, width } = request;
+  const { view, rows, schema, palette, width } = request;
+  const caption = view.columns[0];
   const perRow = 3;
   const tileWidth = (width - GAP * (perRow - 1)) / perRow;
   const tileHeight = tileWidth * 0.62;
@@ -295,13 +296,21 @@ export function drawGallery(request: RenderRequest): Drawing {
       }),
       // The cover is deliberately not drawn: this runs with no network egress at all, so a picture
       // at a URL is unreachable by design rather than by omission. See ADR-0035.
-      text('Cover not included', {
-        x: x + tileWidth / 2,
-        y: y + tileHeight / 2 + 3,
-        size: 8,
-        fill: palette.muted,
-        anchor: 'middle',
-      }),
+      // A gallery with no cover property has nothing missing, so its tile shows a value instead.
+      text(
+        view.coverProperty !== null
+          ? 'Cover not included'
+          : caption === undefined
+            ? ''
+            : truncate(valueOf(row, caption, schema), 8, tileWidth - CARD_PADDING),
+        {
+          x: x + tileWidth / 2,
+          y: y + tileHeight / 2 + 3,
+          size: 8,
+          fill: palette.muted,
+          anchor: 'middle',
+        },
+      ),
       text(truncate(row.title, 9, tileWidth), {
         x,
         y: y + tileHeight + 12,
@@ -455,7 +464,16 @@ export function drawTimeline(request: RenderRequest): Drawing {
     .sort();
 
   const first = stamps[0] ?? null;
-  const last = stamps[stamps.length - 1] ?? null;
+  // The axis ends at the latest end date, so a bar that outlasts every start is not cut short.
+  const last =
+    [
+      ...stamps,
+      ...shown
+        .map((row) => rawOf(row, view.endDateProperty))
+        .filter((stamp): stamp is string => stamp !== null),
+    ]
+      .sort()
+      .pop() ?? null;
 
   const parts: string[] = [
     rect({ x: 0, y: 0, width, height: HEADER_HEIGHT, fill: palette.surface }),
@@ -622,5 +640,342 @@ export function drawChat(request: RenderRequest): Drawing {
             `Only the first ${String(ROW_CEILING)} of ${String(messages.length)} messages are drawn. The native archive retains all message children.`,
           ]
         : [],
+  };
+}
+
+/** Cards in a grid: the board's columns across, a second property down. */
+export function drawMatrix(request: RenderRequest): Drawing {
+  const { view, rows, palette, width } = request;
+  const columns = groupRows(rows, view.groupBy, view.groupOrder);
+  const bands = groupRows(rows, view.rowBy ?? null, []);
+  const labelWidth = 64;
+  const cellWidth = (width - labelWidth) / Math.max(1, columns.length);
+  const cardHeight = 16;
+  const perCell = 4;
+  const parts: string[] = [];
+  let y = HEADER_HEIGHT;
+
+  columns.forEach((column, index) => {
+    parts.push(
+      text(truncate(column.label, 9, cellWidth - GAP), {
+        x: labelWidth + index * cellWidth + CARD_PADDING,
+        y: 14,
+        size: 9,
+        fill: palette.muted,
+        bold: true,
+      }),
+    );
+  });
+
+  for (const band of bands) {
+    const cells = columns.map((column) => column.rows.filter((row) => band.rows.includes(row)));
+    const tallest = Math.min(perCell, Math.max(1, ...cells.map((cell) => cell.length)));
+    const bandHeight = tallest * (cardHeight + 4) + GAP;
+
+    parts.push(
+      text(truncate(band.label, 9, labelWidth - 4), {
+        x: 0,
+        y: y + 16,
+        size: 9,
+        fill: palette.muted,
+        bold: true,
+      }),
+    );
+    cells.forEach((cell, index) => {
+      const x = labelWidth + index * cellWidth;
+      parts.push(
+        rect({
+          x,
+          y,
+          width: cellWidth - 4,
+          height: bandHeight,
+          fill: palette.surface,
+          stroke: palette.divider,
+          radius: 3,
+        }),
+      );
+      cell.slice(0, perCell).forEach((row, cardIndex) => {
+        parts.push(
+          text(truncate(row.title, 9, cellWidth - CARD_PADDING * 2), {
+            x: x + CARD_PADDING,
+            y: y + 15 + cardIndex * (cardHeight + 4),
+            size: 9,
+            fill: palette.ink,
+          }),
+        );
+      });
+    });
+    y += bandHeight + 4;
+  }
+
+  return { body: parts.join(''), height: y, notes: overflowNote(rows.length) };
+}
+
+/** One bar per value of the grouping property: a count, or a property's total. */
+export function drawChart(request: RenderRequest): Drawing {
+  const { view, rows, schema, palette, width } = request;
+  const sums = view.measure === 'sum' && view.measureProperty != null;
+  const bars = groupRows(rows, view.groupBy, view.groupOrder).map((group) => ({
+    label: group.label,
+    value: sums
+      ? group.rows.reduce((total, row) => {
+          const amount = Number(row.properties[view.measureProperty ?? '']);
+          return Number.isFinite(amount) ? total + amount : total;
+        }, 0)
+      : group.rows.length,
+  }));
+  const peak = Math.max(1, ...bars.map((bar) => bar.value));
+  const labelWidth = 110;
+  const barHeight = 16;
+  const parts: string[] = [
+    text(
+      truncate(
+        `${sums ? labelOf(schema, view.measureProperty ?? '') : 'Items'} by ${view.groupBy === null ? 'all' : labelOf(schema, view.groupBy)}`,
+        9,
+        width,
+      ),
+      { x: 0, y: 12, size: 9, fill: palette.muted, bold: true },
+    ),
+  ];
+
+  bars.forEach((bar, index) => {
+    const y = HEADER_HEIGHT + index * (barHeight + GAP);
+    const length = ((width - labelWidth - 36) * bar.value) / peak;
+    parts.push(
+      text(truncate(bar.label, 9, labelWidth - GAP), {
+        x: 0,
+        y: y + 12,
+        size: 9,
+        fill: palette.ink,
+      }),
+      rect({
+        x: labelWidth,
+        y,
+        width: Math.max(2, length),
+        height: barHeight,
+        fill: palette.accentFill,
+        stroke: palette.accentText,
+        radius: 2,
+      }),
+      text(String(Math.round(bar.value * 100) / 100), {
+        x: labelWidth + Math.max(2, length) + 6,
+        y: y + 12,
+        size: 9,
+        fill: palette.muted,
+      }),
+    );
+  });
+
+  return {
+    body: parts.join(''),
+    height: HEADER_HEIGHT + bars.length * (barHeight + GAP),
+    notes: [],
+  };
+}
+
+/** A tick box beside each title, under a line of progress. */
+export function drawChecklist(request: RenderRequest): Drawing {
+  const { view, rows, schema, palette, width } = request;
+  const doneKey = view.doneProperty ?? 'done';
+  const done = (row: ViewRow): boolean => row.properties[doneKey] === true;
+  const shown = rows.slice(0, ROW_CEILING);
+  const finished = rows.filter(done).length;
+  const beside = view.columns[0];
+  const parts: string[] = [
+    text(`${String(finished)} of ${String(rows.length)} done`, {
+      x: 0,
+      y: 12,
+      size: 9,
+      fill: palette.muted,
+      bold: true,
+    }),
+    rect({ x: 90, y: 5, width: width - 90, height: 6, fill: palette.surface, radius: 3 }),
+    rect({
+      x: 90,
+      y: 5,
+      width: rows.length === 0 ? 0 : ((width - 90) * finished) / rows.length,
+      height: 6,
+      fill: palette.accentText,
+      radius: 3,
+    }),
+  ];
+
+  shown.forEach((row, index) => {
+    const y = HEADER_HEIGHT + index * ROW_HEIGHT;
+    const ticked = done(row);
+    parts.push(
+      rect({
+        x: 1,
+        y: y + 4,
+        width: 11,
+        height: 11,
+        fill: ticked ? palette.accentText : 'none',
+        stroke: ticked ? palette.accentText : palette.muted,
+        radius: 2,
+      }),
+      text(truncate(row.title, 9, width * 0.62), {
+        x: 22,
+        y: y + 14,
+        size: 9,
+        fill: ticked ? palette.muted : palette.ink,
+      }),
+    );
+    if (beside !== undefined) {
+      parts.push(
+        text(truncate(valueOf(row, beside, schema), 8, width * 0.3), {
+          x: width,
+          y: y + 14,
+          size: 8,
+          fill: palette.muted,
+          anchor: 'end',
+        }),
+      );
+    }
+  });
+
+  return {
+    body: parts.join(''),
+    height: HEADER_HEIGHT + shown.length * ROW_HEIGHT,
+    notes: overflowNote(rows.length),
+  };
+}
+
+/** Titles as a bulleted tree. Rows arrive flat, so this draws the first level. */
+export function drawOutline(request: RenderRequest): Drawing {
+  const { rows, palette, width } = request;
+  const shown = rows.slice(0, ROW_CEILING);
+  const parts: string[] = [line(4, 4, 4, shown.length * ROW_HEIGHT - 8, palette.divider)];
+
+  shown.forEach((row, index) => {
+    const y = index * ROW_HEIGHT;
+    parts.push(
+      rect({ x: 2, y: y + 8, width: 5, height: 5, fill: palette.muted, radius: 2.5 }),
+      text(truncate(row.title, 10, width - 24), { x: 18, y: y + 14, size: 10, fill: palette.ink }),
+    );
+  });
+
+  return {
+    body: parts.join(''),
+    height: shown.length * ROW_HEIGHT,
+    notes: overflowNote(rows.length),
+  };
+}
+
+/** Files and pages as tiles (grid) or as a list. File sizes and thumbnails are not in a row. */
+export function drawDrive(request: RenderRequest): Drawing {
+  const { view, rows, schema, palette, width } = request;
+  if (view.layout !== 'grid') return drawList(request);
+
+  const perRow = 4;
+  const tileWidth = (width - GAP * (perRow - 1)) / perRow;
+  const tileHeight = 54;
+  const shown = rows.slice(0, 24);
+  const tag = view.columns[0];
+  const parts: string[] = [];
+
+  shown.forEach((row, index) => {
+    const x = (index % perRow) * (tileWidth + GAP);
+    const y = Math.floor(index / perRow) * (tileHeight + GAP);
+    parts.push(
+      rect({
+        x,
+        y,
+        width: tileWidth,
+        height: tileHeight,
+        fill: palette.surface,
+        stroke: palette.divider,
+        radius: 3,
+      }),
+      rect({
+        x: x + CARD_PADDING,
+        y: y + 8,
+        width: 14,
+        height: 18,
+        fill: palette.accentFill,
+        stroke: palette.accentText,
+        radius: 2,
+      }),
+      text(truncate(row.title, 9, tileWidth - CARD_PADDING * 2), {
+        x: x + CARD_PADDING,
+        y: y + 38,
+        size: 9,
+        fill: palette.ink,
+      }),
+    );
+    if (tag !== undefined) {
+      parts.push(
+        text(truncate(valueOf(row, tag, schema), 8, tileWidth - CARD_PADDING * 2), {
+          x: x + CARD_PADDING,
+          y: y + 49,
+          size: 8,
+          fill: palette.muted,
+        }),
+      );
+    }
+  });
+
+  return {
+    body: parts.join(''),
+    height: Math.ceil(shown.length / perRow) * (tileHeight + GAP),
+    notes: overflowNote(rows.length, 24),
+  };
+}
+
+/** Each habit beside an empty week: the check-in history lives outside a row. */
+export function drawHabitGrid(request: RenderRequest): Drawing {
+  const { rows, palette, width } = request;
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const shown = rows.slice(0, ROW_CEILING);
+  const gridLeft = width - days.length * 26;
+  const parts: string[] = [];
+
+  days.forEach((day, index) => {
+    parts.push(
+      text(day, {
+        x: gridLeft + index * 26 + 13,
+        y: 14,
+        size: 9,
+        fill: palette.muted,
+        bold: true,
+        anchor: 'middle',
+      }),
+    );
+  });
+  shown.forEach((row, rowIndex) => {
+    const y = HEADER_HEIGHT + rowIndex * 26;
+    const target = row.properties.$habit_target;
+    const unit = row.properties.$habit_unit;
+    const goal =
+      typeof target === 'number' && typeof unit === 'string' ? `${String(target)} ${unit}` : '';
+    parts.push(
+      line(0, y, width, y, palette.divider),
+      text(truncate(row.title, 9, gridLeft - 80), { x: 0, y: y + 17, size: 9, fill: palette.ink }),
+      text(truncate(goal, 8, 70), {
+        x: gridLeft - 8,
+        y: y + 17,
+        size: 8,
+        fill: palette.muted,
+        anchor: 'end',
+      }),
+    );
+    days.forEach((_, index) => {
+      parts.push(
+        rect({
+          x: gridLeft + index * 26 + 5,
+          y: y + 5,
+          width: 16,
+          height: 16,
+          fill: palette.surface,
+          stroke: palette.divider,
+          radius: 8,
+        }),
+      );
+    });
+  });
+
+  return {
+    body: parts.join(''),
+    height: HEADER_HEIGHT + shown.length * 26,
+    notes: overflowNote(rows.length),
   };
 }

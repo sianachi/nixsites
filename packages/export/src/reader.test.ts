@@ -28,6 +28,7 @@ import {
   readArchive,
   requireTemplateProfile,
   validateTemplateArchive,
+  parseStoredViewsObject,
 } from './reader.js';
 
 it('keeps Go and TypeScript Nix archive profiles aligned with the shared limits fixture', () => {
@@ -901,6 +902,30 @@ describe('the hostile archive reader', () => {
     await expect(readArchive(pieces(bytes))).rejects.toMatchObject({
       code: 'archive.invalid_manifest',
     });
+  });
+
+  it('carries the per-kind fields of the newer view kinds', () => {
+    const stored = {
+      default: 'm',
+      views: [
+        { id: 'm', name: 'Matrix', kind: 'matrix', groupBy: 'urgency', rowBy: 'importance' },
+        { id: 'c', name: 'Chart', kind: 'chart', measure: 'sum', measureProperty: 'cost' },
+        { id: 'k', name: 'Checklist', kind: 'checklist', doneProperty: 'done' },
+        { id: 'd', name: 'Drive', kind: 'drive', layout: 'grid' },
+        { id: 'p', name: 'Custom', kind: 'custom', program: 'root = Text("Hi")' },
+        { id: 'o', name: 'Outline', kind: 'outline' },
+        { id: 'h', name: 'Habits', kind: 'habit_tracker' },
+      ],
+    };
+    const views = parseStoredViewsObject(stored, ROOT)?.views ?? [];
+
+    expect(views.map((view) => view.kind)).toEqual(stored.views.map((view) => view.kind));
+    expect(views[0]).toMatchObject({ rowBy: 'importance' });
+    expect(views[1]).toMatchObject({ measure: 'sum', measureProperty: 'cost' });
+    expect(views[2]).toMatchObject({ doneProperty: 'done' });
+    expect(views[3]).toMatchObject({ layout: 'grid' });
+    expect(views[4]).toMatchObject({ program: 'root = Text("Hi")' });
+    expect(views[5]).not.toHaveProperty('rowBy');
   });
 
   it('refuses unsupported view vocabulary inside an item bundle', async () => {
