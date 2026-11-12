@@ -1279,16 +1279,7 @@ export function NoteEditor({
               Vim basics starts in Normal mode. Press i to insert text, Escape to return to Normal,
               and v or V for Visual mode.
             </Text>
-            {hideToolbar ? null : narrow ? (
-              <MobileNoteToolbar
-                editor={editor}
-                formatting={formatting}
-                actions={mobileActions}
-                details={mobileDetails}
-              />
-            ) : (
-              formatting
-            )}
+            {hideToolbar || narrow ? null : formatting}
 
             <PendingReferenceNotice itemId={itemId} editor={editor} />
             {writingMode === 'collaboration' && !hideToolbar ? (
@@ -1313,11 +1304,8 @@ export function NoteEditor({
             ) : null}
             <PaneViewport
               scrollKey={`${workspaceId ?? ''}:${itemId}:${documentPath ?? 'body'}`}
-              // Reserve room for both dock rows before the viewport measures their height.
               className={`min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-4 sm:px-8 sm:pt-6 ${
-                narrow && !hideToolbar
-                  ? 'pb-[calc(var(--mobile-note-toolbar-clearance,calc(var(--control-lg)*2+var(--spacing)*2))+var(--spacing)*4)]'
-                  : 'pb-24 lg:pb-6'
+                narrow && !hideToolbar ? 'pb-4' : 'pb-24 lg:pb-6'
               }`}
             >
               {dropActive ? (
@@ -1492,6 +1480,14 @@ export function NoteEditor({
               <MentionBubble editor={editor} />
               {readOnly || stale ? null : <TableMenu editor={editor} />}
             </PaneViewport>
+            {hideToolbar || !narrow ? null : (
+              <MobileNoteToolbar
+                editor={editor}
+                formatting={formatting}
+                actions={mobileActions}
+                details={mobileDetails}
+              />
+            )}
             {hideToolbar || narrow || bodyUnavailable ? null : (
               <NoteStatsFooter editor={editor} showWords={!statusBar} />
             )}

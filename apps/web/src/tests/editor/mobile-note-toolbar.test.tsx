@@ -116,24 +116,19 @@ it('reveals writing tools for selected text and keeps them open after formatting
   view.unmount();
   editor.destroy();
 });
-it('keeps the cursor clear of the dock when the editor scrolls it into view', () => {
-  const setProps = vi.fn();
-  const editor = {
-    isFocused: false,
-    isDestroyed: false,
-    isInitialized: false,
-    view: { setProps },
-    state: { selection: { empty: true }, doc: { descendants: () => undefined } },
-    on: () => undefined,
-    off: () => undefined,
-  } as unknown as Editor;
-  const view = render(<MobileNoteToolbar formatting={<button>Bold</button>} editor={editor} />);
-  // jsdom puts the dock at the top of a window `innerHeight` tall, so all of it is clearance.
-  const bottom = window.innerHeight + 16;
-  expect(setProps).toHaveBeenCalledWith({
-    scrollThreshold: { top: 0, right: 0, bottom, left: 0 },
-    scrollMargin: { top: 5, right: 5, bottom, left: 5 },
-  });
-  view.unmount();
-  expect(setProps).toHaveBeenLastCalledWith({ scrollThreshold: 0, scrollMargin: 5 });
+it('lets the writer hide and reopen tools even with automatic hiding off', async () => {
+  const user = userEvent.setup();
+  render(<MobileNoteToolbar formatting={<button>Bold</button>} />);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await user.click(screen.getByRole('button', { name: 'Hide writing tools' }));
+    expect(screen.queryByRole('button', { name: 'Bold' })).not.toBeInTheDocument();
+    const show = screen.getByRole('button', { name: 'Show writing tools' });
+    expect(show).toHaveAttribute('aria-expanded', 'false');
+    await user.click(show);
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Hide writing tools' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  }
 });

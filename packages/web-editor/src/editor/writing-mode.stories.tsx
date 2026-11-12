@@ -84,18 +84,10 @@ function Writing({
     <div
       className={compact ? 'relative flex h-96 w-80 max-w-full flex-col gap-4' : 'w-full space-y-4'}
     >
-      {compact ? (
-        <MobileNoteToolbar
-          formatting={formatting}
-          editor={editor}
-          actions={<Button variant="ghost">Children</Button>}
-        />
-      ) : (
-        formatting
-      )}
+      {compact ? null : formatting}
       <div
         data-text-width={width}
-        className={`min-w-0 w-full ${
+        className={`min-w-0 w-full ${compact ? 'min-h-0 flex-1 overflow-y-auto' : ''} ${
           !compact && width === 'full'
             ? 'max-w-none [&_.ProseMirror]:max-w-none'
             : WRITING_MODES[mode].measure
@@ -103,6 +95,13 @@ function Writing({
       >
         <EditorContent editor={editor} />
       </div>
+      {compact ? (
+        <MobileNoteToolbar
+          formatting={formatting}
+          editor={editor}
+          actions={<Button variant="ghost">Children</Button>}
+        />
+      ) : null}
     </div>
   );
 }
@@ -111,6 +110,15 @@ export const Prose = { render: (): ReactElement => <Writing /> };
 export const Poetry = { render: (): ReactElement => <Writing initialMode="poetry" /> };
 export const PhonePoetry = {
   render: (): ReactElement => <Writing initialMode="poetry" compact />,
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(await canvas.findByRole('button', { name: 'Hide writing tools' }));
+    if (canvas.queryByRole('group', { name: 'Formatting actions' }) !== null)
+      throw new Error('The writing controls should be hidden.');
+    await user.click(canvas.getByRole('button', { name: 'Show writing tools' }));
+    await canvas.findByRole('group', { name: 'Formatting actions' });
+  },
 };
 export const Planning = { render: (): ReactElement => <Writing initialMode="planning" /> };
 export const Collaboration = {

@@ -28,15 +28,19 @@ export function MobileNoteToolbar({
   readonly details?: MobileNoteDetails | undefined;
 }): ReactNode {
   const visibility = useMobileToolbarPreference((state) => state.visibility);
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState<'automatic' | 'manual' | null>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!editor || visibility !== 'while-writing') return;
     const writing = (): void => {
-      if (editor.isFocused && editor.state.selection.empty) setHidden(true);
+      if (editor.isFocused && editor.state.selection.empty) {
+        setHidden((current) => (current === 'manual' ? current : 'automatic'));
+      }
     };
     const selection = (): void => {
-      if (!editor.state.selection.empty) setHidden(false);
+      if (!editor.state.selection.empty) {
+        setHidden((current) => (current === 'automatic' ? null : current));
+      }
     };
     editor.on('update', writing);
     editor.on('selectionUpdate', selection);
@@ -48,6 +52,7 @@ export function MobileNoteToolbar({
   useEffect(() => {
     const viewport = window.visualViewport;
     let frame = 0;
+    let clearance: number | null = null;
     const measure = (): void => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -68,10 +73,16 @@ export function MobileNoteToolbar({
           '--viewport-inset-right',
           `${String(Math.max(0, bounds.right - ((viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth))))}px`,
         );
+        const next = Math.max(0, window.innerHeight - dock.getBoundingClientRect().top);
+        const grew = clearance !== null && next > clearance;
+        clearance = next;
         document.documentElement.style.setProperty(
           '--mobile-note-toolbar-clearance',
-          `${String(Math.max(0, window.innerHeight - dock.getBoundingClientRect().top))}px`,
+          `${String(next)}px`,
         );
+        if (grew && editor?.isFocused && !editor.isDestroyed) {
+          editor.view.dispatch(editor.state.tr.scrollIntoView());
+        }
         window.dispatchEvent(new Event('nix-mobile-note-toolbar-resized'));
       });
     };
@@ -91,69 +102,20 @@ export function MobileNoteToolbar({
       document.documentElement.style.removeProperty('--mobile-note-toolbar-clearance');
       window.dispatchEvent(new Event('nix-mobile-note-toolbar-resized'));
     };
-  }, []);
-  // The dock floats over the bottom of the note, so the editor's own "keep the cursor in view" has
-  // to treat that strip as off screen: otherwise a line typed low enough ends up behind the dock.
-  // When the dock moves up (the keyboard opening, the dock growing) the cursor is brought back into
-  // view once, if the person is writing.
-  useEffect(() => {
-    if (!editor) return;
-    let clearance: number | null = null;
-    const apply = (): void => {
-      const dock = dockRef.current;
-      // TipTap has a live view at mount, before it marks the editor initialized.
-      if (!dock || editor.isDestroyed) return;
-      const next = Math.max(0, Math.round(window.innerHeight - dock.getBoundingClientRect().top));
-      if (next === clearance) return;
-      const grew = clearance !== null && next > clearance;
-      clearance = next;
-      const bottom = next + 16;
-      editor.view.setProps({
-        scrollThreshold: { top: 0, right: 0, bottom, left: 0 },
-        scrollMargin: { top: 5, right: 5, bottom, left: 5 },
-      });
-      if (grew && editor.isFocused) editor.view.dispatch(editor.state.tr.scrollIntoView());
-    };
-    const remount = (): void => {
-      clearance = null;
-      apply();
-    };
-    editor.on('mount', remount);
-    apply();
-    window.addEventListener('nix-mobile-note-toolbar-resized', apply);
-    return () => {
-      editor.off('mount', remount);
-      window.removeEventListener('nix-mobile-note-toolbar-resized', apply);
-      if (!editor.isDestroyed) {
-        editor.view.setProps({ scrollThreshold: 0, scrollMargin: 5 });
-      }
-    };
   }, [editor]);
-  const collapsed = visibility === 'while-writing' && hidden;
+  const collapsed =
+    hidden === 'manual' || (visibility === 'while-writing' && hidden === 'automatic');
   const [actionsOpen, setActionsOpen] = useState(false);
   return (
     // design-token-exempt: insets follow the runtime visual viewport and the device safe area.
     <div
       ref={dockRef}
-      className="absolute left-[calc(var(--spacing)*3+var(--viewport-inset-left,0%))] right-[calc(var(--spacing)*3+var(--viewport-inset-right,0%))] bottom-[max(calc(var(--keyboard-inset,0%)+var(--spacing)*3),env(safe-area-inset-bottom))] z-20 min-w-0 rounded-2xl bg-surface p-1 shadow-lg"
+      className={`relative shrink-0 min-w-0 ml-[calc(var(--spacing)*3+var(--viewport-inset-left,0%))] mr-[calc(var(--spacing)*3+var(--viewport-inset-right,0%))] mb-[max(calc(var(--keyboard-inset,0%)+var(--spacing)*3),env(safe-area-inset-bottom))] rounded-2xl bg-surface p-1 shadow-lg ${collapsed ? 'self-end' : ''}`}
     >
-      {collapsed ? (
-        <Button
-          variant="subtle"
-          onMouseDown={(event) => {
-            event.preventDefault();
-          }}
-          onClick={() => {
-            setHidden(false);
-          }}
-        >
-          Show writing tools
-        </Button>
-      ) : (
-        <>
-          {/* The word count and Outline live in the dock on phones: it covers the page footer. */}
-          {editor ? <NoteStatsFooter editor={editor} className="px-2 pb-1" /> : null}
-          <div className="flex min-w-0 items-center gap-1">
+      {collapsed || !editor ? null : <NoteStatsFooter editor={editor} className="px-2 pb-1" />}
+      <div className="flex min-w-0 items-center gap-1">
+        {collapsed ? null : (
+          <>
             <div
               className="min-w-0 flex-1"
               role="group"
@@ -195,9 +157,24 @@ export function MobileNoteToolbar({
                 <Icon icon={ChevronDown} size="sm" />
               </Button>
             ) : null}
-          </div>
-        </>
-      )}
+          </>
+        )}
+        <Button
+          variant="subtle"
+          className="min-h-(--control-lg) min-w-(--control-lg) shrink-0"
+          aria-label={collapsed ? 'Show writing tools' : 'Hide writing tools'}
+          title={collapsed ? 'Show writing tools' : 'Hide writing tools'}
+          aria-expanded={!collapsed}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={() => {
+            setHidden(collapsed ? null : 'manual');
+          }}
+        >
+          {collapsed ? 'Show writing tools' : 'Hide'}
+        </Button>
+      </div>
       {actionsOpen ? (
         <Dialog
           open
