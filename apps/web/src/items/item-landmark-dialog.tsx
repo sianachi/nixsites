@@ -12,6 +12,9 @@ import {
 import { useState, type ReactNode } from 'react';
 
 import { DEFAULT_LANDMARK, type ItemLandmark } from '@nix/web-foundation/lib/item-landmarks';
+import type { TreeItem } from '@nix/web-collections/items/use-workspace-tree';
+import { findViewKind } from '@nix/web-views/core/view-kinds';
+import { bodyKindIcon } from '@nix/web-views/drive/drive-icons';
 
 const ICONS: Record<ItemLandmark['icon'], { readonly label: string; readonly icon: LucideIcon }> = {
   page: { label: 'Page', icon: FileText },
@@ -30,13 +33,19 @@ const TONES: Record<ItemLandmark['tone'], { readonly label: string; readonly cla
   };
 
 export function ItemLandmarkIcon({
-  landmark = DEFAULT_LANDMARK,
+  landmark,
+  item,
 }: {
   readonly landmark?: ItemLandmark | undefined;
+  readonly item?: Pick<TreeItem, 'type' | 'title' | 'defaultViewKind'> | null;
 }): ReactNode {
+  const defaultViewIcon = item?.defaultViewKind ? findViewKind(item.defaultViewKind)?.icon : null;
+  const icon = landmark
+    ? ICONS[landmark.icon].icon
+    : (defaultViewIcon ?? (item ? bodyKindIcon(item) : FileText));
   return (
-    <span className={cn('flex shrink-0 items-center', TONES[landmark.tone].className)}>
-      <Icon icon={ICONS[landmark.icon].icon} size="sm" />
+    <span className={cn('flex shrink-0 items-center', TONES[landmark?.tone ?? 'muted'].className)}>
+      <Icon icon={icon} size="sm" />
     </span>
   );
 }

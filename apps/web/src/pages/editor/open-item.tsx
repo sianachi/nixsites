@@ -130,6 +130,12 @@ export function OpenItem({
   const { viewId, selectView } = useViewState();
   const commentsAvailable = bodyKind === 'note';
   const storedViews = container.views;
+  const { setDefaultViewKind } = tree;
+  const defaultViewKind = storedViews?.views.find((view) => view.id === storedViews.default)?.kind;
+  const viewsLoaded = storedViews !== null;
+  useEffect(() => {
+    if (viewsLoaded) setDefaultViewKind(itemId, defaultViewKind ?? null);
+  }, [defaultViewKind, itemId, setDefaultViewKind, viewsLoaded]);
   const documentTabHidden =
     hidden.has(DOCUMENT_VIEW) ||
     (storedViews?.hideDocument === true &&

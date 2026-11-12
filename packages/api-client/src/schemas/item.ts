@@ -80,6 +80,7 @@ export const itemSchema = z.object({
   parentId: z.uuid().nullable(),
   type: itemTypeSchema,
   title: z.string(),
+  defaultViewKind: z.string().nullable().exactOptional(),
 
   /**
    * Whether the item has at least one child that is not deleted.

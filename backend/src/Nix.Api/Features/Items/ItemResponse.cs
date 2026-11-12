@@ -37,6 +37,7 @@ namespace Nix.Features.Items;
 /// </param>
 /// <param name="CreatedAt">When it was created.</param>
 /// <param name="UpdatedAt">When it was last modified.</param>
+/// <param name="DefaultViewKind">The kind of the default view, or null when the item opens on its body.</param>
 /// <remarks>
 /// <para>
 /// <b><see cref="Title"/> is a property, promoted.</b> The item table has no title column - a
@@ -75,4 +76,5 @@ internal sealed record ItemResponse(
     bool Collaboration,
     string? ManagedBy,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string? DefaultViewKind = null);

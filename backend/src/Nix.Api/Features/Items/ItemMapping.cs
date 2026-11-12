@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nix.Domain.Items;
+using Nix.Domain.Views;
 using Nix.Messaging;
 
 namespace Nix.Features.Items;
@@ -64,6 +65,10 @@ internal static class ItemMapping
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        var views = ViewDefinitionsJson.Read(item.Views);
+        var defaultId = views.Resolve();
+        var defaultView = views.Views.FirstOrDefault(view => view.Id == defaultId);
+
         return new ItemResponse(
             item.Id.Value,
             item.WorkspaceId.Value,
@@ -80,7 +85,8 @@ internal static class ItemMapping
             item.Collaboration,
             item.ManagedBy,
             item.CreatedAt,
-            item.LastModifiedAt);
+            item.LastModifiedAt,
+            defaultView is null ? null : ViewKinds.ToText(defaultView.Kind));
     }
 
     /// <summary>

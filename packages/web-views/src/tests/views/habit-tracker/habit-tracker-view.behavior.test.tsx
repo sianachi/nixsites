@@ -142,6 +142,7 @@ function CommandHarness({ action }: { readonly action: 'move' | 'delete' }) {
     error: null,
     items: treeItems,
     find: (id: string) => treeItems.find((entry) => entry.id === id) ?? null,
+    setDefaultViewKind: () => undefined,
     childrenOf: (parentId: string | null) =>
       treeItems.filter((entry) => entry.parentId === parentId),
     isExpanded: () => false,

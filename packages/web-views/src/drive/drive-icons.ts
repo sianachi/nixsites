@@ -27,7 +27,10 @@ import type { DriveFileInfo } from './use-drive-file-info';
  */
 export function driveKindIcon(item: Item, info?: DriveFileInfo): LucideIcon {
   if (item.hasChildren) return Folder;
+  return bodyKindIcon(item, info);
+}
 
+export function bodyKindIcon(item: Pick<Item, 'type' | 'title'>, info?: DriveFileInfo): LucideIcon {
   switch (item.type) {
     case 'file':
       return fileIcon(item.title, info);

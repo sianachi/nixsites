@@ -4583,6 +4583,7 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      defaultViewKind?: null | string;
     };
     JsonArray: unknown[];
     JsonElement: unknown;

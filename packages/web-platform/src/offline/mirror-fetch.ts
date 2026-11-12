@@ -48,6 +48,25 @@ export interface MirrorFetchDeps {
 
 type Json = Record<string, unknown>;
 
+function storedViews(value: unknown) {
+  const raw = isRecord(value) ? value : {};
+  const listed = (Array.isArray(raw.views) ? raw.views : []).filter(
+    (view): view is Json =>
+      isRecord(view) &&
+      typeof view.id === 'string' &&
+      typeof view.name === 'string' &&
+      typeof view.kind === 'string',
+  );
+  const views = listed.filter(
+    (view, index) => listed.findIndex((other) => other.id === view.id) === index,
+  );
+  // A missing default opens the document, or the first view if the document tab is hidden.
+  const hideDocument = raw.hideDocument === true && views.length > 0;
+  const mainView =
+    views.find((view) => view.id === raw.default) ?? (hideDocument ? views[0] : undefined);
+  return { views, hideDocument, mainView };
+}
+
 /** Small account-level reads the app makes at boot; kept from the last online run. */
 export const REMEMBERED = new Set([
   '/api/v1/me',
@@ -184,6 +203,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     parentId: item.parentId,
     type: item.type,
     title: item.title,
+    defaultViewKind: storedViews(item.views).mainView?.kind ?? null,
     hasChildren: (index.byParent.get(item.id)?.length ?? 0) > 0,
     seq: item.seq,
     lifecycleState: item.lifecycleState,
@@ -463,26 +483,12 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     }
 
     if (part === 'views') {
-      const raw = isRecord(item.views) ? item.views : {};
-      const listed = (Array.isArray(raw.views) ? raw.views : []).filter(
-        (view): view is Json =>
-          isRecord(view) &&
-          typeof view.id === 'string' &&
-          typeof view.name === 'string' &&
-          typeof view.kind === 'string',
-      );
-      const views = listed.filter(
-        (view, index) => listed.findIndex((other) => other.id === view.id) === index,
-      );
-      // Core's StoredViews.Resolve: a missing or dangling default opens the document, unless the
-      // document tab is hidden, when the first view stands in.
-      const hideDocument = raw.hideDocument === true && views.length > 0;
-      const stored = views.find((view) => view.id === raw.default)?.id;
+      const { views, hideDocument, mainView } = storedViews(item.views);
       return json({
         views,
         // shortcut: whether a view's property still exists is not re-derived offline.
         unrenderable: [],
-        default: typeof stored === 'string' ? stored : hideDocument ? views[0]?.id : 'document',
+        default: mainView?.id ?? 'document',
         hideDocument,
         version: null,
       });

@@ -18047,6 +18047,12 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "defaultViewKind": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

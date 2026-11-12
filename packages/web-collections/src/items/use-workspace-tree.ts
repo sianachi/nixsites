@@ -31,6 +31,7 @@ export interface TreeItem {
   readonly id: string;
   readonly title: string;
   readonly type: string;
+  readonly defaultViewKind?: string | null;
   readonly parentId: string | null;
 
   /**
@@ -130,6 +131,7 @@ export interface WorkspaceTree {
   readonly breadcrumbs: (itemId: string) => readonly TreeItem[];
 
   readonly find: (itemId: string) => TreeItem | null;
+  readonly setDefaultViewKind: (itemId: string, kind: string | null) => void;
 
   /**
    * Loads an item and its ancestors, expanding the chain so it is visible in the tree.
@@ -200,6 +202,7 @@ function toItem(payload: Item): TreeItem {
     id: payload.id,
     title: payload.title,
     type: payload.type,
+    defaultViewKind: payload.defaultViewKind ?? null,
     parentId: payload.parentId,
     hasChildren: payload.hasChildren,
     seq: Number(payload.seq),
@@ -986,6 +989,17 @@ export function useWorkspaceTree(): WorkspaceTree {
 
   const byId = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
+  const setDefaultViewKind = useCallback((itemId: string, kind: string | null): void => {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === itemId);
+      const item = current[index];
+      if (item === undefined || (item.defaultViewKind ?? null) === kind) return current;
+      const next = current.slice();
+      next[index] = { ...item, defaultViewKind: kind };
+      return next;
+    });
+  }, []);
+
   const childrenOf = useCallback(
     (parentId: string | null): readonly TreeItem[] => byParent.get(parentId) ?? [],
     [byParent],
@@ -1023,6 +1037,7 @@ export function useWorkspaceTree(): WorkspaceTree {
     breadcrumbs,
     reveal,
     find: (itemId) => byId.get(itemId) ?? null,
+    setDefaultViewKind,
     isCreating,
     isSaving,
     toggle,

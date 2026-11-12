@@ -143,6 +143,38 @@ public sealed class StructureRuleParityHttpTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task Item_listing_reports_the_default_view_kind()
+    {
+        var token = await AccessTokenAsync("item-default-view-kind");
+        var itemId = await CreateScratchItemAsync(token);
+        var viewsPath = $"/api/v1/items/{itemId}/views";
+        var listPath = $"/api/v1/workspaces/{M0SchemaSeed.Alpha.WorkspaceId:D}/items?parentId={M0SchemaSeed.Alpha.ItemId:D}";
+        var views = new[]
+        {
+            new { id = "all", name = "All", kind = "list" },
+            new { id = "cards", name = "Cards", kind = "gallery" },
+        };
+
+        using var saved = await SendAsync(HttpMethod.Put, viewsPath, token, new { views, @default = "cards" });
+        saved.EnsureSuccessStatusCode();
+        Assert.Equal("gallery", await ReadListedKindAsync());
+
+        using var changed = await SendAsync(HttpMethod.Put, viewsPath, token, new { views, @default = "document" });
+        changed.EnsureSuccessStatusCode();
+        Assert.Null(await ReadListedKindAsync());
+
+        async Task<string?> ReadListedKindAsync()
+        {
+            using var listed = await SendAsync(HttpMethod.Get, listPath, token);
+            listed.EnsureSuccessStatusCode();
+            using var body = JsonDocument.Parse(await listed.Content.ReadAsStringAsync(Cancellation));
+            return body.RootElement.GetProperty("items").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetString() == itemId)
+                .GetProperty("defaultViewKind").GetString();
+        }
+    }
+
     private async Task<string> CreateScratchItemAsync(string bearer)
     {
         using var created = await SendAsync(

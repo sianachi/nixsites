@@ -354,6 +354,7 @@ export function createDemoFetch(): typeof fetch {
     parentId: entry.parentId,
     type: entry.type,
     title: entry.title,
+    defaultViewKind: defaultViewOf(entry.id)?.kind ?? null,
     hasChildren: live().some((child) => child.parentId === entry.id),
     seq: entry.seq,
     lifecycleState: trashed.has(entry.id) ? 'deleted' : 'active',
@@ -373,6 +374,13 @@ export function createDemoFetch(): typeof fetch {
       views: [] as Json[],
       default: '',
     };
+  const defaultViewOf = (id: string | undefined): Json | undefined => {
+    const config = structureOf(id);
+    return (
+      config.views.find((view) => view.id === config.default) ??
+      ((config.hideDocument ?? true) ? config.views[0] : undefined)
+    );
+  };
   // The sample items as the offline view engine reads them.
   const toMirror = (entry: DemoItem): MirrorItem => {
     const shaped = structure.get(entry.id);
@@ -418,11 +426,11 @@ export function createDemoFetch(): typeof fetch {
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
   const viewsOf = (id: string | undefined): Json => {
-    const { views, default: defaultView, hideDocument } = structureOf(id);
+    const { views, hideDocument } = structureOf(id);
     return {
       views,
       unrenderable: [],
-      default: views.length === 0 ? 'document' : defaultView,
+      default: defaultViewOf(id)?.id ?? 'document',
       hideDocument: views.length > 0 && (hideDocument ?? true),
       version: '1',
     };
