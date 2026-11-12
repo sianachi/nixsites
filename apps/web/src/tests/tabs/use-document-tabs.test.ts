@@ -32,6 +32,23 @@ describe('the tab strip a pane draws', () => {
     expect(result.current.tabs).toEqual([{ itemId: 'a', pinned: true }]);
   });
 
+  it('puts pinned documents first and shows each once', () => {
+    useTabStore.setState({
+      byPane: {
+        0: [
+          { itemId: 'preview', pinned: false },
+          { itemId: 'kept', pinned: false },
+          { itemId: 'kept', pinned: true },
+        ],
+      },
+    });
+    const { result } = renderTabs(0, 'preview');
+    expect(result.current.tabs).toEqual([
+      { itemId: 'kept', pinned: true },
+      { itemId: 'preview', pinned: false },
+    ]);
+  });
+
   it('appends the active item alongside tabs already tracked for the pane', () => {
     useTabStore.setState({ byPane: { 0: [{ itemId: 'a', pinned: true }] } });
 

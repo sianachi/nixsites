@@ -1,7 +1,19 @@
 import { z } from 'zod';
 
-import { PANE_LIMIT } from '@nix/web-platform/panes/pane-params';
-import { closePaneParams, parsePanes } from '@nix/web-platform/panes/pane-state';
+import {
+  CHAT_PARAM,
+  PANE_LIMIT,
+  SIZES_PARAM,
+  SPLIT_PARAM,
+  paneParam,
+  splitToParam,
+} from '@nix/web-platform/panes/pane-params';
+import {
+  closePaneParams,
+  copyPaneParams,
+  parsePanes,
+  shiftPane,
+} from '@nix/web-platform/panes/pane-state';
 import { writeSelectedItem } from '@nix/web-platform/routing/selected-item';
 import { ownerOfItem, tabsForPane } from '@nix/web-platform/panes/tab-ownership';
 import { isChatTabId, type OpenTab } from '@nix/web-foundation/lib/tab-store';
@@ -52,7 +64,18 @@ export function carriesTabTransfer(dataTransfer: DataTransfer): boolean {
   return Array.from(dataTransfer.types).includes(TAB_TRANSFER_MIME);
 }
 
-export type TabTransferRefusal = 'same-pane' | 'hidden-pane' | 'missing-pane' | 'stale-tab';
+export const TAB_DOCK_EDGES = ['top', 'bottom', 'left', 'right'] as const;
+export type TabDockEdge = (typeof TAB_DOCK_EDGES)[number];
+
+export const TAB_DOCK_LABELS: Readonly<Record<TabDockEdge, string>> = {
+  top: 'Dock above',
+  bottom: 'Dock below',
+  left: 'Dock left',
+  right: 'Dock right',
+};
+
+export type TabTransferRefusal =
+  'same-pane' | 'hidden-pane' | 'missing-pane' | 'stale-tab' | 'limit';
 
 export interface TabTransferPlan {
   readonly nextParams: URLSearchParams;
@@ -67,6 +90,7 @@ export interface PlanTabTransferInput {
   readonly visiblePaneIndexes: readonly number[];
   readonly payload: TabTransferPayload;
   readonly destinationPane: number;
+  readonly edge?: TabDockEdge | undefined;
 }
 
 export type PlanTabTransferResult =
@@ -110,10 +134,10 @@ function compactClosedPane(
  * as opening beside; the destination's existing preview therefore survives.
  */
 export function planTabTransfer(input: PlanTabTransferInput): PlanTabTransferResult {
-  const { params, byPane, visiblePaneIndexes, payload, destinationPane } = input;
+  const { params, byPane, visiblePaneIndexes, payload, destinationPane, edge } = input;
   const { sourcePane, itemId } = payload;
 
-  if (sourcePane === destinationPane) {
+  if (sourcePane === destinationPane && edge === undefined) {
     return { plan: null, refusal: 'same-pane' };
   }
   if (!visiblePaneIndexes.includes(sourcePane) || !visiblePaneIndexes.includes(destinationPane)) {
@@ -149,34 +173,70 @@ export function planTabTransfer(input: PlanTabTransferInput): PlanTabTransferRes
   const remaining = sourceTabs.filter((tab) => tab.itemId !== itemId);
   const remainingItems = remaining.filter((tab) => !isChatTabId(tab.itemId));
   const sourceClosed = source.itemId === itemId && remainingItems.length === 0;
+  if (edge !== undefined) {
+    if (sourceClosed && sourcePane === destinationPane) return { plan: null, refusal: 'same-pane' };
+    if (!sourceClosed && arrangement.panes.length >= PANE_LIMIT)
+      return { plan: null, refusal: 'limit' };
+    if (arrangement.panes.some((pane) => !visiblePaneIndexes.includes(pane.index))) {
+      return { plan: null, refusal: 'hidden-pane' };
+    }
+  }
   const finalDestinationPane =
     sourceClosed && destinationPane > sourcePane ? destinationPane - 1 : destinationPane;
 
   const nextParams = new URLSearchParams(params);
-  if (sourceClosed) {
-    closePaneParams(nextParams, sourcePane, arrangement.panes.length);
-    writeSelectedItem(nextParams, finalDestinationPane, itemId);
-  } else {
-    if (source.itemId === itemId) {
-      const neighbor = remainingItems[Math.max(0, movedIndex - 1)];
-      if (neighbor === undefined) {
-        return { plan: null, refusal: 'stale-tab' };
-      }
-      writeSelectedItem(nextParams, sourcePane, neighbor.itemId);
-    }
-    writeSelectedItem(nextParams, destinationPane, itemId);
-  }
-
   const installed = withoutItem(byPane, itemId);
-  // Every addressed pane may be URL-only on a fresh link. Materialize all of them before a close
-  // compacts indices, or an untouched middle pane has no store entry to shift and disappears from
-  // the working set even though its address survived correctly.
+  // URL-only panes must have their working set materialized before any indexes move.
   for (const pane of arrangement.panes) {
     installed[pane.index] = tabsForPane(pane.index, pane.itemId, arrangement.panes, byPane).filter(
       (tab) => tab.itemId !== itemId,
     );
   }
   installed[sourcePane] = remaining;
+
+  if (sourceClosed) {
+    closePaneParams(nextParams, sourcePane, arrangement.panes.length);
+  } else if (source.itemId === itemId) {
+    const neighbor = remainingItems[Math.max(0, movedIndex - 1)];
+    if (neighbor === undefined) {
+      return { plan: null, refusal: 'stale-tab' };
+    }
+    writeSelectedItem(nextParams, sourcePane, neighbor.itemId);
+  }
+
+  if (edge !== undefined) {
+    const count = arrangement.panes.length - (sourceClosed ? 1 : 0);
+    const index = finalDestinationPane + (edge === 'right' || edge === 'bottom' ? 1 : 0);
+    const nextByPane = {
+      ...(sourceClosed
+        ? compactClosedPane(installed, sourcePane, arrangement.panes.length)
+        : installed),
+    };
+    for (let from = count - 1; from >= index; from -= 1) {
+      shiftPane(nextParams, from, from + 1);
+      nextByPane[from + 1] = nextByPane[from] ?? [];
+    }
+    if (source.itemId === itemId) {
+      copyPaneParams(params, sourcePane, nextParams, index);
+      nextParams.delete(paneParam(CHAT_PARAM, index));
+    } else {
+      writeSelectedItem(nextParams, index, itemId);
+    }
+    nextByPane[index] = sourceClosed
+      ? sourceTabs.map((tab) => (tab.itemId === itemId ? { ...tab, pinned: true } : tab))
+      : [{ itemId, pinned: true }];
+    nextParams.delete(SIZES_PARAM);
+    nextParams.set(
+      SPLIT_PARAM,
+      splitToParam(edge === 'top' || edge === 'bottom' ? 'horizontal' : 'vertical'),
+    );
+    return {
+      plan: { nextParams, nextByPane, finalDestinationPane: index, sourceClosed },
+      refusal: null,
+    };
+  }
+
+  writeSelectedItem(nextParams, finalDestinationPane, itemId);
   installed[destinationPane] = [
     ...destinationTabs.filter((tab) => tab.itemId !== itemId),
     { itemId, pinned: true },

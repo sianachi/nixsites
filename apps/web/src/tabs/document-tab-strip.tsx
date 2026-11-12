@@ -9,7 +9,7 @@ import {
   type MenuEntry,
   type TabItem,
 } from '@nix/ui';
-import { PanelLeft, PanelTop, Pin, Plus, X } from 'lucide-react';
+import { PanelLeft, PanelTop, Pin, PinOff, Plus, X } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -32,6 +32,8 @@ import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-c
 import {
   carriesTabTransfer,
   readTabTransfer,
+  TAB_DOCK_EDGES,
+  TAB_DOCK_LABELS,
   writeTabTransfer,
   type TabTransferPayload,
 } from './tab-transfer';
@@ -47,6 +49,7 @@ import { useOpenChat } from '@nix/web-pets/pets/use-open-chat';
 import { OPEN_NEW_TAB_PICKER_EVENT, OPEN_TAB_SWITCHER_EVENT } from './new-tab-picker';
 import { TITLE_ROW_TABS_ID } from './title-row-slot';
 import { useOpenItem } from './use-open-item';
+import type { TabTransferControl } from './use-tab-transfer';
 
 /**
  * One pane's open documents.
@@ -81,11 +84,8 @@ export interface DocumentTabStripProps {
   readonly draggedTab: TabTransferPayload | null;
   readonly onTabDragStarted: (payload: TabTransferPayload) => void;
   readonly onTabDragEnded: () => void;
-  readonly onMoveTab: (
-    payload: TabTransferPayload,
-    destinationPane: number,
-    title: string,
-  ) => boolean;
+  readonly onMoveTab: TabTransferControl['moveTab'];
+  readonly canDockTab: TabTransferControl['canDockTab'];
 
   /** Closes this pane. Absent when it is the only one, matching `OpenItem`'s own `onClose`. */
   readonly onClosePane: (() => void) | undefined;
@@ -101,6 +101,7 @@ export function DocumentTabStrip({
   onTabDragStarted,
   onTabDragEnded,
   onMoveTab,
+  canDockTab,
   onClosePane,
 }: DocumentTabStripProps): ReactNode {
   const { tabs } = useDocumentTabs(paneIndex, activeItemId);
@@ -116,6 +117,7 @@ export function DocumentTabStrip({
     (state.byPane[paneIndex] ?? []).some((tab) => tab.itemId === activeId),
   );
   const tabPinned = useTabStore((state) => state.tabPinned);
+  const tabUnpinned = useTabStore((state) => state.tabUnpinned);
   // Set when the conversation is closed, so the record is not made again before the address follows.
   const dismissedChat = useRef<string | null>(null);
   useEffect(() => {
@@ -146,6 +148,7 @@ export function DocumentTabStrip({
   }, []);
   const inTitleRow = paneIndex === 0 && orientation === 'horizontal' && titleRow !== null;
 
+  const destinations = visiblePanes.filter((pane) => pane.index !== paneIndex);
   const items: TabItem[] = tabs.map((tab) => {
     const scope = chatScopeOfTab(tab.itemId);
     if (scope !== null) {
@@ -156,19 +159,35 @@ export function DocumentTabStrip({
         pinned: true,
       };
     }
-    const title = tree.find(tab.itemId)?.title;
+    const itemTitle = tree.find(tab.itemId)?.title ?? '';
+    const title = itemTitle === '' ? 'Untitled' : itemTitle;
+    const payload: TabTransferPayload = { version: 1, itemId: tab.itemId, sourcePane: paneIndex };
+    const dockDestination = canDockTab(payload, paneIndex)
+      ? paneIndex
+      : destinations.find((pane) => canDockTab(payload, pane.index))?.index;
 
     return {
       id: tab.itemId,
-      // `??` alone would not catch an empty string, and an untitled note is ordinary - the same
-      // reasoning `editor-page.tsx`'s `describe()` gives for a pane's own fallback name.
-      label: title !== undefined && title.length > 0 ? title : 'Untitled',
+      label: title,
       pinned: tab.pinned,
+      onTogglePin: () => {
+        if (tab.pinned) tabUnpinned(paneIndex, tab.itemId, activeItemId);
+        else tabPinned(paneIndex, tab.itemId);
+      },
+      ...(dockDestination === undefined
+        ? {}
+        : {
+            dockActions: TAB_DOCK_EDGES.map((edge) => ({
+              label: TAB_DOCK_LABELS[edge],
+              onSelect: () => {
+                onMoveTab(payload, dockDestination, title, edge);
+              },
+            })),
+          }),
     };
   });
 
   const activeTitle = items.find((item) => item.id === activeId)?.label ?? 'Untitled';
-  const destinations = visiblePanes.filter((pane) => pane.index !== paneIndex);
   const canReceive =
     draggedTab !== null &&
     draggedTab.sourcePane !== paneIndex &&
@@ -278,7 +297,8 @@ export function DocumentTabStrip({
     if (tab === undefined) return [];
     const others = tabs.filter((other) => other.itemId !== itemId).map((other) => other.itemId);
     const toTheRight = tabs.slice(index + 1).map((other) => other.itemId);
-    const title = items[index]?.label ?? 'Untitled';
+    const item = items[index];
+    const title = item?.label ?? 'Untitled';
     return [
       {
         kind: 'action',
@@ -307,18 +327,17 @@ export function DocumentTabStrip({
       },
       // A conversation is always kept and has no document link to copy.
       ...(isChatTabId(itemId) ? [] : [{ kind: 'separator' as const }]),
-      ...(tab.pinned || isChatTabId(itemId)
+      ...(item?.onTogglePin === undefined
         ? []
         : [
             {
               kind: 'action' as const,
-              label: 'Keep open',
-              icon: Pin,
-              onSelect: () => {
-                tabPinned(paneIndex, itemId);
-              },
+              label: tab.pinned ? 'Unpin' : 'Keep open',
+              icon: tab.pinned ? PinOff : Pin,
+              onSelect: item.onTogglePin,
             },
           ]),
+      ...(item?.dockActions ?? []),
       ...(workspace === null || isChatTabId(itemId)
         ? []
         : [copyLinkEntry(workspace.workspaceId, itemId, title)]),
@@ -337,8 +356,10 @@ export function DocumentTabStrip({
       onDrop={onDrop}
       className={cn(
         'relative flex min-w-0',
-        orientation === 'vertical' ? 'flex-col' : 'flex-row items-end bg-surface',
-        inTitleRow && 'flex-1',
+        orientation === 'vertical'
+          ? 'flex-col'
+          : 'flex-row items-end border-b border-divider bg-surface',
+        inTitleRow && 'flex-1 max-lg:items-center pointer-coarse:items-center',
         dropTarget === draggedTab &&
           canReceive &&
           'bg-accent/10 outline-2 -outline-offset-2 outline-accent',
@@ -355,6 +376,7 @@ export function DocumentTabStrip({
           onClick={orientationToggled}
           className={cn(
             'flex shrink-0 items-center justify-center self-start rounded-md p-1.5 text-muted hover:text-foreground any-pointer-coarse:min-h-(--control-lg) any-pointer-coarse:min-w-(--control-lg)',
+            inTitleRow && 'max-lg:self-center pointer-coarse:self-center',
             focusRing,
             inkWashStates,
           )}
@@ -374,9 +396,10 @@ export function DocumentTabStrip({
         }}
         onClose={handleClose}
         contextMenu={tabActions}
-        {...(finePointer && destinations.length > 0
+        {...(finePointer && (destinations.length > 0 || items.some((item) => item.dockActions))
           ? {
               drag: {
+                canDrag: (itemId: string) => !isChatTabId(itemId),
                 onStart: (itemId: string, event: DragEvent<HTMLElement>) => {
                   // A conversation is bound to its pane's runtime; it is not moved between panes.
                   if (isChatTabId(itemId)) {
@@ -398,7 +421,12 @@ export function DocumentTabStrip({
               },
             }
           : {})}
-        className={orientation === 'horizontal' ? 'min-w-0' : 'min-w-0 flex-1'}
+        className={cn(
+          'min-w-0',
+          orientation === 'vertical' && 'flex-1',
+          inTitleRow &&
+            'max-lg:items-center max-lg:[&_[role=tab]]:text-base pointer-coarse:items-center pointer-coarse:[&_[role=tab]]:text-base',
+        )}
       />
 
       {portraitTablet ? (

@@ -141,6 +141,8 @@ interface TabsState {
    */
   readonly tabPinned: (pane: number, itemId: string) => void;
 
+  readonly tabUnpinned: (pane: number, itemId: string, activeItemId: string) => void;
+
   /**
    * A tab in a pane was activated. Claims its global ownership for that pane without announcing
    * or moving focus away from the tablist, preserving whether it was already pinned.
@@ -272,6 +274,20 @@ export const useTabStore = create<TabsState>((set) => ({
       const next = pinTabs(tabs, itemId);
 
       return { byPane: claimItem(state.byPane, pane, itemId, next) };
+    });
+  },
+
+  tabUnpinned: (pane, itemId, activeItemId) => {
+    set((state) => {
+      const tabs = state.byPane[pane] ?? [];
+      if (isChatTabId(itemId) || !tabs.some((tab) => tab.itemId === itemId && tab.pinned))
+        return state;
+      // Keep all open documents when this tab takes over as the pane's one preview.
+      const next = pinTabs(tabs, activeItemId).map((tab) => ({
+        ...tab,
+        pinned: tab.itemId !== itemId,
+      }));
+      return { byPane: { ...state.byPane, [pane]: next } };
     });
   },
 

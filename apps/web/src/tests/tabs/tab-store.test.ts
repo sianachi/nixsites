@@ -77,6 +77,17 @@ describe('pinning a document', () => {
 
     expect(tabs(0)).toEqual([{ itemId: 'a', pinned: true }]);
   });
+
+  it('unpins an individual tab without closing the current preview', () => {
+    useTabStore.getState().tabPinned(0, 'a');
+    useTabStore.getState().tabPreviewed(0, 'b');
+    useTabStore.getState().tabUnpinned(0, 'a', 'b');
+
+    expect(tabs(0)).toEqual([
+      { itemId: 'a', pinned: false },
+      { itemId: 'b', pinned: true },
+    ]);
+  });
 });
 
 describe('activating a tab', () => {

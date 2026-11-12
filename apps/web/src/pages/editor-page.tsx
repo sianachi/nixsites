@@ -76,7 +76,7 @@ export function EditorPage(): ReactNode {
   }, [zen, zenPane?.index]);
 
   const paneCount = panes.length;
-  const { moveTab } = useTabTransfer(panes.map((pane) => pane.index));
+  const { moveTab, canDockTab } = useTabTransfer(shownPanes.map((pane) => pane.index));
 
   // F6 and Shift F6 cycle focus between the pane regions - see the hook for why it is claimed
   // only while there is more than one pane to cycle.
@@ -156,6 +156,7 @@ export function EditorPage(): ReactNode {
               setDraggedTab(null);
             }}
             onMoveTab={moveTab}
+            canDockTab={canDockTab}
             canManageTemplates={templateLibrary.capabilities.canManage}
             canApplyTemplates={
               templateLibrary.status === 'ready' &&

@@ -252,7 +252,7 @@ describe('Tabs', () => {
 
     const tab = screen.getByRole('tab', { name: 'Roadmap' });
     expect(tab).toHaveAttribute('draggable', 'true');
-    expect(tab).toHaveAttribute('title', 'Roadmap (Drag to another pane)');
+    expect(tab).toHaveAttribute('title', 'Roadmap (Drag to move or dock)');
 
     fireEvent.dragStart(tab, { dataTransfer });
     fireEvent.dragEnd(tab, { dataTransfer });
@@ -295,7 +295,7 @@ describe('Tabs', () => {
 
     // The strip itself must be able to shrink below its content for `overflow-x-auto` to ever
     // engage, including when a caller also hands it `flex-1` (`document-tab-strip.tsx` does).
-    expect(screen.getByRole('tablist').className).toMatch(/\bmin-w-0\b/);
+    expect(screen.getByRole('tablist').parentElement?.className).toMatch(/\bmin-w-0\b/);
   });
 });
 
@@ -397,7 +397,7 @@ describe('a vertical strip', () => {
   it('keeps its labels out of text selection while leaving fields inside selectable', () => {
     render(<Tabs label="Open documents" items={OPEN} activeId="a" onActivate={vi.fn()} />);
 
-    expect(screen.getByRole('tablist')).toHaveClass(
+    expect(screen.getByRole('tablist').parentElement).toHaveClass(
       'select-none',
       '[&_:is(input,textarea,[contenteditable]:not([contenteditable=false]))]:select-text',
     );

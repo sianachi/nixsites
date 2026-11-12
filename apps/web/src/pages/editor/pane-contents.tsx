@@ -9,6 +9,8 @@ import type { ShellContext } from '../../shell/shell-context';
 import { DocumentTabStrip } from '../../tabs/document-tab-strip';
 import { useTabOrientationStore } from '../../tabs/tab-orientation-store';
 import type { TabTransferPayload } from '../../tabs/tab-transfer';
+import type { TabTransferControl } from '../../tabs/use-tab-transfer';
+import { TabDockTargets } from '../../tabs/tab-dock-targets';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
 import { useOpenItem } from '../../tabs/use-open-item';
 import { Text } from '@nix/ui';
@@ -24,11 +26,8 @@ interface PaneContentsProps {
   readonly draggedTab: TabTransferPayload | null;
   readonly onTabDragStarted: (payload: TabTransferPayload) => void;
   readonly onTabDragEnded: () => void;
-  readonly onMoveTab: (
-    payload: TabTransferPayload,
-    destinationPane: number,
-    title: string,
-  ) => boolean;
+  readonly onMoveTab: TabTransferControl['moveTab'];
+  readonly canDockTab: TabTransferControl['canDockTab'];
 
   /** How many panes this address holds that this window is too narrow to draw. */
   readonly hiddenPanes: number;
@@ -60,6 +59,7 @@ export function PaneContents({
   onTabDragStarted,
   onTabDragEnded,
   onMoveTab,
+  canDockTab,
   onClose,
   paneLabel,
   onFocused,
@@ -110,11 +110,12 @@ export function PaneContents({
             onTabDragStarted={onTabDragStarted}
             onTabDragEnded={onTabDragEnded}
             onMoveTab={onMoveTab}
+            canDockTab={canDockTab}
             onClosePane={onClose}
           />
         ) : null}
 
-        <div className={paneColumn}>
+        <div className={`relative ${paneColumn}`}>
           {hiddenPanes > 0 && !zen ? (
             <Text variant="caption" as="p" tone="muted" className="shrink-0 px-8 pb-1 pt-1">
               {hiddenPanes === 1
@@ -156,6 +157,15 @@ export function PaneContents({
               }}
             />
           )}
+          {draggedTab !== null && canDockTab(draggedTab, pane.index) ? (
+            <TabDockTargets
+              draggedTab={draggedTab}
+              onDock={(edge) => {
+                onMoveTab(draggedTab, pane.index, tree.find(draggedTab.itemId)?.title ?? '', edge);
+                onTabDragEnded();
+              }}
+            />
+          ) : null}
         </div>
       </div>
     </article>

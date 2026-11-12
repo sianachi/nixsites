@@ -1,5 +1,10 @@
 import type { PaneState } from '@nix/web-platform/panes/pane-state';
-import { chatTabId, itemIsPinned, type OpenTab } from '@nix/web-foundation/lib/tab-store';
+import {
+  chatTabId,
+  isChatTabId,
+  itemIsPinned,
+  type OpenTab,
+} from '@nix/web-foundation/lib/tab-store';
 
 /**
  * Finds the one addressed pane that owns a document.
@@ -41,10 +46,13 @@ export function tabsForPane(
   byPane: Readonly<Record<number, readonly OpenTab[]>>,
 ): readonly OpenTab[] {
   const stored = byPane[paneIndex] ?? [];
-  const owned = stored.filter((tab) => {
+  const unique = new Map<string, OpenTab>();
+  for (const tab of stored) {
     const owner = ownerOfItem(tab.itemId, addressed, byPane);
-    return owner === null || owner === paneIndex;
-  });
+    if (owner !== null && owner !== paneIndex) continue;
+    if (tab.pinned || !unique.has(tab.itemId)) unique.set(tab.itemId, tab);
+  }
+  const owned = [...unique.values()];
 
   const activeChat = addressed.find((pane) => pane.index === paneIndex)?.chat;
   const withItem = owned.some((tab) => tab.itemId === activeItemId)
@@ -52,7 +60,11 @@ export function tabsForPane(
     : [...owned, { itemId: activeItemId, pinned: itemIsPinned(byPane, activeItemId) }];
 
   // The pane's open conversation is a tab beside its item, always pinned.
-  return activeChat === undefined || withItem.some((tab) => tab.itemId === chatTabId(activeChat))
-    ? withItem
-    : [...withItem, { itemId: chatTabId(activeChat), pinned: true }];
+  const withChat =
+    activeChat === undefined || withItem.some((tab) => tab.itemId === chatTabId(activeChat))
+      ? withItem
+      : [...withItem, { itemId: chatTabId(activeChat), pinned: true }];
+
+  const pinnedDocument = (tab: OpenTab): boolean => tab.pinned && !isChatTabId(tab.itemId);
+  return [...withChat].sort((a, b) => Number(pinnedDocument(b)) - Number(pinnedDocument(a)));
 }

@@ -105,20 +105,31 @@ export function deletePane(params: URLSearchParams, index: number): void {
  * that {@link parsePanes} refuses to read - and the pane a person did not close would vanish.
  */
 export function shiftPane(params: URLSearchParams, from: number, to: number): void {
+  if (from === to) return;
+  copyPaneParams(params, from, params, to);
+  deletePane(params, from);
+}
+
+/** Copies the complete pane address from a snapshot, including its view and filters. */
+export function copyPaneParams(
+  source: URLSearchParams,
+  from: number,
+  params: URLSearchParams,
+  to: number,
+): void {
   const bases = ['view', 'mode', 'sort', 'dir', SEARCH_PARAM, CHAT_PARAM];
 
-  const itemId = params.get(selectedItemParam(from));
-  const carried = bases.map((base) => params.get(paneParam(base, from)));
+  const itemId = source.get(selectedItemParam(from));
+  const carried = bases.map((base) => source.get(paneParam(base, from)));
 
   const fromPrefix = paneFilterPrefix(from);
   const filters: [string, string][] = [];
-  for (const [name, value] of params) {
+  for (const [name, value] of source) {
     if (name.startsWith(fromPrefix)) {
       filters.push([name.slice(fromPrefix.length), value]);
     }
   }
 
-  deletePane(params, from);
   deletePane(params, to);
 
   if (itemId !== null) {

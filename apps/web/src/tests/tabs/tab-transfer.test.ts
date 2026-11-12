@@ -6,6 +6,7 @@ import {
   planTabTransfer,
   readTabTransfer,
   writeTabTransfer,
+  type TabDockEdge,
   type TabTransferPayload,
 } from '../../tabs/tab-transfer';
 import type { OpenTab } from '@nix/web-foundation/lib/tab-store';
@@ -25,6 +26,7 @@ function plan(
   move: TabTransferPayload,
   destinationPane: number,
   visiblePaneIndexes: readonly number[] = [0, 1, 2],
+  edge?: TabDockEdge,
 ) {
   return planTabTransfer({
     params: new URLSearchParams(search),
@@ -32,8 +34,63 @@ function plan(
     visiblePaneIndexes,
     payload: move,
     destinationPane,
+    edge,
   });
 }
+
+describe('docking a document tab', () => {
+  it.each([
+    ['top', 'h', 0],
+    ['bottom', 'h', 1],
+    ['left', 'v', 0],
+    ['right', 'v', 1],
+  ] as const)(
+    'docks the active tab at the %s edge without losing its view',
+    (edge, split, index) => {
+      const result = plan(
+        `item=${BRAVO}&view=calendar&f.owner=ada&sizes=100`,
+        {
+          0: [
+            { itemId: ALPHA, pinned: true },
+            { itemId: BRAVO, pinned: false },
+          ],
+        },
+        payload(BRAVO, 0),
+        0,
+        [0],
+        edge,
+      );
+      expect(result.refusal).toBeNull();
+      expect(result.plan?.finalDestinationPane).toBe(index);
+      expect(result.plan?.nextParams.get('split')).toBe(split);
+      expect(result.plan?.nextParams.get(index === 0 ? 'item' : 'item2')).toBe(BRAVO);
+      expect(result.plan?.nextParams.get(index === 0 ? 'view' : 'view2')).toBe('calendar');
+      expect(result.plan?.nextParams.get(index === 0 ? 'f.owner' : 'f2.owner')).toBe('ada');
+      expect(result.plan?.nextParams.get(index === 0 ? 'item2' : 'item')).toBe(ALPHA);
+      expect(result.plan?.nextByPane[index]).toEqual([{ itemId: BRAVO, pinned: true }]);
+    },
+  );
+
+  it('moves a single-document pane at the pane limit and keeps the other panes', () => {
+    const result = plan(
+      `item=${ALPHA}&item2=${BRAVO}&view2=board&item3=${CHARLIE}`,
+      {},
+      payload(BRAVO, 1),
+      2,
+      [0, 1, 2],
+      'bottom',
+    );
+    expect(result.refusal).toBeNull();
+    expect(result.plan?.nextParams.get('item')).toBe(ALPHA);
+    expect(result.plan?.nextParams.get('item2')).toBe(CHARLIE);
+    expect(result.plan?.nextParams.get('item3')).toBe(BRAVO);
+    expect(result.plan?.nextParams.get('view3')).toBe('board');
+  });
+
+  it('keeps the one-pane workspace intact when there is no other tab to split', () => {
+    expect(plan(`item=${ALPHA}`, {}, payload(ALPHA, 0), 0, [0], 'top').refusal).toBe('same-pane');
+  });
+});
 
 describe('the tab drag payload', () => {
   it('uses only Nix’s private MIME type and round-trips a versioned payload', () => {

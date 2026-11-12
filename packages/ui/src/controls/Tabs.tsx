@@ -1,10 +1,17 @@
 import { cva } from 'class-variance-authority';
-import { X } from 'lucide-react';
-import { useRef, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { GripVertical, PanelsTopLeft, Pin, PinOff, X } from 'lucide-react';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import { cn } from '../lib/cn';
 import { ContextMenu, type ContextMenuTargetProps } from './ContextMenu';
-import { type MenuEntry } from './Menu';
+import { Menu, type MenuEntry } from './Menu';
 import { Icon } from '../primitives/Icon';
 import { chromeSurface, focusRing, inkWashStates } from '../primitives/interaction';
 
@@ -31,8 +38,7 @@ import { chromeSurface, focusRing, inkWashStates } from '../primitives/interacti
  * gets the same action from the tab element they are already on, announced through
  * `aria-keyshortcuts` on each closable tab.
  *
- * `pinned` is the only thing this component knows about preview tabs - it draws none differently
- * (the strip is upright, as Obsidian's is) and nothing more. Which tab is a preview, when one is
+ * `pinned` adds a pin marker to the ordinary tab. Which tab is a preview, when one is
  * replaced, and when it is promoted to pinned are all decisions the caller makes; this component only draws the result.
  *
  * **Orientation changes which arrow keys move focus, not just which way the strip lays out.**
@@ -45,15 +51,18 @@ import { chromeSurface, focusRing, inkWashStates } from '../primitives/interacti
 export interface TabItem {
   readonly id: string;
   readonly label: string;
-  /** Whether this tab is permanent; kept for callers that tell preview tabs apart. */
+  /** Whether this tab is kept open. */
   readonly pinned?: boolean;
   /** Whether a close control is offered for this tab. Defaults to true. */
   readonly closable?: boolean;
+  readonly dockActions?: readonly MenuEntry[];
+  readonly onTogglePin?: () => void;
 }
 
 export type TabsOrientation = 'horizontal' | 'vertical';
 
 interface TabsDrag {
+  readonly canDrag?: (id: string) => boolean;
   readonly onStart: (id: string, event: DragEvent<HTMLElement>) => void;
   readonly onEnd: () => void;
 }
@@ -146,6 +155,30 @@ export function Tabs(props: TabsProps): ReactNode {
     className,
   } = props;
   const listRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+  const pinnedDescription = `${listId}-pinned`;
+  const activeIndex = items.findIndex((item) => item.id === activeId);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const tab = list?.querySelectorAll<HTMLElement>('[role="tab"]')[activeIndex];
+    if (list === null || tab === undefined) return;
+    const reveal = (): void => {
+      const bounds = list.getBoundingClientRect();
+      const target = tab.getBoundingClientRect();
+      if (orientation === 'horizontal') {
+        if (target.right > bounds.right) list.scrollLeft += target.right - bounds.right;
+        else if (target.left < bounds.left) list.scrollLeft += target.left - bounds.left;
+      } else if (target.bottom > bounds.bottom) list.scrollTop += target.bottom - bounds.bottom;
+      else if (target.top < bounds.top) list.scrollTop += target.top - bounds.top;
+    };
+    reveal();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(reveal);
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeIndex, activeId, orientation]);
 
   function focusTabAt(index: number): void {
     const list = listRef.current;
@@ -196,26 +229,43 @@ export function Tabs(props: TabsProps): ReactNode {
   }
 
   return (
-    <div
-      ref={listRef}
-      role="tablist"
-      aria-label={label}
-      aria-orientation={orientation === 'vertical' ? 'vertical' : undefined}
-      className={cn(tablistVariants({ orientation }), className)}
-    >
+    <div ref={listRef} className={cn(tablistVariants({ orientation }), className)}>
+      {/* Explicit ownership groups the tabs for assistive technology, leaving their buttons as siblings. */}
+      <div
+        role="tablist"
+        aria-label={label}
+        aria-orientation={orientation === 'vertical' ? 'vertical' : undefined}
+        aria-owns={items.map((_, index) => `${listId}-${String(index)}`).join(' ')}
+        className="sr-only"
+      />
+      <span id={pinnedDescription} hidden>
+        Pinned
+      </span>
       {items.map((item, index) => {
         const active = item.id === activeId;
         const closable = (item.closable ?? true) && onClose !== undefined;
+        const draggable = drag !== undefined && (drag.canDrag?.(item.id) ?? true);
+        const dockActions = item.dockActions ?? [];
+        const canDock = dockActions.length > 0;
+        const pinLabel = `${item.pinned ? 'Unpin' : 'Pin'} ${item.label}`;
+        const tabControl = cn(
+          'absolute top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted hover:text-foreground',
+          focusRing,
+          inkWashStates,
+        );
+        const revealControl =
+          'pointer-events-none opacity-0 group-hover/tab:pointer-events-auto group-hover/tab:opacity-100 group-has-[:focus-visible]/tab:pointer-events-auto group-has-[:focus-visible]/tab:opacity-100';
 
         // The tab itself, carrying the context-menu marker only when the caller offers tab actions.
         const drawTab = (contextTarget?: ContextMenuTargetProps): ReactNode => (
           <div
-            key={item.id}
             {...contextTarget}
+            id={`${listId}-${String(index)}`}
             role="tab"
-            draggable={drag === undefined ? undefined : true}
+            draggable={draggable || undefined}
             tabIndex={active ? 0 : -1}
             aria-selected={active}
+            aria-describedby={item.pinned ? pinnedDescription : undefined}
             // Two shortcuts, space-separated, because the handler accepts both and the physical
             // keyboard makes that necessary rather than generous: the key labelled Delete on a Mac
             // laptop sends Backspace, so announcing only one of the pair names a key a large share
@@ -226,14 +276,14 @@ export function Tabs(props: TabsProps): ReactNode {
             // the accessible name - it exists so the Delete shortcut is discoverable without a
             // screen reader reading `aria-keyshortcuts` aloud.
             title={
-              drag !== undefined
-                ? `${item.label} (Drag to another pane${closable ? '; Delete to close' : ''})`
+              draggable
+                ? `${item.label} (Drag to move or dock${closable ? '; Delete to close' : ''})`
                 : closable
                   ? `${item.label} (Delete to close)`
                   : undefined
             }
             onDragStart={(event) => {
-              drag?.onStart(item.id, event);
+              if (draggable) drag.onStart(item.id, event);
             }}
             onDragEnd={drag?.onEnd}
             onClick={() => {
@@ -244,10 +294,29 @@ export function Tabs(props: TabsProps): ReactNode {
             }}
             className={cn(
               tabVariants({ orientation, active }),
-              drag !== undefined && 'cursor-grab',
+              'h-full w-full',
+              draggable && 'cursor-grab active:cursor-grabbing',
             )}
           >
+            {canDock ? (
+              <span aria-hidden="true" className="w-4 shrink-0" />
+            ) : draggable ? (
+              <Icon
+                icon={GripVertical}
+                size="sm"
+                className="shrink-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            ) : null}
             <span className="truncate">{item.label}</span>
+            {item.onTogglePin !== undefined ? (
+              <span aria-hidden="true" className="w-4 shrink-0" />
+            ) : item.pinned ? (
+              <Icon
+                icon={Pin}
+                size="sm"
+                className="shrink-0 text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            ) : null}
 
             {/* `closable` already folds in "the caller accepts a close" - TS narrows `onClose` through the alias. */}
             {closable ? (
@@ -284,7 +353,7 @@ export function Tabs(props: TabsProps): ReactNode {
                   onClose(item.id);
                 }}
                 className={cn(
-                  'shrink-0 cursor-default rounded-sm p-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+                  'shrink-0 cursor-default rounded-sm p-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100',
                   'any-pointer-coarse:flex any-pointer-coarse:size-(--control-lg) any-pointer-coarse:items-center any-pointer-coarse:justify-center any-pointer-coarse:p-0 any-pointer-coarse:opacity-100',
                   active && 'opacity-100',
                   inkWashStates,
@@ -296,16 +365,63 @@ export function Tabs(props: TabsProps): ReactNode {
           </div>
         );
 
-        return contextMenu === undefined ? (
-          drawTab()
-        ) : (
-          <ContextMenu
+        return (
+          <div
             key={item.id}
-            label={`${item.label} tab actions`}
-            items={() => contextMenu(item.id)}
+            role="presentation"
+            className={cn(
+              'group/tab relative min-w-0 shrink-0',
+              orientation === 'horizontal' && 'max-w-48 max-sm:max-w-32',
+            )}
           >
-            {drawTab}
-          </ContextMenu>
+            {contextMenu === undefined ? (
+              drawTab()
+            ) : (
+              <ContextMenu label={`${item.label} tab actions`} items={() => contextMenu(item.id)}>
+                {drawTab}
+              </ContextMenu>
+            )}
+            {canDock && (
+              <Menu label={`Dock ${item.label}`} items={dockActions}>
+                {(trigger) => (
+                  <button
+                    {...trigger}
+                    aria-label={`Dock ${item.label}`}
+                    title={`Dock ${item.label}`}
+                    tabIndex={active ? 0 : -1}
+                    className={cn(tabControl, 'left-2', revealControl, 'aria-expanded:opacity-100')}
+                  >
+                    <Icon icon={PanelsTopLeft} size="sm" />
+                  </button>
+                )}
+              </Menu>
+            )}
+            {item.onTogglePin !== undefined && (
+              <button
+                type="button"
+                aria-label={pinLabel}
+                title={pinLabel}
+                tabIndex={active ? 0 : -1}
+                onClick={item.onTogglePin}
+                className={cn(
+                  tabControl,
+                  closable
+                    ? 'right-8 any-pointer-coarse:right-[calc(var(--control-lg)+var(--spacing)*3)]'
+                    : 'right-2',
+                  revealControl,
+                )}
+              >
+                <Icon
+                  icon={Pin}
+                  size="sm"
+                  className={item.pinned ? 'group-hover/tab:hidden' : ''}
+                />
+                {item.pinned && (
+                  <Icon icon={PinOff} size="sm" className="hidden group-hover/tab:block" />
+                )}
+              </button>
+            )}
+          </div>
         );
       })}
     </div>
