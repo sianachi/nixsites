@@ -332,6 +332,10 @@ export function createDemoFetch(): typeof fetch {
       demoComment('Ada Okafor', 'Yes, the wide crop is in the design file.'),
     ],
   };
+  const commentThreads = new Map<string, readonly CommentThread[]>([
+    [LANDING_PAGE, [landingDiscussion]],
+  ]);
+  let commentRevision = 1;
   const bookmarks = new Map<string, string>();
   const trashed = new Set<string>();
   const structure = new Map<
@@ -442,6 +446,97 @@ export function createDemoFetch(): typeof fetch {
   const text = (body: unknown, key: string, fallback: string): string => {
     const value = field(body, key);
     return typeof value === 'string' ? value : fallback;
+  };
+  const commentPath =
+    /^\/api\/v1\/items\/([^/]+)\/comments(?:\/([^/]+)(?:\/(replies|resolved|anchor))?)?$/;
+  const writeComment: Handler = ({ body, method }, [, itemId, entryId, action]) => {
+    if (itemId === undefined || itemAt(itemId)?.type !== 'note' || trashed.has(itemId)) return null;
+    const threads = commentThreads.get(itemId) ?? [];
+    const store = (next: readonly CommentThread[]): void => {
+      commentThreads.set(itemId, next);
+      commentRevision += 1;
+    };
+    const content = text(body, 'body', '').trim();
+    const missingBody = (): Response =>
+      problem(422, 'comments.body_required', 'Write a comment before posting.');
+    const makeComment = (): Comment => {
+      const mentions = field(body, 'mentionIds');
+      return {
+        ...demoComment(DEMO_PROFILE.name, content),
+        authorId: DEMO_PRINCIPAL,
+        mentionIds: Array.isArray(mentions)
+          ? mentions.filter((id): id is string => typeof id === 'string')
+          : [],
+        createdAt: now(),
+      };
+    };
+    if (method === 'POST' && entryId === undefined) {
+      if (content === '') return missingBody();
+      const anchor = field(body, 'anchor');
+      const comment = makeComment();
+      const thread: CommentThread = {
+        id: comment.id,
+        anchorStart: text(anchor, 'start', '') || null,
+        anchorEnd: text(anchor, 'end', '') || null,
+        quote: text(anchor, 'quote', '') || null,
+        resolvedAt: null,
+        resolvedBy: null,
+        resolvedByName: null,
+        comments: [comment],
+      };
+      store([...threads, thread]);
+      return json(thread, 201);
+    }
+    const thread = threads.find((entry) =>
+      entry.comments.some((comment) => comment.id === entryId),
+    );
+    if (thread === undefined) return null;
+    const replace = (next: CommentThread): Response => {
+      store(threads.map((entry) => (entry.id === next.id ? next : entry)));
+      return json(next);
+    };
+    if (method === 'POST' && action === 'replies') {
+      if (content === '') return missingBody();
+      return replace({ ...thread, comments: [...thread.comments, makeComment()] });
+    }
+    if (method === 'PUT' && action === 'resolved') {
+      const resolved = field(body, 'resolved') === true;
+      return replace({
+        ...thread,
+        resolvedAt: resolved ? now() : null,
+        resolvedBy: resolved ? DEMO_PRINCIPAL : null,
+        resolvedByName: resolved ? DEMO_PROFILE.name : null,
+      });
+    }
+    if (method === 'PUT' && action === 'anchor') {
+      const anchorStart = text(body, 'start', '');
+      const anchorEnd = text(body, 'end', '');
+      return anchorStart && anchorEnd ? replace({ ...thread, anchorStart, anchorEnd }) : null;
+    }
+    const own = thread.comments.find((comment) => comment.id === entryId);
+    if (action !== undefined || own?.authorId !== DEMO_PRINCIPAL || own.deleted) return null;
+    if (method === 'PATCH') {
+      if (content === '') return missingBody();
+      return replace({
+        ...thread,
+        comments: thread.comments.map((comment) =>
+          comment.id === own.id ? { ...comment, body: content, editedAt: now() } : comment,
+        ),
+      });
+    }
+    if (method !== 'DELETE') return null;
+    if (thread.id === own.id) {
+      store(threads.filter((entry) => entry.id !== thread.id));
+    } else {
+      store(
+        threads.map((entry) =>
+          entry.id !== thread.id
+            ? entry
+            : { ...entry, comments: entry.comments.filter((comment) => comment.id !== own.id) },
+        ),
+      );
+    }
+    return new Response(null, { status: 204 });
   };
   /** Properties as Core stores them: a field with no choices keeps an empty list, never null. */
   const propertiesIn = (value: unknown): Json[] | undefined =>
@@ -978,11 +1073,15 @@ export function createDemoFetch(): typeof fetch {
       /^\/api\/v1\/items\/([^/]+)\/comments(?:\/watch)?$/,
       (_, [, id]) =>
         json({
-          revision: 1,
-          threads: id === LANDING_PAGE ? [landingDiscussion] : [],
-          canComment: false,
+          revision: commentRevision,
+          threads: id === undefined ? [] : (commentThreads.get(id) ?? []),
+          canComment: id !== undefined && itemAt(id)?.type === 'note' && !trashed.has(id),
         }),
     ],
+    ['POST', commentPath, writeComment],
+    ['PATCH', commentPath, writeComment],
+    ['PUT', commentPath, writeComment],
+    ['DELETE', commentPath, writeComment],
     [
       'POST',
       /^\/api\/v1\/me\/pets\/inline$/,

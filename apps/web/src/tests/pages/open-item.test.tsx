@@ -50,7 +50,7 @@ const BOARD = {
 };
 
 describe('an item nobody has configured', () => {
-  it('opens straight into its document and offers Comments', async () => {
+  it('opens the document without a default Comments tab', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
@@ -59,7 +59,7 @@ describe('an item nobody has configured', () => {
 
     const views = within(await screen.findByRole('navigation', { name: 'Views' }));
     expect(views.getByRole('button', { name: 'Document' })).toHaveAttribute('aria-current', 'page');
-    expect(views.getByRole('button', { name: 'Comments' })).toBeVisible();
+    expect(views.queryByRole('button', { name: 'Comments' })).not.toBeInTheDocument();
   });
 
   it('offers its own properties and views to configure, even so', async () => {
@@ -240,7 +240,7 @@ describe('an item with views', () => {
     // The body, rather than whichever view happens to be first. Promoting a survivor would mean
     // deleting one view silently changed what the item opens as.
     await waitFor(() => {
-      expect(within(switcher).getByRole('button', { name: /document/i })).toHaveAttribute(
+      expect(within(switcher).getByRole('button', { name: 'Document' })).toHaveAttribute(
         'aria-current',
         'page',
       );

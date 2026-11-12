@@ -64,7 +64,6 @@ export function CommentsPane({
   const composer =
     state.canComment === true ? (
       <Composer
-        compact={conversation}
         label={conversation ? 'Write a comment' : 'New comment'}
         submitLabel={conversation ? 'Post' : 'Comment'}
         onSubmit={(body, mentionIds) => addThread(body, mentionIds, null)}
@@ -78,6 +77,10 @@ export function CommentsPane({
           {problem}
         </Text>
       )}
+
+      {conversation && composer ? (
+        <div className="border-b border-divider pb-3">{composer}</div>
+      ) : null}
 
       <section aria-label="Comment threads" className="flex flex-col gap-3">
         {conversation ? null : (
@@ -102,7 +105,12 @@ export function CommentsPane({
 
         {open.length === 0 && state.status === 'ready' ? (
           <Text variant="note" tone="muted">
-            No open comments.
+            {conversation && resolved.length === 0 ? 'No comments yet.' : 'No open comments.'}
+          </Text>
+        ) : null}
+        {conversation && state.status === 'ready' && state.canComment === false ? (
+          <Text variant="note" tone="muted">
+            {ERRORS['comments.forbidden']}
           </Text>
         ) : null}
         {open.map(card)}
@@ -123,9 +131,7 @@ export function CommentsPane({
         )}
       </section>
 
-      {conversation ? (
-        composer
-      ) : (
+      {conversation ? null : (
         <section aria-label="Suggestions" className="flex flex-col gap-2">
           <Text variant="kicker" tone="muted">
             Suggestions

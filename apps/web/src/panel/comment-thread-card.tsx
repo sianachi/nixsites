@@ -11,7 +11,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import {
   openThreadCard,
@@ -380,6 +380,7 @@ export function Composer({
   const [mentions, setMentions] = useState<ReadonlyMap<string, string>>(new Map());
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLTextAreaElement>(null);
   const workspace = useOptionalWorkspace();
 
   async function send(): Promise<void> {
@@ -393,6 +394,7 @@ export function Composer({
     if (sent) {
       setBody('');
       setMentions(new Map());
+      input.current?.focus();
     }
   }
 
@@ -412,6 +414,7 @@ export function Composer({
 
   const field = (
     <Textarea
+      ref={input}
       aria-label={label}
       placeholder={`${label}…`}
       value={body}

@@ -128,7 +128,10 @@ export function OpenItem({
     add: addSuggestedView,
   } = useItemViewActions(itemId, workspace?.workspaceId);
   const { viewId, selectView } = useViewState();
-  const commentsAvailable = bodyKind === 'note';
+  const boardComments = bodyKind === 'note' && defaultToComments;
+  const showingComments =
+    (boardComments && viewId === null) || (bodyKind === 'note' && viewId === COMMENTS_VIEW);
+  const commentsTab = boardComments || showingComments;
   const storedViews = container.views;
   const { setDefaultViewKind } = tree;
   const defaultViewKind = storedViews?.views.find((view) => view.id === storedViews.default)?.kind;
@@ -146,13 +149,11 @@ export function OpenItem({
     return (
       visibleViews.find(
         (view) => view.id !== excluding && !storedViews?.unrenderable.includes(view.id),
-      )?.id ?? (commentsAvailable ? COMMENTS_VIEW : DOCUMENT_VIEW)
+      )?.id ?? (boardComments ? COMMENTS_VIEW : DOCUMENT_VIEW)
     );
   }
   const requested =
     viewId ?? (hidden.has(storedViews?.default ?? DOCUMENT_VIEW) ? fallbackView() : null);
-  const showingComments =
-    commentsAvailable && (requested === COMMENTS_VIEW || (viewId === null && defaultToComments));
   const overlayDetails = useOverlayDetails();
   // The settings open over the page - a dialog, or a drawer on touch screens - so each note starts
   // with them closed rather than reopening them on every visit.
@@ -489,12 +490,12 @@ export function OpenItem({
           {mobileItemControls}
         </nav>
       ) : null}
-      {(views.length > 0 || commentsAvailable || addView !== undefined) && !zen ? (
+      {(views.length > 0 || commentsTab || addView !== undefined) && !zen ? (
         <ViewSwitcher
           views={visibleViews}
           unrenderable={unrenderable}
           activeViewId={selectedViewId}
-          comments={commentsAvailable}
+          comments={commentsTab}
           addView={addView}
           viewActions={
             lock.open
@@ -504,7 +505,7 @@ export function OpenItem({
                     view: views.find((view) => view.id === id),
                     stored: storedViews,
                     canHide:
-                      commentsAvailable ||
+                      boardComments ||
                       visibleViews.some((view) => view.id !== id) ||
                       (id !== DOCUMENT_VIEW && !documentTabHidden),
                     canWrite: canManageViews,
@@ -531,7 +532,7 @@ export function OpenItem({
           }
           documentLabel={narrow ? 'Body' : 'Document'}
           documentHidden={documentTabHidden}
-          defaultViewId={commentsAvailable && defaultToComments ? COMMENTS_VIEW : storedDefault}
+          defaultViewId={boardComments ? COMMENTS_VIEW : storedDefault}
           onSelect={(chosen) => {
             selectView(chosen);
           }}
