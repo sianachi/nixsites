@@ -63,12 +63,17 @@ describe('drawing any view', () => {
     expect([...DRAWN_VIEW_KINDS].sort()).toEqual([
       'board',
       'calendar',
+      'chart',
       'chat',
+      'checklist',
+      'drive',
       'form',
       'gallery',
       'habit_tracker',
       'interactive_form',
       'list',
+      'matrix',
+      'outline',
       'query',
       'sheet',
       'timeline',
@@ -89,6 +94,68 @@ describe('drawing any view', () => {
 
     expect(drawn.svg).toContain('Read');
     expect(drawn.notes.join(' ')).toContain('check-in history');
+  });
+
+  it('draws a habit tracker as a week grid with each habit target', () => {
+    const drawn = draw('habit_tracker', [row('Read', { $habit_target: 20, $habit_unit: 'pages' })]);
+
+    expect(drawn.svg).toContain('20 pages');
+    expect(drawn.svg.match(/rx="8"/g)).toHaveLength(7);
+  });
+
+  it('places matrix cards by both properties', () => {
+    const drawn = draw(
+      'matrix',
+      [row('Ship', { status: 'Todo', done: true }), row('Rest', { status: 'Done', done: false })],
+      { groupBy: 'status', groupOrder: ['Todo', 'Done'], rowBy: 'done' },
+    );
+
+    expect(drawn.svg.indexOf('Todo')).toBeLessThan(drawn.svg.indexOf('Done'));
+    expect(drawn.svg).toContain('Ship');
+    expect(drawn.svg).toContain('Rest');
+  });
+
+  it('charts a count, or a property total when the view sums one', () => {
+    const rows = [
+      row('A', { status: 'Todo', due: 30 }),
+      row('B', { status: 'Todo', due: 12 }),
+      row('C', { status: 'Done', due: 5 }),
+    ];
+
+    expect(draw('chart', rows, { groupBy: 'status' }).svg).toContain('>2<');
+    expect(
+      draw('chart', rows, { groupBy: 'status', measure: 'sum', measureProperty: 'due' }).svg,
+    ).toContain('>42<');
+  });
+
+  it('reports checklist progress from the done property', () => {
+    const drawn = draw('checklist', [row('One', { done: true }), row('Two', { done: false })], {
+      doneProperty: 'done',
+      columns: [],
+    });
+
+    expect(drawn.svg).toContain('1 of 2 done');
+  });
+
+  it('draws a drive grid as tiles and a drive list as a list', () => {
+    expect(draw('drive', [row('Passport')], { layout: 'grid' }).svg).not.toContain('>Title<');
+    expect(draw('drive', [row('Passport')]).svg).toContain('>Title<');
+  });
+
+  it('ends a timeline at the latest end date, not the latest start', () => {
+    const drawn = draw('timeline', [row('Long', { due: '2026-10-01', end: '2026-12-01' })], {
+      dateProperty: 'due',
+      endDateProperty: 'end',
+    });
+
+    expect(drawn.svg).toContain('2026-12-01');
+  });
+
+  it('captions a gallery tile with a value when the view has no cover property', () => {
+    const drawn = draw('gallery', [row('Deep Work', { status: 'Done' })]);
+
+    expect(drawn.svg).toContain('>Done<');
+    expect(drawn.svg).not.toContain('Cover not included');
   });
 
   it('escapes what came out of a document, so one title cannot break the picture', () => {

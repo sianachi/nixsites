@@ -31,9 +31,9 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-test('ships ten useful archives that pass the production template archive reader', async () => {
+test('ships useful archives that pass the production template archive reader', async () => {
   const artifacts = await catalogBytes();
-  assert.equal(artifacts.size, 10);
+  assert.equal(artifacts.size, 22);
   assert.deepEqual([...artifacts.keys()], CATALOG.map((entry) => `${entry.key}.nix`).sort());
 
   for (const [name, bytes] of artifacts) {
@@ -59,6 +59,10 @@ test('ships ten useful archives that pass the production template archive reader
         archive.bundles.some((item) => item.id === rule.sourceId),
       ),
     );
+    if (definition.rows !== undefined) {
+      assertCollection(name, archive, profile, definition);
+      continue;
+    }
     const actionContainer = archive.bundles.find((item) => item.title === 'Action items');
     assert.ok(actionContainer, `${name} should group workflow tasks under a native task schema`);
     if (actionContainer !== undefined) {
@@ -111,6 +115,74 @@ test('ships ten useful archives that pass the production template archive reader
     }
   }
 });
+
+/** A collection template is its root: the library card draws the root's default view. */
+function assertCollection(name, archive, profile, definition) {
+  const root = archive.bundles.find((item) => item.id === archive.manifest.root);
+  const rows = archive.bundles.filter((item) => item.parentId === root.id);
+  const declared = new Map(root.schema.declared.map((property) => [property.key, property]));
+  assert.equal(root.views.default, root.views.views[0].id, `${name} previews its first view`);
+  assert.deepEqual(
+    root.views.views.map((view) => view.kind),
+    definition.views.map((view) => view.kind),
+  );
+  assert.equal(rows.length, definition.rows.length);
+  assert.deepEqual(
+    root.viewRows.map((row) => row.properties),
+    rows.map((row) => row.properties),
+    `${name} preview rows carry the sample values`,
+  );
+  for (const row of rows)
+    for (const key of Object.keys(row.properties))
+      assert.ok(key.startsWith('$habit_') || declared.has(key), `${name}/${row.title}: ${key}`);
+
+  // What Core's import validator refuses: a view that points at a property of the wrong type.
+  const typeOf = (key) => declared.get(key)?.type;
+  const dates = ['date'];
+  const sections = ['select', 'checkbox'];
+  for (const view of root.views.views) {
+    const at = `${name}/${view.name}`;
+    for (const column of view.columns) assert.ok(declared.has(column), `${at} column ${column}`);
+    if (view.groupBy !== null) {
+      const allowed =
+        view.kind === 'chart'
+          ? [...sections, ...dates]
+          : view.kind === 'board'
+            ? ['select']
+            : sections;
+      assert.ok(allowed.includes(typeOf(view.groupBy)), `${at} groups by ${view.groupBy}`);
+      const options = declared.get(view.groupBy).options;
+      for (const value of view.groupOrder)
+        assert.ok(options.includes(value), `${at} order ${value}`);
+    }
+    for (const key of [view.dateProperty, view.endDateProperty, view.sortBy])
+      if (key != null) assert.ok(dates.includes(typeOf(key)), `${at} date ${key}`);
+    if (view.rowBy != null) assert.ok(sections.includes(typeOf(view.rowBy)), `${at} rows`);
+    if (view.doneProperty != null) assert.equal(typeOf(view.doneProperty), 'checkbox', at);
+    if (view.measureProperty != null) assert.equal(typeOf(view.measureProperty), 'number', at);
+    for (const filter of view.filters ?? [])
+      assert.ok(declared.has(filter.property), `${at} filters by ${filter.property}`);
+    if (['board', 'matrix', 'chart'].includes(view.kind)) assert.ok(view.groupBy, `${at} grouping`);
+    if (['calendar', 'timeline'].includes(view.kind)) assert.ok(view.dateProperty, `${at} date`);
+    if (view.kind === 'matrix') assert.ok(view.rowBy, `${at} rows`);
+    if (view.kind === 'custom') assert.ok(view.program, `${at} program`);
+  }
+  for (const row of rows)
+    for (const [key, value] of Object.entries(row.properties)) {
+      const property = declared.get(key);
+      if (property?.type === 'select')
+        assert.ok(property.options.includes(value), `${name}: ${value}`);
+      if (property?.type === 'date') assert.match(value, /^\d{4}-\d{2}-\d{2}$/);
+    }
+  for (const rule of profile.initialization.rules) {
+    assert.equal(rule.kind, 'relativeDate');
+    assert.equal(typeOf(rule.propertyKey), 'date', `${name} rule ${rule.propertyKey}`);
+    assert.equal(
+      profile.initialization.inputs.find((input) => input.key === rule.inputKey)?.type,
+      'date',
+    );
+  }
+}
 
 test('onboarding fixture carries file bytes, resettable recurrence, links and relative task dates', async () => {
   const bytes = (await catalogBytes()).get('nix.onboarding-plan.nix');

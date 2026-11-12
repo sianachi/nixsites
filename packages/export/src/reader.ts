@@ -483,7 +483,23 @@ const VIEW_KINDS = new Set([
   'form',
   'query',
   'interactive_form',
+  'chart',
+  'habit_tracker',
+  'drive',
+  'checklist',
+  'matrix',
+  'outline',
+  'custom',
 ]);
+/** Per-kind text fields added after archive v1; carried only when the stored view sets them. */
+const OPTIONAL_VIEW_TEXT = [
+  'measure',
+  'measureProperty',
+  'layout',
+  'doneProperty',
+  'rowBy',
+  'program',
+] as const;
 const FILTER_OPERATORS = new Set([
   'equals',
   'not-equals',
@@ -1460,6 +1476,12 @@ function parseView(value: unknown, ownerId: string): ViewSnapshot {
     companionViewId,
     companionPlacement: placement ?? null,
     interactiveForm: parseNullableForm(value.interactiveForm, ownerId),
+    ...Object.fromEntries(
+      OPTIONAL_VIEW_TEXT.flatMap((key) => {
+        const parsed = nullableString(value[key], ownerId);
+        return parsed === null ? [] : [[key, parsed]];
+      }),
+    ),
   };
 }
 
