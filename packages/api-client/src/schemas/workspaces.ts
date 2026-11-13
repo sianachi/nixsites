@@ -17,6 +17,8 @@ export const workspaceSchema = z.object({
   name: z.string(),
   versionRetentionDays: z.union([z.number(), z.string()]),
   storageQuotaBytes: z.union([z.number(), z.string()]),
+  /** Bytes held by the workspace's file versions. Absent from servers that predate it. */
+  storageUsedBytes: z.union([z.number(), z.string()]).default(0),
   createdAt: z.iso.datetime({ offset: true }),
   kind: z.enum(['personal', 'shared']),
   canRename: z.boolean(),

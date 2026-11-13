@@ -138,7 +138,7 @@ export function WorkspaceOverview(props: {
         {' · '}
         {workspace.versionRetentionDays} days history
         {' · '}
-        {formatBytes(workspace.storageQuotaBytes)}
+        {formatBytes(workspace.storageUsedBytes)} of files
         {' · '}
         created {new Date(workspace.createdAt).toLocaleDateString()}
       </Text>
