@@ -1,4 +1,4 @@
-import { Icon, placeFloatingMenu, readViewportBounds } from '@nix/ui';
+import { Icon, Text, placeFloatingMenu, readViewportBounds } from '@nix/ui';
 import type { TextColor } from '@nix/editor-schema';
 import type { Editor } from '@tiptap/react';
 import { useFloatingPlacement } from './floating-placement';
@@ -514,6 +514,16 @@ export function BubbleMenu({
           }
         }}
       >
+        {maxWidth < MENU_WIDTH_ESTIMATE ? (
+          <Text
+            as="span"
+            variant="caption"
+            tone="muted"
+            className="hidden shrink-0 px-1.5 pointer-coarse:inline"
+          >
+            Swipe for more
+          </Text>
+        ) : null}
         <div role="group" aria-label="Text styles" className="flex shrink-0 items-center gap-0.5">
           {TEXT_STYLES.map((style, offset) => {
             const index = offset;

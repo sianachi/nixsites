@@ -112,13 +112,33 @@ export function GraphPage(): ReactElement {
    * would then be a second move rather than a reversal. The two items involved are flashed so the
    * result is seen where it happened, the same on undo.
    */
-  const move = async (itemId: string, parentId: string, undoing = false): Promise<void> => {
+  const move = async (itemId: string, parentId: string): Promise<void> => {
     if (graph === null) {
       return;
     }
     const node = graph.nodes.find((candidate) => candidate.id === itemId);
     const destination = graph.nodes.find((candidate) => candidate.id === parentId);
     const previous = node?.parentId ?? null;
+    let original: { parentId: string | null; afterId: string | null } | null = null;
+
+    if (node !== undefined && (previous !== null || !graph.nodesTruncated)) {
+      try {
+        const current = await client.query(coreItems.itemById(itemId), { forceRefresh: true });
+        const siblings = coreItems.listItems(graph.workspaceId, {
+          parentId: current.parentId ?? undefined,
+        });
+        let afterId: string | null = null;
+        for await (const sibling of client.paginate(siblings)) {
+          if (sibling.id === itemId) {
+            original = { parentId: current.parentId, afterId };
+            break;
+          }
+          afterId = sibling.id;
+        }
+      } catch {
+        // A failed lookup leaves the move available without an uncertain Undo.
+      }
+    }
 
     try {
       await client.execute(
@@ -130,14 +150,27 @@ export function GraphPage(): ReactElement {
     }
 
     notifyItemChildrenChanged(graph.workspaceId, parentId);
-    notifyItemChildrenChanged(graph.workspaceId, previous);
+    notifyItemChildrenChanged(graph.workspaceId, original === null ? previous : original.parentId);
     const label = `Moved "${titleOf(node)}" inside "${titleOf(destination)}".`;
-    if (!undoing) {
-      if (previous === null) {
-        publishNotice({ key: `graph-move:${itemId}:${parentId}`, message: label });
-      } else {
-        undo.push(label, () => move(itemId, previous, true));
-      }
+    if (original === null) {
+      publishNotice({ key: `graph-move:${itemId}:${parentId}`, message: label });
+    } else {
+      const position = original;
+      undo.push(label, async () => {
+        try {
+          await client.execute(coreItems.moveItem(graph.workspaceId, itemId, position));
+        } catch (reason) {
+          publishNotice({ key: `graph-move-refused:${itemId}`, message: moveRefusal(reason) });
+          return;
+        }
+        notifyItemChildrenChanged(graph.workspaceId, parentId);
+        notifyItemChildrenChanged(graph.workspaceId, position.parentId);
+        setFlash({
+          ids: [itemId, ...(position.parentId === null ? [] : [position.parentId])],
+          token: Date.now(),
+        });
+        await refresh();
+      });
     }
     setFlash((current) => ({ ids: [itemId, parentId], token: (current?.token ?? 0) + 1 }));
     await refresh();
@@ -222,24 +255,30 @@ export function GraphPage(): ReactElement {
         />
       )}
 
-      <label className="flex min-w-0 max-w-full flex-col gap-1 self-start">
-        <Text as="span" variant="caption">
-          Open items in
+      {narrow ? (
+        <Text variant="note" tone="muted">
+          Items open in a full page on this device.
         </Text>
-        <Select
-          value={openMode}
-          onChange={(event) => {
-            const parsed = GraphOpenModeSchema.safeParse(event.target.value);
-            if (parsed.success) setOpenMode(parsed.data);
-          }}
-        >
-          {GraphOpenModeSchema.options.map((mode) => (
-            <option key={mode} value={mode}>
-              {GRAPH_OPEN_MODE_LABELS[mode]}
-            </option>
-          ))}
-        </Select>
-      </label>
+      ) : (
+        <label className="flex min-w-0 max-w-full flex-col gap-1 self-start">
+          <Text as="span" variant="caption">
+            Open items in
+          </Text>
+          <Select
+            value={openMode}
+            onChange={(event) => {
+              const parsed = GraphOpenModeSchema.safeParse(event.target.value);
+              if (parsed.success) setOpenMode(parsed.data);
+            }}
+          >
+            {GraphOpenModeSchema.options.map((mode) => (
+              <option key={mode} value={mode}>
+                {GRAPH_OPEN_MODE_LABELS[mode]}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
 
       <GraphExplorer
         initialFocusId={searchParams.get('focus')}

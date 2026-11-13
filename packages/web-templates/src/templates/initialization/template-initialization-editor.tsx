@@ -1,4 +1,4 @@
-import { Blueprint, Button, Checkbox, Field, Input, Select, Text } from '@nix/ui';
+import { Blueprint, Button, Checkbox, Field, Input, Select, Text, focusRing } from '@nix/ui';
 import { items as coreItems } from '@nix/api-client';
 import { useEffect, useState, type ReactNode } from 'react';
 
@@ -185,8 +185,7 @@ export function TemplateInitializationEditor({
           Setup and portability
         </Text>
         <Text variant="bodySmall" tone="muted">
-          Ask for values when an item is created, and choose what each captured field becomes. Use{' '}
-          <code>{'{{input_key}}'}</code> in a title or text.
+          Ask questions when someone uses this template, or set how fields and links are filled in.
         </Text>
       </div>
 
@@ -234,18 +233,29 @@ export function TemplateInitializationEditor({
                 />
               )}
             </Field>
-            <Field label="Input key" hint="Used in placeholders, for example {{project_name}}.">
-              {(control) => (
-                <Input
-                  {...control}
-                  value={input.key}
-                  maxLength={64}
-                  onChange={(event) => {
-                    updateInput(index, { ...input, key: event.target.value });
-                  }}
-                />
-              )}
-            </Field>
+            <details className="min-w-0">
+              <summary
+                className={`cursor-pointer py-2 any-pointer-coarse:min-h-(--control-lg) ${focusRing}`}
+              >
+                <Text as="span" variant="bodySmall">
+                  Advanced question settings
+                </Text>
+              </summary>
+              <div className="mt-2">
+                <Field label="Input key" hint="Used in placeholders, for example {{project_name}}.">
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={input.key}
+                      maxLength={64}
+                      onChange={(event) => {
+                        updateInput(index, { ...input, key: event.target.value });
+                      }}
+                    />
+                  )}
+                </Field>
+              </div>
+            </details>
             <div className="col-span-full flex min-w-0 flex-wrap items-end gap-3">
               <Field label="Answer type" className="min-w-0 flex-1 basis-full @lg/setup:basis-0">
                 {(control) => (

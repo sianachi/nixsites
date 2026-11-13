@@ -38,7 +38,10 @@ export function ApiSection(): ReactElement {
     <SettingsSection title="API" summary="Call Nix over HTTP with a personal access token">
       <Text variant="note">
         The web app, nixctl, and MCP use this API. Create a token under{' '}
-        <Link to={`${pathname}?tab=access-tokens`} className="text-accent-text">
+        <Link
+          to={`${pathname}?tab=access-tokens`}
+          className="text-accent-text underline underline-offset-2"
+        >
           Access tokens
         </Link>
         , exchange it, and send the bearer token that comes back. Scopes only narrow what you can
@@ -61,7 +64,7 @@ export function ApiSection(): ReactElement {
       </Text>
       <Text variant="note">
         Guides, error codes, and the generated reference are in the{' '}
-        <a href={DOCS} className="text-accent-text">
+        <a href={DOCS} className="text-accent-text underline underline-offset-2">
           Nix documentation
         </a>
         .

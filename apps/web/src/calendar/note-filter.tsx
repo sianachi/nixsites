@@ -24,7 +24,7 @@ export interface NoteFilterProps {
 }
 
 export function NoteFilter({ options, selected, onChange }: NoteFilterProps): ReactNode {
-  if (options.length === 0) {
+  if (options.length === 0 && selected.size === 0) {
     return null;
   }
 
@@ -83,7 +83,9 @@ export function NoteFilter({ options, selected, onChange }: NoteFilterProps): Re
       <Text as="span" variant="note" tone="muted" aria-live="polite">
         {selected.size === 0
           ? 'Showing every note'
-          : `Showing ${String(selected.size)} of ${String(options.length)} notes`}
+          : options.length === 0
+            ? 'No events from the selected calendars'
+            : `Showing ${String(options.filter((option) => selected.has(option.id)).length)} of ${String(options.length)} notes`}
       </Text>
     </fieldset>
   );

@@ -60,7 +60,7 @@ describe('workspace-scoped routing', () => {
       `/w/${SHARED.id}/settings`,
     );
     expect(within(menu).getByRole('button', { name: 'New workspace…' })).toBeVisible();
-    expect(within(menu).getByRole('button', { name: 'Arrange workspaces…' })).toBeVisible();
+    expect(within(menu).getByRole('link', { name: /^Manage workspace groups/ })).toBeVisible();
   });
 
   it('searches workspaces by name and opens the first match on Enter', async () => {

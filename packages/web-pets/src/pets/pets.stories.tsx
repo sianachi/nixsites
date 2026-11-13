@@ -1332,7 +1332,7 @@ function keyDisconnectedPlay(reason: string) {
     const alert = await canvas.findByRole('alert');
     if (alert.textContent !== reason)
       throw new Error('A disconnected pet must explain how to set up its selected provider.');
-    const settings = canvas.getByRole('link', { name: 'Open Pet settings' });
+    const settings = canvas.getByRole('link', { name: 'Open Companion settings' });
     if (settings.getAttribute('href') !== `/w/${PHONE_WORKSPACE}/settings?tab=pets`)
       throw new Error('Provider setup must open settings in the current workspace.');
     if (

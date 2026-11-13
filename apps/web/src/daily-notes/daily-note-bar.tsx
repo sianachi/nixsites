@@ -82,7 +82,7 @@ export function DailyNoteBar({
           variant="subtle"
           className="min-w-0 w-full justify-between gap-2"
           aria-haspopup="dialog"
-          aria-label={`Day navigation, ${dailyNoteLabel(date)}`}
+          aria-label={`Date and schedule, ${dailyNoteLabel(date)}`}
           onClick={() => {
             setNavigationOpen(true);
           }}
@@ -90,12 +90,17 @@ export function DailyNoteBar({
           <Text as="span" variant="bodySmall" className="min-w-0 truncate">
             {dailyNoteLabel(date)}
           </Text>
-          <Icon icon={ChevronDown} size="sm" />
+          <span className="flex shrink-0 items-center gap-1">
+            <Text as="span" variant="caption" tone="muted">
+              Schedule
+            </Text>
+            <Icon icon={ChevronDown} size="sm" />
+          </span>
         </Button>
         {navigationOpen ? (
           <Dialog
             open
-            title="Day navigation"
+            title="Date and schedule"
             onClose={() => {
               setNavigationOpen(false);
             }}

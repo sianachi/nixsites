@@ -83,6 +83,16 @@ describe('the trash page', () => {
     expect(calls.ops).toEqual(['items.restore:id-Beta', 'items.delete:id-Beta']);
   });
 
+  it('puts a row’s permanent deletion in its actions menu and still asks for confirmation', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Actions for Beta' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete permanently' }));
+
+    expect(await screen.findByText('Delete “Beta” permanently?')).toBeVisible();
+    expect(calls.ops).toEqual([]);
+  });
+
   it('names what Empty Trash will destroy and how many, and deletes nothing until confirmed', async () => {
     const user = userEvent.setup();
     renderPage();

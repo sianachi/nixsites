@@ -25,8 +25,8 @@ it('offers reachable workspace, search, calendar, inbox and note creation contro
   );
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: 'Explorer' }));
-  await user.click(screen.getByRole('button', { name: 'Find' }));
-  await user.click(screen.getByRole('button', { name: 'Inbox' }));
+  await user.click(screen.getByRole('button', { name: 'Search all workspaces' }));
+  await user.click(screen.getByRole('button', { name: 'Notifications' }));
   await user.click(screen.getByRole('button', { name: 'New note' }));
   expect(tree).toHaveBeenCalledOnce();
   expect(search).toHaveBeenCalledOnce();
@@ -54,7 +54,7 @@ it('announces the unread count as part of the inbox control name', () => {
       />
     </MemoryRouter>,
   );
-  expect(screen.getByRole('button', { name: 'Inbox, 3 unread' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Notifications, 3 unread' })).toBeVisible();
 });
 
 it('offers the pet as its own entry, named, with what it is waiting on', () => {

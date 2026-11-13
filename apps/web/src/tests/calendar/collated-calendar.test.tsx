@@ -104,10 +104,13 @@ afterEach(() => {
 });
 
 describe('offering a destination for a new entry', () => {
-  it('offers exactly the notes that placed something, since those are the only ones proven to have a calendar and a date property', () => {
+  it('offers exactly the notes that placed something, since those are the only ones proven to have a calendar and a date property', async () => {
     renderCalendar(MARCH_ENTRIES, MARCH, () => Promise.resolve(null));
 
-    const note = screen.getByRole('combobox', { name: 'Note' });
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
+    expect(screen.queryByRole('combobox', { name: 'Calendar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Event details' }));
+    const note = screen.getByRole('combobox', { name: 'Calendar' });
     const options = within(note)
       .getAllByRole('option')
       .map((option) => option.textContent);
@@ -115,13 +118,11 @@ describe('offering a destination for a new entry', () => {
     expect(options).toEqual(['Deadlines', 'Sessions']);
   });
 
-  it('says what would make a container eligible, rather than showing an empty menu', () => {
+  it('withholds the entry form when there is no calendar', () => {
     renderCalendar([], MARCH, () => Promise.resolve(null));
 
     expect(screen.queryByRole('form', { name: 'Add an entry' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/no note here offers a calendar with a date property/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add event' })).not.toBeInTheDocument();
   });
 
   it('offers no way to create at all when the caller has not wired one', () => {
@@ -137,9 +138,11 @@ describe('creating an entry', () => {
     const onCreate = vi.fn(() => Promise.resolve(null));
     renderCalendar(MARCH_ENTRIES, MARCH, onCreate);
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Note' }), 'Sessions');
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Event details' }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Calendar' }), 'Sessions');
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'Kickoff');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     expect(onCreate).toHaveBeenCalledWith(CONTAINER_TWO, 'Kickoff', '2026-03-17');
   });
@@ -155,8 +158,9 @@ describe('creating an entry', () => {
     const onCreate = vi.fn(() => Promise.resolve(null));
     const { rerender } = renderCalendar(MARCH_ENTRIES, MARCH, onCreate);
 
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'March pick');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     expect(onCreate).toHaveBeenNthCalledWith(1, CONTAINER_ONE, 'March pick', '2026-03-17');
 
@@ -174,8 +178,9 @@ describe('creating an entry', () => {
       />,
     );
 
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'April pick');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     // The day tracks where the reader is looking, as it should - only the day, and the same
     // container id both times. There is no property in either call for a window to have coloured.
@@ -186,8 +191,9 @@ describe('creating an entry', () => {
     const onCreate = vi.fn(() => Promise.resolve('This note could not be written to right now.'));
     renderCalendar(MARCH_ENTRIES, MARCH, onCreate);
 
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'Refused item');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     const alert = await screen.findByRole('alert');
     expect(
@@ -332,7 +338,7 @@ describe('the agenda', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^Add entry on .*13/ }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'Dentist');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     expect(onCreate).toHaveBeenCalledWith(CONTAINER_ONE, 'Dentist', '2026-03-13');
   });
@@ -340,8 +346,9 @@ describe('the agenda', () => {
   it('clears the title after a success but keeps the day for the next one', async () => {
     renderAgenda();
 
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'One');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('');
@@ -352,7 +359,8 @@ describe('the agenda', () => {
     const onCreate = vi.fn(() => Promise.resolve(null));
     renderAgenda(vi.fn(), onCreate);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save event' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/type a title first/i);
     expect(onCreate).not.toHaveBeenCalled();

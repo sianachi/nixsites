@@ -1,5 +1,6 @@
 import { Checkbox, Field, Select, Text } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
+import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
 
 import {
   PET_SURFACE_OPTIONS,
@@ -15,6 +16,7 @@ export function PetDeviceSettings({
 }: {
   readonly inlineWriting: boolean;
 }): ReactElement {
+  const layout = useLayoutKind();
   const [placement, setPlacement] = useState(() => readDevicePreference('placement') || 'right');
   const [inlineContext, setInlineContext] = useState(
     () => readDevicePreference('inlineContext') === 'true',
@@ -45,7 +47,7 @@ export function PetDeviceSettings({
             </Select>
           )}
         </Field>
-        {surface !== 'page' && surface !== 'drawer' ? (
+        {layout === 'desktop' && surface !== 'page' && surface !== 'drawer' ? (
           <Field label="Position">
             {(control) => (
               <Select

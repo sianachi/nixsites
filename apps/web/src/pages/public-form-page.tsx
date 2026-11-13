@@ -191,7 +191,7 @@ export function PublicFormPage(): ReactNode {
       <PublicFrame framed={false}>
         <ErrorPanel
           title="This form is unavailable"
-          detail="The link may have expired or been revoked."
+          detail="The link may have expired or been revoked. Ask the sender for a new link."
         />
       </PublicFrame>
     );
@@ -543,9 +543,11 @@ function PublicFrame({
   const zen = useZenActive();
   return (
     <main className="mx-auto flex min-h-dvh min-w-0 w-full max-w-2xl lg:max-w-4xl flex-col gap-3 px-2 py-4 sm:justify-center sm:px-5 sm:py-8">
-      <Button variant="subtle" className="self-end" onClick={toggleZenMode} aria-pressed={zen}>
-        {zen ? 'Exit Zen' : 'Enter Zen'}
-      </Button>
+      {framed ? (
+        <Button variant="subtle" className="self-end" onClick={toggleZenMode} aria-pressed={zen}>
+          {zen ? 'Exit Zen' : 'Enter Zen'}
+        </Button>
+      ) : null}
       <section
         className={framed ? 'min-w-0 rounded-md border border-divider p-3 sm:p-6' : 'min-w-0'}
       >

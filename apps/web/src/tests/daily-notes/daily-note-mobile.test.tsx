@@ -32,8 +32,8 @@ it.each([280, 320, 360, 390, 430])(
     expect(within(bar).queryByRole('button', { name: 'Previous day' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Go to a day')).not.toBeInTheDocument();
     expect(requestUrls().some((url) => url.includes('/calendar?'))).toBe(false);
-    await userEvent.click(within(bar).getByRole('button', { name: /Day navigation/ }));
-    const navigation = screen.getByRole('dialog', { name: 'Day navigation' });
+    await userEvent.click(within(bar).getByRole('button', { name: /Date and schedule/ }));
+    const navigation = screen.getByRole('dialog', { name: 'Date and schedule' });
     expect(within(navigation).getByLabelText('Go to a day')).toHaveValue('2026-08-30');
     await waitFor(() => {
       expect(requestUrls().some((url) => url.includes('/calendar?'))).toBe(true);
@@ -42,7 +42,7 @@ it.each([280, 320, 360, 390, 430])(
     await waitFor(() => {
       expect(requestUrls().some((url) => url.includes('/daily-notes/2026-08-31'))).toBe(true);
     });
-    expect(screen.queryByRole('dialog', { name: 'Day navigation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Date and schedule' })).not.toBeInTheDocument();
   },
 );
 

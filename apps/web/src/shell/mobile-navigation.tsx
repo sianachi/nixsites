@@ -49,10 +49,15 @@ export function MobileNavigation({
           Explorer
         </Text>
       </button>
-      <button type="button" className={`${control} ${tone(false)}`} onClick={onSearch}>
+      <button
+        type="button"
+        className={`${control} ${tone(false)}`}
+        aria-label="Search all workspaces"
+        onClick={onSearch}
+      >
         <Icon icon={Search} size="sm" />
         <Text variant="caption" tone="muted">
-          Find
+          Search
         </Text>
       </button>
       <NavLink
@@ -80,7 +85,7 @@ export function MobileNavigation({
           ) : null}
         </span>
         <Text variant="caption" tone="muted">
-          Inbox
+          Notifications
           {unreadNotifications > 0 ? (
             <span className="sr-only">, {unreadNotifications} unread</span>
           ) : null}

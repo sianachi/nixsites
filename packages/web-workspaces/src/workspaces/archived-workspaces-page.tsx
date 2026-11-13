@@ -187,7 +187,7 @@ export function ArchivedWorkspacesPage(): ReactNode {
                 <div {...target}>
                   <Blueprint className="flex min-w-0 flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:p-4">
                     <div className="min-w-0 flex-1">
-                      <Text className="break-words">{workspace.name}</Text>
+                      <Text className="wrap-anywhere">{workspace.name}</Text>
                       <Text variant="note" tone="muted">
                         Archived{' '}
                         {workspace.archivedAt
@@ -223,8 +223,8 @@ export function ArchivedWorkspacesPage(): ReactNode {
                     {confirmation === workspace.id ? (
                       <div className="w-full border-t border-divider pt-3">
                         <Text variant="note" tone="muted">
-                          This permanently deletes the workspace, its content, and its stored files.
-                          It cannot be undone.
+                          Permanently delete {workspace.name}, including its content and stored
+                          files? This cannot be undone.
                         </Text>
                         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                           <Button

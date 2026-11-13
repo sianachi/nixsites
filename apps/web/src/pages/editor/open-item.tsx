@@ -330,7 +330,7 @@ export function OpenItem({
   // no dock: canvases, sheets, files, and any view of the item's children.
   // On a phone the item's own controls - Details and the item actions - sit in exactly one bar that
   // is already on screen, rather than in a row of their own under the title. In order: the views
-  // strip, when the item has views (it also carries Body, so it is the one place for all three);
+  // strip, when the item has views (it also carries Document, so it is the one place for all three);
   // otherwise the writing dock of a note, or the bar a canvas, sheet or file draws for itself. Only
   // a body that cannot be shown - locked, or failed to load - falls back to the row.
   const viewsHostControls = narrow && (contextTab !== undefined || views.length > 0);
@@ -349,7 +349,12 @@ export function OpenItem({
 
   const mobileItemControls = (
     <>
-      <Button variant="ghost" aria-expanded={panelOpen} onClick={togglePanel}>
+      <Button
+        variant="ghost"
+        aria-label="Item details"
+        aria-expanded={panelOpen}
+        onClick={togglePanel}
+      >
         Details
       </Button>
       <Button
@@ -454,7 +459,7 @@ export function OpenItem({
       )}
       <Button
         variant="icon"
-        aria-label="Settings"
+        aria-label="Item settings"
         title="Item settings"
         aria-expanded={panelOpen && panelPane !== 'comments'}
         onClick={openDetailsPane}
@@ -600,7 +605,7 @@ export function OpenItem({
           aria-label="Item sections"
           className="flex shrink-0 items-center justify-end gap-1 border-b border-divider px-3 pb-2"
         >
-          {/* Body only when it is a way back: from a listing of the item's children. With views,
+          {/* Document only when it is a way back: from a listing of the item's children. With views,
               the views strip carries it; on the body itself it would select what is showing. */}
           {showingDocument || documentTabHidden ? null : (
             <Button
@@ -610,7 +615,7 @@ export function OpenItem({
                 selectView(DOCUMENT_VIEW);
               }}
             >
-              Body
+              Document
             </Button>
           )}
           {mobileItemControls}
@@ -657,7 +662,7 @@ export function OpenItem({
               />
             )
           }
-          documentLabel={narrow ? 'Body' : 'Document'}
+          documentLabel="Document"
           documentHidden={documentTabHidden}
           defaultViewId={loadingPreviewView ? undefined : (previewDefault ?? storedDefault)}
           onSelect={(chosen) => {

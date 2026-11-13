@@ -3,7 +3,7 @@ import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useItemDialog } from '@nix/web-foundation/lib/item-dialog-context';
 import { Button, Text, useUndo } from '@nix/ui';
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router';
 
 import { anchorOf, anchorText, grainOf, windowFor } from '../calendar/calendar-window';
 import { CollatedCalendar } from '../calendar/collated-calendar';
@@ -18,7 +18,6 @@ import {
 import { NoteFilter } from '../calendar/note-filter';
 import { useWorkspaceCalendar } from '../calendar/use-workspace-calendar';
 import {
-  EmptyPanel,
   ErrorPanel,
   LoadingPanel,
   PartialNotice,
@@ -80,7 +79,8 @@ export function CalendarPage(): ReactElement {
   const client = useApiClient();
   const { tree } = useOutletContext<ShellContext>();
   const visibility = useHiddenItems();
-  const { workspace } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { openPreview } = useOpenItem();
   const openDialog = useItemDialog();
@@ -286,12 +286,7 @@ export function CalendarPage(): ReactElement {
           Hidden items excluded
         </Text>
       ) : null}
-      {listed.length === 0 && calendar.unplaceable.length === 0 ? (
-        <EmptyPanel
-          title="Nothing scheduled"
-          detail="No item in this workspace carries a date in this range. Give a note a calendar view and a date property, and it will appear here."
-        />
-      ) : (
+      {options.length === 0 && notes.size === 0 ? null : (
         <NoteFilter
           options={options}
           selected={notes}
@@ -303,6 +298,7 @@ export function CalendarPage(): ReactElement {
 
       <CollatedCalendar
         entries={shown}
+        onCreateCalendar={() => void navigate(`/w/${workspaceId}/new/calendar`)}
         fallbackDestinations={[...fallback.values()].filter(
           (note) => !visibility.hiddenSet.has(note.id) && (notes.size === 0 || notes.has(note.id)),
         )}

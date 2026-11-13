@@ -34,13 +34,13 @@ function run(
 }
 
 describe('Settings > Backups', () => {
-  it('is offered only to operators, and a deep link falls back to the default tab for anyone else', async () => {
+  it('is offered only to operators, and explains an unavailable deep link to anyone else', async () => {
     stubCoreApi({ operator: false });
     renderAt(<App />, '/settings?tab=backups');
 
     expect(await screen.findByRole('link', { name: 'MCP' })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Backups' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByText('This setting is unavailable')).toBeVisible();
     expect(screen.queryByRole('region', { name: 'Backups' })).not.toBeInTheDocument();
   });
 

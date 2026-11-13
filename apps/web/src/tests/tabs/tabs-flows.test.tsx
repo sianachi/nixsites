@@ -122,8 +122,8 @@ describe('the New tab button', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/?item=${ALPHA.id}`);
     await user.click(await screen.findByRole('button', { name: 'New tab' }));
-    await user.click(await screen.findByRole('option', { name: 'New structured item' }));
-    const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(await screen.findByRole('option', { name: 'New list, board or tracker' }));
+    const picker = await screen.findByRole('dialog', { name: 'New list, board or tracker' });
     await user.click(within(picker).getByRole('button', { name: /^Canvas/ }));
     const canvas = await screen.findByRole('dialog', { name: 'New canvas' });
     await user.type(within(canvas).getByRole('textbox', { name: 'Title' }), 'Launch{Enter}');
@@ -136,8 +136,8 @@ describe('the New tab button', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/?item=${ALPHA.id}`);
     await user.click(await screen.findByRole('button', { name: 'New tab' }));
-    await user.click(await screen.findByRole('option', { name: 'New structured item' }));
-    const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+    await user.click(await screen.findByRole('option', { name: 'New list, board or tracker' }));
+    const picker = await screen.findByRole('dialog', { name: 'New list, board or tracker' });
     await user.click(within(picker).getByRole('button', { name: /^Board/ }));
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(name);

@@ -37,7 +37,7 @@ describe('view search and saved filters', () => {
   it('changes and clears title search without changing link filters', async () => {
     const user = userEvent.setup();
     renderAt(<Subject />, '/?f.status=Doing&search=Water');
-    const search = screen.getByRole('searchbox', { name: 'Search titles' });
+    const search = screen.getByRole('searchbox', { name: 'Search this view' });
     expect(search).toHaveValue('Water');
     await user.clear(search);
     await user.type(search, 'Plants');
@@ -124,7 +124,7 @@ describe('view search on a phone', () => {
     stubViewport(false);
     const user = userEvent.setup();
     renderAt(<Subject />);
-    const icon = screen.getByRole('button', { name: 'Search titles' });
+    const icon = screen.getByRole('button', { name: 'Search this view' });
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
     expect(icon).toHaveAttribute('aria-expanded', 'false');
 
@@ -169,7 +169,7 @@ describe('view search on a phone', () => {
     renderAt(<Strip />, '/?search=Water');
 
     const details = screen.getByRole('button', { name: 'Details' });
-    const search = screen.getByRole('searchbox', { name: 'Search titles' });
+    const search = screen.getByRole('searchbox', { name: 'Search this view' });
     expect(details.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

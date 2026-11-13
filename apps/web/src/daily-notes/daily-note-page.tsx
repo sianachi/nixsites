@@ -154,6 +154,7 @@ export function DailyNotePage(): ReactNode {
         <Text variant="h2" as="h1">
           Daily note could not be opened
         </Text>
+        <Text tone="muted">{dailyNoteLabel(canonical)}</Text>
         <Text role="alert" tone="muted">
           {error.message}
         </Text>

@@ -13,6 +13,7 @@ import { type useSlashMenu } from './use-slash-menu';
 
 export function Composer({
   petName,
+  scopeLabel,
   input,
   draft,
   onDraftChange,
@@ -39,6 +40,7 @@ export function Composer({
   onShareSelection,
 }: {
   readonly petName: string;
+  readonly scopeLabel: string;
   readonly input: RefObject<HTMLTextAreaElement | null>;
   readonly draft: string;
   readonly onDraftChange: (text: string) => void;
@@ -143,6 +145,9 @@ export function Composer({
 
   return (
     <div className="mx-auto flex min-w-0 w-full max-h-[50%] max-w-2xl shrink-0 flex-col gap-2 overflow-y-auto overscroll-contain border-t border-divider p-3">
+      <Text variant="caption" tone="muted" className="truncate" title={scopeLabel}>
+        {scopeLabel}
+      </Text>
       <ContextChips
         chips={chips}
         onRemove={onRemoveChip}

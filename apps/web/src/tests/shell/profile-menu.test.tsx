@@ -113,9 +113,7 @@ describe('ProfileMenu', () => {
     localStorage.setItem('nix.hidden-workspace-previews', JSON.stringify([workspaces[9]?.id]));
     await openMenu();
     expect(
-      screen
-        .getAllByRole('button', { name: /^Space / })
-        .map((button) => button.textContent?.trim()),
+      screen.getAllByRole('button', { name: /^Space / }).map((button) => button.textContent.trim()),
     ).toEqual([
       'Space 8',
       'Space 6',

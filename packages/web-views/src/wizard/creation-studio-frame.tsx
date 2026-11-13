@@ -21,6 +21,7 @@ export function CreationStudioFrame({
   destination,
   intent,
   step,
+  onCustomize,
   draft,
   existingProperties,
   previewing,
@@ -39,6 +40,7 @@ export function CreationStudioFrame({
   readonly destination: string;
   readonly intent: StudioIntent;
   readonly step: number;
+  readonly onCustomize?: (() => void) | undefined;
   readonly draft: StudioDraft;
   readonly existingProperties: readonly PropertyDefinition[];
   readonly previewing: boolean;
@@ -53,17 +55,19 @@ export function CreationStudioFrame({
 }): ReactNode {
   const zen = useZenActive();
   const stepMainRef = useRef<HTMLElement>(null);
-  const previousStep = useRef(step);
+  const previousStage = useRef({ step, simplified: onCustomize !== undefined });
   const refusal = validateDraft(draft, existingProperties);
 
   useEffect(() => {
-    if (previousStep.current === step) return;
-    previousStep.current = step;
+    const simplified = onCustomize !== undefined;
+    if (previousStage.current.step === step && previousStage.current.simplified === simplified)
+      return;
+    previousStage.current = { step, simplified };
     const heading = stepMainRef.current?.querySelector<HTMLElement>('h2');
     if (heading === null || heading === undefined) return;
     heading.tabIndex = -1;
     heading.focus();
-  }, [step]);
+  }, [onCustomize, step]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -119,7 +123,9 @@ export function CreationStudioFrame({
                 : `Edit ${recipe.label}`}
           </Text>
           <Text variant="note" tone="muted" className="mt-0.5 block truncate">
-            {`Step ${String(step + 1)} of ${String(STEPS.length)} · `}
+            {onCustomize === undefined
+              ? `Step ${String(step + 1)} of ${String(STEPS.length)} · `
+              : null}
             {itemId === undefined
               ? `Creating in ${destination}`
               : viewId === undefined
@@ -140,47 +146,49 @@ export function CreationStudioFrame({
       </header>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col @4xl/studio:flex-row">
-        <nav
-          aria-label="Creation steps"
-          className="min-w-0 shrink-0 border-b border-divider bg-surface p-2 @4xl/studio:w-44 @4xl/studio:border-b-0 @4xl/studio:border-r"
-        >
-          <ol className="grid grid-cols-2 gap-1 @4xl/studio:flex @4xl/studio:flex-col @4xl/studio:gap-2">
-            {STEPS.map((entry, index) => (
-              <li key={entry.id} className="min-w-0">
-                <button
-                  type="button"
-                  aria-current={step === index ? 'step' : undefined}
-                  aria-label={`${entry.label}: ${entry.detail}`}
-                  onClick={() => {
-                    goToStep(index);
-                  }}
-                  className={cn(
-                    `flex min-h-(--control-lg) w-full flex-row items-center gap-2 rounded-md px-2 py-1 ${focusRing}`,
-                    step === index ? 'bg-foreground/10 text-foreground' : 'hover:bg-foreground/7',
-                  )}
-                >
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-background">
-                    {index < step ? <Icon icon={Check} size="sm" /> : String(index + 1)}
-                  </span>
-                  <span className="min-w-0 max-w-full">
-                    <Text variant="bodySmall" as="span" className="block max-w-full truncate">
-                      {entry.label}
-                    </Text>
-                    <Text
-                      variant="caption"
-                      as="span"
-                      // Muted ink fails contrast on the selected fill, so the selected step's detail takes ink too.
-                      tone={step === index ? 'default' : 'muted'}
-                      className="hidden truncate @4xl/studio:block"
-                    >
-                      {entry.detail}
-                    </Text>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        {onCustomize === undefined ? (
+          <nav
+            aria-label="Creation steps"
+            className="min-w-0 shrink-0 border-b border-divider bg-surface p-2 @4xl/studio:w-44 @4xl/studio:border-b-0 @4xl/studio:border-r"
+          >
+            <ol className="grid grid-cols-2 gap-1 @4xl/studio:flex @4xl/studio:flex-col @4xl/studio:gap-2">
+              {STEPS.map((entry, index) => (
+                <li key={entry.id} className="min-w-0">
+                  <button
+                    type="button"
+                    aria-current={step === index ? 'step' : undefined}
+                    aria-label={`${entry.label}: ${entry.detail}`}
+                    onClick={() => {
+                      goToStep(index);
+                    }}
+                    className={cn(
+                      `flex min-h-(--control-lg) w-full flex-row items-center gap-2 rounded-md px-2 py-1 ${focusRing}`,
+                      step === index ? 'bg-foreground/10 text-foreground' : 'hover:bg-foreground/7',
+                    )}
+                  >
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-background">
+                      {index < step ? <Icon icon={Check} size="sm" /> : String(index + 1)}
+                    </span>
+                    <span className="min-w-0 max-w-full">
+                      <Text variant="bodySmall" as="span" className="block max-w-full truncate">
+                        {entry.label}
+                      </Text>
+                      <Text
+                        variant="caption"
+                        as="span"
+                        // Muted ink fails contrast on the selected fill, so the selected step's detail takes ink too.
+                        tone={step === index ? 'default' : 'muted'}
+                        className="hidden truncate @4xl/studio:block"
+                      >
+                        {entry.detail}
+                      </Text>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : null}
 
         <section
           aria-label="Guided setup"
@@ -243,8 +251,12 @@ export function CreationStudioFrame({
           ) : (
             <span />
           )}
-          <div className="flex items-center gap-2">
-            {step < STEPS.length - 1 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {onCustomize !== undefined ? (
+              <Button variant="secondary" onClick={onCustomize} disabled={saving}>
+                Customize
+              </Button>
+            ) : step < STEPS.length - 1 ? (
               <Button
                 variant="secondary"
                 disabled={saving}

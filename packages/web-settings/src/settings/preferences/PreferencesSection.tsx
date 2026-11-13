@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react';
-import { Text } from '@nix/ui';
+import { Button } from '@nix/ui';
+import { ThemeButton } from '@nix/web-foundation/theme/theme-choice';
 
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { usePublishingPreference } from '../publishing/publishing-preference';
@@ -7,7 +8,11 @@ import { PreferenceToggle } from '../shared/preference-toggle';
 import { ScopeNote } from '../shared/saved-mark';
 import { SettingsSection } from '../shared/settings-section';
 
-export function PreferencesSection(): ReactElement {
+export function PreferencesSection({
+  onOpenLayout,
+}: {
+  readonly onOpenLayout?: (() => void) | undefined;
+} = {}): ReactElement {
   const sites = useCapabilities().sites;
   const publishing = usePublishingPreference((state) => state.enabled);
   const setPublishing = usePublishingPreference((state) => state.setEnabled);
@@ -15,9 +20,14 @@ export function PreferencesSection(): ReactElement {
   return (
     <>
       <SettingsSection title="Appearance">
-        <Text as="p" variant="bodySmall" tone="muted">
-          To change your layout, open Preferences in the account menu.
-        </Text>
+        <div className="flex flex-wrap items-center gap-2">
+          <ThemeButton />
+          {onOpenLayout ? (
+            <Button variant="ghost" onClick={onOpenLayout}>
+              Layout and sidebar
+            </Button>
+          ) : null}
+        </div>
       </SettingsSection>
       {sites ? (
         <SettingsSection

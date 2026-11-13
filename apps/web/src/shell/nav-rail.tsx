@@ -170,7 +170,7 @@ const page = (
   ...(includesChildren ? { includesChildren } : {}),
 });
 
-const PET_ITEM = page('workspace', '/pet', 'Pet', PawPrint);
+const PET_ITEM = page('workspace', '/pet', 'Companion', PawPrint);
 
 const ITEMS: readonly RailItem[] = [
   page('workspace', '', 'Homebase', House),
@@ -194,7 +194,7 @@ function preferenceFor(item: RailItem): SidebarDestination | null {
   return result.success ? result.data : null;
 }
 
-export const sidebarChoices = [...ITEMS, { ...PET_ITEM, label: 'Companion' }].map((item) => ({
+export const sidebarChoices = [...ITEMS, PET_ITEM].map((item) => ({
   id: preferenceFor(item),
   label: item.label,
   icon: item.icon,
@@ -244,7 +244,7 @@ export function NavRail({
               item,
               {
                 ...PET_ITEM,
-                label: petEntry.label,
+                label: `Companion · ${petEntry.label}`,
                 ...(petEntry.attention === null
                   ? {}
                   : { attention: petAttentionText(petEntry.attention) }),
@@ -260,7 +260,11 @@ export function NavRail({
   useForgetDeletedSmartLists();
   const destinations = petItems.filter((item) => {
     const id = preferenceFor(item);
-    return id === null || !hiddenDestinations.includes(id);
+    return (
+      id === null ||
+      (phoneMenu !== undefined && (id === 'templates' || id === 'import')) ||
+      !hiddenDestinations.includes(id)
+    );
   });
   const items = withPinnedQueries(destinations, smartLists);
 
@@ -352,7 +356,7 @@ export function NavRail({
     if (phoneMenu) {
       entries.unshift(
         {
-          label: unread > 0 ? `Inbox, ${String(unread)} unread` : 'Inbox',
+          label: unread > 0 ? `Notifications, ${String(unread)} unread` : 'Notifications',
           icon: Bell,
           onSelect: phoneMenu.onOpenInbox,
         },

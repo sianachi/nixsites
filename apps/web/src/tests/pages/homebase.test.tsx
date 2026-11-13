@@ -34,7 +34,9 @@ describe('Homebase', () => {
       `${HOME}/daily`,
     );
     const more = screen.getByRole('region', { name: 'More' });
-    expect(within(more).getByRole('button', { name: /structured note/i })).toBeInTheDocument();
+    expect(
+      within(more).getByRole('button', { name: /new list, board or tracker/i }),
+    ).toBeInTheDocument();
     expect(within(more).getByRole('link', { name: /calendar/i })).toHaveAttribute(
       'href',
       `${HOME}/calendar`,
@@ -72,8 +74,10 @@ describe('Homebase', () => {
 
     const start = await screen.findByRole('region', { name: 'Start something' });
     const more = screen.getByRole('region', { name: 'More' });
-    await userEvent.click(within(more).getByRole('button', { name: /structured note/i }));
-    expect(await screen.findByRole('dialog', { name: 'New structured item' })).toBeVisible();
+    await userEvent.click(
+      within(more).getByRole('button', { name: /new list, board or tracker/i }),
+    );
+    expect(await screen.findByRole('dialog', { name: 'New list, board or tracker' })).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: /^close$/i }));
 
     await userEvent.click(within(start).getByRole('button', { name: /new note/i }));

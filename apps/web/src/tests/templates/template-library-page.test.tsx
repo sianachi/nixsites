@@ -39,6 +39,27 @@ const USER_TEMPLATE: StubTemplate = {
 const TEMPLATE_IMPORT_DIGEST = 'a'.repeat(64);
 
 describe('the workspace template library', () => {
+  it('lets a manager choose the source from the new-template address', async () => {
+    const user = userEvent.setup();
+    const source = item({
+      id: 'a7777777-0000-4000-8000-000000000004',
+      title: 'Source note',
+    });
+    stubCoreApi({ items: [source], canManageTemplates: true });
+    renderAt(<App />, '/templates/new');
+
+    const chooser = await screen.findByRole('combobox', { name: 'Choose item' });
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await user.selectOptions(
+      chooser,
+      await within(chooser).findByRole('option', { name: source.title }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(await screen.findByRole('heading', { name: 'Save as template' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Source note');
+  });
+
   it('searches the server-backed library without showing templates in view settings', async () => {
     const user = userEvent.setup();
     stubCoreApi({ templates: [...STUB_TEMPLATES, USER_TEMPLATE] });

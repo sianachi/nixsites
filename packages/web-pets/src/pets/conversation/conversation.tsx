@@ -484,13 +484,13 @@ export function Conversation({
               <div className="flex flex-col gap-3">
                 <Text role="alert">
                   {runtime.reason ||
-                    `Set up ${petProviderLabels[pet.provider]} in Pet settings to chat.`}
+                    `Set up ${petProviderLabels[pet.provider]} in Companion settings to chat.`}
                 </Text>
                 <Link
                   to={`/w/${workspaceId}/settings?tab=pets`}
                   className={`underline ${focusRing}`}
                 >
-                  <Text as="span">Open Pet settings</Text>
+                  <Text as="span">Open Companion settings</Text>
                 </Link>
               </div>
             )}
@@ -540,6 +540,13 @@ export function Conversation({
             ) : null}
             <Composer
               petName={pet.name}
+              scopeLabel={
+                noteScope !== undefined
+                  ? `Note: ${noteScope.title}${noteScope.readOnly ? ' (read only)' : ''}`
+                  : workspaceAccess
+                    ? 'Workspace chat · workspace access on'
+                    : 'Workspace chat · workspace access off'
+              }
               input={input}
               draft={draft}
               onDraftChange={(text) => {

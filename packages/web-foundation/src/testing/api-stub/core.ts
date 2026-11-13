@@ -34,6 +34,7 @@ export interface StubWorkspace {
   readonly name: string;
   readonly versionRetentionDays: number;
   readonly storageQuotaBytes: string;
+  readonly storageUsedBytes: number | string;
   readonly createdAt: string;
   readonly kind: 'personal' | 'shared';
   readonly canRename: boolean;
@@ -52,6 +53,7 @@ export const STUB_WORKSPACE: StubWorkspace = {
   name: "Test Person's workspace",
   versionRetentionDays: 90,
   storageQuotaBytes: '10737418240',
+  storageUsedBytes: 0,
   createdAt: '2026-08-30T09:00:00.000Z',
   kind: 'personal',
   canRename: true,

@@ -15,11 +15,12 @@ import { ItemDialogProvider } from '../items/item-dialog-provider';
 import { MobileNavigation } from './mobile-navigation';
 import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
 import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
+import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 import { useRememberLocation } from '@nix/web-platform/pwa/use-remember-location';
 import { focusRing, useUndo } from '@nix/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
@@ -62,6 +63,7 @@ import { TemplateLibraryProvider } from '@nix/web-templates/templates/template-l
 import { ShellHeader, type HeaderAccount } from './shell-header';
 import { PhoneNavbar } from './phone/phone-navbar';
 import { PhoneTopRow } from './phone/phone-top-row';
+import { SettingsNavigationContext } from '../pages/settings-navigation-context';
 import { TabSwitcher } from './phone/tab-switcher';
 import { usePhone } from './phone/use-phone';
 import { usePhoneTabs } from './phone/use-phone-tabs';
@@ -135,7 +137,11 @@ import {
  * need a definite height first, and that is a decision for the view.
  */
 
-export function AppShell(): ReactNode {
+export function AppShell({
+  closeSettings,
+}: {
+  readonly closeSettings?: (() => void) | undefined;
+} = {}): ReactNode {
   const navigate = useNavigate();
   const { workspaceId, workspace, reload: reloadWorkspaces } = useWorkspace();
   useRememberLocation(workspaceId);
@@ -268,6 +274,11 @@ export function AppShell(): ReactNode {
   }, []);
   // Both tablet layouts take the phone's touch sizes through one root attribute (theme.css).
   const layout = useLayoutKind();
+  const [companionDock, setCompanionDock] = useState<HTMLDivElement | null>(null);
+  const companionSlot =
+    layout === 'desktop' ? undefined : (
+      <div ref={setCompanionDock} className="has-[.hidden]:hidden empty:hidden" />
+    );
   useLayoutEffect(() => {
     const root = document.documentElement;
     if (layout === 'tablet-portrait' || layout === 'tablet-landscape')
@@ -809,6 +820,7 @@ export function AppShell(): ReactNode {
             <div hidden={keyboardVisible}>
               {phone ? (
                 <PhoneTopRow
+                  companion={companionSlot}
                   profile={
                     <ProfileMenu principal={principal} layoutPreferences={layoutPreferences} />
                   }
@@ -826,6 +838,7 @@ export function AppShell(): ReactNode {
                 />
               ) : (
                 <ShellHeader
+                  companion={companionSlot}
                   compactDestinations={compactDestinations}
                   home={
                     homeInHeader
@@ -919,30 +932,40 @@ export function AppShell(): ReactNode {
                       <CapabilitiesProvider value={capabilities}>
                         <ItemDialogProvider tree={tree}>
                           <ZenPresentationContext value={presentation}>
-                            <Outlet
-                              context={
-                                {
-                                  tree,
-                                  selectedId,
-                                  openExplorer: () => {
-                                    if (!sidebar.visible) sidebar.toggle();
-                                    requestAnimationFrame(() => {
-                                      if (narrow) sidebarToggleRef.current?.focus();
-                                      else explorerSearchRef.current?.focus();
-                                    });
-                                  },
-                                  openStructured: () => {
-                                    setStructuredOpen({ source: 'picker' });
-                                  },
-                                  openImport: () => {
-                                    setWorkspaceImportOpen(true);
-                                  },
-                                } satisfies ShellContext
-                              }
-                            />
-                            {/* Desktop's workspaces, trash and settings. Inside
+                            <SettingsNavigationContext.Provider
+                              value={{
+                                close: closeSettings,
+                                openLayout: () => {
+                                  closeSettings?.();
+                                  zenLayout.open();
+                                },
+                              }}
+                            >
+                              <Outlet
+                                context={
+                                  {
+                                    tree,
+                                    selectedId,
+                                    openExplorer: () => {
+                                      if (!sidebar.visible) sidebar.toggle();
+                                      requestAnimationFrame(() => {
+                                        if (narrow) sidebarToggleRef.current?.focus();
+                                        else explorerSearchRef.current?.focus();
+                                      });
+                                    },
+                                    openStructured: () => {
+                                      setStructuredOpen({ source: 'picker' });
+                                    },
+                                    openImport: () => {
+                                      setWorkspaceImportOpen(true);
+                                    },
+                                  } satisfies ShellContext
+                                }
+                              />
+                              {/* Desktop's workspaces, trash and settings. Inside
                             `<main>` for the providers; a modal dialog sits in the top layer. */}
-                            <RouteDialog />
+                              <RouteDialog />
+                            </SettingsNavigationContext.Provider>
                           </ZenPresentationContext>
                         </ItemDialogProvider>
                       </CapabilitiesProvider>
@@ -998,7 +1021,7 @@ export function AppShell(): ReactNode {
             unreadNotifications={notificationsInbox.unread}
             pet={
               petEntry && {
-                label: petEntry.label,
+                label: `Companion · ${petEntry.label}`,
                 attention: petEntry.attention && petAttentionText(petEntry.attention),
               }
             }
@@ -1010,6 +1033,16 @@ export function AppShell(): ReactNode {
           />
         ) : null}
       </div>
+
+      <PetCompanion
+        dock={
+          layout === 'desktop'
+            ? undefined
+            : companionDock === null || keyboardVisible
+              ? null
+              : (launcher) => createPortal(launcher, companionDock)
+        }
+      />
 
       {phone && tabsOpen ? (
         <TabSwitcher
@@ -1213,7 +1246,7 @@ export function AppShell(): ReactNode {
         commands={[
           {
             id: 'new-structured-item',
-            label: 'New structured item',
+            label: 'New list, board or tracker',
             icon: LayoutGrid,
             keywords: ['view', 'structured', 'board', 'create'],
             run: () => {

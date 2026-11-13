@@ -8,7 +8,7 @@ import {
   ChevronRight,
   GripVertical,
 } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { HourGrid } from '@nix/web-views/calendar/calendar-hours';
 import {
@@ -127,6 +127,7 @@ export interface CollatedCalendarProps {
     | ((containerId: string, title: string, start: string, end?: string) => Promise<string | null>)
     | undefined;
   readonly fallbackDestinations?: readonly CalendarDestination[];
+  readonly onCreateCalendar?: (() => void) | undefined;
 
   /**
    * Marks one occurrence of a repeating entry done.
@@ -162,6 +163,7 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
     onAddEndTimes,
     onCreate,
     fallbackDestinations = [],
+    onCreateCalendar,
     onComplete,
   } = props;
 
@@ -214,8 +216,12 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // one of them is already known to place by a real property (an entry could not exist otherwise).
   // Not memoised: it is a map and a sort over what is already in hand, not a cost worth guarding.
   const visibleDestinations = noteOptions(entries.filter((entry) => !isDailyNote(entry)));
-  const destinations =
-    visibleDestinations.length === 0 ? fallbackDestinations : visibleDestinations;
+  const destinations = [
+    ...new Map(
+      [...visibleDestinations, ...fallbackDestinations].map((note) => [note.id, note]),
+    ).values(),
+  ];
+  const canAdd = onCreate !== undefined && destinations.length > 0;
 
   // One clock reading for the whole grid rather than one per cell: the answer cannot change halfway
   // through a render, and forty-two of them would be forty-two allocations for one fact.
@@ -257,10 +263,8 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
   // A day chosen with an agenda "+ Add": a new object each time, so choosing the same day twice
   // still moves focus to the bar.
   const [pick, setPick] = useState<CalendarPick | null>(null);
-  const createDrag = useCalendarCreateDrag(
-    onCreate !== undefined && destinations.length > 0,
-    setPick,
-  );
+  const addEvent = useRef<HTMLButtonElement>(null);
+  const createDrag = useCalendarCreateDrag(canAdd, setPick);
 
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const reschedulingEntry =
@@ -300,14 +304,12 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
       {...createDrag}
       className={cn(
         'flex min-h-0 flex-1 flex-col gap-3 [&_[data-calendar-selection]]:bg-accent/20',
-        onCreate !== undefined &&
-          destinations.length > 0 &&
-          '[&_[data-calendar-pick]]:cursor-crosshair',
+        canAdd && '[&_[data-calendar-pick]]:cursor-crosshair',
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
-          label="Calendar grain"
+          label="Calendar period"
           options={GRAINS}
           value={grain}
           onChange={(next) => {
@@ -344,6 +346,19 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           Today
         </Button>
 
+        {canAdd ? (
+          <Button
+            ref={addEvent}
+            onClick={() => {
+              setPick({ day: dayText(anchor) });
+            }}
+          >
+            Add event
+          </Button>
+        ) : onCreateCalendar === undefined ? null : (
+          <Button onClick={onCreateCalendar}>Create a calendar</Button>
+        )}
+
         {/* Live, because the two step buttons change it and a reader who cannot see the grid
             redraw has no other way to know the press did anything. */}
         <Text as="span" variant="note" tone="muted" aria-live="polite">
@@ -351,15 +366,15 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
         </Text>
       </div>
 
-      {/* Absent entirely when the caller has not wired a way to create: a bar with nothing to do
-          would be worse than none. */}
-      {onCreate === undefined ? null : (
+      {onCreate === undefined || pick === null || !canAdd ? null : (
         <QuickAdd
           destinations={destinations}
-          day={dayText(anchor)}
           pick={pick}
-          showTime={grain === 'day' || grain === 'week'}
           onCreate={onCreate}
+          onClose={() => {
+            setPick(null);
+            addEvent.current?.focus();
+          }}
         />
       )}
 
@@ -371,11 +386,11 @@ export function CollatedCalendar(props: CollatedCalendarProps): ReactNode {
           onOpen={onOpen}
           onReschedule={setRescheduling}
           onAdd={
-            onCreate === undefined
-              ? undefined
-              : (day) => {
+            canAdd
+              ? (day) => {
                   setPick({ day });
                 }
+              : undefined
           }
           onComplete={onComplete}
         />

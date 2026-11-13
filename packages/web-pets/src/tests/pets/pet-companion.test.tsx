@@ -332,7 +332,7 @@ describe('companion workflow', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         `Add a ${label} API key in Pet settings.`,
       );
-      expect(screen.getByRole('link', { name: 'Open Pet settings' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Open Companion settings' })).toHaveAttribute(
         'href',
         '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
       );
@@ -366,7 +366,7 @@ describe('companion workflow', () => {
     expect(await screen.findByText('ChatGPT conversation')).toBeVisible();
     await openSettings(user);
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('gpt-model');
-    expect(screen.getByRole('link', { name: 'Pet settings' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Companion settings' })).toHaveAttribute(
       'href',
       '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
     );
@@ -453,7 +453,7 @@ describe('companion workflow', () => {
     );
     expect(screen.queryByText('Claude conversation')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Message Cat' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Pet settings' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open Companion settings' })).toHaveAttribute(
       'href',
       '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
     );

@@ -26,6 +26,7 @@ const workspace: Workspace = {
   name: 'Personal',
   versionRetentionDays: 90,
   storageQuotaBytes: 0,
+  storageUsedBytes: 0,
   createdAt: '2026-01-01T00:00:00Z',
   kind: 'personal',
   canRename: true,

@@ -95,6 +95,7 @@ function inWorkspace(location: Location, workspaceId: string): boolean {
 export function useRouteDialogRouting(): {
   readonly mainLocation: Location;
   readonly dialog: RouteDialogState | null;
+  readonly closeSettings: (() => void) | undefined;
 } {
   const location = useLocation();
   const navigationType = useNavigationType();
@@ -109,7 +110,7 @@ export function useRouteDialogRouting(): {
     setTrail(current);
   }
 
-  const match = desktop ? routeDialogOf(location.pathname) : null;
+  const match = routeDialogOf(location.pathname);
   const workspaceId = match?.workspaceId;
   const fromHistory =
     workspaceId !== undefined && current.work !== null && inWorkspace(current.work, workspaceId);
@@ -131,17 +132,23 @@ export function useRouteDialogRouting(): {
     if (depth !== null && depth > 0) {
       void navigate(-depth);
     } else {
-      void navigate(`${background.pathname}${background.search}${background.hash}`);
+      void navigate(`${background.pathname}${background.search}${background.hash}`, {
+        replace: !desktop,
+      });
     }
-  }, [navigate, background, depth]);
+  }, [navigate, background, depth, desktop]);
 
-  const kind = match?.kind;
+  const kind = desktop ? match?.kind : undefined;
   const dialog = useMemo<RouteDialogState | null>(
     () => (kind === undefined ? null : { kind, location, navigationType, close }),
     [kind, location, navigationType, close],
   );
 
-  return { mainLocation: background ?? location, dialog };
+  return {
+    mainLocation: dialog === null ? location : (background ?? location),
+    dialog,
+    closeSettings: match?.kind === 'settings' ? close : undefined,
+  };
 }
 
 const SCREENS: Record<

@@ -14,6 +14,7 @@ export interface StudioGateState {
   readonly workspaceId: string;
   readonly key: string;
   readonly sourceItemId: string | null;
+  readonly captureSourcePicker: ReactNode;
   readonly draft: TemplateDraft;
   readonly template: TemplateDetail | null;
   readonly templateLibrary: TemplateLibrary;
@@ -41,6 +42,7 @@ export function studioGate({
   workspaceId,
   key,
   sourceItemId,
+  captureSourcePicker,
   draft,
   template,
   templateLibrary,
@@ -105,12 +107,6 @@ export function studioGate({
     );
   }
 
-  if (mode === 'capture' && sourceItemId === null) {
-    return (
-      <StudioNotice title="Choose an item first" detail="A template needs an item to capture." />
-    );
-  }
-
   if (mode === 'capture' && templateStatus === 'loading') {
     return <StudioNotice title="Checking template access" detail="Reading workspace access." />;
   }
@@ -134,6 +130,17 @@ export function studioGate({
         title="Template creation unavailable"
         detail="You can browse workspace templates, but you cannot add or change them."
       />
+    );
+  }
+
+  if (mode === 'capture' && sourceItemId === null) {
+    return (
+      <StudioNotice
+        title="Choose an item"
+        detail="Choose an item in this workspace to save as a template."
+      >
+        {captureSourcePicker}
+      </StudioNotice>
     );
   }
 

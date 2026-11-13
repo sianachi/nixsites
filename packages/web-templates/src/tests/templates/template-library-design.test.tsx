@@ -129,8 +129,10 @@ it('offers the built-in templates a workspace does not hold, and imports one on 
   );
 
   // Inbox is already in the workspace, so only Goals is offered.
-  await userEvent.click(await screen.findByRole('button', { name: 'Use Goals template' }));
-  expect(screen.queryByRole('button', { name: 'Use Inbox template' })).not.toBeInTheDocument();
+  await userEvent.click(await screen.findByRole('button', { name: 'Add and use Goals template' }));
+  expect(
+    screen.queryByRole('button', { name: 'Add and use Inbox template' }),
+  ).not.toBeInTheDocument();
 
   expect(
     await screen.findByText('/w/33333333-3333-4333-8333-333333333333/templates/template-9/create'),
@@ -160,5 +162,7 @@ it('does not offer built-ins to someone who cannot manage the workspace template
     </MemoryRouter>,
   );
   expect(await screen.findByText('No templates yet')).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Use Goals template' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Add and use Goals template' }),
+  ).not.toBeInTheDocument();
 });

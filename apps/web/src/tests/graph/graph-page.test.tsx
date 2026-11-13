@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
+import { requestUrl } from '@nix/web-foundation/testing/request-url';
 import { App } from '../../app';
 import { useGraphOpenPreference } from '../../graph/graph-open-preference';
 import { useTabStore } from '@nix/web-foundation/lib/tab-store';
@@ -701,6 +702,35 @@ describe('touching a node on a coarse pointer', () => {
     expect(screen.getByRole('region', { name: 'Selected item' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /note title/i })).not.toBeInTheDocument();
   });
+});
+
+it('returns a root item to its original sibling position after a graph move', async () => {
+  stubCoreApi({
+    items: [
+      { ...ROOT, seq: 1 },
+      { ...OTHER, seq: 2 },
+    ],
+  });
+  const { container } = renderAt(<App />, '/graph');
+  await screen.findByRole('tree', { name: /workspace graph/i });
+  const disc = container.querySelector(`svg g[data-graph-node="${OTHER.id}"]`);
+  if (disc === null) throw new Error('Missing graph node');
+  fireEvent.pointerDown(disc, { button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+  fireEvent.pointerUp(disc, { pointerId: 1, clientX: 100, clientY: 100 });
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Move into' }), ROOT.id);
+  await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
+
+  const moves = vi
+    .mocked(fetch)
+    .mock.calls.flatMap(([input, init]) =>
+      requestUrl(input).includes(`/items/${OTHER.id}/move`) && typeof init?.body === 'string'
+        ? [JSON.parse(init.body) as unknown]
+        : [],
+    );
+  expect(moves).toEqual([
+    { parentId: ROOT.id, afterId: null },
+    { parentId: null, afterId: ROOT.id },
+  ]);
 });
 
 describe('where a graph node opens', () => {

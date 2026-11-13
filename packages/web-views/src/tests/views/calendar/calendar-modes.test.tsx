@@ -80,21 +80,21 @@ describe('choosing a grain', () => {
     render();
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'month' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-current', 'true');
   });
 
   it('takes the grain the view was configured with', () => {
     render({}, viewOf({ mode: 'week' }));
 
     // A template that ships "Calendar (week)" is impossible unless the view can carry this.
-    expect(screen.getByRole('button', { name: 'week' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Week' })).toHaveAttribute('aria-current', 'true');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('lets the address override the view, the way it overrides which view opens', () => {
     render({}, viewOf({ mode: 'month' }), '/?mode=day');
 
-    expect(screen.getByRole('button', { name: 'day' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-current', 'true');
   });
 
   it('falls back to a month for a grain it does not know', () => {

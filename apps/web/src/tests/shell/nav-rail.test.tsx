@@ -426,6 +426,19 @@ describe('workspace pages on a phone', () => {
     expect(screen.getByRole('menuitem', { name: 'Import' })).toBeVisible();
   });
 
+  it('keeps Templates and Import available in the phone menu under a minimal layout', async () => {
+    stubViewport(false);
+    stubCoreApi({
+      uiSettings: { 'shell.layout': { preset: 'essentials', overrides: {} } },
+    });
+    renderAt(<App />);
+
+    await screen.findByRole('button', { name: /^test person/i });
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('menuitem', { name: 'Templates' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Import' })).toBeVisible();
+  });
+
   it('dismisses the tree drawer on the way to a destination, rather than leaving it over the top', async () => {
     const user = userEvent.setup();
     stubViewport(false);

@@ -361,7 +361,7 @@ describe('ChecklistView', () => {
     const user = userEvent.setup();
     renderAt(<Harness shell />);
 
-    await user.click(screen.getByRole('button', { name: 'Clear done' }));
+    await user.click(screen.getByRole('button', { name: 'Remove completed items' }));
     await waitFor(() => {
       expect(screen.queryByRole('checkbox', { name: 'Milk' })).not.toBeInTheDocument();
     });
@@ -371,8 +371,10 @@ describe('ChecklistView', () => {
     expect(await screen.findByRole('checkbox', { name: 'Milk' })).toBeInTheDocument();
   });
 
-  it('offers no Clear done without the shell commands', () => {
+  it('offers no Remove completed items without the shell commands', () => {
     renderAt(<Harness />);
-    expect(screen.queryByRole('button', { name: 'Clear done' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Remove completed items' }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -149,7 +149,7 @@ describe('companion work approvals', () => {
       { wrapper: MemoryRouter },
     );
     expect(await screen.findByText(/I will save “Applications” and 1 children/)).toBeVisible();
-    expect(screen.getByText(/· 2 items to copy, 1 template write$/)).toBeVisible();
+    expect(screen.getByText('2 items to copy, 1 template write')).toBeVisible();
     expect(screen.queryByText(/0 fields, 0 views/)).not.toBeInTheDocument();
     await approveRequest();
     await waitFor(() => {

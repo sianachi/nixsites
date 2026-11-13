@@ -1,5 +1,16 @@
-import { Button, Checkbox, ContextMenu, Dialog, Icon, Input, Text, useUndo } from '@nix/ui';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import {
+  Button,
+  Checkbox,
+  ContextMenu,
+  Dialog,
+  Icon,
+  Input,
+  Menu,
+  Text,
+  useUndo,
+  type MenuEntry,
+} from '@nix/ui';
+import { MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { isNixApiError, items as coreItems, type Item } from '@nix/api-client';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
@@ -316,88 +327,90 @@ export function TrashPage(): ReactElement {
         <EmptyPanel title="No matches" detail={`Nothing in Trash matches “${filter.trim()}”.`} />
       ) : (
         <ul aria-label="Trash" className="grid grid-cols-1 gap-px lg:grid-cols-2 lg:gap-x-3">
-          {visible.map((item) => (
-            <ContextMenu
-              key={item.id}
-              label={`Actions for ${nameOf(item)}`}
-              items={[
-                {
-                  label: 'Restore',
-                  disabled: working,
-                  onSelect: () => {
-                    void restore([item]);
+          {visible.map((item) => {
+            const label = `Actions for ${nameOf(item)}`;
+            const deleteAction = {
+              label: 'Delete permanently',
+              disabled: working,
+              destructive: true,
+              onSelect: () => {
+                setPurgeTarget([item]);
+              },
+            } satisfies MenuEntry;
+            return (
+              <ContextMenu
+                key={item.id}
+                label={label}
+                items={[
+                  {
+                    label: 'Restore',
+                    disabled: working,
+                    onSelect: () => {
+                      void restore([item]);
+                    },
                   },
-                },
-                {
-                  label: 'Delete permanently',
-                  disabled: working,
-                  destructive: true,
-                  onSelect: () => {
-                    setPurgeTarget([item]);
-                  },
-                },
-              ]}
-            >
-              {(target) => (
-                <li
-                  {...target}
-                  {...(leaving.has(item.id) ? { 'data-leave': '' } : {})}
-                  {...(entering.has(item.id) ? { 'data-enter': '', 'data-flash': 'a' } : {})}
-                  className={`flex flex-col gap-2 rounded-sm px-2 py-2 hover:bg-surface sm:flex-row sm:items-center sm:gap-3 ${selected.has(item.id) ? 'bg-surface' : ''}`}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <Checkbox
-                      aria-label={`Select ${nameOf(item)}`}
-                      checked={selected.has(item.id)}
-                      disabled={working}
-                      onChange={(event) => {
-                        const on = event.target.checked;
-                        setSelected((current) => {
-                          const next = new Set(current);
-                          if (on) next.add(item.id);
-                          else next.delete(item.id);
-                          return next;
-                        });
-                      }}
-                    />
-                    <Icon icon={Trash2} size="sm" className="shrink-0 text-muted" />
-                    <Text
-                      variant="note"
-                      as="span"
-                      className="min-w-0 flex-1 break-words sm:truncate"
-                    >
-                      {nameOf(item)}
-                    </Text>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-2 pl-7 sm:ml-auto sm:flex-row sm:pl-0">
-                    <Button
-                      className="min-w-0 flex-1 justify-center sm:flex-none"
-                      variant="secondary"
-                      aria-label={`Restore ${nameOf(item)}`}
-                      disabled={working}
-                      onClick={() => {
-                        void restore([item]);
-                      }}
-                    >
-                      <Icon icon={RotateCcw} size="sm" />
-                      {busy?.kind === 'restore' && busy.ids.has(item.id) ? 'Restoring…' : 'Restore'}
-                    </Button>
-                    <Button
-                      className="min-w-0 flex-1 justify-center text-center sm:flex-none"
-                      variant="danger"
-                      aria-label={`Delete ${nameOf(item)} permanently`}
-                      disabled={working}
-                      onClick={() => {
-                        setPurgeTarget([item]);
-                      }}
-                    >
-                      Delete permanently
-                    </Button>
-                  </div>
-                </li>
-              )}
-            </ContextMenu>
-          ))}
+                  deleteAction,
+                ]}
+              >
+                {(target) => (
+                  <li
+                    {...target}
+                    {...(leaving.has(item.id) ? { 'data-leave': '' } : {})}
+                    {...(entering.has(item.id) ? { 'data-enter': '', 'data-flash': 'a' } : {})}
+                    className={`flex flex-col gap-2 rounded-sm px-2 py-2 hover:bg-surface sm:flex-row sm:items-center sm:gap-3 ${selected.has(item.id) ? 'bg-surface' : ''}`}
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Checkbox
+                        aria-label={`Select ${nameOf(item)}`}
+                        checked={selected.has(item.id)}
+                        disabled={working}
+                        onChange={(event) => {
+                          const on = event.target.checked;
+                          setSelected((current) => {
+                            const next = new Set(current);
+                            if (on) next.add(item.id);
+                            else next.delete(item.id);
+                            return next;
+                          });
+                        }}
+                      />
+                      <Icon icon={Trash2} size="sm" className="shrink-0 text-muted" />
+                      <Text
+                        variant="note"
+                        as="span"
+                        className="min-w-0 flex-1 break-words sm:truncate"
+                      >
+                        {nameOf(item)}
+                      </Text>
+                    </div>
+                    <div className="flex min-w-0 items-center justify-end gap-2 sm:ml-auto">
+                      <Button
+                        className="min-w-0 justify-center"
+                        variant="secondary"
+                        aria-label={`Restore ${nameOf(item)}`}
+                        disabled={working}
+                        onClick={() => {
+                          void restore([item]);
+                        }}
+                      >
+                        <Icon icon={RotateCcw} size="sm" />
+                        {busy?.kind === 'restore' && busy.ids.has(item.id)
+                          ? 'Restoring…'
+                          : 'Restore'}
+                      </Button>
+                      <Menu label={label} items={[deleteAction]}>
+                        {(trigger) => (
+                          <Button {...trigger} variant="subtle" aria-label={label} title={label}>
+                            <Icon icon={MoreHorizontal} size="sm" />
+                          </Button>
+                        )}
+                      </Menu>
+                    </div>
+                  </li>
+                )}
+              </ContextMenu>
+            );
+          })}
         </ul>
       )}
       <Dialog

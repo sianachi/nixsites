@@ -2,7 +2,7 @@ import type { SiteApprovalEntry } from '@nix/api-client';
 import { ScrollRegion, Button, Dialog, Field, Table, Text, Textarea } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
-import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
+import { EmptyPanel, ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { SettingsSection } from '../shared/settings-section';
 import { formatDateTime } from '@nix/web-foundation/lib/date-format';
@@ -81,7 +81,12 @@ export function SiteApprovalsSection(): ReactElement {
       title="Site approvals"
       summary="A site's first publish waits here; approving makes it public"
     >
-      {status === 'error' ? (
+      {status === 'not-configured' ? (
+        <EmptyPanel
+          title="Site publishing is unavailable"
+          detail="Site publishing is not set up on this server. Ask your server administrator to set it up if you need to publish sites."
+        />
+      ) : status === 'error' ? (
         <ErrorPanel
           title="Site approvals could not be loaded"
           detail={error ?? 'Something went wrong reading the approvals.'}
@@ -102,11 +107,13 @@ export function SiteApprovalsSection(): ReactElement {
           className="flex flex-col divide-y divide-divider"
         >
           {approvals.length === 0 ? (
-            <Text variant="note" tone="muted" role="status">
-              {status === 'loading'
-                ? 'Loading the site approvals.'
-                : 'No site is waiting for approval.'}
-            </Text>
+            <li>
+              <Text variant="note" tone="muted" role="status">
+                {status === 'loading'
+                  ? 'Loading the site approvals.'
+                  : 'No site is waiting for approval.'}
+              </Text>
+            </li>
           ) : null}
           {approvals.map((entry) => (
             <li key={entry.siteId} className="flex flex-col gap-2 py-3">

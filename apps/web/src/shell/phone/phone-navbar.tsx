@@ -71,7 +71,12 @@ export function PhoneNavbar({
         >
           <Icon icon={ChevronRight} size="sm" />
         </button>
-        <button type="button" aria-label="Find" className={button} onClick={onSearch}>
+        <button
+          type="button"
+          aria-label="Search all workspaces"
+          className={button}
+          onClick={onSearch}
+        >
           <Icon icon={Search} size="sm" />
         </button>
         <button

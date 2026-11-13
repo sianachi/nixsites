@@ -9,6 +9,7 @@ function Harness({ running }: { readonly running: boolean }): ReactElement {
   return (
     <Composer
       petName="Pip"
+      scopeLabel="Workspace chat"
       input={createRef()}
       draft="hello"
       onDraftChange={vi.fn()}

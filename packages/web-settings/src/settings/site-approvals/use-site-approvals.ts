@@ -1,5 +1,6 @@
 import {
   isCanceledError,
+  isNixApiError,
   sites,
   workspaces as coreWorkspaces,
   type SiteApprovalEntry,
@@ -9,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { refusalMessage } from '@nix/web-sites/sites/site-copy';
 
-export type SiteApprovalsStatus = 'loading' | 'ready' | 'error';
+export type SiteApprovalsStatus = 'loading' | 'ready' | 'not-configured' | 'error';
 
 /** Sites waiting for a first-publish decision. Core refuses anyone who is not an approver. */
 export interface SiteApprovalsState {
@@ -45,8 +46,12 @@ export function useSiteApprovals(): SiteApprovalsState {
         setStatus('ready');
       } catch (cause) {
         if (signal?.aborted === true || isCanceledError(cause)) return;
-        setError(refusalMessage(cause));
-        setStatus('error');
+        if (isNixApiError(cause) && cause.code === 'sites.not_configured') {
+          setStatus('not-configured');
+        } else {
+          setError(refusalMessage(cause));
+          setStatus('error');
+        }
       }
     },
     [client],

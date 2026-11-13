@@ -207,10 +207,12 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
           autoComplete="off"
           aria-controls={listbox.id}
           aria-activedescendant={listbox.activeOptionId}
-          aria-label="Search items or run a command"
+          aria-label={
+            onCreateNote === undefined ? 'Search all workspaces' : 'Open or create in a new tab'
+          }
           aria-describedby={instructionsId}
           placeholder={
-            onCreateNote === undefined ? 'Search or run a command' : 'Open or create in a new tab'
+            onCreateNote === undefined ? 'Search all workspaces' : 'Open or create in a new tab'
           }
           value={query}
           onChange={(event) => {
@@ -233,14 +235,14 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
             : commandOnly
               ? `No commands match “${needle}”.`
               : needle.length === 0
-                ? 'Type to search items, or start with > for commands only.'
+                ? 'Type to search across all workspaces, or start with > for commands only.'
                 : needle.length < MINIMUM_QUERY
                   ? `Type ${String(MINIMUM_QUERY)} letters or more to search items.`
                   : searching
                     ? 'Searching…'
                     : allHits.length > 0
                       ? 'Matching items are hidden. Manage them in Workspace options.'
-                      : `Nothing matches “${needle}”.`
+                      : `No items or commands match “${needle}”. Try a different word.`
         }
         className="min-h-0 max-h-[calc(100dvh-7rem)] overflow-y-auto max-sm:max-h-none max-sm:flex-1"
       />
@@ -269,7 +271,8 @@ export function CommandPalette(props: CommandPaletteProps): ReactNode {
           // absence: text inside documents becomes searchable when the document is saved. Said
           // here for the same reason the backlinks panel says it.
           <Text as="p" variant="caption" tone="muted" className="border-t border-divider px-4 py-2">
-            No items matched. Text inside a document becomes searchable once it has been saved.
+            No items matched across your workspaces. Text inside a document becomes searchable once
+            it has been saved.
           </Text>
         ) : null}
       </div>

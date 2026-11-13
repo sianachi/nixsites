@@ -6,7 +6,7 @@ import {
   columnLetters,
   parseCellKey,
 } from '@nix/sheet';
-import { ContextMenu, focusRingInset } from '@nix/ui';
+import { ContextMenu, Text, focusRingInset } from '@nix/ui';
 import {
   useEffect,
   useReducer,
@@ -358,6 +358,17 @@ export function SheetGrid({ sheet: editable, readOnly = false }: SheetGridProps)
         }}
         onCancel={cancelEdit}
       />
+
+      {totalWidth > viewport.width ? (
+        <Text
+          as="p"
+          variant="caption"
+          tone="muted"
+          className="hidden py-1 any-pointer-coarse:block"
+        >
+          Scroll sideways to see more columns.
+        </Text>
+      ) : null}
 
       <p id={GRID_HINT_ID} className="sr-only">
         Arrow keys move the active cell. Tab and Shift+Tab move it too, rather than leaving the

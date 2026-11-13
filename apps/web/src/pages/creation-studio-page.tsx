@@ -1,4 +1,4 @@
-import { Text } from '@nix/ui';
+import { Button, Text, useUndo } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   useLocation,
@@ -8,6 +8,7 @@ import {
   useSearchParams,
 } from 'react-router';
 
+import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { browserSessionStorage } from '@nix/web-foundation/lib/browser-storage';
 import type { ShellContext } from '../shell/shell-context';
 import { pinCreatedTab } from '../tabs/new-tab-picker';
@@ -47,8 +48,10 @@ function CreationStudio(): ReactNode {
   const targetContainer = useContainer(itemId ?? null);
   const storedView = targetContainer.views?.views.find((view) => view.id === viewId);
   const navigate = useNavigate();
+  const undo = useUndo();
   const location = useLocation();
   const [step, setStep] = useState(0);
+  const [customizing, setCustomizing] = useState(viewId !== undefined || recipeId === 'query');
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,16 +160,34 @@ function CreationStudio(): ReactNode {
   }
 
   if (
-    viewId !== undefined &&
-    (targetContainer.status === 'loading' || storedView?.kind === 'custom')
+    itemId !== undefined &&
+    (targetContainer.status === 'loading' ||
+      targetContainer.status === 'error' ||
+      (viewId !== undefined && (storedView === undefined || storedView.kind === 'custom')))
   ) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <Text variant="bodySmall" tone="muted">
-          {storedView?.kind === 'custom'
-            ? 'Ask your companion to change this view.'
-            : 'Loading view…'}
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
+        <Text variant="bodySmall" tone="muted" role="status">
+          {targetContainer.status === 'loading'
+            ? 'Loading view setup…'
+            : targetContainer.status === 'error'
+              ? 'This view setup could not be loaded.'
+              : storedView?.kind === 'custom'
+                ? 'Ask your companion to change this view.'
+                : 'This view is no longer available.'}
         </Text>
+        {targetContainer.status === 'loading' ? null : (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void navigate(`/w/${workspaceId}?item=${encodeURIComponent(itemId)}`, {
+                replace: true,
+              });
+            }}
+          >
+            Back to item
+          </Button>
+        )}
       </div>
     );
   }
@@ -235,8 +256,15 @@ function CreationStudio(): ReactNode {
       return;
     }
     browserSessionStorage()?.removeItem(draftKey(recipe ?? FALLBACK_RECIPE, draftScope));
-    pinCreatedTab(location.state, result.id);
-    const next = new URLSearchParams({ item: result.id, view: draft.view.id });
+    const createdId = result.id;
+    undo.push(`Created "${draft.title.trim()}"`, async () => {
+      const removed = await tree.remove(createdId);
+      if (removed.refusal !== null) {
+        publishNotice({ key: 'creation-undo-failed', message: removed.refusal });
+      }
+    });
+    pinCreatedTab(location.state, createdId);
+    const next = new URLSearchParams({ item: createdId, view: draft.view.id });
     void navigate(`/w/${workspaceId}?${next.toString()}`);
   }
 
@@ -248,6 +276,13 @@ function CreationStudio(): ReactNode {
       destination={destination}
       intent={intent}
       step={step}
+      onCustomize={
+        customizing
+          ? undefined
+          : () => {
+              setCustomizing(true);
+            }
+      }
       draft={draft}
       existingProperties={existingProperties}
       previewing={previewing}
@@ -265,7 +300,7 @@ function CreationStudio(): ReactNode {
       onFinish={() => void finish()}
     >
       {step === 0 ? (
-        <BasicsStep recipe={recipe} draft={draft} onChange={setDraft} />
+        <BasicsStep recipe={recipe} draft={draft} onChange={setDraft} showFields={customizing} />
       ) : (
         <OptionsStep draft={draft} existingProperties={existingProperties} onChange={setDraft} />
       )}

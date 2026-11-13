@@ -91,9 +91,15 @@ describe('the shell', () => {
     expect(
       await screen.findByRole('button', { name: /^test person(?!'s workspace)/i }),
     ).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
     const pill = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    for (const name of ['Back', 'Forward', 'Find', 'New note', /^Open tabs/, 'Menu']) {
+    for (const name of [
+      'Back',
+      'Forward',
+      'Search all workspaces',
+      'New note',
+      /^Open tabs/,
+      'Menu',
+    ]) {
       expect(within(pill).getByRole('button', { name })).toBeVisible();
     }
   });
@@ -106,7 +112,7 @@ describe('the shell', () => {
     renderAt(<App />, `${homePath}?item=${NOTE.id}`);
 
     await screen.findByRole('textbox', { name: 'Note title' });
-    const home = screen.getByRole('link', { name: 'Home' });
+    const home = screen.getByRole('link', { name: 'Homebase' });
     expect(home).toHaveAttribute('href', homePath);
     expect(home).not.toHaveAttribute('aria-current');
     await user.click(screen.getByRole('button', { name: 'Show the Explorer' }));
@@ -191,7 +197,10 @@ describe('the shell', () => {
 
     await screen.findByRole('button', { name: 'Acquisition memo' });
     await user.click(screen.getByRole('button', { name: /^search/i }));
-    await user.type(screen.getByRole('combobox', { name: /search items/i }), 'acquisition');
+    await user.type(
+      screen.getByRole('combobox', { name: /search all workspaces/i }),
+      'acquisition',
+    );
 
     // Awaited rather than read straight away: the search is debounced and answered by the server,
     // so a synchronous assertion here would be asserting on the empty list that precedes it.
@@ -220,7 +229,10 @@ describe('the shell', () => {
     renderAt(<App />);
 
     await user.click(await screen.findByRole('button', { name: /^search/i }));
-    await user.type(screen.getByRole('combobox', { name: /search items/i }), 'acquisition');
+    await user.type(
+      screen.getByRole('combobox', { name: /search all workspaces/i }),
+      'acquisition',
+    );
 
     expect(await screen.findByText(/could not be run/i)).toBeVisible();
   });
@@ -231,7 +243,7 @@ describe('the shell', () => {
     renderAt(<App />);
 
     await user.click(await screen.findByRole('button', { name: /^search/i }));
-    await user.type(screen.getByRole('combobox', { name: /search items/i }), 'note');
+    await user.type(screen.getByRole('combobox', { name: /search all workspaces/i }), 'note');
 
     // One list, ordered commands then items, so a single run of arrow keys walks the whole answer.
     expect(await screen.findByRole('option', { name: /New note/ })).toBeVisible();
@@ -243,7 +255,7 @@ describe('the shell', () => {
     renderAt(<App />, `/?item=${NOTE.id}`);
 
     await user.click(await screen.findByRole('button', { name: /^search/i }));
-    await user.type(screen.getByRole('combobox', { name: /search items/i }), 'note');
+    await user.type(screen.getByRole('combobox', { name: /search all workspaces/i }), 'note');
     await user.click(await screen.findByRole('option', { name: /New note/ }));
 
     const created = await screen.findByRole('button', { name: 'Untitled note' });

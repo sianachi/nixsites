@@ -22,7 +22,7 @@ describe('the session gate', () => {
     renderAt(<App />);
 
     expect(screen.getByRole('heading', { level: 1, name: /sign in/i })).toBeVisible();
-    expect(screen.getByRole('button', { name: /continue with sso/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
     expect(screen.queryByRole('textbox', { name: /organisation/i })).not.toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe('the session gate', () => {
     renderAt(<App />);
 
     expect(screen.getByRole('heading', { level: 1, name: /nix is offline/i })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /continue with sso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
     screen.getByRole('button', { name: /try again/i }).click();
     await vi.waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('/auth/session', expect.anything());
@@ -120,7 +120,7 @@ describe('the session gate', () => {
     renderAt(<App />);
 
     expect(screen.getByText(/restoring session/i)).toBeVisible();
-    expect(screen.queryByRole('button', { name: /continue with sso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 
   it('explains a server without interactive authentication rather than offering a broken sign-in', async () => {
@@ -204,7 +204,7 @@ describe('the session gate', () => {
     stubCoreApi();
     renderAt(<App />);
 
-    expect(screen.queryByRole('button', { name: /continue with sso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
     expect(await screen.findByRole('banner')).toBeInTheDocument();
   });
 });

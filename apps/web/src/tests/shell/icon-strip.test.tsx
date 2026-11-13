@@ -30,7 +30,9 @@ describe('the icon strip setting', () => {
     renderAt(<App />, '/');
     const header = await screen.findByRole('banner', { name: 'Workspace controls' });
     expect(screen.queryByRole('navigation', { name: 'Destinations' })).toBeNull();
-    expect(within(header).getByRole('button', { name: 'Search' })).toBeInTheDocument();
+    expect(
+      within(header).getByRole('button', { name: 'Search all workspaces' }),
+    ).toBeInTheDocument();
     expect(within(header).getByRole('button', { name: /notifications/i })).toBeInTheDocument();
   });
 });

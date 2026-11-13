@@ -214,12 +214,11 @@ export function ContainerView({
         {tools}
         <Button
           variant="ghost"
-          aria-pressed={grid}
           onClick={() => {
             setGrid(!grid);
           }}
         >
-          {grid ? 'Browse records' : 'Show spreadsheet grid'}
+          {grid ? 'Show record list' : 'Show spreadsheet grid'}
         </Button>
         {grid ? (
           <ViewItemVisibility container={container} view={view}>

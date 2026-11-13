@@ -26,6 +26,7 @@ export interface ShellHeaderProps {
   readonly sidebarVisible: boolean;
   readonly layoutPreferences: ZenLayoutPreferences;
   readonly compactDestinations?: ReactNode;
+  readonly companion?: ReactNode;
   readonly home?: Omit<WorkspaceHomeLinkProps, 'className'> | undefined;
   readonly sidebarToggleRef: RefObject<HTMLButtonElement | null>;
   readonly onToggleSidebar: () => void;
@@ -86,6 +87,7 @@ export function ShellHeader({
   account,
   layoutPreferences,
   compactDestinations,
+  companion,
   home,
 }: ShellHeaderProps): ReactNode {
   const navigate = useNavigate();
@@ -165,17 +167,18 @@ export function ShellHeader({
         <button
           type="button"
           onClick={account.onOpenSearch}
-          aria-label="Search"
+          aria-label="Search all workspaces"
           className={`flex w-56 items-center gap-2 rounded-md bg-background px-3 py-1.5 text-xs text-muted hover:bg-foreground/7 max-lg:w-auto ${focusRing}`}
         >
           <Icon icon={Search} size="sm" />
-          <span className="flex-1 text-left max-lg:sr-only">Search</span>
+          <span className="flex-1 text-left max-lg:sr-only">Search all workspaces</span>
           {/* Shown rather than hidden in a tooltip: a shortcut nobody can discover goes unused. */}
           <kbd className="font-mono text-xs text-muted max-lg:hidden">
             {SEARCH_KEYS.map((keys) => formatShortcut(keys)).join(' ')}
           </kbd>
         </button>
         {compactDestinations}
+        {companion}
         <NotificationBell unread={account.unreadNotifications} onClick={account.onOpenInbox} />
         <ProfileMenu
           principal={account.principal}

@@ -244,6 +244,8 @@ export function ChartBody({
           {caption}
         </Text>
 
+        <Notices chart={chart} labels={labels} />
+
         {compact ? (
           <Select
             aria-label="Chart type"
@@ -271,8 +273,6 @@ export function ChartBody({
         <span role="status" className="sr-only">
           {`Showing ${CHART_KIND_LABELS[kind].toLowerCase()}`}
         </span>
-
-        <Notices chart={chart} labels={labels} />
 
         {chart.buckets.length === 0 ? (
           <Text variant="bodySmall" tone="muted">

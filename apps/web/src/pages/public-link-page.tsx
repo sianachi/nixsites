@@ -17,7 +17,7 @@ const LINK_SECONDARY = `${LINK_BUTTON} border-divider text-foreground`;
 const NOTE_STYLE =
   'min-w-0 wrap-anywhere [&_p]:my-2 [&_a]:underline [&_img]:h-auto [&_img]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-divider [&_pre]:p-3 [&_table]:w-full [&_td]:border [&_td]:border-divider [&_td]:p-2 [&_th]:border [&_th]:border-divider [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_h2]:mt-6 [&_h2]:text-xl [&_h3]:mt-4 [&_h3]:text-lg [&_.nix-anchor]:sr-only [&_.nix-notice]:italic';
 
-/** A public link, read-only and without app chrome. A dead link says only that it is unavailable. */
+/** A public link, read-only and without app chrome. An unavailable link reveals no information about what it shared. */
 export function PublicLinkPage(): ReactNode {
   const { token = '' } = useParams();
   const client = useApiClient();
@@ -81,7 +81,7 @@ export function PublicLinkPage(): ReactNode {
       className={`mx-auto flex min-h-dvh w-full min-w-0 flex-col gap-4 px-4 py-6 sm:px-6 sm:py-10 ${link?.kind === 'file' ? 'max-w-5xl' : 'max-w-3xl'}`}
     >
       {failed ? (
-        <ErrorPanel title="This link is unavailable" detail="" />
+        <ErrorPanel title="This link is unavailable" detail="Ask the sender for a new link." />
       ) : link === null ? (
         <LoadingPanel label="the page" />
       ) : link.kind === 'note' ? (

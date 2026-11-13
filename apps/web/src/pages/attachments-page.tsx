@@ -327,8 +327,8 @@ export function AttachmentsPage(): ReactElement {
       >
         Needs attention ({needing})
       </Button>
-      <label className="flex items-center gap-2">
-        <Text variant="note" as="span">
+      <label className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <Text variant="note" as="span" className="shrink-0">
           State
         </Text>
         <Select
@@ -558,6 +558,12 @@ export function AttachmentsPage(): ReactElement {
   return (
     <Frame>
       {filters}
+      {visible.some(canApprove) ? (
+        <Text as="p" variant="note" tone="muted">
+          Approve marks this version as ready to use. Approved versions can be pinned or shared with
+          a public link where sharing is enabled. Approval alone leaves the file private.
+        </Text>
+      ) : null}
       {notice === null ? null : (
         <div role="status" className="rounded-md border border-divider p-3">
           <Text variant="note" as="p">

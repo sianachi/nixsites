@@ -1,9 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useNavigationType } from 'react-router';
+import { useLocation, useNavigationType } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { STUB_WORKSPACE_ID, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import { App } from '../../app';
 import { SettingsPage } from '../../pages/settings-page';
@@ -89,7 +89,7 @@ describe('reaching the settings screen', () => {
       'Daily notes',
       'Notifications',
       'Calendars',
-      'Pets',
+      'Companion',
       'About',
       'Workspace',
       'Access tokens',
@@ -128,14 +128,65 @@ describe('reaching the settings screen', () => {
     expect(screen.getByRole('checkbox', { name: 'Show publishing on pages' })).toBeVisible();
   });
 
-  it('falls back to the default section for a gated one the account cannot see', async () => {
+  it('explains an unavailable settings link without showing a different section', async () => {
     renderAt(<App />, '/settings?tab=backups');
 
-    expect(await screen.findByRole('link', { name: 'Workspace' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(
+      await screen.findByRole('heading', { name: 'This setting is unavailable' }),
+    ).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Backups' })).not.toBeInTheDocument();
+  });
+
+  it.each([true, false])('finds the theme by keyword in Settings (wide: %s)', async (wide) => {
+    stubViewport(wide);
+    const user = userEvent.setup();
+    renderAt(<App />, '/settings');
+
+    await user.type(await screen.findByRole('searchbox', { name: 'Search settings' }), 'theme');
+    expect(screen.queryByRole('link', { name: 'Editor' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'General' }));
+    await user.click(await screen.findByRole('button', { name: 'Theme' }));
+    expect(await screen.findByRole('dialog', { name: 'Theme' })).toBeVisible();
+  });
+
+  it('opens the layout and sidebar preferences directly from General', async () => {
+    stubViewport(true);
+    const user = userEvent.setup();
+    renderAt(<App />, '/settings?tab=preferences');
+
+    await user.click(await screen.findByRole('button', { name: 'Layout and sidebar' }));
+    const preferences = await screen.findByRole('dialog', { name: 'Preferences' });
+    expect(within(preferences).getByRole('group', { name: 'Layout presets' })).toBeVisible();
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument();
+  });
+
+  it('returns to the exact work address when closing Settings on a landscape tablet', async () => {
+    stubViewport(1024, { touch: true, portrait: false });
+    const user = userEvent.setup();
+    const work = `/w/${STUB_WORKSPACE_ID}/calendar?grain=week#agenda`;
+
+    function Address() {
+      const { pathname, search, hash } = useLocation();
+      return (
+        <output aria-label="current address">
+          {pathname}
+          {search}
+          {hash}
+        </output>
+      );
+    }
+
+    renderAt(
+      <>
+        <App />
+        <Address />
+      </>,
+      work,
+    );
+    const rail = await screen.findByRole('navigation', { name: 'Destinations' });
+    await user.click(within(rail).getByRole('link', { name: 'Settings' }));
+    await user.click(await screen.findByRole('button', { name: 'Close settings' }));
+    expect(screen.getByLabelText('current address')).toHaveTextContent(work);
   });
 
   describe('on a phone', () => {

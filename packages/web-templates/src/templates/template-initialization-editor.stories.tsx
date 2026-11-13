@@ -22,6 +22,7 @@ const workspace = {
   name: 'Northstar',
   versionRetentionDays: 90,
   storageQuotaBytes: '10737418240',
+  storageUsedBytes: 0,
   createdAt: '2026-09-01T09:00:00Z',
   kind: 'team',
   canRename: true,

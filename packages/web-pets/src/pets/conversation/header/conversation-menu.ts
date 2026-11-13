@@ -67,6 +67,6 @@ export function conversationMenuItems({
       : []),
     { kind: 'separator' },
     { label: 'Chat settings', onSelect: onSettings },
-    { kind: 'link', label: 'Pet settings', href: `/w/${workspaceId}/settings?tab=pets` },
+    { kind: 'link', label: 'Companion settings', href: `/w/${workspaceId}/settings?tab=pets` },
   ];
 }

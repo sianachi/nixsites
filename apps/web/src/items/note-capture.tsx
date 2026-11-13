@@ -68,7 +68,7 @@ export function NoteCapture({
             }}
           >
             <Icon icon={LayoutGrid} size="sm" />
-            Structured item
+            List, board or tracker
           </Button>
           <Button
             disabled={saving}

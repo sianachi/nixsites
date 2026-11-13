@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { PetPage } from '../../pages/pet-page';
 import { MobileNoteToolbar } from '@nix/web-editor/editor/mobile-note-toolbar';
@@ -93,6 +94,41 @@ describe('companion on a phone', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole('img', { name: 'Cat' })).toHaveClass('size-24');
+  });
+
+  it('opens chat from the reserved header slot and returns focus there on close', async () => {
+    stubViewport(390);
+    const user = userEvent.setup();
+    function Workspace() {
+      const [dock, setDock] = useState<HTMLDivElement | null>(null);
+      return (
+        <>
+          <header aria-label="Workspace controls">
+            <div ref={setDock} />
+          </header>
+          <main>
+            <button type="button">Create Board</button>
+          </main>
+          <PetCompanion dock={dock === null ? null : (launcher) => createPortal(launcher, dock)} />
+        </>
+      );
+    }
+
+    render(
+      <MemoryRouter>
+        <Workspace />
+      </MemoryRouter>,
+    );
+
+    const controls = screen.getByRole('banner', { name: 'Workspace controls' });
+    const launcher = await within(controls).findByRole('button', { name: 'Talk with Cat' });
+    expect(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Create Board' }),
+    ).toBeVisible();
+    await user.click(launcher);
+    expect(await screen.findByRole('textbox', { name: 'Message Cat' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(launcher).toHaveFocus();
   });
 
   it('draws no launcher on a phone when the chat opens as a page', async () => {
@@ -797,7 +833,7 @@ describe('companion on a phone', () => {
     await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
     await screen.findByRole('dialog', { name: 'Conversation with Cat' });
     await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Pet settings' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Companion settings' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

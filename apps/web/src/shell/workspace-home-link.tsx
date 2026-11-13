@@ -19,7 +19,7 @@ export function WorkspaceHomeLink({
   return (
     <Link
       to={to}
-      aria-label="Home"
+      aria-label="Homebase"
       aria-current={current ? 'page' : undefined}
       title="Homebase"
       className={cn(className, current && 'bg-accent/15 text-accent-text')}

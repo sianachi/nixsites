@@ -59,7 +59,7 @@ describe('the command palette', () => {
   async function paletteFor(query: string): Promise<HTMLElement> {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /^search/i }));
-    await user.type(screen.getByRole('combobox', { name: /search items/i }), query);
+    await user.type(screen.getByRole('combobox', { name: /search all workspaces/i }), query);
     return screen.getByRole('dialog', { name: /search/i });
   }
 

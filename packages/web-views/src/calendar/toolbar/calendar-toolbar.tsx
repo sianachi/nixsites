@@ -1,4 +1,4 @@
-import { Button, Icon, Select, Text } from '@nix/ui';
+import { Button, Icon, Segmented, Select, Text } from '@nix/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
@@ -13,8 +13,12 @@ import {
 import { agendaDayLabel } from '@nix/web-collections/core/day-math';
 import { CreateItemControl } from '../../core/create-item-control';
 
-const calendarModes = ['month', 'week', 'day'] as const;
-type Mode = (typeof calendarModes)[number];
+const calendarModes = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+] as const;
+type Mode = (typeof calendarModes)[number]['value'];
 
 interface CalendarToolbarProps {
   readonly mode: Mode;
@@ -61,48 +65,24 @@ export function CalendarToolbar(props: CalendarToolbarProps): ReactNode {
             : dayLabel(anchor)}
       </Text>
 
-      {/* aria-current rather than a tablist, following the view switcher: these are three ways of
-            looking at one thing, and claiming to be tabs would owe arrow-key navigation nobody
-            asked for. */}
       {presentation?.collectionTools === false ? (
         <Select
           aria-label="Calendar period"
-          className="w-auto capitalize"
+          className="w-auto"
           value={mode}
           onChange={(event) => {
-            const chosen = calendarModes.find((grain) => grain === event.target.value);
-            if (chosen !== undefined) onMode(chosen);
+            const chosen = calendarModes.find((grain) => grain.value === event.target.value);
+            if (chosen !== undefined) onMode(chosen.value);
           }}
         >
           {calendarModes.map((grain) => (
-            <option key={grain} value={grain}>
-              {grain}
+            <option key={grain.value} value={grain.value}>
+              {grain.label}
             </option>
           ))}
         </Select>
       ) : (
-        <nav aria-label="Calendar grain" className="flex items-center gap-0.5">
-          {calendarModes.map((grain) => (
-            <button
-              key={grain}
-              type="button"
-              aria-current={mode === grain ? 'page' : undefined}
-              onClick={() => {
-                onMode(grain);
-              }}
-              className={[
-                // The view tabs' height and radius, so the grain switcher lines up with them.
-                'flex items-center rounded-md border px-2 py-1 text-sm capitalize min-h-(--control-md) pointer-coarse:min-h-(--control-lg)',
-                'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
-                mode === grain
-                  ? 'border-divider bg-foreground/7 text-foreground'
-                  : 'border-transparent text-muted hover:bg-foreground/5',
-              ].join(' ')}
-            >
-              {grain}
-            </button>
-          ))}
-        </nav>
+        <Segmented label="Calendar period" options={calendarModes} value={mode} onChange={onMode} />
       )}
 
       {/* Always visible, never gated behind a hover, and dated: it says which day it adds to and

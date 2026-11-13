@@ -39,7 +39,7 @@ describe('the application keyboard shortcuts', () => {
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}`);
     await screen.findByRole('button', { name: 'Alpha' });
 
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(screen.getByRole('button', { name: 'Search all workspaces' }));
     await user.keyboard('?');
 
     expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('the application keyboard shortcuts', () => {
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}`);
     await screen.findByRole('button', { name: 'Alpha' });
 
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(screen.getByRole('button', { name: 'Search all workspaces' }));
     await user.keyboard('shortcuts');
     await user.click(await screen.findByRole('option', { name: /Keyboard shortcuts/ }));
 

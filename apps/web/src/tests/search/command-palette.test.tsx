@@ -24,7 +24,7 @@ function PaletteHarness({ run }: { readonly run: () => void }): ReactNode {
             setOpen(true);
           }}
         >
-          Search
+          Search all workspaces
         </button>
         <CommandPalette
           open={open}
@@ -66,7 +66,7 @@ for (const wide of [true, false]) {
       stubCoreApi({ items: [NOTE] });
       const user = userEvent.setup();
       render(<PaletteHarness run={() => undefined} />);
-      await user.click(screen.getByRole('button', { name: 'Search' }));
+      await user.click(screen.getByRole('button', { name: 'Search all workspaces' }));
       const dialog = await screen.findByRole('dialog', { name: 'Search and commands' });
       const input = within(dialog).getByRole('combobox');
       expect(input).toHaveFocus();
@@ -114,7 +114,7 @@ for (const wide of [true, false]) {
       const user = userEvent.setup();
       const run = vi.fn();
       render(<PaletteHarness run={run} />);
-      await user.click(screen.getByRole('button', { name: 'Search' }));
+      await user.click(screen.getByRole('button', { name: 'Search all workspaces' }));
       await user.type(await screen.findByRole('combobox'), '> shortcuts');
       await user.keyboard('{ArrowDown}{Enter}');
       expect(run).toHaveBeenCalledOnce();
@@ -127,7 +127,7 @@ it('restores the invoking control after dismissal and clears the command filter 
   stubCoreApi({ items: [NOTE] });
   const user = userEvent.setup();
   render(<PaletteHarness run={() => undefined} />);
-  const search = screen.getByRole('button', { name: 'Search' });
+  const search = screen.getByRole('button', { name: 'Search all workspaces' });
   await user.click(search);
   await user.type(screen.getByRole('combobox'), '> shortcuts');
   await user.click(screen.getByRole('button', { name: 'Close search' }));

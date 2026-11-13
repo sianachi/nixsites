@@ -7,7 +7,8 @@ import {
   useSearchParams,
 } from 'react-router';
 
-import { useUndo } from '@nix/ui';
+import { Button, useUndo } from '@nix/ui';
+import { TemplateItemPicker } from '@nix/web-collections/items/template-item-picker';
 import { emptyTemplateInitialization, isCanceledError } from '@nix/api-client';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -93,6 +94,7 @@ function TemplateStudio(): ReactNode {
   const client = useApiClient();
   const navigate = useNavigate();
   const undo = useUndo();
+  const [chosenSourceId, setChosenSourceId] = useState<string | null>(null);
   const [template, setTemplate] = useState<TemplateDetail | null>(null);
   const [editOperation, setEditOperation] = useState<TemplateEditDraft | null>(null);
   const [captureFacts, setCaptureFacts] = useState<CaptureFacts>({ status: 'loading' });
@@ -179,6 +181,30 @@ function TemplateStudio(): ReactNode {
     workspaceId,
     key,
     sourceItemId,
+    captureSourcePicker: (
+      <form
+        className="flex w-full min-w-0 flex-col items-start gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (chosenSourceId === null) return;
+          const next = new URLSearchParams(searchParams);
+          next.set('sourceItem', chosenSourceId);
+          void navigate({ search: `?${next.toString()}` });
+        }}
+      >
+        <div className="w-full min-w-0">
+          <TemplateItemPicker
+            label="Search workspace items"
+            value={chosenSourceId ?? ''}
+            loadedItems={tree.items}
+            onChange={setChosenSourceId}
+          />
+        </div>
+        <Button type="submit" disabled={chosenSourceId === null}>
+          Continue
+        </Button>
+      </form>
+    ),
     draft,
     template,
     templateLibrary,
