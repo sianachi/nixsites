@@ -17,6 +17,13 @@ import {
 } from '../template-api';
 import { templateFailure } from '../use-templates';
 import { TemplateCard } from './template-card';
+import {
+  builtInArchive,
+  loadBuiltInTemplates,
+  missingBuiltIns,
+  type BuiltInTemplate,
+} from './built-in-catalog';
+import { BuiltInTemplateCard } from './built-in-template-card';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import {
@@ -50,6 +57,23 @@ export function TemplateLibraryPage(): ReactNode {
   const [duplicating, setDuplicating] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [failedDuplicate, setFailedDuplicate] = useState<TemplateSummary | null>(null);
+  const [builtIns, setBuiltIns] = useState<readonly BuiltInTemplate[]>([]);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const addAttempts = useRef(new Map<string, string>());
+  useEffect(() => {
+    let current = true;
+    // Without them the library still works, so a failed fetch (offline, say) shows nothing.
+    void loadBuiltInTemplates().then(
+      (catalog) => {
+        if (current) setBuiltIns(catalog);
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, []);
   const duplicateAttempts = useRef(new Map<string, DuplicateAttempt>());
   const activeRequests = useRef(new Set<AbortController>());
   useEffect(() => {
@@ -77,6 +101,64 @@ export function TemplateLibraryPage(): ReactNode {
           .toLocaleLowerCase()
           .includes(normalized),
   );
+
+  // Adding one imports its archive, which needs the right to manage this workspace's templates.
+  const offered = library.capabilities.canManage
+    ? missingBuiltIns(builtIns, library.templates).filter((template) =>
+        normalized.length === 0
+          ? true
+          : `${template.name} ${template.description} ${template.viewKinds.join(' ')}`
+              .toLocaleLowerCase()
+              .includes(normalized),
+      )
+    : [];
+
+  /** Imports a built-in into this workspace, then carries on as if it had always been there. */
+  async function addBuiltIn(template: BuiltInTemplate): Promise<void> {
+    setAdding(template.key);
+    setAddError(null);
+    const controller = new AbortController();
+    activeRequests.current.add(controller);
+    // One key per built-in and workspace, so a retry resumes the same import.
+    const attempt = `${workspaceId}:${template.key}`;
+    const idempotencyKey = addAttempts.current.get(attempt) ?? globalThis.crypto.randomUUID();
+    addAttempts.current.set(attempt, idempotencyKey);
+    try {
+      const archive = builtInArchive(template);
+      const previewed = await beginAndPreviewTemplate(
+        client,
+        {
+          workspaceId,
+          fileName: `${template.key}.nix`,
+          mediaType: archive.type,
+          byteLength: archive.size,
+          idempotencyKey,
+        },
+        archive,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      if (previewed.preview === null) throw new Error('The template preview did not become ready.');
+      const imported = await commitAndWaitTemplate(
+        client,
+        previewed.id,
+        previewed.preview.digest,
+        controller.signal,
+      );
+      if (imported.result === null) throw new Error('The template import did not publish.');
+      addAttempts.current.delete(attempt);
+      library.reload();
+      beginTemplate(imported.result.templateId);
+    } catch (reason) {
+      if (controller.signal.aborted || isCanceledError(reason)) return;
+      setAddError(
+        templateFailure(reason, `${template.name} could not be added to this workspace.`),
+      );
+    } finally {
+      activeRequests.current.delete(controller);
+      if (!controller.signal.aborted) setAdding(null);
+    }
+  }
 
   function beginTemplate(templateId: string): void {
     if (targetItemId !== null) {
@@ -289,6 +371,11 @@ export function TemplateLibraryPage(): ReactNode {
             {downloadError}
           </Text>
         )}
+        {addError === null ? null : (
+          <Text variant="bodySmall" role="alert" className="rounded-md bg-surface px-3 py-2">
+            {addError}
+          </Text>
+        )}
         {duplicateError === null ? null : (
           <div
             role="alert"
@@ -323,7 +410,7 @@ export function TemplateLibraryPage(): ReactNode {
               </Button>
             }
           />
-        ) : library.templates.length === 0 ? (
+        ) : library.templates.length === 0 && offered.length === 0 && normalized.length === 0 ? (
           <EmptyPanel
             title="No templates yet"
             detail={
@@ -332,7 +419,7 @@ export function TemplateLibraryPage(): ReactNode {
                 : 'There are no templates available in this workspace.'
             }
           />
-        ) : visible.length === 0 ? (
+        ) : visible.length === 0 && offered.length === 0 ? (
           <EmptyPanel
             title="No templates match"
             detail="Try a different name, description, or view type."
@@ -379,6 +466,17 @@ export function TemplateLibraryPage(): ReactNode {
                   template.origin !== 'user' &&
                   template.capabilities.canExport
                 }
+              />
+            ))}
+            {offered.map((template) => (
+              <BuiltInTemplateCard
+                key={template.key}
+                template={template}
+                adding={adding === template.key}
+                disabled={adding !== null}
+                onUse={() => {
+                  void addBuiltIn(template);
+                }}
               />
             ))}
           </div>

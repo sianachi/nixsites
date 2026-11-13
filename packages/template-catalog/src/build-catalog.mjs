@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SCHEMA_VERSION } from '@nix/editor-schema';
-import { writeArchive } from '@nix/export';
+import { readArchive, writeArchive } from '@nix/export';
 import { CATALOG } from './catalog-definitions.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -13,12 +13,45 @@ const workspaceId = '00000000-0000-4000-8000-000000000001';
 const textEncoder = new TextEncoder();
 
 await mkdir(outputDirectory, { recursive: true });
+const index = [];
 for (const definition of CATALOG) {
   validateDefinition(definition);
   const archive = await (definition.rows === undefined
     ? makeTemplate(definition)
     : makeCollection(definition));
   await writeFile(resolve(outputDirectory, `${definition.key}.nix`), archive);
+  index.push(await indexEntry(definition, archive));
+}
+// What the web app ships so every workspace on every deployment can offer these: the card's
+// text and preview, and the archive itself, imported into a workspace on first use.
+await writeFile(resolve(outputDirectory, 'index.json'), `${JSON.stringify(index)}\n`);
+
+async function indexEntry(definition, bytes) {
+  const { bundles, manifest } = await readArchive(
+    (async function* () {
+      yield bytes;
+    })(),
+  );
+  const root = bundles.find((bundle) => bundle.id === manifest.root);
+  // The work templates keep their views on a container below the root; preview the first one.
+  const viewed = root.views === null ? bundles.find((bundle) => bundle.views !== null) : root;
+  const view =
+    viewed === undefined
+      ? null
+      : (viewed.views.views.find((candidate) => candidate.id === viewed.views.default) ??
+        viewed.views.views[0]);
+  return {
+    key: definition.key,
+    name: definition.name,
+    description: definition.description,
+    itemCount: bundles.length - 1,
+    viewKinds: [
+      ...new Set(bundles.flatMap((bundle) => (bundle.views?.views ?? []).map((v) => v.kind))),
+    ],
+    preview:
+      view === null ? null : { view, rows: viewed.viewRows.slice(0, 12), schema: viewed.schema },
+    archive: Buffer.from(bytes).toString('base64'),
+  };
 }
 
 async function makeTemplate(definition) {

@@ -184,6 +184,29 @@ function assertCollection(name, archive, profile, definition) {
   }
 }
 
+test('the index the web app ships carries every archive byte for byte, with a preview', async () => {
+  const artifacts = await catalogBytes();
+  const index = JSON.parse(await readFile(resolve(output, 'index.json'), 'utf8'));
+  assert.deepEqual(
+    index.map((entry) => entry.key),
+    CATALOG.map((entry) => entry.key),
+  );
+  for (const entry of index) {
+    assert.equal(
+      sha256(Buffer.from(entry.archive, 'base64')),
+      sha256(artifacts.get(`${entry.key}.nix`)),
+      entry.key,
+    );
+    assert.ok(entry.preview?.view.kind, `${entry.key} has a view to preview`);
+    // A form previews its fields, not rows.
+    assert.ok(
+      entry.preview.view.kind === 'interactive_form' || entry.preview.rows.length > 0,
+      `${entry.key} previews real rows`,
+    );
+    assert.ok(entry.itemCount > 0 && entry.viewKinds.length > 0);
+  }
+});
+
 test('onboarding fixture carries file bytes, resettable recurrence, links and relative task dates', async () => {
   const bytes = (await catalogBytes()).get('nix.onboarding-plan.nix');
   assert.ok(bytes);

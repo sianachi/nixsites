@@ -1619,6 +1619,9 @@ importers:
       '@nix/design-tokens':
         specifier: workspace:*
         version: link:../design-tokens
+      '@nix/template-catalog':
+        specifier: workspace:*
+        version: link:../template-catalog
       '@nix/ui':
         specifier: workspace:*
         version: link:../ui

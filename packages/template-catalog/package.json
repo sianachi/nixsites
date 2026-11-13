@@ -3,6 +3,9 @@
   "version": "0.6.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./index.json": "./templates/index.json"
+  },
   "scripts": {
     "build": "node ./src/build-catalog.mjs",
     "pretest": "pnpm run build",

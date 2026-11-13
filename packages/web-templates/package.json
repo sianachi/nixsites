@@ -91,6 +91,7 @@
   "dependencies": {
     "@nix/api-client": "workspace:*",
     "@nix/design-tokens": "workspace:*",
+    "@nix/template-catalog": "workspace:*",
     "@nix/ui": "workspace:*",
     "@nix/view-render": "workspace:*",
     "@nix/web-collections": "workspace:*",
