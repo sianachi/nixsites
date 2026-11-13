@@ -16,3 +16,5 @@ packages/structure-spec/evals/openui-library.json
 # Written by Xcode and the Capacitor CLI (`cap add`, `cap sync`), never reformat.
 apps/mobile/ios/
 fixtures/parity/
+# Written by the template-catalog build; a reformatted copy would differ from every rebuild.
+packages/template-catalog/templates/index.json

@@ -96,29 +96,43 @@ export function TemplateViewPreview({
         </div>
       );
     } else {
-      const drawn = renderView({
-        view,
-        rows: detail.root.children.slice(0, PREVIEW_ROW_LIMIT).map((child) => ({
-          id: child.sourceId,
-          title: child.title,
-          properties: child.properties ?? {},
-        })),
-        schema: detail.root.schema ?? null,
-        palette: PRINT_PALETTE,
-        width: 480,
-      });
-      const source = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawn.svg)}`;
       preview = (
-        <figure className="h-36 overflow-hidden rounded-md bg-surface" title={`${view.name} view`}>
-          <img
-            src={source}
-            alt={`${title} template preview, ${view.name} view`}
-            className="h-full w-full object-cover object-top"
-          />
-        </figure>
+        <ViewPreviewImage
+          title={title}
+          view={view}
+          rows={detail.root.children.slice(0, PREVIEW_ROW_LIMIT).map((child) => ({
+            id: child.sourceId,
+            title: child.title,
+            properties: child.properties ?? {},
+          }))}
+          schema={detail.root.schema ?? null}
+        />
       );
     }
   }
 
   return <div ref={hostRef}>{preview}</div>;
+}
+
+/** One view drawn over its rows, cropped to the card: the same picture for stored and built-in templates. */
+export function ViewPreviewImage({
+  title,
+  view,
+  rows,
+  schema,
+}: {
+  readonly title: string;
+} & Pick<Parameters<typeof renderView>[0], 'view' | 'rows' | 'schema'>): ReactNode {
+  const drawn = renderView({ view, rows, schema, palette: PRINT_PALETTE, width: 480 });
+  const source = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawn.svg)}`;
+  return (
+    <figure className="h-36 overflow-hidden rounded-md bg-surface" title={`${view.name} view`}>
+      <img
+        src={source}
+        alt={`${title} template preview, ${view.name} view`}
+        // Full width and cut at the bottom: covering the box crops the sides of a short drawing.
+        className="w-full"
+      />
+    </figure>
+  );
 }

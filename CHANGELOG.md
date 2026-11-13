@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- The built-in templates are offered in the template library of every workspace on every install,
+  with no setup step. Using one adds it to that workspace first. People who cannot manage a
+  workspace's templates do not see them.
 - Twelve personal templates in the template library: Habit tracker, Priority matrix, Goals, Trip
   plan, Reading list, People, Daily journal, Document vault, Inbox, Job hunt, Meal plan and Personal
   dashboard. Each opens with sample rows and several views, and its library card previews the
