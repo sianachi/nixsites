@@ -337,29 +337,6 @@ public sealed partial class DocumentImportStore(
             cancellationToken);
     }
 
-    private async ValueTask<bool> FitsQuotaAsync(
-        Nix.Domain.Tenancy.WorkspaceId workspaceId,
-        long bytes,
-        CancellationToken cancellationToken)
-    {
-        if (bytes < 0)
-        {
-            return false;
-        }
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({workspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
-        var context = Context;
-        var quota = await database.Workspaces.AsNoTracking()
-            .Where(value => value.TenantId == context.TenantId && value.Id == workspaceId)
-            .Select(value => value.StorageQuotaBytes)
-            .SingleAsync(cancellationToken).ConfigureAwait(false);
-        var used = await database.FileVersions.AsNoTracking()
-            .Where(value => value.TenantId == context.TenantId && value.WorkspaceId == workspaceId)
-            .SumAsync(value => (long?)value.ByteLength, cancellationToken).ConfigureAwait(false) ?? 0;
-        return bytes <= quota - used;
-    }
-
     private async ValueTask<bool> ValidParentAsync(
         Nix.Domain.Tenancy.WorkspaceId workspaceId,
         ItemId? parentId,

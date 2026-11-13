@@ -190,22 +190,6 @@ public sealed class WorkspaceItemMoveTests(NixPostgresFixture fixture) : IAsyncL
     }
 
     [Fact]
-    public async Task Transfer_refuses_insufficient_quota_without_changing_containment()
-    {
-        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await work.DbContext.Workspaces.Where(workspace => workspace.Id == Destination)
-            .ExecuteUpdateAsync(update => update.SetProperty(workspace => workspace.StorageQuotaBytes, 0L), Cancellation);
-        var result = await work.Resolve<NixDispatcher>().SendAsync<MoveItem, Item>(
-            new MoveItem(ItemId.From(M0SchemaSeed.Alpha.ItemId), null, null, Destination), Cancellation);
-        Assert.True(result.IsFailure);
-        Assert.Equal("items.transfer_conflict", result.Error.Code);
-        Assert.Contains("storage", result.Error.Message, StringComparison.Ordinal);
-        var source = WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId);
-        Assert.Equal(source, (await work.Resolve<IItemTree>().FindAsync(ItemId.From(M0SchemaSeed.Alpha.ItemId), Cancellation))!.WorkspaceId);
-        Assert.All(await work.DbContext.FileVersions.AsNoTracking().ToArrayAsync(Cancellation), version => Assert.Equal(source, version.WorkspaceId));
-    }
-
-    [Fact]
     public async Task Transfer_refuses_an_active_job_and_rolls_back_the_closure_detach()
     {
         var alpha = M0SchemaSeed.Alpha;

@@ -166,63 +166,6 @@ public sealed class TemplateFileLifecycleMatrixTests : IAsyncLifetime
         }
     }
 
-    [Fact]
-    public async Task Quota_refusal_rolls_back_file_application_state_and_releases_the_idempotency_key()
-    {
-        var seed = await SeedFileTemplateAsync();
-        var usedBytes = await CurrentWorkspaceBytesAsync();
-        await SetWorkspaceQuotaAsync(usedBytes);
-        var itemCountBefore = await WorkspaceItemCountAsync();
-
-        var refused = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await using (refused.ConfigureAwait(false))
-        {
-            var result = await refused.Resolve<TemplateStore>().BeginApplicationAsync(
-                seed.TemplateId,
-                TemplateApplicationMode.Create,
-                null,
-                null,
-                "Quota refused",
-                "file-matrix-quota-retry",
-                Cancellation);
-            Assert.True(result.IsFailure);
-            Assert.Equal("templates.conflict", result.Error.Code);
-            Assert.Contains("storage", result.Error.Message, StringComparison.OrdinalIgnoreCase);
-        }
-
-        var verification = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await using (verification.ConfigureAwait(false))
-        {
-            Assert.Equal(itemCountBefore, await verification.DbContext.Items.IgnoreQueryFilters()
-                .CountAsync(item => item.WorkspaceId == WorkspaceId.From(TestTenants.AlphaWorkspace), Cancellation));
-            Assert.False(await verification.DbContext.TemplateApplications.AnyAsync(
-                application => application.IdempotencyKey == "file-matrix-quota-retry", Cancellation));
-            Assert.Empty(await verification.DbContext.TemplateFileTransfers.AsNoTracking()
-                .Where(transfer => transfer.ApplicationId != null)
-                .ToListAsync(Cancellation));
-            Assert.Equal(2, await verification.DbContext.FileVersions.AsNoTracking()
-                .CountAsync(version => version.ItemId == seed.FirstFile.Id || version.ItemId == seed.SecondFile.Id,
-                    Cancellation));
-        }
-
-        await SetWorkspaceQuotaAsync(1_073_741_824);
-        var retry = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await using (retry.ConfigureAwait(false))
-        {
-            var result = await retry.Resolve<TemplateStore>().BeginApplicationAsync(
-                seed.TemplateId,
-                TemplateApplicationMode.Create,
-                null,
-                null,
-                "Quota retry succeeds",
-                "file-matrix-quota-retry",
-                Cancellation);
-            Assert.True(result.IsSuccess, result.IsFailure ? result.Error.ToString() : null);
-            Assert.Equal(2, await retry.DbContext.TemplateFileTransfers.AsNoTracking()
-                .CountAsync(transfer => transfer.ApplicationId == result.Value.ApplicationId, Cancellation));
-        }
-    }
-
     private async Task<SeededTemplate> SeedFileTemplateAsync()
     {
         var now = DateTimeOffset.UtcNow;
@@ -287,30 +230,6 @@ public sealed class TemplateFileLifecycleMatrixTests : IAsyncLifetime
         await db.Database.ExecuteSqlInterpolatedAsync(
             $"INSERT INTO item_closure (tenant_id, workspace_id, ancestor_id, descendant_id, depth) VALUES ({root.TenantId.Value}, {root.WorkspaceId.Value}, {root.Id.Value}, {root.Id.Value}, 0), ({child.TenantId.Value}, {child.WorkspaceId.Value}, {child.Id.Value}, {child.Id.Value}, 0), ({root.TenantId.Value}, {root.WorkspaceId.Value}, {root.Id.Value}, {child.Id.Value}, 1)",
             Cancellation);
-
-    private async Task<long> CurrentWorkspaceBytesAsync()
-    {
-        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await using (work.ConfigureAwait(false))
-        {
-            return await work.DbContext.FileVersions.AsNoTracking()
-                .Where(version => version.WorkspaceId == WorkspaceId.From(TestTenants.AlphaWorkspace))
-                .SumAsync(version => (long?)version.ByteLength, Cancellation) ?? 0;
-        }
-    }
-
-    private async Task SetWorkspaceQuotaAsync(long quota)
-    {
-        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
-        await using (work.ConfigureAwait(false))
-        {
-            await work.DbContext.Workspaces
-                .Where(workspace => workspace.Id == WorkspaceId.From(TestTenants.AlphaWorkspace))
-                .ExecuteUpdateAsync(update => update.SetProperty(workspace => workspace.StorageQuotaBytes, quota),
-                    Cancellation);
-            await work.CommitAsync(Cancellation);
-        }
-    }
 
     private async Task<int> WorkspaceItemCountAsync()
     {

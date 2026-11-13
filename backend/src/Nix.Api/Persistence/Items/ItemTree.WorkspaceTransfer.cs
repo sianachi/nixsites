@@ -17,8 +17,8 @@ public sealed partial class ItemTree
         ItemId? newParentId, ItemId? afterId, PrincipalId actor,
         DateTimeOffset at, CancellationToken cancellationToken)
     {
-        // Share the file publisher's quota lock. Lock both buckets in a stable order so a
-        // transfer and an upload cannot spend the same free bytes.
+        // Share the file publisher's lock. Lock both buckets in a stable order so a replacement
+        // upload cannot publish into a file while it changes workspace.
         foreach (var workspace in new[] { sourceWorkspaceId, destinationWorkspaceId }.OrderBy(value => value.Value))
         {
             await _dbContext.Database.ExecuteSqlInterpolatedAsync(
@@ -83,21 +83,10 @@ public sealed partial class ItemTree
         {
             return "Daily notes and their folders belong to their workspace. Move their content into an ordinary note first.";
         }
-        var quota = await _dbContext.Workspaces.Where(workspace => workspace.TenantId == tenant
-            && workspace.Id == destinationWorkspaceId && workspace.LifecycleState == WorkspaceLifecycleState.Active)
-            .Select(workspace => (long?)workspace.StorageQuotaBytes)
-            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        if (quota is null)
+        if (!await _dbContext.Workspaces.AnyAsync(workspace => workspace.TenantId == tenant
+            && workspace.Id == destinationWorkspaceId && workspace.LifecycleState == WorkspaceLifecycleState.Active, cancellationToken).ConfigureAwait(false))
         {
             return "The destination workspace is no longer active.";
-        }
-        var incoming = await _dbContext.FileVersions.Where(version => version.TenantId == tenant && subtree.Contains(version.ItemId))
-            .SumAsync(version => (long?)version.ByteLength, cancellationToken).ConfigureAwait(false) ?? 0;
-        var used = await _dbContext.FileVersions.Where(version => version.TenantId == tenant && version.WorkspaceId == destinationWorkspaceId)
-            .SumAsync(version => (long?)version.ByteLength, cancellationToken).ConfigureAwait(false) ?? 0;
-        if (incoming > quota.Value - used)
-        {
-            return "The destination workspace does not have enough storage for these files and their versions.";
         }
 
         var sequence = await AllocateSiblingSequenceAsync(destinationWorkspaceId, newParentId, id, afterId, cancellationToken).ConfigureAwait(false);

@@ -210,19 +210,6 @@ public sealed partial class DocumentImportStore
         await database.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock(hashtextextended({operation.WorkspaceId.Value.ToString()}, 0))",
             cancellationToken).ConfigureAwait(false);
-        long totalBytes = 0;
-        try
-        {
-            foreach (var file in fileVersions)
-            {
-                totalBytes = checked(totalBytes + file.ByteLength);
-            }
-        }
-        catch (OverflowException) { return null; }
-        if (!await FitsQuotaAsync(operation.WorkspaceId, totalBytes, cancellationToken).ConfigureAwait(false))
-        {
-            return null;
-        }
 
         var now = clock.GetUtcNow();
         var versions = new List<FileVersion>(fileVersions.Count);

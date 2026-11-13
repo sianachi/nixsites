@@ -98,26 +98,10 @@ public sealed partial class DocumentImportStore
             return null;
         }
 
-        long fileBytes = 0;
-        try
-        {
-            foreach (var file in plannedFiles)
-            {
-                fileBytes = checked(fileBytes + file.ByteLength);
-            }
-            foreach (var file in fileVersions)
-            {
-                fileBytes = checked(fileBytes + file.ByteLength);
-            }
-        }
-        catch (OverflowException)
-        {
-            return null;
-        }
-        if (!await FitsQuotaAsync(operation.WorkspaceId, fileBytes, cancellationToken).ConfigureAwait(false))
-        {
-            return null;
-        }
+        // File publication and workspace transfers share this per-workspace lock.
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({operation.WorkspaceId.Value.ToString()}, 0))",
+            cancellationToken).ConfigureAwait(false);
 
         var now = clock.GetUtcNow();
         var targetIds = ordered.ToDictionary(item => item.SourceId, _ => ItemId.Create(), StringComparer.Ordinal);

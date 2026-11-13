@@ -163,18 +163,17 @@ public sealed class FileStore(
         {
             return null;
         }
-        // Structural transfers take topology before quota; publishers use the same order.
+        // Structural transfers take topology before the workspace file lock; publishers use the same order.
         if (topology is not null)
         {
             await topology.AcquireWorkspaceTopologyAsync(upload.WorkspaceId, cancellationToken).ConfigureAwait(false);
         }
         // Completion already runs inside NixUnitOfWorkMiddleware's transaction. A transaction-
-        // scoped advisory lock serializes quota decisions per workspace, so two uploads cannot
-        // both observe the same remaining bytes and over-commit the quota.
+        // scoped advisory lock serializes file publication with workspace transfers.
         await database.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock(hashtextextended({upload.WorkspaceId.Value.ToString()}, 0))",
             cancellationToken).ConfigureAwait(false);
-        // A transfer shares this quota lock. Re-read containment after waiting for it so a
+        // A transfer shares this lock. Re-read containment after waiting for it so a
         // replacement upload cannot publish into a file that has left its source workspace.
         if (upload.ParentId is { } parent)
         {
@@ -197,20 +196,6 @@ public sealed class FileStore(
             {
                 return null;
             }
-        }
-
-        var quota = await database.Workspaces
-            .Where(workspace => workspace.TenantId == context.TenantId && workspace.Id == upload.WorkspaceId)
-            .Select(workspace => workspace.StorageQuotaBytes)
-            .SingleAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var used = await database.FileVersions
-            .Where(version => version.TenantId == context.TenantId && version.WorkspaceId == upload.WorkspaceId)
-            .SumAsync(version => (long?)version.ByteLength, cancellationToken)
-            .ConfigureAwait(false) ?? 0;
-        if (request.ByteLength > quota - used)
-        {
-            return null;
         }
 
         ItemId itemId;

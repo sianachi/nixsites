@@ -167,20 +167,6 @@ public sealed partial class TemplateStore
             targetVersionNumbers[targetItemId] = targetVersionNumber;
         }
 
-        var quota = await _database.Workspaces
-            .Where(workspace => workspace.TenantId == context.TenantId && workspace.Id == workspaceId)
-            .Select(workspace => workspace.StorageQuotaBytes)
-            .SingleAsync(cancellationToken).ConfigureAwait(false);
-        var used = await _database.FileVersions
-            .Where(version => version.TenantId == context.TenantId && version.WorkspaceId == workspaceId)
-            .SumAsync(version => (long?)version.ByteLength, cancellationToken).ConfigureAwait(false) ?? 0;
-        var stagedBytes = pending.Sum(transfer => transfer.ByteLength);
-        if (stagedBytes > quota - used)
-        {
-            return Result.Failure<IReadOnlyList<TemplateFileTransfer>>(
-                TemplateErrors.Conflict("The workspace does not have enough file storage for this template."));
-        }
-
         return Result.Success<IReadOnlyList<TemplateFileTransfer>>(pending);
     }
 
