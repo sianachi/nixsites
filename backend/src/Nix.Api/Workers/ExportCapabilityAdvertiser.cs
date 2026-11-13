@@ -20,7 +20,7 @@ public sealed class ExportCapabilityAdvertiser(IWorkerCapabilityRegistry registr
         new("docx", "Word", "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", false,
             ["Interactive workspace behavior is flattened into a document.", "Links outside HTTP, HTTPS, email, and Nix are flattened to visible labels."]),
         new("pdf", "PDF", "pdf", "application/pdf", false,
-            ["Interactive workspace behavior is flattened into fixed pages.", "Characters not supported by the embedded PDF font are replaced.", "Complex layouts and unsupported formatting may be simplified."]),
+            ["Interactive workspace behavior is flattened into fixed pages.", "Characters not supported by the embedded PDF fonts are replaced.", "Complex layouts and unsupported formatting may be simplified."]),
     ];
 
     public Task StartAsync(CancellationToken cancellationToken)

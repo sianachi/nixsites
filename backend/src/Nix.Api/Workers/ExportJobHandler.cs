@@ -357,7 +357,7 @@ public sealed class ExportJobHandler(
                 RenderTree.Walk(projected.Blocks, block => substituted = substituted || ExportWriters.PdfTextRequiresSubstitution(RenderTree.Plain(block.Runs) + block.Text));
                 if (substituted)
                 {
-                    AppendUnique(losses, "Characters not supported by the embedded PDF font were replaced in the PDF output.");
+                    AppendUnique(losses, "Characters not supported by the embedded PDF fonts were replaced in the PDF output.");
                 }
             }
             yield return new ExportRecord { Id = bundle.Id, ParentId = bundle.ParentId ?? string.Empty, Title = bundle.Title, Blocks = projected.Blocks, Images = projected.Images };

@@ -22,5 +22,6 @@ deploy/.dev-data-protection
 deploy/*.env
 deploy/compose.host.yml
 
-# Fetched inside the build instead (scripts/fetch-embedding-model.sh).
+# Fetched inside the build instead (scripts/fetch-embedding-model.sh, scripts/fetch-pdf-fonts.sh).
 backend/models
+backend/fonts/*.ttf

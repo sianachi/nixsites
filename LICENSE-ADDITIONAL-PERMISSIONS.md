@@ -26,6 +26,15 @@ For the avoidance of doubt: a separate program that talks to Nix only through it
 command-line tool `nixctl`, or its MCP server is not a work based on Nix and is not covered by
 AGPL-3.0-only.
 
+## 4. Libraries under the Microsoft Public License
+
+If you modify Nix, or any covered work, by linking or combining it with Svg.Custom (or a modified
+version of that library), or with another library Nix uses that is licensed under the Microsoft
+Public License (MS-PL), containing parts covered by the terms of the MS-PL, the licensor of Nix
+grants you additional permission to convey the resulting work. Corresponding Source for a
+non-source form of such a combination shall include the source code for the parts of those
+libraries used as well as that of the covered work.
+
 ## Commercial licence
 
 The copyright holder also offers Nix under a separate commercial licence, for those who cannot

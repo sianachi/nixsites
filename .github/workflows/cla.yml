@@ -1,0 +1,33 @@
+# Outside contributors sign CLA.md once, by comment, before their pull request can merge: Nix is
+# also offered under a commercial licence (docs/licensing.md). Signatures are committed to the
+# unprotected cla-signatures branch. The action never checks out pull request code, which is what
+# makes pull_request_target safe here.
+name: CLA
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target' || (github.event.issue.pull_request && (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the Nix CLA and I hereby sign it'))
+    steps:
+      - uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: signatures/v1/cla.json
+          path-to-document: https://github.com/sianachi/nixsites/blob/main/CLA.md
+          branch: cla-signatures
+          allowlist: sianachi,dependabot[bot],*[bot]
+          custom-pr-sign-comment: I have read the Nix CLA and I hereby sign it
+          lock-pullrequest-aftermerge: false
