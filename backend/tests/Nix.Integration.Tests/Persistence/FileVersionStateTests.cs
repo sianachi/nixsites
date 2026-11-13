@@ -176,6 +176,19 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
     }
 
     [Fact]
+    public async Task The_workspace_reports_the_bytes_its_file_versions_hold()
+    {
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var workspace = WorkspaceId.From(TestTenants.AlphaWorkspace);
+        var held = await work.DbContext.FileVersions.Where(version => version.WorkspaceId == workspace)
+            .SumAsync(version => (long?)version.ByteLength, Cancellation) ?? 0;
+        var store = work.Resolve<WorkspaceAdministrationStore>();
+        Assert.True(held > 0);
+        Assert.Equal(held, (await store.FindAsync(workspace, Cancellation))!.StorageUsedBytes);
+        Assert.Equal(held, (await store.ListAsync(null, null, 50, Cancellation)).Single(row => row.Id == workspace).StorageUsedBytes);
+    }
+
+    [Fact]
     public async Task An_owner_sets_the_policy_audited_and_the_workspace_response_reports_it()
     {
         await using (var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))

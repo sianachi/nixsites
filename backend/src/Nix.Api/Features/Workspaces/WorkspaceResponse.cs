@@ -6,7 +6,8 @@ namespace Nix.Features.Workspaces;
 /// <param name="Id">The workspace's identifier.</param>
 /// <param name="Name">Its display name.</param>
 /// <param name="VersionRetentionDays">How long non-pinned version history is kept.</param>
-/// <param name="StorageQuotaBytes">The workspace's storage ceiling.</param>
+/// <param name="StorageQuotaBytes">Not enforced: file storage is tracked, not capped. Kept so existing clients keep parsing.</param>
+/// <param name="StorageUsedBytes">Bytes held by every file version in the workspace, trashed files and old versions included.</param>
 /// <param name="CreatedAt">When it was created.</param>
 /// <param name="PasswordProtected">
 /// Whether the workspace has a password. While it is closed to the caller (<c>passwordProtected</c>
@@ -38,7 +39,8 @@ internal sealed record WorkspaceResponse(
     bool? AgentsMayApprove = null,
     bool? AgentsMayCreatePublicLinks = null,
     bool? PasswordProtected = null,
-    DateTimeOffset? UnlockedUntil = null);
+    DateTimeOffset? UnlockedUntil = null,
+    long StorageUsedBytes = 0);
 
 /// <summary>A request to create a shared workspace.</summary>
 internal sealed record CreateWorkspaceRequest(string Name);

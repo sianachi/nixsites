@@ -29,6 +29,7 @@ public sealed record WorkspaceSnapshot(
     bool Collaboration,
     bool AgentsMayApprove,
     bool AgentsMayCreatePublicLinks,
+    long StorageUsedBytes,
     bool PasswordProtected = false,
     DateTimeOffset? UnlockedUntil = null)
 {
@@ -209,7 +210,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 // the API response masks it, as it does every other field this clears.
                 result.Add(new WorkspaceSnapshot(
                     row.Id, row.Name, 0, 0, row.CreatedAt, row.PersonalOwnerPrincipalId, false, false, false, false,
-                    row.PendingInvitationId, row.LifecycleState, null, false, false, false, false,
+                    row.PendingInvitationId, row.LifecycleState, null, false, false, false, false, 0,
                     PasswordProtected: true, UnlockedUntil: null));
             }
             else
@@ -992,7 +993,8 @@ public sealed partial class WorkspaceAdministrationStore(
             reader.GetBoolean(6), reader.GetBoolean(7), reader.GetBoolean(8),
             reader.GetBoolean(9), reader.IsDBNull(10) ? null : reader.GetGuid(10),
             reader.GetString(11), reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12),
-            reader.GetBoolean(13), reader.GetBoolean(14), reader.GetBoolean(15), reader.GetBoolean(16));
+            reader.GetBoolean(13), reader.GetBoolean(14), reader.GetBoolean(15), reader.GetBoolean(16),
+            reader.GetInt64(17));
     }
 
     private readonly record struct DailyNoteContextRow(

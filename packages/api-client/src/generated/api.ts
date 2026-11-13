@@ -6205,6 +6205,11 @@ export interface components {
       passwordProtected?: null | boolean;
       /** Format: date-time */
       unlockedUntil?: null | string;
+      /**
+       * Format: int64
+       * @default 0
+       */
+      storageUsedBytes: number | string;
     };
     WorkspaceSyncChanges: {
       cursor: string;

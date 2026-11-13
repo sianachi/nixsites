@@ -84,7 +84,12 @@ public static class WorkspaceAdministrationSql
                        r.personal_owner_principal_id IS NOT NULL)
                ) AS can_use_daily_notes,
                pending.invitation_id, r.lifecycle_state, r.archived_at,
-               r.membership_locked, r.collaboration, r.agents_may_approve, r.agents_may_create_public_links
+               r.membership_locked, r.collaboration, r.agents_may_approve, r.agents_may_create_public_links,
+               -- shortcut: sums file_version per listed workspace with no (tenant_id, workspace_id) index; add one, or a maintained counter, when tenants hold many file versions.
+               CASE WHEN r.role_rank >= 0 THEN
+                   (SELECT COALESCE(sum(fv.byte_length), 0)::bigint FROM file_version fv
+                    WHERE fv.tenant_id = @tenant_id AND fv.workspace_id = r.workspace_id)
+                   ELSE 0 END AS storage_used_bytes
         FROM reachable r CROSS JOIN caller c
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -149,7 +154,11 @@ public static class WorkspaceAdministrationSql
                             THEN (w.daily_notes ->> 'enabled')::boolean END,
                        w.personal_owner_principal_id IS NOT NULL)),
                pending.invitation_id, w.lifecycle_state, w.archived_at,
-               w.membership_locked, w.collaboration, w.agents_may_approve, w.agents_may_create_public_links
+               w.membership_locked, w.collaboration, w.agents_may_approve, w.agents_may_create_public_links,
+               CASE WHEN c.tenant_admin OR h.role_rank >= 0 THEN
+                   (SELECT COALESCE(sum(fv.byte_length), 0)::bigint FROM file_version fv
+                    WHERE fv.tenant_id = @tenant_id AND fv.workspace_id = w.workspace_id)
+                   ELSE 0 END
         FROM workspace w CROSS JOIN caller c CROSS JOIN held h
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
