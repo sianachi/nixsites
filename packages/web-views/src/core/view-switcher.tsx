@@ -169,7 +169,7 @@ function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolea
         ))}
       </Select>
       {props.addView}
-      <ViewActions label="Manage view" items={props.viewActions?.(activeViewId ?? '')} />
+      <ViewActions label="View settings" items={props.viewActions?.(activeViewId ?? '')} />
     </div>
   );
 }

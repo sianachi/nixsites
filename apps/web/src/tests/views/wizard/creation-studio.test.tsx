@@ -67,6 +67,7 @@ describe('the guided creation studio', () => {
     stubCoreApi();
     renderAt(<App />, '/new/board');
     await screen.findByRole('heading', { name: /new board/i });
+    await user.click(await screen.findByRole('button', { name: 'Customize' }));
     const options = screen.getByRole('textbox', { name: 'Options' });
     await user.clear(options);
     await user.type(options, 'To do{Enter}In progress{Enter}Done');
@@ -84,6 +85,7 @@ describe('the guided creation studio', () => {
     stubCoreApi();
     renderAt(<App />, '/new/interactive-form');
     await screen.findByRole('heading', { name: /new interactive form/i });
+    await user.click(screen.getByRole('button', { name: 'Customize' }));
     await user.click(screen.getByRole('button', { name: /continue/i }));
     await user.click(screen.getByRole('button', { name: 'Add paragraph' }));
     for (const label of ['Introduction', 'Confirmation message', 'Text']) {
@@ -120,6 +122,7 @@ describe('the guided creation studio', () => {
     renderAt(<App />, '/new/interactive-form');
 
     await screen.findByRole('heading', { name: /new interactive form/i });
+    await user.click(screen.getByRole('button', { name: 'Customize' }));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByRole('region', { name: /interactive form designer/i })).toBeVisible();
@@ -300,7 +303,7 @@ describe('the guided creation studio', () => {
     delayed.release();
   });
 
-  it('uses create-specific button and progress copy for a new setup', async () => {
+  it('creates a list with defaults and offers to undo that creation', async () => {
     const user = userEvent.setup();
     stubCoreApi();
     const delayed = deferFetch(
@@ -309,12 +312,22 @@ describe('the guided creation studio', () => {
     renderAt(<App />, '/new/list');
 
     await screen.findByRole('textbox', { name: 'Name' });
+    expect(screen.queryByRole('textbox', { name: 'Field name' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create List' }));
     expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
 
     delayed.release();
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Creating…' })).not.toBeInTheDocument();
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.some(
+            ([input, init]) =>
+              init?.method === 'DELETE' &&
+              requestUrl(input).endsWith('/items/cccccccc-0000-4000-8000-000000000000'),
+          ),
+      ).toBe(true);
     });
   });
 
@@ -406,6 +419,7 @@ describe('the guided creation studio', () => {
 
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(name);
+    await user.click(await screen.findByRole('button', { name: 'Customize' }));
     await user.click(screen.getByRole('button', { name: /options: view, companion and sharing/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a name.');
@@ -421,7 +435,8 @@ describe('the guided creation studio', () => {
     stubCoreApi();
     renderAt(<App />, '/new/list');
 
-    await user.click(await screen.findByRole('button', { name: /continue/i }));
+    await user.click(await screen.findByRole('button', { name: 'Customize' }));
+    await user.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByRole('heading', { name: /options/i })).toHaveFocus();
     expect(screen.getByRole('button', { name: /add a filter/i })).toBeVisible();
@@ -434,7 +449,8 @@ describe('the guided creation studio', () => {
       stubCoreApi();
       renderAt(<App />, `/new/${recipe}`);
 
-      await user.click(await screen.findByRole('button', { name: /continue/i }));
+      await user.click(await screen.findByRole('button', { name: 'Customize' }));
+      await user.click(screen.getByRole('button', { name: /continue/i }));
 
       expect(screen.getByRole('button', { name: /add a filter/i })).toBeVisible();
     },
@@ -445,6 +461,7 @@ describe('the guided creation studio', () => {
     stubCoreApi();
     renderAt(<App />, '/new/board');
 
+    await user.click(await screen.findByRole('button', { name: 'Customize' }));
     const fieldName = await screen.findByRole('textbox', { name: 'Field name' });
     await user.clear(fieldName);
     await user.type(fieldName, 'Workflow status');
@@ -469,7 +486,7 @@ describe('the guided creation studio', () => {
     stubCoreApi();
     renderAt(<App />, '/new/board');
 
-    expect(await screen.findByText(/Step 1 of 2/)).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'New Board' })).toBeVisible();
     await user.click(await screen.findByRole('textbox', { name: 'Name' }));
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -482,6 +499,7 @@ describe('the guided creation studio', () => {
     renderAt(<App />, '/new/interactive-form');
 
     await screen.findByRole('heading', { name: /new interactive form/i });
+    await user.click(await screen.findByRole('button', { name: 'Customize' }));
     expect(screen.getAllByRole('checkbox', { name: 'Required' }).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /continue/i }));
     expect(screen.getByRole('checkbox', { name: /publish a public response link/i })).toBeVisible();

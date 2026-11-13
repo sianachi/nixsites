@@ -73,7 +73,7 @@ function RowInner(): ReactNode {
       views={VIEWS}
       unrenderable={[]}
       activeViewId="all"
-      documentLabel="Body"
+      documentLabel="Document"
       onSelect={() => undefined}
       trailing={<button type="button">Details</button>}
       tools={

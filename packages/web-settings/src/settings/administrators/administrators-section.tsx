@@ -127,11 +127,13 @@ function PeopleBlock({
           {narrow ? (
             <ul aria-label={title} className="flex flex-col divide-y divide-divider">
               {people.length === 0 ? (
-                <Text variant="note" tone="muted" role="status">
-                  {status === 'loading'
-                    ? `Loading ${title.toLocaleLowerCase()}.`
-                    : 'Nobody is listed yet.'}
-                </Text>
+                <li>
+                  <Text variant="note" tone="muted" role="status">
+                    {status === 'loading'
+                      ? `Loading ${title.toLocaleLowerCase()}.`
+                      : 'Nobody is listed yet.'}
+                  </Text>
+                </li>
               ) : null}
               {people.map((person) => (
                 <li key={person.id} className="flex min-h-11 flex-wrap items-center gap-3 py-2">

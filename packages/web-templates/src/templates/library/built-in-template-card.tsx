@@ -39,15 +39,18 @@ export function BuiltInTemplateCard({
         {template.preview === null ? null : (
           <ViewPreviewImage title={template.name} {...template.preview} />
         )}
+        <Text variant="caption" tone="muted">
+          Adds this template to the workspace library.
+        </Text>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
-            aria-label={`Use ${template.name} template`}
+            aria-label={`Add and use ${template.name} template`}
             className="w-full sm:w-auto"
             disabled={disabled}
             onClick={onUse}
           >
-            <Icon icon={LayoutTemplate} size="sm" /> {adding ? 'Adding…' : 'Use template'}
+            <Icon icon={LayoutTemplate} size="sm" /> {adding ? 'Adding…' : 'Add and use template'}
           </Button>
         </div>
       </Blueprint>

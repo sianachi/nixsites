@@ -2,6 +2,8 @@ import { Button, ContextMenu, Icon, Input, Text, focusRing, useUndo } from '@nix
 import type { KeptItem } from '@nix/api-client';
 import { FileText } from 'lucide-react';
 import { useState, type ReactElement, type ReactNode } from 'react';
+import { useOutletContext } from 'react-router';
+import type { ShellContext } from '../shell/shell-context';
 
 import { useHiddenItemPredicate } from '@nix/web-collections/items/use-hidden-items';
 import { BookmarkButton } from '../bookmarks/bookmark-button';
@@ -45,6 +47,7 @@ function BookmarksFrame({ children }: { readonly children: ReactNode }): ReactEl
 }
 
 export function BookmarksPage(): ReactElement {
+  const { openExplorer } = useOutletContext<ShellContext>();
   const isHidden = useHiddenItemPredicate();
   const status = useBookmarksStore((state) => state.status);
   const items = useBookmarksStore((state) => state.items);
@@ -95,8 +98,13 @@ export function BookmarksPage(): ReactElement {
     return (
       <BookmarksFrame>
         <EmptyPanel
-          title="Nothing kept yet"
-          detail="Bookmark a note from the Explorer, from the document itself, or from the command palette, and it will appear here."
+          title="No bookmarks yet"
+          detail="In the Explorer, open the actions for a note and choose Bookmark."
+          action={
+            <Button variant="secondary" onClick={openExplorer}>
+              Open Explorer
+            </Button>
+          }
         />
       </BookmarksFrame>
     );

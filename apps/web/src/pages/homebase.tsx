@@ -116,8 +116,8 @@ export function Homebase({
   const more: Action[] = [
     {
       key: 'structured',
-      label: 'Structured note',
-      detail: 'Board, list, tracker or form',
+      label: 'New list, board or tracker',
+      detail: 'Choose a layout for tasks, habits or forms',
       icon: Columns2,
       onSelect: onOpenStructured,
     },

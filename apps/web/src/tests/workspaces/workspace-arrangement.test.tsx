@@ -47,7 +47,7 @@ describe('arrangeWorkspaces', () => {
     const moved = assignToGroup(
       {
         ...arrangement,
-        groups: [...arrangement.groups, { id: 'g2', name: 'Home', workspaceIds: [] }],
+        groups: [...arrangement.groups, { id: 'g2', name: 'Homebase', workspaceIds: [] }],
       },
       SHARED.id,
       'g2',
@@ -185,20 +185,16 @@ describe('the workspaces page', () => {
     });
   });
 
-  it('creates a group from a row and files the workspace in it', async () => {
+  it('opens group management from the workspaces page', async () => {
     const user = userEvent.setup();
     stubCoreApi({ workspaces: [STUB_WORKSPACE, SHARED] });
     renderAt(<App />, `/w/${STUB_WORKSPACE.id}/workspaces`);
     const page = await screen.findByRole('region', { name: 'Workspaces' });
-    await user.selectOptions(
-      await within(page).findByRole('combobox', { name: `Group for ${SHARED.name}` }),
-      'New group…',
-    );
-    await user.type(
-      within(page).getByRole('textbox', { name: `New group for ${SHARED.name}` }),
-      'Clients{Enter}',
-    );
-    expect(await screen.findByText(`Created group Clients with ${SHARED.name}`)).toBeVisible();
-    expect(await within(page).findByRole('list', { name: 'Clients' })).toBeVisible();
+    await user.click(within(page).getByRole('link', { name: /^Manage workspace groups/ }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Workspace groups', level: 1 }),
+    ).toBeVisible();
+    expect(await screen.findByRole('textbox', { name: 'New group name' })).toBeVisible();
   });
 });

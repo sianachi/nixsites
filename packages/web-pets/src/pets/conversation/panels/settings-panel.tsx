@@ -78,7 +78,7 @@ export function PetSettingsPanel({
       ) : null}
       <Link to={`/w/${workspaceId}/settings?tab=pets`} className={`underline ${focusRing}`}>
         <Text as="span" variant="note">
-          Pet settings
+          Companion settings
         </Text>
       </Link>
     </div>

@@ -1,4 +1,14 @@
-import { ScrollRegion, Blueprint, Button, SkeletonLines, Text, focusRing } from '@nix/ui';
+import { type Workspace } from '@nix/api-client';
+import {
+  ScrollRegion,
+  Blueprint,
+  Button,
+  Field,
+  Select,
+  SkeletonLines,
+  Text,
+  focusRing,
+} from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
@@ -7,6 +17,7 @@ import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspaces/workspace-context';
+import { workspaceClosed } from '../workspaces/workspace-lock-mark';
 import { createNote } from './create-note';
 import { MAX_LAUNCH_FILES, receiveLaunchFiles, type LaunchedFiles } from './launch-files';
 import {
@@ -18,6 +29,7 @@ import {
 } from './launch-intent';
 
 interface CreatedNote {
+  readonly workspaceId: string;
   readonly itemId: string;
   readonly title: string;
 }
@@ -48,12 +60,23 @@ type Phase =
 export function LaunchPage(): ReactNode {
   const { action } = useParams<{ action: string }>();
   const [search] = useSearchParams();
-  const { workspaceId, workspace } = useWorkspace();
+  const { workspaceId, workspace, workspaces } = useWorkspace();
   const client = useApiClient();
   const { getAccessToken } = useAuth();
   const navigate = useNavigate();
   // The launch is read once per address; the effect below owns the one automatic run.
   const [intent] = useState(() => parseLaunchIntent(action, search));
+  const [destinationId, setDestinationId] = useState(workspaceId);
+  const destinations = workspaces.filter(
+    (entry) =>
+      entry.lifecycleState === 'active' &&
+      entry.pendingInvitationId === null &&
+      !workspaceClosed(entry),
+  );
+  const destination =
+    destinationId === workspaceId
+      ? workspace
+      : destinations.find((entry) => entry.id === destinationId);
   const [phase, setPhase] = useState<Phase>(() =>
     intent?.kind === 'new' || intent?.kind === 'share' ? { name: 'confirm' } : { name: 'working' },
   );
@@ -99,7 +122,7 @@ export function LaunchPage(): ReactNode {
           problems.push(`${file.title} was not imported: ${note.error}`);
           continue;
         }
-        created.push({ itemId: note.itemId, title: file.title });
+        created.push({ workspaceId, itemId: note.itemId, title: file.title });
         if (note.bodyError !== null)
           problems.push(`${file.title} was created, but its text was not saved: ${note.bodyError}`);
       }
@@ -169,12 +192,14 @@ export function LaunchPage(): ReactNode {
   ]);
 
   async function confirm(chosen: Extract<LaunchIntent, { kind: 'new' | 'share' }>): Promise<void> {
+    const target = chosen.kind === 'share' ? destination : workspace;
+    if (started.current || target === undefined) return;
     started.current = true;
     setPhase({ name: 'working' });
     const title = chosen.kind === 'share' ? sharedNoteTitle(chosen) : 'Untitled note';
     const note = await createNote({
       client,
-      workspaceId,
+      workspaceId: target.id,
       title,
       ...(chosen.kind === 'share' ? { body: { doc: sharedNoteDocument(chosen) } } : {}),
       getAccessToken,
@@ -185,11 +210,11 @@ export function LaunchPage(): ReactNode {
     } else if (note.bodyError !== null) {
       setPhase({
         name: 'finished',
-        created: [{ itemId: note.itemId, title }],
+        created: [{ workspaceId: target.id, itemId: note.itemId, title }],
         problems: [`The note was created, but its text was not saved: ${note.bodyError}`],
       });
     } else {
-      void navigate(`${home}?item=${encodeURIComponent(note.itemId)}`, { replace: true });
+      void navigate(`/w/${target.id}?item=${encodeURIComponent(note.itemId)}`, { replace: true });
     }
   }
 
@@ -197,7 +222,16 @@ export function LaunchPage(): ReactNode {
     return (
       <ConfirmLaunch
         intent={intent}
-        workspaceName={workspace.name}
+        workspaceName={intent.kind === 'share' ? (destination?.name ?? null) : workspace.name}
+        {...(intent.kind === 'share' && (destinations.length > 1 || destination === undefined)
+          ? {
+              chooser: {
+                destinations,
+                selected: destination?.id ?? '',
+                onChange: setDestinationId,
+              },
+            }
+          : {})}
         onConfirm={() => {
           void confirm(intent);
         }}
@@ -237,9 +271,12 @@ export function LaunchPage(): ReactNode {
                   <Button
                     className="h-auto min-h-(--control-md) min-w-0 max-w-full wrap-anywhere whitespace-normal py-2 any-pointer-coarse:h-auto any-pointer-coarse:min-h-(--control-lg)"
                     onClick={() =>
-                      void navigate(`${home}?item=${encodeURIComponent(first.itemId)}`, {
-                        replace: true,
-                      })
+                      void navigate(
+                        `/w/${first.workspaceId}?item=${encodeURIComponent(first.itemId)}`,
+                        {
+                          replace: true,
+                        },
+                      )
                     }
                   >
                     <span className="min-w-0 wrap-anywhere">Open {first.title}</span>
@@ -289,18 +326,25 @@ function skippedProblems(received: LaunchedFiles | null): string[] {
  */
 export function ConfirmLaunch(props: {
   readonly intent: Extract<LaunchIntent, { kind: 'new' | 'share' }>;
-  readonly workspaceName: string;
+  readonly workspaceName: string | null;
+  readonly chooser?: {
+    readonly destinations: readonly Pick<Workspace, 'id' | 'name'>[];
+    readonly selected: string;
+    readonly onChange: (workspaceId: string) => void;
+  };
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }): ReactNode {
-  const { intent, workspaceName, onConfirm, onCancel } = props;
+  const { intent, workspaceName, chooser, onConfirm, onCancel } = props;
   return (
     <div className="mx-auto min-w-0 w-full max-w-2xl p-3 sm:p-6">
       <Blueprint className="flex min-w-0 flex-col gap-4 p-3 sm:p-6">
         <Text as="h1" variant="h5" className="wrap-anywhere">
-          {intent.kind === 'share'
-            ? `Save this to ${workspaceName}?`
-            : `Create a note in ${workspaceName}?`}
+          {workspaceName === null
+            ? 'Choose where to save this note'
+            : intent.kind === 'share'
+              ? `Save this to ${workspaceName}?`
+              : `Create a note in ${workspaceName}?`}
         </Text>
         {intent.kind === 'share' ? (
           <div role="group" aria-label="What will be saved" className="flex min-w-0 flex-col gap-2">
@@ -328,8 +372,32 @@ export function ConfirmLaunch(props: {
             An untitled note is added at the top of the workspace and opened.
           </Text>
         )}
+        {chooser === undefined ? null : (
+          <Field label="Destination workspace">
+            {(control) => (
+              <Select
+                {...control}
+                value={chooser.selected}
+                onChange={(event) => {
+                  chooser.onChange(event.target.value);
+                }}
+              >
+                {chooser.selected === '' ? (
+                  <option value="" disabled>
+                    Choose a workspace
+                  </option>
+                ) : null}
+                {chooser.destinations.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        )}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={onConfirm}>
+          <Button onClick={onConfirm} disabled={workspaceName === null}>
             {intent.kind === 'share' ? 'Save note' : 'Create note'}
           </Button>
           <Button variant="secondary" onClick={onCancel}>

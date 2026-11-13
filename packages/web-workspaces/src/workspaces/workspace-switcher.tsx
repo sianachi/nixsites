@@ -1,5 +1,4 @@
 import {
-  Button,
   Dialog,
   Icon,
   Input,
@@ -30,7 +29,7 @@ import type { Workspace, WorkspaceArrangementInput } from '@nix/api-client';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { addGroup, arrangeWorkspaces, assignToGroup, removeGroup, togglePin } from './arrangement';
+import { arrangeWorkspaces, assignToGroup, togglePin } from './arrangement';
 import { CreateWorkspaceForm } from './settings/create-workspace-form';
 import {
   useHiddenWorkspacePreviewIds,
@@ -39,7 +38,6 @@ import {
 } from './last-workspace';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { useWorkspace } from './workspace-context';
-import { WorkspaceGroupsSection } from './workspace-groups-section';
 import { WorkspaceLockMark } from './workspace-lock-mark';
 
 /**
@@ -80,7 +78,6 @@ export function WorkspaceSwitcher(): ReactNode {
 }
 
 const QUICK_PREVIEW_LIMIT = 8;
-const NEW_GROUP = '__new__';
 const previewActionClass = cn(
   'flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted hover:text-foreground max-sm:size-(--control-lg) any-pointer-coarse:size-(--control-lg)',
   inkWashStates,
@@ -285,19 +282,10 @@ function useWorkspacePanel(
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
   const arranged = arrangeWorkspaces(activeWorkspaces, arrangement);
   const pinnedIds = new Set(arrangement.pinnedWorkspaceIds);
-  // Creating and arranging workspaces open over the page; they live outside the menu panel, which
-  // unmounts when it closes.
-  const [dialog, setDialog] = useState<'create' | 'arrange' | null>(null);
+  // The create dialog lives outside the menu panel, which unmounts when it closes.
+  const [creating, setCreating] = useState(false);
   // On the page the list takes the room it has; in the menu it scrolls inside a fixed height.
   const listClass = page ? 'py-1' : 'max-h-72 overflow-y-auto py-1';
-  const menuAction =
-    (kind: 'create' | 'arrange', close: () => void): (() => void) =>
-    () => {
-      close();
-      setDialog(kind);
-    };
-
-  const [newGroupFor, setNewGroupFor] = useState<string | null>(null);
   const groupOf = (id: string): { readonly id: string; readonly name: string } | undefined =>
     arrangement.groups.find((group) => group.workspaceIds.includes(id));
 
@@ -314,36 +302,20 @@ function useWorkspacePanel(
       (current) => assignToGroup(current, entry.id, before?.id ?? null),
     );
   };
-  const createGroupFor = (entry: Workspace, name: string): void => {
-    const before = groupOf(entry.id);
-    const added = addGroup(arrangement, name);
-    const created = added.groups[added.groups.length - 1];
-    if (created === undefined) return;
-    setNewGroupFor(null);
-    void apply(
-      assignToGroup(added, entry.id, created.id),
-      `Created group ${created.name} with ${entry.name}`,
-      (current) => removeGroup(assignToGroup(current, entry.id, before?.id ?? null), created.id),
-    );
-  };
-
   const row = (entry: Workspace, close: () => void, hit?: 'first' | 'match'): ReactNode => (
     <WorkspaceRow
       key={entry.id}
       entry={entry}
       current={entry.id === workspace.id}
       pinned={pinnedIds.has(entry.id)}
-      group={page ? (groupOf(entry.id) ?? null) : undefined}
+      group={page && arrangement.groups.length > 0 ? (groupOf(entry.id) ?? null) : undefined}
       groups={arrangement.groups}
       hit={hit}
-      creating={newGroupFor === entry.id}
       close={close}
       onPin={(entry) => {
         void pin(entry);
       }}
       onFile={file}
-      onStartCreate={setNewGroupFor}
-      onCreate={createGroupFor}
     />
   );
 
@@ -481,7 +453,14 @@ function useWorkspacePanel(
             onClick={close}
             className={`flex items-center border-t border-divider px-3 py-2 text-sm text-foreground hover:bg-accent/10 pointer-coarse:min-h-11 ${focusRing}`}
           >
-            Workspace groups
+            <div>
+              <Text as="span" variant="bodySmall">
+                Manage workspace groups
+              </Text>
+              <Text as="span" variant="caption" tone="muted" className="block">
+                Groups are personal. They do not change workspace access.
+              </Text>
+            </div>
           </Link>
 
           {archivedCount > 0 ? (
@@ -497,15 +476,10 @@ function useWorkspacePanel(
 
           <button
             type="button"
-            onClick={menuAction('arrange', close)}
-            className={`flex w-full items-center border-t border-divider px-3 py-2 text-left pointer-coarse:min-h-11 text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
-          >
-            Arrange workspaces…
-          </button>
-
-          <button
-            type="button"
-            onClick={menuAction('create', close)}
+            onClick={() => {
+              close();
+              setCreating(true);
+            }}
             className={`flex w-full items-center gap-2 border-t border-divider px-3 py-2 text-left pointer-coarse:min-h-11 text-sm text-foreground hover:bg-accent/10 ${focusRing}`}
           >
             <Icon icon={Plus} size="sm" />
@@ -516,24 +490,14 @@ function useWorkspacePanel(
     },
   ];
 
-  const closeDialog = (): void => {
-    setDialog(null);
+  const closeCreate = (): void => {
+    setCreating(false);
   };
-
-  const dialogs = (
-    <>
-      {dialog === 'create' ? (
-        <Dialog open title="New workspace" onClose={closeDialog}>
-          <CreateWorkspaceForm onCreated={closeDialog} />
-        </Dialog>
-      ) : null}
-      {dialog === 'arrange' ? (
-        <Dialog open title="Arrange workspaces" onClose={closeDialog}>
-          <WorkspaceGroupsSection />
-        </Dialog>
-      ) : null}
-    </>
-  );
+  const dialogs = creating ? (
+    <Dialog open title="New workspace" onClose={closeCreate}>
+      <CreateWorkspaceForm onCreated={closeCreate} />
+    </Dialog>
+  ) : null;
 
   return { workspace, items, dialogs };
 }
@@ -620,12 +584,9 @@ function WorkspaceRow({
   group,
   groups,
   hit,
-  creating,
   close,
   onPin,
   onFile,
-  onStartCreate,
-  onCreate,
 }: {
   readonly entry: Workspace;
   readonly current: boolean;
@@ -634,15 +595,11 @@ function WorkspaceRow({
   readonly group: { readonly id: string; readonly name: string } | null | undefined;
   readonly groups: readonly { readonly id: string; readonly name: string }[];
   readonly hit: 'first' | 'match' | undefined;
-  readonly creating: boolean;
   readonly close: () => void;
   readonly onPin: (entry: Workspace) => void;
   readonly onFile: (entry: Workspace, groupId: string | null) => void;
-  readonly onStartCreate: (workspaceId: string | null) => void;
-  readonly onCreate: (entry: Workspace, name: string) => void;
 }): ReactNode {
   const flash = useFlash(`${String(pinned)}|${group?.id ?? ''}`);
-  const [name, setName] = useState('');
   const iconButton =
     'flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted transition-transform hover:bg-accent/10 hover:text-foreground active:scale-90 pointer-coarse:size-(--control-lg)';
   return (
@@ -657,7 +614,7 @@ function WorkspaceRow({
         className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-3 text-md text-foreground no-underline hover:bg-accent/10 active:bg-foreground/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
         <Icon icon={Check} size="sm" className={current ? 'text-accent-text' : 'invisible'} />
-        <span className="truncate">{entry.name}</span>
+        <span className="min-w-0 wrap-anywhere">{entry.name}</span>
         <WorkspaceLockMark workspace={entry} />
         {entry.pendingInvitationId === null ? null : (
           <Text variant="caption" as="span" tone="muted" className="shrink-0">
@@ -707,10 +664,7 @@ function WorkspaceRow({
             className="absolute inset-0 h-full min-h-0 w-full cursor-pointer border-0 p-0 opacity-0 any-pointer-coarse:h-full"
             onChange={(event) => {
               const value = event.currentTarget.value;
-              if (value === NEW_GROUP) {
-                setName('');
-                onStartCreate(entry.id);
-              } else onFile(entry, value === '' ? null : value);
+              onFile(entry, value === '' ? null : value);
             }}
           >
             <option value="">No group</option>
@@ -719,7 +673,6 @@ function WorkspaceRow({
                 {option.name}
               </option>
             ))}
-            <option value={NEW_GROUP}>New group…</option>
           </Select>
         </div>
       )}
@@ -731,42 +684,6 @@ function WorkspaceRow({
       >
         <Icon icon={Settings} size="sm" />
       </Link>
-      {creating ? (
-        <form
-          className="flex w-full items-center gap-1 pb-2 pl-8"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (name.trim().length > 0) onCreate(entry, name);
-          }}
-        >
-          <Input
-            aria-label={`New group for ${entry.name}`}
-            placeholder="New group name"
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- Justification: the person just chose "New group…" from this row's picker.
-            autoFocus
-            value={name}
-            maxLength={80}
-            onChange={(event) => {
-              setName(event.currentTarget.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') onStartCreate(null);
-            }}
-          />
-          <Button type="submit" disabled={name.trim().length === 0}>
-            Add
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              onStartCreate(null);
-            }}
-          >
-            Cancel
-          </Button>
-        </form>
-      ) : null}
     </li>
   );
 }

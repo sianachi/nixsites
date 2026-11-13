@@ -453,17 +453,7 @@ export function ImportDialog({
 
         {phase.name === 'pick' ? (
           <>
-            <Text tone="muted" variant="body">
-              Choose a PDF, Word document, UTF-8 text file, Nix archive, Markdown files, an Obsidian
-              vault, or folders containing Markdown notes and attachments. Documents become editable
-              notes and their original files are retained as children. Markdown folders keep their
-              hierarchy, supported formatting, and non-hidden attachments.
-            </Text>
-            <Text tone="muted" variant="note">
-              PDF import extracts existing text but does not perform OCR. The preview names content
-              that cannot be preserved before anything is created.
-            </Text>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-3">
               {/* Out of the tab order and the a11y tree: the visible buttons are the controls, and
                   a focusable but invisible input is a focus ring nobody can see. */}
               <input
@@ -495,32 +485,47 @@ export function ImportDialog({
                   void chose(files);
                 }}
               />
-              {FOLDER_PICK_SUPPORTED ? (
+              <div className="flex flex-col items-start gap-2">
                 <Button
+                  ref={pickButton}
                   disabled={phase.reading}
                   onClick={() => {
-                    folderInput.current?.click();
+                    fileInput.current?.click();
                   }}
                 >
-                  Choose a vault or folder
+                  Choose files
                 </Button>
-              ) : null}
-              <Button
-                ref={pickButton}
-                variant="secondary"
-                disabled={phase.reading}
-                onClick={() => {
-                  fileInput.current?.click();
-                }}
-              >
-                Choose files
-              </Button>
+                <Text tone="muted" variant="note">
+                  Markdown, PDF, Word documents, UTF-8 text files, and Nix archives. Documents
+                  become editable notes and the original file stays attached.
+                </Text>
+                <Text tone="muted" variant="note">
+                  PDF import reads existing text. Scanned pages need text recognition (OCR) before
+                  import.
+                </Text>
+              </div>
+              {FOLDER_PICK_SUPPORTED ? (
+                <div className="flex flex-col items-start gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={phase.reading}
+                    onClick={() => {
+                      folderInput.current?.click();
+                    }}
+                  >
+                    Choose a vault or folder
+                  </Button>
+                  <Text tone="muted" variant="note">
+                    Import an Obsidian vault or a Markdown folder with its folders and attachments.
+                  </Text>
+                </div>
+              ) : (
+                <Text tone="muted" variant="note">
+                  To import a folder or Obsidian vault, open Nix in a browser that supports folder
+                  selection.
+                </Text>
+              )}
             </div>
-            {FOLDER_PICK_SUPPORTED ? null : (
-              <Text tone="muted" variant="note">
-                This browser cannot select folders. You can still choose Markdown files.
-              </Text>
-            )}
             {phase.reading ? <Text tone="muted">Reading the files…</Text> : null}
             {phase.error !== null ? (
               <div role="alert">

@@ -113,9 +113,39 @@ it('browses board columns individually and keeps unassigned cards reachable', as
   );
   expect(screen.getByRole('region', { name: 'Todo' })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Done' })).not.toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Board column' }), 'unset');
+  const columns = screen.getByRole('group', { name: 'Board column' });
+  expect(within(columns).getByRole('button', { name: 'Todo (1)' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+  await userEvent.click(within(columns).getByRole('button', { name: 'Unset (1)' }));
   expect(screen.getByRole('button', { name: 'Unassigned idea' })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Todo' })).not.toBeInTheDocument();
+});
+
+it('uses a select when a phone board has several columns', async () => {
+  const status = {
+    key: 'status',
+    label: 'Status',
+    type: 'select' as const,
+    options: ['Inbox', 'Ready', 'Doing', 'Review', 'Done'],
+    required: false,
+  };
+  renderAt(
+    <ContainerView
+      container={aContainer({
+        schema: { properties: [status], declared: [status], inherit: true },
+        children: [item({ ...note, properties: { status: 'Done' } })],
+      })}
+      view={aView({ kind: 'board', groupBy: 'status' })}
+      onOpen={vi.fn()}
+    />,
+  );
+
+  const picker = screen.getByRole('combobox', { name: 'Board column' });
+  await userEvent.selectOptions(picker, 'Done (1)');
+  expect(screen.getByRole('region', { name: 'Done' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Release plan' })).toBeInTheDocument();
 });
 
 it('opens the item actions from a phone list row, as the desktop rows do', async () => {

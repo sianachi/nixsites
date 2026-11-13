@@ -1,3 +1,4 @@
+import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
 import { Button, cn, focusRing, Select, Text } from '@nix/ui';
 import type { ReactNode } from 'react';
@@ -51,6 +52,7 @@ export function HabitTrackerHeader({
   readonly onThisWeek: () => void;
 }): ReactNode {
   const compact = useCompactCollection();
+  const narrow = useNarrowViewport();
   return (
     <header className="flex flex-col gap-4 border-b border-divider pb-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -155,24 +157,32 @@ export function HabitTrackerHeader({
       {screen === 'checkins' && todayOnly ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="secondary"
-            aria-label="Previous day"
+            variant={narrow && !viewingEarlierDay ? 'subtle' : 'secondary'}
+            aria-label={
+              narrow && !viewingEarlierDay && missedYesterday > 0 ? undefined : 'Previous day'
+            }
             onClick={() => {
               onShiftDay(-1);
             }}
           >
-            ‹ Previous
+            {narrow && !viewingEarlierDay
+              ? missedYesterday === 0
+                ? 'Previous day'
+                : `Previous day · ${String(missedYesterday)} left to review`
+              : '‹ Previous'}
           </Button>
-          <Button
-            variant="secondary"
-            aria-label="Next day"
-            disabled={nextDayDisabled}
-            onClick={() => {
-              onShiftDay(1);
-            }}
-          >
-            Next ›
-          </Button>
+          {narrow && !viewingEarlierDay ? null : (
+            <Button
+              variant="secondary"
+              aria-label="Next day"
+              disabled={nextDayDisabled}
+              onClick={() => {
+                onShiftDay(1);
+              }}
+            >
+              Next ›
+            </Button>
+          )}
           {viewingEarlierDay ? (
             <>
               <Button variant="primary" onClick={onToday}>
@@ -183,7 +193,7 @@ export function HabitTrackerHeader({
               </Text>
             </>
           ) : null}
-          {missedYesterday > 0 ? (
+          {!narrow && missedYesterday > 0 ? (
             <Button variant="secondary" onClick={onReviewYesterday}>
               {`Yesterday: ${String(missedYesterday)} not done. Review`}
             </Button>

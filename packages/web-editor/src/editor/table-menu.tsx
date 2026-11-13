@@ -307,6 +307,16 @@ export function TableMenu({ editor }: { readonly editor: Editor }): ReactNode {
         }
       }}
     >
+      {maxWidth < MENU_WIDTH_ESTIMATE ? (
+        <Text
+          as="span"
+          variant="caption"
+          tone="muted"
+          className="hidden shrink-0 px-1.5 pointer-coarse:inline"
+        >
+          Swipe for more
+        </Text>
+      ) : null}
       {coordinates !== null ? (
         <Text
           variant="caption"

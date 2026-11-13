@@ -40,7 +40,6 @@ import {
 import { ArchivedWorkspacesPage } from '@nix/web-workspaces/workspaces/archived-workspaces-page';
 import { JoinWorkspacePage } from '@nix/web-workspaces/workspaces/join-workspace-page';
 import { AccessibleWorkspacesProvider } from '@nix/web-workspaces/workspaces/workspace-context';
-import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
 import { LaunchPage } from '@nix/web-workspaces/launch/launch-page';
 import { provideArtifactView } from '@nix/web-editor/editor/artifact-view-slot';
 import { provideEmbeddedViews } from '@nix/web-editor/editor/embedded-views-slot';
@@ -126,7 +125,7 @@ export function AppRoutes(): ReactElement {
   // On desktop, workspaces, trash and settings open as dialogs over the work: the app
   // renders at the work's address and the dialog at its own (see `shell/route-dialog.tsx`).
   // Always passed, so the tree keeps one shape and nothing remounts when a dialog opens.
-  const { mainLocation, dialog } = useRouteDialogRouting();
+  const { mainLocation, dialog, closeSettings } = useRouteDialogRouting();
   return (
     <UndoProvider>
       <RouteDialogContext.Provider value={dialog}>
@@ -149,10 +148,7 @@ export function AppRoutes(): ReactElement {
                 path="/w/:workspaceId"
                 element={
                   <WorkspaceGate>
-                    <>
-                      <AppShell />
-                      <PetCompanion />
-                    </>
+                    <AppShell closeSettings={closeSettings} />
                   </WorkspaceGate>
                 }
               >

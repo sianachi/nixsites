@@ -101,10 +101,10 @@ describe('the filter rules editor', () => {
     expect(rules.current()).toEqual([{ property: 'due', operator: 'sometime-around', value: 'x' }]);
   });
 
-  it('says the rules run across containers, which is why the property is typed', () => {
+  it('explains which items the smart list searches', () => {
     editorWith([]);
 
-    expect(screen.getByText(/across every container you can read/)).toBeInTheDocument();
+    expect(screen.getByText(/across items you can read/)).toBeInTheDocument();
   });
 
   it('offers both scopes every operator Core compiles', () => {
@@ -168,7 +168,7 @@ describe('the filter rules editor', () => {
       );
     expect(suggested()).not.toContain('score');
     expect(suggested()).not.toContain('total');
-    expect(screen.getByText(/Smart lists compare stored values/)).toBeVisible();
+    expect(screen.getByText(/To filter by formula or rollup results/)).toBeVisible();
     query.unmount();
     renderAt(
       <FilterRulesEditor rules={[]} schema={schema} scope="container" onChange={() => undefined} />,
@@ -203,7 +203,7 @@ describe('the filter rules editor', () => {
   it('adds an any-of group and edits, extends and empties it', () => {
     const rules = editorWith([]);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add an any-of group' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add alternative filters' }));
     expect(rules.current()).toEqual([
       {
         property: null,
@@ -212,7 +212,7 @@ describe('the filter rules editor', () => {
         any: [{ property: '', operator: 'equals', value: '' }],
       },
     ]);
-    expect(screen.getByRole('group', { name: 'Any of' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Match any of these filters' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Property'), { target: { value: 'status' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add a filter to this group' }));
@@ -244,7 +244,9 @@ describe('the filter rules editor', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Add an any-of group' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add alternative filters' }),
+    ).not.toBeInTheDocument();
   });
 
   it('stops adding at eight filters, counting those inside groups', () => {
@@ -267,7 +269,7 @@ describe('the filter rules editor', () => {
     ]);
 
     expect(screen.getByRole('button', { name: 'Add a filter' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add an any-of group' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add alternative filters' })).toBeDisabled();
     expect(screen.getByText(/at most 8 filters/)).toBeInTheDocument();
   });
 

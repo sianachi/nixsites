@@ -1049,8 +1049,8 @@ describe('adding an item without a hover or a drag', () => {
 
       await person.click(screen.getByRole('button', { name: 'Monday 16 March 2026' }));
       expect(screen.getByRole('heading', { name: 'Mon 16 Mar', level: 3 })).toBeVisible();
-      await person.click(screen.getByRole('button', { name: 'week' }));
-      await person.click(screen.getByRole('button', { name: 'month' }));
+      await person.click(screen.getByRole('button', { name: 'Week' }));
+      await person.click(screen.getByRole('button', { name: 'Month' }));
 
       expect(screen.getByRole('heading', { name: 'Tue 17 Mar', level: 3 })).toBeVisible();
     });

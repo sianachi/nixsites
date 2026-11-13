@@ -8,6 +8,7 @@ import {
 import {
   CaptureUpdateAction,
   Excalidraw,
+  WelcomeScreen,
   convertToExcalidrawElements,
   getDataURL,
   loadFromBlob,
@@ -945,7 +946,7 @@ export function NixCanvas({
   return (
     <div
       ref={canvasRootRef}
-      className="@container/canvas relative h-full min-h-0 min-w-0 w-full overflow-hidden bg-background @max-5xl/canvas:[&_.App-menu\_top]:grid-cols-[auto_minmax(0,1fr)]! @max-5xl/canvas:[&_.App-menu\_top]:gap-x-4! @max-5xl/canvas:[&_.App-menu\_top]:gap-y-8! @max-5xl/canvas:[&_.App-menu\_top>.layer-ui\_\_wrapper\_\_top-right]:col-span-2! [&_.App-top-bar>section]:w-full! [&_.App-top-bar>section>.Stack]:w-full! [&_.App-top-bar_.App-toolbar-container]:relative! [&_.App-top-bar_.App-toolbar-container]:w-full! [&_.App-top-bar_.App-toolbar-container]:grid-cols-1! [&_.App-top-bar_.App-toolbar-container]:grid-flow-row! [&_.App-toolbar--mobile]:w-full! [&_.App-toolbar--mobile]:max-w-full! [&_.App-toolbar--mobile>.Stack]:grid-flow-row! [&_.App-toolbar--mobile>.Stack]:grid-cols-[repeat(auto-fit,minmax(var(--control-lg),1fr))]! [&_.App-toolbar--mobile_.ToolIcon]:min-h-(--control-lg)! [&_.App-toolbar--mobile_.ToolIcon]:min-w-(--control-lg)! [&_.mobile-misc-tools-container]:top-full! [&_.mobile-misc-tools-container]:mt-2!"
+      className="@container/canvas relative h-full min-h-0 min-w-0 w-full overflow-hidden bg-background @max-5xl/canvas:[&_.App-menu\_top]:grid-cols-[auto_minmax(0,1fr)]! @max-5xl/canvas:[&_.App-menu\_top]:gap-x-4! @max-5xl/canvas:[&_.App-menu\_top]:gap-y-8! @max-5xl/canvas:[&_.App-menu\_top>.layer-ui\_\_wrapper\_\_top-right]:col-span-2! [&_.App-top-bar>section]:w-full! [&_.App-top-bar>section>.Stack]:w-full! [&_.App-top-bar_.App-toolbar-container]:relative! [&_.App-top-bar_.App-toolbar-container]:w-full! [&_.App-top-bar_.App-toolbar-container]:grid-cols-1! [&_.App-top-bar_.App-toolbar-container]:grid-flow-row! [&_.App-toolbar--mobile]:w-full! [&_.App-toolbar--mobile]:max-w-full! [&_.App-toolbar--mobile>.Stack]:grid-flow-row! [&_.App-toolbar--mobile>.Stack]:grid-cols-[repeat(auto-fit,minmax(var(--control-lg),1fr))]! [&_.App-toolbar--mobile_.ToolIcon]:min-h-(--control-lg)! [&_.App-toolbar--mobile_.ToolIcon]:min-w-(--control-lg)! [&_.mobile-misc-tools-container]:top-full! [&_.mobile-misc-tools-container]:mt-2! [&_.welcome-screen-center]:flex!"
       role="region"
       aria-label="Canvas workspace"
       onDragOverCapture={(event: ReactDragEvent<HTMLDivElement>) => {
@@ -1177,7 +1178,23 @@ export function NixCanvas({
             event.preventDefault();
             onOpenItem(itemId);
           }}
-        />
+        >
+          {readOnly ? null : (
+            <WelcomeScreen>
+              <WelcomeScreen.Center>
+                <div className="flex max-w-xs flex-col gap-2 px-3 text-center">
+                  <Text as="h2" variant="h4">
+                    Start drawing
+                  </Text>
+                  <Text variant="bodySmall">
+                    Pick a shape or Text from the toolbar. Use Hand to move around the canvas and
+                    Selection to move a shape.
+                  </Text>
+                </div>
+              </WelcomeScreen.Center>
+            </WelcomeScreen>
+          )}
+        </Excalidraw>
       </div>
 
       {fileNotice === null && !uploading && !importing ? null : (

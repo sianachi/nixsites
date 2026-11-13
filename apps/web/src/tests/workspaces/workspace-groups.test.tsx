@@ -151,7 +151,7 @@ describe('the workspace groups hub', () => {
         revision: 1,
         groups: [
           { id: CLIENTS, name: 'Clients', workspaceIds: [] },
-          { id: '55555555-5555-4555-8555-555555555555', name: 'Home', workspaceIds: [] },
+          { id: '55555555-5555-4555-8555-555555555555', name: 'Homebase', workspaceIds: [] },
         ],
         pinnedWorkspaceIds: [],
       },

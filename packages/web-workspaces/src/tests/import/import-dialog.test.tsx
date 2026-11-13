@@ -222,12 +222,12 @@ describe('the import dialog', () => {
   it('says which document and Markdown sources it can import before anything is chosen', () => {
     open();
 
-    expect(screen.getByText(/Obsidian vault/)).toBeInTheDocument();
-    expect(screen.getByText(/folders containing Markdown notes/)).toBeInTheDocument();
-    expect(screen.getByText(/PDF, Word document, UTF-8 text file/)).toBeInTheDocument();
+    expect(screen.getByText(/Obsidian vault/i)).toBeInTheDocument();
+    expect(screen.getByText(/Markdown folder|folder selection/)).toBeInTheDocument();
+    expect(screen.getByText(/PDF, Word documents, UTF-8 text files/)).toBeInTheDocument();
     expect(screen.getByText(/Nix archive/)).toBeInTheDocument();
-    expect(screen.getByText(/original files are retained as children/)).toBeInTheDocument();
-    expect(screen.getByText(/does not perform OCR/)).toBeInTheDocument();
+    expect(screen.getByText(/original file stays attached/)).toBeInTheDocument();
+    expect(screen.getByText(/Scanned pages need text recognition/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Choose files' })).toBeInTheDocument();
   });
 

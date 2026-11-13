@@ -43,7 +43,7 @@ it.each([768, 1024, 1180])(
     await screen.findByRole('textbox', { name: 'Note title' });
     expect(screen.queryByRole('button', { name: 'Children' })).not.toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'Item settings' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Item settings' }));
     const dialog = screen.getByRole('dialog', { name: 'Item details' });
     expect(within(dialog).getByRole('complementary', { name: 'Item settings' })).toBeVisible();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));

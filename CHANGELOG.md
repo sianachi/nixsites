@@ -81,6 +81,17 @@ follows semantic versioning (`0.x` pre-1.0).
 - **Breaking:** Pet settings no longer return `personality`, `responseLength` or `motion`. Update
   clients of `/api/v1/me/pets/settings` to stop using those fields. Core gives companions the same default
   response-length guidance, with personal instructions available for individual preferences.
+- Create lists, boards and trackers with the suggested fields, and open Customize when you want to
+  change the setup. The workspace Calendar keeps the agenda visible and opens event details when
+  requested. Daily notes label the date and schedule control.
+- Use workspace search, view search and Settings search with clearer labels. Find theme and layout
+  preferences from Settings, and return to the same work after closing Settings.
+- Use Document and Companion labels across device layouts. Companion chats show their scope before
+  you send, and artifact previews show the values that will be shared.
+- See board column counts and matrix sections on phones, discover more spreadsheet columns and
+  editing controls, and get clearer guidance when using forms, smart lists, habits and canvas.
+- Choose a source for a new template, see when a built-in template will be added to the workspace,
+  and get clearer file import, workspace grouping, Trash and public-link recovery controls.
 
 - **Breaking:** Accounts can save one companion. Clients saving pet settings must send zero or
   one profile. Existing accounts keep their active companion and its conversation identity.
@@ -122,6 +133,12 @@ follows semantic versioning (`0.x` pre-1.0).
 - PDF exports draw Chinese, Japanese and Korean text instead of replacing it with "?". Arabic,
   Hebrew, Indic scripts and emoji are still replaced, and the export still reports it. Self-hosted
   builds outside the images run `scripts/fetch-pdf-fonts.sh` once.
+- Keep the companion launcher clear of Calendar Add and creation buttons on phones and tablets.
+  Give compact Settings controls 44 px touch targets and make inline API help links distinguishable.
+- Restore a moved graph item to its former sibling position with Undo when that position is known.
+  Keep graph item opening controls consistent with the current layout.
+- Keep Outline toolbar labels and the attachment State filter legible at phone widths, and announce
+  administrator loading and empty states outside the list. Retry a failed artifact load.
 - Workspace calendar events can be dragged between days in Month view, including across weeks.
 
 - Calendar Agenda shows each date below its day heading, keeping dates and Add buttons readable

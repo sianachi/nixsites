@@ -68,7 +68,7 @@ function titleOf(mode: NewItemDialogMode): string {
     case 'item':
       return `New ${NEW_ITEM_KINDS[mode.type].noun}`;
     case 'structured':
-      return 'New structured item';
+      return 'New list, board or tracker';
   }
 }
 
@@ -113,7 +113,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
   const [title, setTitle] = useState(props.initialTitle);
   const [prompt, setPrompt] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
-  const pickerRef = useRef<HTMLFormElement>(null);
+  const pickerRef = useRef<HTMLUListElement>(null);
   // Naming starts at once, including after a canvas or sheet is picked from the structured list.
   useEffect(() => {
     if (mode.kind === 'item') titleRef.current?.focus();
@@ -197,6 +197,12 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
 
   // Structured recipes and the workspace's templates in one dialog: both start a structured item.
   const { templates, templateStatus } = props;
+  const common = ['list', 'board', 'habit-tracker'];
+  const chooseRecipe = (recipe: StructuredRecipeId): void => {
+    done(() => {
+      props.onStartStructured(parentId, recipe);
+    });
+  };
   return (
     <Dialog
       open
@@ -217,9 +223,36 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
       }
     >
       <div className="flex min-w-0 flex-col gap-4">
-        <form
+        <ul
           ref={pickerRef}
           tabIndex={-1}
+          aria-label="Common layouts"
+          className="-mx-3 flex flex-col"
+        >
+          {common.map((id) => {
+            const recipe = STRUCTURED_RECIPES.find((entry) => entry.id === id);
+            if (recipe === undefined) return null;
+            return (
+              <Choice
+                key={id}
+                label={recipe.label}
+                icon={findViewKind(recipe.viewKind)?.icon ?? LayoutTemplate}
+                detail={
+                  id === 'list'
+                    ? 'Keep track of tasks or ideas'
+                    : id === 'board'
+                      ? 'Move cards from To do to Done'
+                      : 'Check off habits each day'
+                }
+                onChoose={() => {
+                  chooseRecipe(recipe.id);
+                }}
+              />
+            );
+          })}
+        </ul>
+        {placeControl}
+        <form
           className="flex flex-col gap-2 rounded-md border border-divider bg-surface p-3"
           onSubmit={(event) => {
             event.preventDefault();
@@ -249,7 +282,6 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
             Ask companion
           </Button>
         </form>
-        {placeControl}
         <div className="flex min-w-0 flex-col gap-1">
           <Text as="h3" variant="kicker" tone="muted" id="new-structured-canvas">
             Create or add
@@ -294,7 +326,9 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
           </ul>
         </div>
         {RECIPE_GROUPS.map((group) => {
-          const recipes = STRUCTURED_RECIPES.filter((recipe) => recipe.group === group);
+          const recipes = STRUCTURED_RECIPES.filter(
+            (recipe) => recipe.group === group && !common.includes(recipe.id),
+          );
           if (recipes.length === 0) return null;
           return (
             <div key={group} className="flex min-w-0 flex-col gap-1">
@@ -309,9 +343,7 @@ export function NewItemDialog(props: NewItemDialogProps): ReactNode {
                     icon={findViewKind(recipe.viewKind)?.icon ?? LayoutTemplate}
                     detail={recipe.detail}
                     onChoose={() => {
-                      done(() => {
-                        props.onStartStructured(parentId, recipe.id);
-                      });
+                      chooseRecipe(recipe.id);
                     }}
                   />
                 ))}

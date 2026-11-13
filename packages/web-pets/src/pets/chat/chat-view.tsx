@@ -239,7 +239,7 @@ export function ChatView({
                   aria-label="Chat sources"
                   className="max-h-48 overflow-y-auto px-3 pb-2 @sm:px-4"
                 >
-                  <fieldset aria-label="Pet answers from" className="flex flex-col gap-2">
+                  <fieldset aria-label="Companion answers from" className="flex flex-col gap-2">
                     <legend>
                       <Text as="span" variant="h5">
                         Sources for future turns
@@ -386,39 +386,44 @@ export function ChatView({
               ) : null}
               {chat.canSend ? (
                 <form
-                  className="mx-auto flex w-full max-w-2xl items-end gap-2 p-3 @sm:p-4"
+                  className="mx-auto flex w-full max-w-2xl flex-col gap-1 p-3 @sm:p-4"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void send();
                   }}
                 >
-                  <Textarea
-                    aria-label="Message"
-                    placeholder="Ask a follow-up…"
-                    value={draft}
-                    maxLength={8000}
-                    onChange={(event) => {
-                      pending.current = null;
-                      setDraft(event.currentTarget.value);
-                    }}
-                    onKeyDown={(event) => {
-                      // Ctrl or Cmd with Enter always sends; plain Enter sends only with a mouse and
-                      // keyboard (a phone has no Shift, so there it stays a newline).
-                      if (
-                        event.key === 'Enter' &&
-                        !event.nativeEvent.isComposing &&
-                        (event.metaKey ||
-                          event.ctrlKey ||
-                          (!event.shiftKey && window.matchMedia('(pointer: fine)').matches))
-                      ) {
-                        event.preventDefault();
-                        void send();
-                      }
-                    }}
-                  />
-                  <Button type="submit" disabled={busy || running || !draft.trim()}>
-                    Send
-                  </Button>
+                  <Text variant="caption" tone="muted">
+                    Chat note · {currentSources.map(nameOf).join(', ') || 'No available sources'}
+                  </Text>
+                  <div className="flex min-w-0 items-end gap-2">
+                    <Textarea
+                      aria-label="Message"
+                      placeholder="Ask a follow-up…"
+                      value={draft}
+                      maxLength={8000}
+                      onChange={(event) => {
+                        pending.current = null;
+                        setDraft(event.currentTarget.value);
+                      }}
+                      onKeyDown={(event) => {
+                        // Ctrl or Cmd with Enter always sends; plain Enter sends only with a mouse and
+                        // keyboard (a phone has no Shift, so there it stays a newline).
+                        if (
+                          event.key === 'Enter' &&
+                          !event.nativeEvent.isComposing &&
+                          (event.metaKey ||
+                            event.ctrlKey ||
+                            (!event.shiftKey && window.matchMedia('(pointer: fine)').matches))
+                        ) {
+                          event.preventDefault();
+                          void send();
+                        }
+                      }}
+                    />
+                    <Button type="submit" disabled={busy || running || !draft.trim()}>
+                      Send
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <Text
@@ -426,8 +431,8 @@ export function ChatView({
                   tone="muted"
                   className="mx-auto w-full max-w-2xl px-3 pb-3 @sm:px-4"
                 >
-                  Sending is unavailable. An editor can check source access and the pet connection,
-                  or update the sources.
+                  Sending is unavailable. An editor can check source access and the companion
+                  connection, or update the sources.
                 </Text>
               )}
             </div>

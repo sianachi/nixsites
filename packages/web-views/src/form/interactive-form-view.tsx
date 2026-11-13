@@ -342,7 +342,7 @@ export function InteractiveFormView({ container, view }: ViewRendererProps): Rea
         />
         <Text variant="note" tone="muted" className="wrap-anywhere">
           {saveResponse
-            ? 'Adds a child entry to this note.'
+            ? 'Saves a new entry inside this note.'
             : 'Answers stay in this view. Uploads and history are off.'}
         </Text>
       </div>

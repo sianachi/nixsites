@@ -90,14 +90,14 @@ describe('keeping an item', () => {
     renderAt(<App />, '/bookmarks');
 
     await screen.findByRole('heading', { name: 'Bookmarks' });
-    expect(await screen.findByText(/nothing kept yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no bookmarks yet/i)).toBeInTheDocument();
 
     const menu = await explorerActions(NOTE.title);
     await userEvent.click(menu.getByRole('menuitem', { name: 'Bookmark' }));
 
     // The shelf page is showing the same store the Explorer action just wrote to.
     await waitFor(() => {
-      expect(screen.queryByText(/nothing kept yet/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/no bookmarks yet/i)).not.toBeInTheDocument();
     });
   });
 });
@@ -112,7 +112,7 @@ describe('the bookmarks destination', () => {
     const menu = await screen.findByRole('menu', { name: 'Actions for Acquisition memo' });
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Remove bookmark' }));
 
-    expect(await screen.findByText(/nothing kept yet/i)).toBeVisible();
+    expect(await screen.findByText(/no bookmarks yet/i)).toBeVisible();
   });
 
   it('lists what has been kept', async () => {
@@ -175,14 +175,14 @@ describe('the bookmarks destination', () => {
     await userEvent.click(within(shelf).getByRole('button', { name: 'Bookmark Acquisition memo' }));
 
     expect(await screen.findByText(/1 bookmark is not shown/i)).toBeInTheDocument();
-    expect(screen.queryByText(/nothing kept yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no bookmarks yet/i)).not.toBeInTheDocument();
   });
 
   it('says a shelf with nothing on it is empty, not broken', async () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />, '/bookmarks');
 
-    expect(await screen.findByText(/nothing kept yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no bookmarks yet/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -207,7 +207,7 @@ describe('the bookmarks destination', () => {
 
     await screen.findByRole('heading', { name: 'Bookmarks' });
 
-    expect(screen.queryByText(/nothing kept yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no bookmarks yet/i)).not.toBeInTheDocument();
     expect(await screen.findByText(/1 bookmark is not shown/i)).toBeInTheDocument();
   });
 

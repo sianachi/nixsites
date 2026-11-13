@@ -39,11 +39,12 @@ export const petAnimationStates = [
 ] as const;
 export type PetAnimationState = (typeof petAnimationStates)[number];
 
-/** The launcher's two CSS boxes; the canvas backing store never changes size. */
-export type PetAvatarSize = 'regular' | 'compact' | 'preview';
+/** The avatar CSS sizes leave its canvas backing store unchanged. */
+export type PetAvatarSize = 'regular' | 'compact' | 'header' | 'preview';
 const avatarBox: Readonly<Record<PetAvatarSize, string>> = {
   regular: 'size-24',
   compact: 'size-14',
+  header: 'size-10',
   preview: 'size-40',
 };
 

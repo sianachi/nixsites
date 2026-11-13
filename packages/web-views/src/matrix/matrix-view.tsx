@@ -262,8 +262,8 @@ export function MatrixView(props: MatrixViewProps): ReactNode {
         <div className="flex flex-col gap-3">
           {rowGroups.map((row) => (
             <section key={row.group} aria-label={row.label} className="flex flex-col gap-2">
-              <Text as="h3" variant="h6">
-                {row.label}
+              <Text as="h3" variant="h6" className="sticky top-0 z-10 bg-background py-1">
+                {`${row.label} · ${String(row.items.length)}`}
               </Text>
               {columnGroups.map((column) => {
                 const address = { row: row.group, column: column.group };

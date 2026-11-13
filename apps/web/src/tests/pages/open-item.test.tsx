@@ -60,7 +60,7 @@ describe('an item nobody has configured', () => {
     const views = within(await screen.findByRole('navigation', { name: 'Views' }));
     expect(views.getByRole('button', { name: 'Document' })).toHaveAttribute('aria-current', 'page');
     expect(views.queryByRole('button', { name: 'Comments' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Item settings' }));
     const settings = within(await screen.findByRole('complementary', { name: 'Item settings' }));
     await userEvent.click(settings.getByRole('button', { name: 'Comments' }));
     expect(await settings.findByRole('textbox', { name: 'New comment' })).toBeVisible();
@@ -77,7 +77,7 @@ describe('an item nobody has configured', () => {
     expect(await screen.findByRole('button', { name: /settings/i })).toBeVisible();
   });
 
-  it('keeps note chat and Settings beside the title and focused commands in Item actions', async () => {
+  it('keeps note chat and Item settings beside the title and focused commands in Item actions', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
@@ -89,7 +89,7 @@ describe('an item nobody has configured', () => {
       within(controls)
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
-    ).toEqual(['Chat about this note', 'Settings', 'Item actions']);
+    ).toEqual(['Chat about this note', 'Item settings', 'Item actions']);
 
     await userEvent.click(actions);
     expect(screen.queryByRole('menuitem', { name: 'Bookmark' })).not.toBeInTheDocument();

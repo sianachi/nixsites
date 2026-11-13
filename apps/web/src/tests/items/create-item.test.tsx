@@ -42,8 +42,8 @@ async function openNew(
   const capture = await screen.findByRole('dialog', { name: 'New note' });
   if (initialTitle)
     await user.type(within(capture).getByRole('textbox', { name: 'Note title' }), initialTitle);
-  await user.click(within(capture).getByRole('button', { name: 'Structured item' }));
-  const picker = await screen.findByRole('dialog', { name: 'New structured item' });
+  await user.click(within(capture).getByRole('button', { name: 'List, board or tracker' }));
+  const picker = await screen.findByRole('dialog', { name: 'New list, board or tracker' });
   const choice = { 'New canvas': /^Canvas/, 'New sheet': /^Sheet/ }[entry];
   if (choice === undefined) return picker;
   await user.click(within(picker).getByRole('button', { name: choice }));
@@ -158,7 +158,12 @@ describe('the new-item menu', () => {
 
     await screen.findByRole('button', { name: 'Engineering' });
     const user = userEvent.setup();
-    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Planning chat');
+    const dialog = await openNew(
+      user,
+      'List, board or tracker',
+      'New list, board or tracker',
+      'Planning chat',
+    );
     expect(within(dialog).getByRole('button', { name: /^Upload/ })).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Inside Engineering' }));
     await user.click(within(dialog).getByRole('button', { name: /^Chat/ }));
@@ -212,15 +217,20 @@ describe('the new-item menu', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Launch planning');
-    // Every recipe, under the headings the registry declares, rather than the old subset.
-    const organise = within(dialog).getByRole('list', { name: 'Organise' });
-    expect(within(organise).getAllByRole('button').length).toBeGreaterThan(3);
-    expect(within(organise).getByText(/columns defined by a select field/i)).toBeVisible();
+    const dialog = await openNew(
+      user,
+      'List, board or tracker',
+      'New list, board or tracker',
+      'Launch planning',
+    );
+    const common = within(dialog).getByRole('list', { name: 'Common layouts' });
+    expect(within(common).getAllByRole('button')).toHaveLength(3);
+    expect(within(common).getByText('Move cards from To do to Done')).toBeVisible();
+    expect(within(dialog).getByRole('list', { name: 'Organise' })).toBeVisible();
     expect(within(dialog).getByRole('list', { name: 'Analyse' })).toBeVisible();
     expect(within(dialog).getByRole('button', { name: /^chart/i })).toBeVisible();
     expect(within(dialog).getAllByRole('button', { name: /^calendar/i })[0]).toBeVisible();
-    await user.click(within(organise).getByRole('button', { name: /^Board/ }));
+    await user.click(within(common).getByRole('button', { name: /^Board/ }));
     expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Launch planning');
   });
 
@@ -230,7 +240,12 @@ describe('the new-item menu', () => {
     renderAt(<App />);
 
     await screen.findByRole('button', { name: 'Engineering' });
-    const dialog = await openNew(user, 'Structured item', 'New structured item', 'Launch tracker');
+    const dialog = await openNew(
+      user,
+      'List, board or tracker',
+      'New list, board or tracker',
+      'Launch tracker',
+    );
     const templates = within(dialog).getByRole('list', { name: 'From a template' });
     await user.click(await within(templates).findByRole('button', { name: /^kanban/i }));
 

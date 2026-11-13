@@ -128,6 +128,7 @@ describe('the demo', () => {
 
     expect(await screen.findByText('Press kit', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByText('Product launch').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Make Nix yours')).not.toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
 

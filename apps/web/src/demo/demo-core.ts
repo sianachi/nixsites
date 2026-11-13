@@ -328,7 +328,7 @@ type MirrorItem = NonNullable<Awaited<ReturnType<ViewSource['item']>>>;
  */
 export function createDemoFetch(): typeof fetch {
   const items = new Map(sampleItems().map((entry) => [entry.id, entry]));
-  let uiSettings: Json = { 'editor.viewSuggestions': 'off' };
+  let uiSettings: Json = { 'editor.viewSuggestions': 'off', 'shell.preferencesSeen': true };
   let uiSettingsRevision = 0;
   const demoComment = (authorName: string, body: string): Comment => ({
     id: nextId(),

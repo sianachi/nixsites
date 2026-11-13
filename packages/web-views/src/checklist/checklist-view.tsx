@@ -121,7 +121,7 @@ export function ChecklistView(props: ChecklistViewProps): ReactNode {
   const undo = useUndo();
   const commands = useOptionalItemCommands();
   const [editing, setEditing] = useState<string | null>(null);
-  // Lines fading out of "Clear done" and titles just added (for the enter motion).
+  // Lines fading out of "Remove completed items" and titles just added (for the enter motion).
   const [leaving, setLeaving] = useState<ReadonlySet<string>>(() => new Set());
   const [entering, setEntering] = useState<ReadonlySet<string>>(() => new Set());
   // The newest children, for an undo that runs later and must see what exists by then.
@@ -311,14 +311,14 @@ export function ChecklistView(props: ChecklistViewProps): ReactNode {
           Nothing on this checklist yet.
         </Text>
       ) : (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Text variant="bodySmall" tone="muted" as="p" role="status" aria-live="polite">
             {`${String(doneCount)} of ${String(items.length)} done`}
           </Text>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {commands !== null && doneCount > 0 ? (
               <Button variant="subtle" onClick={clearDone}>
-                Clear done
+                Remove completed items
               </Button>
             ) : null}
             <Button

@@ -113,9 +113,10 @@ describe('public link page', () => {
     expect(screen.queryByRole('link', { name: 'Download' })).toBeNull();
   });
 
-  it('gives a dead link a plain message with no reason', async () => {
+  it('gives a dead link a recovery step without revealing the reason', async () => {
     renderLink(() => new Response(null, { status: 404 }));
     expect(await screen.findByText('This link is unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Ask the sender for a new link.')).toBeVisible();
     expect(screen.queryByText(/revoked|expired|trashed/i)).toBeNull();
   });
 });

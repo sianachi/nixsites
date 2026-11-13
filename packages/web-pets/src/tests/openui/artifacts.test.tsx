@@ -76,10 +76,12 @@ describe('an artifact', () => {
     open();
     expect(await screen.findByText('3')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getAllByText('4')).toHaveLength(2);
     await new Promise((resolve) => setTimeout(resolve, 1200));
     expect(bodies.planEdit).not.toHaveBeenCalled();
-    expect(screen.getByText(/"\$count":4/)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Changes everyone will see' })).toHaveTextContent(
+      /count\s*4/,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Save values for everyone' }));
     await waitFor(() => {
       expect(bodies.applyEdit).toHaveBeenCalledTimes(1);
@@ -97,6 +99,20 @@ describe('an artifact', () => {
         screen.queryByRole('button', { name: 'Save values for everyone' }),
       ).not.toBeInTheDocument();
     });
+  });
+
+  it('retries a failed load and previews changes using the input label', async () => {
+    bodies.read.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({
+      markdown: fenced('root = NumberInput("Launch video", $video, 0)\n$video = 20'),
+    });
+    open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    fireEvent.change(await screen.findByRole('spinbutton', { name: 'Launch video' }), {
+      target: { value: '30' },
+    });
+    expect(screen.getByRole('region', { name: 'Changes everyone will see' })).toHaveTextContent(
+      /Launch video\s*30/,
+    );
   });
 
   it('adds a values block on the first save', async () => {
@@ -119,7 +135,7 @@ describe('an artifact', () => {
     });
     open();
     fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
-    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getAllByText('4')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Edit source' })).not.toBeInTheDocument();
   });
 
@@ -127,7 +143,7 @@ describe('an artifact', () => {
     bodies.append.mockRejectedValue(new Error('forbidden'));
     open();
     fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
-    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getAllByText('1')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Save values for everyone' }));
     expect(await screen.findByText(/can't be saved here/)).toBeInTheDocument();
   });

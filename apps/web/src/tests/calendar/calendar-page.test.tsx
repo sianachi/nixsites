@@ -98,7 +98,7 @@ describe('the calendar destination', () => {
     renderAt(<App />, '/calendar?grain=week');
 
     await screen.findByRole('heading', { name: 'Calendar' });
-    const grains = await screen.findByRole('group', { name: /calendar grain/i });
+    const grains = await screen.findByRole('group', { name: /calendar period/i });
     expect(within(grains).getAllByRole('button')).toHaveLength(4);
     expect(within(grains).getByRole('button', { name: 'Week' })).toHaveAttribute(
       'aria-current',
@@ -112,7 +112,7 @@ describe('the calendar destination', () => {
 
     await screen.findByRole('heading', { name: 'Calendar' });
 
-    const grains = await screen.findByRole('group', { name: /calendar grain/i });
+    const grains = await screen.findByRole('group', { name: /calendar period/i });
     expect(within(grains).getByRole('button', { name: 'Agenda' })).toHaveAttribute(
       'aria-current',
       'true',
@@ -235,7 +235,7 @@ describe('what the calendar admits to', () => {
     stubCoreApi({ calendarEntries: [] });
     renderAt(<App />, '/calendar?grain=month');
 
-    expect(await screen.findByText(/nothing scheduled/i)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Create a calendar' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next month' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Next month' }));
@@ -352,7 +352,16 @@ describe('filtering the calendar by note', () => {
     await screen.findByRole('heading', { name: 'Calendar' });
 
     expect(await screen.findByRole('button', { name: /^Standup/i })).toBeInTheDocument();
-    expect(screen.getByText(/showing 2 of 2 notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing 1 of 2 notes/i)).toBeInTheDocument();
+  });
+
+  it('can clear a calendar filter in a month with no matching events', async () => {
+    stubCoreApi({ calendarEntries: [] });
+    renderAt(<App />, `/calendar?grain=month&notes=${CONTAINER_ONE}`);
+
+    expect(await screen.findByText('No events from the selected calendars')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(screen.queryByRole('group', { name: 'Notes to show' })).not.toBeInTheDocument();
   });
 
   it('offers no filter when nothing placed anything', async () => {

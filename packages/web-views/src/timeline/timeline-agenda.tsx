@@ -1,4 +1,5 @@
-import { Button, Text, cn, focusRing } from '@nix/ui';
+import { Button, Icon, Text, cn, focusRing } from '@nix/ui';
+import { CalendarDays } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { CalendarEntryMenu } from '../calendar/calendar-entry-menu';
@@ -60,10 +61,11 @@ function AgendaRow({
               aside.setRescheduling(aside.rescheduling === item.id ? null : item.id);
             }}
             className={cn(
-              'flex min-h-(--control-md) w-fit max-w-full items-center rounded-md px-2 text-left pointer-coarse:min-h-(--control-lg)',
+              'flex min-h-(--control-md) w-fit max-w-full items-center gap-1 rounded-md px-2 text-left hover:bg-surface any-pointer-coarse:min-h-(--control-lg)',
               focusRing,
             )}
           >
+            <Icon icon={CalendarDays} size="sm" className="shrink-0 text-muted" />
             <Text
               as="span"
               variant="caption"
@@ -123,7 +125,10 @@ export function TimelineAgenda({
   }
 
   return (
-    <section aria-label="Timeline schedule">
+    <section aria-label="Timeline schedule" className="flex flex-col gap-3">
+      <Text as="h2" variant="h4">
+        Schedule by date
+      </Text>
       <ul className="flex flex-col">{entries}</ul>
     </section>
   );

@@ -22,6 +22,8 @@ it('names the setup steps and lets the keyboard toggle preview without losing th
   await screen.findByRole('heading', { name: 'New Board' });
 
   expect(screen.getAllByRole('main')).toHaveLength(1);
+  expect(screen.queryByRole('navigation', { name: 'Creation steps' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Customize' }));
   const steps = screen.getByRole('navigation', { name: 'Creation steps' });
   const current = within(steps).getByRole('button', { current: 'step' });
   expect(within(current).getByText('Basics').parentElement).not.toHaveClass('hidden');

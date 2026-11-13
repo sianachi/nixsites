@@ -1,4 +1,5 @@
 import { Button } from '@nix/ui';
+import { MessageSquare } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { View } from '@nix/web-collections/core/container-model';
 import { ViewSwitcher } from './view-switcher';
@@ -34,7 +35,7 @@ function ItemViews(): ReactNode {
       activeViewId={active}
       defaultViewId="list"
       documentLabel="Document"
-      comments
+      context={{ id: 'comments', label: 'Comments', icon: MessageSquare }}
       onSelect={select}
       addView={<Button variant="secondary">Add view</Button>}
       viewActions={(id) =>

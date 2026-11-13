@@ -105,8 +105,8 @@ export function ViewTools({
     <Input
       ref={searchInput}
       type="search"
-      aria-label="Search titles"
-      placeholder="Search titles"
+      aria-label="Search this view"
+      placeholder="Search titles in this view"
       className={compactSearch ? 'min-w-0 flex-1' : 'w-48'}
       value={viewState.search}
       onChange={(event) => {
@@ -145,8 +145,8 @@ export function ViewTools({
       {compactSearch ? (
         <Button
           variant={narrow ? 'secondary' : 'icon'}
-          aria-label="Search titles"
-          title="Search titles"
+          aria-label="Search this view"
+          title="Search titles in this view"
           className={narrow ? phoneButton : ''}
           aria-expanded={showSearch}
           onClick={() => {

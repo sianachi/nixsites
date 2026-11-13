@@ -121,6 +121,20 @@ describe('Settings > Site approvals', () => {
     expect(await screen.findByText(/No site is waiting for approval/)).toBeVisible();
   });
 
+  it('explains why site approvals are unavailable on a server without publishing', async () => {
+    stubCoreApi({ siteApprover: true });
+    layerRoutes((call) =>
+      call.path === '/api/v1/sites/approvals'
+        ? reply({ code: 'sites.not_configured' }, 503)
+        : undefined,
+    );
+    renderAt(<App />, '/settings?tab=site-approvals');
+
+    expect(await screen.findByText('Site publishing is unavailable')).toBeVisible();
+    expect(screen.getByText(/ask your server administrator/i)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  });
+
   it('shows the error panel with a retry when the list is refused', async () => {
     stubCoreApi({ siteApprover: true });
     serve({ refuse: true });

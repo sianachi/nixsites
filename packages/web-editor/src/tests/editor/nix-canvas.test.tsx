@@ -141,6 +141,7 @@ vi.mock('@excalidraw/excalidraw', async () => {
   return {
     CaptureUpdateAction: { NEVER: 'never', IMMEDIATELY: 'immediately' },
     Excalidraw: MockExcalidraw,
+    WelcomeScreen: Object.assign(() => null, { Center: () => null }),
     restoreElements: vi.fn((elements: readonly OrderedExcalidrawElement[]) => elements),
     reconcileElements: excalidrawHarness.reconcileElements,
     getDataURL: excalidrawHarness.getDataURL,

@@ -1,5 +1,5 @@
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
-import { Button, Field, Menu, Select, Icon, Text, cn, useUndo } from '@nix/ui';
+import { Button, Field, Menu, Segmented, Select, Icon, Text, cn, useUndo } from '@nix/ui';
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -307,23 +307,37 @@ export function BoardView(props: BoardViewProps): ReactNode {
       )}
 
       {narrow && selectedColumn ? (
-        <Field label="Board column">
-          {(control) => (
-            <Select
-              {...control}
+        <div className="sticky top-0 z-10 bg-background">
+          {columns.length <= 4 ? (
+            <Segmented
+              label="Board column"
+              options={columns.map((column) => ({
+                value: columnId(column),
+                label: `${column.label} (${String(column.items.length)})`,
+              }))}
               value={columnId(selectedColumn)}
-              onChange={(event) => {
-                setMobileColumn(event.target.value);
-              }}
-            >
-              {columns.map((column) => (
-                <option key={columnId(column)} value={columnId(column)}>
-                  {column.label} ({column.items.length})
-                </option>
-              ))}
-            </Select>
+              onChange={setMobileColumn}
+            />
+          ) : (
+            <Field label="Board column">
+              {(control) => (
+                <Select
+                  {...control}
+                  value={columnId(selectedColumn)}
+                  onChange={(event) => {
+                    setMobileColumn(event.target.value);
+                  }}
+                >
+                  {columns.map((column) => (
+                    <option key={columnId(column)} value={columnId(column)}>
+                      {column.label} ({column.items.length})
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
           )}
-        </Field>
+        </div>
       ) : null}
       <div
         className={cn(

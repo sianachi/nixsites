@@ -16,6 +16,7 @@ const workspace: Workspace = {
   name: 'Research',
   versionRetentionDays: 90,
   storageQuotaBytes: 0,
+  storageUsedBytes: 0,
   createdAt: '2026-01-01T00:00:00Z',
   kind: 'shared',
   canRename: true,

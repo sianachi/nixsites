@@ -47,6 +47,7 @@ export const Desktop = {
     const canvas = within(canvasElement);
     const workspace = canvas.getByRole('region', { name: 'Canvas workspace' });
     await canvas.findByRole('region', { name: 'Shapes' });
+    await canvas.findByRole('heading', { name: 'Start drawing' });
     await waitFor(() => {
       const canvasRect = workspace.getBoundingClientRect();
       const controls = workspace.querySelectorAll<HTMLElement>('button, .ToolIcon');

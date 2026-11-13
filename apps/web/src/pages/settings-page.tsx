@@ -1,4 +1,4 @@
-import { Icon, Input, Nav, Text } from '@nix/ui';
+import { Button, Icon, Input, Nav, Text } from '@nix/ui';
 import {
   Bell,
   Building2,
@@ -19,7 +19,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 
@@ -48,6 +48,8 @@ import {
   type SettingsTab,
 } from './settings-tab';
 import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
+import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
+import { SettingsNavigationContext } from './settings-navigation-context';
 
 const fromState = z.object({ from: z.string() });
 const drilledState = z.object({ drilled: z.literal(true) });
@@ -64,13 +66,24 @@ const GROUPS: readonly { name: Group; label: string }[] = [
 
 // What is yours, then the workspace's, then the operator's: each section keeps its id so every
 // `?tab=` link still lands where it did. The retired `publishing` id resolves to General.
-const settingsSections: readonly { id: SettingsTab; label: string; group: Group; gate?: Gate }[] = [
-  { id: 'preferences', label: 'General', group: 'You' },
-  { id: 'editor', label: 'Editor', group: 'You' },
+const settingsSections: readonly {
+  id: SettingsTab;
+  label: string;
+  group: Group;
+  gate?: Gate;
+  keywords?: string;
+}[] = [
+  {
+    id: 'preferences',
+    label: 'General',
+    group: 'You',
+    keywords: 'appearance theme light dark palette layout sidebar publishing',
+  },
+  { id: 'editor', label: 'Editor', group: 'You', keywords: 'writing keyboard formatting' },
   { id: 'daily-notes', label: 'Daily notes', group: 'You' },
-  { id: 'notifications', label: 'Notifications', group: 'You' },
-  { id: 'integrations', label: 'Calendars', group: 'You' },
-  { id: 'pets', label: 'Pets', group: 'You' },
+  { id: 'notifications', label: 'Notifications', group: 'You', keywords: 'inbox reminders push' },
+  { id: 'integrations', label: 'Calendars', group: 'You', keywords: 'sync google outlook' },
+  { id: 'pets', label: 'Companion', group: 'You', keywords: 'pets ai chat' },
   { id: 'about', label: 'About', group: 'You' },
   { id: 'workspace', label: 'Workspace', group: 'Workspace' },
   { id: 'access-tokens', label: 'Access tokens', group: 'Workspace' },
@@ -110,13 +123,14 @@ const sectionIcons: Record<SettingsTab, LucideIcon> = {
 };
 
 function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
+  const navigation = useContext(SettingsNavigationContext);
   switch (props.id) {
     case 'workspace':
       return <WorkspaceManagementSection dailyNotesSwitch={<DailyNotesSwitch />} />;
     case 'editor':
       return <EditorPreferencesSection />;
     case 'preferences':
-      return <PreferencesSection />;
+      return <PreferencesSection onOpenLayout={navigation?.openLayout} />;
     case 'notifications':
       return <NotificationsSection />;
     case 'daily-notes':
@@ -151,15 +165,21 @@ export function SettingsPage(): ReactElement {
   const { requested } = useSettingsTab();
   const narrow = useNarrowViewport();
   const inDialog = useInRouteDialog();
+  const settingsNavigation = useContext(SettingsNavigationContext);
   const { pathname, state } = useLocation() as { pathname: string; state: unknown };
   // Display hints: Core refuses the operator, approver and administrator routes to everyone else.
   const capabilities = useCapabilities();
   const sections = settingsSections.filter((section) => section.gate?.(capabilities) !== false);
-  const offered = sections.some((section) => section.id === requested) ? requested : null;
-  // Wide always shows a section; the phone shows the list until one is chosen.
-  const activeTab = narrow ? offered : (offered ?? DEFAULT_SETTINGS_TAB);
+  // Wide shows a default section only when the address asks for none.
+  const activeTab = requested ?? (narrow ? null : DEFAULT_SETTINGS_TAB);
+  const unavailable = activeTab !== null && !sections.some((section) => section.id === activeTab);
 
   const [query, setQuery] = useState('');
+  const terms = query.trim().toLowerCase().split(/\s+/u);
+  const matching = sections.filter((section) => {
+    const searchable = `${section.label} ${section.keywords ?? ''}`.toLowerCase();
+    return terms.every((term) => searchable.includes(term));
+  });
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const nav = useRef<HTMLDivElement>(null);
@@ -186,16 +206,19 @@ export function SettingsPage(): ReactElement {
 
   const hrefFor = (id: SettingsTab): string => `${pathname}?${SETTINGS_TAB_PARAM}=${id}`;
   const navigation = (
-    <div
-      ref={nav}
-      className={`flex flex-col gap-4 ${narrow ? 'px-3 pb-6' : 'sticky top-0 w-48 shrink-0 self-start'}`}
-    >
+    <div ref={nav} className={narrow ? 'flex flex-col gap-4 px-3 pb-6' : 'flex flex-col gap-4'}>
+      <Input
+        type="search"
+        aria-label="Search settings"
+        placeholder="Search settings"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+        }}
+        className={narrow ? 'w-full rounded-card bg-surface-raised' : 'w-full'}
+      />
       {GROUPS.map((group) => {
-        const items = sections.filter(
-          (section) =>
-            section.group === group.name &&
-            (!narrow || section.label.toLowerCase().includes(query.trim().toLowerCase())),
-        );
+        const items = matching.filter((section) => section.group === group.name);
         return items.length === 0 ? null : (
           <div key={group.name} className="flex flex-col gap-1">
             <Text
@@ -210,7 +233,7 @@ export function SettingsPage(): ReactElement {
             <div
               className={
                 narrow
-                  ? 'overflow-hidden rounded-card [&_a]:flex [&_a]:min-h-11 [&_a]:items-center [&_a]:gap-3 [&_a]:bg-surface-raised [&_a]:px-3'
+                  ? 'overflow-hidden rounded-card [&_a]:flex [&_a]:min-h-(--control-lg) [&_a]:items-center [&_a]:gap-3 [&_a]:bg-surface-raised [&_a]:px-3'
                   : ''
               }
             >
@@ -246,11 +269,8 @@ export function SettingsPage(): ReactElement {
           </div>
         );
       })}
-      {narrow &&
-      !sections.some((section) =>
-        section.label.toLowerCase().includes(query.trim().toLowerCase()),
-      ) ? (
-        <Text as="p" tone="muted" role="status" className="px-3">
+      {matching.length === 0 ? (
+        <Text as="p" tone="muted" role="status" className={narrow ? 'px-3' : ''}>
           No settings match “{query.trim()}”.
         </Text>
       ) : null}
@@ -261,37 +281,32 @@ export function SettingsPage(): ReactElement {
     <div ref={scroller} className={`${paneScroller} flex flex-col ${narrow ? 'bg-surface' : ''}`}>
       {inDialog ? null : (
         <header
-          className={`px-3 py-3 sm:px-6 sm:py-4 ${narrow ? 'relative flex items-center justify-center' : 'border-b border-divider'}`}
+          className={
+            narrow
+              ? 'grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-1'
+              : 'flex items-center justify-between gap-2 border-b border-divider px-6 py-4'
+          }
         >
-          <Text variant="h2" as="h1" className={narrow && activeTab !== null ? 'sr-only' : ''}>
+          <Text
+            variant="h2"
+            as="h1"
+            className={narrow ? (activeTab === null ? 'col-start-2' : 'sr-only') : ''}
+          >
             Settings
           </Text>
-          {narrow ? (
-            <Link
-              to="/"
-              aria-label="Close settings"
-              className="absolute right-3 flex size-9 items-center justify-center rounded-full bg-surface-raised"
-            >
-              <Icon icon={X} size="sm" />
-            </Link>
-          ) : null}
+          <Button
+            variant="icon"
+            aria-label="Close settings"
+            className={narrow ? 'col-start-3 size-(--control-lg) justify-self-end' : ''}
+            onClick={() => {
+              if (settingsNavigation?.close) settingsNavigation.close();
+              else void navigate('/', { replace: true });
+            }}
+          >
+            <Icon icon={X} size="sm" />
+          </Button>
         </header>
       )}
-
-      {narrow && activeTab === null ? (
-        <div className="px-3 pb-3">
-          <Input
-            type="search"
-            aria-label="Search settings"
-            placeholder="Search"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-            className="w-full rounded-card bg-surface-raised"
-          />
-        </div>
-      ) : null}
 
       {narrow && activeTab !== null ? (
         <Link
@@ -313,14 +328,25 @@ export function SettingsPage(): ReactElement {
       ) : null}
 
       <div className={narrow ? 'min-w-0' : `flex min-w-0 gap-6 ${inDialog ? 'pt-2' : 'p-6'}`}>
-        {narrow && activeTab !== null ? null : navigation}
+        {narrow && activeTab !== null ? null : narrow ? (
+          navigation
+        ) : (
+          <div className="sticky top-0 w-48 shrink-0 self-start">{navigation}</div>
+        )}
         {activeTab === null ? null : (
           <div
             ref={content}
             tabIndex={-1}
             className="min-w-0 max-w-2xl flex-1 break-words p-3 outline-none sm:p-0"
           >
-            <SectionBody id={activeTab} />
+            {unavailable ? (
+              <EmptyPanel
+                title="This setting is unavailable"
+                detail="Your account or this server does not offer this setting."
+              />
+            ) : (
+              <SectionBody id={activeTab} />
+            )}
           </div>
         )}
       </div>

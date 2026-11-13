@@ -328,6 +328,17 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
         }}
       />
 
+      {totalWidth > viewport.width ? (
+        <Text
+          as="p"
+          variant="caption"
+          tone="muted"
+          className="hidden py-1 any-pointer-coarse:block"
+        >
+          Scroll sideways to see more columns.
+        </Text>
+      ) : null}
+
       <GridHeader
         columns={columns}
         visibleCols={visibleCols}

@@ -15,19 +15,25 @@ export function BasicsStep({
   recipe,
   draft,
   onChange,
+  showFields = true,
 }: {
   readonly recipe: StructuredRecipe;
   readonly draft: StudioDraft;
   readonly onChange: (draft: StudioDraft) => void;
+  readonly showFields?: boolean;
 }): ReactNode {
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div className="max-w-prose">
-        <Text variant="h3" as="h2">
-          Basics
-        </Text>
+        {showFields ? (
+          <Text variant="h3" as="h2">
+            Basics
+          </Text>
+        ) : null}
         <Text variant="note" tone="muted" className="mt-1">
-          {recipe.detail}
+          {recipe.id === 'board' && !showFields
+            ? 'Start with To do, Doing, and Done columns.'
+            : recipe.detail}
         </Text>
       </div>
       <Field label="Name">
@@ -41,7 +47,7 @@ export function BasicsStep({
           />
         )}
       </Field>
-      {draft.view.kind === 'query' ? (
+      {!showFields ? null : draft.view.kind === 'query' ? (
         <SmartListSetup draft={draft} onChange={onChange} />
       ) : (
         <FieldsEditor

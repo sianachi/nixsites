@@ -141,6 +141,31 @@ describe('launching the installed app', () => {
     expect(writes.bodies).toHaveLength(1);
   });
 
+  it('saves a share in the chosen workspace and opens the new note there', async () => {
+    const user = userEvent.setup();
+    const destination = {
+      ...STUB_WORKSPACE,
+      id: 'a7777777-0000-4000-8000-000000000005',
+      name: 'Research',
+    };
+    stubCoreApi({ workspaces: [STUB_WORKSPACE, destination] });
+    const writes = recordWrites();
+    renderLaunch(`/w/${STUB_WORKSPACE.id}/launch/share?text=Reading`);
+
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Destination workspace' }),
+      destination.id,
+    );
+    expect(screen.getByRole('heading', { name: 'Save this to Research?' })).toBeVisible();
+    expect(writes.creates).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Save note' }));
+
+    await waitFor(() => {
+      expect(location()).toMatch(new RegExp(`^/w/${destination.id}\\?item=`, 'u'));
+    });
+    expect(writes.creates[0]).toContain(`/workspaces/${destination.id}/items`);
+  });
+
   it('leaves the workspace untouched when the person cancels a share', async () => {
     const user = userEvent.setup();
     stubCoreApi();

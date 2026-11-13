@@ -1,7 +1,14 @@
 import { memoryModeOf } from './memory-mode';
 import { type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button } from '@nix/ui';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
@@ -45,7 +52,11 @@ export function petPageHref(workspaceId: string): string {
   return `/w/${workspaceId}/pet`;
 }
 
-export function PetCompanion(): ReactElement | null {
+export function PetCompanion({
+  dock,
+}: {
+  readonly dock?: ((launcher: ReactElement) => ReactNode) | null | undefined;
+} = {}): ReactElement | null {
   const { workspaceId } = useWorkspace();
   const { saved } = usePetSettings();
   const { pathname } = useLocation();
@@ -70,6 +81,7 @@ export function PetCompanion(): ReactElement | null {
       workspaceId={workspaceId}
       pet={pet}
       settings={saved.settings}
+      dock={dock}
     />
   );
 }
@@ -78,10 +90,12 @@ function Companion({
   workspaceId,
   pet,
   settings,
+  dock,
 }: {
   readonly workspaceId: string;
   readonly pet: PetProfile;
   readonly settings: PetSettings;
+  readonly dock: ((launcher: ReactElement) => ReactNode) | null | undefined;
 }) {
   // `?pet=design` (the template library's "Design one with your pet") opens the conversation.
   const [search] = useSearchParams();
@@ -142,9 +156,11 @@ function Companion({
   const narrow = useNarrowViewport();
   const surface = usePetSurface();
   const drawer = surface === 'drawer';
+  const docked = dock !== undefined;
+  const movable = !drawer && !docked;
   const wideEnoughForDrawer = useMediaQuery(WIDE_ENOUGH_FOR_NON_PHONE_LAYOUT);
   const fullscreen = drawer ? !wideEnoughForDrawer : narrow;
-  const floatingPosition = drawer ? null : position;
+  const floatingPosition = movable ? position : null;
   const opensAsPage = chatOpensAsPage(surface, narrow);
   // A tab in the open pane where tabs are drawn, the companion page elsewhere.
   const openChat = useOpenChat();
@@ -161,7 +177,7 @@ function Companion({
   // workspace, but it draws nothing; a panel already open when the preference changes stays until
   // it is closed.
   const floats = launcherFloats(surface, narrow) || open;
-  const launcherHidden = open || !floats || (narrow && keyboardVisible);
+  const launcherHidden = open || !floats || dock === null || (narrow && keyboardVisible);
   useEffect(() => {
     if (!designEntry) return;
     let active = true;
@@ -238,6 +254,7 @@ function Companion({
         return unchanged ? current : next;
       });
     };
+    if (!movable) return;
     recompute();
     window.addEventListener('resize', recompute);
     window.addEventListener('orientationchange', recompute);
@@ -258,7 +275,7 @@ function Companion({
       window.removeEventListener('nix-mobile-nav-resized', recompute);
       window.removeEventListener('nix-mobile-note-toolbar-resized', recompute);
     };
-  }, [keyboardVisible]);
+  }, [keyboardVisible, movable]);
   // The launcher is clamped to the viewport at its own small size, so the panel, which is far
   // larger, would run off the right or bottom edge when it opens from a dragged position. While
   // open, the panel keeps its corner nearest the launcher where the launcher was and is then
@@ -306,11 +323,109 @@ function Companion({
     'bottom-[max(var(--mobile-nav-height,calc(3.5rem+env(safe-area-inset-bottom))),var(--mobile-note-toolbar-clearance,0%))]'; // design-token-exempt: navigation and writing toolbar clearance are measured at runtime.
   // Above the status bar when it is showing, where it has always been when it is not.
   const wideOffset = 'lg:bottom-[calc(var(--status-bar-height,0px)+1rem)]'; // design-token-exempt: the status bar's height is measured at runtime.
+  const launcherButton = (
+    <Button
+      ref={launcher}
+      variant="ghost"
+      className={`relative ${docked ? 'size-(--control-lg) shrink-0 p-0' : 'h-auto p-1 hover:bg-transparent active:bg-transparent'} ${movable ? 'touch-none' : ''} ${launcherHidden ? 'hidden' : ''}`}
+      aria-expanded={opensAsPage ? undefined : open}
+      aria-label={`${open ? `Close ${pet.name}` : opensAsPage ? `Open ${pet.name}` : `Talk with ${pet.name}`}${
+        !open && toolPending ? ' (needs approval)' : !open && unseenReply ? ' (new reply)' : ''
+      }`}
+      onMouseEnter={() => {
+        setHover(true);
+      }}
+      onMouseLeave={() => {
+        setHover(false);
+      }}
+      onClick={(event) => {
+        if (movable && suppressClick.current) {
+          suppressClick.current = false;
+          return;
+        }
+        if (opensAsPage && !open) {
+          openPage();
+          return;
+        }
+        const nextOpen = !open;
+        openedFrom.current =
+          nextOpen && movable ? event.currentTarget.getBoundingClientRect() : null;
+        if (!nextOpen) setPanelPosition(null);
+        setOpen(nextOpen);
+      }}
+      onPointerDown={(event) => {
+        if (!movable || event.button !== 0) return;
+        // A drag that ends past the tap slop, on touch, dispatches no `click` at all: the flag
+        // `onClick` would otherwise clear stays set, and the very next real tap is swallowed
+        // silently. Starting every new pointer-down clean is what keeps a stale flag from a
+        // prior drag from ever eating a later tap.
+        suppressClick.current = false;
+        const rect = event.currentTarget.getBoundingClientRect();
+        drag.current = {
+          pointerId: event.pointerId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+          startX: event.clientX,
+          startY: event.clientY,
+          moved: false,
+        };
+        if (typeof event.currentTarget.setPointerCapture === 'function')
+          event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const active = drag.current;
+        if (!movable || active?.pointerId !== event.pointerId) return;
+        // Cumulative distance from where the pointer went down, rather than the per-event
+        // `movementX`/`movementY` delta: some engines never populate a non-zero delta for a
+        // touch pointer, which would otherwise make a drag never register as one at all.
+        const moved =
+          active.moved ||
+          Math.hypot(event.clientX - active.startX, event.clientY - active.startY) > 2;
+        active.moved = moved;
+        if (!moved) return;
+        suppressClick.current = true;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = Math.min(
+          Math.max(8, event.clientX - active.offsetX),
+          window.innerWidth - rect.width - 8,
+        );
+        const y = Math.min(
+          Math.max(8, event.clientY - active.offsetY),
+          Math.max(8, window.innerHeight - rect.height - 8 - mobileBottomClearance()),
+        );
+        const next = { x, y };
+        setPosition(next);
+        writePetPosition(next);
+      }}
+      onPointerUp={(event) => {
+        if (drag.current?.pointerId === event.pointerId) drag.current = null;
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+      }}
+      title={movable ? 'Drag to move companion' : `Talk with ${pet.name}`}
+    >
+      <span className={`flex items-center justify-center ${docked ? '' : 'p-1'}`}>
+        <PetAvatar
+          appearance={pet.appearance}
+          state={hover ? 'hover' : 'idle'}
+          label={pet.name}
+          size={docked ? 'header' : narrow ? 'compact' : 'regular'}
+        />
+      </span>
+      {!open && (toolPending || unseenReply) ? (
+        <span
+          aria-hidden="true"
+          className="absolute right-1 top-1 size-2.5 rounded-full bg-accent-fill ring-2 ring-background"
+        />
+      ) : null}
+    </Button>
+  );
   return (
     <aside
       ref={aside}
       aria-label={`${pet.name} companion`}
-      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats ? 'flex' : 'hidden'} ${floatingPosition ? '' : `${narrowOffset} ${wideOffset} ${!drawer && placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
+      className={`fixed z-40 max-w-full flex-col gap-2 p-2 ${floats && (!docked || open) ? 'flex' : 'hidden'} ${floatingPosition ? '' : `${narrowOffset} ${wideOffset} ${!drawer && placement === 'left' ? 'left-0 items-start sm:left-4' : 'right-0 items-end sm:right-4'}`}`}
       style={
         floatingPosition
           ? open && panelPosition && !narrow
@@ -352,103 +467,7 @@ function Companion({
           />
         </div>
       ) : null}
-      <Button
-        ref={launcher}
-        variant="ghost"
-        // No card and no wash behind the pet: it stands on the page; its hover pose is the feedback.
-        className={`relative h-auto p-1 hover:bg-transparent active:bg-transparent ${drawer ? '' : 'touch-none'} ${launcherHidden ? 'hidden' : ''}`}
-        aria-expanded={opensAsPage ? undefined : open}
-        aria-label={`${open ? `Close ${pet.name}` : opensAsPage ? `Open ${pet.name}` : `Talk with ${pet.name}`}${
-          !open && toolPending ? ' (needs approval)' : !open && unseenReply ? ' (new reply)' : ''
-        }`}
-        onMouseEnter={() => {
-          setHover(true);
-        }}
-        onMouseLeave={() => {
-          setHover(false);
-        }}
-        onClick={(event) => {
-          if (!drawer && suppressClick.current) {
-            suppressClick.current = false;
-            return;
-          }
-          if (opensAsPage && !open) {
-            openPage();
-            return;
-          }
-          const nextOpen = !open;
-          openedFrom.current =
-            nextOpen && !drawer ? event.currentTarget.getBoundingClientRect() : null;
-          if (!nextOpen) setPanelPosition(null);
-          setOpen(nextOpen);
-        }}
-        onPointerDown={(event) => {
-          if (drawer || event.button !== 0) return;
-          // A drag that ends past the tap slop, on touch, dispatches no `click` at all: the flag
-          // `onClick` would otherwise clear stays set, and the very next real tap is swallowed
-          // silently. Starting every new pointer-down clean is what keeps a stale flag from a
-          // prior drag from ever eating a later tap.
-          suppressClick.current = false;
-          const rect = event.currentTarget.getBoundingClientRect();
-          drag.current = {
-            pointerId: event.pointerId,
-            offsetX: event.clientX - rect.left,
-            offsetY: event.clientY - rect.top,
-            startX: event.clientX,
-            startY: event.clientY,
-            moved: false,
-          };
-          if (typeof event.currentTarget.setPointerCapture === 'function')
-            event.currentTarget.setPointerCapture(event.pointerId);
-        }}
-        onPointerMove={(event) => {
-          const active = drag.current;
-          if (drawer || active?.pointerId !== event.pointerId) return;
-          // Cumulative distance from where the pointer went down, rather than the per-event
-          // `movementX`/`movementY` delta: some engines never populate a non-zero delta for a
-          // touch pointer, which would otherwise make a drag never register as one at all.
-          const moved =
-            active.moved ||
-            Math.hypot(event.clientX - active.startX, event.clientY - active.startY) > 2;
-          active.moved = moved;
-          if (!moved) return;
-          suppressClick.current = true;
-          const rect = event.currentTarget.getBoundingClientRect();
-          const x = Math.min(
-            Math.max(8, event.clientX - active.offsetX),
-            window.innerWidth - rect.width - 8,
-          );
-          const y = Math.min(
-            Math.max(8, event.clientY - active.offsetY),
-            Math.max(8, window.innerHeight - rect.height - 8 - mobileBottomClearance()),
-          );
-          const next = { x, y };
-          setPosition(next);
-          writePetPosition(next);
-        }}
-        onPointerUp={(event) => {
-          if (drag.current?.pointerId === event.pointerId) drag.current = null;
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-        }}
-        title={drawer ? `Talk with ${pet.name}` : 'Drag to move companion'}
-      >
-        <span className="flex items-center justify-center p-1">
-          <PetAvatar
-            appearance={pet.appearance}
-            state={hover ? 'hover' : 'idle'}
-            label={pet.name}
-            size={narrow ? 'compact' : 'regular'}
-          />
-        </span>
-        {!open && (toolPending || unseenReply) ? (
-          <span
-            aria-hidden="true"
-            className="absolute right-1 top-1 size-2.5 rounded-full bg-accent-fill ring-2 ring-background"
-          />
-        ) : null}
-      </Button>
+      {dock ? dock(launcherButton) : docked ? null : launcherButton}
     </aside>
   );
 }

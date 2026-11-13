@@ -17,6 +17,7 @@ export interface PhoneTopRowProps {
   readonly hasItem: boolean;
   readonly onToggleSidebar: () => void;
   readonly profile: ReactNode;
+  readonly companion?: ReactNode;
 }
 
 const surface = 'border border-divider bg-background/75 shadow-md backdrop-blur-md';
@@ -37,6 +38,7 @@ export function PhoneTopRow({
   hasItem,
   onToggleSidebar,
   profile,
+  companion,
 }: PhoneTopRowProps): ReactNode {
   const navigationLabel = navigationHidden ? 'Show navigation bar' : 'Hide navigation bar';
   return (
@@ -85,6 +87,7 @@ export function PhoneTopRow({
             <Icon icon={PanelRight} size="sm" />
           </button>
         ) : null}
+        {companion}
         {profile}
       </div>
     </header>

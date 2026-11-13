@@ -144,8 +144,8 @@ export function FilterRulesEditor(props: FilterRulesEditorProps): ReactNode {
     <div className="@container flex min-w-0 flex-col gap-2">
       <Text variant="note" tone="muted" as="p">
         {scope === 'query'
-          ? 'Filters run across every container you can read and must all match; an "any of" group needs one. Properties are typed keys. Smart lists compare stored values; computed formula and rollup values can be filtered in container views.'
-          : 'Filters are joined with AND, and an "any of" group matches when one of its filters does. They hide children from this view only. Other views keep their own filters.'}
+          ? 'Searches across items you can read. Items must match every separate filter and at least one filter in each group. To filter by formula or rollup results, use a view in the original note.'
+          : 'Items must match every separate filter and at least one filter in each group. These filters apply only to this view.'}
       </Text>
       {computedRules.length === 0 ? null : (
         <Text variant="note" tone="accent" role="status">
@@ -180,7 +180,7 @@ export function FilterRulesEditor(props: FilterRulesEditorProps): ReactNode {
             key={index}
             className="flex min-w-0 flex-col gap-2 rounded-md border border-divider p-3"
           >
-            <legend className={fieldLabel}>Any of</legend>
+            <legend className={fieldLabel}>Match any of these filters</legend>
             {rule.any.map((condition, inner) => (
               <ConditionRow
                 key={inner}
@@ -254,7 +254,7 @@ export function FilterRulesEditor(props: FilterRulesEditorProps): ReactNode {
               onChange([...rules, filterGroup([EMPTY_CONDITION])]);
             }}
           >
-            Add an any-of group
+            Add alternative filters
           </Button>
         ) : null}
         {full ? (

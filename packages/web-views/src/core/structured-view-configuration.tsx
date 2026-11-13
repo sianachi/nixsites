@@ -109,7 +109,7 @@ export function StructuredViewConfiguration({
 
       <Field
         label="Open items"
-        hint="Auto opens a dialog over most views and a page from an outline; phones always open a page."
+        hint="This setting applies on wider layouts. Phones and portrait tablets open a full page."
       >
         {(control) => (
           <Select

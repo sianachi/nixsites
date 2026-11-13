@@ -25,7 +25,8 @@ interface OutlineToolbarProps {
 }
 
 // On a phone the main ways to act carry a short word beside the glyph.
-const labelled = 'pointer-coarse:w-auto pointer-coarse:gap-1 pointer-coarse:px-3';
+const labelled =
+  'shrink-0 any-pointer-coarse:w-auto any-pointer-coarse:gap-1 any-pointer-coarse:px-3';
 
 /**
  * The structural edits as one row of icon buttons, acting on the row last focused - a phone has no
@@ -63,7 +64,7 @@ export function OutlineToolbar(props: OutlineToolbarProps): ReactNode {
           as="span"
           variant="caption"
           aria-hidden="true"
-          className="hidden pointer-coarse:inline"
+          className="hidden whitespace-nowrap any-pointer-coarse:inline"
         >
           Indent
         </Text>
@@ -80,7 +81,7 @@ export function OutlineToolbar(props: OutlineToolbarProps): ReactNode {
           as="span"
           variant="caption"
           aria-hidden="true"
-          className="hidden pointer-coarse:inline"
+          className="hidden whitespace-nowrap any-pointer-coarse:inline"
         >
           Outdent
         </Text>
@@ -97,7 +98,7 @@ export function OutlineToolbar(props: OutlineToolbarProps): ReactNode {
           as="span"
           variant="caption"
           aria-hidden="true"
-          className="hidden pointer-coarse:inline"
+          className="hidden whitespace-nowrap any-pointer-coarse:inline"
         >
           Up
         </Text>
@@ -114,7 +115,7 @@ export function OutlineToolbar(props: OutlineToolbarProps): ReactNode {
           as="span"
           variant="caption"
           aria-hidden="true"
-          className="hidden pointer-coarse:inline"
+          className="hidden whitespace-nowrap any-pointer-coarse:inline"
         >
           Down
         </Text>

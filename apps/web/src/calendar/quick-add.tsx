@@ -1,6 +1,6 @@
-import { Button, Field, Icon, Input, Select, Text } from '@nix/ui';
+import { Button, Field, Icon, Input, Select } from '@nix/ui';
 import { Plus } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { CalendarPick } from './use-calendar-create-drag';
 
 /**
@@ -22,12 +22,9 @@ export interface QuickAddProps {
   /** The containers a new entry may land in: each already placed something, so each has a date property. */
   readonly destinations: readonly CalendarDestination[];
 
-  /** The day the new entry starts on, `yyyy-MM-dd`, until the reader picks another. */
-  readonly day: string;
-
-  /** A day chosen elsewhere on the page ("+ Add" on an agenda day); a new object each time. */
-  readonly pick?: CalendarPick | null | undefined;
-  readonly showTime?: boolean;
+  /** A date chosen on the calendar. A fresh pick moves focus to the title. */
+  readonly pick: CalendarPick;
+  readonly onClose: () => void;
 
   /** Makes the item and writes its date. Answers the refusal, or null when it stuck. */
   readonly onCreate: (
@@ -38,20 +35,16 @@ export interface QuickAddProps {
   ) => Promise<string | null>;
 }
 
-/** What a reader is told instead of an empty menu. */
-const NO_ELIGIBLE_CONTAINER =
-  'No note here offers a calendar with a date property to create into. Give one a calendar view ' +
-  'and a date property, and it will appear here as somewhere a new entry can land.';
-
 export function QuickAdd(props: QuickAddProps): ReactNode {
-  const { destinations, day, pick = null, showTime = false, onCreate } = props;
+  const { destinations, pick, onCreate, onClose } = props;
+  const detailsId = useId();
 
   const [containerId, setContainerId] = useState('');
   const [title, setTitle] = useState('');
-  // Null follows `day` (where the reader is looking); a typed or picked day overrides it.
-  const [dayDraft, setDayDraft] = useState<string | null>(null);
-  const [time, setTime] = useState('');
-  const [end, setEnd] = useState('');
+  const [day, setDay] = useState(pick.day);
+  const [time, setTime] = useState(pick.time ?? '');
+  const [end, setEnd] = useState(pick.end ?? '');
+  const [showDetails, setShowDetails] = useState(Boolean(pick.time ?? pick.end));
   const [seenPick, setSeenPick] = useState(pick);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -59,26 +52,15 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
 
   if (pick !== seenPick) {
     setSeenPick(pick);
-    if (pick !== null) {
-      setDayDraft(pick.day);
-      setTime(pick.time ?? '');
-      setEnd(pick.end ?? '');
-    }
+    setDay(pick.day);
+    setTime(pick.time ?? '');
+    setEnd(pick.end ?? '');
+    if (pick.time !== undefined || pick.end !== undefined) setShowDetails(true);
   }
 
   useEffect(() => {
-    if (pick !== null) {
-      titleRef.current?.focus();
-    }
+    titleRef.current?.focus();
   }, [pick]);
-
-  if (destinations.length === 0) {
-    return (
-      <Text as="span" variant="note" tone="muted">
-        {NO_ELIGIBLE_CONTAINER}
-      </Text>
-    );
-  }
 
   const chosen = destinations.some((d) => d.id === containerId)
     ? containerId
@@ -88,13 +70,19 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
     const named = title.trim();
     if (named.length === 0) {
       setRefusal('Type a title first.');
+      titleRef.current?.focus();
+      return;
+    }
+
+    if (day === '') {
+      setRefusal('Choose a date for this event.');
       return;
     }
 
     setSaving(true);
     setRefusal(null);
-    const timed = showTime && time !== '';
-    const start = `${dayDraft ?? day}${timed ? `T${time}` : ''}`;
+    const timed = time !== '';
+    const start = `${day}${timed ? `T${time}` : ''}`;
     const finish = timed ? end : end.slice(0, 10);
     const reason =
       finish === ''
@@ -119,16 +107,16 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
         event.preventDefault();
         void submit();
       }}
-      className="flex flex-wrap items-end gap-2"
+      className="flex flex-wrap items-end gap-2 rounded-md border border-divider p-3"
     >
-      <div className="min-w-56 flex-1">
+      <div className="min-w-0 basis-full sm:flex-1">
         <Field label="Title" error={refusal}>
           {(control) => (
             <Input
               {...control}
               ref={titleRef}
               value={title}
-              placeholder="Add an entry, then Enter"
+              placeholder="Event name"
               autoComplete="off"
               disabled={saving}
               onChange={(event) => {
@@ -145,16 +133,33 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
           <Input
             {...control}
             type="date"
-            value={dayDraft ?? day}
+            value={day}
             disabled={saving}
             onChange={(event) => {
-              setDayDraft(event.target.value);
+              setDay(event.target.value);
+              setRefusal(null);
             }}
           />
         )}
       </Field>
 
-      {showTime ? (
+      <Button
+        type="button"
+        variant="subtle"
+        aria-expanded={showDetails}
+        aria-controls={detailsId}
+        onClick={() => {
+          setShowDetails((current) => !current);
+        }}
+      >
+        Event details
+      </Button>
+
+      <div
+        id={detailsId}
+        hidden={!showDetails}
+        className="min-w-0 flex-wrap items-end gap-2 not-hidden:flex"
+      >
         <Field label="Time">
           {(control) => (
             <Input
@@ -169,41 +174,44 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
             />
           )}
         </Field>
-      ) : null}
 
-      <Field label="Ends">
-        {(control) => (
-          <Input
-            {...control}
-            type={showTime && time !== '' ? 'datetime-local' : 'date'}
-            value={showTime && time !== '' ? end : end.slice(0, 10)}
-            disabled={saving}
-            onChange={(event) => {
-              setEnd(event.target.value);
-            }}
-          />
-        )}
-      </Field>
+        <Field label="End">
+          {(control) => (
+            <Input
+              {...control}
+              type={time !== '' ? 'datetime-local' : 'date'}
+              value={time !== '' ? end : end.slice(0, 10)}
+              disabled={saving}
+              onChange={(event) => {
+                setEnd(event.target.value);
+              }}
+            />
+          )}
+        </Field>
 
-      <Field label="Note">
-        {(control) => (
-          <Select
-            {...control}
-            value={chosen}
-            disabled={saving}
-            onChange={(event) => {
-              setContainerId(event.target.value);
-            }}
-          >
-            {destinations.map((destination) => (
-              <option key={destination.id} value={destination.id}>
-                {destination.title}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Field>
+        <Field label="Calendar">
+          {(control) => (
+            <Select
+              {...control}
+              value={chosen}
+              disabled={saving}
+              onChange={(event) => {
+                setContainerId(event.target.value);
+              }}
+            >
+              {destinations.map((destination) => (
+                <option key={destination.id} value={destination.id}>
+                  {destination.title}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      </div>
 
+      <Button type="button" variant="subtle" disabled={saving} onClick={onClose}>
+        Close
+      </Button>
       <Button
         type="submit"
         variant="secondary"
@@ -211,7 +219,7 @@ export function QuickAdd(props: QuickAddProps): ReactNode {
         className="pointer-coarse:min-h-11"
       >
         <Icon icon={Plus} size="sm" />
-        {saving ? 'Adding…' : 'Add'}
+        {saving ? 'Adding…' : 'Save event'}
       </Button>
     </form>
   );
