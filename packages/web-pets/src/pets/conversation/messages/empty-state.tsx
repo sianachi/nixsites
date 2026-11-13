@@ -1,4 +1,4 @@
-import { type PetProfile, type PetSettings } from '@nix/api-client';
+import { type PetProfile } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
 import { type ReactElement } from 'react';
 import { PetAvatar } from '../../pet-avatar';
@@ -6,25 +6,18 @@ import { PetAvatar } from '../../pet-avatar';
 /** The pet itself, then at most three ways to begin. */
 export function PetEmptyState({
   pet,
-  settings,
   workspaceAccess,
   suggestions,
   onPick,
 }: {
   readonly pet: PetProfile;
-  readonly settings: PetSettings;
   readonly workspaceAccess: boolean;
   readonly suggestions: readonly string[];
   readonly onPick: (suggestion: string) => void;
 }): ReactElement {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4">
-      <PetAvatar
-        appearance={pet.appearance}
-        motion={settings.motion}
-        state="idle"
-        label={`${pet.name}: ready`}
-      />
+      <PetAvatar appearance={pet.appearance} state="idle" label={`${pet.name}: ready`} />
       {workspaceAccess ? null : (
         <Text variant="note" tone="muted" className="text-center">
           {`Turn on Workspace in + to let ${pet.name} use your notes.`}

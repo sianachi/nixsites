@@ -11,18 +11,9 @@ namespace Nix.Tests.Features.Pets;
 public sealed class PetSettingsTests
 {
     private static readonly Guid PetId = new("33333333-3333-4333-8333-333333333333");
-    private static PetProfile Owl => new(PetId, "Nix", "owl", "playful", "balanced", "Explain clearly.");
-    private static PetSettings Settings => new(false, PetId, "system", [Owl]);
+    private static PetProfile Owl => new(PetId, "Nix", "owl", "Explain clearly.");
+    private static PetSettings Settings => new(false, PetId, [Owl]);
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
-
-    [Fact]
-    public void One_owl_supports_each_independent_personality()
-    {
-        foreach (var personality in new[] { "calm", "playful", "encouraging", "concise" })
-        {
-            Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Personality = personality }] }));
-        }
-    }
 
     [Theory]
     [InlineData("demiurge")]
@@ -118,7 +109,7 @@ public sealed class PetSettingsTests
     }
 
     [Fact]
-    public async Task Stored_settings_with_retired_narration_still_load()
+    public async Task Stored_settings_ignore_retired_profile_and_motion_fields()
     {
         var session = new ScopedNixSessionContextAccessor();
         var context = new NixSessionContext(TenantId.Create(), null, PrincipalId.Create());
@@ -128,16 +119,28 @@ public sealed class PetSettingsTests
         {
             TenantId = context.TenantId,
             PrincipalId = context.PrincipalId,
-            SettingsJson = """{"enabled":false,"activePetId":null,"motion":"reduced","narration":true,"profiles":[],"inlineWriting":true}""",
+            SettingsJson = $$"""
+                {"enabled":true,"activePetId":"{{PetId}}","motion":"reduced","narration":true,
+                 "profiles":[{"id":"{{PetId}}","name":"Nix","appearance":"owl","personality":"playful",
+                   "responseLength":"detailed","instructions":"Explain clearly."}],"inlineWriting":true}
+                """,
             Revision = 1,
         }, 0, Cancellation);
 
         var read = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
 
         Assert.Equal(1, read.Revision);
-        Assert.Equal("reduced", read.Settings.Motion);
         Assert.True(read.Settings.InlineWriting);
-        Assert.Empty(read.Settings.Profiles);
+        Assert.True(read.Settings.Enabled);
+        Assert.Equal(PetId, read.Settings.ActivePetId);
+        Assert.Equal(Owl, Assert.Single(read.Settings.Profiles));
+        var updated = await new SavePetSettingsHandler(store, session).HandleAsync(new(read.Revision, read.Settings), Cancellation);
+        Assert.True(updated.IsSuccess);
+        var saved = await store.FindAsync(context.TenantId, context.PrincipalId, Cancellation);
+        var json = Assert.IsType<PetPreferences>(saved).SettingsJson;
+        Assert.DoesNotContain("\"motion\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"personality\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"responseLength\"", json, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -148,13 +151,13 @@ public sealed class PetSettingsTests
         var store = new MemoryStore();
         var handler = new SavePetSettingsHandler(store, session);
         var first = await handler.HandleAsync(new(0, Settings), Cancellation);
-        var second = await handler.HandleAsync(new(0, Settings with { Motion = "reduced" }), Cancellation);
+        var second = await handler.HandleAsync(new(0, Settings with { InlineWriting = true }), Cancellation);
         Assert.True(first.IsSuccess);
         Assert.Equal(1, first.Value.Revision);
         Assert.True(second.IsFailure);
         Assert.Equal("pets.settings_conflict", second.Error.Code);
         var read = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
-        Assert.Equal("system", read.Settings.Motion);
+        Assert.False(read.Settings.InlineWriting);
     }
 
     private sealed class MemoryStore : IPetPreferencesStore

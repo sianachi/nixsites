@@ -15,7 +15,6 @@ const initial: PetSettingsResponse = {
   settings: {
     enabled: false,
     activePetId: null,
-    motion: 'system',
     profiles: [],
     inlineWriting: false,
   },
@@ -27,15 +26,12 @@ function savedPet(provider: PetProfile['provider']): PetSettingsResponse {
     settings: {
       enabled: true,
       activePetId: '44444444-4444-4444-8444-444444444444',
-      motion: 'system',
       inlineWriting: false,
       profiles: [
         {
           id: '44444444-4444-4444-8444-444444444444',
           name: 'Pip',
           appearance: 'owl',
-          personality: 'calm',
-          responseLength: 'balanced',
           instructions: '',
           applyWithoutAsking: false,
           provider,
@@ -90,16 +86,32 @@ describe('pet configuration', () => {
     client.execute.mockReset().mockResolvedValue(savedClaudeKey);
   });
 
-  it('saves an owl with an independently chosen personality', async () => {
+  it('renames a companion inline and saves personal instructions', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     expect(screen.queryByRole('checkbox', { name: /read a reply aloud/i })).not.toBeInTheDocument();
     await addPet(user);
-    await user.clear(screen.getByRole('textbox', { name: 'Name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Pip');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Personality' }), 'playful');
-    expect(screen.getByRole('button', { name: 'Change appearance' })).toHaveTextContent('Owl');
+    await user.click(screen.getByRole('button', { name: 'Rename Owl' }));
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    expect(name).toHaveFocus();
+    await user.type(name, 'Discard me', { skipClick: true });
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Rename Owl' })).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Pip', { skipClick: true });
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: 'Rename Pip' })).toHaveFocus();
+    await user.type(
+      screen.getByRole('textbox', { name: 'Instructions (optional)' }),
+      'Use metric units.',
+    );
+    await user.click(
+      within(screen.getByRole('region', { name: 'Behaviour' })).getByRole('checkbox', {
+        name: 'Apply changes without asking',
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalledOnce();
@@ -107,7 +119,12 @@ describe('pet configuration', () => {
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       enabled: false,
       profiles: [
-        expect.objectContaining({ name: 'Pip', appearance: 'owl', personality: 'playful' }),
+        expect.objectContaining({
+          name: 'Pip',
+          appearance: 'owl',
+          instructions: 'Use metric units.',
+          applyWithoutAsking: true,
+        }),
       ],
     });
   });
@@ -139,7 +156,7 @@ describe('pet configuration', () => {
     }
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(save.mock.calls[0]?.[0]).toMatchObject({
-      profiles: [expect.objectContaining({ name: 'Pip', appearance: 'fox', personality: 'calm' })],
+      profiles: [expect.objectContaining({ name: 'Pip', appearance: 'fox' })],
     });
   });
 
@@ -173,14 +190,14 @@ describe('pet configuration', () => {
     const user = userEvent.setup();
     const view = render(<PetSettingsEditor initial={initial} saving={false} onSave={save} />);
     await addPet(user);
-    const name = screen.getByRole('textbox', { name: 'Name' });
+    const name = screen.getByRole('button', { name: 'Rename Owl' });
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Pet settings saved.')).toBeVisible();
     const settings = save.mock.calls[0]?.[0] as PetSettingsResponse['settings'];
     view.rerender(
       <PetSettingsEditor initial={{ revision: 1, settings }} saving={false} onSave={save} />,
     );
-    expect(screen.getByRole('textbox', { name: 'Name' })).toBe(name);
+    expect(screen.getByRole('button', { name: 'Rename Owl' })).toBe(name);
     expect(screen.getByText('Pet settings saved.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
@@ -360,6 +377,7 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
+    await user.click(screen.getByRole('button', { name: 'Rename Pip' }));
     await user.clear(screen.getByRole('textbox', { name: 'Name' }));
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
@@ -500,6 +518,7 @@ describe('pet configuration', () => {
         onSave={() => Promise.resolve(true)}
       />,
     );
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Chat opens' }), 'floating');
     expect(screen.getByRole('combobox', { name: 'Position' })).toHaveValue('left');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Chat opens' }), 'page');
     expect(screen.queryByRole('combobox', { name: 'Position' })).not.toBeInTheDocument();
@@ -516,25 +535,19 @@ describe('pet configuration', () => {
     expect(localStorage.getItem('nix.pet.placement')).toBe('left');
   });
 
-  it('keeps instructions in a disclosure that opens only when they already have text', () => {
-    const withText = savedPet('anthropic');
-    const pet = withText.settings.profiles[0] as PetProfile;
-    const view = render(
-      <PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={vi.fn()} />,
-    );
-    expect(view.container.querySelector('details')).not.toHaveAttribute('open');
+  it('defaults to the right-side drawer and respects a saved device choice', () => {
+    const props = { initial: savedPet('anthropic'), saving: false, onSave: vi.fn() };
+    const view = render(<PetSettingsEditor {...props} />);
+    expect(screen.getByRole('combobox', { name: 'Chat opens' })).toHaveValue('drawer');
+    expect(screen.getByRole('textbox', { name: 'Instructions (optional)' })).toBeVisible();
+    expect(
+      screen.queryByRole('combobox', { name: /motion|personality|response length/i }),
+    ).toBeNull();
+
     view.unmount();
-    const filled = render(
-      <PetSettingsEditor
-        initial={{
-          ...withText,
-          settings: { ...withText.settings, profiles: [{ ...pet, instructions: 'Be brief' }] },
-        }}
-        saving={false}
-        onSave={vi.fn()}
-      />,
-    );
-    expect(filled.container.querySelector('details')).toHaveAttribute('open');
+    localStorage.setItem('nix.pet.surface', 'page');
+    render(<PetSettingsEditor {...props} />);
+    expect(screen.getByRole('combobox', { name: 'Chat opens' })).toHaveValue('page');
   });
 
   it('collapses a connected ChatGPT pet to a status line until Change is pressed', async () => {

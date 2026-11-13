@@ -49,7 +49,7 @@ public sealed class DocumentImportStoreTests(NixPostgresFixture fixture) : IAsyn
             var dispatcher = work.Resolve<NixDispatcher>();
             var preferences = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
             var saved = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(preferences.Revision,
-                new(true, petId, "system", [new(petId, "Analyst", "cat", "calm", "balanced", "")])), Cancellation);
+                new(true, petId, [new(petId, "Analyst", "cat", "")])), Cancellation);
             Assert.True(saved.IsSuccess);
             var created = await dispatcher.SendAsync<CreateConversation, ConversationResponse>(new(TestTenants.AlphaWorkspace,
                 new("Portable chat", null, [TestTenants.AlphaWorkspace], petId, Messages: [new("user", "Compare priorities"), new("assistant", "Saved insight")])), Cancellation);

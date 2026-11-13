@@ -4848,8 +4848,6 @@ export interface components {
       id: string;
       name: string;
       appearance: string;
-      personality: string;
-      responseLength: string;
       instructions: string;
       /** @default false */
       applyWithoutAsking: boolean;
@@ -4926,7 +4924,6 @@ export interface components {
       enabled: boolean;
       /** Format: uuid */
       activePetId: null | string;
-      motion: string;
       profiles: components['schemas']['PetProfile'][];
       /** @default false */
       inlineWriting: boolean;

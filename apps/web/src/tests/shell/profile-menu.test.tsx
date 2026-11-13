@@ -23,6 +23,12 @@ const workspaces = vi.hoisted(() =>
   })),
 );
 
+vi.mock('@nix/web-workspaces/workspaces/use-workspace-arrangement', () => ({
+  useWorkspaceArrangement: () => ({
+    arrangement: { groups: [], pinnedWorkspaceIds: [workspaces[8]?.id, workspaces[9]?.id] },
+  }),
+}));
+
 const auth = vi.hoisted(() => ({
   accountUrl: null as string | null,
   signOut: vi.fn(() => Promise.resolve()),
@@ -88,6 +94,8 @@ async function openMenu(): Promise<void> {
 }
 
 beforeEach(() => {
+  localStorage.removeItem('nix.recent-workspace-ids');
+  localStorage.removeItem('nix.hidden-workspace-previews');
   auth.accountUrl = null;
   auth.signOut.mockReset().mockResolvedValue(undefined);
   useSessionStore.setState({ status: 'authenticated', profile, error: null });
@@ -97,11 +105,29 @@ beforeEach(() => {
 });
 
 describe('ProfileMenu', () => {
-  it('lists the eight most recent workspaces with a tick on the current one', async () => {
+  it('puts pins and frequent visits in Quick previews, except workspaces hidden here', async () => {
+    localStorage.setItem(
+      'nix.recent-workspace-ids',
+      JSON.stringify(workspaces.slice(0, 7).map(({ id }, index) => ({ id, count: index + 1 }))),
+    );
+    localStorage.setItem('nix.hidden-workspace-previews', JSON.stringify([workspaces[9]?.id]));
     await openMenu();
-    for (let index = 0; index < 8; index += 1)
-      expect(screen.getByRole('button', { name: `Space ${String(index)}` })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Space 8' })).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Space / })
+        .map((button) => button.textContent?.trim()),
+    ).toEqual([
+      'Space 8',
+      'Space 6',
+      'Space 5',
+      'Space 4',
+      'Space 3',
+      'Space 2',
+      'Space 1',
+      'Space 0',
+    ]);
+    expect(screen.queryByRole('button', { name: 'Space 7' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Space 9' })).not.toBeInTheDocument();
     // The tick is drawn on the current workspace only.
     const tick = (name: string): Element | null =>
       screen.getByRole('button', { name }).querySelector('span[aria-hidden]');

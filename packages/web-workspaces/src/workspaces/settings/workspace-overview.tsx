@@ -1,6 +1,7 @@
 import { Button, Icon, Input, Menu, Text, type MenuEntry } from '@nix/ui';
-import { MoreHorizontal, Pencil } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useHiddenWorkspacePreviewIds, useSetWorkspacePreviewHidden } from '../last-workspace';
 
 import {
   formatBytes,
@@ -9,13 +10,15 @@ import {
   type CurrentWorkspace,
 } from './shared';
 
-/** The workspace's name (renamed in place), its facts, and a menu for leaving or archiving it. */
+/** The workspace name, facts and actions. */
 export function WorkspaceOverview(props: {
   readonly workspace: CurrentWorkspace;
   readonly administration: Administration;
   readonly onConfirm: (confirmation: Confirmation) => void;
 }): ReactNode {
   const { workspace, administration } = props;
+  const hiddenFromPreviews = useHiddenWorkspacePreviewIds().has(workspace.id);
+  const setHidden = useSetWorkspacePreviewHidden();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(workspace.name);
   const input = useRef<HTMLInputElement>(null);
@@ -35,8 +38,16 @@ export function WorkspaceOverview(props: {
     setEditing(false);
   }
 
-  // Leaving is open to anyone who may; archiving follows the rename right (owner or administrator).
   const actions: MenuEntry[] = [
+    {
+      label: hiddenFromPreviews
+        ? 'Show in Quick previews on this browser'
+        : 'Hide from Quick previews on this browser',
+      icon: hiddenFromPreviews ? Eye : EyeOff,
+      onSelect: () => {
+        setHidden(workspace, !hiddenFromPreviews);
+      },
+    },
     ...(workspace.canLeave
       ? [
           {
@@ -121,17 +132,15 @@ export function WorkspaceOverview(props: {
             ) : null}
           </>
         )}
-        {actions.length === 0 ? null : (
-          <div className="ml-auto">
-            <Menu label="Workspace actions" items={actions}>
-              {(trigger) => (
-                <Button {...trigger} variant="icon" aria-label="Workspace actions">
-                  <Icon icon={MoreHorizontal} size="sm" />
-                </Button>
-              )}
-            </Menu>
-          </div>
-        )}
+        <div className="ml-auto">
+          <Menu label="Workspace actions" items={actions}>
+            {(trigger) => (
+              <Button {...trigger} variant="icon" aria-label="Workspace actions">
+                <Icon icon={MoreHorizontal} size="sm" />
+              </Button>
+            )}
+          </Menu>
+        </div>
       </div>
       <Text variant="note" tone="muted">
         {workspace.kind === 'shared' ? 'Shared' : 'Personal'}

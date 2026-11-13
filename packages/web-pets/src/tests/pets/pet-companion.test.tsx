@@ -29,14 +29,11 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
       settings: {
         enabled: true,
         activePetId: '44444444-4444-4444-8444-444444444444',
-        motion: 'reduced',
         profiles: [
           {
             id: '44444444-4444-4444-8444-444444444444',
             name: 'Cat',
             appearance: 'cat',
-            personality: 'calm',
-            responseLength: 'balanced',
             instructions: '',
             get applyWithoutAsking() {
               return petSettings.applyWithoutAsking;
@@ -119,6 +116,7 @@ describe('companion workflow', () => {
   });
 
   it('opens upward when a moved companion is near the bottom of the screen', async () => {
+    localStorage.setItem('nix.pet.surface', 'floating');
     localStorage.setItem('nix.pet.position', JSON.stringify({ x: 24, y: 700 }));
     render(
       <MemoryRouter>

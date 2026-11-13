@@ -30,6 +30,7 @@ interface ItemBodyProps {
   readonly lock: ReturnType<typeof useItemLock>;
   readonly lockHolderTitle: string | null;
   readonly onUnlock: (password: string) => Promise<string | null>;
+  readonly loadingView: boolean;
   readonly showingDocument: boolean;
   readonly showChildren: boolean;
   readonly active: View | null;
@@ -56,6 +57,7 @@ export function ItemBody({
   lock,
   lockHolderTitle,
   onUnlock: unlockAndFocus,
+  loadingView,
   showingDocument,
   showChildren,
   active,
@@ -98,6 +100,8 @@ export function ItemBody({
             onUnlock={unlockAndFocus}
           />
         )
+      ) : loadingView ? (
+        <SkeletonLines label="Loading view…" heading className="w-full max-w-3xl px-8 py-6" />
       ) : contextView !== undefined ? (
         contextView
       ) : showingDocument ? (

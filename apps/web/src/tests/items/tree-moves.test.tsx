@@ -197,7 +197,7 @@ describe('moving an item from the keyboard', () => {
 });
 
 describe('moving an item to the workspace root', () => {
-  it('offers one direct action for a nested item', async () => {
+  it('offers the root move in the nested item’s Actions menu', async () => {
     const user = userEvent.setup();
     const move = vi.fn(() => Promise.resolve({ refusal: null }));
     const parent = { ...ROOT_A, hasChildren: true };
@@ -206,7 +206,8 @@ describe('moving an item to the workspace root', () => {
     renderSidebar(treeOf(move, [parent, ROOT_B, child], new Set([parent.id])), child.id);
     await user.click(screen.getByRole('button', { name: `Expand ${parent.title}` }));
 
-    await user.click(screen.getByRole('button', { name: /move nested to the workspace root/i }));
+    await user.click(screen.getByRole('button', { name: 'Actions for Nested' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Move to workspace root' }));
 
     await waitFor(() => {
       expect(move).toHaveBeenCalledWith(child.id, null, ROOT_B.id);
@@ -215,11 +216,12 @@ describe('moving an item to the workspace root', () => {
 });
 
 describe('moving an item without dragging or keys', () => {
-  it('offers a labelled Move to… control on each row that opens the destination dialog', async () => {
+  it('opens the destination dialog from the row’s Actions menu', async () => {
     const user = userEvent.setup();
     renderSidebar(treeOf(vi.fn(() => Promise.resolve({ refusal: null }))));
 
-    await user.click(screen.getByRole('button', { name: 'Move Second to…' }));
+    await user.click(screen.getByRole('button', { name: 'Actions for Second' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Move to…' }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });

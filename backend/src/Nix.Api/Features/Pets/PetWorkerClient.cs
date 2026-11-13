@@ -218,7 +218,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
                 return Result.Failure<PetConnectionResponse>(new("pets.invalid_request", "Enable a saved pet before starting a conversation."));
             }
 
-            instructions = $"Your name is {pet.Name}. Communication style: {pet.Personality}. Response length: {pet.ResponseLength}. User preferences: {pet.Instructions}";
+            instructions = $"Your name is {pet.Name}. Keep replies concise, with enough detail to answer the request. User preferences: {pet.Instructions}";
             // A chat thread's replies are saved in a workspace item others may read, so the owner's
             // personal facts stay out of it.
             if (conversationItemId is null && settings.Settings.MemoryMode != PetMemoryModes.Off && settings.Settings.Memories is { Count: > 0 } memories)

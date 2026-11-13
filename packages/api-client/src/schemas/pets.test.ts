@@ -5,20 +5,27 @@ const pet = {
   id: '33333333-3333-4333-8333-333333333333',
   name: 'Owl',
   appearance: 'owl',
-  personality: 'playful',
-  responseLength: 'balanced',
   instructions: '',
 };
 const settings = {
   enabled: false,
   activePetId: pet.id,
-  motion: 'system',
   profiles: [pet],
 };
 
 describe('pet boundary schemas', () => {
-  it('accepts an owl independently of its personality', () => {
-    expect(petSettingsSchema.parse(settings).profiles[0]?.personality).toBe('playful');
+  it('reads legacy settings while dropping retired fields', () => {
+    expect(
+      petSettingsSchema.parse({
+        ...settings,
+        motion: 'full',
+        profiles: [{ ...pet, personality: 'playful', responseLength: 'detailed' }],
+      }),
+    ).toEqual({
+      ...settings,
+      profiles: [{ ...pet, applyWithoutAsking: false, provider: 'chatgpt' }],
+      inlineWriting: false,
+    });
   });
   it.each([
     'eye-of-ra',

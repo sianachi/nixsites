@@ -1,6 +1,6 @@
 import { Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import type { PetProfile, PetSettings } from '@nix/api-client';
+import type { PetProfile } from '@nix/api-client';
 import atlas from './owl-atlas.json';
 import eyeOfRaAtlas from './eye-of-ra-atlas.json';
 import demiurgeAtlas from './demiurge-atlas.json';
@@ -57,7 +57,7 @@ export function PetAvatar({
 }: {
   readonly appearance?: PetProfile['appearance'];
   readonly state?: PetAnimationState;
-  readonly motion?: PetSettings['motion'];
+  readonly motion?: 'system' | 'reduced';
   readonly label?: string;
   readonly size?: PetAvatarSize;
 }): ReactElement {
@@ -96,7 +96,7 @@ function AtlasAvatar({
 }: {
   readonly atlas: SpriteAtlas;
   readonly state: PetAnimationState;
-  readonly motion: PetSettings['motion'];
+  readonly motion: 'system' | 'reduced';
   readonly label: string;
   readonly size: PetAvatarSize;
 }): ReactElement {
@@ -117,7 +117,7 @@ function AtlasAvatar({
     const row = spriteAtlas.stateRows[state];
     const frameCount = spriteAtlas.frameCounts[row] ?? spriteAtlas.columns;
     const idleFrames = [0, 0, 0, 0, 1, 2, 3, 4, 5];
-    const moving = () => motion !== 'reduced' && (motion !== 'system' || !reduced.matches);
+    const moving = () => motion === 'system' && !reduced.matches;
     function draw(frame: number): void {
       if (!context || !element || !loaded || frame === previous) return;
       previous = frame;
@@ -206,7 +206,7 @@ function OwlAvatar({
   size,
 }: {
   readonly state: PetAnimationState;
-  readonly motion: PetSettings['motion'];
+  readonly motion: 'system' | 'reduced';
   readonly label: string;
   readonly size: PetAvatarSize;
 }): ReactElement {
@@ -229,7 +229,7 @@ function OwlAvatar({
     const sourceHeight = atlas.rowHeights[row] ?? atlas.cellWidth;
     const baseline = atlas.rowBaselines[row] ?? 197;
     const idleFrames = [0, 0, 0, 0, 0, 0, 1, 2, 3];
-    const moving = () => motion !== 'reduced' && (motion !== 'system' || !reduced.matches);
+    const moving = () => motion === 'system' && !reduced.matches;
     function draw(frame: number): void {
       if (!context || !element || !loaded || frame === previous) return;
       previous = frame;

@@ -1,5 +1,5 @@
 import { Checkbox, Field, Select, Text } from '@nix/ui';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import {
   PET_SURFACE_OPTIONS,
@@ -9,13 +9,11 @@ import {
   type PetSurface,
 } from '@nix/web-foundation/lib/device-preferences';
 
-/** The device-only rows of the Behaviour group; `children` leads the first row. */
+/** The device-only rows of the Behaviour group. */
 export function PetDeviceSettings({
   inlineWriting,
-  children,
 }: {
   readonly inlineWriting: boolean;
-  readonly children?: ReactNode;
 }): ReactElement {
   const [placement, setPlacement] = useState(() => readDevicePreference('placement') || 'right');
   const [inlineContext, setInlineContext] = useState(
@@ -24,55 +22,48 @@ export function PetDeviceSettings({
   const [surface, setSurface] = useState<PetSurface>(() => readPetSurface());
   return (
     <>
-      <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2">
-        {children}
-        <div
-          role="group"
-          aria-label="This device"
-          className="flex min-w-0 flex-wrap items-end gap-3"
-        >
-          <Field label="Chat opens">
+      <div role="group" aria-label="This device" className="flex min-w-0 flex-wrap items-end gap-3">
+        <Field label="Chat opens">
+          {(control) => (
+            <Select
+              {...control}
+              value={surface}
+              onChange={(event) => {
+                const value = PET_SURFACE_OPTIONS.find(
+                  (option) => option.value === event.currentTarget.value,
+                )?.value;
+                if (!value) return;
+                setSurface(value);
+                writeDevicePreference('surface', value);
+              }}
+            >
+              {PET_SURFACE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        {surface !== 'page' && surface !== 'drawer' ? (
+          <Field label="Position">
             {(control) => (
               <Select
                 {...control}
-                value={surface}
+                value={placement}
                 onChange={(event) => {
-                  const value = PET_SURFACE_OPTIONS.find(
-                    (option) => option.value === event.currentTarget.value,
-                  )?.value;
-                  if (!value) return;
-                  setSurface(value);
-                  writeDevicePreference('surface', value);
+                  const value = event.currentTarget.value;
+                  setPlacement(value);
+                  writeDevicePreference('placement', value);
                 }}
               >
-                {PET_SURFACE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                <option value="right">Bottom right</option>
+                <option value="left">Bottom left</option>
               </Select>
             )}
           </Field>
-          {surface !== 'page' && surface !== 'drawer' ? (
-            <Field label="Position">
-              {(control) => (
-                <Select
-                  {...control}
-                  value={placement}
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    setPlacement(value);
-                    writeDevicePreference('placement', value);
-                  }}
-                >
-                  <option value="right">Bottom right</option>
-                  <option value="left">Bottom left</option>
-                </Select>
-              )}
-            </Field>
-          ) : null}
-          <DeviceTag />
-        </div>
+        ) : null}
+        <DeviceTag />
       </div>
       {inlineWriting ? (
         <div className="flex flex-col gap-1">

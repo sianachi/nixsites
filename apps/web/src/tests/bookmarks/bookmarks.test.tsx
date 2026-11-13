@@ -43,70 +43,41 @@ beforeEach(() => {
 });
 
 describe('keeping an item', () => {
-  it('offers a bookmark control on every row of the tree', async () => {
-    stubCoreApi({ items: [NOTE, OTHER] });
-    renderAt(<App />);
+  async function explorerActions(title: string) {
+    const tree = await screen.findByRole('tree', { name: 'Items' });
+    await userEvent.click(
+      await within(tree).findByRole('button', { name: `Actions for ${title}` }),
+    );
+    return within(screen.getByRole('menu', { name: `Actions for ${title}` }));
+  }
 
-    expect(
-      await within(await screen.findByRole('tree', { name: 'Items' })).findByRole('button', {
-        name: 'Bookmark Acquisition memo',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bookmark Board pack' })).toBeInTheDocument();
-  });
-
-  /**
-   * A toggle button is a thing with a state, and a screen reader announces that state itself.
-   * Swapping the accessible name between "Bookmark" and "Remove bookmark" would make one key press
-   * sound like it did two different things.
-   */
-  it('says whether it is kept with aria-pressed rather than by changing its name', async () => {
+  it('shows a pinned state after bookmarking from the row menu', async () => {
     stubCoreApi({ items: [NOTE] });
     renderAt(<App />);
 
-    const star = await within(await screen.findByRole('tree', { name: 'Items' })).findByRole(
-      'button',
-      { name: 'Bookmark Acquisition memo' },
-    );
-    expect(star).toHaveAttribute('aria-pressed', 'false');
+    const menu = await explorerActions(NOTE.title);
+    await userEvent.click(menu.getByRole('menuitem', { name: 'Bookmark' }));
 
-    await userEvent.click(star);
-
-    await waitFor(() => {
-      expect(star).toHaveAttribute('aria-pressed', 'true');
+    const rowTitle = within(screen.getByRole('tree', { name: 'Items' })).getByRole('button', {
+      name: NOTE.title,
     });
+    expect(rowTitle).toHaveAccessibleDescription('Bookmarked');
+    const reopened = await explorerActions(NOTE.title);
+    expect(reopened.getByRole('menuitem', { name: 'Remove bookmark' })).toBeVisible();
   });
 
-  it('starts pressed for something already kept', async () => {
-    stubCoreApi({ items: [NOTE], bookmarks: [KEPT] });
-    renderAt(<App />);
-    const star = await within(await screen.findByRole('tree', { name: 'Items' })).findByRole(
-      'button',
-      { name: 'Bookmark Acquisition memo' },
-    );
-
-    await waitFor(() => {
-      expect(star).toHaveAttribute('aria-pressed', 'true');
-    });
-  });
-
-  it('lets go of something that was kept', async () => {
+  it('lets go of an item that was already bookmarked', async () => {
     stubCoreApi({ items: [NOTE], bookmarks: [KEPT] });
     renderAt(<App />);
 
-    const star = await within(await screen.findByRole('tree', { name: 'Items' })).findByRole(
-      'button',
-      { name: 'Bookmark Acquisition memo' },
-    );
-    await waitFor(() => {
-      expect(star).toHaveAttribute('aria-pressed', 'true');
+    const tree = within(await screen.findByRole('tree', { name: 'Items' }));
+    const rowTitle = await tree.findByRole('button', {
+      name: NOTE.title,
+      description: 'Bookmarked',
     });
-
-    await userEvent.click(star);
-
-    await waitFor(() => {
-      expect(star).toHaveAttribute('aria-pressed', 'false');
-    });
+    const menu = await explorerActions(NOTE.title);
+    await userEvent.click(menu.getByRole('menuitem', { name: 'Remove bookmark' }));
+    expect(rowTitle).not.toHaveAccessibleDescription();
   });
 
   /**
@@ -121,9 +92,10 @@ describe('keeping an item', () => {
     await screen.findByRole('heading', { name: 'Bookmarks' });
     expect(await screen.findByText(/nothing kept yet/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Bookmark Acquisition memo' }));
+    const menu = await explorerActions(NOTE.title);
+    await userEvent.click(menu.getByRole('menuitem', { name: 'Bookmark' }));
 
-    // The shelf page is showing the same store the tree's star just wrote to.
+    // The shelf page is showing the same store the Explorer action just wrote to.
     await waitFor(() => {
       expect(screen.queryByText(/nothing kept yet/i)).not.toBeInTheDocument();
     });

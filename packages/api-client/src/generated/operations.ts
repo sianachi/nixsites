@@ -2859,11 +2859,10 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
         expectedRevision: { type: ['integer', 'string'] },
         settings: {
           type: 'object',
-          required: ['enabled', 'activePetId', 'motion', 'profiles'],
+          required: ['enabled', 'activePetId', 'profiles'],
           properties: {
             enabled: { type: 'boolean' },
             activePetId: { type: ['null', 'string'], format: 'uuid' },
-            motion: { type: 'string' },
             profiles: { type: 'array', items: { type: 'object' } },
             inlineWriting: { type: 'boolean' },
             memories: { type: ['null', 'array'], items: { type: 'object' } },

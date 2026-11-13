@@ -259,8 +259,11 @@ export function WorkspaceProvider({
     throw new Error('WorkspaceProvider requires a resolved accessible workspace.');
   }
 
+  const recordedVisit = useRef<string | null>(null);
   useEffect(() => {
     useTabStore.getState().workspaceChanged(workspace.id);
+    if (recordedVisit.current === workspace.id) return;
+    recordedVisit.current = workspace.id;
     rememberLastWorkspaceId(workspace.id);
   }, [workspace.id]);
 

@@ -15,7 +15,6 @@ describe('forgetting a memory from the chat', () => {
       settings: {
         enabled: true,
         activePetId: null,
-        motion: 'system',
         profiles: [],
         inlineWriting: false,
         memories: [

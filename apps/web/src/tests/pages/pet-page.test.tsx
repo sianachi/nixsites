@@ -26,14 +26,11 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
           return petSettings.enabled;
         },
         activePetId: '44444444-4444-4444-8444-444444444444',
-        motion: 'reduced',
         profiles: [
           {
             id: '44444444-4444-4444-8444-444444444444',
             name: 'Pip',
             appearance: 'cat',
-            personality: 'calm',
-            responseLength: 'balanced',
             instructions: '',
             applyWithoutAsking: false,
             get provider() {

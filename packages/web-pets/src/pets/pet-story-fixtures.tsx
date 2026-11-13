@@ -56,14 +56,11 @@ export const phoneSettings = {
   settings: {
     enabled: true,
     activePetId: '44444444-4444-4444-8444-444444444444',
-    motion: 'reduced' as const,
     profiles: [
       {
         id: '44444444-4444-4444-8444-444444444444',
         name: 'Pip',
         appearance: 'cat' as const,
-        personality: 'calm' as const,
-        responseLength: 'balanced' as const,
         instructions: '',
       },
     ],

@@ -16,8 +16,6 @@ const petProfileSchema = z.object({
     'phoenix-chick',
     'mushroom-sprite',
   ]),
-  personality: z.enum(['calm', 'playful', 'encouraging', 'concise']),
-  responseLength: z.enum(['concise', 'balanced', 'detailed']),
   instructions: z.string().max(2000),
   /** Default for the conversation's "Apply without asking" switch; stored pets without it read as off. */
   applyWithoutAsking: z.boolean().default(false),
@@ -40,7 +38,6 @@ export const petSettingsSchema = z
   .object({
     enabled: z.boolean(),
     activePetId: z.uuid().nullable(),
-    motion: z.enum(['system', 'reduced', 'full']),
     profiles: z.array(petProfileSchema).max(1),
     inlineWriting: z.boolean().default(false),
     /** What the pet has learned about the owner, newest last; the owner edits them in Settings. */

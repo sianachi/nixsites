@@ -284,7 +284,6 @@ describe('workspace-scoped companion tools', () => {
       settings: {
         enabled: true,
         activePetId: null,
-        motion: 'system',
         profiles: [],
         inlineWriting: false,
         memories: [{ id: itemId, text: 'Works in London.', createdAt: '2026-10-29T00:00:00.000Z' }],

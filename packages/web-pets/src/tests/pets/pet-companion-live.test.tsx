@@ -22,14 +22,11 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
       settings: {
         enabled: true,
         activePetId: '44444444-4444-4444-8444-444444444444',
-        motion: 'reduced',
         profiles: [
           {
             id: '44444444-4444-4444-8444-444444444444',
             name: 'Cat',
             appearance: 'cat',
-            personality: 'calm',
-            responseLength: 'balanced',
             instructions: '',
             applyWithoutAsking: false,
             provider: 'chatgpt',

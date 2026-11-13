@@ -9,7 +9,7 @@ namespace Nix.Features.Pets;
 /// It is a client-side convenience with no server authority: every change still runs under the
 /// owner's own permissions. Last and defaulted so stored profiles without it read as off.
 /// </remarks>
-public sealed record PetProfile(Guid Id, string Name, string Appearance, string Personality, string ResponseLength, string Instructions, bool ApplyWithoutAsking = false, string Provider = PetProviders.ChatGpt);
+public sealed record PetProfile(Guid Id, string Name, string Appearance, string Instructions, bool ApplyWithoutAsking = false, string Provider = PetProviders.ChatGpt);
 
 /// <summary>Account preferences. Device placement is deliberately absent.</summary>
 /// <remarks>
@@ -20,7 +20,7 @@ public sealed record PetProfile(Guid Id, string Name, string Appearance, string 
 /// <c>ask</c> (each new memory waits for the owner's click) or <c>always</c> (saved without asking, with
 /// Undo). All three trail and default so a stored document without them still deserialises.
 /// </remarks>
-public sealed record PetSettings(bool Enabled, Guid? ActivePetId, string Motion, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, string MemoryMode = PetMemoryModes.Ask);
+public sealed record PetSettings(bool Enabled, Guid? ActivePetId, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, string MemoryMode = PetMemoryModes.Ask);
 
 /// <summary>How the pet may save memories.</summary>
 public static class PetMemoryModes

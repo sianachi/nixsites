@@ -1,11 +1,5 @@
 import { Button, Icon, Menu, Select, cn, focusRing, focusRingInset, type MenuEntry } from '@nix/ui';
-import {
-  FileText,
-  List as ListIcon,
-  MessageSquare,
-  MoreHorizontal,
-  TriangleAlert,
-} from 'lucide-react';
+import { FileText, List as ListIcon, MoreHorizontal, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
   createContext,
@@ -47,7 +41,6 @@ import { findViewKind } from './view-kinds';
  * so DOM and focus order match the visual order. Null outside a switcher row.
  */
 export const BelowRowSlot = createContext<HTMLElement | null>(null);
-export const COMMENTS_VIEW = '$comments';
 
 export interface ViewSwitcherProps {
   readonly views: readonly View[];
@@ -57,7 +50,8 @@ export interface ViewSwitcherProps {
 
   /** What to call the item's own body. Omit to leave the document out entirely. */
   readonly documentLabel?: string;
-  readonly comments?: boolean;
+  readonly context?:
+    { readonly id: string; readonly label: string; readonly icon: LucideIcon } | undefined;
   readonly addView?: ReactNode;
   readonly viewActions?: ((id: string) => readonly MenuEntry[]) | undefined;
 
@@ -71,7 +65,7 @@ export interface ViewSwitcherProps {
    * Which entry the item opens as when nobody has asked for another. Marked quietly, so the choice
    * made in the settings panel is visible where people actually look.
    */
-  readonly defaultViewId?: string;
+  readonly defaultViewId?: string | undefined;
 
   /**
    * Controls about the item itself rather than its views - on a phone, its details and actions -
@@ -87,7 +81,7 @@ export interface ViewSwitcherProps {
 }
 
 export function ViewSwitcher(props: ViewSwitcherProps): ReactNode {
-  return props.views.length === 0 && !props.comments && props.addView == null ? null : (
+  return props.views.length === 0 && props.context === undefined && props.addView == null ? null : (
     <ViewStrip {...props} />
   );
 }
@@ -101,7 +95,7 @@ function ViewStrip(props: ViewSwitcherProps): ReactNode {
   const only = props.views.length === 1 ? props.views[0] : undefined;
   const hasOneChoice =
     compact &&
-    !props.comments &&
+    props.context === undefined &&
     props.addView == null &&
     only?.id === props.activeViewId &&
     (props.documentLabel === undefined || props.documentHidden === true) &&
@@ -139,12 +133,13 @@ function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolea
     documentLabel,
     documentHidden,
     defaultViewId,
+    context,
   } = props;
   const mark = (name: string, id: string): string =>
     `${name}${id === defaultViewId ? ' (default)' : ''}${unrenderable.includes(id) ? ' (needs attention)' : ''}`;
   const selected =
     views.some((view) => view.id === activeViewId) ||
-    (activeViewId === COMMENTS_VIEW && props.comments === true) ||
+    activeViewId === context?.id ||
     (activeViewId === DOCUMENT_VIEW && documentLabel !== undefined && !documentHidden);
   return (
     <div
@@ -166,9 +161,7 @@ function ViewSelect(props: ViewSwitcherProps & { readonly compactDesktop: boolea
         {documentLabel === undefined || documentHidden === true ? null : (
           <option value={DOCUMENT_VIEW}>{mark(documentLabel, DOCUMENT_VIEW)}</option>
         )}
-        {props.comments ? (
-          <option value={COMMENTS_VIEW}>{mark('Comments', COMMENTS_VIEW)}</option>
-        ) : null}
+        {context ? <option value={context.id}>{mark(context.label, context.id)}</option> : null}
         {views.map((view) => (
           <option key={view.id} value={view.id}>
             {mark(view.name, view.id)}
@@ -190,6 +183,7 @@ function ViewTabs(props: ViewSwitcherProps): ReactNode {
     documentLabel,
     documentHidden,
     defaultViewId,
+    context,
   } = props;
   const stripRef = useRef<HTMLElement>(null);
 
@@ -235,16 +229,16 @@ function ViewTabs(props: ViewSwitcherProps): ReactNode {
             }}
           />
         )}
-        {props.comments ? (
+        {context ? (
           <SwitcherTab
-            icon={MessageSquare}
-            label="Comments"
-            active={activeViewId === COMMENTS_VIEW}
-            isDefault={defaultViewId === COMMENTS_VIEW}
+            icon={context.icon}
+            label={context.label}
+            active={activeViewId === context.id}
+            isDefault={defaultViewId === context.id}
             broken={false}
-            actions={props.viewActions?.(COMMENTS_VIEW)}
+            actions={props.viewActions?.(context.id)}
             onSelect={() => {
-              onSelect(COMMENTS_VIEW);
+              onSelect(context.id);
             }}
           />
         ) : null}

@@ -46,13 +46,12 @@ public static class PetSettingsValidation
     }
 
     /// <summary>Gets the initial disabled configuration.</summary>
-    public static PetSettings Empty => new(false, null, "system", []);
+    public static PetSettings Empty => new(false, null, []);
 
     /// <summary>Refuses unknown presets, invalid active references, duplicate identities, and unbounded text.</summary>
     public static bool IsValid(PetSettings? settings)
     {
-        if (settings is null || settings.Profiles is null || settings.Profiles.Count > 1
-            || settings.Motion is not ("system" or "reduced" or "full"))
+        if (settings is null || settings.Profiles is null || settings.Profiles.Count > 1)
         {
             return false;
         }
@@ -63,8 +62,6 @@ public static class PetSettingsValidation
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
                 || profile.Appearance is not ("owl" or "cat" or "fox" or "eye-of-ra" or "demiurge"
                     or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite")
-                || profile.Personality is not ("calm" or "playful" or "encouraging" or "concise")
-                || profile.ResponseLength is not ("concise" or "balanced" or "detailed")
                 || profile.Instructions is null || profile.Instructions.Length > 2000
                 || !PetProviders.IsValid(profile.Provider))
             {

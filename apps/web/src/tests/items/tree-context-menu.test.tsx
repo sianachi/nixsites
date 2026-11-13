@@ -239,13 +239,19 @@ describe('the sidebar row context menu', () => {
     ]);
   });
 
-  it('leaves secondary row controls out of the item context menu', () => {
+  it('opens the same row actions from the keyboard and returns focus on Escape', async () => {
+    const user = userEvent.setup();
     renderSidebar(treeOf(vi.fn()));
-    expect(fireEvent.contextMenu(screen.getByRole('button', { name: 'Delete First' }))).toBe(true);
-    expect(fireEvent.contextMenu(screen.getByRole('button', { name: 'Open First beside' }))).toBe(
-      true,
-    );
+
+    const trigger = screen.getByRole('button', { name: 'Actions for First' });
+    expect(fireEvent.contextMenu(trigger)).toBe(true);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menu', { name: 'Actions for First' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Open' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
   });
 
   it('offers open and personal hide actions on the mobile browser row', async () => {

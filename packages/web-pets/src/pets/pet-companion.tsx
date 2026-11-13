@@ -438,7 +438,6 @@ function Companion({
           <PetAvatar
             appearance={pet.appearance}
             state={hover ? 'hover' : 'idle'}
-            motion={settings.motion}
             label={pet.name}
             size={narrow ? 'compact' : 'regular'}
           />

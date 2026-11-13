@@ -18,7 +18,7 @@ import {
   UndoBar,
   useUndo,
 } from '@nix/ui';
-import { Check, Plus } from 'lucide-react';
+import { Check, Pencil, Plus } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactElement } from 'react';
 import { newPet, petCatalog } from './catalog';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
@@ -35,10 +35,7 @@ export function PetSettingsSection(): ReactElement {
   const state = usePetSettings();
   const inDialog = useInRouteDialog();
   return (
-    <SettingsSection
-      title="Your companion"
-      summary="Choose a provider, character and tone for your companion across workspaces"
-    >
+    <SettingsSection title="Your companion" summary="Set up your companion across workspaces">
       {state.loading ? <Text role="status">Loading your companion…</Text> : null}
       {state.error ? (
         <div className="flex flex-col gap-2">
@@ -71,15 +68,20 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   const [draft, setDraft] = useState(initial.settings);
   const [message, setMessage] = useState<string | null>(null);
   const [picker, setPicker] = useState<'add' | 'edit' | null>(null);
+  const [nameBeforeEdit, setNameBeforeEdit] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
+  const nameButton = useRef<HTMLButtonElement>(null);
+  const returnToName = useRef(false);
   const addButton = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
   const undo = useUndo();
+  const behaviourId = useId();
   if (initial !== previousInitial) {
     setPreviousInitial(initial);
     if (JSON.stringify(draft) !== JSON.stringify(initial.settings)) {
       setDraft(initial.settings);
       setMessage(null);
+      setNameBeforeEdit(null);
     }
   }
   const pet = draft.profiles[0] ?? null;
@@ -88,8 +90,18 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   useEffect(() => {
     if (!restoreFocus.current) return;
     restoreFocus.current = false;
-    (pet === null ? addButton.current : nameInput.current)?.focus();
+    (pet === null ? addButton.current : nameButton.current)?.focus();
   }, [pet]);
+
+  useEffect(() => {
+    if (nameBeforeEdit !== null) {
+      nameInput.current?.focus();
+      nameInput.current?.select();
+    } else if (returnToName.current) {
+      returnToName.current = false;
+      nameButton.current?.focus();
+    }
+  }, [nameBeforeEdit]);
 
   function change(next: PetSettings): void {
     setDraft(next);
@@ -97,6 +109,29 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   }
   function updatePet(update: Partial<PetProfile>): void {
     if (pet !== null) change({ ...draft, profiles: [{ ...pet, ...update }] });
+  }
+  function finishRename(cancel = false): void {
+    if (pet === null || nameBeforeEdit === null) return;
+    const previousName = nameBeforeEdit;
+    setNameBeforeEdit(null);
+    if (cancel) {
+      updatePet({ name: previousName });
+      return;
+    }
+    const name = pet.name.trim();
+    if (pet.name !== name) updatePet({ name });
+    if (name !== '' && name !== previousName) {
+      undo.push(`Renamed ${previousName || 'pet'} to ${name}`, () => {
+        setDraft((current) => ({
+          ...current,
+          profiles: current.profiles.map((profile) =>
+            profile.id === pet.id && profile.name === name
+              ? { ...profile, name: previousName }
+              : profile,
+          ),
+        }));
+      });
+    }
   }
   function add(profile: PetProfile): void {
     if (pet !== null) return;
@@ -113,6 +148,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   function remove(): void {
     if (pet === null) return;
     restoreFocus.current = true;
+    setNameBeforeEdit(null);
     const gone = pet;
     const wasActive = draft.activePetId;
     const wasEnabled = draft.enabled;
@@ -145,24 +181,6 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     return ok;
   }
 
-  const motionField = (
-    <Field label="Motion">
-      {(control) => (
-        <Select
-          {...control}
-          value={draft.motion}
-          onChange={(event) => {
-            change({ ...draft, motion: event.currentTarget.value as PetSettings['motion'] });
-          }}
-        >
-          <option value="system">System</option>
-          <option value="reduced">Reduced</option>
-          <option value="full">Full</option>
-        </Select>
-      )}
-    </Field>
-  );
-
   return (
     <form
       className="@container flex min-w-0 flex-col gap-4"
@@ -189,12 +207,66 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
           ) : (
             <>
               <div className="flex min-w-0 items-center gap-2">
-                <span aria-hidden>
-                  <PetAvatar appearance={pet.appearance} motion="reduced" size="compact" />
-                </span>
-                <Text variant="body" truncate>
-                  {pet.name || 'Unnamed pet'}
-                </Text>
+                <Button
+                  type="button"
+                  variant="subtle"
+                  aria-label="Change appearance"
+                  title="Change appearance"
+                  aria-haspopup="dialog"
+                  className="size-14 shrink-0"
+                  onClick={() => {
+                    setPicker('edit');
+                  }}
+                >
+                  <span aria-hidden>
+                    <PetAvatar appearance={pet.appearance} motion="reduced" size="compact" />
+                  </span>
+                </Button>
+                {nameBeforeEdit === null ? (
+                  <Button
+                    ref={nameButton}
+                    type="button"
+                    variant="subtle"
+                    aria-label={`Rename ${pet.name || 'unnamed pet'}`}
+                    title="Rename companion"
+                    className="group min-w-0 justify-start"
+                    onClick={() => {
+                      setNameBeforeEdit(pet.name);
+                    }}
+                  >
+                    <Text as="span" variant="body" className="text-foreground" truncate>
+                      {pet.name || 'Unnamed pet'}
+                    </Text>
+                    <Icon
+                      icon={Pencil}
+                      size="sm"
+                      className="shrink-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 any-pointer-coarse:opacity-100"
+                    />
+                  </Button>
+                ) : (
+                  <Input
+                    ref={nameInput}
+                    aria-label="Name"
+                    required
+                    maxLength={80}
+                    value={pet.name}
+                    onChange={(event) => {
+                      updatePet({ name: event.currentTarget.value });
+                    }}
+                    onBlur={() => {
+                      finishRename();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.nativeEvent.isComposing) return;
+                      if (event.key === 'Escape' || event.key === 'Enter') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        returnToName.current = true;
+                        finishRename(event.key === 'Escape');
+                      }
+                    }}
+                  />
+                )}
               </div>
               <Button type="button" variant="ghost" onClick={remove}>
                 Remove pet
@@ -204,70 +276,6 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         </div>
         {pet ? (
           <>
-            <div className="grid min-w-0 gap-3 @lg:grid-cols-2 @3xl:grid-cols-4">
-              <Field label="Name">
-                {(control) => (
-                  <Input
-                    {...control}
-                    ref={nameInput}
-                    required
-                    maxLength={80}
-                    value={pet.name}
-                    onChange={(event) => {
-                      updatePet({ name: event.currentTarget.value });
-                    }}
-                  />
-                )}
-              </Field>
-              <div className="flex flex-col gap-1">
-                <Text variant="caption">Appearance</Text>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  aria-label="Change appearance"
-                  onClick={() => {
-                    setPicker('edit');
-                  }}
-                >
-                  {petCatalog.find((entry) => entry.appearance === pet.appearance)?.name}
-                </Button>
-              </div>
-              <Field label="Personality">
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={pet.personality}
-                    onChange={(event) => {
-                      updatePet({
-                        personality: event.currentTarget.value as PetProfile['personality'],
-                      });
-                    }}
-                  >
-                    <option value="calm">Calm and thoughtful</option>
-                    <option value="playful">Playful and inventive</option>
-                    <option value="encouraging">Encouraging and practical</option>
-                    <option value="concise">Concise and composed</option>
-                  </Select>
-                )}
-              </Field>
-              <Field label="Response length">
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={pet.responseLength}
-                    onChange={(event) => {
-                      updatePet({
-                        responseLength: event.currentTarget.value as PetProfile['responseLength'],
-                      });
-                    }}
-                  >
-                    <option value="concise">Concise</option>
-                    <option value="balanced">Balanced</option>
-                    <option value="detailed">Detailed</option>
-                  </Select>
-                )}
-              </Field>
-            </div>
             <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
               <Field label="Model">
                 {(control) => (
@@ -306,6 +314,13 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                 updatePet({ instructions });
               }}
             />
+          </>
+        ) : null}
+        <section aria-labelledby={behaviourId} className="flex min-w-0 flex-col gap-4">
+          <Text variant="h5" as="h3" id={behaviourId}>
+            Behaviour
+          </Text>
+          {pet === null ? null : (
             <Checkbox
               label="Apply changes without asking"
               checked={pet.applyWithoutAsking}
@@ -313,45 +328,34 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                 updatePet({ applyWithoutAsking: event.currentTarget.checked });
               }}
             />
-          </>
-        ) : (
-          <Text variant="note" tone="muted">
-            Choose your companion’s appearance and personality.
-          </Text>
-        )}
-        <Text variant="h5" as="h3">
-          Behaviour
-        </Text>
-        <Checkbox
-          label="Show companion in my workspaces"
-          checked={draft.enabled}
-          disabled={pet === null}
-          onChange={(event) => {
-            change({
-              ...draft,
-              enabled: event.currentTarget.checked,
-              activePetId: pet?.id ?? null,
-            });
-          }}
-        />
-        <div className="flex flex-col gap-1">
+          )}
           <Checkbox
-            label="Use AI while writing notes"
-            checked={draft.inlineWriting}
-            disabled={draft.activePetId === null || !draft.enabled}
+            label="Show companion in my workspaces"
+            checked={draft.enabled}
+            disabled={pet === null}
             onChange={(event) => {
-              change({ ...draft, inlineWriting: event.currentTarget.checked });
+              change({
+                ...draft,
+                enabled: event.currentTarget.checked,
+                activePetId: pet?.id ?? null,
+              });
             }}
           />
-          <Text variant="note" tone="muted">
-            The text you select is sent to your connected model. Locked notes are never sent.
-          </Text>
-        </div>
-        {draft.enabled ? (
-          <PetDeviceSettings inlineWriting={draft.inlineWriting}>{motionField}</PetDeviceSettings>
-        ) : (
-          motionField
-        )}
+          <div className="flex flex-col gap-1">
+            <Checkbox
+              label="Use AI while writing notes"
+              checked={draft.inlineWriting}
+              disabled={draft.activePetId === null || !draft.enabled}
+              onChange={(event) => {
+                change({ ...draft, inlineWriting: event.currentTarget.checked });
+              }}
+            />
+            <Text variant="note" tone="muted">
+              The text you select is sent to your connected model. Locked notes are never sent.
+            </Text>
+          </div>
+          {draft.enabled ? <PetDeviceSettings inlineWriting={draft.inlineWriting} /> : null}
+        </section>
         <PetMemorySection
           memories={draft.memories ?? []}
           mode={memoryModeOf(draft)}
@@ -364,7 +368,6 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         <PetAppearancePicker
           initial={picker === 'edit' ? (pet?.appearance ?? 'owl') : 'owl'}
           adding={picker === 'add'}
-          motion={draft.motion}
           onClose={() => {
             setPicker(null);
           }}
@@ -411,13 +414,11 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
 function PetAppearancePicker({
   initial,
   adding,
-  motion,
   onClose,
   onChoose,
 }: {
   readonly initial: PetProfile['appearance'];
   readonly adding: boolean;
-  readonly motion: PetSettings['motion'];
   readonly onClose: () => void;
   readonly onChoose: (appearance: PetProfile['appearance']) => void;
 }): ReactElement {
@@ -485,12 +486,7 @@ function PetAppearancePicker({
         </fieldset>
         <div className="order-first flex flex-col gap-2 rounded-md border border-divider bg-surface p-3 sm:order-none">
           <div className="flex justify-center">
-            <PetAvatar
-              appearance={appearance}
-              size="preview"
-              motion={motion}
-              label={`${selected.name} preview`}
-            />
+            <PetAvatar appearance={appearance} size="preview" label={`${selected.name} preview`} />
           </div>
           <Text as="h3" variant="h4">
             {selected.name}
@@ -504,7 +500,6 @@ function PetAppearancePicker({
   );
 }
 
-/** Collapsed until needed; opens on mount only when the pet already has instructions. */
 function PetInstructions({
   value,
   onChange,
@@ -512,28 +507,22 @@ function PetInstructions({
   readonly value: string;
   readonly onChange: (value: string) => void;
 }): ReactElement {
-  const [open] = useState(value !== '');
   return (
-    <details open={open}>
-      <summary className="min-h-11 cursor-pointer text-sm text-accent-text any-pointer-coarse:min-h-(--control-lg)">
-        Instructions (optional)
-      </summary>
-      <Field
-        label="Personal instructions"
-        hint="How you like to work; this never grants extra access"
-      >
-        {(control) => (
-          <Textarea
-            {...control}
-            rows={4}
-            maxLength={2000}
-            value={value}
-            onChange={(event) => {
-              onChange(event.currentTarget.value);
-            }}
-          />
-        )}
-      </Field>
-    </details>
+    <Field
+      label="Instructions (optional)"
+      hint="Tell your companion how you like to work. Instructions never grant extra access."
+    >
+      {(control) => (
+        <Textarea
+          {...control}
+          rows={3}
+          maxLength={2000}
+          value={value}
+          onChange={(event) => {
+            onChange(event.currentTarget.value);
+          }}
+        />
+      )}
+    </Field>
   );
 }

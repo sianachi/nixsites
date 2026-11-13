@@ -100,7 +100,6 @@ function ItemDialog({
   readonly onNavigateAway: () => void;
 }): ReactNode {
   const [params, setParams] = useState(() => new URLSearchParams());
-  const [showContext, setShowContext] = useState(true);
   const templates = useTemplateLibrary();
   const item = tree.find(itemId);
   const reveal = tree.revealOf(itemId);
@@ -153,17 +152,6 @@ function ItemDialog({
               Next {noun}
             </Button>
           )}
-          {contextLabel === null ? null : (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                if (showContext) setParams(new URLSearchParams({ view: 'document' }));
-                setShowContext(!showContext);
-              }}
-            >
-              {showContext ? 'Document' : contextLabel}
-            </Button>
-          )}
           <Button variant="secondary" onClick={onPage}>
             Open as page
           </Button>
@@ -201,34 +189,39 @@ function ItemDialog({
                 title={item.title}
                 bodyKind={item.type}
                 defaultToComments={view?.kind === 'comments'}
-                renderContext={
-                  contextLabel !== null && showContext
-                    ? (details) => (
-                        <section aria-label={contextLabel} className={paneScroller}>
-                          <div
-                            className={`mx-auto flex w-full flex-col gap-4 p-4 sm:p-6 ${review === null ? 'max-w-3xl' : 'max-w-6xl'}`}
-                          >
-                            <Text as="h2" variant="h5">
-                              {contextLabel}
-                            </Text>
-                            {record !== null ? (
-                              <ContextFields details={details} fields={record.fields} />
-                            ) : null}
-                            {event !== null ? <EventBrief details={details} view={event} /> : null}
-                            {dependencies !== null ? (
-                              <DependenciesPanel
-                                details={details}
-                                view={dependencies}
-                                onOpen={onStep}
-                              />
-                            ) : null}
-                            {review !== null ? (
-                              <GalleryReview details={details} view={review} />
-                            ) : null}
-                          </div>
-                        </section>
-                      )
-                    : undefined
+                contextView={
+                  contextLabel === null
+                    ? undefined
+                    : {
+                        label: contextLabel,
+                        render: (details) => (
+                          <section aria-label={contextLabel} className={paneScroller}>
+                            <div
+                              className={`mx-auto flex w-full flex-col gap-4 p-4 sm:p-6 ${review === null ? 'max-w-3xl' : 'max-w-6xl'}`}
+                            >
+                              <Text as="h2" variant="h5">
+                                {contextLabel}
+                              </Text>
+                              {record !== null ? (
+                                <ContextFields details={details} fields={record.fields} />
+                              ) : null}
+                              {event !== null ? (
+                                <EventBrief details={details} view={event} />
+                              ) : null}
+                              {dependencies !== null ? (
+                                <DependenciesPanel
+                                  details={details}
+                                  view={dependencies}
+                                  onOpen={onStep}
+                                />
+                              ) : null}
+                              {review !== null ? (
+                                <GalleryReview details={details} view={review} />
+                              ) : null}
+                            </div>
+                          </section>
+                        ),
+                      }
                 }
                 canManageTemplates={templates.capabilities.canManage}
                 canApplyTemplates={templates.templates.some(

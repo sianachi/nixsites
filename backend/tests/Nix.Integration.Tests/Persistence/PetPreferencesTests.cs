@@ -56,7 +56,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             var conflict = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(0, saved.Settings), Cancellation);
             Assert.True(conflict.IsFailure);
             Assert.Equal("pets.settings_conflict", conflict.Error.Code);
-            var updated = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(1, saved.Settings with { Motion = "reduced" }), Cancellation);
+            var updated = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(1, saved.Settings with { InlineWriting = true }), Cancellation);
             Assert.True(updated.IsSuccess);
             Assert.Equal(2, updated.Value.Revision);
             await work.CommitAsync(Cancellation);
@@ -103,7 +103,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
         await using (work.ConfigureAwait(false))
         {
             var id = Guid.NewGuid();
-            var settings = new PetSettings(enabled, id, "system", [new(id, "Owl", "owl", "calm", "balanced", "")]);
+            var settings = new PetSettings(enabled, id, [new(id, "Owl", "owl", "")]);
             Result<PetSettingsResponse> saved = await work.Resolve<NixDispatcher>()
                 .SendAsync<SavePetSettings, PetSettingsResponse>(new(0, settings), Cancellation);
             Assert.True(saved.IsSuccess);
@@ -148,7 +148,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             using var body = JsonDocument.Parse(handler.Body);
             Assert.Equal(TestTenants.Alpha.ToString(), body.RootElement.GetProperty("tenantId").GetString());
             Assert.Equal(TestTenants.AlphaPrincipal.ToString(), body.RootElement.GetProperty("principalId").GetString());
-            Assert.Contains("calm", body.RootElement.GetProperty("instructions").GetString(), StringComparison.Ordinal);
+            Assert.Contains("Keep replies concise", body.RootElement.GetProperty("instructions").GetString(), StringComparison.Ordinal);
             Assert.False(body.RootElement.TryGetProperty("rootItemId", out _));
             Assert.False(body.RootElement.TryGetProperty("readOnly", out _));
             Assert.Equal("test-secret", handler.Secret);
@@ -194,10 +194,10 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             var remembered = saved.Settings with { Memories = [new(Guid.NewGuid(), "Prefers metric units.", DateTimeOffset.UnixEpoch)] };
             var first = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(saved.Revision, remembered), Cancellation);
             // An older client knows nothing of memories and sends none.
-            var older = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(first.Value.Revision, remembered with { Memories = null, Motion = "reduced" }), Cancellation);
+            var older = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(first.Value.Revision, remembered with { Memories = null, InlineWriting = true }), Cancellation);
             Assert.True(older.IsSuccess);
             var reread = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
-            Assert.Equal("reduced", reread.Settings.Motion);
+            Assert.True(reread.Settings.InlineWriting);
             Assert.Equal(["Prefers metric units."], reread.Settings.Memories?.Select(memory => memory.Text));
             // An empty list is the owner forgetting them all.
             var cleared = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(reread.Revision, reread.Settings with { Memories = [] }), Cancellation);

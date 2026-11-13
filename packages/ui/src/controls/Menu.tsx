@@ -107,11 +107,11 @@ interface MenuSeparator {
   readonly kind: 'separator';
 }
 
-/** Handed to a `content` entry's render function - the one thing bespoke content cannot do for
- * itself, since it did not open the menu. */
 interface MenuContentHelpers {
-  /** Drops the panel without returning focus to the trigger - the click already moved it. */
+  /** Closes the panel after the content moves focus elsewhere. */
   readonly close: () => void;
+  /** Closes the panel and returns focus to its trigger. */
+  readonly closeAndRestoreFocus: () => void;
 }
 
 /**
@@ -535,9 +535,8 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
       const node =
         typeof entry.content === 'function'
           ? entry.content({
-              close: () => {
-                onClose(false);
-              },
+              close: () => onClose(false),
+              closeAndRestoreFocus: () => onClose(true),
             })
           : entry.content;
       return <Fragment key={entry.key ?? `content-${String(index)}`}>{node}</Fragment>;

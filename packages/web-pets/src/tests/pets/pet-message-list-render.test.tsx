@@ -10,7 +10,7 @@ import { useStablePieces } from '../../pets/conversation/state/use-stable-pieces
 vi.mock('../../pets/work-tools/pet-work-tools', () => ({ PetWorkTools: () => null }));
 
 const pet = { id: 'p', name: 'Cat', appearance: 'cat' } as never;
-const settings = { motion: 'reduced' } as never;
+const settings = { enabled: false, activePetId: null, profiles: [], inlineWriting: false };
 const noop = () => undefined;
 
 /** A fresh message array each tick, as the watch endpoint delivers it: new objects, same text. */

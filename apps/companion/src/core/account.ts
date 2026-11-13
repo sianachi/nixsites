@@ -75,10 +75,10 @@ import {
 } from '../shared/util.ts';
 import { toolNamesChat } from '../tools/catalog.ts';
 
-/** toolVersion 12 adds the supported-Markdown rule to the instructions. Older provider threads
+/** Version 13 retires the personality and length presets in the provider instructions. Older provider threads
  * restart on their next send to receive the current catalog and rules; visible conversation
  * history and its protected-read hold are retained. */
-export const TOOL_VERSION = 12;
+export const TOOL_VERSION = 13;
 export const MAX_TOOL_CALLS_PER_TURN = 20;
 export const MAX_CONCURRENT_WATCHERS = 4;
 export const MIN_WATCH_DWELL_MS = 120;
@@ -784,8 +784,12 @@ export class Account {
       earlier = earlierTranscript(
         c.messages.slice(0, Math.max(replaceIndex(c.messages, r.replaceFromMessageId), 0)),
       );
-    } else if (r.conversationItemId === '' && c.threadId === '' && c.messages.length > 0) {
-      // A resumed archive has its messages but no provider thread.
+    } else if (
+      r.conversationItemId === '' &&
+      (c.threadId === '' || (thread === '' && c.readOnly === r.readOnly)) &&
+      c.messages.length > 0
+    ) {
+      // Restore visible context when starting a replacement provider thread.
       earlier = earlierTranscript(c.messages);
     }
     const params: Record<string, unknown> = {

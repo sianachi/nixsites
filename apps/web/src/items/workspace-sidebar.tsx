@@ -665,13 +665,7 @@ function TreeNode(props: TreeNodeProps): ReactNode {
               });
             }}
             openButtonRef={openButtonRef}
-            canOpenBeside={canOpenBeside}
-            besideRefusal={besideRefusal}
-            onOpenBeside={onOpenBeside}
             onOpenPinned={onOpenPinned}
-            onDeleteItem={onDeleteItem}
-            moveToRoot={moveToRoot}
-            onMoveItem={onMoveItem}
             flashProps={flashProps}
             contextItems={contextItems}
           />

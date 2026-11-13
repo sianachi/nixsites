@@ -6,7 +6,10 @@ import {
   Menu,
   Select,
   Text,
+  cn,
   focusRing,
+  focusRingInset,
+  inkWashStates,
   useFlash,
   useUndo,
   type MenuEntry,
@@ -15,6 +18,7 @@ import {
   Archive,
   Check,
   ChevronDown,
+  EyeOff,
   FolderClosed,
   Layers,
   Pin,
@@ -28,7 +32,11 @@ import { Link, useNavigate } from 'react-router';
 
 import { addGroup, arrangeWorkspaces, assignToGroup, removeGroup, togglePin } from './arrangement';
 import { CreateWorkspaceForm } from './settings/create-workspace-form';
-import { readRecentWorkspaceIds } from './last-workspace';
+import {
+  useHiddenWorkspacePreviewIds,
+  useMostUsedWorkspaceIds,
+  useSetWorkspacePreviewHidden,
+} from './last-workspace';
 import { useWorkspaceArrangement } from './use-workspace-arrangement';
 import { useWorkspace } from './workspace-context';
 import { WorkspaceGroupsSection } from './workspace-groups-section';
@@ -71,16 +79,57 @@ export function WorkspaceSwitcher(): ReactNode {
   );
 }
 
-const RECENT_LIMIT = 8;
+const QUICK_PREVIEW_LIMIT = 8;
 const NEW_GROUP = '__new__';
+const previewActionClass = cn(
+  'flex size-(--control-sm) shrink-0 items-center justify-center rounded-md text-muted hover:text-foreground max-sm:size-(--control-lg) any-pointer-coarse:size-(--control-lg)',
+  inkWashStates,
+  focusRingInset,
+);
 
-/**
- * The workspace entries for the profile menu: the most recently used workspaces with a tick on the
- * current one, "All workspaces…" (the full switcher panel in a dialog) once there are more than
- * the limit, and "New workspace" through the same create flow the switcher uses.
- */
+function useWorkspaceArrangementActions() {
+  const state = useWorkspaceArrangement();
+  const { arrangement, save } = state;
+  const latest = useRef({ arrangement, save });
+  const undo = useUndo();
+  useEffect(() => {
+    latest.current = { arrangement, save };
+  });
+
+  const apply = async (
+    next: WorkspaceArrangementInput,
+    label: string,
+    reverse: (current: WorkspaceArrangementInput) => WorkspaceArrangementInput,
+  ): Promise<boolean> => {
+    if (!(await save(next))) return false;
+    undo.push(label, async () => {
+      await latest.current.save(reverse(latest.current.arrangement));
+    });
+    return true;
+  };
+
+  const pin = (entry: Workspace): Promise<boolean> => {
+    const wasPinned = arrangement.pinnedWorkspaceIds.includes(entry.id);
+    return apply(
+      togglePin(arrangement, entry.id),
+      `${wasPinned ? 'Unpinned' : 'Pinned'} ${entry.name}`,
+      (current) =>
+        current.pinnedWorkspaceIds.includes(entry.id) === wasPinned
+          ? current
+          : togglePin(current, entry.id),
+    );
+  };
+
+  return { ...state, apply, pin };
+}
+
+/** Quick access for the workspace switcher and account menu. */
 export function useWorkspaceMenuEntries(): { entries: MenuEntry[]; dialogs: ReactNode } {
   const { workspace, workspaces } = useWorkspace();
+  const { arrangement, loading, saving, error, pin } = useWorkspaceArrangementActions();
+  const hiddenIds = useHiddenWorkspacePreviewIds();
+  const setHidden = useSetWorkspacePreviewHidden();
+  const mostUsedIds = useMostUsedWorkspaceIds();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const closeDialog = (): void => {
@@ -91,25 +140,98 @@ export function useWorkspaceMenuEntries(): { entries: MenuEntry[]; dialogs: Reac
       <CreateWorkspaceForm onCreated={closeDialog} />
     </Dialog>
   ) : null;
-  const active = workspaces.filter((entry) => entry.lifecycleState === 'active');
-  const recent = readRecentWorkspaceIds();
-  const rank = (id: string): number => {
-    const at = recent.indexOf(id);
-    return at === -1 ? recent.length : at;
-  };
-  // Array.sort is stable, so workspaces never opened here keep the server's order.
-  const shown = [...active].sort((a, b) => rank(a.id) - rank(b.id)).slice(0, RECENT_LIMIT);
+  const available = new Map(
+    workspaces
+      .filter((entry) => entry.lifecycleState === 'active' && !hiddenIds.has(entry.id))
+      .map((entry) => [entry.id, entry]),
+  );
+  const pinnedIds = new Set(arrangement.pinnedWorkspaceIds);
+  const shown: Workspace[] = [];
+  for (const id of new Set([...pinnedIds, ...mostUsedIds])) {
+    const entry = available.get(id);
+    if (entry === undefined) continue;
+    if (shown.length >= QUICK_PREVIEW_LIMIT && !pinnedIds.has(id)) break;
+    shown.push(entry);
+  }
   const entries: MenuEntry[] = [
-    ...shown.map((entry): MenuEntry => ({
-      kind: 'action',
-      key: `workspace-${entry.id}`,
-      label: entry.name,
-      role: 'menuitemradio',
-      checked: entry.id === workspace.id,
-      onSelect: () => void navigate(`/w/${entry.id}`),
-    })),
-    // Always offered, not only past the limit: the page is also where pinning, groups,
-    // archived workspaces and per-workspace management live.
+    {
+      kind: 'content',
+      key: 'quick-previews',
+      content: ({ closeAndRestoreFocus }) =>
+        shown.length === 0 && !error ? null : (
+          <>
+            {error ? (
+              <Text variant="caption" tone="muted" role="status" className="px-3 py-2">
+                {error}
+              </Text>
+            ) : null}
+            <ul aria-label="Quick previews">
+              {shown.map((entry) => {
+                const current = entry.id === workspace.id;
+                const pinned = pinnedIds.has(entry.id);
+                const pinLabel = `${pinned ? 'Unpin' : 'Pin'} ${entry.name}`;
+                const hideLabel = `Hide ${entry.name} from Quick previews in this browser`;
+                return (
+                  <li key={entry.id} className="flex min-w-0 items-center pr-1">
+                    <button
+                      type="button"
+                      aria-current={current ? 'page' : undefined}
+                      className={cn(
+                        'flex min-h-(--control-md) min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left text-foreground max-sm:min-h-(--control-lg) any-pointer-coarse:min-h-(--control-lg)',
+                        inkWashStates,
+                        focusRingInset,
+                      )}
+                      onClick={() => {
+                        closeAndRestoreFocus();
+                        void navigate(`/w/${entry.id}`);
+                      }}
+                    >
+                      <span aria-hidden="true" className={current ? undefined : 'invisible'}>
+                        <Icon icon={Check} size="sm" />
+                      </span>
+                      <Text as="span" variant="bodySmall" className="min-w-0" truncate>
+                        {entry.name}
+                      </Text>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Pin ${entry.name}`}
+                      aria-pressed={pinned}
+                      aria-disabled={loading || saving}
+                      title={pinLabel}
+                      className={cn(
+                        previewActionClass,
+                        'aria-pressed:text-accent-text aria-disabled:opacity-45',
+                      )}
+                      onClick={(event) => {
+                        if (loading || saving) return;
+                        const button = event.currentTarget;
+                        void pin(entry).then((saved) => {
+                          if (saved && button.isConnected) closeAndRestoreFocus();
+                        });
+                      }}
+                    >
+                      <Icon icon={pinned ? PinOff : Pin} size="sm" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={hideLabel}
+                      title="Hide from Quick previews"
+                      className={previewActionClass}
+                      onClick={() => {
+                        if (setHidden(entry, true)) closeAndRestoreFocus();
+                      }}
+                    >
+                      <Icon icon={EyeOff} size="sm" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        ),
+    },
+    // The directory includes every active workspace, groups and per-workspace management.
     {
       kind: 'action',
       label: 'All workspaces…',
@@ -140,7 +262,7 @@ export function WorkspacesPanel(): ReactNode {
   return (
     <>
       {content?.kind === 'content' && typeof content.content === 'function'
-        ? content.content({ close: () => undefined })
+        ? content.content({ close: () => undefined, closeAndRestoreFocus: () => undefined })
         : null}
       {dialogs}
     </>
@@ -159,7 +281,7 @@ function useWorkspacePanel(
   const activeWorkspaces = workspaces.filter((entry) => entry.lifecycleState === 'active');
   const archivedCount = workspaces.filter((entry) => entry.lifecycleState === 'archived').length;
   // The person's own groups and pins (requirements 4 and 5), laid over what they can see now.
-  const { arrangement, save } = useWorkspaceArrangement();
+  const { arrangement, apply, pin } = useWorkspaceArrangementActions();
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
   const arranged = arrangeWorkspaces(activeWorkspaces, arrangement);
   const pinnedIds = new Set(arrangement.pinnedWorkspaceIds);
@@ -175,38 +297,10 @@ function useWorkspacePanel(
       setDialog(kind);
     };
 
-  const latest = useRef({ arrangement, save });
-  useEffect(() => {
-    latest.current = { arrangement, save };
-  });
-  const undo = useUndo();
   const [newGroupFor, setNewGroupFor] = useState<string | null>(null);
   const groupOf = (id: string): { readonly id: string; readonly name: string } | undefined =>
     arrangement.groups.find((group) => group.workspaceIds.includes(id));
 
-  // Saves, then records the inverse. Undo re-reads the latest saved arrangement, so it reverses only
-  // this action and keeps anything done since.
-  const apply = async (
-    next: WorkspaceArrangementInput,
-    label: string,
-    reverse: (current: WorkspaceArrangementInput) => WorkspaceArrangementInput,
-  ): Promise<void> => {
-    if (!(await save(next))) return;
-    undo.push(label, async () => {
-      await latest.current.save(reverse(latest.current.arrangement));
-    });
-  };
-  const pin = (entry: Workspace): void => {
-    const was = pinnedIds.has(entry.id);
-    void apply(
-      togglePin(arrangement, entry.id),
-      `${was ? 'Unpinned' : 'Pinned'} ${entry.name}`,
-      (current) =>
-        current.pinnedWorkspaceIds.includes(entry.id) === was
-          ? current
-          : togglePin(current, entry.id),
-    );
-  };
   // shortcut: undo puts the workspace back at the end of its old group, not at its old position.
   const file = (entry: Workspace, groupId: string | null): void => {
     const before = groupOf(entry.id);
@@ -244,7 +338,9 @@ function useWorkspacePanel(
       hit={hit}
       creating={newGroupFor === entry.id}
       close={close}
-      onPin={pin}
+      onPin={(entry) => {
+        void pin(entry);
+      }}
       onFile={file}
       onStartCreate={setNewGroupFor}
       onCreate={createGroupFor}

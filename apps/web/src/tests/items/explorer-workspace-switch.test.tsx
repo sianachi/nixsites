@@ -16,8 +16,10 @@ it('switches workspace from the workspace name in the title row', async () => {
   renderAt(<App />, '/');
   const header = await screen.findByRole('banner', { name: 'Workspace controls' });
   await user.click(await within(header).findByRole('button', { name: STUB_WORKSPACE.name }));
-  // The same workspace entries as the profile menu: the current one ticked, then the way to more.
-  expect(await screen.findByRole('menuitemradio', { name: STUB_WORKSPACE.name })).toBeChecked();
+  const previews = await screen.findByRole('list', { name: 'Quick previews' });
+  expect(
+    await within(previews).findByRole('button', { name: STUB_WORKSPACE.name }),
+  ).toHaveAttribute('aria-current', 'page');
   expect(screen.getByText('All workspaces…')).toBeVisible();
   expect(screen.getByText('New workspace')).toBeVisible();
 });

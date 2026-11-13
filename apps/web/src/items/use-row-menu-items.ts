@@ -28,7 +28,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { RefObject } from 'react';
-import type { OpenBesideRefusal } from '../tabs/use-open-item';
+import { OPEN_BESIDE_REFUSAL_COPY, type OpenBesideRefusal } from '../tabs/use-open-item';
 
 /** Whether this is an Apple platform, for the one gesture whose modifier differs. */
 const APPLE = isApplePlatform();
@@ -121,9 +121,12 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
         : [
             {
               kind: 'action' as const,
-              label: 'Open beside',
+              label:
+                besideRefusal === null
+                  ? 'Open beside'
+                  : `Open beside. ${OPEN_BESIDE_REFUSAL_COPY[besideRefusal]}`,
               icon: Columns2,
-              shortcut: APPLE ? '⌥ Click' : 'Alt+Click',
+              ...(canOpenBeside ? { shortcut: APPLE ? '⌥ Click' : 'Alt+Click' } : {}),
               disabled: !canOpenBeside,
               onSelect: () => {
                 onOpenBeside(item.id);

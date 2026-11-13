@@ -203,7 +203,8 @@ describe('pinning a document', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/?item=${ALPHA.id}`);
 
-    await user.click(await screen.findByRole('button', { name: 'Open Bravo beside' }));
+    await user.click(await screen.findByRole('button', { name: 'Actions for Bravo' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }));
 
     expect(await screen.findByRole('tab', { name: 'Bravo' })).toHaveAttribute(
       'aria-selected',
@@ -219,7 +220,8 @@ describe('closing tabs and panes', () => {
     const user = userEvent.setup();
     renderAt(<App />, `/?item=${ALPHA.id}`);
 
-    await user.click(await screen.findByRole('button', { name: 'Open Bravo beside' }));
+    await user.click(await screen.findByRole('button', { name: 'Actions for Bravo' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }));
     await screen.findByRole('tab', { name: 'Bravo' });
     expect(screen.getAllByRole('article')).toHaveLength(2);
 

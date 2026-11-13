@@ -31,7 +31,10 @@ it('opens a child over its parent and closes back to the same view', async () =>
   });
   stubCoreApi({
     items: [root, child, sibling],
-    views: { [root.id]: { views: [aView({ name: 'List' })], default: 'document' } },
+    views: {
+      [root.id]: { views: [aView({ name: 'List' })], default: 'document' },
+      [child.id]: { views: [aView({ name: 'Nested list' })], default: 'document' },
+    },
   });
   const user = userEvent.setup();
   renderAt(<App />, `/?item=${root.id}&view=view-1`);
@@ -44,12 +47,29 @@ it('opens a child over its parent and closes back to the same view', async () =>
   const dialog = await screen.findByRole('dialog', { name: 'Plan' });
   expect(within(dialog).getByRole('textbox', { name: 'Note title' })).toHaveValue('Plan');
   expect(await within(dialog).findByRole('region', { name: 'Record detail' })).toBeVisible();
+  await user.click(await within(dialog).findByRole('button', { name: 'Add view' }));
+  expect(await screen.findByRole('menuitem', { name: 'Calendar' })).toBeVisible();
+  await user.keyboard('{Escape}');
+  await user.click(within(dialog).getByRole('button', { name: 'Nested list' }));
+  expect(await within(dialog).findByRole('region', { name: 'Container' })).toBeVisible();
+  await user.click(within(dialog).getByRole('button', { name: 'Record detail' }));
+  expect(within(dialog).getByRole('region', { name: 'Record detail' })).toBeVisible();
   expect(within(dialog).queryByRole('button', { name: 'Comments' })).not.toBeInTheDocument();
   expect(within(dialog).getByRole('button', { name: 'Open as page' })).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Nested list options' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Set as default' }));
+  await within(dialog).findByRole('button', {
+    name: 'Nested list',
+    description: 'Opens by default',
+  });
   await user.click(within(dialog).getByRole('button', { name: 'Next record' }));
   const draft = await screen.findByRole('dialog', { name: 'Draft' });
   await user.click(within(draft).getByRole('button', { name: 'Previous record' }));
   const returned = await screen.findByRole('dialog', { name: 'Plan' });
+  expect(await within(returned).findByRole('region', { name: 'Container' })).toBeVisible();
+  await user.click(within(returned).getByRole('button', { name: 'Record detail options' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Set as default' }));
+  expect(await within(returned).findByRole('region', { name: 'Record detail' })).toBeVisible();
   expect(
     within(screen.getByRole('tree', { name: 'Items' })).queryByRole('button', { name: 'Plan' }),
   ).not.toBeInTheDocument();
@@ -94,7 +114,7 @@ it('opens a board note on Comments inside the item dialog and can switch to Docu
         views: [aView({ name: 'Board', kind: 'board', groupBy: stage.key })],
         default: 'view-1',
       },
-      [card.id]: { views: [aView({ name: 'List' })], default: 'view-1' },
+      [card.id]: { views: [aView({ name: 'List' })], default: 'document' },
     },
     schemas: { [board.id]: { properties: [stage], declared: [stage], inherit: true } },
   });

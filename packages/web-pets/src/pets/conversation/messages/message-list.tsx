@@ -117,7 +117,6 @@ export function MessageList({
         <>
           <PetEmptyState
             pet={pet}
-            settings={settings}
             workspaceAccess={workspaceAccess}
             suggestions={suggestions}
             onPick={onPick}
@@ -206,7 +205,6 @@ export function MessageList({
         <div className="flex items-center gap-2" aria-hidden="true">
           <PetAvatar
             appearance={pet.appearance}
-            motion={settings.motion}
             state="thinking"
             label={`${pet.name}: thinking`}
             size="compact"

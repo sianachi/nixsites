@@ -221,12 +221,13 @@ describe('conversation protocol', () => {
     if (c === undefined) throw new Error('no conversation');
     Object.assign(c, {
       threadId: 'old',
-      toolVersion: 7,
+      toolVersion: 12,
       messages: [{ id: 'a', role: 'user', text: 'earlier' }],
       lockedRead: true,
     });
     await send(h);
     expect(h.transport.methods()[0]).toBe('thread/start');
+    expect(JSON.stringify(h.transport.calls[1]?.params.input)).toContain('earlier');
     const snapshot = h.account.snapshot(key);
     expect(snapshot.messages.map((m) => m.role)).toEqual(['user', 'system', 'user']);
     expect(snapshot.messages[1]?.text).toBe(

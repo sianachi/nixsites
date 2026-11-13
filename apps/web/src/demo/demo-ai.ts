@@ -38,14 +38,11 @@ const MEMORY_TEXT = 'Prefers Friday launches';
 export const demoPetSettings = (): Json => ({
   enabled: true,
   activePetId: DEMO_PET_ID,
-  motion: 'system',
   profiles: [
     {
       id: DEMO_PET_ID,
       name: DEMO_PET_NAME,
       appearance: 'owl',
-      personality: 'encouraging',
-      responseLength: 'concise',
       instructions: '',
       applyWithoutAsking: false,
       provider: 'anthropic',

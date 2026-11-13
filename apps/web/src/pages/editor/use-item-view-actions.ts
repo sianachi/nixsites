@@ -30,6 +30,7 @@ interface ViewActionOptions {
   readonly stored: ContainerViews | null;
   readonly canHide: boolean;
   readonly canWrite: boolean;
+  readonly previewTab?: { readonly id: string; readonly label: string } | undefined;
   readonly leave: () => void;
   readonly restoreViews: readonly { readonly id: string; readonly name: string }[];
 }
@@ -185,6 +186,7 @@ export function useItemViewActions(
     stored,
     canHide,
     canWrite,
+    previewTab,
     leave,
     restoreViews,
   }: ViewActionOptions): MenuEntry[] {
@@ -204,18 +206,24 @@ export function useItemViewActions(
         },
       });
     }
+    // Core uses Document when there is no child view set as default. In a preview that
+    // opens the contextual tab, so offer the reset on that tab.
+    const contextualChoice = previewTab?.id === id ? previewTab : undefined;
+    const defaultId = contextualChoice ? DOCUMENT_VIEW : id;
     if (
       canWrite &&
       stored !== null &&
-      (view !== undefined || id === DOCUMENT_VIEW) &&
-      id !== stored.default &&
-      !(id === DOCUMENT_VIEW && stored.hideDocument)
+      (view !== undefined ||
+        contextualChoice ||
+        (id === DOCUMENT_VIEW && previewTab === undefined)) &&
+      defaultId !== stored.default &&
+      !(defaultId === DOCUMENT_VIEW && stored.hideDocument)
     ) {
       actions.push({
         label: 'Set as default',
         icon: Pin,
         onSelect: () => {
-          void setDefault(id, name);
+          void setDefault(defaultId, contextualChoice?.label ?? name);
         },
       });
     }

@@ -19074,8 +19074,6 @@
           "id",
           "name",
           "appearance",
-          "personality",
-          "responseLength",
           "instructions"
         ],
         "type": "object",
@@ -19088,12 +19086,6 @@
             "type": "string"
           },
           "appearance": {
-            "type": "string"
-          },
-          "personality": {
-            "type": "string"
-          },
-          "responseLength": {
             "type": "string"
           },
           "instructions": {
@@ -19302,7 +19294,6 @@
         "required": [
           "enabled",
           "activePetId",
-          "motion",
           "profiles"
         ],
         "type": "object",
@@ -19316,9 +19307,6 @@
               "string"
             ],
             "format": "uuid"
-          },
-          "motion": {
-            "type": "string"
           },
           "profiles": {
             "type": "array",

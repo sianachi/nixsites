@@ -400,7 +400,6 @@ export function Conversation({
           zen={zen}
           petName={pet.name}
           appearance={pet.appearance}
-          motion={settings.motion}
           animation={animation}
           status={statusText({
             runtimeLoaded: Boolean(runtime),

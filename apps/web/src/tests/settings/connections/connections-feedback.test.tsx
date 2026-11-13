@@ -41,8 +41,6 @@ const pet = (id: string, name: string) => ({
   id,
   name,
   appearance: 'owl' as const,
-  personality: 'calm' as const,
-  responseLength: 'balanced' as const,
   instructions: '',
   applyWithoutAsking: false,
   provider: 'anthropic' as const,
@@ -52,7 +50,6 @@ const saved: PetSettingsResponse = {
   settings: {
     enabled: true,
     activePetId: first,
-    motion: 'system',
     inlineWriting: false,
     profiles: [pet(first, 'Hoot')],
   },
@@ -77,7 +74,7 @@ describe('Pet settings undo', () => {
     expect(screen.getByText('Removed Hoot')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Hoot');
+    expect(screen.getByRole('button', { name: 'Rename Hoot' })).toBeVisible();
     expect(screen.getByRole('checkbox', { name: 'Show companion in my workspaces' })).toBeChecked();
   });
 });

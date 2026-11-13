@@ -93,14 +93,11 @@ function settingsStory(provider: PetProfile['provider']): ReactElement {
           settings: {
             enabled: true,
             activePetId: '44444444-4444-4444-8444-444444444444',
-            motion: 'reduced',
             profiles: [
               {
                 id: '44444444-4444-4444-8444-444444444444',
                 name: 'Pip',
                 appearance: 'cat',
-                personality: 'calm',
-                responseLength: 'balanced',
                 instructions: '',
                 applyWithoutAsking: false,
                 provider,
@@ -180,12 +177,7 @@ export const AnimatedCompanion = {
     appearance: PetProfile['appearance'];
     state: PetAnimationState;
   }): ReactElement => (
-    <PetAvatar
-      appearance={appearance}
-      state={state}
-      motion="full"
-      label={`${appearance}: ${state}`}
-    />
+    <PetAvatar appearance={appearance} state={state} label={`${appearance}: ${state}`} />
   ),
 };
 

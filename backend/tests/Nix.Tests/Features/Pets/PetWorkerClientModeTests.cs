@@ -246,6 +246,10 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         using var body = JsonDocument.Parse(handler.Body);
         Assert.Equal(provider, body.RootElement.GetProperty("provider").GetString());
         Assert.Equal(key, body.RootElement.GetProperty("apiKey").GetString());
+        Assert.Equal(operation == "send"
+                ? "Your name is Nix. Keep replies concise, with enough detail to answer the request. User preferences: Explain clearly."
+                : string.Empty,
+            body.RootElement.GetProperty("instructions").GetString());
         Assert.DoesNotContain(key, JsonSerializer.Serialize(result.Value), StringComparison.Ordinal);
     }
 
@@ -1147,9 +1151,9 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     private sealed class FakeGetPetSettingsHandler(string provider, bool inlineWriting) : IQueryHandler<GetPetSettings, PetSettingsResponse>
     {
         public ValueTask<PetSettingsResponse> HandleAsync(GetPetSettings query, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(new PetSettingsResponse(0, new(true, PetGuid, "system",
-                [new(Guid.NewGuid(), "Other pet", "owl", "calm", "balanced", ""),
-                    new(PetGuid, "Nix", "owl", "playful", "balanced", "Explain clearly.", Provider: provider)], inlineWriting)));
+            ValueTask.FromResult(new PetSettingsResponse(0, new(true, PetGuid,
+                [new(Guid.NewGuid(), "Other pet", "owl", ""),
+                    new(PetGuid, "Nix", "owl", "Explain clearly.", Provider: provider)], inlineWriting)));
     }
 
     private sealed class FakeGetItemLockHandler(Guid? locked) : IQueryHandler<GetItemLock, Result<ItemLockState>>

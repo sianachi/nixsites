@@ -55,14 +55,11 @@ const client: NixClient = {
               settings: {
                 enabled: true,
                 activePetId: id,
-                motion: 'system',
                 profiles: [
                   {
                     id,
                     name: 'Owl',
                     appearance: 'owl',
-                    personality: 'calm',
-                    responseLength: 'balanced',
                     instructions: '',
                   },
                 ],

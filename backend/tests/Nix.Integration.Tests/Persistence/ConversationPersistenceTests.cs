@@ -33,7 +33,7 @@ public sealed class ConversationPersistenceTests(NixPostgresFixture fixture) : I
         var dispatcher = work.Resolve<NixDispatcher>();
         var previousSettings = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
         var settings = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(previousSettings.Revision,
-            new(true, Pet, "system", [new(Pet, "Analyst", "cat", "calm", "balanced", "")])), Cancellation);
+            new(true, Pet, [new(Pet, "Analyst", "cat", "")])), Cancellation);
         Assert.True(settings.IsSuccess, settings.IsFailure ? settings.Error.Message : "");
         if (groupId is { } group)
         {

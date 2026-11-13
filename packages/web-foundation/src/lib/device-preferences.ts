@@ -18,7 +18,7 @@ export type PetPlacement = 'left' | 'right';
  * the right answer depends on the screen in front of the owner, not on the pet. */
 export type PetSurface = 'floating' | 'drawer' | 'page-on-phones' | 'page' | 'both';
 
-export const PET_SURFACE_DEFAULT: PetSurface = 'page-on-phones';
+export const PET_SURFACE_DEFAULT: PetSurface = 'drawer';
 
 export const PET_SURFACE_OPTIONS: readonly {
   readonly value: PetSurface;

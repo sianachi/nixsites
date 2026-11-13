@@ -1,4 +1,4 @@
-import { type PetProfile, type PetSettings } from '@nix/api-client';
+import { type PetProfile } from '@nix/api-client';
 import { Button, ContextMenu, Icon, Menu, Text, type MenuEntry } from '@nix/ui';
 import { ChevronDown, MoreHorizontal, X } from 'lucide-react';
 import { type ReactElement, type RefObject } from 'react';
@@ -87,7 +87,6 @@ export function ConversationHeader({
   zen,
   petName,
   appearance,
-  motion,
   animation,
   status,
   title,
@@ -106,7 +105,6 @@ export function ConversationHeader({
   readonly zen: boolean;
   readonly petName: string;
   readonly appearance: PetProfile['appearance'];
-  readonly motion: PetSettings['motion'];
   readonly animation: PetAnimationState;
   readonly status: string;
   /** The conversation's own title, when it has one. */
@@ -137,7 +135,6 @@ export function ConversationHeader({
               <div aria-hidden="true" className="hidden shrink-0 @md:block">
                 <PetAvatar
                   appearance={appearance}
-                  motion={motion}
                   state={animation}
                   label={`${petName}: ${animation}`}
                   size="compact"

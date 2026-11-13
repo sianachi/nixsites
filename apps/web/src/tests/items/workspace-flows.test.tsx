@@ -143,31 +143,20 @@ describe('the breadcrumb trail', () => {
 });
 
 describe('opening an item beside another', () => {
-  it('does not render the control at all on a narrow screen, since a phone never has room for a second pane', async () => {
+  it('omits Open beside from the Actions menu when the screen is too narrow', async () => {
     const user = userEvent.setup();
     stubViewport(false);
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
     await user.click(await screen.findByRole('button', { name: /show the explorer/i }));
-    await screen.findByRole('button', { name: 'Engineering' });
-
-    // `'narrow'` is a fact about this viewport, true of every row at once - unlike the pane limit
-    // below, it is never going to stop being true without the window itself changing size, so a
-    // disabled control here would be permanently visible and permanently useless, and a screen
-    // reader would hear its refusal read out on every row in the tree.
-    expect(
-      screen.queryByRole('button', { name: /open engineering beside/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /cannot open engineering beside/i }),
-    ).not.toBeInTheDocument();
-
-    // Nor does the phone offer the full tree's other row actions: its drawer browses and opens.
-    expect(screen.queryByRole('button', { name: /delete engineering/i })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Actions for Engineering' }));
+    const menu = screen.getByRole('menu', { name: 'Actions for Engineering' });
+    expect(within(menu).queryByRole('menuitem', { name: /open beside/i })).not.toBeInTheDocument();
   });
 
-  it('keeps the control visible and disabled at the pane limit, since that refusal is transient', async () => {
+  it('explains why Open beside is disabled at the pane limit', async () => {
+    const user = userEvent.setup();
     const A = item({ id: '2a2a2a2a-2222-4222-8222-2a2a2a2a2a2a', title: 'Alpha' });
     const B = item({ id: '2b2b2b2b-2222-4222-8222-2b2b2b2b2b2b', title: 'Bravo' });
     const C = item({ id: '2c2c2c2c-2222-4222-8222-2c2c2c2c2c2c', title: 'Charlie' });
@@ -175,12 +164,10 @@ describe('opening an item beside another', () => {
     stubCoreApi({ items: [A, B, C, D] });
     renderAt(<App />, `/?item=${A.id}&item2=${B.id}&item3=${C.id}`);
 
-    await screen.findByRole('button', { name: 'Delta' });
-
-    // Unlike the narrow case above, three panes already open is a state of this arrangement, not
-    // of this window - closing one changes the answer - so the control stays put, disabled, and
-    // says why.
-    expect(screen.getByRole('button', { name: /cannot open delta beside/i })).toBeDisabled();
+    await user.click(await screen.findByRole('button', { name: 'Actions for Delta' }));
+    expect(
+      screen.getByRole('menuitem', { name: /Open beside.*Close one to open another/i }),
+    ).toBeDisabled();
   });
 });
 
@@ -197,17 +184,18 @@ describe('deleting an item', () => {
     return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   }
 
+  async function deleteFromExplorer(user: ReturnType<typeof deleteUser>, title: string) {
+    await user.click(await screen.findByRole('button', { name: `Actions for ${title}` }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+  }
+
   it('removes the item right away, without asking first', async () => {
     const user = deleteUser();
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
 
-    // Immediate, in the row's own established grammar: the control is revealed on hover and sits
-    // a few pixels from the one that opens the item, which is exactly the situation an undo -
-    // rather than a native `confirm()` - is meant to answer.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Engineering' })).not.toBeInTheDocument();
     });
@@ -219,8 +207,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [LEAF] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Notes' });
-    await user.click(screen.getByRole('button', { name: /delete notes/i }));
+    await deleteFromExplorer(user, 'Notes');
 
     expect(await screen.findByRole('status')).toHaveTextContent('Deleted "Notes"');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
@@ -236,8 +223,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Deleted "Engineering" and everything inside it',
@@ -249,8 +235,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT], removeFails: true });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
 
     // A refused delete leaves the tree exactly as it was, and no toast asserts a deletion that
     // never happened - only the tree's own foot-of-sidebar error does, which the tree already
@@ -265,8 +250,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT], restoreFails: true });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
     await screen.findByRole('status');
     await user.click(screen.getByRole('button', { name: 'Undo' }));
 
@@ -282,8 +266,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT], restoreFails: true });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
     await screen.findByRole('status');
     await user.click(screen.getByRole('button', { name: 'Undo' }));
 
@@ -303,8 +286,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Engineering' })).not.toBeInTheDocument();
     });
@@ -322,8 +304,7 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [PARENT] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Engineering' });
-    await user.click(screen.getByRole('button', { name: /delete engineering/i }));
+    await deleteFromExplorer(user, 'Engineering');
     expect(await screen.findByRole('button', { name: 'Undo' })).toBeVisible();
 
     // `act` rather than a bare `await`: the state update the timeout produces is not inside any
@@ -345,10 +326,9 @@ describe('deleting an item', () => {
     stubCoreApi({ items: [ALPHA, BRAVO] });
     renderAt(<App />);
 
-    await screen.findByRole('button', { name: 'Alpha' });
-    await user.click(screen.getByRole('button', { name: /delete alpha/i }));
+    await deleteFromExplorer(user, 'Alpha');
     await screen.findByText('Deleted "Alpha"');
-    await user.click(screen.getByRole('button', { name: /delete bravo/i }));
+    await deleteFromExplorer(user, 'Bravo');
     await screen.findByText('Deleted "Bravo"');
 
     await user.click(screen.getByRole('button', { name: 'Undo (2)' }));

@@ -6,6 +6,7 @@ import {
   Maximize2,
   MessageCircle,
   MessageSquare,
+  PanelTop,
   Plus,
   Sparkles,
   Star,
@@ -39,7 +40,7 @@ import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import { ContainerViewTools } from '@nix/web-views/core/container-view';
 import { useContainer } from '@nix/web-collections/core/use-container';
 import { useViewState } from '@nix/web-collections/core/view-state';
-import { COMMENTS_VIEW, ViewSwitcher } from '@nix/web-views/core/view-switcher';
+import { ViewSwitcher } from '@nix/web-views/core/view-switcher';
 import { useRememberSmartList } from '@nix/web-views/query/known-smart-lists';
 import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { STRUCTURED_RECIPES } from '@nix/structure-spec';
@@ -62,6 +63,8 @@ const addableViews = STRUCTURED_RECIPES.filter(
     all.findIndex((candidate) => candidate.viewKind === recipe.viewKind) === index,
 );
 const DIALOG_ACTIONS = new Set(['move', 'export', 'import', 'lock']);
+const COMMENTS_VIEW = '$comments';
+const CONTEXT_VIEW = '$context';
 
 interface OpenItemProps {
   readonly tree: ShellContext['tree'];
@@ -71,7 +74,12 @@ interface OpenItemProps {
   /** The item's `type`: how its own body is drawn. Never gates what it may contain. */
   readonly bodyKind: string;
   readonly defaultToComments?: boolean;
-  readonly renderContext?: ((details: ItemProperties) => ReactNode) | undefined;
+  readonly contextView?:
+    | {
+        readonly label: string;
+        readonly render: (details: ItemProperties) => ReactNode;
+      }
+    | undefined;
   readonly canManageTemplates: boolean;
   readonly canApplyTemplates: boolean;
   readonly onOpen: (itemId: string) => void;
@@ -97,7 +105,7 @@ export function OpenItem({
   title,
   bodyKind,
   defaultToComments = false,
-  renderContext,
+  contextView,
   canManageTemplates,
   canApplyTemplates,
   onOpen,
@@ -142,10 +150,16 @@ export function OpenItem({
   } = useItemViewActions(itemId, workspace?.workspaceId);
   const { viewId, selectView } = useViewState();
   const boardComments = bodyKind === 'note' && defaultToComments;
-  const showingComments =
-    (boardComments && viewId === null) || (bodyKind === 'note' && viewId === COMMENTS_VIEW);
-  const commentsTab = boardComments || showingComments;
+  const previewTab = contextView
+    ? { id: CONTEXT_VIEW, label: contextView.label, icon: PanelTop }
+    : boardComments
+      ? { id: COMMENTS_VIEW, label: 'Comments', icon: MessageSquare }
+      : undefined;
   const storedViews = container.views;
+  const storedDefault = storedViews?.default ?? DOCUMENT_VIEW;
+  const previewDefault = storedDefault === DOCUMENT_VIEW ? previewTab?.id : undefined;
+  const loadingPreviewView =
+    previewTab !== undefined && viewId === null && container.status === 'loading';
   const { setDefaultViewKind } = tree;
   const defaultViewKind = storedViews?.views.find((view) => view.id === storedViews.default)?.kind;
   const viewsLoaded = storedViews !== null;
@@ -162,11 +176,17 @@ export function OpenItem({
     return (
       visibleViews.find(
         (view) => view.id !== excluding && !storedViews?.unrenderable.includes(view.id),
-      )?.id ?? (boardComments ? COMMENTS_VIEW : DOCUMENT_VIEW)
+      )?.id ??
+      previewTab?.id ??
+      DOCUMENT_VIEW
     );
   }
   const requested =
-    viewId ?? (hidden.has(storedViews?.default ?? DOCUMENT_VIEW) ? fallbackView() : null);
+    viewId ??
+    previewDefault ??
+    (hidden.has(storedDefault) ? (previewTab?.id ?? fallbackView()) : null);
+  const showingComments = !loadingPreviewView && bodyKind === 'note' && requested === COMMENTS_VIEW;
+  const commentsTab = boardComments || showingComments;
   const compactDetails = useOverlayDetails();
   const overlayDetails = compactDetails || onClose !== undefined || onNavigateAway !== undefined;
   const [panelOpen, setPanelOpen] = useState(false);
@@ -266,23 +286,37 @@ export function OpenItem({
   const hasSite = useItemHasSite(itemId, sitesEnabled);
 
   const details = useItemProperties(itemId);
+  const contextTab =
+    lock.open && previewTab
+      ? previewTab
+      : commentsTab
+        ? { id: COMMENTS_VIEW, label: 'Comments', icon: MessageSquare }
+        : undefined;
+  const showingContext =
+    !loadingPreviewView &&
+    contextView !== undefined &&
+    lock.open &&
+    !zen &&
+    requested === CONTEXT_VIEW;
+  const contextualView = showingContext ? contextView.render(details) : undefined;
 
   // The marker the server puts on every daily note; the title is configurable and says nothing.
   const dailyMarker = details.item?.properties.$daily;
   const dailyDate = typeof dailyMarker === 'string' ? parseDailyNoteDate(dailyMarker) : null;
 
-  const { views, unrenderable, storedDefault, active, activeId, showChildren, showingDocument } =
-    useMemo(
-      () => resolveActiveView(container.views, requested === COMMENTS_VIEW ? null : requested),
-      [container.views, requested],
-    );
-  const selectedViewId = showingComments
-    ? COMMENTS_VIEW
-    : showingDocument
-      ? DOCUMENT_VIEW
-      : showChildren
-        ? ''
-        : activeId;
+  const { views, unrenderable, active, activeId, showChildren, showingDocument } = useMemo(
+    () => resolveActiveView(container.views, requested),
+    [container.views, requested],
+  );
+  const selectedViewId = loadingPreviewView
+    ? null
+    : showingContext || showingComments
+      ? requested
+      : showingDocument
+        ? DOCUMENT_VIEW
+        : showChildren
+          ? ''
+          : activeId;
   const canManageViews = lock.open && workspace !== null && container.status === 'ready';
   const hiddenViews = [
     ...(documentTabHidden && (hidden.has(DOCUMENT_VIEW) || canManageViews)
@@ -299,13 +333,10 @@ export function OpenItem({
   // strip, when the item has views (it also carries Body, so it is the one place for all three);
   // otherwise the writing dock of a note, or the bar a canvas, sheet or file draws for itself. Only
   // a body that cannot be shown - locked, or failed to load - falls back to the row.
-  const contextualView = renderContext === undefined || zen ? undefined : renderContext(details);
-  const viewsHostControls =
-    narrow && contextualView === undefined && (views.length > 0 || showingComments);
+  const viewsHostControls = narrow && (contextTab !== undefined || views.length > 0);
   const editorKind = bodyKind === 'canvas' || bodyKind === 'spreadsheet' || bodyKind === 'file';
   const noteDocked =
     narrow &&
-    contextualView === undefined &&
     !viewsHostControls &&
     // Still loading counts: most notes open, and drawing the row only to remove it once the lock
     // answers would make it flicker. A note that turns out locked has no dock, so it gets the row.
@@ -313,12 +344,7 @@ export function OpenItem({
     showingDocument &&
     !editorKind;
   const editorHostsControls =
-    narrow &&
-    contextualView === undefined &&
-    !viewsHostControls &&
-    lock.open &&
-    showingDocument &&
-    editorKind;
+    narrow && !viewsHostControls && lock.open && showingDocument && editorKind;
   const sectionRowShown = narrow && !viewsHostControls && !noteDocked && !editorHostsControls;
 
   const mobileItemControls = (
@@ -554,13 +580,13 @@ export function OpenItem({
           bodyKind={bodyKind}
           onNavigate={onOpen}
           onCommit={onCommit}
-          reading={showingDocument && !showingComments && !editorKind}
+          reading={showingDocument && !showingComments && !showingContext && !editorKind}
           titleInBody={
             lock.open &&
             showingDocument &&
             !showingComments &&
             !editorKind &&
-            contextualView === undefined &&
+            !showingContext &&
             leadingHeading !== null &&
             leadingHeading !== '' &&
             leadingHeading === title.trim()
@@ -576,7 +602,7 @@ export function OpenItem({
         >
           {/* Body only when it is a way back: from a listing of the item's children. With views,
               the views strip carries it; on the body itself it would select what is showing. */}
-          {showingDocument || contextualView !== undefined || documentTabHidden ? null : (
+          {showingDocument || documentTabHidden ? null : (
             <Button
               variant="ghost"
               className="mr-auto"
@@ -590,14 +616,12 @@ export function OpenItem({
           {mobileItemControls}
         </nav>
       ) : null}
-      {(views.length > 0 || commentsTab || addView !== undefined) &&
-      !zen &&
-      contextualView === undefined ? (
+      {(views.length > 0 || contextTab !== undefined || addView !== undefined) && !zen ? (
         <ViewSwitcher
           views={visibleViews}
           unrenderable={unrenderable}
           activeViewId={selectedViewId}
-          comments={commentsTab}
+          context={contextTab}
           addView={addView}
           viewActions={
             lock.open
@@ -611,6 +635,7 @@ export function OpenItem({
                       visibleViews.some((view) => view.id !== id) ||
                       (id !== DOCUMENT_VIEW && !documentTabHidden),
                     canWrite: canManageViews,
+                    previewTab,
                     leave: () => {
                       if (id === selectedViewId) selectView(fallbackView(id));
                     },
@@ -622,7 +647,7 @@ export function OpenItem({
           tools={
             // An empty fragment, not undefined: a defined slot keeps the row's markup (and so the
             // tabs) from being rebuilt every time the document is chosen.
-            showingDocument || showingComments ? (
+            showingDocument || showingComments || showingContext ? (
               <></>
             ) : (
               <ContainerViewTools
@@ -634,7 +659,7 @@ export function OpenItem({
           }
           documentLabel={narrow ? 'Body' : 'Document'}
           documentHidden={documentTabHidden}
-          defaultViewId={boardComments ? COMMENTS_VIEW : storedDefault}
+          defaultViewId={loadingPreviewView ? undefined : (previewDefault ?? storedDefault)}
           onSelect={(chosen) => {
             selectView(chosen);
           }}
@@ -698,6 +723,7 @@ export function OpenItem({
           lock={lock}
           lockHolderTitle={lockHolderTitle}
           onUnlock={unlockAndFocus}
+          loadingView={loadingPreviewView}
           showingDocument={showingDocument}
           showChildren={showChildren}
           active={active}
