@@ -99,5 +99,8 @@ deploy/.dev-access-token-key.pem
 # Local embedding model, fetched by scripts/fetch-embedding-model.sh.
 backend/models
 
+# PDF fallback fonts, fetched by scripts/fetch-pdf-fonts.sh; their licence (OFL.txt) is committed.
+backend/fonts/*.ttf
+
 # Turns the demo on in the local dev preview; never committed.
 apps/web/public/web-config.json

@@ -33,10 +33,23 @@ changes, a commercial licence is available from the copyright holder. Ask throug
 [issue tracker](https://github.com/sianachi/nixsites/issues/new/choose) until a dedicated contact
 is published.
 
+## Third-party software
+
+Nix is built on open-source libraries, fonts and models under permissive licences such as MIT, BSD,
+Apache-2.0, ISC, PostgreSQL, SIL OFL and MS-PL, with one MPL-2.0 library used unmodified. Their
+licence texts are in [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt), which every Nix image
+and the desktop app ship, and which the web app serves at `/THIRD-PARTY-NOTICES.txt`.
+`scripts/third-party-notices.mjs` generates it.
+
+The services Nix talks to over the network are separate programs under their own licences. The
+quickstart's identity provider, Zitadel, is under AGPL-3.0; Nix signs people in through OpenID
+Connect and contains none of its code.
+
 ## Contributing
 
-Outside contributions will need a contributor licence agreement before they are merged, so that
-Nix can continue to offer the commercial licence. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+Outside contributions need the [contributor licence agreement](../CLA.md) before they are merged,
+so that Nix can continue to offer the commercial licence. You keep your copyright. The CLA check on
+your first pull request tells you how to sign, once, by comment.
 
 ## The name
 

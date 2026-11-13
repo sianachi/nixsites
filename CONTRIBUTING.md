@@ -120,4 +120,4 @@ Do not report security problems in public issues. See [SECURITY.md](SECURITY.md)
 
 Nix is released under [AGPL-3.0-only](LICENSE), with the [additional permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for plugins, output and programs that use Nix. By contributing, you agree that your contribution is licensed the same way.
 
-Nix is also offered under a commercial licence, so outside contributions will need a contributor licence agreement before they are merged. See [docs/licensing.md](docs/licensing.md).
+Nix is also offered under a commercial licence, so outside contributions need the [contributor licence agreement](CLA.md) before they are merged. You keep your copyright; the CLA check on your first pull request asks you to sign once, by comment. See [docs/licensing.md](docs/licensing.md).

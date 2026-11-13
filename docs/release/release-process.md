@@ -60,6 +60,8 @@ patch when fixes are waiting. No fixed calendar.
 - No open [SEC] finding on surfaces the release touches; migrations reviewed by the backend-data
   specialist.
 - Changelog entry written; user-facing help updated in the Nix Docs workspace.
+- `node scripts/third-party-notices.mjs --check` passes after `pnpm install` and a `dotnet restore`
+  of `backend/src` (regenerate and commit `THIRD-PARTY-NOTICES.txt` if not).
 
 ## Changelog
 

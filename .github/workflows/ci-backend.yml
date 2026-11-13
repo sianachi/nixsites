@@ -24,6 +24,7 @@ on:
       - 'scripts/check-no-controllers.sh'
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
+      - 'scripts/fetch-pdf-fonts.sh'
       - '.github/workflows/ci-backend.yml'
   pull_request:
     paths:
@@ -34,6 +35,7 @@ on:
       - 'scripts/check-no-controllers.sh'
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
+      - 'scripts/fetch-pdf-fonts.sh'
       - '.github/workflows/ci-backend.yml'
 
 concurrency:
@@ -111,6 +113,10 @@ jobs:
       # needs Docker and runs in its own stage-3 job. Nix.Tests must stay free of
       # Testcontainers so this job never needs a daemon - that is the whole reason
       # the two suites are separate projects rather than one.
+      # The PDF CJK font tests skip without these fonts.
+      - name: Fetch PDF fallback fonts
+        run: sh scripts/fetch-pdf-fonts.sh
+
       - name: Unit tests
         working-directory: backend
         run: dotnet test --project tests/Nix.Tests/Nix.Tests.csproj --configuration Release

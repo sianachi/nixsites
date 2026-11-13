@@ -56,6 +56,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - Pet chat streams. Replies, tool cards and approvals arrive over one open connection instead of repeated polling; the app falls back to polling when a stream cannot open. New routes: `POST /api/v1/me/pets/runtime/stream` and `.../runtime/note/stream`.
 - Server-side pet tools, off by default. With `Nix:Pets:ServerTools` (Core) and `NIX_COMPANION_SERVER_TOOLS` (companion) set to `reads`, a pet's read tools run on the server when the owner has "read without asking" on, so a turn no longer waits on the open tab; with `all`, an approved change is applied by the server after the owner approves the same card. The companion then also needs `NIX_COMPANION_COLLAB_URL`. Reading files (PDFs, images) stays in the app.
+- The licence texts of the third-party software Nix includes are in `THIRD-PARTY-NOTICES.txt`,
+  shipped in every image and the desktop app and served by the web app at
+  `/THIRD-PARTY-NOTICES.txt`. Outside contributions now need the contributor licence agreement
+  (`CLA.md`), signed once by comment on the pull request.
 
 ### Removed
 
@@ -100,6 +104,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- PDF exports draw Chinese, Japanese and Korean text instead of replacing it with "?". Arabic,
+  Hebrew, Indic scripts and emoji are still replaced, and the export still reports it. Self-hosted
+  builds outside the images run `scripts/fetch-pdf-fonts.sh` once.
 - Workspace calendar events can be dragged between days in Month view, including across weeks.
 
 - Calendar Agenda shows each date below its day heading, keeping dates and Add buttons readable

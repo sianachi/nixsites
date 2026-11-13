@@ -26,17 +26,36 @@ public static class PdfWriter
         return true;
     });
 
-    /// <summary>Replaces every rune Go Regular has no glyph for with "?", keeping line breaks and tabs.</summary>
+    /// <summary>Replaces every rune neither Go Regular nor a CJK fallback has a glyph for with "?", keeping line breaks and tabs.</summary>
     public static string PdfText(string value)
     {
         var sanitized = TextRules.Sanitize(value);
         var output = new StringBuilder(sanitized.Length);
         foreach (var rune in sanitized.EnumerateRunes())
         {
-            output.Append(rune.Value is '\n' or '\t' || GoFonts.HasGlyph(rune.Value) ? rune.ToString() : "?");
+            output.Append(rune.Value is '\n' or '\t' || GoFonts.HasGlyph(rune.Value) || CjkFonts.FamilyFor(rune.Value) is not null ? rune.ToString() : "?");
         }
         return output.ToString();
     }
+
+    /// <summary>
+    /// The family to draw already-PdfText'd text in: <paramref name="family"/> when Go covers every rune,
+    /// else the CJK fallback for the first rune Go lacks (the fallbacks carry Latin too).
+    /// </summary>
+    internal static string Family(string text, string family)
+    {
+        foreach (var rune in text.EnumerateRunes())
+        {
+            if (rune.Value is not ('\n' or '\t') && !GoFonts.HasGlyph(rune.Value))
+            {
+                return CjkFonts.FamilyFor(rune.Value) ?? family;
+            }
+        }
+        return family;
+    }
+
+    // CJK text has no spaces: a line may break after any of these characters, so each gets its own piece.
+    private static bool IsCjk(char value) => value is (>= '\u3000' and <= '\u9FFF') or (>= '\uAC00' and <= '\uD7A3') or (>= '\uF900' and <= '\uFAFF') or (>= '\uFF00' and <= '\uFFEF');
 
     public static async Task WriteAsync(Stream output, IAsyncEnumerable<ExportRecord> records, StreamLimits limits, string pageSize, CancellationToken cancellationToken)
     {
@@ -138,7 +157,7 @@ public static class PdfWriter
 
         public void Title(string text)
         {
-            var font = new XFont(GoFonts.Family, 24, XFontStyleEx.Bold);
+            var font = new XFont(Family(text, GoFonts.Family), 24, XFontStyleEx.Bold);
             foreach (var line in Wrap(text, font, ContentWidth))
             {
                 Space(30);
@@ -180,8 +199,9 @@ public static class PdfWriter
                         _y += 6;
                         foreach (var line in (block.Text ?? string.Empty).Split('\n'))
                         {
-                            var font = new XFont(GoFonts.MonoFamily, 10);
-                            foreach (var wrapped in Wrap(PdfText(line).Replace('\t', ' '), font, ContentWidth - indent))
+                            var text = PdfText(line).Replace('\t', ' ');
+                            var font = new XFont(Family(text, GoFonts.MonoFamily), 10);
+                            foreach (var wrapped in Wrap(text, font, ContentWidth - indent))
                             {
                                 Space(15);
                                 _graphics!.DrawRectangle(new XSolidBrush(XColor.FromArgb(243, 244, 246)), Margin + indent, _y, ContentWidth - indent, 15);
@@ -286,7 +306,12 @@ public static class PdfWriter
                 {
                     style |= XFontStyleEx.Underline;
                 }
-                var font = run.Has("code") ? new XFont(GoFonts.MonoFamily, size) : new XFont(GoFonts.Family, size, style);
+                var family = run.Has("code") ? GoFonts.MonoFamily : GoFonts.Family;
+                if (run.Has("code"))
+                {
+                    style = XFontStyleEx.Regular;
+                }
+                var runFont = new XFont(family, size, style);
                 var link = !string.IsNullOrEmpty(run.Href) && TextRules.SafeDocumentLink(run.Href) ? run.Href : null;
                 foreach (var piece in Pieces(PdfText(run.Text).Replace('\t', ' ')))
                 {
@@ -297,6 +322,8 @@ public static class PdfWriter
                         Space(lineHeight);
                         continue;
                     }
+                    var pieceFamily = Family(piece, family);
+                    var font = pieceFamily == family ? runFont : new XFont(pieceFamily, size, style);
                     var width = _graphics!.MeasureString(piece, font).Width;
                     if (_x + width > right && _x > left)
                     {
@@ -335,7 +362,7 @@ public static class PdfWriter
                     yield return "\n";
                     start = index + 1;
                 }
-                else if (text[index] == ' ')
+                else if (text[index] == ' ' || IsCjk(text[index]))
                 {
                     yield return text[start..(index + 1)];
                     start = index + 1;
@@ -381,14 +408,15 @@ public static class PdfWriter
             var width = ContentWidth / columns;
             foreach (var row in rows)
             {
-                var font = new XFont(GoFonts.Family, 10, row.Header ? XFontStyleEx.Bold : XFontStyleEx.Regular);
+                var style = row.Header ? XFontStyleEx.Bold : XFontStyleEx.Regular;
                 var cells = new List<string>[columns];
+                var fonts = new XFont[columns];
                 var count = 1;
                 for (var column = 0; column < columns; column++)
                 {
-                    cells[column] = column < row.Cells.Count
-                        ? Wrap(PdfText(RenderTree.Plain(row.Cells[column]).Replace("\n", " ", StringComparison.Ordinal)), font, Math.Max(width - 12, 1)).ToList()
-                        : [];
+                    var text = column < row.Cells.Count ? PdfText(RenderTree.Plain(row.Cells[column]).Replace("\n", " ", StringComparison.Ordinal)) : string.Empty;
+                    fonts[column] = new XFont(Family(text, GoFonts.Family), 10, style);
+                    cells[column] = column < row.Cells.Count ? Wrap(text, fonts[column], Math.Max(width - 12, 1)).ToList() : [];
                     count = Math.Max(count, cells[column].Count);
                 }
                 // Tall rows split across pages at line boundaries so no cell runs below the footer.
@@ -412,7 +440,7 @@ public static class PdfWriter
                         }
                         for (var n = 0; n < take && start + n < cells[column].Count; n++)
                         {
-                            _graphics.DrawString(cells[column][start + n], font, XBrushes.Black, new XPoint(left + 6, top + 4 + n * 14 + 14 * 0.78));
+                            _graphics.DrawString(cells[column][start + n], fonts[column], XBrushes.Black, new XPoint(left + 6, top + 4 + n * 14 + 14 * 0.78));
                         }
                     }
                     _y = top + height;
@@ -432,7 +460,7 @@ public static class PdfWriter
         }
     }
 
-    /// <summary>Serves the embedded Go fonts to PdfSharp by family and style.</summary>
+    /// <summary>Serves the embedded Go fonts, and the CJK fallbacks with simulated bold and italic, to PdfSharp by family and style.</summary>
     private sealed class GoFontResolver : IFontResolver
     {
         public byte[]? GetFont(string faceName) => faceName switch
@@ -442,7 +470,7 @@ public static class PdfWriter
             "Go#Italic" => GoFonts.Italic,
             "Go#BoldItalic" => GoFonts.BoldItalic,
             "GoMono#Regular" => GoFonts.Mono,
-            _ => null,
+            _ => CjkFonts.Bytes(faceName),
         };
 
         public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
@@ -450,6 +478,10 @@ public static class PdfWriter
             if (string.Equals(familyName, GoFonts.MonoFamily, StringComparison.OrdinalIgnoreCase))
             {
                 return new FontResolverInfo("GoMono#Regular", bold, italic);
+            }
+            if (CjkFonts.Has(familyName))
+            {
+                return new FontResolverInfo(familyName, bold, italic);
             }
             if (!string.Equals(familyName, GoFonts.Family, StringComparison.OrdinalIgnoreCase))
             {

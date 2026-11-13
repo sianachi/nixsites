@@ -29,6 +29,12 @@
     "files": [
       "src/**"
     ],
+    "extraResources": [
+      {
+        "from": "../../THIRD-PARTY-NOTICES.txt",
+        "to": "THIRD-PARTY-NOTICES.txt"
+      }
+    ],
     "protocols": [
       {
         "name": "Nix sign-in",

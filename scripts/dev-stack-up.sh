@@ -24,6 +24,7 @@ node --experimental-strip-types scripts/ensure-dev-object-store.mts
 deploy/seed/seed.sh
 scripts/dev-migrate.sh
 scripts/fetch-embedding-model.sh   # pet retrieval's local model; full-text only without it
+scripts/fetch-pdf-fonts.sh         # CJK fallback fonts for PDF exports; "?" without them
 deploy/seed/zitadel-configure.sh
 deploy/seed/seed.sh   # second pass: the schema exists now, seeds tenants + identity_provider
 

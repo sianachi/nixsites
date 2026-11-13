@@ -27,4 +27,9 @@
     <EmbeddedResource Include="Fonts/*.ttf" />
   </ItemGroup>
 
+  <!-- The CJK fallback fonts (OFL, ../../fonts/OFL.txt), fetched by scripts/fetch-pdf-fonts.sh: too large to embed or commit. -->
+  <ItemGroup>
+    <None Include="../../fonts/**" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

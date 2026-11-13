@@ -15,6 +15,9 @@ RUN dotnet restore backend/src/Nix.Api/Nix.Api.csproj \
 # The local embedding model (about 35 MB) is fetched in its own cached layer, ahead of the source.
 COPY scripts/fetch-embedding-model.sh scripts/
 RUN sh scripts/fetch-embedding-model.sh backend/models/bge-small-en-v1.5
+# The PDF fallback fonts for Chinese, Japanese and Korean (about 17 MB), likewise.
+COPY scripts/fetch-pdf-fonts.sh scripts/
+RUN sh scripts/fetch-pdf-fonts.sh backend/fonts
 
 COPY backend/ backend/
 # The build regenerates backend/openapi/nix-api.json as a side effect (see Nix.Api.csproj).
@@ -30,6 +33,7 @@ RUN dotnet publish backend/src/Nix.Api/Nix.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8 AS api
 WORKDIR /app
 COPY --from=build /out/api ./
+COPY THIRD-PARTY-NOTICES.txt ./
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_gcServer=0
 EXPOSE 8080
@@ -41,5 +45,6 @@ ENTRYPOINT ["dotnet", "Nix.Api.dll"]
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8 AS migrator
 WORKDIR /app
 COPY --from=build /out/migrator ./
+COPY THIRD-PARTY-NOTICES.txt ./
 USER $APP_UID
 ENTRYPOINT ["dotnet", "Nix.Migrator.dll"]
