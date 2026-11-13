@@ -67,6 +67,17 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Subitem previews open an item's saved default view when one is set. From the preview you can
+  switch views, add one, or set a new default. When no child view is set as default, previews
+  start in the contextual view, such as Record detail for a list item.
+- Change a companion’s appearance by clicking its avatar, or click its name to rename it. Personal
+  instructions are always visible, and the approval preference is under Behaviour.
+- Companion chat defaults to the right-side drawer on devices without a saved choice. Avatar
+  animation follows the system’s reduced-motion setting.
+- **Breaking:** Pet settings no longer return `personality`, `responseLength` or `motion`. Update
+  clients of `/api/v1/me/pets/settings` to stop using those fields. Core gives companions the same default
+  response-length guidance, with personal instructions available for individual preferences.
+
 - **Breaking:** Accounts can save one companion. Clients saving pet settings must send zero or
   one profile. Existing accounts keep their active companion and its conversation identity.
 
@@ -74,6 +85,10 @@ follows semantic versioning (`0.x` pre-1.0).
 - Bookmarked items appear at the top of the Explorer list with a pin icon.
 - The desktop Explorer shows a circled plus for creating notes.
 - The desktop Explorer has a visible divider along its right edge.
+- Workspace Quick previews show pinned and most-used workspaces. Pin, unpin, or hide a workspace
+  directly from Quick previews. Hiding applies to this browser. Restore a hidden workspace with
+  Undo or from Workspace actions in Settings.
+- Explorer tree rows group item commands in one Actions menu beside the drag grip.
 - Pinned document tabs appear once, at the start of their pane’s tab strip. Tab controls appear on
   hover and keyboard focus, and horizontal strips have a bottom divider.
 - Note details and Comments open beside the note on wide screens. Bookmarking and tree visibility
