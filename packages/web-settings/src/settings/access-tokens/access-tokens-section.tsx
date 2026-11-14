@@ -175,23 +175,28 @@ export function AccessTokensSection(): ReactElement {
       header: 'Actions',
       cell: (token: AccessToken) =>
         tokenStatus(token, now).kind === 'live' ? (
-          <span className="inline-flex flex-wrap gap-1">
+          // One word each and never wrapped: a button has a fixed height, so a label carrying a
+          // long token name wrapped inside this narrow column and ran into the button beside it.
+          // The name stays in the accessible name; the row already shows it.
+          <span className="inline-flex gap-1 whitespace-nowrap">
             <Button
               variant="subtle"
+              aria-label={`Rotate ${token.name}`}
               onClick={() => {
                 askRotate(token);
               }}
             >
-              Rotate {token.name}
+              Rotate
             </Button>
             <Button
               variant="subtle"
+              aria-label={`Revoke ${token.name}`}
               onClick={() => {
                 setRevokeRefusal(null);
                 setRevoking(token);
               }}
             >
-              Revoke {token.name}
+              Revoke
             </Button>
           </span>
         ) : null,
