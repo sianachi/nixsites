@@ -16,10 +16,16 @@ anything. Your own agents reach the same workspace through `nixctl` and its MCP 
 same permissions. Nix syncs in real time, exports with no lock-in, runs on your own server, and can
 publish a subtree as a static site.
 
+If you think the project is cool, please star it because it helps people find the project.
+
 **[Live demo and docs](https://nix.nixsites.com/).** That site is itself a Nix workspace, published
 as a static site.
 
-![A launch plan on a board in Nix](assets/screenshots/board.png)
+
+
+https://github.com/user-attachments/assets/45a8a3df-a709-4c86-b762-895fcc0fffa5
+
+
 
 ## What it does
 
