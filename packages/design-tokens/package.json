@@ -32,9 +32,9 @@
     "build": "tsc --project tsconfig.build.json"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.11",
+    "@tailwindcss/cli": "^4.3.5",
     "@types/node": "^22.15.0",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^4.3.5",
     "vitest": "^3.2.7"
   }
 }

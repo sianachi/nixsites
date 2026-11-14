@@ -15,9 +15,9 @@
     "dist": "electron-builder"
   },
   "devDependencies": {
-    "electron": "45.2.3",
+    "electron": "45.3.0",
     "electron-builder": "26.18.0",
-    "playwright": "^1.62.0"
+    "playwright": "^1.65.0"
   },
   "build": {
     "appId": "app.nix.desktop",
