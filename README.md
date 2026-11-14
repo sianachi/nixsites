@@ -23,11 +23,13 @@ as a static site.
 
 ## What it does
 
-- **One tree, many views.** A body (note, canvas or spreadsheet) is separate from how its children are
-  shown: list, board, calendar, timeline, gallery, spreadsheet, chart, habit tracker.
+- **One tree, many views.** A body (note, canvas, spreadsheet or artifact) is separate from how its
+  children are shown: list, board, calendar, timeline, gallery, spreadsheet, chart, checklist, matrix,
+  outline, form, smart list, drive and habit tracker.
 - **Structure you shape yourself.** Property schemas, formulas, rollups, templates and automations,
   plus a companion that builds structure on request, with every plan previewed before it runs.
-- **Real-time editing.** CRDT-synced notes with presence, version history and password-locked subtrees.
+- **Real-time editing.** CRDT-synced notes with presence, comments, suggestions, version history and
+  password-locked subtrees and workspaces.
 - **Quiet reminders and sync.** Due tasks and habits arrive as push notifications; Google and Outlook
   calendars sync both ways with a visible log.
 - **Safe by construction.** Permissions are enforced by Postgres row-level security, and the web app,
@@ -38,7 +40,8 @@ as a static site.
 - **HTTP API.** The same workspace is a REST API. Create a personal access token, exchange it at
   `POST /public/v1/auth/token`, and call `/api/v1`. Start with [the API guide](docs/site/nix-docs/markdown/api/index.md);
   the contract is [backend/openapi/nix-api.json](backend/openapi/nix-api.json).
-- **Publish a subtree** as a static site. The [live demo](https://nix.nixsites.com/) above is one.
+- **Publish any item** and what is under it as a static site, or share a single note or file with a
+  public link. The [live demo](https://nix.nixsites.com/) above is a published site.
 
 The full list is in [docs/features.md](docs/features.md).
 
@@ -71,8 +74,7 @@ open that server's own web app, so they stay in step with it.
 | Desktop (`apps/desktop`) | macOS, Windows, Linux | The iOS app's offline sync on the desktop, with sign-in in your normal browser. Early: unsigned, no auto-update, and the Windows and Linux builds are untested |
 | `nixctl` (`apps/cli`) | Any machine with Node | A JSON CLI for scripts, and `nixctl mcp` for AI tools |
 
-The native apps are not in an app store yet, so build them from source. The iOS and desktop apps need a
-server newer than v0.5.1.
+The native apps are not in an app store, so build them from source.
 
 ```sh
 pnpm --filter @nix/mobile sync && pnpm --filter @nix/mobile open                  # iOS, in Xcode
@@ -87,7 +89,7 @@ Nix is for a workspace you run yourself: structured views, and a copy of the dat
 | | Nix | Notion | Obsidian |
 | --- | --- | --- | --- |
 | Where it runs | Your machine or server, with Docker or Kubernetes | Notion's hosted service | A folder of Markdown on your devices. Sync is [Obsidian Sync](https://obsidian.md/sync) or your own |
-| Licence | [AGPL-3.0](LICENSE), with [permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for plugins and your content | Proprietary | Proprietary. Free for personal use |
+| Licence | [AGPL-3.0](LICENSE), with [permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for your content and programs that use Nix | Proprietary | Proprietary. Free for personal use |
 | Shape | One item tree: lists, boards, calendars, sheets, habits and the rest | Pages and databases | Notes, plus a large plugin ecosystem |
 | Editing together | Real-time CRDT editing, with presence, for a small group | Real-time collaboration | Files synced between devices |
 | Leaving | Lossless `.nix` archives, plus PDF, DOCX and Markdown. An Obsidian vault can be imported | Markdown, HTML and CSV export | The notes are already files |
@@ -104,8 +106,8 @@ publishing above.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker. The stack runs
-Postgres, an object store, the identity provider and four Nix services (API,
-web, and one Node service for collaboration, the pet companion and the sites worker). A default
+Postgres, an object store, the identity provider and three Nix services (API,
+web, and one Node service for collaboration, the companion and the sites worker). A default
 Docker Desktop VM is often 2 to 4 GB, and a smaller limit thrashes. The script stops if a tool is
 missing, and warns when Docker has less than about 8 GB.
 
@@ -159,7 +161,7 @@ Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Co
 ```
 apps/web         React app, installable as a PWA
 apps/collab      Collaboration service
-apps/companion   Pet companion (codex app-server)
+apps/companion   Companion (codex app-server)
 apps/node-host   One process for collab, companion and the sites worker
 apps/cli         nixctl and the MCP server
 apps/mobile      iOS and Android shell (Capacitor)
@@ -172,7 +174,7 @@ deploy/          Compose manifests, images, seed and backup scripts
 
 ## API
 
-The REST API is a way to use Nix, with the web app, `nixctl`, and MCP. [The API guide](docs/site/nix-docs/markdown/api/index.md) covers tokens, the first request in curl, Python, and TypeScript, resources, errors, and limits. The browsable reference generated from the OpenAPI document is [docs/site/nix-docs/generated/reference.html](docs/site/nix-docs/generated/reference.html). The same text is on the [docs site](https://nix.nixsites.com) once that guide is published there.
+The REST API is a way to use Nix, with the web app, `nixctl`, and MCP. [The API guide](docs/site/nix-docs/markdown/api/index.md) covers tokens, the first request in curl, Python, and TypeScript, resources, errors, and limits. The browsable reference generated from the OpenAPI document is [docs/site/nix-docs/generated/reference.html](docs/site/nix-docs/generated/reference.html).
 
 ## Contributing
 
@@ -187,10 +189,9 @@ Generated OpenAPI and client code is never edited by hand.
 
 ## Licence
 
-[AGPL-3.0-only](LICENSE) from v0.5, with [additional permissions](LICENSE-ADDITIONAL-PERMISSIONS.md)
-for plugins, your content and programs that use Nix. Using Nix, including at work, asks nothing of
-you; see [what AGPL means for you](docs/licensing.md). Releases up to v0.4.x stay under the
-[MIT licence](LICENSE-MIT-before-v0.5). A commercial licence is also available.
+[AGPL-3.0-only](LICENSE), with [additional permissions](LICENSE-ADDITIONAL-PERMISSIONS.md)
+for your content and programs that use Nix. Using Nix, including at work, asks nothing of
+you; see [what AGPL means for you](docs/licensing.md). A commercial licence is also available.
 
 ## Star, or open an issue
 
