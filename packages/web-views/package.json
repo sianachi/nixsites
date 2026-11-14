@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-views",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Views: the view registry and every view kind (board, calendar, chart, checklist, drive, form, gallery, habit tracker, list, matrix, outline, query, spreadsheet, timeline), suggestions and the creation wizard",

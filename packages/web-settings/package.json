@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-settings",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Settings sections: access tokens, administrators, API, backups, calendars, daily notes, editor preferences, MCP, members, notifications, preferences, publishing, site approvals",

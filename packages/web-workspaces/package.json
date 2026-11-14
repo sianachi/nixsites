@@ -1,6 +1,6 @@
 {
   "name": "@nix/web-workspaces",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Workspaces, document import and launch: workspace context and switcher, administration, import dialog and runner, launch page",
@@ -32,6 +32,10 @@
     "./workspaces/settings/people-list": {
       "types": "./src/workspaces/settings/people-list.tsx",
       "default": "./src/workspaces/settings/people-list.tsx"
+    },
+    "./workspaces/settings/item-defaults-switches": {
+      "types": "./src/workspaces/settings/item-defaults-switches.tsx",
+      "default": "./src/workspaces/settings/item-defaults-switches.tsx"
     },
     "./workspaces/settings/sharing-switches": {
       "types": "./src/workspaces/settings/sharing-switches.tsx",

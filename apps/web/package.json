@@ -1,11 +1,12 @@
 {
   "name": "@nix/web",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Nix web application (React 19, Tailwind CSS v4, react-router)",
   "scripts": {
     "dev": "vite",
+    "capture:landing": "node scripts/capture-landing.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "stress:mvp1": "node ../../scripts/stress/mvp1.mjs",
