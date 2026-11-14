@@ -2,30 +2,49 @@
 
 [![Release](https://img.shields.io/github/v/release/sianachi/nixsites?label=release)](https://github.com/sianachi/nixsites/releases/latest)
 [![Licence](https://img.shields.io/github/license/sianachi/nixsites?label=licence)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/sianachi/nixsites)](https://github.com/sianachi/nixsites)
 [![CI backend](https://github.com/sianachi/nixsites/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/sianachi/nixsites/actions/workflows/ci-backend.yml)
 [![CI frontend](https://github.com/sianachi/nixsites/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/sianachi/nixsites/actions/workflows/ci-frontend.yml)
 [![Container image](https://img.shields.io/badge/ghcr.io-sianachi%2Fnix-2496ED?logo=docker&logoColor=white)](https://github.com/sianachi/nixsites/packages)
-[![GitHub stars](https://img.shields.io/github/stars/sianachi/nixsites)](https://github.com/sianachi/nixsites)
 
-Nix ([nixsites](https://github.com/sianachi/nixsites)) is a free, open-source workspace where people
-and their AI agents work together: notes, tasks, habits, calendars, spreadsheets, files and
-automations in one place.
+If Nix is useful to you, [star the repository](https://github.com/sianachi/nixsites) so other people
+can find it.
+
+Nix ([nixsites](https://github.com/sianachi/nixsites)) is a free, open-source workspace you run on
+your own machine or server, where people and their AI agents work together: notes, tasks, habits,
+calendars, spreadsheets, files and automations in one place.
 
 Every workspace has an AI companion that can do anything you can do and asks before it changes
 anything. Your own agents reach the same workspace through `nixctl` and its MCP server, under the
-same permissions. Nix syncs in real time, exports with no lock-in, runs on your own server, and can
-publish a subtree as a static site.
+same permissions. Nix syncs in real time, exports with no lock-in, and can publish any item, and
+what is under it, as a static site.
 
-If you think the project is cool, please star it because it helps people find the project.
+**What's new in 0.7.** [v0.7.0](https://github.com/sianachi/nixsites/releases/tag/v0.7.0) adds desktop
+apps for macOS, Windows and Linux (early: unsigned, no auto-update, and the Windows and Linux builds
+are untested), publishing any item as a site, workspace passwords, and a template library on every
+install.
 
 **[Live demo and docs](https://nix.nixsites.com/).** That site is itself a Nix workspace, published
 as a static site.
 
+## Install
 
+Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
+the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
+```
+
+Open <http://nix.localhost> in Chrome or Firefox and sign in with the details it prints.
+Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost auth.nix.localhost` to
+`/etc/hosts` first. A public hostname, Kubernetes and backups are in [Run it for real](#run-it-for-real).
+
+![A launch plan on a board in Nix](assets/screenshots/board.png)
+
+Demo recording:
 
 https://github.com/user-attachments/assets/45a8a3df-a709-4c86-b762-895fcc0fffa5
-
-
 
 ## What it does
 
@@ -109,6 +128,9 @@ files and calendar in that same tree, and adds the CLI, the MCP server and stati
 publishing above.
 
 ## Run it for real
+
+The short path is [Install](#install). This section is what the script runs, a public hostname,
+and what to back up.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker. The stack runs
