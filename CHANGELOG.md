@@ -3,10 +3,24 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
-## Unreleased
+## 0.7.0 - 2026-11-14
 
 ### Added
 
+- Publish any item as a site: Publish as a site is in the item menu and the sidebar row menu for every
+  item type, for workspace owners, and the publishing switch in Settings is now on by default.
+- Items have their own settings: comments, suggesting, file review states and full width, plus the
+  default view, in a new Settings pane of the item panel. Core stores and enforces them, so they
+  apply in the web app, `nixctl item settings`, MCP and the mobile apps. Workspace owners set what
+  new items start with under Workspace settings > New items.
+- The landing page shows every view kind (now including smart lists, the drive, guided forms and
+  custom views), in light and dark, with phone screenshots on narrow screens, and has an Apps
+  section for the iOS, Android, macOS, Windows and Linux downloads (each shows "Coming soon" until
+  it has a link). `pnpm --filter @nix/web capture:landing` retakes the screenshots.
+- Access tokens can be rotated. Rotate in Settings > Access tokens (or `nixctl token rotate <id>`) keeps
+  the token's name and scopes, shows a new secret once, ends the old secret and its sessions immediately and restarts
+  the expiry with the original lifetime. `nixctl` also updates local profiles that used the old
+  token. Revoked or expired tokens cannot be rotated, and a token cannot rotate tokens.
 - The built-in templates are offered in the template library of every workspace on every install,
   with no setup step. Using one adds it to that workspace first. People who cannot manage a
   workspace's templates do not see them.
@@ -60,126 +74,6 @@ follows semantic versioning (`0.x` pre-1.0).
   shipped in every image and the desktop app and served by the web app at
   `/THIRD-PARTY-NOTICES.txt`. Outside contributions now need the contributor licence agreement
   (`CLA.md`), signed once by comment on the pull request.
-
-### Removed
-
-- **Breaking:** the finance feature. The `finance` view kind, its `/api/v1/items/{itemId}/finance*`
-  routes, the `nixctl finance` commands and the finance MCP tools are gone; keep money records in
-  plain CSV files, which open in the sheet grid. Existing finance records stay as ordinary items
-  and any saved `finance` view becomes a `sheet` view on upgrade, but nothing converts the records
-  to CSV. Scripts that call the removed routes, commands or tools must stop.
-
-### Changed
-
-- Subitem previews open an item's saved default view when one is set. From the preview you can
-  switch views, add one, or set a new default. When no child view is set as default, previews
-  start in the contextual view, such as Record detail for a list item.
-- Change a companion’s appearance by clicking its avatar, or click its name to rename it. Personal
-  instructions are always visible, and the approval preference is under Behaviour.
-- Companion chat defaults to the right-side drawer on devices without a saved choice. Avatar
-  animation follows the system’s reduced-motion setting.
-- **Breaking:** Pet settings no longer return `personality`, `responseLength` or `motion`. Update
-  clients of `/api/v1/me/pets/settings` to stop using those fields. Core gives companions the same default
-  response-length guidance, with personal instructions available for individual preferences.
-- Create lists, boards and trackers with the suggested fields, and open Customize when you want to
-  change the setup. The workspace Calendar keeps the agenda visible and opens event details when
-  requested. Daily notes label the date and schedule control.
-- Use workspace search, view search and Settings search with clearer labels. Find theme and layout
-  preferences from Settings, and return to the same work after closing Settings.
-- Use Document and Companion labels across device layouts. Companion chats show their scope before
-  you send, and artifact previews show the values that will be shared.
-- See board column counts and matrix sections on phones, discover more spreadsheet columns and
-  editing controls, and get clearer guidance when using forms, smart lists, habits and canvas.
-- Choose a source for a new template, see when a built-in template will be added to the workspace,
-  and get clearer file import, workspace grouping, Trash and public-link recovery controls.
-
-- **Breaking:** Accounts can save one companion. Clients saving pet settings must send zero or
-  one profile. Existing accounts keep their active companion and its conversation identity.
-
-- Homebase's Explore button opens the workspace Explorer, which now has its own item search.
-- Bookmarked items appear at the top of the Explorer list with a pin icon.
-- The desktop Explorer shows a circled plus for creating notes.
-- The desktop Explorer has a visible divider along its right edge.
-- Workspace Quick previews show pinned and most-used workspaces. Pin, unpin, or hide a workspace
-  directly from Quick previews. Hiding applies to this browser. Restore a hidden workspace with
-  Undo or from Workspace actions in Settings.
-- Explorer tree rows group item commands in one Actions menu beside the drag grip.
-- Pinned document tabs appear once, at the start of their pane’s tab strip. Tab controls appear on
-  hover and keyboard focus, and horizontal strips have a bottom divider.
-- Note details and Comments open beside the note on wide screens. Bookmarking and tree visibility
-  live in Explorer, and Item actions groups commands that open a dialog.
-- Chat notes center the transcript and composer, show who sent each message and when, and offer
-  Copy reply and a shortcut back to the latest reply.
-- The Chat about this note button opens a right-side drawer and keeps the note in place.
-- The writing toolbar keeps Markdown and Suggesting under Writing mode and Text width under More tools.
-- The phone and tablet Explorer shows only item browsing and actions. Workspace pages are
-  available from the main navigation menu. Bottom navigation actions close the Explorer.
-
-- Explorer uses the default view's icon for structured items and the body type's icon for other
-  items. A custom icon still takes precedence.
-- Mobile view controls have labelled Search and Filter buttons aligned with the view picker.
-- The notice that offers Undo after an action now closes after 5 seconds instead of 8, and has a
-  Dismiss button. Ctrl/Cmd+Z still undoes after it has gone.
-- Manage automations and custom programs by asking your companion. Existing custom views and
-  artifacts still open and run.
-- The phone and portrait tablet note dock keeps Insert and Undo visible without sideways scrolling.
-  More groups tools by task. Undoing an inserted block restores the caret and keeps nearby typing.
-- CSV and TSV files open in the sheet grid instead of a read-only table. Edit cells and press Save
-  to write the grid back as a new version of the file; files past the sheet's limits keep the
-  read-only table.
-
-### Fixed
-
-- PDF exports draw Chinese, Japanese and Korean text instead of replacing it with "?". Arabic,
-  Hebrew, Indic scripts and emoji are still replaced, and the export still reports it. Self-hosted
-  builds outside the images run `scripts/fetch-pdf-fonts.sh` once.
-- Keep the companion launcher clear of Calendar Add and creation buttons on phones and tablets.
-  Give compact Settings controls 44 px touch targets and make inline API help links distinguishable.
-- Restore a moved graph item to its former sibling position with Undo when that position is known.
-  Keep graph item opening controls consistent with the current layout.
-- Keep Outline toolbar labels and the attachment State filter legible at phone widths, and announce
-  administrator loading and empty states outside the list. Retry a failed artifact load.
-- Workspace calendar events can be dragged between days in Month view, including across weeks.
-
-- Calendar Agenda shows each date below its day heading, keeping dates and Add buttons readable
-  on tablet and desktop.
-- The mobile writing toolbar no longer covers the note and can be hidden or shown while editing.
-- The Comments view puts a text field and a visible Post button above the discussion, so adding
-  the first comment is easy. The demo supports posting comments.
-- Tablet header controls align with the Home icon.
-- Tablet document tabs align with the workspace controls and keep the active tab in view.
-- When a note begins with a heading identical to its title, the header shows a Rename control and
-  the document shows its heading once.
-- Tablets keep a direct Homebase link when the navigation rail is hidden. View tabs use their
-  compact spacing and expand to reveal options on hover or keyboard focus. On touch, options
-  appear beside the selected view.
-
-- Pressing a result as the command palette refreshes opens the item shown on screen.
-- The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
-  history is kept, so Ctrl/Cmd+Z still works and the next action or undo shows the notice again.
-- Text a pet writes into a note converts properly: `- [ ]` checklists become task lists (and survive a pet edit), `> [!note]` callouts work in their usual spelling, bold next to punctuation is bold, plain web addresses become links, `<br>` is a line break, and a reply wrapped in a Markdown code fence is unwrapped. The pet is told when any Markdown stayed as plain text. Markdown import gains the same task lists, callouts, links and line breaks.
-
-## 0.6.0 - 2026-11-07
-
-### Removed
-
-- **Breaking:** WebAssembly plugins. The workspace plugin routes (`/api/v1/workspaces/{workspaceId}/plugins*`), the seven `plugin_*` tables and the `plugin-events` worker role are gone; nothing was installable outside seed data and no installation existed. Objects under `plugins/components/` in storage can be purged. The `worker` image now hosts only the pet companion (`nix-companion` in Compose; the `nix-worker` Deployment in Kubernetes), which needs no broker or storage credentials.
-- The Go worker binary, the `go-workers` sources and its Dockerfile. Every role now runs in Core or in `nix-node` (ADR-0067); the Go toolchain is no longer needed to build or develop Nix.
-- **Breaking:** RabbitMQ. The broker and its `NIX_RABBITMQ_*` settings are gone from Core, Compose and Kubernetes; it only carried wake-up hints and every job is a `worker_job` row. Before upgrading, wait until no export or import is running: queued jobs are leased by Core on first start, but running exports and imports are marked failed with "try again". Remove the `rabbitmq` service and volume, the `NIX_RABBITMQ_*` variables and the retired worker services afterwards (Compose `deploy.sh` removes the containers; Kubernetes `deploy.sh` deletes the StatefulSet and keeps the volume).
-
-### Changed
-
-- **Breaking:** a revoked file version no longer gets a download or thumbnail link. Naming one answers 410 `files.version_revoked`, and a plain download never serves a revoked version (404 `files.no_servable_version` when nothing else is left). A workspace Owner can still fetch one for diagnosis with `includeRevoked=true` from a browser session or an admin-scope access token, and each such link is recorded in the audit log. Links issued before the revocation stay valid until they expire (`Nix:ObjectStorage:CapabilitySeconds`, 300 seconds by default). Download responses gain `storedMediaType` and `revoked`; `mediaType` stays the type the link is served as.
-- A file download with no version named now returns the latest approved version, or the latest upload when none is approved, and says which it served. Renaming a file only renames a draft version, so an approved file name stays exact.
-- One `nix-node` service runs collaboration, the pet companion and the sites worker, replacing `nix-collab`, `nix-companion` and `nix-sites-worker` (Compose) and the `nix-collab`, `nix-worker` and `nix-sites-worker` Deployments (Kubernetes). The companion is now Node (`NIX_COMPANION_IDLE_SECONDS`, default 300) and the `worker` image is no longer published. `deploy.sh` removes the old services; the companion data volume carries over. See Upgrading in the docs.
-- The sites worker no longer uses RabbitMQ: it leases `site.build`, `site.activate` and `site.purge` jobs from Core every few seconds (`NIX_SITES_POLL_SECONDS`, default 5) and completes them over the internal dispatch route. `NIX_SITES_RABBITMQ_URL` is no longer read.
-- Imports run inside Core: the `import` worker role and its container are gone. Document imports (`.nix`, Markdown, text, Word, PDF), template imports, file publication with thumbnails, template file copies and object cleanup run as Core background jobs. Import plans for `.nix`, Markdown, text, Word and template archives are byte-identical to the worker's (recorded scenarios replay); PDF text is extracted in process instead of by `pdftotext`, so PDF imports split lines differently. An import commit interrupted by a restart is failed and its staged items removed, so a retry imports once. The pet companion now runs in the `nix-plugin-worker` container (Compose: `Nix__Pets__WorkerUrl` points at it).
-- Exports run inside Core: the `export` worker role and its container are gone. Markdown, Word and `.nix` exports are byte-identical to the worker's; PDF exports carry the same text on the same pages but are written by a different library, so the bytes differ and Mermaid diagrams are rasterised by a different engine. An export interrupted by a restart is marked failed and can be retried.
-- Calendar sync runs inside Core: the `calendar` worker role and its container are gone. Google Calendar and Microsoft Graph are called from Core with the same requests the worker sent (nine recorded scenarios replay identically). The provider API origins are `Nix:Calendar:Google:ApiOrigin` and `Nix:Calendar:Microsoft:ApiOrigin`; `NIX_CALENDAR_*_ORIGIN` on the worker is no longer read. A sync interrupted by a restart is marked failed and the next five-minute slot re-runs it; cursors are stored only after a full round, so nothing is left half-applied.
-- Web Push delivery runs inside Core: the `notify` worker role and its container are gone, and Core now needs `Nix:Push:VapidPrivateKey` and `Nix:Push:VapidSubject` (Compose: `NIX_PUSH_VAPID_PRIVATE_KEY` and `NIX_PUSH_VAPID_SUBJECT`, already in the env file; Kubernetes: the `nix-push-vapid` secret, already present). A notification's push is handed to the worker once, so a restart mid-delivery can never push the same notification twice. Jobs Core was running when it restarted are marked `failed` with `interrupted_by_restart` and can be retried.
-
-### Added
-
 - Account → Preferences previews and applies three Zen layouts across the workspace and collection views. Essentials simplifies navigation and view controls, Workspace restores planning and insertion tools, and Full toolkit adds the advanced note tools. Nix remembers your applied layout and overrides across devices. Undo restores the previous layout across devices too.
 
 - Tenant administrators can switch MCP and public links on or off in Settings > Administrators, taking effect at once (`GET`/`PUT /api/v1/tenant/settings`, `nixctl tenant settings`). The deployment setting stays the ceiling. Turning public links off stops existing links from serving without revoking them, and turning them back on restores them. With MCP off, the remote MCP endpoint refuses requests for that organisation.
@@ -256,6 +150,77 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Comments, suggesting and file review states (Draft, In review, Approved, Approve,
+  Revoke) are now off until switched on for each item. Notes that already have comment threads keep
+  comments on, and existing files keep review states on. Turning comments off keeps the threads and refuses new ones (`comments.disabled`);
+  suggestions already in a note stay with Accept and Reject. With review states off, a file's public
+  link serves its newest version that is not revoked, and the web app asks before you turn them off
+  on a file that has a public link. An access token can turn review states off only where the
+  workspace lets agents approve.
+- Subitem previews open an item's saved default view when one is set. From the preview you can
+  switch views, add one, or set a new default. When no child view is set as default, previews
+  start in the contextual view, such as Record detail for a list item.
+- Change a companion’s appearance by clicking its avatar, or click its name to rename it. Personal
+  instructions are always visible, and the approval preference is under Behaviour.
+- Companion chat defaults to the right-side drawer on devices without a saved choice. Avatar
+  animation follows the system’s reduced-motion setting.
+- **Breaking:** Pet settings no longer return `personality`, `responseLength` or `motion`. Update
+  clients of `/api/v1/me/pets/settings` to stop using those fields. Core gives companions the same default
+  response-length guidance, with personal instructions available for individual preferences.
+- Create lists, boards and trackers with the suggested fields, and open Customize when you want to
+  change the setup. The workspace Calendar keeps the agenda visible and opens event details when
+  requested. Daily notes label the date and schedule control.
+- Use workspace search, view search and Settings search with clearer labels. Find theme and layout
+  preferences from Settings, and return to the same work after closing Settings.
+- Use Document and Companion labels across device layouts. Companion chats show their scope before
+  you send, and artifact previews show the values that will be shared.
+- See board column counts and matrix sections on phones, discover more spreadsheet columns and
+  editing controls, and get clearer guidance when using forms, smart lists, habits and canvas.
+- Choose a source for a new template, see when a built-in template will be added to the workspace,
+  and get clearer file import, workspace grouping, Trash and public-link recovery controls.
+
+- **Breaking:** Accounts can save one companion. Clients saving pet settings must send zero or
+  one profile. Existing accounts keep their active companion and its conversation identity.
+
+- Homebase's Explore button opens the workspace Explorer, which now has its own item search.
+- Bookmarked items appear at the top of the Explorer list with a pin icon.
+- The desktop Explorer shows a circled plus for creating notes.
+- The desktop Explorer has a visible divider along its right edge.
+- Workspace Quick previews show pinned and most-used workspaces. Pin, unpin, or hide a workspace
+  directly from Quick previews. Hiding applies to this browser. Restore a hidden workspace with
+  Undo or from Workspace actions in Settings.
+- Explorer tree rows group item commands in one Actions menu beside the drag grip.
+- Pinned document tabs appear once, at the start of their pane’s tab strip. Tab controls appear on
+  hover and keyboard focus, and horizontal strips have a bottom divider.
+- Note details and Comments open beside the note on wide screens. Bookmarking and tree visibility
+  live in Explorer, and Item actions groups commands that open a dialog.
+- Chat notes center the transcript and composer, show who sent each message and when, and offer
+  Copy reply and a shortcut back to the latest reply.
+- The Chat about this note button opens a right-side drawer and keeps the note in place.
+- The writing toolbar keeps Markdown and Suggesting under Writing mode and Text width under More tools.
+- The phone and tablet Explorer shows only item browsing and actions. Workspace pages are
+  available from the main navigation menu. Bottom navigation actions close the Explorer.
+
+- Explorer uses the default view's icon for structured items and the body type's icon for other
+  items. A custom icon still takes precedence.
+- Mobile view controls have labelled Search and Filter buttons aligned with the view picker.
+- The notice that offers Undo after an action now closes after 5 seconds instead of 8, and has a
+  Dismiss button. Ctrl/Cmd+Z still undoes after it has gone.
+- Manage automations and custom programs by asking your companion. Existing custom views and
+  artifacts still open and run.
+- The phone and portrait tablet note dock keeps Insert and Undo visible without sideways scrolling.
+  More groups tools by task. Undoing an inserted block restores the caret and keeps nearby typing.
+- CSV and TSV files open in the sheet grid instead of a read-only table. Edit cells and press Save
+  to write the grid back as a new version of the file; files past the sheet's limits keep the
+  read-only table.
+- **Breaking:** a revoked file version no longer gets a download or thumbnail link. Naming one answers 410 `files.version_revoked`, and a plain download never serves a revoked version (404 `files.no_servable_version` when nothing else is left). A workspace Owner can still fetch one for diagnosis with `includeRevoked=true` from a browser session or an admin-scope access token, and each such link is recorded in the audit log. Links issued before the revocation stay valid until they expire (`Nix:ObjectStorage:CapabilitySeconds`, 300 seconds by default). Download responses gain `storedMediaType` and `revoked`; `mediaType` stays the type the link is served as.
+- A file download with no version named now returns the latest approved version, or the latest upload when none is approved, and says which it served. Renaming a file only renames a draft version, so an approved file name stays exact.
+- One `nix-node` service runs collaboration, the pet companion and the sites worker, replacing `nix-collab`, `nix-companion` and `nix-sites-worker` (Compose) and the `nix-collab`, `nix-worker` and `nix-sites-worker` Deployments (Kubernetes). The companion is now Node (`NIX_COMPANION_IDLE_SECONDS`, default 300) and the `worker` image is no longer published. `deploy.sh` removes the old services; the companion data volume carries over. See Upgrading in the docs.
+- The sites worker no longer uses RabbitMQ: it leases `site.build`, `site.activate` and `site.purge` jobs from Core every few seconds (`NIX_SITES_POLL_SECONDS`, default 5) and completes them over the internal dispatch route. `NIX_SITES_RABBITMQ_URL` is no longer read.
+- Imports run inside Core: the `import` worker role and its container are gone. Document imports (`.nix`, Markdown, text, Word, PDF), template imports, file publication with thumbnails, template file copies and object cleanup run as Core background jobs. Import plans for `.nix`, Markdown, text, Word and template archives are byte-identical to the worker's (recorded scenarios replay); PDF text is extracted in process instead of by `pdftotext`, so PDF imports split lines differently. An import commit interrupted by a restart is failed and its staged items removed, so a retry imports once. The pet companion now runs in the `nix-plugin-worker` container (Compose: `Nix__Pets__WorkerUrl` points at it).
+- Exports run inside Core: the `export` worker role and its container are gone. Markdown, Word and `.nix` exports are byte-identical to the worker's; PDF exports carry the same text on the same pages but are written by a different library, so the bytes differ and Mermaid diagrams are rasterised by a different engine. An export interrupted by a restart is marked failed and can be retried.
+- Calendar sync runs inside Core: the `calendar` worker role and its container are gone. Google Calendar and Microsoft Graph are called from Core with the same requests the worker sent (nine recorded scenarios replay identically). The provider API origins are `Nix:Calendar:Google:ApiOrigin` and `Nix:Calendar:Microsoft:ApiOrigin`; `NIX_CALENDAR_*_ORIGIN` on the worker is no longer read. A sync interrupted by a restart is marked failed and the next five-minute slot re-runs it; cursors are stored only after a full round, so nothing is left half-applied.
+- Web Push delivery runs inside Core: the `notify` worker role and its container are gone, and Core now needs `Nix:Push:VapidPrivateKey` and `Nix:Push:VapidSubject` (Compose: `NIX_PUSH_VAPID_PRIVATE_KEY` and `NIX_PUSH_VAPID_SUBJECT`, already in the env file; Kubernetes: the `nix-push-vapid` secret, already present). A notification's push is handed to the worker once, so a restart mid-delivery can never push the same notification twice. Jobs Core was running when it restarted are marked `failed` with `interrupted_by_restart` and can be retried.
 - Signing in keeps you signed in for 30 days instead of 8 hours, in the browser and the apps.
   `Nix:BrowserAuth:SessionHours` can shorten it (at most 720 hours).
 - Your workspaces are listed in the profile menu and in the workspace switcher at the top, with
@@ -285,12 +250,48 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Removed
 
+- **Breaking:** the finance feature. The `finance` view kind, its `/api/v1/items/{itemId}/finance*`
+  routes, the `nixctl finance` commands and the finance MCP tools are gone; keep money records in
+  plain CSV files, which open in the sheet grid. Existing finance records stay as ordinary items
+  and any saved `finance` view becomes a `sheet` view on upgrade, but nothing converts the records
+  to CSV. Scripts that call the removed routes, commands or tools must stop.
+- **Breaking:** WebAssembly plugins. The workspace plugin routes (`/api/v1/workspaces/{workspaceId}/plugins*`), the seven `plugin_*` tables and the `plugin-events` worker role are gone; nothing was installable outside seed data and no installation existed. Objects under `plugins/components/` in storage can be purged. The `worker` image now hosts only the pet companion (`nix-companion` in Compose; the `nix-worker` Deployment in Kubernetes), which needs no broker or storage credentials.
+- The Go worker binary, the `go-workers` sources and its Dockerfile. Every role now runs in Core or in `nix-node` (ADR-0067); the Go toolchain is no longer needed to build or develop Nix.
+- **Breaking:** RabbitMQ. The broker and its `NIX_RABBITMQ_*` settings are gone from Core, Compose and Kubernetes; it only carried wake-up hints and every job is a `worker_job` row. Before upgrading, wait until no export or import is running: queued jobs are leased by Core on first start, but running exports and imports are marked failed with "try again". Remove the `rabbitmq` service and volume, the `NIX_RABBITMQ_*` variables and the retired worker services afterwards (Compose `deploy.sh` removes the containers; Kubernetes `deploy.sh` deletes the StatefulSet and keeps the volume).
 - `GET /api/v1/items/{itemId}/permissions`, `PUT …/permissions/entries` and
   `DELETE …/permissions/entries/{aclEntryId}`. They were never built and always answered 501. The
   item routes no longer declare a 501 response either.
 
 ### Fixed
 
+- PDF exports draw Chinese, Japanese and Korean text instead of replacing it with "?". Arabic,
+  Hebrew, Indic scripts and emoji are still replaced, and the export still reports it. Self-hosted
+  builds outside the images run `scripts/fetch-pdf-fonts.sh` once.
+- Keep the companion launcher clear of Calendar Add and creation buttons on phones and tablets.
+  Give compact Settings controls 44 px touch targets and make inline API help links distinguishable.
+- Restore a moved graph item to its former sibling position with Undo when that position is known.
+  Keep graph item opening controls consistent with the current layout.
+- Keep Outline toolbar labels and the attachment State filter legible at phone widths, and announce
+  administrator loading and empty states outside the list. Retry a failed artifact load.
+- Workspace calendar events can be dragged between days in Month view, including across weeks.
+
+- Calendar Agenda shows each date below its day heading, keeping dates and Add buttons readable
+  on tablet and desktop.
+- The mobile writing toolbar no longer covers the note and can be hidden or shown while editing.
+- The Comments view puts a text field and a visible Post button above the discussion, so adding
+  the first comment is easy. The demo supports posting comments.
+- Tablet header controls align with the Home icon.
+- Tablet document tabs align with the workspace controls and keep the active tab in view.
+- When a note begins with a heading identical to its title, the header shows a Rename control and
+  the document shows its heading once.
+- Tablets keep a direct Homebase link when the navigation rail is hidden. View tabs use their
+  compact spacing and expand to reveal options on hover or keyboard focus. On touch, options
+  appear beside the selected view.
+
+- Pressing a result as the command palette refreshes opens the item shown on screen.
+- The undo notice now goes away on its own after a few seconds instead of staying on screen. Undo
+  history is kept, so Ctrl/Cmd+Z still works and the next action or undo shows the notice again.
+- Text a pet writes into a note converts properly: `- [ ]` checklists become task lists (and survive a pet edit), `> [!note]` callouts work in their usual spelling, bold next to punctuation is bold, plain web addresses become links, `<br>` is a line break, and a reply wrapped in a Markdown code fence is unwrapped. The pet is told when any Markdown stayed as plain text. Markdown import gains the same task lists, callouts, links and line breaks.
 - Form entries can be undone even when the collection has not finished refreshing.
 
 - Public forms were not reachable behind the bundled reverse proxy configurations: `/public/v1/forms/*` fell through to the web app.

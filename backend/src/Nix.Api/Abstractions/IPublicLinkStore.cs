@@ -34,8 +34,11 @@ public interface IPublicLinkStore
     /// <summary>The service principal of the item's most recent link, when still active, so a replace reuses it.</summary>
     public ValueTask<PrincipalId?> FindReusablePrincipalAsync(ItemId itemId, CancellationToken cancellationToken);
 
-    /// <summary>The named version of the file, or its latest approved one when none is named.</summary>
-    public ValueTask<FileVersion?> FindVersionAsync(ItemId itemId, Guid? versionId, CancellationToken cancellationToken);
+    /// <summary>
+    /// The named version of the file, or when none is named its latest approved one - or, with
+    /// <paramref name="newestUnrevoked"/> (the file has review states off), its newest one that is not revoked.
+    /// </summary>
+    public ValueTask<FileVersion?> FindVersionAsync(ItemId itemId, Guid? versionId, CancellationToken cancellationToken, bool newestUnrevoked = false);
 
     /// <summary>Stages a link and, for a new one, its service principal and membership.</summary>
     public void Add(PublicLink link, Principal? principal, WorkspaceMember? membership);
@@ -53,12 +56,16 @@ public interface IPublicFileVersions
     /// <summary>The file's body row, or null.</summary>
     public ValueTask<FileBody?> FindBodyAsync(TenantId tenant, ItemId itemId, CancellationToken cancellationToken);
 
-    /// <summary>The latest approved, ready version of the file, or null.</summary>
+    /// <summary>
+    /// The latest approved, ready version of the file, or null. With <paramref name="anyUnrevoked"/>
+    /// (the file has review states off), the newest ready version that is not revoked.
+    /// </summary>
     public ValueTask<FileVersion?> FindLatestApprovedAsync(
         TenantId tenant,
         WorkspaceId workspace,
         ItemId itemId,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool anyUnrevoked = false);
 
     /// <summary>One version of the file, or null.</summary>
     public ValueTask<FileVersion?> FindVersionAsync(

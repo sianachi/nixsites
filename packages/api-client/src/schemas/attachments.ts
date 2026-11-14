@@ -20,6 +20,8 @@ export const attachmentRowSchema = z.object({
   sourceItemId: z.uuid().nullable(),
   pinCount: z.number().int().nonnegative(),
   hasPublicLink: z.boolean(),
+  /** Whether the file has review states switched on; off means no Draft, In review or Approved wording. */
+  reviewStates: z.boolean().default(false),
 }) satisfies z.ZodType<Omit<AttachmentRowContract, 'shownVersionState' | 'pinCount'> & object>;
 
 export type AttachmentRow = z.infer<typeof attachmentRowSchema>;

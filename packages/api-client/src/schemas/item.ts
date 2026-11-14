@@ -20,6 +20,22 @@ import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
 /**
+ * The optional features an item switches on for itself. All off unless someone turned them on.
+ * Defaulted per field, so a server from before the field still parses as everything off.
+ */
+export const itemSettingsSchema = z.object({
+  /** Whether people may add comments and replies; existing threads are kept either way. */
+  comments: z.boolean().default(false),
+  /** Whether the editor offers suggesting (track changes). */
+  suggesting: z.boolean().default(false),
+  /** Whether a file's versions carry Draft, In review and Approved states. */
+  reviewStates: z.boolean().default(false),
+  /** Whether a note's body uses the full width of its pane. */
+  fullWidth: z.boolean().default(false),
+});
+export type ItemSettings = z.infer<typeof itemSettingsSchema>;
+
+/**
  * The item's kind, as an open string.
  *
  * Deliberately not an enum. It says how an item's own *body* is drawn - a note's prose, a canvas's
@@ -121,6 +137,14 @@ export const itemSchema = z.object({
    * off. Defaulted, so a server from before the field still parses.
    */
   collaboration: z.boolean().default(true),
+
+  /** The optional features switched on for this item: comments, suggesting, review states, full width. */
+  settings: itemSettingsSchema.default({
+    comments: false,
+    suggesting: false,
+    reviewStates: false,
+    fullWidth: false,
+  }),
 
   /**
    * The system feature managing the item (`calendar` for a linked calendar's container,

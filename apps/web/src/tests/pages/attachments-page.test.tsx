@@ -32,6 +32,8 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     sourceItemId: SOURCE,
     pinCount: 2,
     hasPublicLink: false,
+    // The approval flow these tests cover needs review states on; the off case has its own test.
+    reviewStates: true,
     ...overrides,
   };
 }
@@ -209,6 +211,23 @@ describe('the attachments page', () => {
       'href',
       expect.stringContaining(SOURCE),
     );
+  });
+
+  it('shows no review wording or controls for a file with review states off', async () => {
+    stubAttachments({
+      rows: [row({ reviewStates: false, shownVersionState: 'draft', hasPublicLink: true })],
+    });
+    renderAt(<App />, PAGE);
+
+    const list = await screen.findByRole('list', { name: 'Attachments' });
+    expect(within(list).getByText('Contract.pdf')).toBeVisible();
+    expect(within(list).queryByText('Draft')).toBeNull();
+    expect(within(list).queryByRole('button', { name: 'Approve Contract.pdf' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'State' })).toBeNull();
+    await manage(userEvent.setup());
+    expect(within(list).queryByRole('button', { name: 'Submit for review' })).toBeNull();
+    expect(within(list).queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(within(list).getByRole('button', { name: 'Download' })).toBeVisible();
   });
 
   it('sends the filters to the server', async () => {

@@ -162,6 +162,23 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
     }
 
     [Fact]
+    public async Task A_token_cannot_switch_review_states_unless_the_workspace_lets_agents_approve()
+    {
+        var file = await UploadAsync("settings", 1);
+        var path = $"/api/v1/items/{file.ItemId:D}/settings";
+        var write = await TokenAsync(AccessTokenScopes.Read, AccessTokenScopes.Write);
+
+        using var other = await SendAsync(HttpMethod.Put, path, write, new { fullWidth = true });
+        Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+        using var refused = await SendAsync(HttpMethod.Put, path, write, new { reviewStates = false });
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+
+        await SetPolicyAsync(approve: true);
+        using var allowed = await SendAsync(HttpMethod.Put, path, write, new { reviewStates = true });
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
     public async Task The_agent_policy_is_refused_for_every_token_even_with_the_admin_scope()
     {
         var path = $"/api/v1/workspaces/{TestTenants.AlphaWorkspace:D}/agent-policy";

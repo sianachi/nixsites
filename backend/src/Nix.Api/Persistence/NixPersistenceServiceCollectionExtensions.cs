@@ -429,6 +429,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<DeleteItem, ItemId>, DeleteItemHandler>();
         services.AddScoped<ICommandHandler<RenameItem, Item>, RenameItemHandler>();
         services.AddScoped<ICommandHandler<SetItemProtection, Item>, SetItemProtectionHandler>();
+        services.AddScoped<ICommandHandler<SetItemSettings, Item>, SetItemSettingsHandler>();
         services.AddScoped<ICommandHandler<MoveItem, Item>, MoveItemHandler>();
         services.AddScoped<IQueryHandler<ListItemMoveWorkspaces, Result<ItemMoveWorkspacePage>>, ListItemMoveWorkspacesHandler>();
         services.AddScoped<ICommandHandler<RestoreItem, Item>, RestoreItemHandler>();
@@ -506,6 +507,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<CreateAccessToken, IssuedAccessToken>, CreateAccessTokenHandler>();
         services.AddScoped<IQueryHandler<ListAccessTokens, Result<IReadOnlyList<PersonalAccessToken>>>, ListAccessTokensHandler>();
         services.AddScoped<ICommandHandler<RevokeAccessToken, bool>, RevokeAccessTokenHandler>();
+        services.AddScoped<ICommandHandler<RotateAccessToken, IssuedAccessToken>, RotateAccessTokenHandler>();
 
         services.AddScoped<IQueryHandler<ListWorkspaces, IReadOnlyList<WorkspaceSnapshot>>, ListWorkspacesHandler>();
         services.AddScoped<IQueryHandler<GetWorkspace, WorkspaceSnapshot?>, GetWorkspaceHandler>();

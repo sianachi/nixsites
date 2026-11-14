@@ -13,6 +13,12 @@ public static class TokenErrors
 
     /// <summary>The caller already holds as many live tokens as one principal may.</summary>
     public const string LimitReachedCode = "tokens.limit_reached";
+
+    /// <summary>The token does not exist or is not the caller's.</summary>
+    public const string NotFoundCode = "tokens.not_found";
+
+    /// <summary>The token is revoked or expired, so a new secret would revive it.</summary>
+    public const string NotRotatableCode = "tokens.not_rotatable";
 }
 
 /// <summary>Mints a personal access token for the acting principal.</summary>
@@ -35,6 +41,10 @@ public sealed record ListAccessTokens : IQuery<Result<IReadOnlyList<PersonalAcce
 /// <summary>Revokes one of the acting principal's tokens.</summary>
 /// <param name="Id">The token to revoke.</param>
 public sealed record RevokeAccessToken(PersonalAccessTokenId Id) : ICommand<bool>;
+
+/// <summary>Replaces the secret of one of the acting principal's live tokens.</summary>
+/// <param name="Id">The token to rotate.</param>
+public sealed record RotateAccessToken(PersonalAccessTokenId Id) : ICommand<IssuedAccessToken>;
 
 /// <summary>
 /// Mints a token: validates what was asked for, bounds how many one principal may hold, stores
@@ -214,5 +224,64 @@ public sealed class RevokeAccessTokenHandler(
             .ConfigureAwait(false);
 
         return Result.Success(revoked);
+    }
+}
+
+/// <summary>
+/// Rotates a token: same row, name and scopes, new secret, and the original lifetime restarted
+/// from now. The old secret stops working in the same statement.
+/// </summary>
+/// <remarks>
+/// A revoked or expired token is refused rather than revived: rotation must never undo a
+/// revocation or extend a credential past the end its issuer chose. The lifetime is capped at
+/// <see cref="PersonalAccessToken.MaximumLifetimeDays"/> in case the ceiling was ever lowered.
+/// </remarks>
+public sealed class RotateAccessTokenHandler(
+    IPersonalAccessTokens tokens,
+    TimeProvider clock)
+    : ICommandHandler<RotateAccessToken, IssuedAccessToken>
+{
+    /// <summary>Rotates the token.</summary>
+    /// <param name="command">The token to rotate.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>The row with its new secret, or why there is none.</returns>
+    public async ValueTask<Result<IssuedAccessToken>> HandleAsync(
+        RotateAccessToken command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var now = clock.GetUtcNow();
+        var existing = await tokens.FindOwnAsync(command.Id, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            return Result.Failure<IssuedAccessToken>(TokenErrors.NotFoundCode, "That token does not exist.");
+        }
+
+        var lifetime = TimeSpan.FromDays(PersonalAccessToken.MaximumLifetimeDays);
+        var kept = existing.ExpiresAt - existing.CreatedAt;
+        var minted = PersonalAccessTokenSecret.Mint();
+
+        var rotated = existing.RevokedAt is null
+            && existing.ExpiresAt > now
+            && await tokens
+                .RotateOwnAsync(
+                    existing.Id,
+                    minted.Lookup,
+                    minted.Hash,
+                    now + (kept < lifetime ? kept : lifetime),
+                    now,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        if (!rotated)
+        {
+            return Result.Failure<IssuedAccessToken>(
+                TokenErrors.NotRotatableCode,
+                "A revoked or expired token cannot be rotated. Create a new token instead.");
+        }
+
+        var row = await tokens.FindOwnAsync(existing.Id, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("A rotated token vanished within its own unit of work.");
+        return Result.Success(new IssuedAccessToken(row, minted.Token));
     }
 }

@@ -156,6 +156,12 @@ public sealed class Item
     public bool Collaboration { get; init; } = true;
 
     /// <summary>
+    /// Gets the item's optional-feature switches as a JSON object, or <see langword="null"/> when
+    /// none was ever set (everything off). Read it through <see cref="ItemSettings.Read"/>.
+    /// </summary>
+    public string? Settings { get; init; }
+
+    /// <summary>
     /// Gets the system feature that manages this item, or <see langword="null"/> for an ordinary
     /// item. One of <see cref="ItemManagers"/>.
     /// </summary>

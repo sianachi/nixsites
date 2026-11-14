@@ -247,6 +247,97 @@ public sealed class PersonalAccessTokenStoreTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task Rotation_swaps_the_secret_in_place_and_restarts_the_original_lifetime()
+    {
+        var minted = await MintAsync(OwnerContext, "rotating", [AccessTokenScopes.Read, AccessTokenScopes.Write], days: 30);
+
+        var rotated = await RotateAsync(OwnerContext, minted.Row.Id);
+
+        Assert.True(rotated.IsSuccess, rotated.IsFailure ? rotated.Error.Message : string.Empty);
+        Assert.Equal(minted.Row.Id, rotated.Value.Row.Id);
+        Assert.Equal(minted.Row.Name, rotated.Value.Row.Name);
+        Assert.Equal(minted.Row.Scopes, rotated.Value.Row.Scopes);
+        Assert.NotEqual(minted.Secret, rotated.Value.Secret);
+        Assert.InRange(
+            (rotated.Value.Row.ExpiresAt - DateTimeOffset.UtcNow).TotalDays,
+            29.9,
+            30.1);
+
+        // A second rotation measures the same 30 days, not the stretch since first issue.
+        Assert.Equal(
+            rotated.Value.Row.ExpiresAt - rotated.Value.Row.CreatedAt,
+            minted.Row.ExpiresAt - minted.Row.CreatedAt);
+
+        Assert.False(await ResolvesAsync(minted.Secret));
+        Assert.True(await ResolvesAsync(rotated.Value.Secret));
+    }
+
+    [Fact]
+    public async Task Rotation_refuses_a_revoked_token_and_another_principal_s_token()
+    {
+        var minted = await MintAsync(OwnerContext, "rotation-refused", [AccessTokenScopes.Read], days: 30);
+
+        var foreign = await RotateAsync(NeighbourContext, minted.Row.Id);
+        Assert.Equal(TokenErrors.NotFoundCode, foreign.Error.Code);
+
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(OwnerContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            await work.Resolve<IPersonalAccessTokens>()
+                .RevokeOwnAsync(minted.Row.Id, DateTimeOffset.UtcNow, Cancellation);
+            await work.CommitAsync(Cancellation);
+        }
+
+        var revoked = await RotateAsync(OwnerContext, minted.Row.Id);
+        Assert.Equal(TokenErrors.NotRotatableCode, revoked.Error.Code);
+        Assert.True(await ResolvesAsync(minted.Secret));
+    }
+
+    [Fact]
+    public async Task Rotation_refuses_an_expired_token()
+    {
+        var minted = await MintAsync(OwnerContext, "rotation-expired", [AccessTokenScopes.Read], days: 30);
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(
+                connection,
+                transaction: null,
+                $"UPDATE personal_access_token SET expires_at = now() - interval '1 minute' "
+                + $"WHERE token_id = '{minted.Row.Id.Value:D}'::uuid;");
+        }
+
+        var result = await RotateAsync(OwnerContext, minted.Row.Id);
+
+        Assert.Equal(TokenErrors.NotRotatableCode, result.Error.Code);
+    }
+
+    private async Task<Result<IssuedAccessToken>> RotateAsync(NixSessionContext context, PersonalAccessTokenId id)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(context, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var result = await work.Resolve<NixDispatcher>()
+                .SendAsync<RotateAccessToken, IssuedAccessToken>(new RotateAccessToken(id), Cancellation);
+            await work.CommitAsync(Cancellation);
+            return result;
+        }
+    }
+
+    /// <summary>Whether a presented token still finds a row whose hash it matches.</summary>
+    private async Task<bool> ResolvesAsync(string secret)
+    {
+        var scope = _fixture.Application.CreateUnscopedScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            Assert.True(PersonalAccessTokenSecret.TryReadLookup(secret, out var lookup));
+            var candidate = await scope.ServiceProvider.GetRequiredService<IPersonalAccessTokens>()
+                .FindForExchangeAsync(lookup, Cancellation);
+            return candidate is not null && PersonalAccessTokenSecret.Matches(candidate.SecretHash, secret);
+        }
+    }
+
     private async Task<IssuedAccessToken> MintAsync(
         NixSessionContext context,
         string name,

@@ -83,6 +83,7 @@ internal static class ItemMapping
             item.NoDelete,
             item.NoChildren,
             item.Collaboration,
+            ItemSettings.Read(item.Settings),
             item.ManagedBy,
             item.CreatedAt,
             item.LastModifiedAt,

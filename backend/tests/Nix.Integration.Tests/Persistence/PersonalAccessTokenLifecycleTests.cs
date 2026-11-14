@@ -96,6 +96,30 @@ public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Rotation_ends_a_session_exchanged_with_the_old_secret_but_not_one_from_the_new()
+    {
+        var minted = await MintAsync("rotated", [AccessTokenScopes.Read], days: 30);
+        var oldJwt = await ExchangeAsync(minted.Secret);
+        Assert.Equal(HttpStatusCode.OK, (await GetAsync("/api/v1/me", oldJwt)).StatusCode);
+
+        string newSecret;
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var result = await work.Resolve<NixDispatcher>()
+                .SendAsync<RotateAccessToken, IssuedAccessToken>(new RotateAccessToken(minted.Row.Id), Cancellation);
+            Assert.True(result.IsSuccess);
+            newSecret = result.Value.Secret;
+            await work.CommitAsync(Cancellation);
+        }
+
+        var refused = await GetAsync("/api/v1/me", oldJwt);
+        Assert.Equal(HttpStatusCode.Unauthorized, refused.StatusCode);
+        Assert.Equal(AuthenticationRefusalCodes.TokenRevoked, await ProblemCodeAsync(refused));
+        Assert.Equal(HttpStatusCode.OK, (await GetAsync("/api/v1/me", await ExchangeAsync(newSecret))).StatusCode);
+    }
+
+    [Fact]
     public async Task A_read_scoped_session_reads_but_cannot_write()
     {
         var minted = await MintAsync("read-only", [AccessTokenScopes.Read], days: 30);
@@ -142,6 +166,20 @@ public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
         Assert.Equal(
             AuthenticationRefusalCodes.InsufficientScope,
             await ProblemCodeAsync(refused));
+    }
+
+    [Fact]
+    public async Task A_token_authenticated_session_cannot_rotate_a_token()
+    {
+        var minted = await MintAsync("rotator", [AccessTokenScopes.Read, AccessTokenScopes.Write, AccessTokenScopes.Admin], days: 30);
+        var jwt = await ExchangeAsync(minted.Secret);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/me/tokens/{minted.Row.Id.Value:D}/rotate");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
+        var refused = await _client.SendAsync(request, Cancellation);
+
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        Assert.Equal(AuthenticationRefusalCodes.InsufficientScope, await ProblemCodeAsync(refused));
     }
 
     [Fact]

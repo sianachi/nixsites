@@ -165,8 +165,8 @@ export function SharePublicLinkDialog({
         {phase === 'none' ? (
           <Text variant="bodySmall">
             Anyone with the link can read this note, without signing in. It updates as you edit.
-            Comments, properties and child items stay private. Attached files show only when an
-            approved version exists.
+            Comments, properties and child items stay private. An attached file shows its newest
+            version, or only an approved one when that file uses review states.
           </Text>
         ) : null}
         {phase === 'confirmRevoke' ? (

@@ -1145,7 +1145,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         public ValueTask<WorkspaceSnapshot?> HandleAsync(GetWorkspace query, CancellationToken cancellationToken) =>
             ValueTask.FromResult<WorkspaceSnapshot?>(new(query.WorkspaceId, "Workspace", 30, 0, DateTimeOffset.UtcNow,
-                null, false, false, false, false, null, "active", null, false, true, false, false));
+                null, false, false, false, false, null, "active", null, false, true, false, false, 0));
     }
 
     private sealed class FakeGetPetSettingsHandler(string provider, bool inlineWriting) : IQueryHandler<GetPetSettings, PetSettingsResponse>

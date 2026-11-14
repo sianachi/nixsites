@@ -146,6 +146,10 @@ public sealed partial class DocumentImportStore
                     context.PrincipalId.ToString()),
                 Schema = planned.Schema,
                 Views = planned.Views,
+                // Imported threads would be hidden while comments are off, so they switch them on.
+                Settings = planned.ItemType == "note" && planned.Comments is { Count: > 0 }
+                    ? ItemSettings.Patch(true, null, null, null)
+                    : null,
                 LifecycleState = ItemLifecycleState.Provisioning,
                 CreatedBy = context.PrincipalId,
                 LastModifiedBy = context.PrincipalId,

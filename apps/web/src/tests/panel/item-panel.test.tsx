@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from '../../app';
-import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { STUB_WORKSPACE, item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { usePublishingPreference } from '@nix/web-settings/settings/publishing/publishing-preference';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 
 /**
@@ -18,6 +19,7 @@ let stored: Map<string, string>;
 
 beforeEach(() => {
   signedIn();
+  usePublishingPreference.setState({ enabled: true });
   stored = new Map();
 
   Object.defineProperty(globalThis.window, 'localStorage', {
@@ -114,9 +116,13 @@ describe('the settings panel', () => {
     expect(within(panel).queryByRole('button', { name: 'Site' })).not.toBeInTheDocument();
   });
 
-  it('hides the Site entry when the deployment has sites but the person has not turned publishing on', async () => {
+  it('hides the Site entry when the deployment has sites but the person turned publishing off', async () => {
     const user = userEvent.setup();
-    stubCoreApi({ items: [NOTE], siteFeature: true });
+    stubCoreApi({
+      items: [NOTE],
+      siteFeature: true,
+      uiSettings: { 'sites.publishingEnabled': false },
+    });
     renderAt(<App />, `/?item=${NOTE.id}`);
 
     await user.click(await screen.findByRole('button', { name: /item actions/i }));
@@ -124,17 +130,55 @@ describe('the settings panel', () => {
     expect(screen.queryByRole('menuitem', { name: /site/i })).not.toBeInTheDocument();
   });
 
-  it('opens on the Site pane from the item actions', async () => {
+  it('offers the Site entry on a note by default', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [NOTE], siteFeature: true });
+    renderAt(<App />, `/?item=${NOTE.id}`);
+
+    await user.click(await screen.findByRole('button', { name: /item actions/i }));
+    expect(await screen.findByRole('menuitem', { name: /site/i })).toBeVisible();
+  });
+
+  it('offers the Site entry on an item that is not a note', async () => {
+    const user = userEvent.setup();
+    const collection = item({
+      id: '6b6b6b6b-6666-4666-8666-6b6b6b6b6b6b',
+      title: 'Projects',
+      type: 'collection',
+    });
+    stubCoreApi({ items: [collection], siteFeature: true });
+    renderAt(<App />, `/?item=${collection.id}`);
+
+    await user.click(await screen.findByRole('button', { name: /item actions/i }));
+    expect(await screen.findByRole('menuitem', { name: /site/i })).toBeVisible();
+  });
+
+  it('hides the Site entry and tab from someone who cannot manage the workspace', async () => {
     const user = userEvent.setup();
     stubCoreApi({
       items: [NOTE],
       siteFeature: true,
-      uiSettings: { 'sites.publishingEnabled': true },
+      workspaces: [{ ...STUB_WORKSPACE, canManageMembers: false }],
     });
     renderAt(<App />, `/?item=${NOTE.id}`);
 
     await user.click(await screen.findByRole('button', { name: /item actions/i }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Site' }));
+    expect(await screen.findByRole('menuitem', { name: 'Export' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: /site/i })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /settings/i }));
+    const panel = await screen.findByRole('complementary', { name: /item settings/i });
+    expect(within(panel).queryByRole('button', { name: 'Site' })).not.toBeInTheDocument();
+  });
+
+  it('opens on the Site pane from the item actions', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ items: [NOTE], siteFeature: true });
+    renderAt(<App />, `/?item=${NOTE.id}`);
+
+    await user.click(await screen.findByRole('button', { name: /item actions/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /site/i }));
     const panel = await screen.findByRole('complementary', { name: /item settings/i });
 
     expect(within(panel).getByRole('button', { name: 'Site' })).toHaveAttribute(

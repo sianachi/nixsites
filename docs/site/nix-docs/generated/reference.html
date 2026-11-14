@@ -63,6 +63,18 @@
 
 <p>Responses: <code>204</code>.</p>
 </article>
+<article id="rotateaccesstoken" data-search="post /api/v1/me/tokens/{tokenid}/rotate rotateaccesstoken rotate a personal access token keeps the token's identity, name and scopes but issues a new secret, shown in this response only. the old secret stops working immediately. the expiry restarts from now with the token's original lifetime, capped at 365 days. fails with 'tokens.not_found' when the token is not the caller's, and 'tokens.not_rotatable' when it is revoked or expired. accesstokens">
+<h3><span class="verb">POST</span> <code>/api/v1/me/tokens/{tokenId}/rotate</code></h3>
+<p>Rotate a personal access token</p>
+<p class="id">Operation id: <code>RotateAccessToken</code></p>
+<p><strong>Can.</strong> Replace the secret of one of the caller's live personal access tokens. The new secret is in this response only, and the old one stops working at once.</p>
+<p><strong>Cannot.</strong> Be called with a personal access token, or revive a revoked or expired token. The expiry restarts with the original lifetime, never longer.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+<p>Keeps the token's identity, name and scopes but issues a new secret, shown in this response only. The old secret stops working immediately. The expiry restarts from now with the token's original lifetime, capped at 365 days. Fails with 'tokens.not_found' when the token is not the caller's, and 'tokens.not_rotatable' when it is revoked or expired.</p>
+<ul><li><code>tokenId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>, <code>409</code>.</p>
+</article>
 <article id="getaccesstokensigningkeys" data-search="get /public/v1/auth/jwks getaccesstokensigningkeys the public keys exchanged sessions are signed with an rfc 7517 key set. collaboration lists core's issuer beside the identity providers they already trust and fetch its keys here; an empty set means no key is configured and nothing signed by this issuer should validate. accesstokens">
 <h3><span class="verb">GET</span> <code>/public/v1/auth/jwks</code></h3>
 <p>The public keys exchanged sessions are signed with</p>
@@ -1238,6 +1250,18 @@
 <ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>, <code>409</code>.</p>
+</article>
+<article id="setitemsettings" data-search="put /api/v1/items/{itemid}/settings setitemsettings switch an item's optional features on or off sets comments, suggesting, file review states and full width for one item. all are off until switched on. a field left null is unchanged. anyone who may edit the item may change them. turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409). items">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/settings</code></h3>
+<p>Switch an item's optional features on or off</p>
+<p class="id">Operation id: <code>SetItemSettings</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Sets comments, suggesting, file review states and full width for one item. All are off until switched on. A field left null is unchanged. Anyone who may edit the item may change them. Turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409).</p>
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetItemSettingsRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
 <article id="listitems" data-search="get /api/v1/workspaces/{workspaceid}/items listitems children of an item, or the workspace root returns the items directly under 'parentid', or the workspace's roots when it is omitted, in sibling order. items the caller cannot read are omitted entirely - a query result is how you enumerate what exists, so redacted placeholders would disclose their existence. soft-deleted items are excluded unless 'includedeleted' is set. fails with 'items.locked' (423) when a lock the caller has not opened covers 'parentid' - a locked item's children are withheld until it is unlocked. items">
 <h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/items</code></h3>
@@ -2798,6 +2822,30 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li><li><code>query</code> in query (optional, string)</li></ul>
 
 <p>Responses: <code>200</code>, <code>422</code>.</p>
+</article>
+<article id="getworkspaceitemdefaults" data-search="get /api/v1/workspaces/{workspaceid}/item-defaults getworkspaceitemdefaults the settings new items in a workspace start with  workspaces">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/item-defaults</code></h3>
+<p>The settings new items in a workspace start with</p>
+<p class="id">Operation id: <code>GetWorkspaceItemDefaults</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="setworkspaceitemdefaults" data-search="put /api/v1/workspaces/{workspaceid}/item-defaults setworkspaceitemdefaults change the settings new items in a workspace start with workspace owners only. a field left null is unchanged. existing items keep their own settings. workspaces">
+<h3><span class="verb">PUT</span> <code>/api/v1/workspaces/{workspaceId}/item-defaults</code></h3>
+<p>Change the settings new items in a workspace start with</p>
+<p class="id">Operation id: <code>SetWorkspaceItemDefaults</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Workspace owners only. A field left null is unchanged. Existing items keep their own settings.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetItemDefaultsRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
 <article id="leaveworkspace" data-search="post /api/v1/workspaces/{workspaceid}/leave leaveworkspace   workspaces">
 <h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/leave</code></h3>

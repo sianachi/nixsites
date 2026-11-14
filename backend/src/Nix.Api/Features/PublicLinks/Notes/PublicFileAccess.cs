@@ -65,7 +65,9 @@ public static class PublicFileAccess
             return Hidden;
         }
 
-        var approved = await versions.FindLatestApprovedAsync(tenant, workspace, itemId, cancellationToken).ConfigureAwait(false);
+        // With review states off nothing is ever approved, so the newest version that is not revoked is the one shown.
+        var approved = await versions.FindLatestApprovedAsync(
+            tenant, workspace, itemId, cancellationToken, anyUnrevoked: !ItemSettings.Read(item.Settings).ReviewStates).ConfigureAwait(false);
         if (approved is not null)
         {
             return Serve(approved);

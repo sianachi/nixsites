@@ -270,6 +270,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/workspaces/{workspaceId}/item-defaults': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The settings new items in a workspace start with */
+    get: operations['GetWorkspaceItemDefaults'];
+    /**
+     * Change the settings new items in a workspace start with
+     * @description Workspace owners only. A field left null is unchanged. Existing items keep their own settings.
+     */
+    put: operations['SetWorkspaceItemDefaults'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/workspaces/{workspaceId}/lookup': {
     parameters: {
       query?: never;
@@ -841,6 +862,26 @@ export interface paths {
      * @description Sets whether the item can be deleted and whether it accepts new children. A field left null is unchanged. Fails with 'items.protection_managed' (409) when the deletion protection belongs to a system feature, such as a linked calendar.
      */
     put: operations['SetItemProtection'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Switch an item's optional features on or off
+     * @description Sets comments, suggesting, file review states and full width for one item. All are off until switched on. A field left null is unchanged. Anyone who may edit the item may change them. Turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409).
+     */
+    put: operations['SetItemSettings'];
     post?: never;
     delete?: never;
     options?: never;
@@ -2859,6 +2900,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/me/tokens/{tokenId}/rotate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rotate a personal access token
+     * @description Keeps the token's identity, name and scopes but issues a new secret, shown in this response only. The old secret stops working immediately. The expiry restarts from now with the token's original lifetime, capped at 365 days. Fails with 'tokens.not_found' when the token is not the caller's, and 'tokens.not_rotatable' when it is revoked or expired.
+     */
+    post: operations['RotateAccessToken'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/public/v1/auth/token': {
     parameters: {
       query?: never;
@@ -3455,6 +3516,8 @@ export interface components {
       /** Format: int32 */
       pinCount: number | string;
       hasPublicLink: boolean;
+      /** @default false */
+      reviewStates: boolean;
     };
     AuthorizeCalendarRequest: {
       returnTo: null | string;
@@ -3848,6 +3911,8 @@ export interface components {
       threads: components['schemas']['CommentThreadDto'][];
       /** @default false */
       canComment: boolean;
+      /** @default true */
+      enabled: boolean;
     };
     CommentThreadDto: {
       /** Format: uuid */
@@ -4578,12 +4643,23 @@ export interface components {
       noDelete: boolean;
       noChildren: boolean;
       collaboration: boolean;
+      settings: components['schemas']['ItemSettings'];
       managedBy: null | string;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
       defaultViewKind?: null | string;
+    };
+    ItemSettings: {
+      /** @default false */
+      comments: boolean;
+      /** @default false */
+      suggesting: boolean;
+      /** @default false */
+      reviewStates: boolean;
+      /** @default false */
+      fullWidth: boolean;
     };
     JsonArray: unknown[];
     JsonElement: unknown;
@@ -4695,6 +4771,7 @@ export interface components {
       bodyDocId: null | string;
       bodyHeadSeq: null | string;
       file: null | components['schemas']['NativeFileSnapshot'];
+      settings?: null | components['schemas']['ItemSettings'];
     };
     NativeRemovedItem: {
       /** Format: uuid */
@@ -5314,6 +5391,12 @@ export interface components {
     SetFileVersionStateRequest: {
       state: string;
     };
+    SetItemDefaultsRequest: {
+      comments: null | boolean;
+      suggesting: null | boolean;
+      reviewStates: null | boolean;
+      fullWidth: null | boolean;
+    };
     SetItemLockRequest: {
       password: string;
       currentPassword: null | string;
@@ -5322,6 +5405,12 @@ export interface components {
       noDelete: null | boolean;
       noChildren: null | boolean;
       collaboration?: null | boolean;
+    };
+    SetItemSettingsRequest: {
+      comments: null | boolean;
+      suggesting: null | boolean;
+      reviewStates: null | boolean;
+      fullWidth: null | boolean;
     };
     SetPropertiesRequest: {
       properties: components['schemas']['JsonObject'];
@@ -6921,6 +7010,72 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetWorkspaceItemDefaults: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemSettings'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetWorkspaceItemDefaults: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetItemDefaultsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemSettings'];
         };
       };
       /** @description Not Found */
@@ -8572,6 +8727,41 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetItemSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetItemSettingsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -14221,6 +14411,46 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  RotateAccessToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tokenId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CreatedAccessTokenResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
       };
     };
   };

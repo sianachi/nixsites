@@ -705,6 +705,7 @@ app.MapNativeReplayEndpoints();
 // in its own file and leaves these registrations alone.
 app.MapFileVersionStateEndpoints();
 app.MapAgentPolicyEndpoints();
+app.MapItemDefaultsEndpoints();
 app.MapReferenceEndpoints();
 app.MapRecordEndpoints();
 app.MapPublicLinkEndpoints();

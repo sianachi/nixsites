@@ -211,6 +211,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     computed: item.computedProperties,
     noDelete: item.noDelete,
     noChildren: item.noChildren,
+    ...(item.settings ? { settings: item.settings } : {}),
     managedBy: item.managedBy,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt ?? item.createdAt,

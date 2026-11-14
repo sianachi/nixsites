@@ -1644,6 +1644,19 @@ export function stubCoreApi(options: StubOptions = {}): StubWrites {
       // which matches by `includes` and would otherwise swallow them all. Flips the row rather
       // than removing it, exactly as the endpoint does, and answers 204 regardless - it is
       // idempotent and scoped to the caller on the real server.
+      // Rotating one: the same row, a new secret shown once. Live rows only, like the endpoint.
+      const rotateToken = /\/api\/v1\/me\/tokens\/([0-9a-f-]{36})\/rotate$/.exec(
+        parsedUrl.pathname,
+      );
+      if (rotateToken !== null && method === 'POST') {
+        const held = heldTokens.find((token) => token.id === rotateToken[1]);
+        if (held?.revokedAt !== null) {
+          return Promise.resolve(json({ code: 'tokens.not_rotatable' }, 409));
+        }
+
+        return Promise.resolve(json({ token: `rotated-secret-${held.id}`, details: held }, 200));
+      }
+
       const revokeToken = /\/api\/v1\/me\/tokens\/([0-9a-f-]{36})$/.exec(parsedUrl.pathname);
       if (revokeToken !== null && method === 'DELETE') {
         heldTokens = heldTokens.map((token) =>

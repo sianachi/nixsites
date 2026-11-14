@@ -154,6 +154,13 @@ export interface NoteEditorProps {
    * move costs nothing but a slightly different order.
    */
   readonly parentId?: string | null | undefined;
+  /**
+   * Whether the note offers suggesting (track changes). Off means the switch is not shown and a
+   * remembered "on" is ignored; suggestions already in the text still show Accept and Reject.
+   */
+  readonly suggestingAllowed?: boolean;
+  /** Draw the body at the full pane width, whatever this reader's own text width is. */
+  readonly fullWidth?: boolean;
 }
 
 /**
@@ -495,6 +502,8 @@ export function NoteEditor({
   cacheBody = false,
   hideToolbar = false,
   parentId,
+  suggestingAllowed = true,
+  fullWidth = false,
 }: NoteEditorProps): ReactNode {
   const narrow = useDrawerNavigation();
   const statusBar = useStatusBarPreference((state) => state.enabled);
@@ -545,7 +554,8 @@ export function NoteEditor({
   // Vim and Emacs only on the desktop layout; phones and tablets always edit as standard.
   const keyboardMode = useLayoutKind() === 'desktop' ? storedKeyboardMode : 'standard';
   const writingMode = useWritingModePreference((state) => state.mode);
-  const textWidth = useTextWidthPreference((state) => state.width);
+  const readerTextWidth = useTextWidthPreference((state) => state.width);
+  const textWidth = fullWidth ? 'full' : readerTextWidth;
   const vimDescriptionId = useId();
   const ghostSetting = useGhostTextPreference((state) => state.setting);
   const mentionSetting = useMentionPreference((state) => state.setting);
@@ -901,8 +911,11 @@ export function NoteEditor({
     selector: ({ editor: current }) => hasSuggestions(current.state.doc),
   });
   useEffect(() => {
-    setSuggesting(editor, { enabled: suggesting && !readOnly && !stale, authorId: suggestAs });
-  }, [editor, readOnly, stale, suggestAs, suggesting]);
+    setSuggesting(editor, {
+      enabled: suggesting && suggestingAllowed && !readOnly && !stale,
+      authorId: suggestAs,
+    });
+  }, [editor, readOnly, stale, suggestAs, suggesting, suggestingAllowed]);
 
   // The server's read-only mode and stale copies cannot save edits.
   useLayoutEffect(() => {
@@ -1169,7 +1182,11 @@ export function NoteEditor({
   };
 
   const activeEditingMode =
-    markdownMode?.phase === 'open' ? 'Markdown' : suggesting ? 'Suggesting' : undefined;
+    markdownMode?.phase === 'open'
+      ? 'Markdown'
+      : suggesting && suggestingAllowed
+        ? 'Suggesting'
+        : undefined;
   function reviewControls(closeTools?: () => void): ReactNode {
     return (
       <>
@@ -1203,14 +1220,15 @@ export function NoteEditor({
         >
           Markdown
         </Button>
-        {subject === undefined ? null : (
+        {subject === undefined || (!suggestingAllowed && !suggestionsPending) ? null : (
           <span
             className="contents"
             data-zen-tool={suggesting || suggestionsPending ? undefined : 'advanced'}
           >
             <SuggestingControl
               editor={editor}
-              suggesting={suggesting}
+              suggesting={suggesting && suggestingAllowed}
+              canToggle={suggestingAllowed}
               pending={suggestionsPending}
               onToggle={() => {
                 closeTools?.();

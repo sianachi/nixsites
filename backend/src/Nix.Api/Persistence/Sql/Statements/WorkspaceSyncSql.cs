@@ -99,7 +99,8 @@ public static class WorkspaceSyncSql
         CASE WHEN lock_state.locked THEN NULL ELSE item.last_modified_at END,
         allowed_workspace.can_write, lock_state.locked, lock_state.metadata_expires_at,
         body.doc_id, body.head_seq,
-        file.file_version_id, file.file_name, file.media_type, file.byte_length, file.sha256, file.state
+        file.file_version_id, file.file_name, file.media_type, file.byte_length, file.sha256, file.state,
+        CASE WHEN lock_state.locked THEN NULL ELSE item.settings::text END
         """;
 
     /// <summary>Lists every currently visible durable item, independently of marker history.</summary>

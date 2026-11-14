@@ -341,6 +341,35 @@ public sealed partial class WorkspaceAdministrationStore(
         return result != Guid.Empty;
     }
 
+    /// <summary>The item settings new items in the workspace start with, as stored JSON; null when the workspace is not visible.</summary>
+    public async ValueTask<string?> ReadItemDefaultsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken)
+    {
+        var context = Session;
+        return await _sql.ScalarOrDefaultAsync<string>(
+            WorkspaceAdministrationSql.ReadItemDefaults,
+            [
+                Uuid("tenant_id", context.TenantId.Value),
+                Uuid("principal_id", context.PrincipalId.Value),
+                Uuid("workspace_id", workspaceId.Value),
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Merges the named defaults and returns the stored JSON; null unless the caller owns the workspace.</summary>
+    public async ValueTask<string?> SetItemDefaultsAsync(WorkspaceId workspaceId, string patch, CancellationToken cancellationToken)
+    {
+        var context = Session;
+        return await _sql.ScalarOrDefaultAsync<string>(
+            WorkspaceAdministrationSql.SetItemDefaults,
+            [
+                Uuid("tenant_id", context.TenantId.Value),
+                Uuid("principal_id", context.PrincipalId.Value),
+                Uuid("workspace_id", workspaceId.Value),
+                Text("patch", patch),
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Sets the agent policy switches named, and audits it. False unless the caller owns the workspace.</summary>
     public async ValueTask<bool> SetAgentPolicyAsync(
         WorkspaceId workspaceId,

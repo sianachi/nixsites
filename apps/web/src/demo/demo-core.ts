@@ -76,6 +76,46 @@ const BUDGET_PROGRAM = [
   '$budget = 12000',
 ].join('\n');
 
+/** A guided form over Product launch's own properties, for the interactive form view. */
+const formField = (propertyKey: string, text: string, required: boolean): Json => ({
+  id: propertyKey,
+  kind: 'field',
+  propertyKey,
+  text,
+  help: null,
+  required,
+  identityRole: null,
+  visibleWhen: [],
+});
+const CHECK_IN_FORM: Json = {
+  pages: [
+    {
+      id: 'details',
+      title: 'Add a launch task',
+      description: 'Two quick questions, then it joins the plan.',
+      visibleWhen: [],
+      blocks: [
+        formField('priority', 'How important is it?', true),
+        formField('status', 'Where does it stand?', false),
+      ],
+    },
+  ],
+  titleMode: 'generated',
+  titleFieldBlockId: null,
+  confirmationTitle: 'Task added',
+  confirmationMessage: 'It is on the board now.',
+};
+
+/** A custom view is an OpenUI program stored in the view and drawn by the browser. */
+const CUSTOM_PROGRAM = [
+  'root = Stack([title, totals, split])',
+  'title = Text("Launch at a glance", "title")',
+  'totals = Grid([open, done], 2)',
+  'open = Stat("Tasks in flight", 6)',
+  'done = Stat("Finished", 2)',
+  'split = Chart("column", "Tasks by status", ["To do", "In progress", "Done"], [{label: "Tasks", values: [2, 4, 2]}])',
+].join('\n');
+
 /** Note bodies the demo opens with, by item id; every other note starts empty. */
 export const DEMO_NOTES: Readonly<Record<string, string>> = {
   [BUDGET]: ['```openui-lang', BUDGET_PROGRAM, '```'].join('\n'),
@@ -275,6 +315,13 @@ const STRUCTURE: Record<string, { readonly properties: Json[]; readonly views: J
       view('chart', 'chart', { groupBy: 'status', chart: { kind: 'column' } }),
       view('outline', 'outline'),
       view('form', 'form', { columns: ['priority', 'due_date', 'status'] }),
+      view('smart', 'query', {
+        filters: [{ property: 'priority', operator: 'equals', value: 'High' }],
+        columns: ['status', 'due_date'],
+      }),
+      view('drive', 'drive'),
+      view('guided', 'interactive_form', { interactiveForm: CHECK_IN_FORM }),
+      view('custom', 'custom', { program: CUSTOM_PROGRAM }),
     ],
   },
   [CHAT]: { properties: [], views: [view('chat', 'chat')] },
@@ -359,6 +406,17 @@ export function createDemoFetch(): typeof fetch {
     [LANDING_PAGE, [landingDiscussion]],
   ]);
   let commentRevision = 1;
+  // Everything starts off, as on a real server; the discussion the sample page already holds keeps its comments on.
+  const itemSettings = new Map<string, Record<string, boolean>>([
+    [LANDING_PAGE, { comments: true }],
+  ]);
+  const settingsOf = (id: string): Record<string, boolean> => ({
+    comments: false,
+    suggesting: false,
+    reviewStates: false,
+    fullWidth: false,
+    ...itemSettings.get(id),
+  });
   const bookmarks = new Map<string, string>();
   const trashed = new Set<string>();
   const structure = new Map<
@@ -388,6 +446,7 @@ export function createDemoFetch(): typeof fetch {
     seq: entry.seq,
     lifecycleState: trashed.has(entry.id) ? 'deleted' : 'active',
     properties: entry.properties,
+    settings: settingsOf(entry.id),
     createdAt: CREATED,
     updatedAt: entry.updatedAt,
   });
@@ -1129,8 +1188,29 @@ export function createDemoFetch(): typeof fetch {
         json({
           revision: commentRevision,
           threads: id === undefined ? [] : (commentThreads.get(id) ?? []),
-          canComment: id !== undefined && itemAt(id)?.type === 'note' && !trashed.has(id),
+          canComment:
+            id !== undefined &&
+            itemAt(id)?.type === 'note' &&
+            !trashed.has(id) &&
+            settingsOf(id).comments === true,
+          enabled: id !== undefined && settingsOf(id).comments === true,
         }),
+    ],
+    [
+      'PUT',
+      /^\/api\/v1\/items\/([^/]+)\/settings$/,
+      ({ body }, [, id]) => {
+        const entry = itemAt(id);
+        if (id === undefined || entry === undefined) return null;
+        const changed = Object.fromEntries(
+          ['comments', 'suggesting', 'reviewStates', 'fullWidth'].flatMap((key) => {
+            const value = field(body, key);
+            return typeof value === 'boolean' ? [[key, value]] : [];
+          }),
+        );
+        itemSettings.set(id, { ...settingsOf(id), ...changed });
+        return json(toItem(entry));
+      },
     ],
     ['POST', commentPath, writeComment],
     ['PATCH', commentPath, writeComment],

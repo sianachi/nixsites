@@ -90,7 +90,7 @@ function expiryWarning(row: AttachmentRow): 'Expired' | 'Expiring soon' | null {
 }
 
 function needsAttention(row: AttachmentRow): boolean {
-  return row.shownVersionState === 'in_review' || expiryWarning(row) !== null;
+  return (row.reviewStates && row.shownVersionState === 'in_review') || expiryWarning(row) !== null;
 }
 
 const manyFiles = (n: number): string => (n === 1 ? '1 file' : `${String(n)} files`);
@@ -309,10 +309,15 @@ export function AttachmentsPage(): ReactElement {
       failure,
     });
   };
-  const canReview = (row: AttachmentRow): boolean => row.shownVersionState === 'draft';
+  // A file with review states switched off has no Draft, In review or Approved to move between.
+  const canReview = (row: AttachmentRow): boolean =>
+    row.reviewStates && row.shownVersionState === 'draft';
   const canApprove = (row: AttachmentRow): boolean =>
-    row.shownVersionState === 'draft' || row.shownVersionState === 'in_review';
-  const canRevoke = (row: AttachmentRow): boolean => row.shownVersionState === 'approved';
+    row.reviewStates &&
+    (row.shownVersionState === 'draft' || row.shownVersionState === 'in_review');
+  const canRevoke = (row: AttachmentRow): boolean =>
+    row.reviewStates && row.shownVersionState === 'approved';
+  const reviewing = state !== '' || rows.some((row) => row.reviewStates);
   const canClear = (row: AttachmentRow): boolean => row.expiresAt !== null;
   const canLink = (row: AttachmentRow): boolean => !row.hasPublicLink;
 
@@ -327,25 +332,27 @@ export function AttachmentsPage(): ReactElement {
       >
         Needs attention ({needing})
       </Button>
-      <label className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-        <Text variant="note" as="span" className="shrink-0">
-          State
-        </Text>
-        <Select
-          aria-label="State"
-          value={state}
-          onChange={(event) => {
-            setState(event.target.value as FileVersionState | '');
-          }}
-        >
-          <option value="">Any state</option>
-          {(Object.keys(STATE_LABEL) as FileVersionState[]).map((key) => (
-            <option key={key} value={key}>
-              {STATE_LABEL[key]}
-            </option>
-          ))}
-        </Select>
-      </label>
+      {reviewing ? (
+        <label className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <Text variant="note" as="span" className="shrink-0">
+            State
+          </Text>
+          <Select
+            aria-label="State"
+            value={state}
+            onChange={(event) => {
+              setState(event.target.value as FileVersionState | '');
+            }}
+          >
+            <option value="">Any state</option>
+            {(Object.keys(STATE_LABEL) as FileVersionState[]).map((key) => (
+              <option key={key} value={key}>
+                {STATE_LABEL[key]}
+              </option>
+            ))}
+          </Select>
+        </label>
+      ) : null}
       <Checkbox
         label="Show images"
         checked={includeImages}
@@ -412,57 +419,61 @@ export function AttachmentsPage(): ReactElement {
           />
           {selected.length === 0 ? null : (
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                disabled={count(canReview) === 0}
-                onClick={() => {
-                  bulk(
-                    canReview,
-                    (row) => stateChange(client, row, 'in_review'),
-                    'Submitted for review:',
-                    'Those files could not be submitted for review.',
-                  );
-                }}
-              >
-                {`Submit for review (${String(count(canReview))})`}
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={count(canApprove) === 0}
-                onClick={() => {
-                  bulk(
-                    canApprove,
-                    (row) => stateChange(client, row, 'approved'),
-                    'Approved',
-                    'Those files could not be approved.',
-                  );
-                }}
-              >
-                {`Approve (${String(count(canApprove))})`}
-              </Button>
-              <Button
-                variant="danger"
-                disabled={count(canRevoke) === 0}
-                onClick={() => {
-                  const picked = selected.filter(canRevoke);
-                  setConfirm({
-                    title: `Revoke ${manyFiles(picked.length)}?`,
-                    detail:
-                      'Public links to these versions stop working. Pins keep pointing at them and show them as revoked.',
-                    action: 'Revoke',
-                    run: () =>
-                      commit(
-                        picked.map((row) => stateChange(client, row, 'revoked')),
-                        {
-                          done: `Revoked ${manyFiles(picked.length)}`,
-                          failure: 'Those files could not be revoked.',
-                        },
-                      ),
-                  });
-                }}
-              >
-                {`Revoke (${String(count(canRevoke))})`}
-              </Button>
+              {reviewing ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    disabled={count(canReview) === 0}
+                    onClick={() => {
+                      bulk(
+                        canReview,
+                        (row) => stateChange(client, row, 'in_review'),
+                        'Submitted for review:',
+                        'Those files could not be submitted for review.',
+                      );
+                    }}
+                  >
+                    {`Submit for review (${String(count(canReview))})`}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={count(canApprove) === 0}
+                    onClick={() => {
+                      bulk(
+                        canApprove,
+                        (row) => stateChange(client, row, 'approved'),
+                        'Approved',
+                        'Those files could not be approved.',
+                      );
+                    }}
+                  >
+                    {`Approve (${String(count(canApprove))})`}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    disabled={count(canRevoke) === 0}
+                    onClick={() => {
+                      const picked = selected.filter(canRevoke);
+                      setConfirm({
+                        title: `Revoke ${manyFiles(picked.length)}?`,
+                        detail:
+                          'Public links to these versions stop working. Pins keep pointing at them and show them as revoked.',
+                        action: 'Revoke',
+                        run: () =>
+                          commit(
+                            picked.map((row) => stateChange(client, row, 'revoked')),
+                            {
+                              done: `Revoked ${manyFiles(picked.length)}`,
+                              failure: 'Those files could not be revoked.',
+                            },
+                          ),
+                      });
+                    }}
+                  >
+                    {`Revoke (${String(count(canRevoke))})`}
+                  </Button>
+                </>
+              ) : null}
               <Input
                 type="date"
                 aria-label="Expiry date for selected files"
@@ -767,7 +778,7 @@ function AttachmentItem({
       {...flash}
       className={`flex flex-col gap-2 rounded-sm px-2 py-2 hover:bg-surface ${
         selected ? 'bg-surface' : ''
-      } ${warning !== null || row.shownVersionState === 'in_review' ? 'border-l-2 border-accent-text' : ''}`}
+      } ${warning !== null || (row.reviewStates && row.shownVersionState === 'in_review') ? 'border-l-2 border-accent-text' : ''}`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -789,12 +800,14 @@ function AttachmentItem({
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2 pl-7 sm:pl-0">
-          <Tag tone={row.shownVersionState === 'approved' ? 'accent' : 'neutral'}>
-            {STATE_LABEL[row.shownVersionState]}
-          </Tag>
+          {row.reviewStates ? (
+            <Tag tone={row.shownVersionState === 'approved' ? 'accent' : 'neutral'}>
+              {STATE_LABEL[row.shownVersionState]}
+            </Tag>
+          ) : null}
           {warning === null ? null : <Tag>{warning}</Tag>}
           {row.hasPublicLink ? <Tag tone="muted">Public link</Tag> : null}
-          {row.shownVersionState === 'approved' ? (
+          {!row.reviewStates ? null : row.shownVersionState === 'approved' ? (
             <Button variant="danger" aria-label={`Revoke ${title}`} onClick={revoke}>
               Revoke
             </Button>
@@ -865,7 +878,7 @@ function AttachmentItem({
             </Text>
           </div>
           <div className="flex flex-wrap gap-2">
-            {row.shownVersionState === 'draft' ? (
+            {row.reviewStates && row.shownVersionState === 'draft' ? (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -875,7 +888,8 @@ function AttachmentItem({
                 Submit for review
               </Button>
             ) : null}
-            {row.shownVersionState === 'draft' || row.shownVersionState === 'in_review' ? (
+            {row.reviewStates &&
+            (row.shownVersionState === 'draft' || row.shownVersionState === 'in_review') ? (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -885,7 +899,7 @@ function AttachmentItem({
                 Approve
               </Button>
             ) : null}
-            {row.shownVersionState === 'approved' ? (
+            {row.reviewStates && row.shownVersionState === 'approved' ? (
               <Button variant="danger" onClick={revoke}>
                 Revoke
               </Button>

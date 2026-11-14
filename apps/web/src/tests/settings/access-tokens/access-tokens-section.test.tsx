@@ -196,6 +196,28 @@ describe('creating a token', () => {
   });
 });
 
+describe('rotating a token', () => {
+  it('offers Rotate only on live tokens, confirms, then shows the new secret once', async () => {
+    const user = userEvent.setup();
+    stubCoreApi({ accessTokens: [liveToken, revokedToken] });
+    await renderTokens();
+
+    const table = await screen.findByRole('table', { name: /your personal access tokens/i });
+    expect(
+      within(table).queryByRole('button', { name: 'Rotate old laptop' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(within(table).getByRole('button', { name: 'Rotate ci deploy' }));
+    expect(screen.getByText(/old secret stops working immediately/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Rotate token' }));
+
+    expect(await screen.findByText(`rotated-secret-${liveToken.id}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByText(/rotated-secret-/)).not.toBeInTheDocument();
+  });
+});
+
 describe('revoking a token', () => {
   it('asks for confirmation, sends the DELETE, and then shows the row as revoked', async () => {
     const user = userEvent.setup();

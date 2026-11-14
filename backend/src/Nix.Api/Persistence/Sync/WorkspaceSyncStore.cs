@@ -175,7 +175,8 @@ public sealed class WorkspaceSyncStore(
             var file = versionId is { } version ? new NativeFileSnapshot(version, fileName!, mediaType!, bytes!.Value, hash!, Text(reader, 28)!) : null;
             return new SnapshotRow(seq, new NativeItemSnapshot(id, workspaceId, revision, parentId, type, title, siblingSeq,
                 lifecycle, properties, schema, views, recurrence, noDelete, noChildren, managedBy, createdAt, updatedAt,
-                canWrite, locked, !locked, metadataExpiresAt, bodyDocId, bodySeq is { } head ? Decimal(head) : null, file));
+                canWrite, locked, !locked, metadataExpiresAt, bodyDocId, bodySeq is { } head ? Decimal(head) : null, file,
+                reader.IsDBNull(29) ? null : Domain.Items.ItemSettings.Read(reader.GetString(29))));
         }
 
         private static T? Nullable<T>(NpgsqlDataReader reader, int ordinal) where T : struct =>

@@ -26,6 +26,9 @@ public sealed class PublicFileAccessTests(NixPostgresFixture fixture) : IAsyncLi
     {
         await fixture.ResetAsync();
         await M0SchemaSeed.SeedBothTenantsAsync(fixture);
+
+        // The rules below are the review-states-on rules; the off rule has its own tests.
+        await ExecAsync($"UPDATE item SET settings = '{{\"reviewStates\": true}}' WHERE id = '{Alpha.ItemId}'");
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
@@ -90,6 +93,32 @@ public sealed class PublicFileAccessTests(NixPostgresFixture fixture) : IAsyncLi
 
         Assert.Equal(PublicFileDisposition.Servable, verdict.Disposition);
         Assert.Equal("files/seed/alpha", verdict.Choice?.ObjectKey);
+    }
+
+    [Fact]
+    public async Task With_review_states_off_the_newest_unrevoked_version_is_served_even_when_a_draft()
+    {
+        await ExecAsync($"UPDATE item SET settings = NULL WHERE id = '{Alpha.ItemId}'");
+        await AddCurrentVersionAsync("application/pdf");
+
+        var verdict = await ResolveAsync(Alpha.ItemId, asImage: false);
+
+        Assert.Equal(PublicFileDisposition.Servable, verdict.Disposition);
+        Assert.Equal("files/seed/alpha-v2", verdict.Choice?.ObjectKey);
+    }
+
+    [Fact]
+    public async Task With_review_states_off_a_revoked_newest_version_is_skipped_and_all_revoked_is_withheld()
+    {
+        await ExecAsync($"UPDATE item SET settings = NULL WHERE id = '{Alpha.ItemId}'");
+        await AddCurrentVersionAsync("application/pdf", "revoked");
+
+        var skipped = await ResolveAsync(Alpha.ItemId, asImage: false);
+        Assert.Equal("files/seed/alpha", skipped.Choice?.ObjectKey);
+
+        await SetStateAsync(FirstVersion, "revoked");
+        var withheld = await ResolveAsync(Alpha.ItemId, asImage: false);
+        Assert.Equal(PublicFileDisposition.Withheld, withheld.Disposition);
     }
 
     [Fact]

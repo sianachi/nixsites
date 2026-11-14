@@ -22,6 +22,7 @@ namespace Nix.Serialization;
 [JsonSerializable(typeof(UpdateItemRequest))]
 [JsonSerializable(typeof(MoveItemRequest))]
 [JsonSerializable(typeof(SetItemProtectionRequest))]
+[JsonSerializable(typeof(SetItemSettingsRequest))]
 [JsonSerializable(typeof(ItemBodyResponse))]
 [JsonSerializable(typeof(ItemBodyWriteResponse))]
 [JsonSerializable(typeof(ItemBodyLoss))]

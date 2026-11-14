@@ -75,6 +75,12 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// <summary>The claim carrying the token row the session must re-check.</summary>
     public const string AccessTokenClaim = "nix_pat_id";
 
+    /// <summary>
+    /// The claim carrying the lookup half of the secret the session was exchanged with. Rotation
+    /// replaces the lookup, so a session minted from a rotated-away secret stops matching.
+    /// </summary>
+    public const string SecretLookupClaim = "nix_pat_lookup";
+
     /// <summary>The claim carrying the revocable browser session behind an interactive token.</summary>
     public const string BrowserSessionClaim = "nix_browser_session_id";
 
@@ -207,9 +213,10 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// <param name="principalId">The principal the session resolves directly.</param>
     /// <param name="tenantId">The tenant the session is scoped to.</param>
     /// <param name="accessTokenId">The row every authenticated request re-checks.</param>
+    /// <param name="secretLookup">The lookup half of the secret that was exchanged.</param>
     /// <returns>The signed compact JWT.</returns>
     /// <exception cref="InvalidOperationException">The service is not configured.</exception>
-    public string Mint(PrincipalId principalId, TenantId tenantId, PersonalAccessTokenId accessTokenId)
+    public string Mint(PrincipalId principalId, TenantId tenantId, PersonalAccessTokenId accessTokenId, string secretLookup = "")
     {
         if (principalId.Value == Guid.Empty)
         {
@@ -233,6 +240,7 @@ public sealed class SelfIssuedTokenService : IDisposable
                 new Claim("sub", principalId.Value.ToString("D", CultureInfo.InvariantCulture)),
                 new Claim(TenantClaim, tenantId.Value.ToString("D", CultureInfo.InvariantCulture)),
                 new Claim(AccessTokenClaim, accessTokenId.Value.ToString("D", CultureInfo.InvariantCulture)),
+                new Claim(SecretLookupClaim, secretLookup),
                 new Claim("jti", Guid.CreateVersion7().ToString("D", CultureInfo.InvariantCulture)),
             ],
             notBefore: now.UtcDateTime,

@@ -4,6 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LandingPage } from '../../pages/landing-page';
 
+const downloads = vi.hoisted(() => ({
+  iOS: null as string | null,
+  Android: null,
+  macOS: null,
+  Windows: null,
+  Linux: null,
+}));
+vi.mock('../../pages/landing-apps', async (original) => ({
+  ...(await original()),
+  APP_DOWNLOADS: downloads,
+}));
+
 const picture = (): string | null =>
   screen.getByRole('tabpanel').querySelector('img')?.getAttribute('src') ?? null;
 
@@ -25,6 +37,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute('data-theme');
   localStorage.clear();
+  downloads.iOS = null;
 });
 
 /** The hero opens on Homebase and steps through every view, by pointer or by arrow keys. */
@@ -48,6 +61,10 @@ describe('the landing page view gallery', () => {
       'Outline',
       'Chart',
       'Form',
+      'Smart list',
+      'Drive',
+      'Interactive form',
+      'Custom view',
       'Habit tracker',
       'Companion',
       'Artifact',
@@ -98,5 +115,33 @@ describe('the landing page view gallery', () => {
     expect(picture()).toBe('/landing/graph.jpg');
     await user.click(screen.getByRole('button', { name: 'Apply theme' }));
     expect(picture()).toBe('/landing/graph-dark.jpg');
+  });
+});
+
+describe('the landing page apps section', () => {
+  it('shows a disabled Coming soon button for every app without a link', () => {
+    render(<LandingPage onSignIn={() => undefined} demo />);
+
+    const section = document.getElementById('apps');
+    expect(section).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Apps' })).toHaveAttribute('href', '#apps');
+    for (const platform of ['iOS', 'Android', 'macOS', 'Windows', 'Linux']) {
+      const button = screen.getByRole('button', { name: `${platform} app: coming soon` });
+      expect(button).toBeDisabled();
+      expect(section).toContainElement(button);
+    }
+    expect(screen.queryByRole('link', { name: /Download for/ })).toBeNull();
+  });
+
+  it('links a configured app and leaves the others coming soon', () => {
+    downloads.iOS = 'https://example.com/nix.ipa';
+    render(<LandingPage onSignIn={() => undefined} demo />);
+
+    expect(screen.getByRole('link', { name: 'Download for iOS' })).toHaveAttribute(
+      'href',
+      'https://example.com/nix.ipa',
+    );
+    expect(screen.queryByRole('button', { name: 'iOS app: coming soon' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Android app: coming soon' })).toBeDisabled();
   });
 });

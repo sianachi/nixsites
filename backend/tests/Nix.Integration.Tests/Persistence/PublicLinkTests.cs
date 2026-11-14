@@ -92,6 +92,30 @@ public sealed class PublicLinkTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task With_review_states_off_a_link_with_no_named_version_pins_the_newest_unrevoked_one()
+    {
+        var file = await NewFileAsync(reviewStates: false);
+        await AddVersionAsync(file, 1, "approved");
+        var newest = await AddVersionAsync(file, 2, "draft");
+        await AddVersionAsync(file, 3, "revoked");
+
+        var link = await PutAsync(file);
+
+        Assert.Equal(newest, link.VersionId);
+        Assert.Equal("draft", link.VersionState);
+    }
+
+    [Fact]
+    public async Task With_review_states_off_a_file_whose_every_version_is_revoked_still_cannot_be_linked()
+    {
+        var file = await NewFileAsync(reviewStates: false);
+        await AddVersionAsync(file, 1, "revoked");
+
+        using var refused = await Send(HttpMethod.Put, $"/api/v1/items/{file}/public-link", new { });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
+    }
+
+    [Fact]
     public async Task A_version_of_another_file_cannot_be_named()
     {
         var file = await NewFileAsync();
@@ -513,13 +537,15 @@ public sealed class PublicLinkTests : IAsyncLifetime
         return (await ReadJsonAsync(exchange)).GetProperty("accessToken").GetString()!;
     }
 
-    private async Task<Guid> NewFileAsync()
+    // Review states on by default, so the tests above keep exercising the approval rules.
+    private async Task<Guid> NewFileAsync(bool reviewStates = true)
     {
         var id = Guid.NewGuid();
+        var settings = reviewStates ? "'{\"reviewStates\": true}'::jsonb" : "NULL";
         await Sql(
             $"""
-            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
-            VALUES ('{id}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 'file', '{Alpha.ItemId}', 2000, NULL, 'active', NULL, '{Alpha.PrincipalId}', '{Alpha.PrincipalId}', now(), now());
+            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, settings, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
+            VALUES ('{id}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 'file', '{Alpha.ItemId}', 2000, NULL, {settings}, 'active', NULL, '{Alpha.PrincipalId}', '{Alpha.PrincipalId}', now(), now());
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES ('{id}', '{id}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 0), ('{id}', '{Alpha.ItemId}', '{Alpha.TenantId}', '{Alpha.WorkspaceId}', 1);
             """);

@@ -9,6 +9,7 @@ import {
   restoreItem,
 } from './items.ts';
 import { closeLock, lockStatus, openLock, readPasswords, removeLock, setLock } from './locks.ts';
+import { itemSettings, type ItemSettingsOptions } from './item-settings.ts';
 import { protect, type ProtectionOptions } from './protection.ts';
 import type {
   LsOptions,
@@ -148,6 +149,20 @@ export function registerItemCommands(program: Command, act: Act): void {
     .option('--collaboration <on|off>', 'whether several people may edit it at once')
     .action((itemId: string, options: ProtectionOptions, command: Command) =>
       act(command, (profile, output) => protect(profile, itemId, options, output)),
+    );
+
+  item
+    .command('settings <itemId>')
+    .description(
+      "Switch an item's optional features on or off: comments, suggesting, file review " +
+        'states and full width. All are off until switched on.',
+    )
+    .option('--comments <on|off>', 'whether people may comment on the item')
+    .option('--suggesting <on|off>', 'whether the editor offers suggesting')
+    .option('--review-states <on|off>', "whether a file's versions carry review states")
+    .option('--full-width <on|off>', 'whether a note uses the full pane width')
+    .action((itemId: string, options: ItemSettingsOptions, command: Command) =>
+      act(command, (profile, output) => itemSettings(profile, itemId, options, output)),
     );
 
   // A lock withholds an item's body until its password is presented; it does not encrypt it.

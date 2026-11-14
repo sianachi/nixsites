@@ -77,6 +77,20 @@ internal static class TokenEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
+        tokens.MapPost("/{tokenId:guid}/rotate", RotateTokenEndpoint.Handle)
+            .WithName("RotateAccessToken")
+            .WithSummary("Rotate a personal access token")
+            .WithDescription(
+                "Keeps the token's identity, name and scopes but issues a new secret, shown in "
+                + "this response only. The old secret stops working immediately. The expiry "
+                + "restarts from now with the token's original lifetime, capped at 365 days. "
+                + "Fails with 'tokens.not_found' when the token is not the caller's, and "
+                + "'tokens.not_rotatable' when it is revoked or expired.")
+            .Produces<CreatedAccessTokenResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+
         return endpoints;
     }
 
@@ -197,5 +211,41 @@ internal static class RevokeTokenEndpoint
         // caller's. See the endpoint description: distinguishing them would turn this into a
         // probe for whether an identifier names anything.
         return TypedResults.NoContent();
+    }
+}
+
+/// <summary>Route handler for rotating a token.</summary>
+internal static class RotateTokenEndpoint
+{
+    /// <summary>Handles a rotation.</summary>
+    /// <param name="tokenId">The token to rotate.</param>
+    /// <param name="httpContext">The current request.</param>
+    /// <param name="dispatcher">Sends the command to its handler.</param>
+    /// <returns>The token with its new secret, or why there is none.</returns>
+    internal static async Task<Results<Ok<CreatedAccessTokenResponse>, ProblemHttpResult>> Handle(
+        Guid tokenId,
+        HttpContext httpContext,
+        [FromServices] NixDispatcher dispatcher)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(dispatcher);
+
+        var result = await dispatcher
+            .SendAsync<RotateAccessToken, IssuedAccessToken>(
+                new RotateAccessToken(PersonalAccessTokenId.From(tokenId)),
+                httpContext.RequestAborted)
+            .ConfigureAwait(false);
+
+        return result.Match<Results<Ok<CreatedAccessTokenResponse>, ProblemHttpResult>>(
+            issued => TypedResults.Ok(
+                new CreatedAccessTokenResponse(issued.Secret, TokenEndpoints.ToResponse(issued.Row))),
+            error => TypedResults.Problem(ApiProblem.Create(
+                httpContext,
+                error.Code == TokenErrors.NotFoundCode
+                    ? StatusCodes.Status404NotFound
+                    : StatusCodes.Status409Conflict,
+                error.Code,
+                "Request refused",
+                error.Message)));
     }
 }

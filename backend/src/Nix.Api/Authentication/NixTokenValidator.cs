@@ -331,7 +331,8 @@ public sealed class NixTokenValidator
                 out var principalId,
                 out var accessTokenId))
             {
-                return new ValidatedCoreToken(tenantId, principalId, accessTokenId);
+                return new ValidatedCoreToken(
+                    tenantId, principalId, accessTokenId, result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.SecretLookupClaim)?.Value ?? string.Empty);
             }
 
             if (SelfIssuedTokenService.TryReadWorkerExecutionClaims(
@@ -566,10 +567,12 @@ public sealed record ValidatedExternalToken(
 /// <param name="TenantId">The tenant claim signed by Core.</param>
 /// <param name="PrincipalId">The principal identifier claim signed by Core.</param>
 /// <param name="AccessTokenId">The PAT row that must be rechecked on every Core request.</param>
+/// <param name="SecretLookup">The lookup half of the secret the session was exchanged with; it must still be the row's.</param>
 public sealed record ValidatedCoreToken(
     TenantId TenantId,
     PrincipalId PrincipalId,
-    PersonalAccessTokenId AccessTokenId)
+    PersonalAccessTokenId AccessTokenId,
+    string SecretLookup = "")
     : ValidatedToken(TenantId);
 
 /// <summary>A short-lived Core JWT backed by a revocable browser session.</summary>

@@ -112,6 +112,28 @@ Parameters:
 
 Responses: `204`.
 
+### POST /api/v1/me/tokens/{tokenId}/rotate
+
+<a id="rotateaccesstoken"></a>
+
+Rotate a personal access token
+
+Operation id: `RotateAccessToken`.
+
+**Can.** Replace the secret of one of the caller's live personal access tokens. The new secret is in this response only, and the old one stops working at once.
+
+**Cannot.** Be called with a personal access token, or revive a revoked or expired token. The expiry restarts with the original lifetime, never longer.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Keeps the token's identity, name and scopes but issues a new secret, shown in this response only. The old secret stops working immediately. The expiry restarts from now with the token's original lifetime, capped at 365 days. Fails with 'tokens.not_found' when the token is not the caller's, and 'tokens.not_rotatable' when it is revoked or expired.
+
+Parameters:
+
+- `tokenId` in path (required, string (uuid))
+
+Responses: `200`, `404`, `409`.
+
 ### GET /public/v1/auth/jwks
 
 <a id="getaccesstokensigningkeys"></a>
@@ -2137,6 +2159,30 @@ Parameters:
 - `itemId` in path (required, string (uuid))
 
 Responses: `200`, `404`, `409`.
+
+### PUT /api/v1/items/{itemId}/settings
+
+<a id="setitemsettings"></a>
+
+Switch an item's optional features on or off
+
+Operation id: `SetItemSettings`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Sets comments, suggesting, file review states and full width for one item. All are off until switched on. A field left null is unchanged. Anyone who may edit the item may change them. Turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409).
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `SetItemSettingsRequest`.
+
+Responses: `200`, `404`.
 
 ### GET /api/v1/workspaces/{workspaceId}/items
 
@@ -4865,6 +4911,50 @@ Parameters:
 - `query` in query (optional, string)
 
 Responses: `200`, `422`.
+
+### GET /api/v1/workspaces/{workspaceId}/item-defaults
+
+<a id="getworkspaceitemdefaults"></a>
+
+The settings new items in a workspace start with
+
+Operation id: `GetWorkspaceItemDefaults`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `200`, `404`.
+
+### PUT /api/v1/workspaces/{workspaceId}/item-defaults
+
+<a id="setworkspaceitemdefaults"></a>
+
+Change the settings new items in a workspace start with
+
+Operation id: `SetWorkspaceItemDefaults`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Workspace owners only. A field left null is unchanged. Existing items keep their own settings.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `SetItemDefaultsRequest`.
+
+Responses: `200`, `404`.
 
 ### POST /api/v1/workspaces/{workspaceId}/leave
 

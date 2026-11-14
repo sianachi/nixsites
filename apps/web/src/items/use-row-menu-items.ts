@@ -8,6 +8,8 @@ import {
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import type { TreeItem, WorkspaceTree } from '@nix/web-collections/items/use-workspace-tree';
+import { useCanPublishSites } from '@nix/web-settings/settings/publishing/publishing-preference';
+import { requestSitePane } from '../panel/panel-state';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
 import { isApplePlatform } from '@nix/web-foundation/lib/shortcuts';
 import type { MenuEntry } from '@nix/ui';
@@ -19,6 +21,7 @@ import {
   FolderLock,
   FolderPlus,
   FolderUp,
+  Globe,
   Link2,
   Shapes,
   Shield,
@@ -75,6 +78,7 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
   } = args;
   const { workspaceId } = useWorkspace();
   const { publicLinks } = useCapabilities();
+  const canPublish = useCanPublishSites();
   const muteRemindersEntry = useMuteRemindersEntry();
   const treeChildren = useHiddenItems('tree-children');
   const visibility = useHiddenItems();
@@ -168,6 +172,19 @@ export function useRowMenuItems(args: RowMenuArgs): () => MenuEntry[] {
               icon: Link2,
               onSelect: () => {
                 onSharePublicLink(item);
+              },
+            },
+          ]
+        : []),
+      ...(canPublish
+        ? [
+            {
+              kind: 'action' as const,
+              label: 'Publish as a site…',
+              icon: Globe,
+              onSelect: () => {
+                requestSitePane(item.id);
+                onSelect(item.id);
               },
             },
           ]

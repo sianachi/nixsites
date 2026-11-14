@@ -36,6 +36,7 @@ import { registerStressCommands } from './commands/register-stress.ts';
 import { registerItemCommands } from './commands/register-item.ts';
 import { registerSiteCommands } from './commands/register-site.ts';
 import { registerTenantCommands } from './commands/register-tenant.ts';
+import { registerTokenCommands } from './commands/register-token.ts';
 import { registerRecordCommands, registerRecordExtensions } from './commands/register-records.ts';
 interface GlobalFlags {
   readonly profile: string | undefined;
@@ -148,6 +149,7 @@ export function buildProgram(): Command {
   registerItemCommands(program, act);
   registerSiteCommands(program, act);
   registerTenantCommands(program, act);
+  registerTokenCommands(program, act);
   registerRecordCommands(program, act);
   registerRecordExtensions(program, act);
 

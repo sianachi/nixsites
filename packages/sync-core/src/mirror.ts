@@ -28,6 +28,16 @@ export const nativeItemSnapshotSchema = z.object({
   recurrence: properties.nullable(),
   noDelete: z.boolean(),
   noChildren: z.boolean(),
+  /** The item's optional features; absent from servers that predate them and null while locked. */
+  settings: z
+    .object({
+      comments: z.boolean().default(false),
+      suggesting: z.boolean().default(false),
+      reviewStates: z.boolean().default(false),
+      fullWidth: z.boolean().default(false),
+    })
+    .nullable()
+    .optional(),
   managedBy: z.string().nullable(),
   createdAt: timestamp,
   updatedAt: timestamp.nullable(),

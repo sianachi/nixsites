@@ -56,7 +56,8 @@ function runFeed(client: NixClient, itemId: string): () => void {
   const apply = (answer: CommentsResponse): void => {
     if (signal.aborted || answer.revision < readComments(itemId).revision) return;
     patchComments(itemId, {
-      threads: answer.threads,
+      // Kept on the server while comments are off, and shown nowhere until they are back on.
+      threads: answer.enabled ? answer.threads : [],
       revision: answer.revision,
       canComment: answer.canComment,
       status: 'ready',

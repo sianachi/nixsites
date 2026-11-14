@@ -922,24 +922,29 @@ export function SuggestingControl({
   editor,
   suggesting,
   pending,
+  canToggle = true,
   onToggle,
 }: {
   readonly editor: Editor;
   readonly suggesting: boolean;
+  /** False when suggesting is switched off for the note: only Accept all and Reject all remain. */
+  readonly canToggle?: boolean;
   /** Whether the note holds any suggestion. */
   readonly pending: boolean;
   readonly onToggle: () => void;
 }): ReactNode {
   return (
     <>
-      <Button
-        variant="subtle"
-        className={`shrink-0 whitespace-nowrap ${suggesting ? 'bg-accent/18 text-foreground' : ''}`}
-        aria-pressed={suggesting}
-        onClick={onToggle}
-      >
-        Suggesting
-      </Button>
+      {canToggle ? (
+        <Button
+          variant="subtle"
+          className={`shrink-0 whitespace-nowrap ${suggesting ? 'bg-accent/18 text-foreground' : ''}`}
+          aria-pressed={suggesting}
+          onClick={onToggle}
+        >
+          Suggesting
+        </Button>
+      ) : null}
       {pending ? (
         <>
           <Button

@@ -14,7 +14,13 @@ import { z } from 'zod';
 
 export { problemDetailsSchema, type ProblemDetails } from './problem-details.js';
 export { cursorPageSchema, type CursorPage } from './pagination.js';
-export { itemSchema, KNOWN_ITEM_TYPES, type Item } from './item.js';
+export {
+  itemSchema,
+  itemSettingsSchema,
+  KNOWN_ITEM_TYPES,
+  type Item,
+  type ItemSettings,
+} from './item.js';
 export { canvasLibrarySchema, type CanvasLibrary } from './canvas-library.js';
 export {
   workspaceGraphSchema,

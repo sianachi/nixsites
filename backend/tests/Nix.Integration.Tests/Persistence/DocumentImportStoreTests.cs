@@ -185,6 +185,10 @@ public sealed class DocumentImportStoreTests(NixPostgresFixture fixture) : IAsyn
         var rows = await work.DbContext.NoteComments.AsNoTracking()
             .Where(row => row.ItemId == ItemId.From(stage.RootItemId)).OrderBy(row => row.CreatedAt).ToListAsync(Cancellation);
 
+        var imported = await work.DbContext.Items.IgnoreQueryFilters().AsNoTracking()
+            .SingleAsync(item => item.Id == ItemId.From(stage.RootItemId), Cancellation);
+        Assert.True(Nix.Domain.Items.ItemSettings.Read(imported.Settings).Comments);
+
         Assert.Equal(3, rows.Count);
         Assert.All(rows, row => Assert.Equal(TestTenants.AlphaPrincipal, row.AuthorPrincipalId.Value));
         Assert.Equal(["Ada", "Grace", "Unknown"], rows.Select(row => row.ImportedAuthor));

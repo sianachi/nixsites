@@ -183,7 +183,7 @@ internal static class ExchangeEndpoint
                 "The principal this token acts as has been suspended or deprovisioned.");
         }
 
-        var session = minter.Mint(candidate.PrincipalId, candidate.TenantId, candidate.Id);
+        var session = minter.Mint(candidate.PrincipalId, candidate.TenantId, candidate.Id, lookup);
         return TypedResults.Ok(new TokenExchangeResponse(
             session,
             "Bearer",

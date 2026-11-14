@@ -257,6 +257,36 @@ public static class WorkspaceAdministrationSql
         SELECT workspace_id FROM updated
         """;
 
+    /// <summary>A workspace's item defaults for any member. Null when the workspace is not visible; <c>{}</c> when none were set.</summary>
+    public const string ReadItemDefaults = """
+        SELECT COALESCE(w.item_defaults, '{}'::jsonb)::text
+        FROM workspace w
+        WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+          AND (EXISTS (SELECT 1 FROM workspace_member wm
+                       WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
+                         AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)
+                           OR (wm.subject_type = 'group' AND EXISTS (
+                               SELECT 1 FROM group_membership gm
+                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
+                                 AND gm.principal_id = @principal_id)))))
+        """;
+
+    /// <summary>Merges the named item defaults, only for an owner (the rename rule). Returns the stored object.</summary>
+    public const string SetItemDefaults = """
+        UPDATE workspace w
+        SET item_defaults = COALESCE(w.item_defaults, '{}'::jsonb) || @patch::jsonb
+        WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
+          AND (EXISTS (SELECT 1 FROM workspace_member wm
+                       WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
+                         AND wm.role = 'owner'
+                         AND ((wm.subject_type = 'principal' AND wm.subject_id = @principal_id)
+                           OR (wm.subject_type = 'group' AND EXISTS (
+                               SELECT 1 FROM group_membership gm
+                               WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
+                                 AND gm.principal_id = @principal_id)))))
+        RETURNING w.item_defaults::text
+        """;
+
     /// <summary>Archives a workspace only for an owner.</summary>
     public const string Archive = """
         UPDATE workspace w

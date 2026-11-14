@@ -3,6 +3,7 @@ import {
   isNixApiError,
   items as coreItems,
   structure as coreStructure,
+  type ItemSettingsInput,
   type NixClient,
 } from '@nix/api-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -59,6 +60,9 @@ export interface ItemProperties {
 
   /** Writes the changed properties, answering with the refusal reason or null. */
   readonly write: (changes: Record<string, unknown>) => Promise<string | null>;
+
+  /** Switches the item's optional features, answering with the refusal reason or null. */
+  readonly setSettings: (changes: ItemSettingsInput) => Promise<string | null>;
 }
 
 export function useItemProperties(itemId: string | null): ItemProperties {
@@ -219,6 +223,27 @@ export function useItemProperties(itemId: string | null): ItemProperties {
     [client, itemId],
   );
 
+  const setSettings = useCallback(
+    async (changes: ItemSettingsInput): Promise<string | null> => {
+      if (item === null) {
+        return 'There is nothing open to change.';
+      }
+      try {
+        const written = ItemSchema.parse(
+          await client.execute(coreItems.setItemSettings(item.workspaceId, item.id, changes)),
+        );
+        setItem((previous) => keepComputed(previous ?? undefined, written));
+      } catch (reason) {
+        return isNixApiError(reason)
+          ? (reason.detail ?? 'That setting could not be saved.')
+          : 'That setting could not be saved.';
+      }
+
+      return null;
+    },
+    [client, item],
+  );
+
   /**
    * The item as the panel reads it: what the server sent, plus the properties this build computes.
    *
@@ -233,7 +258,7 @@ export function useItemProperties(itemId: string | null): ItemProperties {
     [item, schema?.properties],
   );
 
-  return { loading, schema, item: computed, error, retry, write };
+  return { loading, schema, item: computed, error, retry, write, setSettings };
 }
 
 type QueryOutcome<TValue> =

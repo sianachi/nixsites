@@ -9,6 +9,10 @@ export interface StubItem {
   readonly seq: number;
   readonly lifecycleState: string;
   readonly properties: Readonly<Record<string, unknown>>;
+  /** The item's optional features; absent means a server from before them, so everything off. */
+  readonly settings?: Readonly<
+    Record<'comments' | 'suggesting' | 'reviewStates' | 'fullWidth', boolean>
+  >;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

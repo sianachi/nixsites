@@ -83,6 +83,7 @@ export type {
   GraphLink,
   GraphNode,
   Item,
+  ItemSettings,
   ItemLock,
   ProblemDetails,
   CurrentPrincipal,
@@ -202,6 +203,7 @@ export type {
 export * as bookmarks from './resources/bookmarks.js';
 export * as locks from './resources/locks.js';
 export * as items from './resources/items.js';
+export type { ItemSettingsInput } from './resources/items.js';
 export * as workspaces from './resources/workspaces.js';
 export * as workspaceLocks from './resources/workspace-locks.js';
 export type { AssignableWorkspaceRole } from './resources/workspaces.js';

@@ -361,13 +361,13 @@ public sealed class NoteCommentTests : IAsyncLifetime
                 ({{workspace}}, 'principal', {{Literal(Commenter)}}, {{tenant}}, 'commenter', {{granter}}, now()),
                 ({{workspace}}, 'principal', {{Literal(Editor)}}, {{tenant}}, 'editor', {{granter}}, now());
 
-            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
+            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, settings, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 2000, '{"title": "Locked"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000, '{"title": "Parent"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 'note', {{Literal(TrashedParent)}}, 1000, '{"title": "Child"}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now());
+                ({{Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 2000, '{"title": "Locked"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000, '{"title": "Parent"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 'note', {{Literal(TrashedParent)}}, 1000, '{"title": "Child"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES

@@ -24,6 +24,8 @@ const NOTES = item({
   id: '2a2a2a2a-2222-4222-8222-2a2a2a2a2a2a',
   title: 'Roadmap',
   hasChildren: true,
+  // Comments are off until an item switches them on.
+  settings: { comments: true, suggesting: false, reviewStates: false, fullWidth: false },
 });
 
 const CHILD = item({

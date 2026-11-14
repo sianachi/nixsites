@@ -183,6 +183,21 @@ public interface IItemTree
         DateTimeOffset at,
         CancellationToken cancellationToken);
 
+    /// <summary>Merges the named switches into an item's settings; a switch left out stays as it is.</summary>
+    /// <param name="id">The item.</param>
+    /// <param name="patch">A JSON object holding only the switches to change.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when the row is updated.</returns>
+    public ValueTask SetSettingsAsync(ItemId id, string patch, CancellationToken cancellationToken) =>
+        ValueTask.FromException(new NotSupportedException("This item tree does not implement item settings."));
+
+    /// <summary>The item settings new items in a workspace start with, as stored JSON, or null for all off.</summary>
+    /// <param name="workspaceId">The workspace.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The stored JSON object, or null.</returns>
+    public ValueTask<string?> ReadItemDefaultsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<string?>(null);
+
     /// <summary>Replaces the schema an item declares for its subtree.</summary>
     /// <param name="id">The item.</param>
     /// <param name="schema">The schema as JSON, or <see langword="null"/> to declare none.</param>

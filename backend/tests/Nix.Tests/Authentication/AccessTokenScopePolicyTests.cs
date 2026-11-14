@@ -128,6 +128,7 @@ public sealed class AccessTokenScopePolicyTests
         ["AppendItemBody"] = Requirement.Write,
         ["DeleteItem"] = Requirement.Write,
         ["SetItemProtection"] = Requirement.Write,
+        ["SetItemSettings"] = Requirement.Write,
         ["PurgeItem"] = Requirement.Write,
         ["KeepItem"] = Requirement.Write,
         ["ReleaseItem"] = Requirement.Write,
@@ -223,6 +224,8 @@ public sealed class AccessTokenScopePolicyTests
         ["MoveItem"] = Requirement.Admin,
         ["CreateWorkspaceInvitation"] = Requirement.Admin,
         ["SetWorkspaceSharing"] = Requirement.Admin,
+        ["GetWorkspaceItemDefaults"] = Requirement.Read,
+        ["SetWorkspaceItemDefaults"] = Requirement.Write,
         ["ListWorkspaceInvitees"] = Requirement.Admin,
         ["RevokeWorkspaceInvitation"] = Requirement.Admin,
         ["AcceptWorkspaceInvitation"] = Requirement.Admin,
@@ -324,6 +327,7 @@ public sealed class AccessTokenScopePolicyTests
         ["ListAccessTokens"] = Requirement.InteractiveOnly,
         ["CreateAccessToken"] = Requirement.InteractiveOnly,
         ["RevokeAccessToken"] = Requirement.InteractiveOnly,
+        ["RotateAccessToken"] = Requirement.InteractiveOnly,
     };
 
     [Fact]
@@ -502,6 +506,7 @@ public sealed class AccessTokenScopePolicyTests
     [InlineData("POST", "/api/v1/me/pets/inline")]
     [InlineData("POST", "/api/v1/me/tokens")]
     [InlineData("DELETE", "/api/v1/me/tokens/00000000-0000-0000-0000-000000000001")]
+    [InlineData("POST", "/api/v1/me/tokens/00000000-0000-0000-0000-000000000001/rotate")]
     public void No_scope_admits_a_token_to_token_management(string method, string path)
     {
         var requirement = Classify(method, path);

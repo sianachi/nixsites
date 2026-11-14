@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Nix.Domain.Items;
 
 namespace Nix.Features.Items;
 
@@ -30,6 +31,10 @@ namespace Nix.Features.Items;
 /// <param name="NoChildren">Whether it refuses new children.</param>
 /// <param name="Collaboration">
 /// Whether several people may edit it at once. Its workspace's own switch can still turn it off.
+/// </param>
+/// <param name="Settings">
+/// The optional features switched on for this item: comments, suggesting, file review states and
+/// full width. All off unless someone turned them on.
 /// </param>
 /// <param name="ManagedBy">
 /// The system feature managing it ('calendar' for a linked calendar's container, 'calendar_event'
@@ -74,6 +79,7 @@ internal sealed record ItemResponse(
     bool NoDelete,
     bool NoChildren,
     bool Collaboration,
+    ItemSettings Settings,
     string? ManagedBy,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,

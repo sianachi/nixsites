@@ -189,6 +189,14 @@ function specificCapability(verb, path) {
     };
   }
 
+  if (path === '/api/v1/me/tokens/{tokenId}/rotate' && verb === 'POST') {
+    return {
+      can: "Replace the secret of one of the caller's live personal access tokens. The new secret is in this response only, and the old one stops working at once.",
+      cannot:
+        'Be called with a personal access token, or revive a revoked or expired token. The expiry restarts with the original lifetime, never longer.',
+    };
+  }
+
   return null;
 }
 

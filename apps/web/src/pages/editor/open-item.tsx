@@ -28,10 +28,14 @@ import { useForgetLockedBody } from '../../locks/use-forget-locked-body';
 import { useItemLock } from '../../locks/use-item-lock';
 import { toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
-import { TOGGLE_ITEM_PANEL_EVENT } from '../../panel/panel-state';
+import {
+  OPEN_SITE_PANE_EVENT,
+  TOGGLE_ITEM_PANEL_EVENT,
+  takeSitePaneRequest,
+} from '../../panel/panel-state';
 import type { Pane } from '../../panel/item-panel';
 import { useItemProperties } from '@nix/web-collections/properties/use-item-properties';
-import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
+import { useCanPublishSites } from '@nix/web-settings/settings/publishing/publishing-preference';
 import type { ShellContext } from '../../shell/shell-context';
 
 import { focusSitePaneHeading } from '@nix/web-sites/sites/site-pane';
@@ -149,7 +153,10 @@ export function OpenItem({
     add: addSuggestedView,
   } = useItemViewActions(itemId, workspace?.workspaceId);
   const { viewId, selectView } = useViewState();
-  const boardComments = bodyKind === 'note' && defaultToComments;
+  const details = useItemProperties(itemId);
+  // Off until the note's settings switch comments on; Core refuses new ones and the threads stay hidden.
+  const commentsOn = details.item?.settings?.comments === true;
+  const boardComments = bodyKind === 'note' && defaultToComments && commentsOn;
   const previewTab = contextView
     ? { id: CONTEXT_VIEW, label: contextView.label, icon: PanelTop }
     : boardComments
@@ -263,12 +270,25 @@ export function OpenItem({
     };
   }, [paneIndex, togglePanel]);
 
-  function openSitePane(): void {
+  const openSitePane = useCallback((): void => {
     setHistoryOpen(false);
     setPanelPane('site');
     setPanelOpen(true);
     focusSitePaneHeading();
-  }
+  }, []);
+
+  // The sidebar's "Publish as a site" names an item, then opens it: this page answers once it is
+  // the one named, whether it was already open or has just mounted.
+  useEffect(() => {
+    const answer = (): void => {
+      if (takeSitePaneRequest(itemId)) openSitePane();
+    };
+    answer();
+    window.addEventListener(OPEN_SITE_PANE_EVENT, answer);
+    return () => {
+      window.removeEventListener(OPEN_SITE_PANE_EVENT, answer);
+    };
+  }, [itemId, openSitePane]);
   function openCommentsPane(): void {
     setHistoryOpen(false);
     setPanelPane('comments');
@@ -281,11 +301,10 @@ export function OpenItem({
       setPanelOpen(true);
     } else setPanelOpen(!panelOpen);
   }
-  const canOpenComments = lock.open && bodyKind === 'note' && !commentsTab;
-  const sitesEnabled = useSitesVisible();
+  const canOpenComments = lock.open && bodyKind === 'note' && !commentsTab && commentsOn;
+  const sitesEnabled = useCanPublishSites();
   const hasSite = useItemHasSite(itemId, sitesEnabled);
 
-  const details = useItemProperties(itemId);
   const contextTab =
     lock.open && previewTab
       ? previewTab
@@ -572,6 +591,8 @@ export function OpenItem({
       mobileDetails={noteDocked && !zen ? { open: panelOpen, onToggle: togglePanel } : undefined}
       // From the tree the page already holds: no fetch, only a ranking hint.
       parentId={tree.find(itemId)?.parentId}
+      suggestingAllowed={details.item?.settings?.suggesting === true}
+      fullWidth={details.item?.settings?.fullWidth === true}
     />
   );
 

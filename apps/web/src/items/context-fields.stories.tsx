@@ -27,6 +27,7 @@ const details: ItemProperties = {
   error: null,
   retry: () => undefined,
   write: () => Promise.resolve(null),
+  setSettings: () => Promise.resolve(null),
 };
 
 export const RecordFields = {

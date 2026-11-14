@@ -188,7 +188,8 @@ internal static class PublicLinkEndpoints
                 return Refuse(context, 503, "public_links.storage_unavailable", "File storage is not configured.");
             }
 
-            version = await store.FindVersionAsync(item.Id, request.VersionId, ct).ConfigureAwait(false);
+            version = await store.FindVersionAsync(
+                item.Id, request.VersionId, ct, newestUnrevoked: !ItemSettings.Read(item.Settings).ReviewStates).ConfigureAwait(false);
             if (version is null || version.State == FileVersionStates.Revoked)
             {
                 return Refuse(

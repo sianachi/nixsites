@@ -30,6 +30,10 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - PUT /api/v1/me/canvas-library
 
+### `comments.disabled`
+
+- PUT /api/v1/items/{itemId}/settings
+
 ### `health.check_not_found`
 
 - GET /api/v1/health/checks/{name}
@@ -222,6 +226,14 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 ### `tokens.limit_reached`
 
 - POST /api/v1/me/tokens
+
+### `tokens.not_found`
+
+- POST /api/v1/me/tokens/{tokenId}/rotate
+
+### `tokens.not_rotatable`
+
+- POST /api/v1/me/tokens/{tokenId}/rotate
 
 ### `views.document_cannot_be_hidden`
 

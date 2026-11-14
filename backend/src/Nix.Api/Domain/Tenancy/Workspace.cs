@@ -41,6 +41,12 @@ public sealed class Workspace
     /// </summary>
     public string? DailyNotes { get; init; }
 
+    /// <summary>
+    /// Gets the item settings new items in this workspace start with, as a JSON object, or null
+    /// when every switch starts off. Read it through <c>ItemSettings.Read</c>.
+    /// </summary>
+    public string? ItemDefaults { get; init; }
+
     /// <summary>Gets the workspace's storage ceiling in bytes.</summary>
     public required long StorageQuotaBytes { get; init; }
 

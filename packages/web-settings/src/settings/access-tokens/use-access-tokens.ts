@@ -64,6 +64,7 @@ export interface AccessTokensState {
     readonly scopes: readonly string[];
     readonly expiresInDays: number;
   }) => Promise<CreateTokenOutcome>;
+  readonly rotate: (tokenId: string) => Promise<CreateTokenOutcome>;
   readonly revoke: (tokenId: string) => Promise<{ readonly refusal: string | null }>;
 }
 
@@ -184,5 +185,31 @@ export function useAccessTokens(): AccessTokensState {
     [client],
   );
 
-  return { status, tokens, error, reload, create, revoke };
+  const rotate = useCallback(
+    async (tokenId: string): Promise<CreateTokenOutcome> => {
+      try {
+        return {
+          created: await client.execute(accessTokens.rotateAccessToken(tokenId)),
+          refusal: null,
+        };
+      } catch (reason) {
+        if (isNixApiError(reason) && reason.code === 'tokens.not_rotatable') {
+          return {
+            created: null,
+            refusal: 'A revoked or expired token cannot be rotated. Create a new token instead.',
+          };
+        }
+        return {
+          created: null,
+          refusal:
+            isNixApiError(reason) && reason.status !== undefined
+              ? `The token could not be rotated (${String(reason.status)}).`
+              : 'The rotation could not be sent. Check the connection and try again.',
+        };
+      }
+    },
+    [client],
+  );
+
+  return { status, tokens, error, reload, create, rotate, revoke };
 }

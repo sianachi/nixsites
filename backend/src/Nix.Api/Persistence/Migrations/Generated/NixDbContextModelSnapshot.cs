@@ -2225,6 +2225,10 @@ namespace Nix.Persistence.Migrations.Generated
                         .HasColumnType("bigint")
                         .HasColumnName("seq");
 
+                    b.Property<string>("Settings")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings");
+
                     b.Property<Guid?>("TemplateId")
                         .HasColumnType("uuid")
                         .HasColumnName("template_id");
@@ -4343,6 +4347,10 @@ namespace Nix.Persistence.Migrations.Generated
                     b.Property<string>("DailyNotes")
                         .HasColumnType("jsonb")
                         .HasColumnName("daily_notes");
+
+                    b.Property<string>("ItemDefaults")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("item_defaults");
 
                     b.Property<string>("LifecycleState")
                         .IsRequired()

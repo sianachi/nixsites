@@ -89,9 +89,11 @@ function renderSidebar(
   callbacks: Callbacks = {},
   view: 'desktop' | 'mobile' = 'desktop',
   publicLinks = false,
+  sites = false,
+  canManage = true,
 ): void {
   render(
-    <CapabilitiesProvider value={{ ...NO_CAPABILITIES, publicLinks }}>
+    <CapabilitiesProvider value={{ ...NO_CAPABILITIES, publicLinks, sites }}>
       <MemoryRouter initialEntries={[`/w/${STUB_WORKSPACE.id}`]}>
         <AuthProvider>
           <ApiClientProvider>
@@ -102,7 +104,7 @@ function renderSidebar(
                   <WorkspaceProvider
                     state={{
                       status: 'ready',
-                      workspaces: [STUB_WORKSPACE],
+                      workspaces: [{ ...STUB_WORKSPACE, canManageMembers: canManage }],
                       error: null,
                       reload: () => undefined,
                       workspaceCreated: () => undefined,
@@ -213,6 +215,25 @@ describe('the sidebar row context menu', () => {
     rightClick('First');
     await user.click(screen.getByRole('menuitem', { name: 'Share public link…' }));
     expect(await screen.findByRole('dialog', { name: 'Share “First”' })).toBeInTheDocument();
+  });
+
+  it('offers Publish as a site on any row type when the server has sites and the person manages', () => {
+    const folder: TreeItem = { ...ROOT_A, type: 'folder' };
+    renderSidebar(treeOf(vi.fn(), [ROOT_B, folder]), null, {}, 'desktop', false, true);
+    rightClick('Second');
+    expect(screen.getByRole('menuitem', { name: 'Publish as a site…' })).toBeVisible();
+  });
+
+  it('leaves Publish as a site off for a non-manager and where the server has no sites', () => {
+    renderSidebar(treeOf(vi.fn()), null, {}, 'desktop', false, true, false);
+    rightClick('First');
+    expect(screen.queryByRole('menuitem', { name: 'Publish as a site…' })).toBeNull();
+  });
+
+  it('leaves Publish as a site off where the server has no sites', () => {
+    renderSidebar(treeOf(vi.fn()));
+    rightClick('First');
+    expect(screen.queryByRole('menuitem', { name: 'Publish as a site…' })).toBeNull();
   });
 
   it('replaces the browser menu with the row actions', () => {

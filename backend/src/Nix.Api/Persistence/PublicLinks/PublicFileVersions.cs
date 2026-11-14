@@ -20,10 +20,12 @@ public sealed class PublicFileVersions(NixDbContext db) : IPublicFileVersions
         TenantId tenant,
         WorkspaceId workspace,
         ItemId itemId,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        bool anyUnrevoked = false) =>
         await db.FileVersions.AsNoTracking()
             .Where(version => version.TenantId == tenant && version.ItemId == itemId && version.WorkspaceId == workspace
-                && version.State == FileVersionStates.Approved && version.ObjectReady)
+                && (anyUnrevoked ? version.State != FileVersionStates.Revoked : version.State == FileVersionStates.Approved)
+                && version.ObjectReady)
             .OrderByDescending(version => version.Version)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 

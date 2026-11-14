@@ -6,6 +6,7 @@ import {
   Link2,
   ListTree,
   MessageSquare,
+  Settings2,
   SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
@@ -15,9 +16,10 @@ import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels'
 import { BacklinksPane } from '../links/backlinks-panel';
 import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { CommentsPane } from './comments-pane';
+import { ItemSettingsPane } from './item-settings-pane';
 import { OutlinePane } from './outline-pane';
 import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
-import { useSitesVisible } from '@nix/web-settings/settings/publishing/publishing-preference';
+import { useCanPublishSites } from '@nix/web-settings/settings/publishing/publishing-preference';
 import { SitePane } from '@nix/web-sites/sites/site-pane';
 import type { ItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
@@ -25,8 +27,9 @@ import { SchemaEditor } from '@nix/web-views/core/schema-editor';
 import { ViewEditor } from '@nix/web-views/core/view-editor';
 
 /**
- * One panel, six panes: what this item *is*, what its children may carry, how they are shown,
- * what elsewhere points at it, what people have said on it, and whether it is published as a site.
+ * One panel, a few panes: what this item *is*, what its children may carry, how they are shown,
+ * what elsewhere points at it, what people have said on it, whether it is published as a site, and
+ * which optional features it has switched on.
  *
  * **The rename is the point.** Two surfaces were called Properties - the values on this item, and
  * the schema it gives its children - and they are different questions with the same answer only by
@@ -35,7 +38,8 @@ import { ViewEditor } from '@nix/web-views/core/view-editor';
  * Shown beside a wide note and in an overlay on compact layouts (`item-panels.tsx`).
  */
 
-export type Pane = 'details' | 'fields' | 'views' | 'links' | 'outline' | 'comments' | 'site';
+export type Pane =
+  'details' | 'fields' | 'views' | 'links' | 'outline' | 'comments' | 'site' | 'settings';
 
 const PANES = [
   { value: 'details', label: 'Details' },
@@ -51,6 +55,8 @@ const PANES = [
   { value: 'comments', label: 'Comments' },
   // Publishing this item and everything inside it as a website (ADR-0063).
   { value: 'site', label: 'Site' },
+  // What this one item can do: comments, suggesting, file review states, full width, default view.
+  { value: 'settings', label: 'Settings' },
 ] as const;
 
 export interface ItemPanelProps {
@@ -78,6 +84,7 @@ const PANE_ICONS: Record<Pane, LucideIcon> = {
   outline: ListTree,
   comments: MessageSquare,
   site: Globe,
+  settings: Settings2,
 };
 
 export function ItemPanel({
@@ -88,14 +95,15 @@ export function ItemPanel({
   onPaneChange,
   drawer = false,
 }: ItemPanelProps): ReactNode {
-  const sitesEnabled = useSitesVisible();
+  const sitesEnabled = useCanPublishSites();
   const openComments = useItemComments(details.item?.id ?? null).threads.filter(
     (thread) => thread.resolvedAt === null,
   ).length;
   const [ownPane, setOwnPane] = useState<Pane>('details');
   const requestedPane = steeredPane ?? ownPane;
-  // Comments are notes-only on the server; a canvas, sheet or file has no thread to show.
-  const commentsAvailable = details.item?.type === 'note';
+  // Comments are notes-only on the server, and off until the note's settings switch them on.
+  const commentsAvailable =
+    details.item?.type === 'note' && details.item.settings?.comments === true;
   // Switching publishing off while the Site pane is open falls back to Details.
   const pane =
     (requestedPane === 'site' && !sitesEnabled) ||
@@ -133,7 +141,7 @@ export function ItemPanel({
             options={options}
             value={pane}
             onChange={setPane}
-            // One row: the seven tabs scroll sideways rather than wrapping onto a second line.
+            // One row: the tabs scroll sideways rather than wrapping onto a second line.
             className="min-w-0 flex-1 flex-nowrap overflow-x-auto bg-background *:shrink-0"
           />
         </div>
@@ -150,6 +158,8 @@ export function ItemPanel({
           details.item === null ? null : (
             <CommentsPane itemId={details.item.id} />
           )
+        ) : pane === 'settings' ? (
+          <ItemSettingsPane container={container} details={details} />
         ) : pane === 'outline' ? (
           <OutlinePane />
         ) : pane === 'links' ? (

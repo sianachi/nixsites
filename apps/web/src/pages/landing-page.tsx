@@ -5,6 +5,7 @@ import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactN
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { ThemeButton } from '@nix/web-foundation/theme/theme-choice';
 import { findViewKind } from '@nix/web-views/core/view-kinds';
+import { APP_DOWNLOADS, APP_PLATFORMS } from './landing-apps';
 
 export interface LandingPageProps {
   /** Starts the redirect to the identity provider. */
@@ -70,19 +71,27 @@ function Shot(props: {
   readonly large?: boolean;
   readonly eager?: boolean;
 }): ReactNode {
-  const ground = useGround();
+  const dark = useGround() === 'dark' ? '-dark' : '';
   return (
     <div
       className={`overflow-hidden border ${RULE} bg-surface ${props.large === true ? 'rounded-lg' : 'rounded-md'}`}
     >
-      <img
-        src={`/landing/${props.name}${ground === 'dark' ? '-dark' : ''}.jpg`}
-        alt={props.alt}
-        width={1600}
-        height={1000}
-        loading={props.eager === true ? 'eager' : 'lazy'}
-        className="block h-auto w-full"
-      />
+      <picture>
+        <source
+          media="(max-width: 639px)"
+          srcSet={`/landing/${props.name}-phone${dark}.jpg`}
+          width={780}
+          height={1688}
+        />
+        <img
+          src={`/landing/${props.name}${dark}.jpg`}
+          alt={props.alt}
+          width={1600}
+          height={1000}
+          loading={props.eager === true ? 'eager' : 'lazy'}
+          className="block h-auto w-full"
+        />
+      </picture>
     </div>
   );
 }
@@ -208,6 +217,30 @@ const VIEWS: readonly {
     alt: 'A form that adds a launch task',
   },
   {
+    id: 'smart',
+    label: 'Smart list',
+    kind: 'query',
+    alt: 'A smart list of every high-priority launch task, found by a saved filter',
+  },
+  {
+    id: 'drive',
+    label: 'Drive',
+    kind: 'drive',
+    alt: 'Launch items as a file manager with names and modified dates',
+  },
+  {
+    id: 'guided',
+    label: 'Interactive form',
+    kind: 'interactive_form',
+    alt: 'A guided form that asks two questions and adds a launch task',
+  },
+  {
+    id: 'custom',
+    label: 'Custom view',
+    kind: 'custom',
+    alt: 'A custom view with launch stats and a chart of tasks by status',
+  },
+  {
     id: 'habits',
     label: 'Habit tracker',
     kind: 'habit_tracker',
@@ -290,6 +323,26 @@ function ViewGallery(): ReactNode {
   );
 }
 
+/** A download link, or a disabled "Coming soon" button while the app has no link yet. */
+function AppButton(props: { readonly platform: string; readonly url: string | null }): ReactNode {
+  if (props.url !== null)
+    return (
+      <a href={props.url} className={PRIMARY}>
+        Download for {props.platform}
+      </a>
+    );
+  return (
+    <button
+      type="button"
+      disabled
+      aria-label={`${props.platform} app: coming soon`}
+      className={`${SECONDARY} cursor-not-allowed opacity-60`}
+    >
+      Coming soon
+    </button>
+  );
+}
+
 /**
  * The front door for an install that turns it on (`landing` in web-config.json), after the landing
  * design. Shown only to an anonymous visitor at `/`; a deep link still gets sign-in.
@@ -318,6 +371,9 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
           >
             <a href="#views" className={NAV_LINK}>
               Views
+            </a>
+            <a href="#apps" className={NAV_LINK}>
+              Apps
             </a>
             <a href="#agents" className={NAV_LINK}>
               AI agents
@@ -356,7 +412,7 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
                 </a>
               ) : null}
               <a href={REPOSITORY} className={SECONDARY}>
-                View on GitHub
+                Star on GitHub
               </a>
             </div>
           </div>
@@ -504,6 +560,30 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
           </div>
         </section>
 
+        <section id="apps" className={`border-t ${RULE}`}>
+          <div className={`${PAGE} flex flex-col gap-8 py-20`}>
+            <div className="flex max-w-2xl flex-col gap-3">
+              <Kicker>Apps</Kicker>
+              <Text variant="h2" as="h2" className={`${SECTION_HEAD} text-balance`}>
+                Take Nix with you.
+              </Text>
+              <Text variant="body" as="p" tone="muted" className="text-lg text-pretty">
+                Native apps for your phone and your desktop, the same workspace everywhere.
+              </Text>
+            </div>
+            <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-5">
+              {APP_PLATFORMS.map((platform) => (
+                <li key={platform} className={`flex flex-col gap-3 rounded-md border ${RULE} p-4`}>
+                  <Text variant="h4" as="h3" className="font-bold">
+                    {platform}
+                  </Text>
+                  <AppButton platform={platform} url={APP_DOWNLOADS[platform]} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         <section className={`border-t ${RULE}`}>
           <div className={`${PAGE} flex flex-wrap items-center justify-between gap-6 py-18`}>
             <Text variant="h2" as="h2" className="max-w-xl font-bold text-balance">
@@ -516,6 +596,15 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
             ) : (
               signIn
             )}
+          </div>
+          <div className={`${PAGE} flex flex-wrap items-center justify-between gap-6 pb-18`}>
+            <Text variant="body" as="p" tone="muted" className="max-w-xl">
+              Nix is open source. If it is useful to you, a star on GitHub helps other people find
+              it.
+            </Text>
+            <a href={REPOSITORY} className={SECONDARY}>
+              Star Nix on GitHub
+            </a>
           </div>
         </section>
       </main>

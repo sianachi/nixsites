@@ -17,6 +17,7 @@ import {
 import {
   dailyNoteSchema,
   dailyNoteSettingsSchema,
+  itemSettingsSchema,
   noContentSchema,
   workspaceInvitationSchema,
   workspaceInviteeSchema,
@@ -25,6 +26,7 @@ import {
   workspaceSchema,
   type DailyNote,
   type DailyNoteSettings,
+  type ItemSettings,
   type Workspace,
   type WorkspaceInvitation,
   type WorkspaceInvitee,
@@ -340,6 +342,37 @@ export const openDailyNote = (workspaceId: string, date: string): CommandEndpoin
     method: 'PUT',
     path: `/api/v1/workspaces/${workspaceId}/daily-notes/${date}`,
     schema: dailyNoteSchema,
+  });
+
+const itemDefaultsKey = (workspaceId: string) =>
+  ['workspaces', workspaceId, 'item-defaults'] as const;
+
+/** The settings items created in this workspace from now on start with. */
+export const itemDefaults = (workspaceId: string): QueryEndpoint<ItemSettings> =>
+  defineQuery<ItemSettings>({
+    operation: 'workspaces.itemDefaults.get',
+    path: `/api/v1/workspaces/${workspaceId}/item-defaults`,
+    schema: itemSettingsSchema,
+    cacheKey: itemDefaultsKey(workspaceId),
+  });
+
+/** Changes the settings new items start with; owners only. A field left out is unchanged. */
+export const setItemDefaults = (
+  workspaceId: string,
+  input: Partial<ItemSettings>,
+): CommandEndpoint<ItemSettings> =>
+  defineCommand({
+    operation: 'workspaces.itemDefaults.set',
+    method: 'PUT',
+    path: `/api/v1/workspaces/${workspaceId}/item-defaults`,
+    body: {
+      comments: input.comments ?? null,
+      suggesting: input.suggesting ?? null,
+      reviewStates: input.reviewStates ?? null,
+      fullWidth: input.fullWidth ?? null,
+    },
+    schema: itemSettingsSchema,
+    invalidates: [itemDefaultsKey(workspaceId)],
   });
 
 const dailyNoteSettingsKey = (workspaceId: string) =>

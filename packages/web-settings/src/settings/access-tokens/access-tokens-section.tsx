@@ -5,12 +5,12 @@ import { Link, useLocation } from 'react-router';
 import { ErrorPanel } from '@nix/web-foundation/components/states/status-panels';
 import { FlashText } from '../shared/flash-text';
 import { SettingsSection } from '../shared/settings-section';
-import { AccessTokenCreateDialog } from './access-token-create-dialog';
+import { AccessTokenCreateDialog, SecretSurface } from './access-token-create-dialog';
 import { formatDay, tokenStatus, type TokenStatus } from './token-facts';
-import { useAccessTokens, type AccessToken } from './use-access-tokens';
+import { useAccessTokens, type AccessToken, type CreatedAccessToken } from './use-access-tokens';
 
 /**
- * The caller's personal access tokens: every one ever issued, and the controls to mint and revoke.
+ * The caller's personal access tokens: every one ever issued, and the controls to mint, rotate and revoke.
  *
  * **Revoked and expired tokens stay in the table.** The list is an audit of what has been able to
  * act as this principal, and an audit that forgets is not one - so a dead token keeps its row,
@@ -40,7 +40,7 @@ function statusTag(status: TokenStatus): ReactNode {
 
 export function AccessTokensSection(): ReactElement {
   const { pathname } = useLocation();
-  const { status, tokens, error, reload, create, revoke } = useAccessTokens();
+  const { status, tokens, error, reload, create, rotate, revoke } = useAccessTokens();
 
   const [createOpen, setCreateOpen] = useState(false);
   /** The ids that existed when a token was created: rows outside it are new and slide in. */
@@ -52,6 +52,12 @@ export function AccessTokensSection(): ReactElement {
   const [revoking, setRevoking] = useState<AccessToken | null>(null);
   const [revokeRefusal, setRevokeRefusal] = useState<string | null>(null);
   const [revokeInFlight, setRevokeInFlight] = useState(false);
+
+  /** The token a rotation is being confirmed for, and the new secret once it has landed. */
+  const [rotating, setRotating] = useState<AccessToken | null>(null);
+  const [rotated, setRotated] = useState<CreatedAccessToken | null>(null);
+  const [rotateRefusal, setRotateRefusal] = useState<string | null>(null);
+  const [rotateInFlight, setRotateInFlight] = useState(false);
 
   // Taken once per render rather than once per row: sixty rows asking the clock separately could
   // disagree about which side of an expiry boundary "now" is on within one paint.
@@ -75,6 +81,34 @@ export function AccessTokensSection(): ReactElement {
     } finally {
       setRevokeInFlight(false);
     }
+  }
+
+  async function confirmRotate(token: AccessToken): Promise<void> {
+    setRotateInFlight(true);
+    setRotateRefusal(null);
+    try {
+      const outcome = await rotate(token.id);
+      if (outcome.created === null) {
+        setRotateRefusal(outcome.refusal ?? 'The token could not be rotated.');
+        return;
+      }
+
+      setRotated(outcome.created);
+      setDone(`Rotated ${token.name}. The old secret no longer works.`);
+      await reload();
+    } finally {
+      setRotateInFlight(false);
+    }
+  }
+
+  function askRotate(token: AccessToken): void {
+    setRotateRefusal(null);
+    setRotating(token);
+  }
+
+  function closeRotate(): void {
+    setRotating(null);
+    setRotated(null);
   }
 
   const columns = [
@@ -141,15 +175,25 @@ export function AccessTokensSection(): ReactElement {
       header: 'Actions',
       cell: (token: AccessToken) =>
         tokenStatus(token, now).kind === 'live' ? (
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setRevokeRefusal(null);
-              setRevoking(token);
-            }}
-          >
-            Revoke {token.name}
-          </Button>
+          <span className="inline-flex flex-wrap gap-1">
+            <Button
+              variant="subtle"
+              onClick={() => {
+                askRotate(token);
+              }}
+            >
+              Rotate {token.name}
+            </Button>
+            <Button
+              variant="subtle"
+              onClick={() => {
+                setRevokeRefusal(null);
+                setRevoking(token);
+              }}
+            >
+              Revoke {token.name}
+            </Button>
+          </span>
         ) : null,
     },
   ] as const;
@@ -223,6 +267,7 @@ export function AccessTokensSection(): ReactElement {
             status={status}
             tokens={tokens}
             now={now}
+            onRotate={askRotate}
             onRevoke={(token) => {
               setRevokeRefusal(null);
               setRevoking(token);
@@ -248,6 +293,53 @@ export function AccessTokensSection(): ReactElement {
           }}
         />
       ) : null}
+
+      {rotating === null ? null : (
+        <Dialog
+          open
+          title={rotated === null ? `Rotate ${rotating.name}?` : 'Copy your new token now'}
+          onClose={() => {
+            if (!rotateInFlight) {
+              closeRotate();
+            }
+          }}
+          closeLabel={rotated === null ? 'Keep the token' : 'Close'}
+          actions={
+            rotated === null ? (
+              <>
+                <Button variant="secondary" disabled={rotateInFlight} onClick={closeRotate}>
+                  Cancel
+                </Button>
+                <Button
+                  disabled={rotateInFlight}
+                  onClick={() => {
+                    void confirmRotate(rotating);
+                  }}
+                >
+                  {rotateInFlight ? 'Rotating the token' : 'Rotate token'}
+                </Button>
+              </>
+            ) : null
+          }
+        >
+          {rotated === null ? (
+            <div className="flex flex-col gap-2">
+              <Text variant="bodySmall">
+                The token keeps its name and scopes but gets a new secret, and its expiry restarts
+                from today. The old secret stops working immediately, so every client using it needs
+                the new one.
+              </Text>
+              {rotateRefusal === null ? null : (
+                <Text variant="note" role="alert">
+                  {rotateRefusal}
+                </Text>
+              )}
+            </div>
+          ) : (
+            <SecretSurface minted={rotated} onDone={closeRotate} />
+          )}
+        </Dialog>
+      )}
 
       {revoking === null ? null : (
         <Dialog
@@ -302,11 +394,13 @@ function MobileTokenList({
   status,
   tokens,
   now,
+  onRotate,
   onRevoke,
 }: {
   readonly status: 'loading' | 'ready' | 'error';
   readonly tokens: readonly AccessToken[];
   readonly now: Date;
+  readonly onRotate: (token: AccessToken) => void;
   readonly onRevoke: (token: AccessToken) => void;
 }): ReactElement {
   if (status === 'loading') {
@@ -392,7 +486,16 @@ function MobileTokenList({
               </div>
             </dl>
             {status.kind === 'live' ? (
-              <div className="flex justify-end border-t border-divider pt-2">
+              <div className="flex justify-end gap-2 border-t border-divider pt-2">
+                <Button
+                  variant="secondary"
+                  aria-label={`Rotate ${token.name}`}
+                  onClick={() => {
+                    onRotate(token);
+                  }}
+                >
+                  Rotate token
+                </Button>
                 <Button
                   variant="secondary"
                   aria-label={`Revoke ${token.name}`}

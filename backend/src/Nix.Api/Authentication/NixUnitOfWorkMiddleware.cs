@@ -456,6 +456,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                     scopeContext,
                     clock,
                     core.AccessTokenId,
+                    core.SecretLookup,
                     principal.Id)
                     .ConfigureAwait(false);
 
@@ -589,6 +590,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
     /// <param name="accessTokens">Reads and touches the row.</param>
     /// <param name="clock">Judges expiry and stamps last use.</param>
     /// <param name="accessTokenId">The row the validated JWT names.</param>
+    /// <param name="secretLookup">The secret lookup the validated JWT was minted with.</param>
     /// <param name="principalId">The principal the session resolved to.</param>
     /// <returns>Whether the request may proceed. A refusal has already been written.</returns>
     private static async Task<bool> EnforceAccessTokenAsync(
@@ -597,6 +599,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         AccessTokenSessionContext scopeContext,
         TimeProvider clock,
         PersonalAccessTokenId accessTokenId,
+        string secretLookup,
         PrincipalId principalId)
     {
         var state = await accessTokens
@@ -606,7 +609,8 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         // A deleted row and a row belonging to a different principal answer identically: the JWT
         // is signed by us and both claims came from one mint, so a mismatch is a defect or a
         // forgery, and neither deserves a more detailed answer than "this token no longer works".
-        if (state is null || state.PrincipalId != principalId)
+        // [SEC] A session minted from a secret that has since been rotated away dies with it.
+        if (state is null || state.PrincipalId != principalId || state.Lookup != secretLookup)
         {
             await WriteProblemAsync(
                 context,

@@ -86,8 +86,6 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
   /** The minted token. Its presence is what flips the dialog to the secret face. */
   const [minted, setMinted] = useState<CreatedAccessToken | null>(null);
 
-  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
-
   const nameFieldRef = useRef<HTMLInputElement>(null);
 
   function dismiss(): void {
@@ -105,7 +103,6 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
     setRefusal(null);
     setSubmitting(false);
     setMinted(null);
-    setCopyState('idle');
 
     onClose(createdToken);
   }
@@ -182,24 +179,6 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function copySecret(secret: string): void {
-    // jsdom and older browsers have no clipboard at all; a copy control that threw would take the
-    // secret's one showing down with it. Failure is reported, and the secret stays selectable.
-    if (!('clipboard' in navigator)) {
-      setCopyState('failed');
-      return;
-    }
-
-    navigator.clipboard.writeText(secret).then(
-      () => {
-        setCopyState('copied');
-      },
-      () => {
-        setCopyState('failed');
-      },
-    );
   }
 
   return (
@@ -365,7 +344,7 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
           </fieldset>
         </form>
       ) : (
-        <SecretSurface minted={minted} copyState={copyState} onCopy={copySecret} onDone={dismiss} />
+        <SecretSurface minted={minted} onDone={dismiss} />
       )}
     </Dialog>
   );
@@ -378,13 +357,30 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
  * person must leave this dialog holding: there is no second showing, by design - the server keeps
  * a hash, not the token.
  */
-function SecretSurface(props: {
+export function SecretSurface(props: {
   readonly minted: CreatedAccessToken;
-  readonly copyState: 'idle' | 'copied' | 'failed';
-  readonly onCopy: (secret: string) => void;
   readonly onDone: () => void;
 }): ReactNode {
-  const { minted, copyState, onCopy, onDone } = props;
+  const { minted, onDone } = props;
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  function copySecret(secret: string): void {
+    // jsdom and older browsers have no clipboard at all; a copy control that threw would take the
+    // secret's one showing down with it. Failure is reported, and the secret stays selectable.
+    if (!('clipboard' in navigator)) {
+      setCopyState('failed');
+      return;
+    }
+
+    navigator.clipboard.writeText(secret).then(
+      () => {
+        setCopyState('copied');
+      },
+      () => {
+        setCopyState('failed');
+      },
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -399,7 +395,7 @@ function SecretSurface(props: {
           <Button
             variant="secondary"
             onClick={() => {
-              onCopy(minted.token);
+              copySecret(minted.token);
             }}
           >
             <Icon icon={Copy} size="sm" />

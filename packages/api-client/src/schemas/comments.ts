@@ -35,6 +35,8 @@ export const commentsResponseSchema = z.object({
   revision: z.number().int().min(0),
   threads: z.array(commentThreadSchema),
   canComment: z.boolean(),
+  /** False while comments are switched off for the note: the threads are kept, but none is shown. */
+  enabled: z.boolean().default(true),
 });
 
 export type Comment = z.infer<typeof commentSchema>;

@@ -121,7 +121,7 @@ function SiteEntryProbe() {
 
 describe('publishing', () => {
   beforeEach(() => {
-    usePublishingPreference.setState({ enabled: false });
+    usePublishingPreference.setState({ enabled: true });
   });
 
   it('is not an editor preference; it has its own section', () => {
@@ -136,7 +136,7 @@ describe('publishing', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('is off by default, and switching it on and off shows and hides the site entry', async () => {
+  it('is on by default, and switching it off and on hides and shows the site entry', async () => {
     const user = userEvent.setup();
     render(
       <CapabilitiesProvider value={{ ...NO_CAPABILITIES, sites: true }}>
@@ -146,17 +146,17 @@ describe('publishing', () => {
     );
 
     const toggle = screen.getByRole('checkbox', { name: 'Show publishing on pages' });
-    expect(toggle).not.toBeChecked();
+    expect(toggle).toBeChecked();
     expect(
       screen.getByText('Adds Publish as a site to the page menu and the item panel'),
     ).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Publish as a site' })).not.toBeInTheDocument();
-
-    await user.click(toggle);
     expect(screen.getByRole('button', { name: 'Publish as a site' })).toBeVisible();
 
     await user.click(toggle);
     expect(screen.queryByRole('button', { name: 'Publish as a site' })).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(screen.getByRole('button', { name: 'Publish as a site' })).toBeVisible();
   });
 
   it('offers no toggle when the deployment has no sites', () => {

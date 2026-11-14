@@ -276,6 +276,14 @@ public sealed partial class ItemTree(
 
         _dbContext.Items.Add(item);
         _dbContext.Entry(item).Property(row => row.Properties).CurrentValue = ConversationImportProperties.Sanitize(item.Properties);
+
+        // A new item starts with its workspace's defaults, whichever path created it.
+        if (item.Settings is null
+            && await ReadItemDefaultsAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false) is { } defaults)
+        {
+            _dbContext.Entry(item).Property(row => row.Settings).CurrentValue = defaults;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // The row has to exist before its edges do: item_closure references it both ways, and the
@@ -289,6 +297,36 @@ public sealed partial class ItemTree(
                 NullableUuid("parent_id", item.ParentId?.Value),
             ],
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask SetSettingsAsync(ItemId id, string patch, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(patch);
+
+        // last_modified_at is left alone: a switch is not content. The sync trigger still marks the row.
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE item SET settings = COALESCE(settings, jsonb_build_object()) || {patch}::jsonb
+            WHERE id = {id.Value} AND tenant_id = {Tenant.Value}
+            """, cancellationToken).ConfigureAwait(false);
+    }
+
+    private readonly Dictionary<WorkspaceId, string?> _itemDefaults = [];
+
+    /// <inheritdoc />
+    public async ValueTask<string?> ReadItemDefaultsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken)
+    {
+        // Cached per request: an import creates many items in one workspace.
+        if (_itemDefaults.TryGetValue(workspaceId, out var cached))
+        {
+            return cached;
+        }
+
+        var stored = await _dbContext.Database.SqlQuery<string>($"""
+            SELECT item_defaults::text AS "Value" FROM workspace
+            WHERE tenant_id = {Tenant.Value} AND workspace_id = {workspaceId.Value}
+            """).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return _itemDefaults[workspaceId] = stored;
     }
 
     /// <inheritdoc />

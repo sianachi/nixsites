@@ -253,6 +253,37 @@ export const setItemProtection = (
     invalidates: [itemKey(itemId), workspaceTreeKey(workspaceId)],
   });
 
+export interface ItemSettingsInput {
+  /** Whether people may comment on the item; omitted leaves it as it is. */
+  readonly comments?: boolean;
+  /** Whether the editor offers suggesting; omitted leaves it as it is. */
+  readonly suggesting?: boolean;
+  /** Whether a file's versions carry review states; omitted leaves it as it is. */
+  readonly reviewStates?: boolean;
+  /** Whether a note's body uses the full pane width; omitted leaves it as it is. */
+  readonly fullWidth?: boolean;
+}
+
+/** Switches an item's optional features on or off. Anyone who may edit the item may call it. */
+export const setItemSettings = (
+  workspaceId: string,
+  itemId: string,
+  input: ItemSettingsInput,
+): CommandEndpoint<Item> =>
+  defineCommand<Item>({
+    operation: 'items.setSettings',
+    method: 'PUT',
+    path: `/api/v1/items/${itemId}/settings`,
+    schema: itemSchema,
+    body: {
+      comments: input.comments ?? null,
+      suggesting: input.suggesting ?? null,
+      reviewStates: input.reviewStates ?? null,
+      fullWidth: input.fullWidth ?? null,
+    } satisfies components['schemas']['SetItemSettingsRequest'],
+    invalidates: [itemKey(itemId), workspaceTreeKey(workspaceId)],
+  });
+
 /** Soft-deletes an item. The subtree stays intact and restoring is the same flag flipped back. */
 export const deleteItem = (workspaceId: string, itemId: string): CommandEndpoint<undefined> =>
   defineCommand<undefined>({

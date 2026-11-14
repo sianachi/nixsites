@@ -158,6 +158,15 @@ describe('SQLite mirror with real SQLite', () => {
     expect((await store.getCheckpoint(workspace)).cursor).toBe('2');
   });
 
+  it("keeps an item's settings across a reopen", async () => {
+    const setupResult = await setup();
+    const settings = { comments: true, suggesting: false, reviewStates: false, fullWidth: true };
+    await snapshot(setupResult.store, [item({ settings })]);
+    await setupResult.store.close();
+    const store = await setupResult.reopen();
+    expect((await store.listItems(workspace))[0]?.settings).toEqual(settings);
+  });
+
   it('rolls back both item changes and cursor advancement on a real SQLite trigger failure', async () => {
     const { store, driver } = await setup();
     await snapshot(store, [item()]);

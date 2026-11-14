@@ -492,6 +492,18 @@ public sealed class NixUnitOfWorkJitTests
             DateTimeOffset at,
             CancellationToken cancellationToken) => ValueTask.FromResult(false);
 
+        public ValueTask<PersonalAccessToken?> FindOwnAsync(
+            PersonalAccessTokenId id,
+            CancellationToken cancellationToken) => ValueTask.FromResult<PersonalAccessToken?>(null);
+
+        public ValueTask<bool> RotateOwnAsync(
+            PersonalAccessTokenId id,
+            string lookup,
+            ReadOnlyMemory<byte> secretHash,
+            DateTimeOffset expiresAt,
+            DateTimeOffset now,
+            CancellationToken cancellationToken) => ValueTask.FromResult(false);
+
         public ValueTask<AccessTokenSessionState?> FindSessionStateAsync(
             PersonalAccessTokenId id,
             CancellationToken cancellationToken) => ValueTask.FromResult<AccessTokenSessionState?>(null);

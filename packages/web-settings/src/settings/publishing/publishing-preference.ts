@@ -4,19 +4,21 @@ import { writeStored } from '@nix/web-foundation/lib/stored-setting';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { registerSyncedSetting, settingChanged } from '@nix/web-foundation/lib/ui-settings-sync';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
 /**
  * Whether the person wants site publishing shown for pages they own: synced to the account as
- * `sites.publishingEnabled`, off by default. A display choice only - Core's own gate decides
+ * `sites.publishingEnabled`, on by default. A display choice only - Core's own gate decides
  * whether anything can be published, and this is never read as permission.
  */
 const KEY = 'nix.sites-publishing';
 
 function read(): boolean {
   try {
-    return browserStorage()?.getItem(KEY) === '1';
+    // Only the opt-out is stored, so a device that never chose follows the default.
+    return browserStorage()?.getItem(KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -26,7 +28,7 @@ export const usePublishingPreference = create<{
 }>((set) => ({
   enabled: read(),
   setEnabled: (enabled) => {
-    writeStored(KEY, enabled ? '1' : null);
+    writeStored(KEY, enabled ? null : '0');
     set({ enabled });
     settingChanged('sites.publishingEnabled', enabled);
   },
@@ -37,11 +39,18 @@ registerSyncedSetting('sites.publishingEnabled', {
   set: (enabled) => {
     usePublishingPreference.getState().setEnabled(enabled);
   },
-  defaultValue: false,
+  defaultValue: true,
 });
 
 /** Whether to draw any site entry point: the deployment offers sites and the person asked for them. */
 export function useSitesVisible(): boolean {
   const offered = useCapabilities().sites;
   return usePublishingPreference((state) => state.enabled) && offered;
+}
+
+/** Whether to offer publishing on an item: sites are visible and the person manages the workspace, as Core requires. */
+export function useCanPublishSites(): boolean {
+  const visible = useSitesVisible();
+  const manages = useOptionalWorkspace()?.workspace.canManageMembers === true;
+  return visible && manages;
 }

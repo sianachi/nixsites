@@ -72,6 +72,32 @@ public interface IPersonalAccessTokens
         DateTimeOffset at,
         CancellationToken cancellationToken);
 
+    /// <summary>Reads one of the acting principal's tokens, or <see langword="null"/> when it is not theirs.</summary>
+    /// <param name="id">The token to read.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The row, untracked.</returns>
+    public ValueTask<PersonalAccessToken?> FindOwnAsync(
+        PersonalAccessTokenId id,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Swaps a live token's secret and expiry in place, keeping its identity, name and scopes.
+    /// </summary>
+    /// <param name="id">The token to rotate.</param>
+    /// <param name="lookup">The new lookup half.</param>
+    /// <param name="secretHash">The new secret's hash.</param>
+    /// <param name="expiresAt">The restarted expiry.</param>
+    /// <param name="now">The moment liveness is judged against.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>Whether a row changed: false when it is not the caller's, revoked or expired.</returns>
+    public ValueTask<bool> RotateOwnAsync(
+        PersonalAccessTokenId id,
+        string lookup,
+        ReadOnlyMemory<byte> secretHash,
+        DateTimeOffset expiresAt,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
+
     /// <summary>
     /// Reads the row the unit-of-work middleware re-checks on every token-authenticated request.
     /// </summary>
@@ -126,9 +152,11 @@ public sealed record AccessTokenExchangeCandidate(
 /// <param name="ExpiresAt">When the token stops working.</param>
 /// <param name="RevokedAt">When it was revoked, if it was.</param>
 /// <param name="LastUsedAt">When it last authenticated, coarsened.</param>
+/// <param name="Lookup">The lookup half of the current secret; rotation replaces it.</param>
 public sealed record AccessTokenSessionState(
     PrincipalId PrincipalId,
     IReadOnlyList<string> Scopes,
     DateTimeOffset ExpiresAt,
     DateTimeOffset? RevokedAt,
-    DateTimeOffset? LastUsedAt);
+    DateTimeOffset? LastUsedAt,
+    string Lookup);

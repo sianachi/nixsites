@@ -143,6 +143,51 @@ public sealed class PersonalAccessTokenStore(
     }
 
     /// <inheritdoc />
+    public async ValueTask<PersonalAccessToken?> FindOwnAsync(
+        PersonalAccessTokenId id,
+        CancellationToken cancellationToken)
+    {
+        var principal = Principal;
+        return await _context.PersonalAccessTokens
+            .AsNoTracking()
+            .Where(token => token.Id == id && token.PrincipalId == principal)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> RotateOwnAsync(
+        PersonalAccessTokenId id,
+        string lookup,
+        ReadOnlyMemory<byte> secretHash,
+        DateTimeOffset expiresAt,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var principal = Principal;
+        var hash = secretHash.ToArray();
+
+        // Ownership and liveness are in the statement, so a revoked or expired row can never be
+        // revived by a race with a revocation.
+        var changed = await _context.PersonalAccessTokens
+            .Where(token => token.Id == id
+                && token.PrincipalId == principal
+                && token.RevokedAt == null
+                && token.ExpiresAt > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(token => token.Lookup, lookup)
+                    .SetProperty(token => token.SecretHash, hash)
+                    // Issued-at restarts too, so the next rotation measures the same lifetime, not a longer one.
+                    .SetProperty(token => token.CreatedAt, now)
+                    .SetProperty(token => token.ExpiresAt, expiresAt),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return changed > 0;
+    }
+
+    /// <inheritdoc />
     public async ValueTask<AccessTokenSessionState?> FindSessionStateAsync(
         PersonalAccessTokenId id,
         CancellationToken cancellationToken)
@@ -154,7 +199,8 @@ public sealed class PersonalAccessTokenStore(
                 token.Scopes,
                 token.ExpiresAt,
                 token.RevokedAt,
-                token.LastUsedAt))
+                token.LastUsedAt,
+                token.Lookup))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }

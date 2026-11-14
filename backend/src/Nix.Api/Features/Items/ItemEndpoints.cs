@@ -197,6 +197,18 @@ internal static class ItemEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
+        items.MapPut("/{itemId:guid}/settings", SetItemSettingsEndpoint.Handle)
+            .WithName("SetItemSettings")
+            .WithSummary("Switch an item's optional features on or off")
+            .WithDescription(
+                "Sets comments, suggesting, file review states and full width for one item. All are "
+                + "off until switched on. A field left null is unchanged. Anyone who may edit the "
+                + "item may change them. Turning comments off keeps existing threads but refuses "
+                + "new ones with 'comments.disabled' (409).")
+            .Produces<ItemResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+
         items.MapPost("/{itemId:guid}/restore", RestoreItemEndpoint.Handle)
             .WithName("RestoreItem")
             .WithSummary("Restore a soft-deleted item")

@@ -535,8 +535,12 @@ export function MenuPanel(props: MenuPanelProps): ReactNode {
       const node =
         typeof entry.content === 'function'
           ? entry.content({
-              close: () => onClose(false),
-              closeAndRestoreFocus: () => onClose(true),
+              close: () => {
+                onClose(false);
+              },
+              closeAndRestoreFocus: () => {
+                onClose(true);
+              },
             })
           : entry.content;
       return <Fragment key={entry.key ?? `content-${String(index)}`}>{node}</Fragment>;

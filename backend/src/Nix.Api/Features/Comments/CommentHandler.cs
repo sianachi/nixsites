@@ -91,6 +91,11 @@ public sealed class CommentHandler(
             return Result.Failure<CommentThreadDto>(gate.Error);
         }
 
+        if (Disabled(gate.Value))
+        {
+            return CommentsOff<CommentThreadDto>();
+        }
+
         var anchor = request.Anchor;
         string? quote = null;
         if (anchor is not null)
@@ -143,6 +148,11 @@ public sealed class CommentHandler(
         if (gate.IsFailure)
         {
             return Result.Failure<CommentThreadDto>(gate.Error);
+        }
+
+        if (Disabled(gate.Value))
+        {
+            return CommentsOff<CommentThreadDto>();
         }
 
         var root = await RootAsync(command.ItemId, command.ThreadId, cancellationToken).ConfigureAwait(false);
@@ -365,10 +375,18 @@ public sealed class CommentHandler(
             : Result.Failure<Item>(ItemErrors.LifecycleConflict("A trashed note cannot be commented on."));
     }
 
+    // Existing threads are kept and still returned (flagged by Enabled); only new comments and replies are refused.
+    private static bool Disabled(Item item) => !ItemSettings.Read(item.Settings).Comments;
+
+    private static Result<T> CommentsOff<T>() =>
+        Result.Failure<T>(new NixError("comments.disabled", "Comments are switched off for this note. Turn them on in its settings."));
+
     private async ValueTask<CommentsResponse> ReadForCallerAsync(Item item, CancellationToken cancellationToken) =>
         (await ReadAsync(item.Id, cancellationToken).ConfigureAwait(false)) with
         {
-            CanComment = await permissions.CanCommentWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false),
+            CanComment = !Disabled(item)
+                && await permissions.CanCommentWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false),
+            Enabled = !Disabled(item),
         };
 
     private async ValueTask<CommentsResponse> ReadAsync(ItemId itemId, CancellationToken cancellationToken)

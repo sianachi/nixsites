@@ -5,6 +5,7 @@ import { PartialNotice } from '@nix/web-foundation/components/states/status-pane
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { ConfirmationDialog } from './settings/confirmation-dialog';
 import { InviteSection } from './settings/invite-section';
+import { ItemDefaultsSwitches } from './settings/item-defaults-switches';
 import { PeopleList } from './settings/people-list';
 import type { Confirmation } from './settings/shared';
 import { SharingSwitches } from './settings/sharing-switches';
@@ -55,6 +56,13 @@ export function WorkspaceManagementSection({
         {workspace.canRename ? null : (
           <Text variant="note">Only a workspace owner or an administrator can change these.</Text>
         )}
+      </section>
+
+      <section aria-labelledby="workspace-item-defaults-heading" className="flex flex-col gap-1">
+        <Text id="workspace-item-defaults-heading" variant="h4" as="h3">
+          New items
+        </Text>
+        <ItemDefaultsSwitches />
       </section>
 
       <WorkspacePasswordSection />

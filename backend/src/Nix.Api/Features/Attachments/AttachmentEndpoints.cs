@@ -26,6 +26,7 @@ namespace Nix.Features.Attachments;
 /// <param name="ExpiresAt">The item's expiry, or null.</param>
 /// <param name="SourceItemId">The note the shown version was exported from, or null.</param>
 /// <param name="PinCount">How many references pin a version of this file.</param>
+/// <param name="ReviewStates">Whether this file has review states switched on; when false, show no Draft, In review or Approved wording or controls for it.</param>
 public sealed record AttachmentRow(
     Guid ItemId,
     string Title,
@@ -35,7 +36,8 @@ public sealed record AttachmentRow(
     DateTimeOffset? ExpiresAt,
     Guid? SourceItemId,
     int PinCount,
-    bool HasPublicLink);
+    bool HasPublicLink,
+    bool ReviewStates = false);
 
 /// <summary>One page of attachments; the endpoint wraps it as a CursorPage.</summary>
 public sealed record AttachmentPage(IReadOnlyList<AttachmentRow> Items, string? NextCursor);
@@ -77,7 +79,8 @@ public sealed class ListAttachmentsHandler(
                  WHERE pin.tenant_id = @tenant_id AND pin.target_item_id = item.id
                    AND {ItemProtectionSql.LivePin})::int,
                EXISTS (SELECT 1 FROM public_link AS link
-                 WHERE link.tenant_id = @tenant_id AND link.item_id = item.id AND link.revoked_at IS NULL)
+                 WHERE link.tenant_id = @tenant_id AND link.item_id = item.id AND link.revoked_at IS NULL),
+               item.settings::text
         FROM file_body AS body
         JOIN item ON item.tenant_id = @tenant_id AND item.id = body.item_id
         JOIN LATERAL (
@@ -167,9 +170,10 @@ public sealed class ListAttachmentsHandler(
             Guid? source = reader.IsDBNull(6) ? null : reader.GetGuid(6);
             var pins = reader.GetInt32(7);
             var link = reader.GetBoolean(8);
+            var reviewStates = ItemSettings.Read(reader.IsDBNull(9) ? null : reader.GetString(9)).ReviewStates;
 
             var expiresAt = ReminderInstant.Read(properties, ItemProperties.ExpiryKey);
-            return new AttachmentRow(id, title, mediaType, versionId, state, expiresAt, source, pins, link);
+            return new AttachmentRow(id, title, mediaType, versionId, state, expiresAt, source, pins, link, reviewStates);
         }
     }
 }

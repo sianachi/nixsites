@@ -924,6 +924,99 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/item-defaults": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "The settings new items in a workspace start with",
+        "operationId": "GetWorkspaceItemDefaults",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemSettings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Change the settings new items in a workspace start with",
+        "description": "Workspace owners only. A field left null is unchanged. Existing items keep their own settings.",
+        "operationId": "SetWorkspaceItemDefaults",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetItemDefaultsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemSettings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/lookup": {
       "post": {
         "tags": [
@@ -3283,6 +3376,59 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/settings": {
+      "put": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Switch an item's optional features on or off",
+        "description": "Sets comments, suggesting, file review states and full width for one item. All are off until switched on. A field left null is unchanged. Anyone who may edit the item may change them. Turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409).",
+        "operationId": "SetItemSettings",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetItemSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10853,6 +10999,59 @@
         }
       }
     },
+    "/api/v1/me/tokens/{tokenId}/rotate": {
+      "post": {
+        "tags": [
+          "AccessTokens"
+        ],
+        "summary": "Rotate a personal access token",
+        "description": "Keeps the token's identity, name and scopes but issues a new secret, shown in this response only. The old secret stops working immediately. The expiry restarts from now with the token's original lifetime, capped at 365 days. Fails with 'tokens.not_found' when the token is not the caller's, and 'tokens.not_rotatable' when it is revoked or expired.",
+        "operationId": "RotateAccessToken",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedAccessTokenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/v1/auth/token": {
       "post": {
         "tags": [
@@ -13358,6 +13557,10 @@
           },
           "hasPublicLink": {
             "type": "boolean"
+          },
+          "reviewStates": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -15017,6 +15220,10 @@
           "canComment": {
             "type": "boolean",
             "default": false
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -17971,6 +18178,7 @@
           "noDelete",
           "noChildren",
           "collaboration",
+          "settings",
           "managedBy",
           "createdAt",
           "updatedAt"
@@ -18034,6 +18242,9 @@
           "collaboration": {
             "type": "boolean"
           },
+          "settings": {
+            "$ref": "#/components/schemas/ItemSettings"
+          },
           "managedBy": {
             "type": [
               "null",
@@ -18053,6 +18264,27 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ItemSettings": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "boolean",
+            "default": false
+          },
+          "suggesting": {
+            "type": "boolean",
+            "default": false
+          },
+          "reviewStates": {
+            "type": "boolean",
+            "default": false
+          },
+          "fullWidth": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -18501,6 +18733,16 @@
               },
               {
                 "$ref": "#/components/schemas/NativeFileSnapshot"
+              }
+            ]
+          },
+          "settings": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ItemSettings"
               }
             ]
           }
@@ -20938,6 +21180,41 @@
           }
         }
       },
+      "SetItemDefaultsRequest": {
+        "required": [
+          "comments",
+          "suggesting",
+          "reviewStates",
+          "fullWidth"
+        ],
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "suggesting": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "reviewStates": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "fullWidth": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "SetItemLockRequest": {
         "required": [
           "password",
@@ -20976,6 +21253,41 @@
             ]
           },
           "collaboration": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "SetItemSettingsRequest": {
+        "required": [
+          "comments",
+          "suggesting",
+          "reviewStates",
+          "fullWidth"
+        ],
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "suggesting": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "reviewStates": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "fullWidth": {
             "type": [
               "null",
               "boolean"

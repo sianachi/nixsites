@@ -1,8 +1,8 @@
 /**
  * The personal-access-token resource: the only place its URLs appear.
  *
- * Management (list, mint, revoke) hangs under `/me` and requires an interactive session - the API
- * refuses a token-authenticated caller here, so these three descriptors are for the settings
+ * Management (list, mint, rotate, revoke) hangs under `/me` and requires an interactive session - the API
+ * refuses a token-authenticated caller here, so these descriptors are for the settings
  * screen, never for a scripted client. The exchange is the opposite: unauthenticated by nature,
  * because a session is what it buys.
  */
@@ -74,6 +74,20 @@ export const revokeAccessToken = (tokenId: string): CommandEndpoint<undefined> =
     method: 'DELETE',
     path: `/api/v1/me/tokens/${tokenId}`,
     schema: noContentSchema,
+    invalidates: [tokensKey],
+  });
+
+/**
+ * Replaces a live token's secret, keeping its id, name and scopes. The old secret dies at once and
+ * the new one appears in this response only. Fails with `tokens.not_found` and, for a revoked or
+ * expired token, `tokens.not_rotatable`.
+ */
+export const rotateAccessToken = (tokenId: string): CommandEndpoint<CreatedAccessToken> =>
+  defineCommand<CreatedAccessToken>({
+    operation: 'tokens.rotate',
+    method: 'POST',
+    path: `/api/v1/me/tokens/${tokenId}/rotate`,
+    schema: createdAccessTokenSchema,
     invalidates: [tokensKey],
   });
 

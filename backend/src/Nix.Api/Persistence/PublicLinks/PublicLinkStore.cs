@@ -164,14 +164,17 @@ internal sealed class PublicLinkStore(
     public async ValueTask<FileVersion?> FindVersionAsync(
         ItemId itemId,
         Guid? versionId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool newestUnrevoked = false)
     {
         var versions = database.FileVersions.AsNoTracking()
             .Where(version => version.ItemId == itemId && version.ObjectReady);
         return versionId is { } named
             ? await versions.SingleOrDefaultAsync(version => version.Id == FileVersionId.From(named), cancellationToken)
                 .ConfigureAwait(false)
-            : await versions.Where(version => version.State == FileVersionStates.Approved)
+            : await versions.Where(version => newestUnrevoked
+                    ? version.State != FileVersionStates.Revoked
+                    : version.State == FileVersionStates.Approved)
                 .OrderByDescending(version => version.Version)
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
