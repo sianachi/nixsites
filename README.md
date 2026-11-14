@@ -40,8 +40,6 @@ Open <http://nix.localhost> in Chrome or Firefox and sign in with the details it
 Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost auth.nix.localhost` to
 `/etc/hosts` first. A public hostname, Kubernetes and backups are in [Run it for real](#run-it-for-real).
 
-![A launch plan on a board in Nix](assets/screenshots/board.png)
-
 Demo recording:
 
 https://github.com/user-attachments/assets/45a8a3df-a709-4c86-b762-895fcc0fffa5
@@ -69,22 +67,6 @@ https://github.com/user-attachments/assets/45a8a3df-a709-4c86-b762-895fcc0fffa5
   public link. The [live demo](https://nix.nixsites.com/) above is a published site.
 
 The full list is in [docs/features.md](docs/features.md).
-
-## Screenshots
-
-One tree of items, shown the way each job needs. All data here is made up.
-
-| | |
-| --- | --- |
-| ![Timeline](assets/screenshots/timeline.png)<br>**Timeline** | ![Calendar](assets/screenshots/calendar.png)<br>**Calendar** |
-| ![Spreadsheet](assets/screenshots/sheet.png)<br>**Spreadsheet** | ![List](assets/screenshots/list.png)<br>**List** |
-| ![Priority matrix](assets/screenshots/matrix.png)<br>**Matrix** | ![Notes](assets/screenshots/note.png)<br>**Rich notes** |
-| ![Habits](assets/screenshots/habits.png)<br>**Habits** | ![Companion chat](assets/screenshots/chat.png)<br>**Companion chat** |
-| ![Dark theme](assets/screenshots/dark.png)<br>**Dark theme** | |
-
-**On a phone.** Nix installs as an app, with the same views and a share target.
-
-<img src="assets/screenshots/mobile-board.png" alt="Board on a phone" width="150"> <img src="assets/screenshots/mobile-calendar.png" alt="Calendar on a phone" width="150"> <img src="assets/screenshots/mobile-note.png" alt="Note on a phone" width="150"> <img src="assets/screenshots/mobile-habits.png" alt="Habits on a phone" width="150"> <img src="assets/screenshots/mobile-chat.png" alt="Companion chat on a phone" width="150">
 
 ## Apps
 
