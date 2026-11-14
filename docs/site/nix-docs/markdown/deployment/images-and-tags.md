@@ -9,6 +9,7 @@ CI builds Nix's images in `.github/workflows/ci-images.yml` on every push to `ma
 | api | Core |
 | migrator | Core's database migrations |
 | collab | The collaboration service, and its document migration command |
+| worker | The Go worker binary for every role |
 | web | The web app and Caddy |
 | sites | The sites build worker and the sites serving process |
 | release-tools | nixctl and the release smoke test, so the host needs no Node |

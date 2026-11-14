@@ -38,6 +38,14 @@ NIX_COLLAB_DATABASE_URL=postgresql://nix_collab:<collab-password>@postgres:5432/
 
 Generate each with a strong random value, for example `openssl rand -base64 48`.
 
+## RabbitMQ
+
+Each component has its own broker credential. Use URL-safe values, because Compose builds connection URLs from them.
+
+`NIX_RABBITMQ_API_PASSWORD`, `NIX_RABBITMQ_IMPORT_PASSWORD`, `NIX_RABBITMQ_EXPORT_PASSWORD`, `NIX_RABBITMQ_PLUGIN_PASSWORD`, `NIX_RABBITMQ_CALENDAR_PASSWORD`, `NIX_RABBITMQ_NOTIFY_PASSWORD`, and `NIX_RABBITMQ_SITES_PASSWORD` when Sites is enabled
+
+To use an external TLS broker instead of the bundled one, set a full `amqps://` URL for every role: `NIX_RABBITMQ_API_URL`, `NIX_RABBITMQ_IMPORT_URL`, `NIX_RABBITMQ_EXPORT_URL`, `NIX_RABBITMQ_PLUGIN_URL`, `NIX_RABBITMQ_CALENDAR_URL` and `NIX_RABBITMQ_NOTIFY_URL`.
+
 ## Object storage
 
 | Variable | Purpose |
@@ -120,6 +128,7 @@ Optional. Leave these unset and nothing about Sites runs.
 | COMPOSE\_PROFILES | Set to sites to start the two Sites services |
 | NIX\_SITES\_DOMAIN | The domain sites are served under, as \<slug>.\<sites-domain>. It must not share a registrable domain with NIX\_PUBLIC\_ORIGIN |
 | NIX\_SITES\_BUCKET | The bucket built sites are written to. Defaults to nix-sites |
+| NIX\_RABBITMQ\_SITES\_PASSWORD | The sites worker's own broker password |
 | NIX\_SITES\_READ\_ACCESS\_KEY, NIX\_SITES\_READ\_SECRET\_KEY | The serving process's storage credential. Use a key that can only read the sites bucket where your store supports it |
 | NIX\_SITES\_DEFAULT\_LABEL\_SUFFIX | Optional. A label suffix for this instance's default hostnames, as \<slug>\<suffix>.\<sites-domain>, when another deployment shares the sites domain |
 | NIX\_SITES\_CLOUDFLARE\_API\_TOKEN | Optional. Lets Nix create DNS records and tunnel routes for site hostnames. Needs Zone:Read, DNS:Edit and Cloudflare Tunnel:Edit |
@@ -142,7 +151,7 @@ The Kubernetes manifests read the same settings from Secrets and ConfigMaps inst
 | SITES\_FOREIGN\_LABEL\_SUFFIX | Defaults to -home; set it empty when no other deployment shares the domain |
 | POD\_CIDR | Defaults to 10.42.0.0/16 |
 
-The inputs to `create-secrets.sh` include `DOMAIN`, the `NIX_OBJECT_STORE_*` and `NIX_CALENDAR_*` values, `NIX_SITES_BUCKET` and `NIX_SITES_READ_*`, the optional `NIX_SITES_CLOUDFLARE_*` values, `NIX_PUSH_VAPID_*`, `NIX_ORIGIN_TLS_CERT_FILE`, `NIX_ORIGIN_TLS_KEY_FILE`, and `NIX_ZITADEL_ADMIN_USERNAME` and `NIX_ZITADEL_ADMIN_PASSWORD`. Passwords for the database, internal secret and signing keys are generated.
+The inputs to `create-secrets.sh` include `DOMAIN`, the `NIX_OBJECT_STORE_*` and `NIX_CALENDAR_*` values, `NIX_SITES_BUCKET` and `NIX_SITES_READ_*`, the optional `NIX_SITES_CLOUDFLARE_*` values, `NIX_PUSH_VAPID_*`, `NIX_ORIGIN_TLS_CERT_FILE`, `NIX_ORIGIN_TLS_KEY_FILE`, and `NIX_ZITADEL_ADMIN_USERNAME` and `NIX_ZITADEL_ADMIN_PASSWORD`. Passwords for the database, broker, internal secret and signing keys are generated.
 
 ## Properties
 

@@ -8,7 +8,7 @@ Everything in Nix is an item. A note, a project, a reading list and a budget are
 
 - **Write.** Rich collaborative notes with headings, tables, callouts, columns, collapsible sections, code, images and Mermaid diagrams. Optional Vim and Emacs keyboard modes.
 - **Structure.** Give a container fields that cascade to everything inside it, then add formulas, rollups and charts.
-- **See things differently.** List, board, calendar, gallery, timeline, spreadsheet, chart, form, smart list, checklist, matrix, outline, drive, habit tracker and finance views over the same children.
+- **See things differently.** List, board, calendar, gallery, timeline, spreadsheet, chart, form, smart list, checklist, matrix, outline, drive, guided form, custom and habit tracker views over the same children. The [landing page](https://nixsites.com/#views) shows each one in light and dark, on desktop and phone.
 - **Plan.** Due dates, recurring tasks, reminders with quiet hours, automations and two-way sync with Google Calendar and Microsoft Outlook.
 - **Draw and calculate.** Canvas bodies for diagrams and whiteboards, spreadsheet bodies with A1 formulas.
 - **Work with AI.** Every workspace has a companion that can do anything you can do in Nix and asks before it changes anything. It searches your notes by meaning, answers with tables and charts you can edit, and remembers what you ask it to.
@@ -16,6 +16,12 @@ Everything in Nix is an item. A note, a project, a reading list and a budget are
 - **Bring your own agents.** `nixctl` gives you every operation from a terminal, with JSON output, and its MCP server gives agents such as Claude and Codex the same reach, under the same permissions as you.
 - **Leave whenever you like.** Export a page or a whole subtree as a lossless `.nix` archive, Markdown, PDF or Word, with any losses reported before you export.
 - **Publish.** Turn any page tree into a static website. This site is one.
+
+## Apps
+
+Native apps for iOS, Android, macOS, Windows and Linux are on the way. The [landing page](https://nixsites.com/#apps) lists each one with a download button; until an app has a link the button reads "Coming soon". Until then, install the web app on your phone from the browser.
+
+Nix is open source. If it is useful to you, a [star on GitHub](https://github.com/sianachi/nixsites) helps other people find it.
 
 ## Why it is built this way
 

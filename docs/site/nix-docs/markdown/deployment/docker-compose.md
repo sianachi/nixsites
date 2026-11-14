@@ -11,9 +11,16 @@ The production manifest is `deploy/compose.prod.yml` in the repository. Images c
 | Service | Role |
 | --- | --- |
 | postgres | PostgreSQL 16 with pgvector: all durable state and search |
+| rabbitmq | Job transport between Core and the workers |
 | nix-versitygw | S3-compatible storage for file bytes |
 | nix-api | Core: API, permissions, sign-in and search |
-| nix-node | One Node process: collaboration (live editing, history, import and export assembly), the pet companion runtime (codex app-server) and, when `NIX_SITES_DOMAIN` is set, the sites build worker |
+| nix-collab | Collaboration: live editing, history, import and export assembly |
+| nix-import-worker | Imports and file inspection; also hosts the optional companion runtime |
+| nix-export-worker | Native, Markdown, PDF and Word exports |
+| nix-plugin-worker | Signed WebAssembly plugin runs |
+| nix-calendar-worker | Google and Outlook calendar sync |
+| nix-notify-worker | Web Push delivery |
+| nix-sites-worker | Builds published websites (sites profile) |
 | nix-sites-serve | Serves published websites to anonymous readers (sites profile) |
 | nix-web | The web app, served by Caddy, which also routes the API, collaboration and storage |
 | cloudflared | An optional tunnel connector for public ingress |
@@ -28,7 +35,7 @@ One-shot jobs prepare each release:
 | nix-storage-init | Creates the storage bucket (maintenance profile) |
 | nix-collab-migrate | Document schema migrations (maintenance profile) |
 
-Every service drops all Linux capabilities, cannot gain new privileges and, where it can, runs with a read-only filesystem.
+All five workers use the same `worker` image with a different role. Every service drops all Linux capabilities, cannot gain new privileges and, where it can, runs with a read-only filesystem.
 
 ## Profiles
 
@@ -37,9 +44,9 @@ Two Compose profiles keep optional services out of a normal `up`:
 | Profile | Services | How it is used |
 | --- | --- | --- |
 | maintenance | nix-storage-init, nix-collab-migrate | Run as one-shot jobs during a release |
-| sites | nix-sites-serve | Set COMPOSE\_PROFILES=sites and NIX\_SITES\_DOMAIN to publish websites |
+| sites | nix-sites-worker, nix-sites-serve | Set COMPOSE\_PROFILES=sites and NIX\_SITES\_DOMAIN to publish websites |
 
-To enable Sites, set the two variables above, then point a wildcard hostname for `*.<sites-domain>` at the web container with the `Host` header left as sent. Caddy routes one-label hostnames under the sites domain to `nix-sites-serve`. `nix-storage-init` creates the sites bucket. See [Sites](nix://item/01a130b0-106e-79a7-868c-435fae417b52) and [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
+To enable Sites, set the two variables above and a distinct broker password for the sites worker, then point a wildcard hostname for `*.<sites-domain>` at the web container with the `Host` header left as sent. Caddy routes one-label hostnames under the sites domain to `nix-sites-serve`. `nix-storage-init` creates the sites bucket. See [Sites](nix://item/01a130b0-106e-79a7-868c-435fae417b52) and [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 
 ## The release scripts
 
@@ -84,7 +91,7 @@ Then proxy `https://<your-domain>` to `http://127.0.0.1:8090`, passing the origi
 
 ## First start
 
-1. **Check out the release.** Clone the repository and check out the full commit SHA you intend to run. The manifest and seed files must match the images. Wait until CI has published images for that commit.
+1. **Check out the release.** Clone the repository and check out the full commit SHA you intend to run. The manifest, RabbitMQ configuration and seed files must match the images. Wait until CI has published images for that commit.
 2. **Write the environment file.** Copy `deploy/compose.prod.env.example` to a private path outside the checkout, set its mode to `0600` and replace every placeholder. See [Configuration](nix://item/01a130b0-14df-721e-b23c-3f24282e0eae).
 
    ```sh
@@ -103,7 +110,7 @@ Then proxy `https://<your-domain>` to `http://127.0.0.1:8090`, passing the origi
 4. **Start the infrastructure.**
 
    ```sh
-   dc up -d --wait postgres nix-versitygw
+   dc up -d --wait postgres rabbitmq nix-versitygw
    ```
 5. **Create the database and roles.** Nix uses three database roles: `nix_migrator` owns the schema and runs migrations, `nix_app` is Core's runtime role, and `nix_collab` is the collaboration service's role. Neither runtime role may bypass row-level security. The repository's seed files create them with your passwords:
 

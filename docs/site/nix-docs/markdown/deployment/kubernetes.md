@@ -2,7 +2,7 @@
 
 # Kubernetes
 
-The manifests in `deploy/k8s/` run a complete Nix deployment on a Kubernetes cluster: the application, its database, object store, the Zitadel identity provider and the Sites services. They are rendered with `envsubst` and applied by `deploy/k8s/deploy.sh`. `deploy/install.sh --kubernetes` runs them for you on any cluster (see [Install in one line](nix://item/01a16030-a2fa-76fd-bef3-cb99a1a146d0)); what follows describes the manifests and their defaults, which are a k3s cluster behind Cloudflare.
+The manifests in `deploy/k8s/` run a complete Nix deployment on a Kubernetes cluster: the application, its database, broker, object store, the Zitadel identity provider and the Sites services. They are rendered with `envsubst` and applied by `deploy/k8s/deploy.sh`. `deploy/install.sh --kubernetes` runs them for you on any cluster (see [Install in one line](nix://item/01a16030-a2fa-76fd-bef3-cb99a1a146d0)); what follows describes the manifests and their defaults, which are a k3s cluster behind Cloudflare.
 
 The Kubernetes path is kept for an explicit switch. Every script in `deploy/k8s/` and `deploy/docker/build-and-push.sh` refuses to run unless you set:
 
@@ -26,6 +26,7 @@ export NIX_DEPLOY_TARGET=kubernetes
 | namespace.yaml | The nix namespace |
 | postgres.yaml | PostgreSQL 16 with pgvector, as a StatefulSet with a 20 Gi volume |
 | objectstore.yaml | The versitygw object store with a 20 Gi retained volume, and a policy that limits who may reach it |
+| rabbitmq.yaml | RabbitMQ 4.1 with a 5 Gi volume and an ingress policy |
 | api.yaml | Core, one replica, with a small volume for its data-protection keys |
 | collab.yaml | The collaboration service, one replica, replaced rather than rolled |
 | worker.yaml | One combined worker running all five roles, and its egress policy |
@@ -50,6 +51,7 @@ Run `deploy/k8s/create-secrets.sh` once per cluster before the first deploy. It 
 | nix-db | The PostgreSQL superuser, migrator, app and collaboration passwords |
 | nix-connections | The derived connection strings for Core, the migrator, collaboration and document migrations |
 | nix-internal | The internal service secret and the public forms signing key |
+| nix-rabbitmq | One password and URL per broker account |
 | nix-object-store | The storage endpoint, public origin, region, bucket and keys |
 | nix-calendar | Google and Microsoft OAuth client IDs and secrets |
 | nix-sites | The sites bucket and the sites server's read-only key |
@@ -59,7 +61,7 @@ Run `deploy/k8s/create-secrets.sh` once per cluster before the first deploy. It 
 | nix-zitadel | Zitadel's master key, database password and first administrator |
 | nix-auth | The P-256 key that signs Nix access tokens |
 
-It refuses to run again once `nix-db` exists, so it can never silently rotate passwords the database does not know. To change one external service later, run it with one of `--object-store-only`, `--calendar-only`, `--sites-only`, `--sites-cloudflare-only`, `--push-only`, `--tls-only` or `--zitadel-only`. The sites server's key must be a different, read-only key; the script refuses to reuse the write key.
+It refuses to run again once `nix-db` exists, so it can never silently rotate passwords the database does not know. To change one external service later, run it with one of `--rabbitmq-only`, `--object-store-only`, `--calendar-only`, `--sites-only`, `--sites-cloudflare-only`, `--push-only`, `--tls-only` or `--zitadel-only`. The sites server's key must be a different, read-only key; the script refuses to reuse the write key.
 
 Values reach `kubectl` through your shell. Once the deployment is more than a first bring-up, consider sealed secrets or an external secrets operator.
 
@@ -77,19 +79,20 @@ deploy/k8s/deploy.sh
 The script applies a release in an order that stops a bad step before it reaches users:
 
 1. checks that every required Secret and key exists;
-2. removes retired workloads, keeping their volumes (including the retired RabbitMQ StatefulSet, Service, policy and Secret);
+2. removes retired workloads, keeping their volumes;
 3. PostgreSQL;
 4. the object store, then the storage job;
-5. the seed job for database roles;
-6. Zitadel's database job and Zitadel;
-7. Core and document migrations;
-8. template presets;
-9. Caddy's configuration;
-10. Core, collaboration, the worker, the web app and the Sites services, waiting for each rollout;
-11. the Cloudflare-only middleware and the Ingresses;
-12. the worker rollout, whose readiness depends on the public origin;
-13. the backup CronJob;
-14. the managed template library, if enabled.
+5. RabbitMQ's configuration and broker;
+6. the seed job for database roles;
+7. Zitadel's database job and Zitadel;
+8. Core and document migrations;
+9. template presets;
+10. Caddy's configuration;
+11. Core, collaboration, the worker, the web app and the Sites services, waiting for each rollout;
+12. the Cloudflare-only middleware and the Ingresses;
+13. the worker rollout, whose readiness depends on the public origin;
+14. the backup CronJob;
+15. the managed template library, if enabled.
 
 ### First install
 
@@ -123,7 +126,8 @@ The middleware admits only Cloudflare's published address ranges, so nobody can 
 | Policy | Rule |
 | --- | --- |
 | versitygw-ingress | Only Core, collaboration, the web app, the worker, both Sites services and the storage job may reach the object store |
-| worker-egress | The worker may reach Core, collaboration, the object store, HTTPS and DNS |
+| rabbitmq-ingress | Only Core, the worker and the sites worker may reach the broker |
+| worker-egress | The worker may reach Core, collaboration, the broker, the object store, HTTPS and DNS |
 | sites-worker-egress | The same set as the worker |
 | sites-serve-egress | The sites server may reach only the object store, HTTPS and DNS |
 
@@ -135,6 +139,7 @@ Requests are deliberately small and limits are capped:
 | --- | --- | --- |
 | PostgreSQL | 384 Mi | 1 Gi |
 | Object store | 64 Mi | 512 Mi |
+| RabbitMQ | 192 Mi | 768 Mi |
 | Core | 256 Mi | 512 Mi |
 | Collaboration | 320 Mi | 768 Mi |
 | Worker (all roles) | 160 Mi | 1 Gi |
@@ -151,7 +156,7 @@ The combined worker exists to fit a single small node. Split it back into one De
 DOMAIN=<your-domain> SITE_HOST=<slug>.<your-domain> deploy/k8s/verify.sh
 ```
 
-`verify.sh` runs its checks in order, each failing in its own way: pods, Core's health and status, log scans, collaboration, the workers, the object store (an unsigned request must be refused), Zitadel's issuer, the sites server, the public app routes, that `/internal/authorize` answers `404` publicly, that a Content Security Policy is present, that the apex is not served by Sites and, with `SITE_HOST`, that a site answers with its own policy and sets no cookie.
+`verify.sh` runs its checks in order, each failing in its own way: pods, Core's health and status, log scans, collaboration, RabbitMQ (vhost, required and retired accounts, exact permissions), the workers, the object store (an unsigned request must be refused), Zitadel's issuer, the sites server, the public app routes, that `/internal/authorize` answers `404` publicly, that a Content Security Policy is present, that the apex is not served by Sites and, with `SITE_HOST`, that a site answers with its own policy and sets no cookie.
 
 It cannot check what needs a browser. Do these by hand: sign in end to end, edit the same note in two browsers, export a note as PDF and reload a deep link.
 

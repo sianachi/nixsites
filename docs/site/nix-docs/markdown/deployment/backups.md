@@ -16,7 +16,7 @@ A Nix backup is only complete if it contains the database, the file bytes and th
 
 If your identity provider runs on the same machine, back up its database too.
 
-Durable jobs live in PostgreSQL. Search runs inside PostgreSQL, so the database backup covers it.
+RabbitMQ does not need a backup: it is a transport, and durable jobs live in PostgreSQL. Search runs inside PostgreSQL, so the database backup covers it.
 
 ## Taking a backup
 
