@@ -40,6 +40,24 @@ afterEach(() => {
   downloads.iOS = null;
 });
 
+describe('the landing page tour', () => {
+  it('offers the desktop and the phone video, neither loading nor playing until asked', () => {
+    const { container } = render(<LandingPage onSignIn={() => undefined} demo />);
+
+    const videos = [...container.querySelectorAll('video')];
+    expect(videos.map((video) => video.getAttribute('src'))).toEqual([
+      '/landing/brag.mp4',
+      '/landing/brag-phone.mp4',
+    ]);
+    for (const video of videos) {
+      expect(video.getAttribute('preload')).toBe('none');
+      expect(video.autoplay).toBe(false);
+      expect(video.controls).toBe(true);
+      expect(video.getAttribute('aria-label')).toMatch(/tour/u);
+    }
+  });
+});
+
 /** The hero opens on Homebase and steps through every view, by pointer or by arrow keys. */
 describe('the landing page view gallery', () => {
   it('lists every view, Homebase first', () => {

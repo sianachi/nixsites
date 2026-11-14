@@ -96,6 +96,41 @@ function Shot(props: {
   );
 }
 
+/**
+ * The launch videos, desktop beside phone at one height (each grows by its aspect ratio); a phone
+ * gets the phone one alone. Nothing but the poster downloads until Play, and neither starts by itself.
+ * Neither has speech, so the one captions file says so for both.
+ */
+function Videos(): ReactNode {
+  const frame = `min-w-0 rounded-lg border ${RULE} bg-surface`;
+  return (
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+      <video
+        controls
+        playsInline
+        preload="none"
+        poster="/landing/brag-poster.jpg"
+        src="/landing/brag.mp4"
+        aria-label="Nix on a desktop, a 45-second tour with music"
+        className={`${frame} hidden aspect-video sm:block sm:flex-[256]`}
+      >
+        <track kind="captions" src="/landing/brag.vtt" srcLang="en" label="English" />
+      </video>
+      <video
+        controls
+        playsInline
+        preload="none"
+        poster="/landing/brag-phone-poster.jpg"
+        src="/landing/brag-phone.mp4"
+        aria-label="Nix on a phone, a 45-second tour with music"
+        className={`${frame} aspect-[9/16] w-4/5 sm:w-auto sm:flex-[81]`}
+      >
+        <track kind="captions" src="/landing/brag.vtt" srcLang="en" label="English" />
+      </video>
+    </div>
+  );
+}
+
 function Point({ title, children }: { readonly title: string; readonly children: ReactNode }) {
   return (
     <div className={`border-b ${RULE} py-5 pr-6`}>
@@ -418,6 +453,18 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
           </div>
           <div className="mt-14">
             <ViewGallery />
+          </div>
+        </section>
+
+        <section id="tour" className={`border-t ${RULE}`}>
+          <div className={`${PAGE} flex flex-col gap-12 py-20`}>
+            <div className="flex max-w-2xl flex-col gap-3">
+              <Kicker>The 45-second tour</Kicker>
+              <Text variant="h2" as="h2" className={`${SECTION_HEAD} text-balance`}>
+                See Nix at work.
+              </Text>
+            </div>
+            <Videos />
           </div>
         </section>
 

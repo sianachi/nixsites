@@ -3,6 +3,19 @@
 All notable changes to Nix are recorded here. The format follows Keep a Changelog and the project
 follows semantic versioning (`0.x` pre-1.0).
 
+## Unreleased
+
+### Added
+
+- The landing page has a 45-second video tour between the view gallery and the views section: the
+  desktop and the phone video side by side on a desktop or tablet, the phone video alone on a phone.
+  Neither downloads or plays until you press Play.
+
+### Fixed
+
+- In Settings > Access tokens the Rotate and Revoke buttons no longer run into each other when a
+  token has a long name. They read Rotate and Revoke; the token's name stays in the row.
+
 ## 0.7.0 - 2026-11-14
 
 ### Added
