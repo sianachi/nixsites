@@ -76,6 +76,13 @@
     <PackageReference Include="Microsoft.ML.Tokenizers" />
   </ItemGroup>
 
+  <!-- Local sign-in (Authentication/Local). -->
+  <ItemGroup>
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="BCrypt.Net-Next" />
+    <PackageReference Include="Fido2" />
+  </ItemGroup>
+
   <!-- Fetched by scripts/fetch-embedding-model.sh; absent in a checkout that never ran it, and
        then retrieval is full-text only. -->
   <ItemGroup>

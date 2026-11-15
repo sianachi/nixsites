@@ -22,6 +22,8 @@ public static class PetTurnPolicy
         (Rule(@"^/api/v1/conversations/[^/]+/(turns|configure|sources|cancel)$"), false),
         (Rule(@"^/api/v1/workspaces/[^/]+/conversations(/|$)"), false),
         (Rule(@"^/api/v1/tenant/admins(/|$)"), true),
+        (Rule(@"^/api/v1/me/security(/|$)"), true),
+        (Rule(@"^/api/v1/tenant/people(/|$)"), true),
         (Rule(@"^/api/v1/tenant/settings(/|$)"), true),
         (Rule(@"^/api/v1/sites/operators(/|$)"), true),
         (Rule(@"/approval/(approve|reject)$"), true),

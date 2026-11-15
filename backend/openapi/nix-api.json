@@ -5175,6 +5175,453 @@
         }
       }
     },
+    "/api/v1/me/security": {
+      "get": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "The caller's own sign-in methods",
+        "operationId": "GetLocalSecurity",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/password": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Set or change the caller's password; other sessions are signed out",
+        "operationId": "SetLocalPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalChangePasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Remove the caller's password; only allowed while a passkey exists",
+        "operationId": "RemoveLocalPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalCurrentPasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/sign-out-everywhere": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Ends every browser session of the caller, this one included",
+        "operationId": "SignOutEverywhere",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/passkeys/options": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Start adding a passkey; returns WebAuthn creation options",
+        "operationId": "StartAddLocalPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalCurrentPasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/passkeys/verify": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Finish adding a passkey",
+        "operationId": "FinishAddLocalPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalPasskeyRegistrationRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/passkeys/{id}": {
+      "patch": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Rename a passkey",
+        "operationId": "RenameLocalPasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalPasskeyRenameRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Remove a passkey; the last sign-in method cannot be removed",
+        "operationId": "RemoveLocalPasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalCurrentPasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/totp": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Start an authenticator app; returns a secret that does nothing until confirmed",
+        "operationId": "EnrolLocalTotp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalCurrentPasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Remove the authenticator app",
+        "operationId": "RemoveLocalTotp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalCurrentPasswordRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/security/totp/confirm": {
+      "post": {
+        "tags": [
+          "LocalSecurity"
+        ],
+        "summary": "Turn the authenticator app on with its first code",
+        "operationId": "ConfirmLocalTotp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LocalTotpConfirmRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/people": {
+      "get": {
+        "tags": [
+          "People"
+        ],
+        "summary": "The organization's local accounts. Needs a tenant administrator and a browser session.",
+        "operationId": "ListPeople",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Adds a person and returns a one-hour setup link",
+        "operationId": "AddPerson",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddPersonRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/people/{id}/reset-link": {
+      "post": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Issues a one-hour reset link for another person; needs the administrator's current password",
+        "operationId": "IssuePersonResetLink",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ResetLinkRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/people/{id}/disable": {
+      "post": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Blocks sign-in and signs the person out everywhere",
+        "operationId": "DisablePerson",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/people/{id}/enable": {
+      "post": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Lets a disabled person sign in again",
+        "operationId": "EnablePerson",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/me/ui-settings": {
       "get": {
         "tags": [
@@ -13384,6 +13831,27 @@
           }
         }
       },
+      "AddPersonRequest": {
+        "required": [
+          "email",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "AddPushSubscriptionRequest": {
         "required": [
           "endpoint",
@@ -18389,6 +18857,87 @@
           }
         }
       },
+      "LocalChangePasswordRequest": {
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "newPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LocalCurrentPasswordRequest": {
+        "required": [
+          "currentPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LocalPasskeyRegistrationRequest": {
+        "required": [
+          "credential",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LocalPasskeyRenameRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LocalTotpConfirmRequest": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LookupItemsRequest": {
         "required": [
           "key",
@@ -20838,6 +21387,20 @@
         "properties": {
           "acknowledgeDisclosure": {
             "type": "boolean"
+          }
+        }
+      },
+      "ResetLinkRequest": {
+        "required": [
+          "currentPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25531,6 +26094,12 @@
     },
     {
       "name": "Operations"
+    },
+    {
+      "name": "LocalSecurity"
+    },
+    {
+      "name": "People"
     },
     {
       "name": "Roles"

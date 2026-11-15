@@ -20,6 +20,8 @@ export const SettingsTabSchema = z.enum([
   'backups',
   'site-approvals',
   'administrators',
+  'people',
+  'security',
   'about',
 ]);
 

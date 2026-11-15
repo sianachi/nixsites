@@ -1,6 +1,6 @@
 import { Button, Text } from '@nix/ui';
 import { type ReactNode } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { OfflineBanner } from '@nix/web-platform/offline/offline-banner';
@@ -28,9 +28,9 @@ export function RequireSession(): ReactNode {
   const error = useSessionStore((state) => state.error);
   const retry = useSessionStore((state) => state.sessionRetryRequested);
   const unreachable = useSessionStore((state) => state.unreachable);
-  const { signIn, isConfigured } = useAuth();
+  const { signIn, isConfigured, mode, setupRequired } = useAuth();
   const { landing, demo } = useWebConfig();
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
 
   if (status === 'authenticated') {
     return (
@@ -78,6 +78,18 @@ export function RequireSession(): ReactNode {
           void signIn();
         }}
         demo={demo}
+      />
+    );
+  }
+
+  // Local mode has its own pages. The iOS shell keeps the button: passkeys need its system
+  // session, which opens /auth/login and lands on these pages.
+  if (mode === 'local' && !inNativeShell && status === 'anonymous') {
+    const returnTo = encodeURIComponent(`${pathname}${search}${hash}`);
+    return (
+      <Navigate
+        to={setupRequired ? `/setup?returnTo=${returnTo}` : `/sign-in?returnTo=${returnTo}`}
+        replace
       />
     );
   }

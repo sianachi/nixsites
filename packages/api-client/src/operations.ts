@@ -47,6 +47,8 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],
   [/^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, 'write'],
   [/^\/api\/v1\/tenant\/admins(\/|$)/, 'any'],
+  [/^\/api\/v1\/me\/security(\/|$)/, 'any'],
+  [/^\/api\/v1\/tenant\/people(\/|$)/, 'any'],
   [/^\/api\/v1\/tenant\/settings(\/|$)/, 'any'],
   [/^\/api\/v1\/sites\/operators(\/|$)/, 'any'],
   [/\/approval\/(approve|reject)$/, 'any'],

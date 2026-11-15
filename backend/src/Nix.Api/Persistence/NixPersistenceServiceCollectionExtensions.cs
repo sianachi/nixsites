@@ -212,6 +212,11 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IBrowserSessions, BrowserSessionStore>();
         services.AddScoped<ICliLoginSessions, CliLoginSessionStore>();
         services.AddScoped<INativeHandoffs, NativeHandoffStore>();
+        services.AddScoped<ILocalAccounts, LocalAccountStore>();
+        services.AddScoped<ILocalCredentials, LocalCredentialStore>();
+        services.AddScoped<LocalAccountLinkStore>();
+        services.AddScoped<ILocalAccountLinks>(provider => provider.GetRequiredService<LocalAccountLinkStore>());
+        services.AddScoped<ILocalChallenges>(provider => provider.GetRequiredService<LocalAccountLinkStore>());
         services.AddScoped<PersonalWorkspaceProvisioner>();
         services.AddScoped<IPersonalWorkspaceProvisioner>(provider => provider.GetRequiredService<PersonalWorkspaceProvisioner>());
         services.AddScoped<IPrincipalDirectory, PrincipalDirectory>();

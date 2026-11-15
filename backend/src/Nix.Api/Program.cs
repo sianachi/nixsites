@@ -105,6 +105,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(TemplateImportsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(TokensJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(BrowserAuthJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.LocalAuth.LocalAuthJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.People.PeopleJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.LocalAuth.LocalTotpJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.LocalAuth.LocalPasskeyJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(FilesJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(OperationsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(DocumentImportsJsonContext.Default);
@@ -138,6 +142,14 @@ builder.Services.AddSingleton<SelfIssuedTokenService>();
 // cookie and short-lived Core-signed access tokens, so provider tokens never enter JavaScript.
 builder.Services.Configure<BrowserAuthOptions>(
     builder.Configuration.GetSection(BrowserAuthOptions.SectionName));
+
+// Local sign-in: one mode per install (Nix:Auth:Mode), oidc whenever an authority is configured and the mode is unset.
+builder.Services.AddOptions<LocalAuthOptions>()
+    .Bind(builder.Configuration.GetSection(LocalAuthOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<LocalAuthOptions>, LocalAuthOptionsValidator>();
+builder.Services.AddSingleton<AuthSettings>();
+builder.Services.AddSingleton<PasswordHasher>();
 var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Nix");
 var dataProtectionKeysPath = builder.Configuration["Nix:Bff:DataProtectionKeysPath"];
 if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
@@ -477,10 +489,16 @@ if (persistenceConfigured)
 
     // Scoped, because it resolves issuers through the request's own connection. The signing-key
     // cache inside it is static and shared, which is the part that must not be per request.
-    builder.Services.AddScoped<NixTokenValidator>();
+    builder.Services.AddScoped(static services => new NixTokenValidator(
+        services.GetRequiredService<Nix.Abstractions.IIdentityDirectory>(),
+        services.GetRequiredService<SelfIssuedTokenService>())
+    {
+        SelfIssuedOnly = services.GetRequiredService<AuthSettings>().IsLocal,
+    });
     builder.Services.AddScoped<BrowserAuthCoordinator>();
     builder.Services.AddScoped<CliLoginCoordinator>();
     builder.Services.AddScoped<NativeHandoffCoordinator>();
+    Nix.Features.LocalAuth.LocalAuthServiceCollectionExtensions.AddLocalAuth(builder.Services);
 }
 
 builder.Services.AddOpenApi(options =>
@@ -597,6 +615,9 @@ if (persistenceConfigured)
 {
     app.MapBrowserAuthEndpoints();
     app.MapCliLoginEndpoints();
+    Nix.Features.LocalAuth.LocalAuthEndpoints.MapLocalAuthEndpoints(app);
+    Nix.Features.LocalAuth.LocalPasskeyEndpoints.MapLocalPasskeySignInEndpoints(app);
+    Nix.Features.LocalAuth.LocalTotpEndpoints.MapLocalTotpSignInEndpoints(app);
     Nix.Features.CalendarSync.CalendarOAuthCallbackEndpoint.MapCalendarOAuthCallback(app);
 }
 
@@ -670,6 +691,10 @@ app.MapTemplateImportEndpoints();
 app.MapExportEndpoints();
 app.MapOperationEndpoints();
 app.MapMeEndpoints();
+Nix.Features.LocalAuth.LocalSecurityEndpoints.MapLocalSecurityEndpoints(app);
+Nix.Features.LocalAuth.LocalPasskeyEndpoints.MapLocalPasskeySecurityEndpoints(app);
+Nix.Features.LocalAuth.LocalTotpEndpoints.MapLocalTotpSecurityEndpoints(app);
+Nix.Features.People.PeopleEndpoints.MapPeopleEndpoints(app);
 app.MapSystemVersionsEndpoints();
 app.MapUiSettingsEndpoints();
 app.MapBackupEndpoints();

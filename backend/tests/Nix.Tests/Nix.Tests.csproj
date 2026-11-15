@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Nix.Api\Nix.Api.csproj" />
+    <ProjectReference Include="..\..\src\Nix.Migrator\Nix.Migrator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

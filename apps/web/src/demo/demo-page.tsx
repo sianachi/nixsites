@@ -29,6 +29,8 @@ const DEMO_AUTH: AuthContextValue = {
   handleSessionRefusal: () => undefined,
   isConfigured: true,
   accountUrl: null,
+  mode: 'oidc',
+  setupRequired: false,
 };
 
 /**

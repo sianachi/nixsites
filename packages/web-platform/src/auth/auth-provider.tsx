@@ -102,6 +102,10 @@ export interface AuthContextValue {
    * the deployment names none. Nix never handles credentials; it only points at where they live.
    */
   readonly accountUrl: string | null;
+  /** "local" when Core owns sign-in itself, "oidc" when it hands off to an identity provider. */
+  readonly mode: 'local' | 'oidc';
+  /** Local mode only: no account exists yet, so the first-run page comes before sign-in. */
+  readonly setupRequired: boolean;
 }
 
 const browserProfileSchema = z.object({
@@ -121,6 +125,9 @@ const browserSessionSchema = z.object({
     .url({ protocol: /^https?$/ })
     .nullish()
     .catch(null),
+  // Older servers send neither: they are oidc installs.
+  mode: z.enum(['local', 'oidc']).catch('oidc'),
+  setupRequired: z.boolean().catch(false),
 });
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -248,6 +255,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
   // the session gate is still restoring. The response is authoritative before the gate settles.
   const [configured, setConfigured] = useState(true);
   const [accountUrl, setAccountUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<'local' | 'oidc'>('oidc');
+  const [setupRequired, setSetupRequired] = useState(false);
   const accessTokenRef = useRef<AccessTokenState | null>(null);
   const refreshRef = useRef<Promise<string | null> | null>(null);
   const signingOutRef = useRef(false);
@@ -364,6 +373,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         settled = true;
         setConfigured(session.configured);
         setAccountUrl(session.accountUrl ?? null);
+        setMode(session.mode);
+        setSetupRequired(session.setupRequired);
         if (
           session.authenticated &&
           session.profile !== null &&
@@ -564,6 +575,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
     () => ({
       isConfigured: configured,
       accountUrl,
+      mode,
+      setupRequired,
 
       signIn: () => {
         if (!configured) {
@@ -766,6 +779,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
     }),
     [
       accountUrl,
+      mode,
+      setupRequired,
       configured,
       closeSession,
       invalidateSessionRequests,

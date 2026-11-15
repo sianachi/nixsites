@@ -24,6 +24,9 @@ import { TrashPage } from './pages/trash-page';
 import { AttachmentsPage } from './pages/attachments-page';
 import { WorkspacesPage } from './pages/workspaces-page';
 import { CreationStudioPage } from './pages/creation-studio-page';
+import { LocalSignInPage } from './pages/local-auth/local-sign-in-page';
+import { LocalSetupPage } from './pages/local-auth/local-setup-page';
+import { AccountLinkPage } from './pages/local-auth/account-link-page';
 import { RequireSession } from './shell/require-session';
 import { AppShell } from './shell/app-shell';
 import { RouteDialogContext } from '@nix/web-foundation/layout/route-dialog-context';
@@ -132,6 +135,9 @@ export function AppRoutes(): ReactElement {
         <Routes location={mainLocation}>
           <Route path="/forms/:token" element={<PublicFormPage />} />
           <Route path="/links/:token" element={<PublicLinkPage />} />
+          <Route path="/sign-in" element={<LocalSignInPage />} />
+          <Route path="/setup" element={<LocalSetupPage />} />
+          <Route path="/account-link/:token" element={<AccountLinkPage />} />
 
           <Route element={<RequireSession />}>
             {/* Outside the workspace list on purpose: a join link shows nothing about a workspace

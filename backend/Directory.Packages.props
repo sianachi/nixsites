@@ -98,4 +98,11 @@
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 
+  <!-- Local sign-in: Argon2id for new password hashes, bcrypt to verify imported ones, WebAuthn for passkeys. All MIT. -->
+  <ItemGroup Label="Local sign-in">
+    <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+    <PackageVersion Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageVersion Include="Fido2" Version="4.3.3" />
+  </ItemGroup>
+
 </Project>

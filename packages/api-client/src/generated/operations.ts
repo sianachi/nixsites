@@ -56,6 +56,27 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     },
   },
   {
+    id: 'AddPerson',
+    method: 'POST',
+    path: '/api/v1/tenant/people',
+    area: 'People',
+    summary: 'Adds a person and returns a one-hour setup link',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['email', 'name'],
+          properties: { email: { type: ['null', 'string'] }, name: { type: ['null', 'string'] } },
+        },
+      ],
+    },
+  },
+  {
     id: 'AddPushSubscription',
     method: 'POST',
     path: '/api/v1/me/push-subscriptions',
@@ -593,6 +614,23 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     },
   },
   {
+    id: 'ConfirmLocalTotp',
+    method: 'POST',
+    path: '/api/v1/me/security/totp/confirm',
+    area: 'LocalSecurity',
+    summary: 'Turn the authenticator app on with its first code',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        { type: 'object', required: ['code'], properties: { code: { type: ['null', 'string'] } } },
+      ],
+    },
+  },
+  {
     id: 'CreateAccessToken',
     method: 'POST',
     path: '/api/v1/me/tokens',
@@ -946,6 +984,17 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     queryParams: [],
   },
   {
+    id: 'DisablePerson',
+    method: 'POST',
+    path: '/api/v1/tenant/people/{id}/disable',
+    area: 'People',
+    summary: 'Blocks sign-in and signs the person out everywhere',
+    detail: '',
+    pathParams: ['id'],
+    uuidParams: ['id'],
+    queryParams: [],
+  },
+  {
     id: 'EditComment',
     method: 'PATCH',
     path: '/api/v1/items/{itemId}/comments/{commentId}',
@@ -956,6 +1005,38 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     uuidParams: ['itemId', 'commentId'],
     queryParams: [],
     body: { type: 'object', required: ['body'], properties: { body: { type: 'string' } } },
+  },
+  {
+    id: 'EnablePerson',
+    method: 'POST',
+    path: '/api/v1/tenant/people/{id}/enable',
+    area: 'People',
+    summary: 'Lets a disabled person sign in again',
+    detail: '',
+    pathParams: ['id'],
+    uuidParams: ['id'],
+    queryParams: [],
+  },
+  {
+    id: 'EnrolLocalTotp',
+    method: 'POST',
+    path: '/api/v1/me/security/totp',
+    area: 'LocalSecurity',
+    summary: 'Start an authenticator app; returns a secret that does nothing until confirmed',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
+    },
   },
   {
     id: 'FindMentions',
@@ -976,6 +1057,27 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
         workspaceId: { type: ['null', 'string'], format: 'uuid' },
         excludeIds: { type: ['null', 'array'], items: { type: 'string', format: 'uuid' } },
       },
+    },
+  },
+  {
+    id: 'FinishAddLocalPasskey',
+    method: 'POST',
+    path: '/api/v1/me/security/passkeys/verify',
+    area: 'LocalSecurity',
+    summary: 'Finish adding a passkey',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['credential', 'name'],
+          properties: { credential: {}, name: { type: ['null', 'string'] } },
+        },
+      ],
     },
   },
   {
@@ -1208,6 +1310,17 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     detail: '',
     pathParams: ['itemId'],
     uuidParams: ['itemId'],
+    queryParams: [],
+  },
+  {
+    id: 'GetLocalSecurity',
+    method: 'GET',
+    path: '/api/v1/me/security',
+    area: 'LocalSecurity',
+    summary: "The caller's own sign-in methods",
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
     queryParams: [],
   },
   {
@@ -1553,6 +1666,28 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     },
   },
   {
+    id: 'IssuePersonResetLink',
+    method: 'POST',
+    path: '/api/v1/tenant/people/{id}/reset-link',
+    area: 'People',
+    summary:
+      "Issues a one-hour reset link for another person; needs the administrator's current password",
+    detail: '',
+    pathParams: ['id'],
+    uuidParams: ['id'],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
+    },
+  },
+  {
     id: 'JoinWorkspace',
     method: 'POST',
     path: '/api/v1/workspaces/{workspaceId}/join',
@@ -1776,6 +1911,18 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
       { name: 'cursor', required: false, type: 'string' },
       { name: 'unreadOnly', required: false, type: 'boolean' },
     ],
+  },
+  {
+    id: 'ListPeople',
+    method: 'GET',
+    path: '/api/v1/tenant/people',
+    area: 'People',
+    summary:
+      "The organization's local accounts. Needs a tenant administrator and a browser session.",
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
   },
   {
     id: 'ListPetProviderKeys',
@@ -2412,6 +2559,69 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     queryParams: [],
   },
   {
+    id: 'RemoveLocalPasskey',
+    method: 'DELETE',
+    path: '/api/v1/me/security/passkeys/{id}',
+    area: 'LocalSecurity',
+    summary: 'Remove a passkey; the last sign-in method cannot be removed',
+    detail: '',
+    pathParams: ['id'],
+    uuidParams: ['id'],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
+    },
+  },
+  {
+    id: 'RemoveLocalPassword',
+    method: 'DELETE',
+    path: '/api/v1/me/security/password',
+    area: 'LocalSecurity',
+    summary: "Remove the caller's password; only allowed while a passkey exists",
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
+    },
+  },
+  {
+    id: 'RemoveLocalTotp',
+    method: 'DELETE',
+    path: '/api/v1/me/security/totp',
+    area: 'LocalSecurity',
+    summary: 'Remove the authenticator app',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
+    },
+  },
+  {
     id: 'RemovePetProviderKey',
     method: 'DELETE',
     path: '/api/v1/me/pets/providers/{provider}/key',
@@ -2467,6 +2677,23 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     uuidParams: ['workspaceId'],
     queryParams: [],
     body: { type: 'object', required: ['password'], properties: { password: { type: 'string' } } },
+  },
+  {
+    id: 'RenameLocalPasskey',
+    method: 'PATCH',
+    path: '/api/v1/me/security/passkeys/{id}',
+    area: 'LocalSecurity',
+    summary: 'Rename a passkey',
+    detail: '',
+    pathParams: ['id'],
+    uuidParams: ['id'],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        { type: 'object', required: ['name'], properties: { name: { type: ['null', 'string'] } } },
+      ],
+    },
   },
   {
     id: 'RenameWorkspace',
@@ -3275,6 +3502,30 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     },
   },
   {
+    id: 'SetLocalPassword',
+    method: 'POST',
+    path: '/api/v1/me/security/password',
+    area: 'LocalSecurity',
+    summary: "Set or change the caller's password; other sessions are signed out",
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword', 'newPassword'],
+          properties: {
+            currentPassword: { type: ['null', 'string'] },
+            newPassword: { type: ['null', 'string'] },
+          },
+        },
+      ],
+    },
+  },
+  {
     id: 'SetSiteHostnames',
     method: 'PUT',
     path: '/api/v1/sites/{siteId}/hostnames',
@@ -3376,6 +3627,38 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
         membershipLocked: { type: ['null', 'boolean'] },
         collaboration: { type: ['null', 'boolean'] },
       },
+    },
+  },
+  {
+    id: 'SignOutEverywhere',
+    method: 'POST',
+    path: '/api/v1/me/security/sign-out-everywhere',
+    area: 'LocalSecurity',
+    summary: 'Ends every browser session of the caller, this one included',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+  },
+  {
+    id: 'StartAddLocalPasskey',
+    method: 'POST',
+    path: '/api/v1/me/security/passkeys/options',
+    area: 'LocalSecurity',
+    summary: 'Start adding a passkey; returns WebAuthn creation options',
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['currentPassword'],
+          properties: { currentPassword: { type: ['null', 'string'] } },
+        },
+      ],
     },
   },
   {

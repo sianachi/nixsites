@@ -127,8 +127,8 @@ services:
       NIX_BOOTSTRAP_TENANT_NAME: ${NIX_BOOTSTRAP_TENANT_NAME:-}
       NIX_BOOTSTRAP_TENANT_ID: ${NIX_BOOTSTRAP_TENANT_ID:-}
       NIX_BOOTSTRAP_OIDC_PROJECT_ID: ${NIX_BOOTSTRAP_OIDC_PROJECT_ID:-}
-      NIX_OIDC_ISSUER: ${NIX_OIDC_ISSUER:?set NIX_OIDC_ISSUER}
-      NIX_OIDC_CLIENT_ID: ${NIX_OIDC_CLIENT_ID:?set NIX_OIDC_CLIENT_ID}
+      NIX_OIDC_ISSUER: ${NIX_OIDC_ISSUER?set NIX_OIDC_ISSUER (empty for a local-mode install)}
+      NIX_OIDC_CLIENT_ID: ${NIX_OIDC_CLIENT_ID?set NIX_OIDC_CLIENT_ID (empty for a local-mode install)}
     command:
       - sh
       - -c
@@ -192,12 +192,18 @@ services:
       Nix__Workers__InstanceId: nix-api
       Nix__GoWorkers__ExportEnabled: "true"
       Nix__GoWorkers__ImportEnabled: "true"
-      Nix__Bff__Authority: ${NIX_OIDC_ISSUER:?set NIX_OIDC_ISSUER}
-      Nix__Bff__ClientId: ${NIX_OIDC_CLIENT_ID:?set NIX_OIDC_CLIENT_ID}
+      # Sign-in mode: local (Core signs people in) or oidc (an outside identity provider). Unset
+      # means oidc when an issuer is configured, otherwise local.
+      Nix__Auth__Mode: ${NIX_AUTH_MODE:-}
+      Nix__Auth__SetupCode: ${NIX_AUTH_SETUP_CODE:-}
+      Nix__Auth__Passkeys__RpId: ${NIX_AUTH_PASSKEY_RP_ID:-}
+      # Empty in local mode, which leaves the OIDC login unconfigured.
+      Nix__Bff__Authority: ${NIX_OIDC_ISSUER?set NIX_OIDC_ISSUER (empty for a local-mode install)}
+      Nix__Bff__ClientId: ${NIX_OIDC_CLIENT_ID?set NIX_OIDC_CLIENT_ID (empty for a local-mode install)}
       Nix__Bff__PublicOrigin: ${NIX_PUBLIC_ORIGIN:?set NIX_PUBLIC_ORIGIN}
       # The IdP's self-service page for password, passkey and MFA changes. Defaults to the
       # Zitadel console's own-account page; set NIX_OIDC_ACCOUNT_URL for any other provider.
-      Nix__Bff__AccountPage: ${NIX_OIDC_ACCOUNT_URL:-${NIX_OIDC_ISSUER}/ui/console/users/me?id=security}
+      Nix__Bff__AccountPage: ${NIX_OIDC_ACCOUNT_URL:-${NIX_OIDC_ISSUER?set NIX_OIDC_ISSUER (empty for a local-mode install)}/ui/console/users/me?id=security}
       # Also protects stored calendar refresh tokens (ADR-0052): every Core replica must share
       # this key ring. Back it up separately from the database, never alongside it.
       Nix__Bff__DataProtectionKeysPath: /var/lib/nix/data-protection
@@ -278,8 +284,10 @@ services:
       NIX_COLLAB_DATABASE_URL: ${NIX_COLLAB_DATABASE_URL:?set NIX_COLLAB_DATABASE_URL}
       NIX_COLLAB_CORE_BASE_URL: http://nix-api:8080
       NIX_COLLAB_INTERNAL_SECRET: ${NIX_INTERNAL_SECRET:?set NIX_INTERNAL_SECRET}
-      NIX_COLLAB_OIDC_ISSUERS: ${NIX_OIDC_ISSUER:?set NIX_OIDC_ISSUER},${NIX_CORE_TOKEN_ISSUER:?set NIX_CORE_TOKEN_ISSUER}|http://nix-api:8080/public/v1/auth/jwks
-      NIX_COLLAB_OIDC_AUDIENCE: ${NIX_OIDC_CLIENT_ID:?set NIX_OIDC_CLIENT_ID},${NIX_CORE_TOKEN_AUDIENCE:?set NIX_CORE_TOKEN_AUDIENCE}
+      # Local mode sets both to Core's own issuer and audience only; otherwise the identity provider
+      # is trusted too (the nested defaults need NIX_OIDC_ISSUER and NIX_OIDC_CLIENT_ID in that case).
+      NIX_COLLAB_OIDC_ISSUERS: ${NIX_COLLAB_OIDC_ISSUERS:-${NIX_OIDC_ISSUER?set NIX_OIDC_ISSUER (empty for a local-mode install)},${NIX_CORE_TOKEN_ISSUER:?set NIX_CORE_TOKEN_ISSUER}|http://nix-api:8080/public/v1/auth/jwks}
+      NIX_COLLAB_OIDC_AUDIENCE: ${NIX_COLLAB_OIDC_AUDIENCE:-${NIX_OIDC_CLIENT_ID?set NIX_OIDC_CLIENT_ID (empty for a local-mode install)},${NIX_CORE_TOKEN_AUDIENCE:?set NIX_CORE_TOKEN_AUDIENCE}}
       NIX_COLLAB_REAUTH_SECONDS: "60"
       NIX_COLLAB_MAX_RESIDENT_MB: "256"
       NIX_COLLAB_MAX_DOCS: "200"

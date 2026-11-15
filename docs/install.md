@@ -7,7 +7,7 @@ what the script does, the flags, upgrades, Kubernetes and image tags.
 ## Try it on your machine
 
 Needs Docker with the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for
-Docker. The stack runs Postgres, an object store, the identity provider and four Nix
+Docker. The stack runs Postgres, an object store and three Nix
 services (API, web, and one Node service for collaboration, the pet
 companion and the sites worker). A default Docker Desktop VM can be as small as 2 GB, which is too little. The script
 stops if a tool is missing, and warns when Docker has less than about 4 GB.
@@ -16,8 +16,8 @@ stops if a tool is missing, and warns when Docker has less than about 4 GB.
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Then open <http://nix.localhost> in Chrome or Firefox and sign in with the details it prints.
-Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost auth.nix.localhost` to
+Then open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints and
+enter the setup code. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
 `/etc/hosts` first.
 
 ## Install for real
@@ -29,19 +29,74 @@ at `ghcr.io/sianachi/nix`:
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash -s -- https://nix.example.org
 ```
 
-**Before you run it:** point `nix.example.org` and `auth.nix.example.org` at the machine and leave
-ports 80 and 443 free. The tools and the 4 GB of Docker memory are the same as the try-out above.
+**Before you run it:** point `nix.example.org` at the machine and leave ports 80 and 443 free. That
+is the only hostname a new install needs. The tools and the 4 GB of Docker memory are the same as
+the try-out above.
 
 ## What it does
 
-The installer generates every secret into `~/nix/nix.env`, starts Postgres, the object
-store and a bundled identity provider (Zitadel) behind Caddy, which fetches the TLS certificates
-itself; registers the web application with the identity provider; runs the database migrations;
-starts every service; prints the administrator sign-in (`admin@nix.auth.<host>` and a one-time
-password you must change at first sign-in).
+The installer generates every secret into `~/nix/nix.env`, starts Postgres and the object
+store behind Caddy, which fetches the TLS certificates itself, runs the database migrations, starts
+every service and prints the address of the setup page with a setup code.
 
 Back up `~/nix/nix.env` together with the Docker volumes (`nix-*`). The env file holds every secret
 and cannot be regenerated.
+
+## Signing in
+
+Nix signs people in itself. Nobody can sign up on their own; accounts come from two places.
+
+- **The first account.** Open the setup page the installer printed (`<origin>/setup`), enter the
+  setup code (`NIX_AUTH_SETUP_CODE` in `nix.env`), your email, name and a password. That account
+  is the administrator. The page closes once an account exists.
+- **Adding people.** An administrator opens People in the settings, enters an email and a name and
+  gets a one-time link to send them. The link is valid for one hour and works once. The person
+  opens it and chooses a password or registers a passkey. Nothing is emailed: you send the link.
+
+The email address is the sign-in name, and it is unique across the install. Passwords are at least
+10 characters. A passkey is a full sign-in on its own, and a person who has one can remove their
+password. An authenticator app (a six-digit code) is asked for after the password. Ten wrong
+passwords in five minutes pause that account's sign-in for five minutes.
+
+**Reset.** An administrator issues a new link from the People page, after entering their own
+password; using it signs the person out everywhere. Nobody can issue a link for themselves. If the only administrator is locked out, run this on the host and send the link it
+prints:
+
+```sh
+docker compose -p nix --env-file ~/nix/nix.env -f <release>/deploy/compose.prod.yml \
+  -f <release>/deploy/compose.quickstart.yml run --rm --no-deps nix-migrate \
+  account reset-link --email you@example.org
+```
+
+Each person manages their own passwords, passkeys and authenticator app under Settings > Security,
+and can sign out of every device there. Scripts and tools use access tokens
+(`account service-token --name <name>` on the host creates one without a person's account).
+
+### Moving an install off the bundled Zitadel
+
+Installs made before this change use Zitadel for sign-in and keep doing so; running the installer
+again changes nothing about that. To move one onto Nix's own sign-in:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh \
+  | bash -s -- --migrate-local-auth --dry-run https://nix.example.org   # report only
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh \
+  | bash -s -- --migrate-local-auth https://nix.example.org
+```
+
+It supports only the Zitadel version the installer bundled (v4.16.1) and refuses any other. It
+moves accounts and profiles, verified-email state, password hashes, authenticator apps, passkeys and
+second-step security keys onto the existing people, so their items, sessions and access tokens
+survive. It stops and lists the accounts when two share an email address. Not moved: Zitadel's own
+sessions, SMS and email codes, links to outside logins, and machine users (create access tokens
+instead).
+
+Passkeys were registered for the old `auth.<host>` name, so that name stays the passkey hostname.
+The web server keeps answering on it, serving only `/.well-known/webauthn`, so keep its DNS record.
+Browsers that do not support related origins fall back to the password.
+
+Zitadel's volumes are left as they are. To roll back, copy `~/nix/nix.env.pre-local-auth` back over
+`~/nix/nix.env` and run the installer again; it starts the Zitadel containers again.
 
 ## Options
 
@@ -65,7 +120,7 @@ Run the same line again with `--version <newer release>`. The env file is kept, 
 services restart on the new images. Back up `~/nix/nix.env` together with the Docker volumes
 (`nix-*`); the env file holds every secret and cannot be regenerated.
 
-## Signing in from the iOS app
+## Signing in from the iOS app (installs that use an outside identity provider)
 
 The iOS app refuses any `http://` address, including one hop in the middle of the sign-in
 redirects; the sign-in page then fails with an App Transport Security error. Desktop browsers
@@ -91,6 +146,12 @@ or list the tunnel or proxy addresses in the entrypoint's `forwardedHeaders.trus
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash -s -- --kubernetes https://nix.example.org
 ```
+
+A new Kubernetes install also signs in locally and deploys no Zitadel; the setup code is printed at
+the end and kept as `setup-code` in the `nix-auth` secret. Managed template sync there needs a Core
+access token from `account service-token` instead of a Zitadel machine key, so it is off by default
+on the generic path. An existing cluster install that passes `OIDC_CLIENT_ID` to `deploy.sh` stays
+on OIDC.
 
 The cluster needs an ingress controller listening on the origin's port and a default StorageClass.
 The installer reads the IngressClass, StorageClass and pod CIDR from the cluster (`--ingress-class`,

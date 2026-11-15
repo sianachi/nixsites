@@ -454,6 +454,12 @@ if (PATH="$fake_bin:$PATH" REGISTRY=r TAG=t OIDC_CLIENT_ID=c DOMAIN=nix.example.
   echo 'Deployment ran without template configuration while managed templates are enabled.' >&2
   exit 1
 fi
+# With no sign-in setting at all, an existing install is refused rather than switched to local mode.
+if (PATH="$fake_bin:$PATH" REGISTRY=r TAG=t DOMAIN=nix.example.test NIX_TEMPLATE_BOOT_ENABLED=false \
+  NIX_DEPLOY_TARGET=kubernetes bash "$repo_root/deploy/k8s/deploy.sh" >/dev/null 2>&1); then
+  echo 'Deployment over an existing install ran without a sign-in mode.' >&2
+  exit 1
+fi
 # The kubelet cannot verify runAsNonRoot against a named image user (the node images run as "node").
 if awk 'BEGIN { RS = "\n---\n" } /runAsNonRoot: true/ && !/runAsUser:/ { found = 1 } END { exit !found }' "$RENDERED_ALL"; then
   echo 'A runAsNonRoot pod has no numeric runAsUser.' >&2

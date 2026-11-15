@@ -305,13 +305,15 @@ create_sites_secret false
 create_sites_cloudflare_secret false
 create_push_secret
 create_tls_secret
-create_zitadel_secret
+# Local sign-in needs no identity provider; install.sh --kubernetes sets NIX_AUTH_MODE=local.
+[ "${NIX_AUTH_MODE:-oidc}" = local ] || create_zitadel_secret
 
 auth_key_file="$(mktemp)"
 trap 'rm -f "$auth_key_file"' EXIT
 openssl ecparam -name prime256v1 -genkey -noout -out "$auth_key_file"
 kubectl -n nix create secret generic nix-auth \
-  --from-file=access-token-signing-key.pem="$auth_key_file"
+  --from-file=access-token-signing-key.pem="$auth_key_file" \
+  ${NIX_AUTH_SETUP_CODE:+--from-literal=setup-code="$NIX_AUTH_SETUP_CODE"}
 
 APP_PW=$(kubectl -n nix get secret nix-db -o jsonpath='{.data.app-password}' | base64 -d)
 MIG_PW=$(kubectl -n nix get secret nix-db -o jsonpath='{.data.migrator-password}' | base64 -d)

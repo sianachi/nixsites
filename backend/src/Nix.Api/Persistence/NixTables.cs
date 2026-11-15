@@ -47,6 +47,21 @@ public static class NixTables
     /// </summary>
     public const string NativeLoginHandoff = "native_login_handoff";
 
+    /// <summary>A person's local sign-in: email, password hash and the failure window.</summary>
+    public const string LocalAccount = "local_account";
+
+    /// <summary>A passkey or second-step security key of a local account.</summary>
+    public const string LocalPasskey = "local_passkey";
+
+    /// <summary>The authenticator-app secret of a local account.</summary>
+    public const string LocalTotp = "local_totp";
+
+    /// <summary>A one-time setup or reset link, stored as a hash.</summary>
+    public const string LocalAccountLink = "local_account_link";
+
+    /// <summary>A pending sign-in or registration challenge.</summary>
+    public const string LocalSecondStep = "local_second_step";
+
     /// <summary>CLI-to-browser revocation links, accessed only inside session capability functions.</summary>
     public const string CliSessionLink = "cli_session_link";
 
@@ -373,7 +388,7 @@ public static class NixTables
     /// browser. Exact security-definer functions derive identity from a standing source session;
     /// they never accept a caller-supplied tenant or principal. Both tables force RLS with no policies.
     /// </remarks>
-    public static ImmutableArray<string> CapabilityOnly { get; } = [CliLoginPairing, CliSessionLink, BackupRuns, NativeLoginHandoff];
+    public static ImmutableArray<string> CapabilityOnly { get; } = [CliLoginPairing, CliSessionLink, BackupRuns, NativeLoginHandoff, LocalAccount, LocalPasskey, LocalTotp, LocalAccountLink, LocalSecondStep];
 
     /// <summary>
     /// Read and write, sorted the way <c>information_schema.table_privileges</c> reports them.
@@ -425,6 +440,11 @@ public static class NixTables
             [BrowserSession] = ["INSERT", "SELECT", "UPDATE"],
             [CliLoginPairing] = [],
             [NativeLoginHandoff] = [],
+            [LocalAccount] = [],
+            [LocalPasskey] = [],
+            [LocalTotp] = [],
+            [LocalAccountLink] = [],
+            [LocalSecondStep] = [],
             [CliSessionLink] = [],
             [BackupRuns] = [],
             [Principal] = FullDml,

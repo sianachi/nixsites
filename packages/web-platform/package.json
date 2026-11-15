@@ -9,6 +9,14 @@
       "types": "./src/api/api-client-provider.tsx",
       "default": "./src/api/api-client-provider.tsx"
     },
+    "./auth/security-client": {
+      "types": "./src/auth/security-client.ts",
+      "default": "./src/auth/security-client.ts"
+    },
+    "./auth/use-auth-mode": {
+      "types": "./src/auth/use-auth-mode.ts",
+      "default": "./src/auth/use-auth-mode.ts"
+    },
     "./auth/auth-provider": {
       "types": "./src/auth/auth-provider.tsx",
       "default": "./src/auth/auth-provider.tsx"

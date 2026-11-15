@@ -52,8 +52,19 @@ internal static class Migrator
             cancellation.Cancel();
         };
 
+        if (args is ["account", "import-zitadel", .. var importArgs])
+        {
+            return await Nix.Migrator.ZitadelImport.ZitadelImportCommand
+                .RunAsync(importArgs, builder.Configuration, Console.Out, cancellation.Token).ConfigureAwait(false);
+        }
+
         try
         {
+            if (AccountCommands.Matches(args))
+            {
+                return await AccountCommands.RunAsync(args, builder.Configuration, connectionString, cancellation.Token).ConfigureAwait(false);
+            }
+
             var target = new NpgsqlConnectionStringBuilder(connectionString);
             MigratorLog.Starting(logger, target.Host ?? "(unspecified)", target.Database ?? "(unspecified)");
 

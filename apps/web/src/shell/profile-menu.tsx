@@ -13,6 +13,7 @@ import { type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
+import { useAuthMode } from '@nix/web-platform/auth/use-auth-mode';
 import { inNativeShell, switchServer, useInstallNix } from '@nix/web-platform/pwa/install-nix';
 import type { CurrentPrincipalState } from '@nix/web-platform/session/use-current-principal';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
@@ -45,6 +46,7 @@ export function ProfileMenu({
   showWorkspaceMenu = true,
 }: ProfileMenuProps): ReactNode {
   const { accountUrl } = useAuth();
+  const local = useAuthMode() === 'local';
   const pendingSignOut = usePendingSignOut();
   const { workspaceId } = useWorkspace();
   const install = useInstallNix();
@@ -95,17 +97,26 @@ export function ProfileMenu({
     // Password, passkeys and second factors belong to the identity provider, not to Nix, so this
     // leaves for the provider's own page - in a new tab, so unsaved work here survives the visit.
     // Absent when the deployment names none.
-    ...(accountUrl === null
-      ? []
-      : [
+    ...(local
+      ? [
           {
             kind: 'link',
             label: 'Password and security',
             icon: KeyRound,
-            href: accountUrl,
-            external: true,
+            href: `/w/${workspaceId}/settings?tab=security`,
           } satisfies MenuEntry,
-        ]),
+        ]
+      : accountUrl === null
+        ? []
+        : [
+            {
+              kind: 'link',
+              label: 'Password and security',
+              icon: KeyRound,
+              href: accountUrl,
+              external: true,
+            } satisfies MenuEntry,
+          ]),
     ...(install.offer
       ? [
           {

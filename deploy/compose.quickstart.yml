@@ -1,6 +1,7 @@
-# One-machine install (deploy/install.sh): layered over compose.prod.yml. Adds what a fresh
-# host lacks - a bundled identity provider and a public Caddy listener - and parks cloudflared
-# behind a profile. Values come from the env file install.sh writes.
+# One-machine install (deploy/install.sh): layered over compose.prod.yml. Adds the public
+# Caddy listener a fresh host lacks and parks cloudflared behind a profile. Core signs people
+# in itself (NIX_AUTH_MODE=local), so nothing else is needed. An install that still uses the
+# bundled Zitadel adds compose.zitadel.yml. Values come from the env file install.sh writes.
 #
 #   docker compose -p nix --env-file <env> -f compose.prod.yml -f compose.quickstart.yml ...
 
@@ -17,104 +18,21 @@ services:
       - "${NIX_HTTPS_PORT:-443}:${NIX_HTTPS_PORT:-443}"
     environment:
       NIX_PUBLIC_ORIGIN: ${NIX_PUBLIC_ORIGIN:?set NIX_PUBLIC_ORIGIN}
-      NIX_OIDC_ISSUER: ${NIX_OIDC_ISSUER:?set NIX_OIDC_ISSUER}
       NIX_CLIENT_IP: "{http.request.remote.host}"
     volumes:
       - ./Caddyfile.quickstart:/etc/caddy/Caddyfile:ro
       - ./Caddyfile.prod:/etc/caddy/Caddyfile.prod:ro
+      # Extra site blocks: the legacy auth host after a migration (see install.sh), or Zitadel.
+      - ${NIX_WEBAUTHN_CADDY:-./Caddyfile.none}:/etc/caddy/auth.d/webauthn.caddy:ro
     networks:
       default:
         aliases:
           # Core, the workers and the browser all use the public names; inside the network
           # they resolve straight to this listener, so no traffic has to leave the host.
           - ${NIX_PUBLIC_HOST:?set NIX_PUBLIC_HOST}
-          - ${NIX_AUTH_HOST:?set NIX_AUTH_HOST}
+          - ${NIX_AUTH_HOST:-auth.invalid}
 
   # Parked: Caddy is the public listener. COMPOSE_PROFILES=cloudflare and a real token in the
   # env file bring it back.
   cloudflared:
     profiles: [cloudflare]
-
-  # Zitadel's own database: a separate trust domain from the app database, never reachable
-  # through the app roles.
-  zitadel-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${NIX_ZITADEL_DB_PASSWORD:?set NIX_ZITADEL_DB_PASSWORD}
-    volumes:
-      - nix-zitadel-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-      start_period: 10s
-    mem_limit: 512m
-    security_opt:
-      - no-new-privileges:true
-
-  # The machinekey volume is created root-owned; Zitadel runs as uid 1000 and must write the
-  # bootstrap PAT there on first start.
-  zitadel-init:
-    image: busybox:1.37
-    restart: "no"
-    command: ["sh", "-c", "chown -R 1000:1000 /machinekey"]
-    volumes:
-      - nix-zitadel-machinekey:/machinekey
-    cap_drop: [ALL]
-    cap_add: [CHOWN]
-    security_opt:
-      - no-new-privileges:true
-
-  # First-instance bootstrap applies only when the instance is created: an organisation, one
-  # human administrator (password change required at first sign-in) and a machine user whose
-  # PAT install.sh uses once to register the Nix application. No healthcheck: the image is
-  # distroless; install.sh waits on OIDC discovery instead.
-  zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.16.1
-    restart: unless-stopped
-    command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "${NIX_ZITADEL_TLS_MODE:?set NIX_ZITADEL_TLS_MODE}"]
-    environment:
-      ZITADEL_MASTERKEY: ${NIX_ZITADEL_MASTERKEY:?set NIX_ZITADEL_MASTERKEY}
-      ZITADEL_DATABASE_POSTGRES_HOST: zitadel-db
-      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
-      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${NIX_ZITADEL_USER_PASSWORD:?set NIX_ZITADEL_USER_PASSWORD}
-      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${NIX_ZITADEL_DB_PASSWORD:?set NIX_ZITADEL_DB_PASSWORD}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      ZITADEL_EXTERNALDOMAIN: ${NIX_AUTH_HOST:?set NIX_AUTH_HOST}
-      ZITADEL_EXTERNALPORT: ${NIX_AUTH_PORT:?set NIX_AUTH_PORT}
-      ZITADEL_EXTERNALSECURE: ${NIX_AUTH_SECURE:?set NIX_AUTH_SECURE}
-      ZITADEL_FIRSTINSTANCE_ORG_NAME: Nix
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${NIX_ADMIN_USERNAME:?set NIX_ADMIN_USERNAME}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${NIX_ADMIN_PASSWORD:?set NIX_ADMIN_PASSWORD}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "true"
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: nix-install
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: Nix install automation
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
-      ZITADEL_FIRSTINSTANCE_PATPATH: /machinekey/pat.txt
-      ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_ALLOWREGISTER: "false"
-    ports:
-      # The management API for install.sh only; the public address is served by nix-web.
-      - "127.0.0.1:${NIX_ZITADEL_ADMIN_PORT:-8301}:8080"
-    volumes:
-      - nix-zitadel-machinekey:/machinekey
-    depends_on:
-      zitadel-db:
-        condition: service_healthy
-      zitadel-init:
-        condition: service_completed_successfully
-    mem_limit: 768m
-    security_opt:
-      - no-new-privileges:true
-
-volumes:
-  nix-zitadel-data:
-    name: nix-zitadel-data
-  nix-zitadel-machinekey:
-    name: nix-zitadel-machinekey

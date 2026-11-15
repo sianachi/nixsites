@@ -116,7 +116,7 @@ and what to back up.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for Docker. The stack runs
-Postgres, an object store, the identity provider and three Nix services (API,
+Postgres, an object store and three Nix services (API,
 web, and one Node service for collaboration, the companion and the sites worker). A default
 Docker Desktop VM can be as small as 2 GB, which is too little. The script stops if a tool is
 missing, and warns when Docker has less than about 4 GB.
@@ -125,9 +125,9 @@ missing, and warns when Docker has less than about 4 GB.
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Open <http://nix.localhost> in Chrome or Firefox and sign in with the details it prints.
-Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost auth.nix.localhost` to
-`/etc/hosts` first.
+Open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints, and enter
+the setup code it prints to create the first account (it becomes the administrator). Safari does not
+resolve `.localhost` names: add `127.0.0.1 nix.localhost` to `/etc/hosts` first.
 
 The same line with a public origin is a real install, using the images at `ghcr.io/sianachi/nix`:
 
@@ -135,10 +135,15 @@ The same line with a public origin is a real install, using the images at `ghcr.
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash -s -- https://nix.example.org
 ```
 
-Point `nix.example.org` and `auth.nix.example.org` at the machine and leave ports 80 and 443 free.
+Point `nix.example.org` at the machine and leave ports 80 and 443 free. One hostname is enough:
+Nix signs people in itself.
 
-The script writes every secret into `~/nix/nix.env` and prints an administrator sign-in. Back that
-file up with the Docker volumes (`nix-*`); it cannot be regenerated.
+The script writes every secret into `~/nix/nix.env` and prints the setup code for the first account.
+Back that file up with the Docker volumes (`nix-*`); it cannot be regenerated. Add other people from
+the People page in the settings: each gets a one-time link, valid for an hour, to set a password or a
+passkey, and the same page issues a new link when someone is locked out. An install that already
+runs the bundled Zitadel keeps it, and `install.sh --migrate-local-auth` moves it over (see
+[docs/install.md](docs/install.md)).
 
 Flags, what the installer starts, upgrades, Kubernetes and image tags are in
 [docs/install.md](docs/install.md).
@@ -166,7 +171,7 @@ Run/Debug configurations for each service.
 ## Stack
 
 ASP.NET Core 10 and Postgres 16 (row-level security, pgvector) · React 19, TypeScript, Tailwind v4 ·
-Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Core · OIDC login (Zitadel).
+Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Core · sign-in built in (or OIDC, Zitadel in development).
 
 ```
 apps/web         React app, installable as a PWA

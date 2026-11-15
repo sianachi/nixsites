@@ -25,7 +25,7 @@ internal static class BrowserAuthEndpoints
 
         var auth = endpoints.MapGroup("/auth").WithTags("BrowserAuth");
         auth.MapGet("/login", BeginLogin).RequireRateLimiting(LoginPolicy);
-        auth.MapGet("/callback", CompleteLogin).RequireRateLimiting(LoginPolicy);
+        auth.MapGet("/callback", CompleteLogin).RequireRateLimiting(LoginPolicy).RequireAuthMode(AuthMode.Oidc);
         auth.MapGet("/session", GetSession);
         auth.MapPost("/token", RefreshToken);
         auth.MapPost("/native/redeem", RedeemNative).WithRequestBodyLimit(2048).RequireRateLimiting(RateLimitRefusal.TokenExchangePolicyName);
@@ -37,11 +37,19 @@ internal static class BrowserAuthEndpoints
         string? returnTo,
         string? native,
         HttpContext httpContext,
-        [FromServices] BrowserAuthCoordinator coordinator)
+        [FromServices] BrowserAuthCoordinator coordinator,
+        [FromServices] AuthSettings settings)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(coordinator);
+        ArgumentNullException.ThrowIfNull(settings);
         SetNoStore(httpContext);
+
+        if (settings.IsLocal)
+        {
+            // The CLI, phone and desktop flows all open /auth/login; the web sign-in page takes the same query.
+            return TypedResults.Redirect("/sign-in" + httpContext.Request.QueryString.Value);
+        }
 
         if (native is not null && !NativeHandoffCoordinator.IsChallenge(native))
         {
@@ -103,21 +111,10 @@ internal static class BrowserAuthEndpoints
                 state,
                 protectedState,
                 httpContext.RequestAborted).ConfigureAwait(false);
-            if (completed.NativeChallenge is not null)
-            {
-                // The system sheet never receives the session: only a one-time code the app redeems with its verifier.
-                var handoff = await handoffs.CreateAsync(completed, completed.NativeChallenge, httpContext.RequestAborted)
-                    .ConfigureAwait(false);
-                return handoff is null
-                    ? Problem(httpContext, BrowserAuthFailure.HandoffBusy)
-                    : TypedResults.Redirect(NativeHandoffCoordinator.CallbackUrl(handoff, coordinator.PublicOrigin));
-            }
-
-            httpContext.Response.Cookies.Append(
-                coordinator.SessionCookieName,
-                completed.CookieToken,
-                Cookie(coordinator, "/", completed.ExpiresAt));
-            return TypedResults.Redirect(completed.ReturnTo);
+            var redirect = await FinishSignInAsync(httpContext, coordinator, handoffs, completed).ConfigureAwait(false);
+            return redirect is null
+                ? Problem(httpContext, BrowserAuthFailure.HandoffBusy)
+                : TypedResults.Redirect(redirect);
         }
         catch (BrowserAuthException exception)
         {
@@ -137,20 +134,57 @@ internal static class BrowserAuthEndpoints
         }
     }
 
+    /// <summary>
+    /// Finishes a sign-in the same way for every mode: a native flow gets a one-time handoff code instead of
+    /// the session, a browser flow gets the session cookie. Returns where to send the person next, or null
+    /// when too many app handoffs are waiting.
+    /// </summary>
+    internal static async Task<string?> FinishSignInAsync(
+        HttpContext httpContext,
+        BrowserAuthCoordinator coordinator,
+        NativeHandoffCoordinator handoffs,
+        BrowserLoginCompletion completed)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(coordinator);
+        ArgumentNullException.ThrowIfNull(handoffs);
+        ArgumentNullException.ThrowIfNull(completed);
+        if (completed.NativeChallenge is not null)
+        {
+            // The system sheet never receives the session: only a one-time code the app redeems with its verifier.
+            var handoff = await handoffs.CreateAsync(completed, completed.NativeChallenge, httpContext.RequestAborted)
+                .ConfigureAwait(false);
+            return handoff is null ? null : NativeHandoffCoordinator.CallbackUrl(handoff, coordinator.PublicOrigin);
+        }
+
+        httpContext.Response.Cookies.Append(
+            coordinator.SessionCookieName,
+            completed.CookieToken,
+            Cookie(coordinator, "/", completed.ExpiresAt));
+        return completed.ReturnTo;
+    }
+
     private static async Task<Ok<BrowserSessionResponse>> GetSession(
         HttpContext httpContext,
         [FromServices] BrowserAuthCoordinator coordinator,
-        [FromServices] SelfIssuedTokenService tokens)
+        [FromServices] SelfIssuedTokenService tokens,
+        [FromServices] AuthSettings settings)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(coordinator);
         ArgumentNullException.ThrowIfNull(tokens);
+        ArgumentNullException.ThrowIfNull(settings);
         SetNoStore(httpContext);
 
+        var mode = settings.IsLocal ? "local" : "oidc";
         var session = await ResolveAsync(httpContext, coordinator).ConfigureAwait(false);
         if (session is null)
         {
-            return TypedResults.Ok(BrowserSessionResponse.Anonymous(coordinator.IsConfigured));
+            // Resolved lazily: only a local install with persistence has the store.
+            var setupRequired = settings.IsLocal
+                && httpContext.RequestServices.GetService<ILocalAccounts>() is { } accounts
+                && !await accounts.AnyAsync(httpContext.RequestAborted).ConfigureAwait(false);
+            return TypedResults.Ok(BrowserSessionResponse.Anonymous(coordinator.IsConfigured, mode, setupRequired));
         }
 
         return TypedResults.Ok(BrowserSessionResponse.SignedIn(
@@ -159,7 +193,8 @@ internal static class BrowserAuthEndpoints
                 session.DisplayName),
             coordinator.MintAccessToken(session),
             tokens.Clock.GetUtcNow() + tokens.Lifetime,
-            coordinator.AccountPage?.AbsoluteUri));
+            coordinator.AccountPage?.AbsoluteUri,
+            mode));
     }
 
     private static async Task<Results<Ok<BrowserTokenResponse>, ProblemHttpResult>> RefreshToken(
@@ -256,13 +291,13 @@ internal static class BrowserAuthEndpoints
         return TypedResults.NoContent();
     }
 
-    private static ValueTask<AuthenticatedBrowserSession?> ResolveAsync(
+    internal static ValueTask<AuthenticatedBrowserSession?> ResolveAsync(
         HttpContext context,
         BrowserAuthCoordinator coordinator) => coordinator.ResolveAsync(
             context.Request.Cookies[coordinator.SessionCookieName],
             context.RequestAborted);
 
-    private static CookieOptions Cookie(
+    internal static CookieOptions Cookie(
         BrowserAuthCoordinator coordinator,
         string path,
         DateTimeOffset? expiresAt) => new()
@@ -275,7 +310,7 @@ internal static class BrowserAuthEndpoints
             IsEssential = true,
         };
 
-    private static bool HasSameOrigin(HttpContext context, BrowserAuthCoordinator coordinator)
+    internal static bool HasSameOrigin(HttpContext context, BrowserAuthCoordinator coordinator)
     {
         var expected = coordinator.PublicOrigin;
         var supplied = context.Request.Headers.Origin.ToString();
@@ -290,20 +325,20 @@ internal static class BrowserAuthEndpoints
             && origin.Port == expected.Port;
     }
 
-    private static void SetNoStore(HttpContext context)
+    internal static void SetNoStore(HttpContext context)
     {
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
     }
 
-    private static ProblemHttpResult CsrfProblem(HttpContext context) => TypedResults.Problem(ApiProblem.Create(
+    internal static ProblemHttpResult CsrfProblem(HttpContext context) => TypedResults.Problem(ApiProblem.Create(
         context,
         StatusCodes.Status403Forbidden,
         "auth.cross_origin_refused",
         "Cross-origin request refused",
         "This browser-session operation must originate from the configured Nix origin."));
 
-    private static ProblemHttpResult AuthenticationProblem(HttpContext context) => TypedResults.Problem(
+    internal static ProblemHttpResult AuthenticationProblem(HttpContext context) => TypedResults.Problem(
         ApiProblem.Create(
             context,
             StatusCodes.Status401Unauthorized,
@@ -311,7 +346,7 @@ internal static class BrowserAuthEndpoints
             "Not authenticated",
             "No active browser session was presented."));
 
-    private static ProblemHttpResult Problem(HttpContext context, BrowserAuthFailure failure)
+    internal static ProblemHttpResult Problem(HttpContext context, BrowserAuthFailure failure)
     {
         var (status, code, title, detail) = failure switch
         {
@@ -376,16 +411,19 @@ internal sealed record BrowserSessionResponse(
     BrowserProfileResponse? Profile,
     string? AccessToken,
     DateTimeOffset? ExpiresAt,
-    string? AccountUrl)
+    string? AccountUrl,
+    string Mode,
+    bool SetupRequired)
 {
-    internal static BrowserSessionResponse Anonymous(bool configured) =>
-        new(false, configured, null, null, null, null);
+    internal static BrowserSessionResponse Anonymous(bool configured, string mode, bool setupRequired) =>
+        new(false, configured, null, null, null, null, mode, setupRequired);
 
     internal static BrowserSessionResponse SignedIn(
         BrowserProfileResponse profile,
         string accessToken,
         DateTimeOffset expiresAt,
-        string? accountUrl) => new(true, true, profile, accessToken, expiresAt, accountUrl);
+        string? accountUrl,
+        string mode) => new(true, true, profile, accessToken, expiresAt, accountUrl, mode, false);
 }
 
 /// <summary>A renewed short-lived Core bearer token.</summary>

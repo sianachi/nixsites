@@ -179,4 +179,150 @@ assert_lacks 'unknown option'
 assert_lacks 'GiB'
 [ ! -s "$called" ]
 
-echo 'install prerequisite checks passed.'
+# ── Sign-in modes ──────────────────────────────────────────────────────────────
+# A recording Docker stands in for the daemon; real openssl and jq generate the keys.
+dlog=$fixture/docker.log
+real=$fixture/real
+mkdir -p "$real"
+cat > "$real/docker" <<STUB
+#!/bin/sh
+printf '%s\n' "\$*" >> "$dlog"
+case "\$*" in
+  "info --format"*) echo 17179869184 ;;
+  *"SELECT 1 FROM pg_database"*) echo 1 ;;
+esac
+exit 0
+STUB
+chmod +x "$real/docker"
+stub curl '#!/bin/sh
+exit 1'
+rm -f "$bin/openssl" "$bin/jq" "$bin/kubectl" "$bin/envsubst"
+run_install() {
+  : > "$dlog"
+  set +e
+  out=$(env PATH="$real:$bin:/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin" NIX_SOURCE_DIR="$root" "$bash_bin" deploy/install.sh \
+    --dir "$sdir" --version v0.0.0 "$@" 2>&1)
+  code=$?
+  set -e
+}
+assert_log_has() { grep -F -q -- "$1" "$dlog" || { printf 'expected in docker calls: %s\n%s\n' "$1" "$(cat "$dlog")" >&2; exit 1; }; }
+assert_log_lacks() { ! grep -F -q -- "$1" "$dlog" || { printf 'unexpected in docker calls: %s\n' "$1" >&2; exit 1; }; }
+env_val() { sed -n "s|^$1=||p" "$sdir/nix.env"; }
+
+# A new install signs in locally: no Zitadel, no OIDC settings, one hostname, a setup code.
+sdir=$fixture/new
+run_install http://nix.localhost
+assert_ok
+[ "$(env_val NIX_AUTH_MODE)" = local ]
+grep -q '^NIX_OIDC_ISSUER=$' "$sdir/nix.env"
+grep -q '^NIX_OIDC_CLIENT_ID=$' "$sdir/nix.env"
+case "$(env_val NIX_AUTH_SETUP_CODE)" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;; *) echo 'no setup code' >&2; exit 1 ;; esac
+[ "$(env_val NIX_COLLAB_OIDC_AUDIENCE)" = nix ]
+[ "$(env_val NIX_COLLAB_OIDC_ISSUERS)" = 'http://nix.localhost|http://nix-api:8080/public/v1/auth/jwks' ]
+! grep -q -i -E 'ZITADEL|OIDC_ISSUER|OIDC_CLIENT|AUTH_HOST|ADMIN_PASSWORD' "$sdir/nix.env"
+assert_log_lacks compose.zitadel.yml
+assert_log_lacks 'up -d zitadel'
+assert_log_lacks nix-identity-bootstrap
+assert_has 'http://nix.localhost/setup'
+assert_has "$(env_val NIX_AUTH_SETUP_CODE)"
+grep -q '^NIX_OIDC_ISSUER=$' "$sdir/nix.env"
+grep -q '^NIX_OIDC_CLIENT_ID=$' "$sdir/nix.env"
+assert_lacks 'auth.nix.localhost'
+
+# Running it again upgrades and does not print the code a second time.
+run_install http://nix.localhost
+assert_ok
+assert_lacks "$(env_val NIX_AUTH_SETUP_CODE)"
+assert_has 'NIX_AUTH_SETUP_CODE'
+
+# An install that already uses the bundled Zitadel keeps it exactly as it is.
+sdir=$fixture/old
+mkdir -p "$sdir"
+cat > "$sdir/nix.env" <<ENV
+NIX_PUBLIC_ORIGIN=https://nix.example.org
+NIX_PUBLIC_HOST=nix.example.org
+NIX_AUTH_HOST=auth.nix.example.org
+NIX_OIDC_ISSUER=https://auth.nix.example.org
+NIX_OIDC_CLIENT_ID=abc
+NIX_ADMIN_PASSWORD=pw
+NIX_ZITADEL_MASTERKEY=masterkey-value
+NIX_ZITADEL_DB_PASSWORD=zdb-secret
+NIX_PG_APP_PASSWORD=a
+NIX_PG_MIGRATOR_PASSWORD=b
+NIX_PG_COLLAB_PASSWORD=c
+ENV
+cp "$sdir/nix.env" "$fixture/old.env"
+run_install https://nix.example.org
+assert_ok
+assert_log_has compose.zitadel.yml
+assert_log_has 'up -d zitadel'
+assert_log_has nix-identity-bootstrap
+assert_has 'admin@nix.auth.nix.example.org'
+assert_has '--migrate-local-auth'
+cmp -s "$sdir/nix.env" "$fixture/old.env"
+
+# Migration needs the flag, only for the Docker install, and a dry run changes nothing.
+run_install --dry-run https://nix.example.org
+assert_fail
+assert_has '--dry-run only goes with --migrate-local-auth'
+
+run_install --migrate-local-auth --dry-run https://nix.example.org
+assert_ok
+assert_log_has 'nix-migrate account import-zitadel --dry-run'
+assert_log_has '-e Nix__Auth__Passkeys__RpId=auth.nix.example.org'
+assert_log_has '-e NIX_ZITADEL_DATABASE_URL -e NIX_ZITADEL_MASTERKEY'
+assert_log_lacks NIX_ZITADEL_CONNECTION_STRING
+assert_log_lacks zdb-secret
+assert_log_lacks masterkey-value
+assert_log_lacks 'stop zitadel'
+cmp -s "$sdir/nix.env" "$fixture/old.env"
+[ ! -e "$sdir/nix.env.pre-local-auth" ]
+
+# The real run switches to local mode, keeps the old hostname for passkeys, stops Zitadel, keeps its data.
+run_install --migrate-local-auth https://nix.example.org
+assert_ok
+assert_log_has 'nix-migrate account import-zitadel'
+assert_log_has '-e Nix__Auth__Passkeys__RpId=auth.nix.example.org'
+assert_log_has '-e NIX_ZITADEL_DATABASE_URL -e NIX_ZITADEL_MASTERKEY'
+assert_log_lacks NIX_ZITADEL_CONNECTION_STRING
+assert_log_lacks zdb-secret
+assert_log_lacks masterkey-value
+assert_log_has 'stop zitadel zitadel-db'
+cmp -s "$sdir/nix.env.pre-local-auth" "$fixture/old.env"
+[ "$(env_val NIX_AUTH_MODE)" = local ]
+[ "$(env_val NIX_AUTH_PASSKEY_RP_ID)" = auth.nix.example.org ]
+[ "$(env_val NIX_WEBAUTHN_CADDY)" = "$sdir/webauthn.caddy" ]
+grep -F -q 'https://auth.nix.example.org {' "$sdir/webauthn.caddy"
+grep -F -q '{"origins":["https://nix.example.org"]}' "$sdir/webauthn.caddy"
+! grep -F -q 'down' "$dlog"
+assert_has 'To roll back'
+assert_has "$sdir/nix.env.pre-local-auth"
+
+# Afterwards it is an ordinary local install; migrating again is refused.
+run_install https://nix.example.org
+assert_ok
+assert_log_lacks compose.zitadel.yml
+run_install --migrate-local-auth https://nix.example.org
+assert_fail
+assert_has 'already signs people in with Nix itself'
+
+# The compose files parse in both shapes, with the env files install.sh writes.
+if docker compose version >/dev/null 2>&1; then
+  for shape in local oidc; do
+    envf=$fixture/shape.env
+    if [ "$shape" = local ]; then cp "$fixture/new/nix.env" "$envf"; else cp "$fixture/old.env" "$envf"; fi
+    files=(-f deploy/compose.prod.yml -f deploy/compose.quickstart.yml)
+    [ "$shape" = local ] || files+=(-f deploy/compose.zitadel.yml)
+    NIX_IMAGE_TAG=x NIX_WEB_IMAGE_TAG=x NIX_CORE_TOKEN_ISSUER=https://nix.example.org NIX_CORE_TOKEN_AUDIENCE=nix NIX_CORE_TOKEN_KEY_ID=k \
+      NIX_CORE_TOKEN_SIGNING_KEY_FILE=/dev/null NIX_OBJECT_STORE_ENDPOINT=http://a NIX_OBJECT_STORE_PUBLIC_ORIGIN=http://a \
+      NIX_OBJECT_STORE_BUCKET=a NIX_OBJECT_STORE_ACCESS_KEY=a NIX_OBJECT_STORE_SECRET_KEY=a NIX_PUBLIC_FORMS_SIGNING_KEY=a \
+      NIX_INTERNAL_SECRET=a NIX_PG_SUPERUSER_PASSWORD=a NIX_PG_APP_PASSWORD=a NIX_PG_MIGRATOR_PASSWORD=a NIX_MIGRATOR_CONNECTION_STRING=a \
+      NIX_CORE_DATABASE_URL=a NIX_COLLAB_DATABASE_URL=a NIX_COLLAB_MIGRATOR_CONNECTION_STRING=a CLOUDFLARE_TUNNEL_TOKEN=u \
+      NIX_ZITADEL_TLS_MODE=external NIX_ZITADEL_MASTERKEY=a NIX_ZITADEL_DB_PASSWORD=a NIX_ZITADEL_USER_PASSWORD=a NIX_AUTH_PORT=443 \
+      NIX_AUTH_SECURE=true NIX_ADMIN_USERNAME=a \
+      docker compose -p t --env-file "$envf" "${files[@]}" --profile bootstrap config --quiet
+  done
+fi
+
+
+echo 'install checks passed.'

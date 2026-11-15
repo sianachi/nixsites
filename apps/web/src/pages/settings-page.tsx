@@ -10,6 +10,7 @@ import {
   HardDrive,
   Info,
   KeyRound,
+  LockKeyhole,
   PawPrint,
   PenLine,
   Plug,
@@ -26,6 +27,9 @@ import { z } from 'zod';
 import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { AccessTokensSection } from '@nix/web-settings/settings/access-tokens/access-tokens-section';
+import { PeopleSection } from '@nix/web-settings/settings/people/people-section';
+import { SecuritySection } from '@nix/web-settings/settings/security/security-section';
+import { useAuthMode } from '@nix/web-platform/auth/use-auth-mode';
 import { AdministratorsSection } from '@nix/web-settings/settings/administrators/administrators-section';
 import { SiteApprovalsSection } from '@nix/web-settings/settings/site-approvals/site-approvals-section';
 import { BackupsSection } from '@nix/web-settings/settings/backups/backups-section';
@@ -71,6 +75,8 @@ const settingsSections: readonly {
   label: string;
   group: Group;
   gate?: Gate;
+  /** Offered only when the install signs people in itself. */
+  local?: true;
   keywords?: string;
 }[] = [
   {
@@ -84,6 +90,13 @@ const settingsSections: readonly {
   { id: 'notifications', label: 'Notifications', group: 'You', keywords: 'inbox reminders push' },
   { id: 'integrations', label: 'Calendars', group: 'You', keywords: 'sync google outlook' },
   { id: 'pets', label: 'Companion', group: 'You', keywords: 'pets ai chat' },
+  {
+    id: 'security',
+    label: 'Security',
+    group: 'You',
+    local: true,
+    keywords: 'password passkey authenticator two-step sign out',
+  },
   { id: 'about', label: 'About', group: 'You' },
   { id: 'workspace', label: 'Workspace', group: 'Workspace' },
   { id: 'access-tokens', label: 'Access tokens', group: 'Workspace' },
@@ -100,6 +113,14 @@ const settingsSections: readonly {
     label: 'Administrators',
     group: 'Administration',
     gate: (c) => c.tenantAdministrator || c.siteApprover,
+  },
+  {
+    id: 'people',
+    label: 'People',
+    group: 'Administration',
+    local: true,
+    gate: (c) => c.tenantAdministrator,
+    keywords: 'accounts invite reset link disable',
   },
   { id: 'backups', label: 'Backups', group: 'Administration', gate: (c) => c.operator },
 ];
@@ -119,6 +140,8 @@ const sectionIcons: Record<SettingsTab, LucideIcon> = {
   api: Code,
   'site-approvals': ShieldCheck,
   administrators: Users,
+  people: Users,
+  security: LockKeyhole,
   backups: HardDrive,
 };
 
@@ -151,6 +174,10 @@ function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
       return <SiteApprovalsSection />;
     case 'administrators':
       return <AdministratorsSection />;
+    case 'people':
+      return <PeopleSection />;
+    case 'security':
+      return <SecuritySection />;
     case 'about':
       return <AboutSection />;
   }
@@ -169,7 +196,11 @@ export function SettingsPage(): ReactElement {
   const { pathname, state } = useLocation() as { pathname: string; state: unknown };
   // Display hints: Core refuses the operator, approver and administrator routes to everyone else.
   const capabilities = useCapabilities();
-  const sections = settingsSections.filter((section) => section.gate?.(capabilities) !== false);
+  const mode = useAuthMode();
+  const sections = settingsSections.filter(
+    (section) =>
+      section.gate?.(capabilities) !== false && (section.local !== true || mode === 'local'),
+  );
   // Wide shows a default section only when the address asks for none.
   const activeTab = requested ?? (narrow ? null : DEFAULT_SETTINGS_TAB);
   const unavailable = activeTab !== null && !sections.some((section) => section.id === activeTab);

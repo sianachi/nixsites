@@ -110,6 +110,12 @@ spec:
               value: "20"
             - name: Nix__RateLimits__SuggestionsPerMinute
               value: "60"
+            - name: Nix__Auth__Mode
+              value: "${AUTH_MODE}"
+            - name: Nix__Auth__SetupCode
+              valueFrom: { secretKeyRef: { name: nix-auth, key: setup-code, optional: true } }
+            - name: Nix__Auth__Passkeys__RpId
+              value: "${AUTH_PASSKEY_RP_ID}"
             - name: Nix__Bff__Authority
               value: "${OIDC_ISSUER}"
             - name: Nix__Bff__ClientId

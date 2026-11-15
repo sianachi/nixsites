@@ -48,6 +48,9 @@ public sealed class NixTokenValidator
     // "sub" silently finds nothing and every token is refused with no error to explain it.
     private readonly JwtSecurityTokenHandler _handler = new() { MapInboundClaims = false };
 
+    /// <summary>Refuse every token Core did not issue itself. Set when Core signs people in (local mode).</summary>
+    public bool SelfIssuedOnly { get; init; }
+
     // Keyed by the complete immutable provider registration identity, not issuer alone. One issuer
     // can legitimately register separate audiences and JWKS sets for separate tenants. Reusing one
     // audience's set for another would become a cross-tenant acceptance bug when both sets contain
@@ -191,6 +194,12 @@ public sealed class NixTokenValidator
             && string.Equals(issuer, _selfIssued.Issuer, StringComparison.Ordinal))
         {
             return await ValidateSelfIssuedAsync(token).ConfigureAwait(false);
+        }
+
+        // One sign-in mode per install: a provider left registered after a move to local sign-in is no longer a way in.
+        if (SelfIssuedOnly)
+        {
+            return null;
         }
 
         var registrations = new IdentityProviderRegistration[MaximumAudiences];

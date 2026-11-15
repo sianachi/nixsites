@@ -7,12 +7,30 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Nix can sign people in itself, so a self-host no longer needs a separate identity provider. The
+  first account is created on the setup page with a setup code, and an administrator adds people
+  from a new People page: it lists accounts, adds a person (they get a one-time link, valid for an
+  hour, to choose a password or register a passkey), issues a reset link and disables or re-enables
+  someone. Issuing a reset link asks for the administrator's own password, and nobody can issue one
+  for themselves. Sign-in is by email and password, with an authenticator-app code as a second step, or by
+  passkey alone. Ten wrong passwords in five minutes pause that account for five minutes.
+- Settings > Security for everyone: change or remove your password (removal needs a passkey), add,
+  rename and remove passkeys, add or remove an authenticator app, and sign out everywhere.
+- `install.sh --migrate-local-auth` moves an install off the bundled Zitadel onto Nix's own sign-in,
+  keeping accounts, password hashes, authenticator apps and passkeys, with `--dry-run` to see what
+  would move first. Zitadel's data is left in place so you can roll back.
+- Host commands for the locked-out administrator and for scripts: `account reset-link`,
+  `account service-token` and `account import-zitadel`.
 - The landing page has a 45-second video tour between the view gallery and the views section: the
   desktop and the phone video side by side on a desktop or tablet, the phone video alone on a phone.
   Neither downloads or plays until you press Play.
 
 ### Changed
 
+- New installs no longer include Zitadel and need one hostname instead of two. Installs that
+  already use it keep it until you migrate. `NIX_AUTH_MODE` (`local` or `oidc`) picks the mode;
+  when unset it is `oidc` if an issuer is configured, so existing installs behave as before. An
+  install in `local` mode refuses tokens from an outside identity provider.
 - The self-host images take about 4 GB less disk space in total: Core went from 1.6 GB to
   0.5 GB, the Node services image from 1.9 GB to 0.9 GB, the sites image from 1.5 GB to 0.4 GB
   and the release tools image from 1.6 GB to 0.6 GB. The migration job image shrinks the same

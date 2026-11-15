@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Nix.Api\Nix.Api.csproj" />
+    <InternalsVisibleTo Include="Nix.Tests" />
   </ItemGroup>
 
   <ItemGroup>

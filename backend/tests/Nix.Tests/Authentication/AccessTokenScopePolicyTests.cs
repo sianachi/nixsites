@@ -31,6 +31,23 @@ public sealed class AccessTokenScopePolicyTests
     /// </remarks>
     private static readonly Dictionary<string, Requirement> ExpectedByOperation = new(StringComparer.Ordinal)
     {
+        // How a person signs in, and who else may: a person at a browser only, never a token.
+        ["GetLocalSecurity"] = Requirement.InteractiveOnly,
+        ["SetLocalPassword"] = Requirement.InteractiveOnly,
+        ["RemoveLocalPassword"] = Requirement.InteractiveOnly,
+        ["SignOutEverywhere"] = Requirement.InteractiveOnly,
+        ["StartAddLocalPasskey"] = Requirement.InteractiveOnly,
+        ["FinishAddLocalPasskey"] = Requirement.InteractiveOnly,
+        ["RenameLocalPasskey"] = Requirement.InteractiveOnly,
+        ["RemoveLocalPasskey"] = Requirement.InteractiveOnly,
+        ["EnrolLocalTotp"] = Requirement.InteractiveOnly,
+        ["RemoveLocalTotp"] = Requirement.InteractiveOnly,
+        ["ConfirmLocalTotp"] = Requirement.InteractiveOnly,
+        ["ListPeople"] = Requirement.InteractiveOnly,
+        ["AddPerson"] = Requirement.InteractiveOnly,
+        ["IssuePersonResetLink"] = Requirement.InteractiveOnly,
+        ["DisablePerson"] = Requirement.InteractiveOnly,
+        ["EnablePerson"] = Requirement.InteractiveOnly,
         ["CreateConversation"] = Requirement.Write,
         ["ImportConversation"] = Requirement.Write,
         ["ConfigureConversation"] = Requirement.Write,

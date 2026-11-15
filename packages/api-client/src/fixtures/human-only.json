@@ -11,6 +11,12 @@
     "path": "/api/v1/workspaces/33333333-3333-4333-8333-333333333333/conversations"
   },
   { "method": "POST", "path": "/api/v1/tenant/admins" },
+  { "method": "POST", "path": "/api/v1/me/security/password" },
+  { "method": "GET", "path": "/api/v1/me/security" },
+  {
+    "method": "POST",
+    "path": "/api/v1/tenant/people/55555555-5555-4555-8555-555555555555/reset-link"
+  },
   { "method": "PUT", "path": "/api/v1/tenant/settings" },
   { "method": "POST", "path": "/api/v1/sites/operators" },
   {

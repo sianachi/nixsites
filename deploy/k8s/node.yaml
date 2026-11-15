@@ -58,9 +58,9 @@ spec:
             - name: NIX_COLLAB_INTERNAL_SECRET
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
             - name: NIX_COLLAB_OIDC_ISSUERS
-              value: "${OIDC_ISSUER},${PUBLIC_ORIGIN}|http://nix-api:8080/public/v1/auth/jwks"
+              value: "${COLLAB_OIDC_ISSUERS}"
             - name: NIX_COLLAB_OIDC_AUDIENCE
-              value: "${OIDC_CLIENT_ID},nix"
+              value: "${COLLAB_OIDC_AUDIENCE}"
             - name: NIX_COLLAB_REAUTH_SECONDS
               value: "60"
             - name: NIX_COLLAB_MAX_RESIDENT_MB

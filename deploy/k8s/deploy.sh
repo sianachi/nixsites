@@ -33,6 +33,7 @@
 # NIX_BOOTSTRAP_TENANT_NAME and NIX_BOOTSTRAP_OIDC_PROJECT_ID (the identity provider's project id,
 # the audience of machine tokens); NIX_BOOTSTRAP_TENANT_ID is optional. After migrations it runs
 # deploy/seed/bootstrap_identity.sql in the postgres pod against OIDC_ISSUER/OIDC_CLIENT_ID. Idempotent.
+# Local mode never needs it: Core's first-run setup creates the tenant when none exists.
 #
 # NIX_SITES_REQUIRE_OPERATOR_APPROVAL (default true) holds a site's first publish for an operator.
 #
@@ -53,13 +54,40 @@ source deploy/k8s/template-boot-config.sh
 
 : "${REGISTRY:?set REGISTRY, matching what build-and-push.sh pushed to}"
 : "${TAG:?set TAG, matching what build-and-push.sh pushed}"
-: "${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}"
 : "${DOMAIN:?set DOMAIN, e.g. nix.example.com}"
-OIDC_ISSUER="${OIDC_ISSUER:-https://auth.$DOMAIN}"
 export PUBLIC_ORIGIN="${PUBLIC_ORIGIN:-https://$DOMAIN}"
+# One sign-in mode per install. local: Core signs people in itself and no identity provider is
+# deployed. oidc: an outside provider (the bundled Zitadel by default). Unset means oidc when
+# OIDC_CLIENT_ID is given, so existing deploys do not change; with neither set, local is the
+# default only for a namespace that has no Nix install yet.
+if [ -z "${NIX_AUTH_MODE:-}" ] && [ -z "${OIDC_CLIENT_ID:-}" ] && kubectl -n nix get deployment nix-api >/dev/null 2>&1; then
+  echo "Nix is already installed here. Set NIX_AUTH_MODE=oidc with OIDC_CLIENT_ID to keep the identity provider, or NIX_AUTH_MODE=local to switch on purpose." >&2
+  exit 1
+fi
+AUTH_MODE="${NIX_AUTH_MODE:-$([ -n "${OIDC_CLIENT_ID:-}" ] && echo oidc || echo local)}"
+case "$AUTH_MODE" in
+  oidc)
+    : "${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}"
+    OIDC_ISSUER="${OIDC_ISSUER:-https://auth.$DOMAIN}"
+    COLLAB_OIDC_ISSUERS="$OIDC_ISSUER,$PUBLIC_ORIGIN|http://nix-api:8080/public/v1/auth/jwks"
+    COLLAB_OIDC_AUDIENCE="$OIDC_CLIENT_ID,nix"
+    ;;
+  local)
+    OIDC_ISSUER="" OIDC_CLIENT_ID=""
+    COLLAB_OIDC_ISSUERS="$PUBLIC_ORIGIN|http://nix-api:8080/public/v1/auth/jwks"
+    COLLAB_OIDC_AUDIENCE=nix
+    ;;
+  *) echo "NIX_AUTH_MODE must be local or oidc" >&2; exit 1 ;;
+esac
+AUTH_PASSKEY_RP_ID="${NIX_AUTH_PASSKEY_RP_ID:-}"
+export AUTH_MODE AUTH_PASSKEY_RP_ID COLLAB_OIDC_ISSUERS COLLAB_OIDC_AUDIENCE
 NIX_TEMPLATE_BOOT_ENABLED="${NIX_TEMPLATE_BOOT_ENABLED:-true}"
 case "$NIX_TEMPLATE_BOOT_ENABLED" in
-  true) require_template_boot_config ;;
+  true)
+    # The sync script signs in with a Zitadel machine key; a local-mode install has none. Take a
+    # Core access token from "account service-token" and run the sync by hand until it accepts one.
+    [ "$AUTH_MODE" = oidc ] || { echo "NIX_TEMPLATE_BOOT_ENABLED=true needs NIX_AUTH_MODE=oidc; use false for a local-mode install" >&2; exit 1; }
+    require_template_boot_config ;;
   false) ;;
   *) echo "NIX_TEMPLATE_BOOT_ENABLED must be true or false" >&2; exit 1 ;;
 esac
@@ -125,7 +153,7 @@ export NIX_RELEASE_VERSION
 SITES_FOREIGN_LABEL_SUFFIX="${SITES_FOREIGN_LABEL_SUFFIX--home}"
 export REGISTRY TAG OIDC_ISSUER OIDC_CLIENT_ID DOMAIN SITES_REQUIRE_OPERATOR_APPROVAL SITES_FOREIGN_LABEL_SUFFIX BACKUP_OFFSITE PUBLIC_LINKS_ENABLED
 
-render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION}' < "$1"; }
+render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_SERVICE_KEY_SECRET} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION} ${AUTH_MODE} ${AUTH_PASSKEY_RP_ID} ${COLLAB_OIDC_ISSUERS} ${COLLAB_OIDC_AUDIENCE}' < "$1"; }
 
 if ! kubectl -n nix get secret nix-db >/dev/null 2>&1; then
   echo "secret nix-db not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
@@ -139,7 +167,9 @@ if ! kubectl -n nix get secret nix-object-store >/dev/null 2>&1; then
   echo "secret nix-object-store not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
   exit 1
 fi
-for required_secret in nix-sites nix-tls nix-zitadel; do
+required_secrets="nix-sites nix-tls"
+[ "$AUTH_MODE" = oidc ] && required_secrets="$required_secrets nix-zitadel"
+for required_secret in $required_secrets; do
   if ! kubectl -n nix get secret "$required_secret" >/dev/null 2>&1; then
     echo "secret $required_secret not found in namespace nix - run deploy/k8s/create-secrets.sh --${required_secret#nix-}-only" >&2
     exit 1
@@ -235,17 +265,19 @@ kubectl -n nix delete job/nix-db-seed --ignore-not-found
 kubectl apply -f deploy/k8s/job-seed.yaml
 kubectl -n nix wait --for=condition=complete job/nix-db-seed --timeout=180s
 
-echo "== Identity provider (database now; rollout waits with the workloads) =="
-kubectl -n nix delete "job/nix-zitadel-db-$TAG" --ignore-not-found
-render deploy/k8s/zitadel.yaml | kubectl apply -f -
-kubectl -n nix wait --for=condition=complete "job/nix-zitadel-db-$TAG" --timeout=180s
+if [ "$AUTH_MODE" = oidc ]; then
+  echo "== Identity provider (database now; rollout waits with the workloads) =="
+  kubectl -n nix delete "job/nix-zitadel-db-$TAG" --ignore-not-found
+  render deploy/k8s/zitadel.yaml | kubectl apply -f -
+  kubectl -n nix wait --for=condition=complete "job/nix-zitadel-db-$TAG" --timeout=180s
+fi
 
 echo "== Migrations (tag $TAG) =="
 render deploy/k8s/job-migrate.yaml | kubectl apply -f -
 kubectl -n nix wait --for=condition=complete "job/nix-migrate-$TAG" --timeout=300s
 kubectl -n nix wait --for=condition=complete "job/nix-migrate-documents-$TAG" --timeout=300s
 
-if [ "$NIX_BOOTSTRAP_IDENTITY" = true ]; then
+if [ "$NIX_BOOTSTRAP_IDENTITY" = true ] && [ "$AUTH_MODE" = oidc ]; then
   echo "== Identity bootstrap =="
   kubectl -n nix exec -i statefulset/postgres -c postgres -- \
     psql -X -v ON_ERROR_STOP=1 -U postgres -d nix \
@@ -288,7 +320,7 @@ kubectl -n nix rollout status deployment/nix-api --timeout=180s
 kubectl -n nix rollout status deployment/nix-web --timeout=180s
 kubectl -n nix rollout status deployment/nix-sites-serve --timeout=180s
 # A first install runs Zitadel's instance setup before it listens; that can take several minutes.
-kubectl -n nix rollout status deployment/nix-zitadel --timeout=900s
+if [ "$AUTH_MODE" = oidc ]; then kubectl -n nix rollout status deployment/nix-zitadel --timeout=900s; fi
 
 # The node host's readiness probes the object store's public origin, which is this Ingress, and managed
 # templates upload through it too: on a first install nothing answers there until it is applied.

@@ -5,6 +5,14 @@
   "type": "module",
   "description": "Settings sections: access tokens, administrators, API, backups, calendars, daily notes, editor preferences, MCP, members, notifications, preferences, publishing, site approvals",
   "exports": {
+    "./settings/people/people-section": {
+      "types": "./src/settings/people/people-section.tsx",
+      "default": "./src/settings/people/people-section.tsx"
+    },
+    "./settings/security/security-section": {
+      "types": "./src/settings/security/security-section.tsx",
+      "default": "./src/settings/security/security-section.tsx"
+    },
     "./settings/about/about-section": {
       "types": "./src/settings/about/about-section.tsx",
       "default": "./src/settings/about/about-section.tsx"

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Provisioning;
+using Nix.Domain.Tenancy;
 using Nix.Features.Identity;
 using Nix.Messaging;
 using Nix.Persistence;
@@ -30,7 +31,8 @@ public sealed class BrowserAuthCoordinator(
     NixDispatcher dispatcher,
     IBrowserSessions sessions,
     SelfIssuedTokenService tokens,
-    TimeProvider clock)
+    TimeProvider clock,
+    AuthSettings authSettings)
 {
     /// <summary>The opaque HttpOnly session cookie.</summary>
     private const string SecureSessionCookieName = "__Host-nix_session";
@@ -58,9 +60,11 @@ public sealed class BrowserAuthCoordinator(
     private readonly IBrowserSessions _sessions = sessions;
     private readonly SelfIssuedTokenService _tokens = tokens;
     private readonly TimeProvider _clock = clock;
+    private readonly AuthSettings _authSettings = authSettings;
 
     /// <summary>Whether the deployment can begin an interactive login.</summary>
-    public bool IsConfigured => _options.IsConfigured && _tokens.IsConfigured;
+    public bool IsConfigured =>
+        (_authSettings.IsLocal ? _options.TryPublicOrigin(out _) : _options.IsConfigured) && _tokens.IsConfigured;
 
     /// <summary>The deployment-appropriate session cookie name.</summary>
     public string SessionCookieName => SecureCookies ? SecureSessionCookieName : "nix_session";
@@ -75,7 +79,7 @@ public sealed class BrowserAuthCoordinator(
     public Uri? PublicOrigin => _options.TryPublicOrigin(out var origin) ? origin : null;
 
     /// <summary>The provider's self-service account page, when one is configured and safe.</summary>
-    public Uri? AccountPage => _options.TryAccountPage(out var account) ? account : null;
+    public Uri? AccountPage => !_authSettings.IsLocal && _options.TryAccountPage(out var account) ? account : null;
 
     /// <summary>Creates a protected PKCE transaction and the provider redirect.</summary>
     public async ValueTask<BrowserLoginStart> BeginAsync(
@@ -190,17 +194,7 @@ public sealed class BrowserAuthCoordinator(
                 registration.TenantId,
                 registration.Issuer,
                 access.Subject);
-        var secret = BrowserSessionSecret.Mint();
-        var now = _clock.GetUtcNow();
-        var session = new BrowserSession
-        {
-            Id = BrowserSessionId.Create(),
-            TenantId = registration.TenantId,
-            PrincipalId = principalId,
-            TokenHash = secret.Hash,
-            CreatedAt = now,
-            ExpiresAt = now + TimeSpan.FromHours(Math.Clamp(_options.SessionHours, 1, BrowserAuthOptions.MaxSessionHours)),
-        };
+        var (secret, session) = NewSession(registration.TenantId, principalId);
 
         _sessionContext.Set(NixSessionContext.ForTenant(registration.TenantId, principalId));
         var transaction = await _database.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -229,6 +223,43 @@ public sealed class BrowserAuthCoordinator(
                 completed.Value.Principal,
                 login.NativeChallenge);
         }
+    }
+
+    /// <summary>
+    /// Creates the browser session for a person Core itself has just authenticated (local sign-in): the same
+    /// session, expiry and cookie secret the OIDC callback produces, without a provider round trip.
+    /// </summary>
+    /// <param name="principal">The authenticated person; must be active.</param>
+    /// <param name="requestedReturnTo">The path to land on, sanitized here.</param>
+    /// <param name="nativeChallenge">The native handoff challenge when the phone or desktop app started the sign-in.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    public async ValueTask<BrowserLoginCompletion> SignInLocalAsync(
+        AuthenticatedPrincipal principal,
+        string? requestedReturnTo,
+        string? nativeChallenge,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+        if (!IsConfigured)
+        {
+            throw new BrowserAuthException(BrowserAuthFailure.NotConfigured);
+        }
+
+        if (principal.Status != PrincipalStatus.Active)
+        {
+            throw new BrowserAuthException(BrowserAuthFailure.PrincipalInactive);
+        }
+
+        var (secret, session) = NewSession(principal.TenantId, principal.Id);
+        _sessionContext.Set(NixSessionContext.ForTenant(principal.TenantId, principal.Id));
+        var transaction = await _database.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (transaction.ConfigureAwait(false))
+        {
+            await _sessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return new BrowserLoginCompletion(secret.Token, session.ExpiresAt, SafeReturnTo(requestedReturnTo), principal, nativeChallenge);
     }
 
     /// <summary>Resolves the opaque cookie without exposing it beyond this boundary.</summary>
@@ -260,6 +291,21 @@ public sealed class BrowserAuthCoordinator(
             await _sessions.RevokeAsync(session.Id, _clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private (MintedBrowserSessionSecret Secret, BrowserSession Session) NewSession(TenantId tenantId, PrincipalId principalId)
+    {
+        var secret = BrowserSessionSecret.Mint();
+        var now = _clock.GetUtcNow();
+        return (secret, new BrowserSession
+        {
+            Id = BrowserSessionId.Create(),
+            TenantId = tenantId,
+            PrincipalId = principalId,
+            TokenHash = secret.Hash,
+            CreatedAt = now,
+            ExpiresAt = now + TimeSpan.FromHours(Math.Clamp(_options.SessionHours, 1, BrowserAuthOptions.MaxSessionHours)),
+        });
     }
 
     private async ValueTask<OidcTokenPair> ExchangeAsync(
@@ -352,7 +398,7 @@ public sealed class BrowserAuthCoordinator(
 
     private void AssertConfigured()
     {
-        if (!IsConfigured)
+        if (_authSettings.IsLocal || !IsConfigured)
         {
             throw new BrowserAuthException(BrowserAuthFailure.NotConfigured);
         }

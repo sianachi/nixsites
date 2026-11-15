@@ -6,15 +6,17 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 #
-# For a real install the argument is the public origin, with DNS for it and for auth.<host>
-# pointing at the machine (or the cluster's ingress):
+# For a real install the argument is the public origin, with DNS for it pointing at the machine
+# (or the cluster's ingress):
 #
 #   curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh \
 #     | bash -s -- https://nix.example.org
 #
 # Docker (default): Caddy is the public listener on ports 80 and 443 and fetches the certificates;
 # everything lands under --dir (default ~/nix), where nix.env holds every generated secret and is
-# the only file to back up with the Docker volumes.
+# the only file to back up with the Docker volumes. Nix signs people in itself: the first visit
+# asks for the setup code printed at the end, and the person who uses it becomes the administrator.
+# An install that already uses the bundled Zitadel keeps it until you run --migrate-local-auth.
 #
 # --kubernetes: installs into the current kubectl context with deploy/k8s, under namespace nix.
 # The ingress controller must listen on the origin's port. Certificates: --tls-cert/--tls-key
@@ -31,6 +33,9 @@
 #   --storage-class <name>   kubernetes: StorageClass (default: the cluster default)
 #   --pod-cidr <cidr>        kubernetes: pod network (default: the first node's podCIDR)
 #   --tls-cert/--tls-key <file>, --cluster-issuer <name>  kubernetes certificates, see above
+#   --migrate-local-auth     Docker: move an install off the bundled Zitadel onto Nix's own sign-in,
+#                            carrying accounts, passwords, authenticator apps and passkeys over
+#   --dry-run                with --migrate-local-auth: report what would move and change nothing
 # NIX_SOURCE_DIR=<checkout> uses that checkout's deploy/ instead of downloading the release.
 set -euo pipefail
 
@@ -41,7 +46,8 @@ dir=$HOME/nix
 target=compose
 origin=
 ingress_class= ingress_service= storage_class= pod_cidr= tls_cert= tls_key= cluster_issuer=
-usage='usage: install.sh [--version <tag|sha>] [--dir <path>] [--kubernetes ...] [origin]'
+migrate_auth=false dry_run=false
+usage='usage: install.sh [--version <tag|sha>] [--dir <path>] [--kubernetes ...] [--migrate-local-auth [--dry-run]] [origin]'
 die() { printf 'install: %s\n' "$*" >&2; exit 2; }
 say() { printf '\ninstall: %s\n' "$*"; }
 warn() { printf 'install: warning: %s\n' "$*" >&2; }
@@ -105,11 +111,15 @@ while [ $# -gt 0 ]; do
     --tls-cert) tls_cert=${2:?}; shift 2 ;;
     --tls-key) tls_key=${2:?}; shift 2 ;;
     --cluster-issuer) cluster_issuer=${2:?}; shift 2 ;;
+    --migrate-local-auth) migrate_auth=true; shift ;;
+    --dry-run) dry_run=true; shift ;;
     -h|--help) echo "$usage"; exit 0 ;;
     -*) die "unknown option $1" ;;
     *) [ -z "$origin" ] || die "$usage"; origin=$1; shift ;;
   esac
 done
+[ "$dry_run" = false ] || [ "$migrate_auth" = true ] || die '--dry-run only goes with --migrate-local-auth'
+[ "$migrate_auth" = false ] || [ "$target" = compose ] || die '--migrate-local-auth is for the Docker install'
 require_tools
 origin=${origin:-http://nix.localhost}
 
@@ -121,6 +131,7 @@ if [ "$scheme" = http ] && [[ "$host" != *.localhost && "$host" != localhost ]];
   die "a plain-http origin is only allowed for a .localhost try-out; use https:// for $host"
 fi
 [ "$host" != localhost ] || die "use http://nix.localhost: inside a container, localhost is the container itself"
+# Only an install that still uses the bundled Zitadel has an auth hostname.
 auth_host="auth.$host"
 issuer="$scheme://$auth_host${port:+:$port}"
 if [ "$scheme" = https ]; then
@@ -209,24 +220,36 @@ register_app() {
   set_env NIX_BOOTSTRAP_OIDC_PROJECT_ID "$project_id"
 }
 
+# $1: the setup code (new local install), "-" (existing local install), or "" for the Zitadel
+# administrator sign-in, whose password is $2.
 finish() {
-  cat <<EOF
-
-Nix is running at $origin
-
-  Sign in as:  admin@nix.$auth_host
-  Password:    $1  (you will be asked to change it)
-
-State: $dir
-Upgrade: run this installer again with --version <newer release>
-EOF
-  [ "$scheme" = https ] || echo "Try-out: Chrome and Firefox resolve $host and $auth_host on their own; Safari needs both in /etc/hosts as 127.0.0.1."
+  printf '\nNix is running at %s\n\n' "$origin"
+  case "$1" in
+    "")
+      printf '  Sign in as:  admin@nix.%s\n  Password:    %s  (you will be asked to change it)\n' "$auth_host" "$2" ;;
+    -)
+      echo "  Sign in with your email and password. The setup code is NIX_AUTH_SETUP_CODE in $env_file."
+      echo "  Add people from People in the settings; they get a one-time link to set a password." ;;
+    *)
+      printf '  Open %s/setup and enter this setup code to create the first account\n  (it becomes the administrator):\n\n    %s\n\n' "$origin" "$1"
+      echo "  Add people from People in the settings; they get a one-time link to set a password." ;;
+  esac
+  printf '\nState: %s\nUpgrade: run this installer again with --version <newer release>\n' "$dir"
+  [ "$scheme" = https ] || echo "Try-out: Chrome and Firefox resolve $host on their own; Safari needs it in /etc/hosts as 127.0.0.1."
 }
 
 # ══ Kubernetes ═════════════════════════════════════════════════════════════════
 if [ "$target" = kubernetes ]; then
   env_file=$dir/kubernetes.env
-  [ -f "$env_file" ] || printf 'NIX_PUBLIC_ORIGIN=%s\nNIX_OIDC_CLIENT_ID=pending\nNIX_BOOTSTRAP_OIDC_PROJECT_ID=pending\n' "$origin" > "$env_file"
+  # A new install signs people in itself. A state file from before that has no NIX_AUTH_MODE and
+  # keeps the bundled Zitadel.
+  new_install=false
+  if [ ! -f "$env_file" ]; then
+    new_install=true
+    printf 'NIX_PUBLIC_ORIGIN=%s\nNIX_AUTH_MODE=local\nNIX_AUTH_SETUP_CODE=%s\n' "$origin" "$(secret 8)" > "$env_file"
+  fi
+  auth_mode=$(env_get NIX_AUTH_MODE); auth_mode=${auth_mode:-oidc}
+  [ "$auth_mode" = local ] || [ -n "$(env_get NIX_OIDC_CLIENT_ID)" ] || printf 'NIX_OIDC_CLIENT_ID=pending\nNIX_BOOTSTRAP_OIDC_PROJECT_ID=pending\n' >> "$env_file"
   [ "$(env_get NIX_PUBLIC_ORIGIN)" = "$origin" ] || die "$env_file was written for $(env_get NIX_PUBLIC_ORIGIN); pass that origin or use another --dir"
   kubectl cluster-info >/dev/null 2>&1 || die 'kubectl has no working context'
   ingress_class=${ingress_class:-$(kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}')}
@@ -236,7 +259,10 @@ if [ "$target" = kubernetes ]; then
   [ -n "$storage_class" ] || die 'no default StorageClass; pass --storage-class'
   [ -n "$pod_cidr" ] || die 'cannot read the pod CIDR; pass --pod-cidr'
   tls_hosts="[\"$host\", \"*.$host\"]"
-  [ -z "$cluster_issuer" ] || tls_hosts="[\"$host\", \"$auth_host\"]"
+  if [ -n "$cluster_issuer" ]; then
+    tls_hosts="[\"$host\", \"$auth_host\"]"
+    [ "$auth_mode" = oidc ] || tls_hosts="[\"$host\"]"
+  fi
 
   if ! kubectl -n nix get secret nix-db >/dev/null 2>&1; then
     if [ -z "$tls_cert" ]; then
@@ -247,6 +273,7 @@ if [ "$target" = kubernetes ]; then
     fi
     say "creating secrets in namespace nix"
     DOMAIN=$host NIX_OBJECT_STORE_PUBLIC_ORIGIN=$origin NIX_PUSH_VAPID_SUBJECT=$vapid_subject \
+      NIX_AUTH_MODE=$auth_mode NIX_AUTH_SETUP_CODE=$(env_get NIX_AUTH_SETUP_CODE) \
       NIX_ORIGIN_TLS_CERT_FILE=$tls_cert NIX_ORIGIN_TLS_KEY_FILE=$tls_key bash "$src/k8s/create-secrets.sh"
   fi
 
@@ -272,12 +299,13 @@ if [ "$target" = kubernetes ]; then
   fi
 
   deploy() {
+    local oidc_client_id=; [ "$auth_mode" = oidc ] && oidc_client_id=$(env_get NIX_OIDC_CLIENT_ID)
     NIX_DEPLOY_TARGET=kubernetes REGISTRY=$registry TAG=$version DOMAIN=$host PUBLIC_ORIGIN=$origin OIDC_ISSUER=$issuer \
-      OIDC_CLIENT_ID=$(env_get NIX_OIDC_CLIENT_ID) NIX_TEMPLATE_BOOT_ENABLED=false NIX_INGRESS_CLOUDFLARE_ONLY=false \
+      NIX_AUTH_MODE=$auth_mode OIDC_CLIENT_ID=$oidc_client_id NIX_TEMPLATE_BOOT_ENABLED=false NIX_INGRESS_CLOUDFLARE_ONLY=false \
       INGRESS_CLASS=$ingress_class STORAGE_CLASS=$storage_class STORAGE_CLASS_RETAIN=$storage_class POD_CIDR=$pod_cidr \
       AUTH_PORT=$auth_port AUTH_SECURE=$auth_secure ZITADEL_TLS_MODE=$tls_mode INGRESS_SSL_REDIRECT=$auth_secure TLS_HOSTS=$tls_hosts env "$@" bash "$src/k8s/deploy.sh"
   }
-  if [ "$(env_get NIX_OIDC_CLIENT_ID)" = pending ]; then
+  if [ "$auth_mode" = oidc ] && [ "$(env_get NIX_OIDC_CLIENT_ID)" = pending ]; then
     say "deploying Nix $version (first pass, before the application is registered)"
     deploy
     admin_url=http://127.0.0.1:${NIX_ZITADEL_ADMIN_PORT:-8301}
@@ -289,9 +317,18 @@ if [ "$target" = kubernetes ]; then
     kill $forward 2>/dev/null; trap - EXIT
   fi
   say "deploying Nix $version"
-  deploy NIX_BOOTSTRAP_IDENTITY=true NIX_BOOTSTRAP_TENANT_NAME=Nix NIX_BOOTSTRAP_OIDC_PROJECT_ID="$(env_get NIX_BOOTSTRAP_OIDC_PROJECT_ID)"
+  if [ "$auth_mode" = oidc ]; then
+    deploy NIX_BOOTSTRAP_IDENTITY=true NIX_BOOTSTRAP_TENANT_NAME=Nix NIX_BOOTSTRAP_OIDC_PROJECT_ID="$(env_get NIX_BOOTSTRAP_OIDC_PROJECT_ID)"
+  else
+    deploy
+  fi
   [ -z "$cluster_issuer" ] || kubectl -n nix annotate --overwrite ingress nix "cert-manager.io/cluster-issuer=$cluster_issuer" >/dev/null
-  finish "$(kubectl -n nix get secret nix-zitadel -o jsonpath='{.data.admin-password}' | base64 -d)"
+  if [ "$auth_mode" = local ]; then
+    if [ "$new_install" = true ]; then finish "$(env_get NIX_AUTH_SETUP_CODE)"; else finish -; fi
+    echo "Token for scripts and template sync: run the migrator image's 'account service-token --name <name>' (see docs/install.md)."
+  else
+    finish "" "$(kubectl -n nix get secret nix-zitadel -o jsonpath='{.data.admin-password}' | base64 -d)"
+  fi
   echo "Logs:    kubectl -n nix logs deployment/nix-api -f"
   exit 0
 fi
@@ -299,8 +336,11 @@ fi
 # ══ Docker Compose ═════════════════════════════════════════════════════════════
 env_file=$dir/nix.env
 key_file=$dir/core-access-token.pem
+new_install=false
+[ -f "$env_file" ] || new_install=true
+[ "$new_install" = false ] || [ "$migrate_auth" = false ] || die "no $env_file to migrate"
 [ -f "$key_file" ] || openssl ecparam -name prime256v1 -genkey -noout -out "$key_file"
-if [ ! -f "$env_file" ]; then
+if [ "$new_install" = true ]; then
   say "writing $env_file"
   pg_app=$(secret 24) pg_migrator=$(secret 24) pg_collab=$(secret 24)
   # SEC1 DER for P-256: the private scalar is at offset 7, the public point the last 65 bytes.
@@ -310,25 +350,20 @@ if [ ! -f "$env_file" ]; then
   vapid_private=$(dd if="$vapid_der" bs=1 skip=7 count=32 2>/dev/null | openssl base64 -A | tr '+/' '-_' | tr -d '=')
   vapid_public=$(tail -c 65 "$vapid_der" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
   rm -f "$vapid_der"
-  cat > "$env_file" <<EOF
+  cat > "$env_file" <<ENVEOF
 # Written by deploy/install.sh. Every value is a secret for this install; back this file up.
 NIX_PUBLIC_ORIGIN=$origin
 NIX_PUBLIC_HOST=$host
-NIX_AUTH_HOST=$auth_host
-NIX_AUTH_PORT=$auth_port
-NIX_AUTH_SECURE=$auth_secure
 NIX_HTTP_PORT=$http_port
 NIX_HTTPS_PORT=$https_port
-NIX_OIDC_ISSUER=$issuer
-NIX_OIDC_CLIENT_ID=pending
-NIX_BOOTSTRAP_OIDC_PROJECT_ID=pending
-NIX_BOOTSTRAP_TENANT_NAME=Nix
-NIX_ZITADEL_TLS_MODE=$tls_mode
-NIX_ZITADEL_MASTERKEY=$(secret 16)
-NIX_ZITADEL_DB_PASSWORD=$(secret 24)
-NIX_ZITADEL_USER_PASSWORD=$(secret 24)
-NIX_ADMIN_USERNAME=admin
-NIX_ADMIN_PASSWORD=$(secret 12)Aa1!
+# Core signs people in itself. The setup code is only asked for on the first-run page.
+NIX_AUTH_MODE=local
+NIX_AUTH_SETUP_CODE=$(secret 8)
+# Explicitly empty: Compose refuses an unset sign-in variable so an old OIDC install cannot drift into local mode.
+NIX_OIDC_ISSUER=
+NIX_OIDC_CLIENT_ID=
+NIX_COLLAB_OIDC_ISSUERS=$origin|http://nix-api:8080/public/v1/auth/jwks
+NIX_COLLAB_OIDC_AUDIENCE=nix
 NIX_PG_SUPERUSER_PASSWORD=$(secret 24)
 NIX_PG_APP_PASSWORD=$pg_app
 NIX_PG_MIGRATOR_PASSWORD=$pg_migrator
@@ -354,18 +389,87 @@ NIX_CORE_TOKEN_KEY_ID=nix-core-$(date +%Y-%m)
 NIX_CORE_TOKEN_SIGNING_KEY_FILE=$key_file
 # cloudflared is parked behind the cloudflare profile; the manifest still wants a value.
 CLOUDFLARE_TUNNEL_TOKEN=unused
-EOF
+ENVEOF
 fi
 [ "$(env_get NIX_PUBLIC_ORIGIN)" = "$origin" ] || die "$env_file was written for $(env_get NIX_PUBLIC_ORIGIN); pass that origin or use another --dir"
 
+# An install made before Core could sign people in has an OIDC issuer and no NIX_AUTH_MODE: it
+# keeps the bundled Zitadel, overlay included, until --migrate-local-auth.
+auth_mode=$(env_get NIX_AUTH_MODE)
+if [ -z "$auth_mode" ]; then
+  if [ -n "$(env_get NIX_OIDC_ISSUER)" ]; then auth_mode=oidc; else auth_mode=local; fi
+fi
+[ "$migrate_auth" = false ] || [ "$auth_mode" = oidc ] || die "this install already signs people in with Nix itself; nothing to migrate"
+
 export NIX_IMAGE_REGISTRY=$registry NIX_IMAGE_TAG=$version NIX_WEB_IMAGE_TAG=$version
-compose=(docker compose -p nix --env-file "$env_file" -f "$src/compose.prod.yml" -f "$src/compose.quickstart.yml")
+set_compose() {
+  compose=(docker compose -p nix --env-file "$env_file" -f "$src/compose.prod.yml" -f "$src/compose.quickstart.yml")
+  if [ "$auth_mode" = oidc ]; then compose+=(-f "$src/compose.zitadel.yml"); fi
+}
+set_compose
 "${compose[@]}" config --quiet
 
-say "starting the database, broker, object store and identity provider"
+# Reads the bundled Zitadel's database and moves its accounts onto the existing principals in Core.
+# Core's data protection keys are mounted because authenticator secrets are stored encrypted with them.
+run_account_import() {
+  # Secrets go in by name only, so they never show in the process list. The RP ID is the hostname
+  # Core will use after the switch; without it the import falls back to Zitadel's own domain and
+  # passkeys registered for the other name would be refused.
+  NIX_ZITADEL_DATABASE_URL="Host=zitadel-db;Port=5432;Database=zitadel;Username=postgres;Password=$(env_get NIX_ZITADEL_DB_PASSWORD)" \
+  NIX_ZITADEL_MASTERKEY=$(env_get NIX_ZITADEL_MASTERKEY) \
+  "${compose[@]}" run --rm --no-deps \
+    -v nix-api-data-protection:/var/lib/nix/data-protection \
+    -e Nix__Bff__DataProtectionKeysPath=/var/lib/nix/data-protection \
+    -e "Nix__Auth__Passkeys__RpId=$auth_host" \
+    -e NIX_ZITADEL_DATABASE_URL -e NIX_ZITADEL_MASTERKEY \
+    nix-migrate account import-zitadel "$@"
+}
+
+if [ "$migrate_auth" = true ]; then
+  say "starting the databases and bringing the schema to $version"
+  "${compose[@]}" up -d --wait --wait-timeout 180 postgres zitadel-db
+  "${compose[@]}" run --rm --no-deps nix-api-init >/dev/null
+  "${compose[@]}" run --rm --no-deps nix-migrate
+  if [ "$dry_run" = true ]; then
+    say "dry run: nothing is changed"
+    run_account_import --dry-run
+    exit 0
+  fi
+  run_account_import
+  # Zitadel's data stays where it is; rolling back is restoring this copy of the env file.
+  backup_env=$env_file.pre-local-auth
+  cp -p "$env_file" "$backup_env"
+  # Passkeys were registered for the old auth hostname, so it stays the WebAuthn RP ID and the
+  # listener keeps answering /.well-known/webauthn there; nothing else is served on it.
+  webauthn_file=$dir/webauthn.caddy
+  cat > "$webauthn_file" <<CADDYEOF
+# Related origins for passkeys registered before Nix signed people in itself (written by install.sh).
+$issuer {
+	header Content-Type application/json
+	respond /.well-known/webauthn \`{"origins":["$origin"]}\` 200
+	respond 404
+}
+CADDYEOF
+  set_env NIX_AUTH_MODE local
+  set_env NIX_OIDC_ISSUER ""
+  set_env NIX_OIDC_CLIENT_ID ""
+  set_env NIX_AUTH_PASSKEY_RP_ID "$auth_host"
+  set_env NIX_WEBAUTHN_CADDY "$webauthn_file"
+  set_env NIX_COLLAB_OIDC_ISSUERS "$origin|http://nix-api:8080/public/v1/auth/jwks"
+  set_env NIX_COLLAB_OIDC_AUDIENCE nix
+  say "stopping the bundled identity provider (its volumes are kept)"
+  "${compose[@]}" stop zitadel zitadel-db
+  auth_mode=local
+  set_compose
+  "${compose[@]}" config --quiet
+fi
+
+say "starting the database and object store"
 "${compose[@]}" up -d --wait --wait-timeout 180 postgres nix-versitygw
-# No healthcheck on the distroless Zitadel image; register_app polls its discovery document.
-"${compose[@]}" up -d zitadel
+if [ "$auth_mode" = oidc ]; then
+  # No healthcheck on the distroless Zitadel image; register_app polls its discovery document.
+  "${compose[@]}" up -d zitadel
+fi
 "${compose[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres \
   -v app_password="$(env_get NIX_PG_APP_PASSWORD)" -v migrator_password="$(env_get NIX_PG_MIGRATOR_PASSWORD)" \
   -v collab_password="$(env_get NIX_PG_COLLAB_PASSWORD)" -v db_name=nix -f /nix-seed/seed.sql >/dev/null
@@ -375,7 +479,7 @@ fi
 "${compose[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U postgres -d nix -v db_name=nix -f /nix-seed/seed_database.sql >/dev/null
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-storage-init >/dev/null
 
-if [ "$(env_get NIX_OIDC_CLIENT_ID)" = pending ]; then
+if [ "$auth_mode" = oidc ] && [ "$(env_get NIX_OIDC_CLIENT_ID)" = pending ]; then
   admin_url=http://127.0.0.1:${NIX_ZITADEL_ADMIN_PORT:-8301}
   pat=
   deadline=$((SECONDS + 240))
@@ -388,12 +492,26 @@ fi
 
 say "running migrations"
 "${compose[@]}" run --rm --no-deps nix-migrate
-"${compose[@]}" --profile bootstrap run --rm --no-deps nix-identity-bootstrap
+# The first-run page creates the first tenant in local mode; only an outside provider needs one made here.
+if [ "$auth_mode" = oidc ]; then
+  "${compose[@]}" --profile bootstrap run --rm --no-deps nix-identity-bootstrap
+fi
 "${compose[@]}" run --rm --no-deps nix-template-presets
 "${compose[@]}" run --rm --no-deps nix-api-init
 "${compose[@]}" --profile maintenance run --rm --no-deps nix-collab-migrate
 say "starting Nix $version"
 "${compose[@]}" up -d
 "${compose[@]}" up -d --wait --wait-timeout 300 nix-api nix-node nix-web
-finish "$(env_get NIX_ADMIN_PASSWORD)"
+if [ "$auth_mode" = oidc ]; then
+  finish "" "$(env_get NIX_ADMIN_PASSWORD)"
+  echo "Sign-in: this install still uses the bundled identity provider. --migrate-local-auth [--dry-run] moves it onto Nix's own sign-in."
+elif [ "$migrate_auth" = true ]; then
+  finish -
+  printf '\nMigrated. People sign in with the same email and password; passkeys and authenticator apps came across.\n'
+  printf "Zitadel's data is untouched in the nix-zitadel-* volumes. To roll back:\n  cp %s %s\n  run this installer again without --migrate-local-auth (it starts the Zitadel containers again)\n" "$backup_env" "$env_file"
+elif [ "$new_install" = true ]; then
+  finish "$(env_get NIX_AUTH_SETUP_CODE)"
+else
+  finish -
+fi
 echo "Logs:    ${compose[*]} logs -f"
