@@ -12,6 +12,17 @@ services:
     volumes:
       - ./seed:/nix-seed:ro
 
+  # Remote MCP is always on here, with OAuth sign-in for hosted connectors: Core answers the
+  # OAuth routes only when both its public origin and the MCP URL are set.
+  nix-api:
+    environment:
+      Nix__Mcp__PublicUrl: ${NIX_PUBLIC_ORIGIN:?set NIX_PUBLIC_ORIGIN}/mcp
+
+  nix-mcp:
+    profiles: !reset []
+    environment:
+      NIX_MCP_PUBLIC_URL: ${NIX_PUBLIC_ORIGIN:?set NIX_PUBLIC_ORIGIN}/mcp
+
   nix-web:
     ports:
       - "${NIX_HTTP_PORT:-80}:${NIX_HTTP_PORT:-80}"
@@ -19,6 +30,7 @@ services:
     environment:
       NIX_PUBLIC_ORIGIN: ${NIX_PUBLIC_ORIGIN:?set NIX_PUBLIC_ORIGIN}
       NIX_CLIENT_IP: "{http.request.remote.host}"
+      NIX_MCP_UPSTREAM: nix-mcp:8500
     volumes:
       - ./Caddyfile.quickstart:/etc/caddy/Caddyfile:ro
       - ./Caddyfile.prod:/etc/caddy/Caddyfile.prod:ro

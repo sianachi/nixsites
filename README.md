@@ -116,8 +116,9 @@ and what to back up.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
 the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for Docker. The stack runs
-Postgres, an object store and three Nix services (API,
-web, and one Node service for collaboration, the companion and the sites worker). A default
+Postgres, an object store and four Nix services (API,
+web, one Node service for collaboration, the companion and the sites worker, and the remote MCP
+server at `<origin>/mcp`). A default
 Docker Desktop VM can be as small as 2 GB, which is too little. The script stops if a tool is
 missing, and warns when Docker has less than about 4 GB.
 

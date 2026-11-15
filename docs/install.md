@@ -7,9 +7,9 @@ what the script does, the flags, upgrades, Kubernetes and image tags.
 ## Try it on your machine
 
 Needs Docker with the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for
-Docker. The stack runs Postgres, an object store and three Nix
-services (API, web, and one Node service for collaboration, the pet
-companion and the sites worker). A default Docker Desktop VM can be as small as 2 GB, which is too little. The script
+Docker. The stack runs Postgres, an object store and four Nix
+services (API, web, one Node service for collaboration, the pet
+companion and the sites worker, and the remote MCP server). A default Docker Desktop VM can be as small as 2 GB, which is too little. The script
 stops if a tool is missing, and warns when Docker has less than about 4 GB.
 
 ```sh
@@ -41,6 +41,10 @@ every service and prints the address of the setup page with a setup code.
 
 Back up `~/nix/nix.env` together with the Docker volumes (`nix-*`). The env file holds every secret
 and cannot be regenerated.
+
+Remote MCP is always on at `<origin>/mcp`. An AI client connects with a personal access token, or a
+hosted connector (Claude, ChatGPT) signs in through the browser with OAuth; hosted connectors need
+the public https origin, since they cannot reach a `.localhost` try-out.
 
 ## Signing in
 

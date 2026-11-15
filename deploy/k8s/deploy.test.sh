@@ -710,6 +710,8 @@ fi
 run_deploy
 grep -Fq 'apply-stdin:nix-mcp,nix-mcp,nix-mcp' "$KUBECTL_LOG"
 grep -A1 -F 'name: Nix__Mcp__PublicUrl' "$RENDERED_API" | grep -Fq 'value: "https://nix.example.test/mcp"'
+grep -A1 -F 'name: NIX_MCP_PUBLIC_URL' "$RENDERED_ALL" | grep -Fq 'value: "https://nix.example.test/mcp"'
+grep -Fq '@oauth_discovery path /.well-known/oauth-protected-resource*' deploy/k8s/Caddyfile
 # NIX_MCP_ENABLED=false removes it and Core advertises nothing.
 : > "$KUBECTL_LOG"; : > "$RENDERED_ALL"
 NIX_MCP_ENABLED=false run_deploy

@@ -83,8 +83,8 @@ vi.stubGlobal('fetch', (input: string | URL | Request, init?: RequestInit) => {
   return url.host === 'core.test' ? fetchImpl(url.toString(), init) : realFetch(input, init);
 });
 
-async function listen(): Promise<URL> {
-  const handler = createMcpHttpHandler({ apiUrl: API, fetchImpl });
+async function listen(publicOrigin?: string): Promise<URL> {
+  const handler = createMcpHttpHandler({ apiUrl: API, fetchImpl, publicOrigin });
   const created = createServer((request, response) => {
     void handler(request, response);
   });
@@ -130,6 +130,14 @@ describe('nixctl mcp over HTTP', () => {
     expect(seen).toEqual([]);
     const health = await fetch(new URL('/healthz', url));
     expect(health.status).toBe(200);
+  });
+
+  it('points a 401 at the OAuth discovery document when the public origin is known', async () => {
+    const url = await listen('https://nix.example.test');
+    const anonymous = await fetch(url, { method: 'POST' });
+    expect(anonymous.headers.get('www-authenticate')).toBe(
+      'Bearer realm="nix", resource_metadata="https://nix.example.test/.well-known/oauth-protected-resource/mcp"',
+    );
   });
 
   it('serves the tool contract to a bearer and reaches Core as that token alone', async () => {

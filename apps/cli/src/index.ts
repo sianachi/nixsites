@@ -109,9 +109,13 @@ export function buildProgram(): Command {
     .option('--listen <host:port>', 'serve Streamable HTTP instead of stdio (or NIX_MCP_LISTEN)')
     .option('--api-url <url>', "Core's origin for HTTP mode (or NIX_API_URL)")
     .option('--collab-url <url>', 'the collaboration service for HTTP mode (or NIX_COLLAB_URL)')
+    .option(
+      '--public-url <url>',
+      "the install's public MCP URL, for OAuth discovery hints (or NIX_MCP_PUBLIC_URL)",
+    )
     .action(
       async (
-        options: { listen?: string; apiUrl?: string; collabUrl?: string },
+        options: { listen?: string; apiUrl?: string; collabUrl?: string; publicUrl?: string },
         command: Command,
       ) => {
         const flags = globalFlags(command);
@@ -125,9 +129,11 @@ export function buildProgram(): Command {
           throw new Error('HTTP mode needs --api-url or NIX_API_URL.');
         }
         const collabUrl = options.collabUrl ?? process.env.NIX_COLLAB_URL;
+        const publicUrl = options.publicUrl ?? process.env.NIX_MCP_PUBLIC_URL;
+        const publicOrigin = publicUrl ? new URL(publicUrl).origin : undefined;
         const { startMcpHttpServer } = await import('./mcp-http.ts');
         await run(async () => {
-          await startMcpHttpServer({ listen, apiUrl, collabUrl });
+          await startMcpHttpServer({ listen, apiUrl, collabUrl, publicOrigin });
           await new Promise<never>(() => undefined);
         });
       },

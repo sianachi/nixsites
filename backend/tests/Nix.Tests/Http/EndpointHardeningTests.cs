@@ -151,7 +151,7 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
     private static string? ExpectedPolicy(RouteEndpoint endpoint) => endpoint.RoutePattern.RawText switch
     {
         "/public/v1/forms/{token}" => RateLimitRefusal.PublicFormsPolicyName,
-        "/public/v1/auth/token" => RateLimitRefusal.TokenExchangePolicyName,
+        "/public/v1/auth/token" or "/api/v1/oauth/token" => RateLimitRefusal.TokenExchangePolicyName,
 
         // Every route that checks an item-lock password carries the tighter lock policy instead.
         // Relocking shares the unlock path but checks nothing, so it keeps the writes policy.

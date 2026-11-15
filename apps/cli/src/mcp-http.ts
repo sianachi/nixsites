@@ -24,12 +24,15 @@ import { openSession, type FetchImpl, type Session } from './session.ts';
  * takes at most that long to bite. Stdio MCP (`nixctl mcp`) runs on the person's own machine with
  * their own login, is not served by this endpoint and is deliberately not covered by the switch.
  *
- * shortcut: header-bearer clients only (Claude Code, Cursor, Claude Desktop via mcp-remote); the
- * OAuth discovery that hosted claude.ai connectors require is deferred and documented.
+ * A 401 points hosted connectors at Core's OAuth discovery (`resource_metadata`) when the public
+ * origin is known. shortcut: that origin comes from one option, so a proxy that serves Nix on
+ * several origins advertises only the configured one; revisit if installs need more than one.
  */
 export interface McpHttpOptions {
   readonly apiUrl: string;
   readonly collabUrl?: string | undefined;
+  /** The install's public origin; when set, 401s carry the OAuth protected-resource metadata link. */
+  readonly publicOrigin?: string | undefined;
   /** The request path the endpoint answers on; everything else is 404. */
   readonly path?: string;
   readonly fetchImpl?: FetchImpl | undefined;
@@ -57,6 +60,12 @@ export function createMcpHttpHandler(
   const sessions = new Map<string, Omit<Session, 'client'>>();
 
   const now = options.now ?? Date.now;
+  const challenge = (invalidToken: boolean): string =>
+    'Bearer realm="nix"' +
+    (invalidToken ? ', error="invalid_token"' : '') +
+    (options.publicOrigin
+      ? `, resource_metadata="${options.publicOrigin}/.well-known/oauth-protected-resource/mcp"`
+      : '');
   const switches = new Map<string, { readonly enabled: boolean; readonly until: number }>();
 
   /** Whether the caller's organisation allows MCP; throws only when Core cannot say. */
@@ -127,7 +136,7 @@ export function createMcpHttpHandler(
       response
         .writeHead(401, {
           'content-type': 'application/json',
-          'www-authenticate': 'Bearer realm="nix", error="invalid_token"',
+          'www-authenticate': challenge(request.headers.authorization !== undefined),
         })
         .end(
           JSON.stringify({
@@ -151,9 +160,7 @@ export function createMcpHttpHandler(
       response
         .writeHead(unauthorised ? 401 : 503, {
           'content-type': 'application/json',
-          ...(unauthorised
-            ? { 'www-authenticate': 'Bearer realm="nix", error="invalid_token"' }
-            : {}),
+          ...(unauthorised ? { 'www-authenticate': challenge(true) } : {}),
         })
         .end(
           JSON.stringify({

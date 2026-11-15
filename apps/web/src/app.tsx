@@ -13,6 +13,7 @@ import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
 import { GraphPage } from './pages/graph-page';
 import { PetPage } from './pages/pet-page';
+import { OAuthAuthorizePage } from './pages/oauth-authorize-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { PublicFormPage } from './pages/public-form-page';
 import { PublicLinkPage } from './pages/public-link-page';
@@ -143,6 +144,8 @@ export function AppRoutes(): ReactElement {
             {/* Outside the workspace list on purpose: a join link shows nothing about a workspace
                 before the password is accepted, so nothing here may load one. */}
             <Route path="/join/:workspaceId" element={<JoinWorkspacePage />} />
+            {/* A connector's authorization request; the session gate returns here after sign-in. */}
+            <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
             <Route element={<AccessibleWorkspacesProvider />}>
               <Route path="/workspaces/groups" element={<WorkspaceGroupsPage />} />
               <Route

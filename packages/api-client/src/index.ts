@@ -150,6 +150,7 @@ export type {
  * to the client, so nothing above this package ever sees a URL.
  */
 export * as accessTokens from './resources/access-tokens.js';
+export * as oauth from './resources/oauth.js';
 export * as health from './resources/health.js';
 export type { ServiceVersion, SystemVersions } from './resources/health.js';
 export * as principal from './resources/principal.js';

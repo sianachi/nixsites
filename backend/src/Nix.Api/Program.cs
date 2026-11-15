@@ -105,6 +105,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(TemplateImportsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(TokensJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(BrowserAuthJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.OAuth.OAuthJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.LocalAuth.LocalAuthJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.People.PeopleJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(Nix.Features.LocalAuth.LocalTotpJsonContext.Default);
@@ -498,6 +499,9 @@ if (persistenceConfigured)
     builder.Services.AddScoped<BrowserAuthCoordinator>();
     builder.Services.AddScoped<CliLoginCoordinator>();
     builder.Services.AddScoped<NativeHandoffCoordinator>();
+    builder.Services.AddSingleton<Nix.Features.OAuth.OAuthClients>();
+    builder.Services.AddScoped<Nix.Features.OAuth.OAuthConsentGuard>();
+    Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<Nix.Abstractions.IIsolatedUnitOfWork, Nix.Persistence.IsolatedUnitOfWork>(builder.Services);
     Nix.Features.LocalAuth.LocalAuthServiceCollectionExtensions.AddLocalAuth(builder.Services);
 }
 
@@ -629,7 +633,10 @@ if (persistenceConfigured)
             context.Request.Path.StartsWithSegments("/api/v1", StringComparison.OrdinalIgnoreCase)
             && !context.Request.Path.StartsWithSegments(
                 "/api/v1/health",
-                StringComparison.OrdinalIgnoreCase),
+                StringComparison.OrdinalIgnoreCase)
+            // Protocol routes for clients that hold no credential yet; consent stays inside the unit of work.
+            && !context.Request.Path.StartsWithSegments("/api/v1/oauth/register", StringComparison.OrdinalIgnoreCase)
+            && !context.Request.Path.StartsWithSegments("/api/v1/oauth/token", StringComparison.OrdinalIgnoreCase),
         static branch => branch.UseMiddleware<NixUnitOfWorkMiddleware>());
 }
 
@@ -722,6 +729,7 @@ app.MapPublicFormEndpoints();
 app.MapTemplateEndpoints();
 app.MapTokenEndpoints();
 app.MapTokenExchangeEndpoints();
+Nix.Features.OAuth.OAuthEndpoints.MapOAuthEndpoints(app);
 app.MapSiteEndpoints();
 app.MapWorkspaceSyncEndpoints();
 app.MapNativeReplayEndpoints();

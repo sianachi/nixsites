@@ -87,6 +87,7 @@ edge=Path('deploy/Caddyfile.prod').read_text()
 exchange=edge.split('handle /public/v1/auth/token {',1)[1].split('\n\thandle ',1)[0]
 assert 'reverse_proxy nix-api:8080' in exchange
 assert 'handle /.well-known/webauthn {\n\t\treverse_proxy nix-api:8080' in edge
+assert '@oauth_discovery path /.well-known/oauth-protected-resource* /.well-known/oauth-authorization-server' in edge
 assert 'header_up X-Forwarded-For {$NIX_CLIENT_IP}' in exchange
 assert s['nix-web']['environment']['NIX_CLIENT_IP'] == '{http.request.header.CF-Connecting-IP}'
 # Sites on a shared domain: the label suffix reaches Core, serve and the edge; no wildcard is two levels deep.

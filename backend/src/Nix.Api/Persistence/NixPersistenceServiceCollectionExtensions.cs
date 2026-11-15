@@ -212,6 +212,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<IBrowserSessions, BrowserSessionStore>();
         services.AddScoped<ICliLoginSessions, CliLoginSessionStore>();
         services.AddScoped<INativeHandoffs, NativeHandoffStore>();
+        services.AddScoped<IOAuthCodes, OAuthCodeStore>();
         services.AddScoped<ILocalAccounts, LocalAccountStore>();
         services.AddScoped<ILocalCredentials, LocalCredentialStore>();
         services.AddScoped<LocalAccountLinkStore>();

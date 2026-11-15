@@ -63,6 +63,56 @@ export interface AccessTokenCreateDialogProps {
   }) => Promise<CreateTokenOutcome>;
 }
 
+/**
+ * The scope checkboxes, shared with the OAuth consent page so a connector is granted access with
+ * the same controls, words and independence note as a hand-made token.
+ */
+export function AccessScopesField(props: {
+  readonly scopes: ReadonlySet<string>;
+  readonly onToggle: (scope: string) => void;
+  readonly error: string | null;
+}): ReactElement {
+  const { scopes, onToggle, error } = props;
+  return (
+    <fieldset className="flex flex-col gap-1 border-0 p-0">
+      <legend className={fieldLabel}>
+        Scopes
+        <span aria-hidden="true" className="ml-1 text-accent-text">
+          *
+        </span>
+      </legend>
+      {ACCESS_TOKEN_SCOPES.map((scope) => (
+        <label key={scope} className="flex min-h-11 flex-wrap items-center gap-x-2">
+          <input
+            type="checkbox"
+            checked={scopes.has(scope)}
+            onChange={() => {
+              onToggle(scope);
+            }}
+          />
+          <Text as="span" variant="bodySmall">
+            {scope}
+          </Text>
+          <Text as="span" variant="note" tone="muted">
+            {SCOPE_DESCRIPTIONS[scope]}
+          </Text>
+        </label>
+      ))}
+      {/* Said because it is surprising: most systems nest their scopes, this one does not,
+          and a write-only token that cannot read is a support question waiting to be a
+          sentence instead. */}
+      <Text variant="note" tone="muted">
+        Scopes are independent: write does not include read.
+      </Text>
+      {error === null ? null : (
+        <Text variant="note" role="alert">
+          {error}
+        </Text>
+      )}
+    </fieldset>
+  );
+}
+
 export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): ReactElement {
   const { open, onClose, create } = props;
 
@@ -240,42 +290,7 @@ export function AccessTokenCreateDialog(props: AccessTokenCreateDialogProps): Re
             )}
           </Field>
 
-          <fieldset className="flex flex-col gap-1 border-0 p-0">
-            <legend className={fieldLabel}>
-              Scopes
-              <span aria-hidden="true" className="ml-1 text-accent-text">
-                *
-              </span>
-            </legend>
-            {ACCESS_TOKEN_SCOPES.map((scope) => (
-              <label key={scope} className="flex min-h-11 flex-wrap items-center gap-x-2">
-                <input
-                  type="checkbox"
-                  checked={scopes.has(scope)}
-                  onChange={() => {
-                    toggleScope(scope);
-                  }}
-                />
-                <Text as="span" variant="bodySmall">
-                  {scope}
-                </Text>
-                <Text as="span" variant="note" tone="muted">
-                  {SCOPE_DESCRIPTIONS[scope]}
-                </Text>
-              </label>
-            ))}
-            {/* Said because it is surprising: most systems nest their scopes, this one does not,
-                and a write-only token that cannot read is a support question waiting to be a
-                sentence instead. */}
-            <Text variant="note" tone="muted">
-              Scopes are independent: write does not include read.
-            </Text>
-            {scopesError === null ? null : (
-              <Text variant="note" role="alert">
-                {scopesError}
-              </Text>
-            )}
-          </fieldset>
+          <AccessScopesField scopes={scopes} onToggle={toggleScope} error={scopesError} />
 
           <fieldset className="flex flex-col gap-1 border-0 p-0">
             <legend className={fieldLabel}>

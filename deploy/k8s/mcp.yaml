@@ -35,6 +35,9 @@ spec:
               value: http://nix-api:8080
             - name: NIX_COLLAB_URL
               value: http://nix-node:8100
+            # So a 401 can point hosted clients at Core's OAuth discovery.
+            - name: NIX_MCP_PUBLIC_URL
+              value: "${MCP_PUBLIC_URL}"
           livenessProbe:
             httpGet: { path: /healthz, port: 8500 }
             periodSeconds: 10

@@ -359,7 +359,20 @@ if docker compose version >/dev/null 2>&1; then
       NIX_CORE_DATABASE_URL=a NIX_COLLAB_DATABASE_URL=a NIX_COLLAB_MIGRATOR_CONNECTION_STRING=a CLOUDFLARE_TUNNEL_TOKEN=u \
       docker compose -p t --env-file "$envf" "${files[@]}" --profile bootstrap config --quiet
   done
+  # Remote MCP and its OAuth discovery are on with no profile: the service runs, Core and the
+  # service get <origin>/mcp, and Caddy proxies /mcp to it.
+  NIX_IMAGE_TAG=x NIX_WEB_IMAGE_TAG=x docker compose -p t --env-file "$fixture/new/nix.env" "${files[@]}" config --format json > "$fixture/rendered.json"
+  jq -e '.services["nix-mcp"].command == ["nixctl","mcp","--listen","0.0.0.0:8500"]
+    and .services["nix-mcp"].environment.NIX_MCP_PUBLIC_URL == "http://nix.localhost/mcp"
+    and .services["nix-api"].environment.Nix__Mcp__PublicUrl == "http://nix.localhost/mcp"
+    and .services["nix-api"].environment.Nix__Bff__PublicOrigin == "http://nix.localhost"
+    and .services["nix-web"].environment.NIX_MCP_UPSTREAM == "nix-mcp:8500"' "$fixture/rendered.json" >/dev/null
 fi
+# The quickstart edge serves the production app routes, which carry /mcp and both OAuth documents.
+grep -Fq 'import /etc/caddy/Caddyfile.prod' deploy/Caddyfile.quickstart
+grep -Fq 'handle /mcp {' deploy/Caddyfile.prod
+grep -Fq 'reverse_proxy {$NIX_MCP_UPSTREAM}' deploy/Caddyfile.prod
+grep -Fq '@oauth_discovery path /.well-known/oauth-protected-resource* /.well-known/oauth-authorization-server' deploy/Caddyfile.prod
 
 
 echo 'install checks passed.'

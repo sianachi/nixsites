@@ -38,6 +38,12 @@
 		reverse_proxy localhost:5014
 	}
 
+	# OAuth discovery for hosted MCP clients: Core answers both documents.
+	@oauth_discovery path /.well-known/oauth-protected-resource* /.well-known/oauth-authorization-server
+	handle @oauth_discovery {
+		reverse_proxy localhost:5014
+	}
+
 	# Core owns the OIDC redirect, callback and HttpOnly browser session.
 	handle /auth/* {
 		reverse_proxy localhost:5014

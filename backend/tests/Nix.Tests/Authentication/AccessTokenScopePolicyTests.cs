@@ -342,6 +342,8 @@ public sealed class AccessTokenScopePolicyTests
 
         // A token never manages tokens, whatever it holds.
         ["ListAccessTokens"] = Requirement.InteractiveOnly,
+        ["PreviewOAuthConsent"] = Requirement.InteractiveOnly,
+        ["DecideOAuthConsent"] = Requirement.InteractiveOnly,
         ["CreateAccessToken"] = Requirement.InteractiveOnly,
         ["RevokeAccessToken"] = Requirement.InteractiveOnly,
         ["RotateAccessToken"] = Requirement.InteractiveOnly,

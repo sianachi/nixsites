@@ -315,6 +315,320 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
         await AssertRefusedAsync(await _client.SendAsync(request, Cancellation));
     }
 
+    // ---- OAuth sign-in for remote MCP -------------------------------------------------------------------------
+
+    private const string Redirect = "https://connector.test/callback";
+
+    private async Task<string> SignInAsync()
+    {
+        var login = await _client.GetAsync(new Uri("/auth/login?returnTo=%2F", UriKind.Relative), Cancellation);
+        var query = QueryHelpers.ParseQuery(login.Headers.Location!.Query);
+        _provider.Nonce = query["nonce"].ToString();
+        var callback = await _client.GetAsync(
+            new Uri($"/auth/callback?code=provider-code&state={Uri.EscapeDataString(query["state"].ToString())}", UriKind.Relative),
+            Cancellation);
+        Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+        var restored = await _client.GetAsync(new Uri("/auth/session", UriKind.Relative), Cancellation);
+        using var session = JsonDocument.Parse(await restored.Content.ReadAsStringAsync(Cancellation));
+        return session.RootElement.GetProperty("accessToken").GetString()!;
+    }
+
+    private static readonly string[] UnsafeRedirects = ["http://connector.test/cb", "https://connector.test/cb#frag", "custom://cb", "https://evil.test/cb\njavascript://claude.ai/%0Aalert(1)"];
+    private static readonly string[] ReadWrite = ["read", "write"];
+    private static readonly string[] AllScopes = ["read", "write", "admin"];
+
+    private async Task<HttpResponseMessage> PostAsync(string path, string? bearer, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path);
+        request.Content = body is Dictionary<string, string> form ? new FormUrlEncodedContent(form) : JsonContent.Create(body);
+        if (bearer is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        }
+
+        return await _client.SendAsync(request, Cancellation);
+    }
+
+    private async Task<string> RegisterAsync(string redirect = Redirect)
+    {
+        var response = await PostAsync("/api/v1/oauth/register", null, (new { client_name = "ChatGPT", redirect_uris = new[] { redirect } }));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        return body.RootElement.GetProperty("client_id").GetString()!;
+    }
+
+    private Task<HttpResponseMessage> ConsentAsync(string bearer, string clientId, string challenge, string decision = "approve", string redirect = Redirect, string? resource = null) =>
+        PostAsync("/api/v1/oauth/consent", bearer, (new
+        {
+            clientId,
+            redirectUri = redirect,
+            codeChallenge = challenge,
+            codeChallengeMethod = "S256",
+            state = "xyz",
+            resource,
+            decision,
+            token = new { scopes = ReadWrite },
+        }));
+
+    private async Task<string> ApproveAsync(string bearer, string clientId, string challenge)
+    {
+        var response = await ConsentAsync(bearer, clientId, challenge);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        var target = new Uri(body.RootElement.GetProperty("redirectTo").GetString()!);
+        Assert.StartsWith(Redirect, target.OriginalString, StringComparison.Ordinal);
+        var query = QueryHelpers.ParseQuery(target.Query);
+        Assert.Equal("xyz", query["state"]);
+        Assert.Equal(PublicOrigin, query["iss"]);
+        return query["code"].ToString();
+    }
+
+    private Task<HttpResponseMessage> OAuthTokenAsync(string code, string clientId, string verifier, string redirect = Redirect, string? resource = null)
+    {
+        var form = new Dictionary<string, string>
+        {
+            ["grant_type"] = "authorization_code",
+            ["code"] = code,
+            ["client_id"] = clientId,
+            ["redirect_uri"] = redirect,
+            ["code_verifier"] = verifier,
+        };
+        if (resource is not null)
+        {
+            form["resource"] = resource;
+        }
+
+        return PostAsync("/api/v1/oauth/token", null, form);
+    }
+
+    private static async Task<string?> OAuthErrorAsync(HttpResponseMessage response)
+    {
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+        return body.RootElement.GetProperty("error").GetString();
+    }
+
+    [Fact]
+    public async Task Discovery_documents_name_this_install()
+    {
+        using var resource = JsonDocument.Parse(await _client.GetStringAsync(new Uri("/.well-known/oauth-protected-resource/mcp", UriKind.Relative), Cancellation));
+        Assert.Equal(PublicOrigin + "/mcp", resource.RootElement.GetProperty("resource").GetString());
+        Assert.Equal(PublicOrigin, resource.RootElement.GetProperty("authorization_servers")[0].GetString());
+
+        using var server = JsonDocument.Parse(await _client.GetStringAsync(new Uri("/.well-known/oauth-authorization-server", UriKind.Relative), Cancellation));
+        Assert.Equal(PublicOrigin + "/oauth/authorize", server.RootElement.GetProperty("authorization_endpoint").GetString());
+        Assert.Equal(PublicOrigin + "/api/v1/oauth/token", server.RootElement.GetProperty("token_endpoint").GetString());
+        Assert.Equal("S256", server.RootElement.GetProperty("code_challenge_methods_supported")[0].GetString());
+        Assert.Equal(PublicOrigin, server.RootElement.GetProperty("issuer").GetString());
+        Assert.True(server.RootElement.GetProperty("authorization_response_iss_parameter_supported").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("Nix")]
+    [InlineData("Nix Settings")]
+    [InlineData("\u202E\u200B")]
+    public async Task Registration_refuses_names_that_pose_as_nix_or_show_nothing(string name)
+    {
+        var response = await PostAsync("/api/v1/oauth/register", null, (new { client_name = name, redirect_uris = new[] { Redirect } }));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("invalid_client_metadata", await OAuthErrorAsync(response));
+    }
+
+    [Fact]
+    public async Task Registration_refuses_unsafe_redirect_uris()
+    {
+        foreach (var redirect in UnsafeRedirects)
+        {
+            var response = await PostAsync("/api/v1/oauth/register", null, (new { client_name = "X", redirect_uris = new[] { redirect } }));
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal("invalid_redirect_uri", await OAuthErrorAsync(response));
+        }
+
+        Assert.NotEmpty(await RegisterAsync("http://127.0.0.1:8080/cb"));
+    }
+
+    [Fact]
+    public async Task A_person_approves_a_client_and_it_redeems_the_code_once_for_a_working_token()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var clientId = await RegisterAsync();
+        // RFC 7636 allows '.' and '~' in a verifier; the MCP SDK's generator uses them.
+        var verifier = "ab.cd~" + NewVerifier();
+
+        var preview = await PostAsync("/api/v1/oauth/consent/preview", bearer, (new
+        {
+            clientId,
+            redirectUri = Redirect,
+            codeChallenge = Challenge(verifier),
+            codeChallengeMethod = "S256",
+            resource = PublicOrigin + "/mcp",
+        }));
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        using (var shown = JsonDocument.Parse(await preview.Content.ReadAsStringAsync(Cancellation)))
+        {
+            Assert.Equal("ChatGPT", shown.RootElement.GetProperty("clientName").GetString());
+            Assert.Equal("connector.test", shown.RootElement.GetProperty("redirectHost").GetString());
+        }
+
+        var code = await ApproveAsync(bearer, clientId, Challenge(verifier));
+        Assert.Equal(0L, await CountAsync("SELECT count(*) FROM personal_access_token WHERE name = 'ChatGPT via connector.test (connector)'"));
+        Assert.Equal(0L, await CountAsync($"SELECT count(*) FROM oauth_authorization_code WHERE code_hash = '{code}'"));
+
+        var redeemed = await OAuthTokenAsync(code, clientId, verifier, resource: PublicOrigin + "/mcp");
+        Assert.Equal(HttpStatusCode.OK, redeemed.StatusCode);
+        Assert.Equal("no-store", redeemed.Headers.CacheControl?.ToString());
+        using var token = JsonDocument.Parse(await redeemed.Content.ReadAsStringAsync(Cancellation));
+        var secret = token.RootElement.GetProperty("access_token").GetString()!;
+        Assert.StartsWith("nixpat_", secret, StringComparison.Ordinal);
+        Assert.Equal("Bearer", token.RootElement.GetProperty("token_type").GetString());
+        Assert.Equal(90 * 86400, token.RootElement.GetProperty("expires_in").GetInt64());
+        Assert.Equal(1L, await CountAsync("SELECT count(*) FROM personal_access_token WHERE name = 'ChatGPT via connector.test (connector)'"));
+
+        // The token is an ordinary personal access token: it buys a session that reads workspaces.
+        var exchanged = await PostAsync("/public/v1/auth/token", null, (new { token = secret }));
+        exchanged.EnsureSuccessStatusCode();
+        using var session = JsonDocument.Parse(await exchanged.Content.ReadAsStringAsync(Cancellation));
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/api/v1/workspaces");
+        list.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.RootElement.GetProperty("accessToken").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(list, Cancellation)).StatusCode);
+
+        // A second redemption of the same code finds nothing.
+        var again = await OAuthTokenAsync(code, clientId, verifier);
+        Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+        Assert.Equal("invalid_grant", await OAuthErrorAsync(again));
+    }
+
+    [Fact]
+    public async Task A_wrong_verifier_a_wrong_redirect_or_an_expired_code_is_refused_and_leaves_no_token()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var clientId = await RegisterAsync();
+        var verifier = NewVerifier();
+
+        var wrongVerifier = await OAuthTokenAsync(await ApproveAsync(bearer, clientId, Challenge(verifier)), clientId, NewVerifier());
+        Assert.Equal("invalid_grant", await OAuthErrorAsync(wrongVerifier));
+
+        var wrongRedirect = await OAuthTokenAsync(await ApproveAsync(bearer, clientId, Challenge(verifier)), clientId, verifier, redirect: "https://other.test/cb");
+        Assert.Equal("invalid_grant", await OAuthErrorAsync(wrongRedirect));
+
+        var expired = await ApproveAsync(bearer, clientId, Challenge(verifier));
+        await SqlAsync("UPDATE oauth_authorization_code SET expires_at = now() - interval '1 second'");
+        Assert.Equal("invalid_grant", await OAuthErrorAsync(await OAuthTokenAsync(expired, clientId, verifier)));
+
+        var wrongResource = await OAuthTokenAsync(await ApproveAsync(bearer, clientId, Challenge(verifier)), clientId, verifier, resource: "https://elsewhere.test/mcp");
+        Assert.Equal("invalid_target", await OAuthErrorAsync(wrongResource));
+
+        Assert.Equal(0L, await CountAsync("SELECT count(*) FROM personal_access_token WHERE name = 'ChatGPT via connector.test (connector)'"));
+    }
+
+    [Fact]
+    public async Task Consent_refuses_unregistered_redirects_unknown_clients_and_returns_access_denied_on_deny()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var clientId = await RegisterAsync();
+        var challenge = Challenge(NewVerifier());
+
+        var elsewhere = await ConsentAsync(bearer, clientId, challenge, redirect: "https://evil.test/cb");
+        Assert.Equal(HttpStatusCode.BadRequest, elsewhere.StatusCode);
+        var unknown = await ConsentAsync(bearer, "not-a-client", challenge);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+
+        var denied = await ConsentAsync(bearer, clientId, challenge, decision: "deny");
+        using var body = JsonDocument.Parse(await denied.Content.ReadAsStringAsync(Cancellation));
+        Assert.Equal(Redirect + "?error=access_denied&state=xyz" + IssuerParameter, body.RootElement.GetProperty("redirectTo").GetString());
+        Assert.Equal(0L, await CountAsync("SELECT count(*) FROM oauth_authorization_code"));
+    }
+
+    private const string ConnectorTokens = "FROM personal_access_token WHERE name = 'ChatGPT via connector.test (connector)'";
+
+    private async Task<string> ConnectAsync(string bearer, string clientId)
+    {
+        var verifier = NewVerifier();
+        var redeemed = await OAuthTokenAsync(await ApproveAsync(bearer, clientId, Challenge(verifier)), clientId, verifier);
+        Assert.Equal(HttpStatusCode.OK, redeemed.StatusCode);
+        using var token = JsonDocument.Parse(await redeemed.Content.ReadAsStringAsync(Cancellation));
+        return token.RootElement.GetProperty("access_token").GetString()!;
+    }
+
+    [Fact]
+    public async Task Reconnecting_keeps_the_three_newest_connector_tokens_and_revokes_the_oldest()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var clientId = await RegisterAsync();
+
+        var first = await ConnectAsync(bearer, clientId);
+        for (var i = 0; i < 3; i++)
+        {
+            await ConnectAsync(bearer, clientId);
+        }
+
+        Assert.Equal(4L, await CountAsync("SELECT count(*) " + ConnectorTokens));
+        Assert.Equal(3L, await CountAsync("SELECT count(*) " + ConnectorTokens + " AND revoked_at IS NULL"));
+        var exchanged = await PostAsync("/public/v1/auth/token", null, (new { token = first }));
+        Assert.Equal(HttpStatusCode.Unauthorized, exchanged.StatusCode);
+    }
+
+    [Fact]
+    public async Task Approval_is_refused_at_the_token_cap_unless_reconnecting_frees_a_slot()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var clientId = await RegisterAsync();
+        for (var i = 0; i < 3; i++)
+        {
+            await ConnectAsync(bearer, clientId);
+        }
+
+        // Fill the person to the cap of 25 live tokens.
+        await SqlAsync(
+            """
+            INSERT INTO personal_access_token (token_id, tenant_id, principal_id, name, lookup, secret_hash, scopes, created_at, expires_at)
+            SELECT gen_random_uuid(), owner.tenant_id, owner.principal_id, 'filler ' || g, 'filler' || g, decode('0304', 'hex'), ARRAY['read']::text[], now(), now() + interval '30 days'
+              FROM (SELECT tenant_id, principal_id FROM personal_access_token WHERE name LIKE 'ChatGPT via %' LIMIT 1) owner,
+                   generate_series(1, 22) g
+            """);
+
+        // The same connector reconnecting retires its oldest token, so it still fits.
+        await ConnectAsync(bearer, clientId);
+
+        // Another connector would need a 26th: refused before any code exists.
+        var codes = await CountAsync("SELECT count(*) FROM oauth_authorization_code");
+        var other = await RegisterAsync("https://other.test/cb");
+        var refused = await ConsentAsync(bearer, other, Challenge(NewVerifier()), redirect: "https://other.test/cb");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        using var problem = JsonDocument.Parse(await refused.Content.ReadAsStringAsync(Cancellation));
+        Assert.Equal("tokens.limit_reached", problem.RootElement.GetProperty("code").GetString());
+        Assert.Contains("Settings > Access tokens", problem.RootElement.GetProperty("detail").GetString(), StringComparison.Ordinal);
+        Assert.Equal(codes, await CountAsync("SELECT count(*) FROM oauth_authorization_code"));
+    }
+
+    [Fact]
+    public async Task A_personal_access_token_cannot_approve_a_client()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = true");
+        var bearer = await SignInAsync();
+        var created = await PostAsync("/api/v1/me/tokens", bearer, (new { name = "automation", scopes = AllScopes, expiresInDays = 7 }));
+        created.EnsureSuccessStatusCode();
+        using var minted = JsonDocument.Parse(await created.Content.ReadAsStringAsync(Cancellation));
+        var exchanged = await PostAsync("/public/v1/auth/token", null, (new { token = minted.RootElement.GetProperty("token").GetString() }));
+        using var session = JsonDocument.Parse(await exchanged.Content.ReadAsStringAsync(Cancellation));
+
+        var response = await ConsentAsync(session.RootElement.GetProperty("accessToken").GetString()!, await RegisterAsync(), Challenge(NewVerifier()));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(0L, await CountAsync("SELECT count(*) FROM oauth_authorization_code"));
+    }
+
+    [Fact]
+    public async Task Consent_is_refused_when_the_organisation_turned_mcp_off()
+    {
+        await SqlAsync("UPDATE tenant SET mcp_enabled = false");
+        var response = await ConsentAsync(await SignInAsync(), await RegisterAsync(), Challenge(NewVerifier()));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private static string NewVerifier() => Base64UrlTextEncoder.Encode(RandomNumberGenerator.GetBytes(48));
 
     private static string Challenge(string verifier) =>
@@ -490,6 +804,7 @@ public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
             builder.UseSetting("Nix:Bff:ClientId", ClientId);
             builder.UseSetting("Nix:Bff:PublicOrigin", PublicOrigin);
             builder.UseSetting("Nix:Bff:AccountPage", AccountPage);
+            builder.UseSetting("Nix:Mcp:PublicUrl", PublicOrigin + "/mcp");
             builder.UseSetting(SelfIssuedTokenService.IssuerConfigurationKey, "https://core.browser.test");
             builder.UseSetting(SelfIssuedTokenService.AudienceConfigurationKey, "nix");
             builder.UseSetting(SelfIssuedTokenService.KeyIdConfigurationKey, "browser-core-key");

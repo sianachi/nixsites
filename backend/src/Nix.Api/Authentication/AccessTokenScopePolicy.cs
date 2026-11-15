@@ -61,6 +61,7 @@ public static class AccessTokenScopePolicy
         // which a token used by an automation has no reason to do.
         if (path.StartsWithSegments("/api/v1/me/tokens", StringComparison.OrdinalIgnoreCase)
             || path.StartsWithSegments("/api/v1/me/security", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWithSegments("/api/v1/oauth/consent", StringComparison.OrdinalIgnoreCase)
             || path.StartsWithSegments("/api/v1/tenant/people", StringComparison.OrdinalIgnoreCase)
             || path.StartsWithSegments("/api/v1/me/pets/runtime", StringComparison.OrdinalIgnoreCase)
             || path.StartsWithSegments("/api/v1/me/pets/connection", StringComparison.OrdinalIgnoreCase)

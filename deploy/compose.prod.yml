@@ -390,6 +390,8 @@ services:
       NIX_RELEASE_COMMIT: ${NIX_IMAGE_TAG}
       NIX_API_URL: http://nix-api:8080
       NIX_COLLAB_URL: http://nix-node:8100
+      # The public address, so a 401 can point hosted clients at Core's OAuth discovery.
+      NIX_MCP_PUBLIC_URL: ${NIX_MCP_PUBLIC_URL:-}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8500/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 10s

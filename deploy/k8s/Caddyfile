@@ -61,6 +61,12 @@
 		}
 	}
 
+	# OAuth discovery for hosted MCP clients: Core answers both documents.
+	@oauth_discovery path /.well-known/oauth-protected-resource* /.well-known/oauth-authorization-server
+	handle @oauth_discovery {
+		reverse_proxy nix-api:8080
+	}
+
 	handle /auth/* {
 		reverse_proxy nix-api:8080 {
 			header_up X-Forwarded-For {client_ip}

@@ -3168,6 +3168,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/oauth/consent/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Check an OAuth authorization request before asking the person
+     * @description Browser session only. Succeeds only for a registered client and one of its redirect URIs, so the page never redirects anywhere else.
+     */
+    post: operations['PreviewOAuthConsent'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/oauth/consent': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Approve or deny an OAuth authorization request
+     * @description Browser session only. Returns the redirect carrying a one-time code, or access_denied. The token is minted when the client redeems the code.
+     */
+    post: operations['DecideOAuthConsent'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/sites': {
     parameters: {
       query?: never;
@@ -5052,6 +5092,33 @@ export interface components {
       unread: number | string;
       /** Format: int64 */
       revision: number | string;
+    };
+    OAuthConsentPreviewRequest: {
+      clientId: null | string;
+      redirectUri: null | string;
+      codeChallenge: null | string;
+      codeChallengeMethod: null | string;
+      resource: null | string;
+    };
+    OAuthConsentPreviewResponse: {
+      clientName: string;
+      redirectHost: string;
+    };
+    OAuthConsentRequest: {
+      clientId: null | string;
+      redirectUri: null | string;
+      codeChallenge: null | string;
+      codeChallengeMethod: null | string;
+      state: null | string;
+      resource: null | string;
+      decision: null | string;
+      token: null | components['schemas']['OAuthConsentTokenChoice'];
+    };
+    OAuthConsentResponse: {
+      redirectTo: string;
+    };
+    OAuthConsentTokenChoice: {
+      scopes: null | string[];
     };
     OperationResponse: {
       /** Format: uuid */
@@ -15095,6 +15162,54 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['JwksResponse'];
+        };
+      };
+    };
+  };
+  PreviewOAuthConsent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OAuthConsentPreviewRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OAuthConsentPreviewResponse'];
+        };
+      };
+    };
+  };
+  DecideOAuthConsent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OAuthConsentRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OAuthConsentResponse'];
         };
       };
     };
