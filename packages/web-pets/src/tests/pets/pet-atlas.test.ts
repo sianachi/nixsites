@@ -22,14 +22,14 @@ describe('owl atlas geometry', () => {
   });
 });
 
-describe.each(Object.entries(petAtlases))('%s atlas geometry', (_appearance, eyeOfRaAtlas) => {
+describe.each(Object.entries(petAtlases))('%s atlas geometry', (_appearance, spriteAtlas) => {
   it('uses the v2 grid and maps every runtime state to a populated animation row', () => {
-    expect(eyeOfRaAtlas.version).toBe(2);
-    expect(eyeOfRaAtlas.columns * eyeOfRaAtlas.cellWidth).toBe(eyeOfRaAtlas.imageWidth);
-    expect(eyeOfRaAtlas.rows * eyeOfRaAtlas.cellHeight).toBe(eyeOfRaAtlas.imageHeight);
-    expect(Object.keys(eyeOfRaAtlas.stateRows)).toEqual(petAnimationStates);
-    for (const row of Object.values(eyeOfRaAtlas.stateRows)) {
-      expect(eyeOfRaAtlas.frameCounts[row]).toBeGreaterThan(0);
+    expect(spriteAtlas.version).toBe(2);
+    expect(spriteAtlas.columns * spriteAtlas.cellWidth).toBe(spriteAtlas.imageWidth);
+    expect(spriteAtlas.rows * spriteAtlas.cellHeight).toBe(spriteAtlas.imageHeight);
+    expect(Object.keys(spriteAtlas.stateRows)).toEqual(petAnimationStates);
+    for (const row of Object.values(spriteAtlas.stateRows)) {
+      expect(spriteAtlas.frameCounts[row]).toBeGreaterThan(0);
     }
   });
 });

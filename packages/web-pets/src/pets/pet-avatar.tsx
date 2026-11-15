@@ -2,7 +2,6 @@ import { Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { PetProfile } from '@nix/api-client';
 import atlas from './owl-atlas.json';
-import eyeOfRaAtlas from './eye-of-ra-atlas.json';
 import demiurgeAtlas from './demiurge-atlas.json';
 import foxAtlas from './fox-atlas.json';
 import nekoAtlas from './neko-atlas.json';
@@ -12,9 +11,18 @@ import mothAtlas from './moth-atlas.json';
 import pangolinAtlas from './pangolin-atlas.json';
 import phoenixChickAtlas from './phoenix-chick-atlas.json';
 import mushroomSpriteAtlas from './mushroom-sprite-atlas.json';
+import origamiCraneAtlas from './origami-crane-atlas.json';
+import jumpingSpiderAtlas from './jumping-spider-atlas.json';
+import lanternSpiritAtlas from './lantern-spirit-atlas.json';
+import hermitCrabAtlas from './hermit-crab-atlas.json';
+import kirinFawnAtlas from './kirin-fawn-atlas.json';
+import geckoAtlas from './gecko-atlas.json';
+import pocketWhaleAtlas from './pocket-whale-atlas.json';
+import crystalGolemAtlas from './crystal-golem-atlas.json';
+import fruitBatAtlas from './fruit-bat-atlas.json';
+import dustBunnyAtlas from './dust-bunny-atlas.json';
 
 export const petAtlases = {
-  'eye-of-ra': eyeOfRaAtlas,
   demiurge: demiurgeAtlas,
   fox: foxAtlas,
   cat: nekoAtlas,
@@ -24,6 +32,16 @@ export const petAtlases = {
   pangolin: pangolinAtlas,
   'phoenix-chick': phoenixChickAtlas,
   'mushroom-sprite': mushroomSpriteAtlas,
+  'origami-crane': origamiCraneAtlas,
+  'jumping-spider': jumpingSpiderAtlas,
+  'lantern-spirit': lanternSpiritAtlas,
+  'hermit-crab': hermitCrabAtlas,
+  'kirin-fawn': kirinFawnAtlas,
+  gecko: geckoAtlas,
+  'pocket-whale': pocketWhaleAtlas,
+  'crystal-golem': crystalGolemAtlas,
+  'fruit-bat': fruitBatAtlas,
+  'dust-bunny': dustBunnyAtlas,
 } as const;
 
 export const petAnimationStates = [

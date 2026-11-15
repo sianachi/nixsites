@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "source": "eye-of-ra-atlas.webp",
+  "source": "origami-crane-atlas.webp",
   "columns": 8,
   "rows": 11,
   "cellWidth": 192,
@@ -19,5 +19,5 @@
     "success": 8,
     "error": 5
   },
-  "frameCounts": [6, 8, 8, 4, 5, 8, 6, 6, 6, 8, 8]
+  "frameCounts": [6, 0, 0, 4, 5, 8, 6, 6, 6, 0, 0]
 }

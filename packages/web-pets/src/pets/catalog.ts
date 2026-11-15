@@ -23,11 +23,6 @@ export const petCatalog = [
     description: 'A bright, inventive companion.',
   },
   {
-    appearance: 'eye-of-ra',
-    name: 'Eye of Ra',
-    description: 'A golden falcon companion.',
-  },
-  {
     appearance: 'demiurge',
     name: 'Demiurge',
     description: 'A lion-headed serpent companion.',
@@ -61,6 +56,56 @@ export const petCatalog = [
     appearance: 'mushroom-sprite',
     name: 'Mushroom Sprite',
     description: 'A cheerful woodland sprite with a spotted red cap.',
+  },
+  {
+    appearance: 'origami-crane',
+    name: 'Origami Crane',
+    description: 'A thoughtful paper crane with crisp blue-edged wings.',
+  },
+  {
+    appearance: 'jumping-spider',
+    name: 'Jumping Spider',
+    description: 'A curious little spider with fluffy teal legs and bright amber eyes.',
+  },
+  {
+    appearance: 'lantern-spirit',
+    name: 'Lantern Spirit',
+    description: 'A warm paper lantern with a gentle glow and a swaying golden tassel.',
+  },
+  {
+    appearance: 'hermit-crab',
+    name: 'Hermit Crab',
+    description: 'A shy coral crab carrying a tiny house with a blue front door.',
+  },
+  {
+    appearance: 'kirin-fawn',
+    name: 'Kirin Fawn',
+    description: 'A playful young kirin with golden antlers and turquoise scales.',
+  },
+  {
+    appearance: 'gecko',
+    name: 'Gecko',
+    description: 'An inquisitive mint-green gecko with a curled turquoise tail.',
+  },
+  {
+    appearance: 'pocket-whale',
+    name: 'Pocket Whale',
+    description: 'A little blue whale that glides through the air.',
+  },
+  {
+    appearance: 'crystal-golem',
+    name: 'Crystal Golem',
+    description: 'A patient stone companion with glowing lavender crystals.',
+  },
+  {
+    appearance: 'fruit-bat',
+    name: 'Fruit Bat',
+    description: 'A sleepy cocoa-brown bat with enormous ears and soft folded wings.',
+  },
+  {
+    appearance: 'dust-bunny',
+    name: 'Dust Bunny',
+    description: 'A bouncy lavender fluffball with rabbit ears and a copper button.',
   },
 ] as const;
 

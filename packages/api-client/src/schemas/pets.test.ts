@@ -28,7 +28,6 @@ describe('pet boundary schemas', () => {
     });
   });
   it.each([
-    'eye-of-ra',
     'demiurge',
     'fox',
     'cat',
@@ -38,6 +37,16 @@ describe('pet boundary schemas', () => {
     'pangolin',
     'phoenix-chick',
     'mushroom-sprite',
+    'origami-crane',
+    'jumping-spider',
+    'lantern-spirit',
+    'hermit-crab',
+    'kirin-fawn',
+    'gecko',
+    'pocket-whale',
+    'crystal-golem',
+    'fruit-bat',
+    'dust-bunny',
   ])('accepts the %s appearance', (appearance) => {
     expect(
       petSettingsSchema.parse({
@@ -46,6 +55,25 @@ describe('pet boundary schemas', () => {
       }).profiles[0]?.appearance,
     ).toBe(appearance);
   });
+  it.each(['Eye of Ra', 'Pip'])(
+    'maps the retired design to Owl and preserves the companion named %s',
+    (name) => {
+      const profile = {
+        ...pet,
+        name,
+        appearance: 'eye-of-ra',
+        instructions: 'Keep my notes concise.',
+      };
+      const parsed = petSettingsSchema.parse({ ...settings, profiles: [profile] });
+      expect(parsed.activePetId).toBe(pet.id);
+      expect(parsed.profiles[0]).toMatchObject({
+        ...profile,
+        appearance: 'owl',
+        name: name === 'Eye of Ra' ? 'Owl' : name,
+      });
+      expect(profile.appearance).toBe('eye-of-ra');
+    },
+  );
   it('rejects duplicate identities, unknown designs, and dangling active pets', () => {
     expect(petSettingsSchema.safeParse({ ...settings, profiles: [pet, pet] }).success).toBe(false);
     expect(
