@@ -30,14 +30,14 @@ as a static site.
 ## Install
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
-the Compose plugin, `curl`, `openssl`, `jq`, and about 8 GB of memory for Docker.
+the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for Docker.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Open <http://nix.localhost> in Chrome or Firefox and sign in with the details it prints.
-Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost auth.nix.localhost` to
+Open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints and enter
+the setup code. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
 `/etc/hosts` first. A public hostname, Kubernetes and backups are in [Run it for real](#run-it-for-real).
 
 Demo recording:
