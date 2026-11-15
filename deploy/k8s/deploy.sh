@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Applies a Nix release to k3s, in the order that keeps a bad step from reaching users:
-# database -> object store -> seed -> identity database -> migrations -> identity bootstrap (opt-in) ->
-# preset reconciliation ->
-# workloads (with Zitadel) -> ingress -> worker -> managed templates.
+# database -> object store -> seed -> migrations -> identity bootstrap (opt-in) -> preset reconciliation ->
+# workloads -> ingress -> worker -> managed templates.
 #
 # Run deploy/k8s/create-secrets.sh once per cluster before the first run of this script.
 # Run deploy/docker/build-and-push.sh first each time, with the same REGISTRY and TAG.
@@ -15,12 +14,12 @@
 # sites domain owns (<slug>-home.$DOMAIN); slugs ending with it are refused here. Set it empty when
 # no other deployment shares the domain.
 #
-# DOMAIN is the app's apex and also the sites domain: sites are served at <slug>.$DOMAIN. The
-# bundled Zitadel answers at auth.$DOMAIN, which is the default OIDC_ISSUER; set OIDC_ISSUER only
-# for an external identity provider. OIDC_CLIENT_ID is the Zitadel application's client id: on a
-# first install deploy once with a placeholder, create the application, then deploy again.
+# DOMAIN is the app's apex and also the sites domain: sites are served at <slug>.$DOMAIN. Nix signs
+# people in itself (NIX_AUTH_MODE=local, the default for a new install). NIX_AUTH_MODE=oidc uses an
+# OpenID Connect provider you run yourself and needs both OIDC_ISSUER and OIDC_CLIENT_ID; this script
+# deploys and manages no identity provider.
 #
-# Managed templates need a workspace, a Zitadel project and a service-account key that a first install
+# Managed templates need a workspace, an identity-provider project and a service-account key that a first install
 # does not have yet. Set NIX_TEMPLATE_BOOT_ENABLED=false until they exist; the step is then skipped
 # and everything else, the Ingress included, is applied. TEMPLATE_BOOT_* is required otherwise.
 #
@@ -35,15 +34,19 @@
 # deploy/seed/bootstrap_identity.sql in the postgres pod against OIDC_ISSUER/OIDC_CLIENT_ID. Idempotent.
 # Local mode never needs it: Core's first-run setup creates the tenant when none exists.
 #
-# Moving an install off the bundled Zitadel onto Core's own sign-in (NIX_AUTH_MODE=local):
+# Moving a cluster that still holds the old bundled Zitadel onto Core's own sign-in (NIX_AUTH_MODE=local).
+# This version does not deploy Zitadel; a cluster whose nix-zitadel Deployment still has replicas is
+# refused until it is migrated (NIX_IMPORT_ZITADEL=run with NIX_AUTH_MODE=local):
 #   NIX_IMPORT_ZITADEL=dry-run  after the migrations, runs deploy/k8s/job-import-zitadel.yaml with
 #                               --dry-run, prints what would move, clashes and blockers, and stops
-#                               before anything else changes. Works while the install is still oidc.
+#                               before anything else changes.
 #   NIX_IMPORT_ZITADEL=run      needs NIX_AUTH_MODE=local. Runs the import for real; a failure prints
 #                               the log and stops before the switch. NIX_AUTH_PASSKEY_RP_ID is the host
 #                               the passkeys were registered for (default auth.$DOMAIN).
-# Zitadel's database, secret and volume are kept; the Deployment is scaled to zero. To go back, deploy
-# with NIX_AUTH_MODE=oidc and OIDC_CLIENT_ID again. Keep the DNS record for auth.$DOMAIN either way.
+# Both read the old nix-zitadel secret and the zitadel database, and fail with a message when they are
+# gone. After a run, the nix-zitadel Deployment is scaled to zero; its objects, database and volume are
+# left for you to delete (docs/install.md). Keep the DNS record for auth.$DOMAIN: browsers check
+# migrated passkeys there.
 # Managed templates in local mode need TEMPLATE_BOOT_TOKEN_SECRET: a secret whose key "token" holds
 # the output of `account service-token --name <name> --scopes read,write`.
 #
@@ -69,18 +72,18 @@ source deploy/k8s/template-boot-config.sh
 : "${DOMAIN:?set DOMAIN, e.g. nix.example.com}"
 export PUBLIC_ORIGIN="${PUBLIC_ORIGIN:-https://$DOMAIN}"
 # One sign-in mode per install. local: Core signs people in itself and no identity provider is
-# deployed. oidc: an outside provider (the bundled Zitadel by default). Unset means oidc when
+# deployed. oidc: an outside provider you run. Unset means oidc when
 # OIDC_CLIENT_ID is given, so existing deploys do not change; with neither set, local is the
 # default only for a namespace that has no Nix install yet.
 if [ -z "${NIX_AUTH_MODE:-}" ] && [ -z "${OIDC_CLIENT_ID:-}" ] && kubectl -n nix get deployment nix-api >/dev/null 2>&1; then
-  echo "Nix is already installed here. Set NIX_AUTH_MODE=oidc with OIDC_CLIENT_ID to keep the identity provider, or NIX_AUTH_MODE=local to switch on purpose." >&2
+  echo "Nix is already installed here. Set NIX_AUTH_MODE=oidc with OIDC_ISSUER and OIDC_CLIENT_ID for your own identity provider, or NIX_AUTH_MODE=local to switch on purpose." >&2
   exit 1
 fi
 AUTH_MODE="${NIX_AUTH_MODE:-$([ -n "${OIDC_CLIENT_ID:-}" ] && echo oidc || echo local)}"
 case "$AUTH_MODE" in
   oidc)
+    : "${OIDC_ISSUER:?set OIDC_ISSUER: NIX_AUTH_MODE=oidc needs a provider you run, none is deployed here}"
     : "${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}"
-    OIDC_ISSUER="${OIDC_ISSUER:-https://auth.$DOMAIN}"
     COLLAB_OIDC_ISSUERS="$OIDC_ISSUER,$PUBLIC_ORIGIN|http://nix-api:8080/public/v1/auth/jwks"
     COLLAB_OIDC_AUDIENCE="$OIDC_CLIENT_ID,nix"
     ;;
@@ -104,12 +107,7 @@ case "$NIX_IMPORT_ZITADEL" in
 esac
 # Core's passkey host is also what the import records, so a dry run reports the same value a run uses.
 IMPORT_RP_ID="${AUTH_PASSKEY_RP_ID:-auth.$DOMAIN}"
-# auth.$DOMAIN is the identity provider, or in local mode only the passkey related-origins document.
-case "$AUTH_MODE" in
-  oidc) AUTH_HOST_PATH=/ AUTH_HOST_PATH_TYPE=Prefix AUTH_HOST_SERVICE=nix-zitadel ;;
-  local) AUTH_HOST_PATH=/.well-known/webauthn AUTH_HOST_PATH_TYPE=Exact AUTH_HOST_SERVICE=nix-api ;;
-esac
-export AUTH_MODE AUTH_PASSKEY_RP_ID COLLAB_OIDC_ISSUERS COLLAB_OIDC_AUDIENCE ZITADEL_IMPORT_ARGS IMPORT_RP_ID AUTH_HOST_PATH AUTH_HOST_PATH_TYPE AUTH_HOST_SERVICE
+export AUTH_MODE AUTH_PASSKEY_RP_ID COLLAB_OIDC_ISSUERS COLLAB_OIDC_AUDIENCE ZITADEL_IMPORT_ARGS IMPORT_RP_ID
 NIX_TEMPLATE_BOOT_ENABLED="${NIX_TEMPLATE_BOOT_ENABLED:-true}"
 case "$NIX_TEMPLATE_BOOT_ENABLED" in
   true) require_template_boot_config || exit 1 ;;
@@ -150,11 +148,6 @@ export POD_CIDR="${POD_CIDR:-10.42.0.0/16}"
 export INGRESS_CLASS="${INGRESS_CLASS:-traefik}"
 export STORAGE_CLASS="${STORAGE_CLASS:-local-path}"
 export STORAGE_CLASS_RETAIN="${STORAGE_CLASS_RETAIN:-local-path-retain}"
-export AUTH_PORT="${AUTH_PORT:-443}"
-export AUTH_SECURE="${AUTH_SECURE:-true}"
-# external: TLS ends at the ingress. disabled: a plain-http .localhost try-out (tlsMode external
-# would still advertise an https issuer).
-export ZITADEL_TLS_MODE="${ZITADEL_TLS_MODE:-external}"
 export INGRESS_SSL_REDIRECT="${INGRESS_SSL_REDIRECT:-true}"
 export TLS_HOSTS="${TLS_HOSTS:-[\"$DOMAIN\", \"*.$DOMAIN\"]}"
 # true: only Cloudflare's edge may reach the Ingress and the visitor comes from CF-Connecting-IP.
@@ -178,7 +171,17 @@ export NIX_RELEASE_VERSION
 SITES_FOREIGN_LABEL_SUFFIX="${SITES_FOREIGN_LABEL_SUFFIX--home}"
 export REGISTRY TAG OIDC_ISSUER OIDC_CLIENT_ID DOMAIN SITES_REQUIRE_OPERATOR_APPROVAL SITES_FOREIGN_LABEL_SUFFIX BACKUP_OFFSITE PUBLIC_LINKS_ENABLED
 
-render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_CREDENTIAL_SECRET} ${TEMPLATE_BOOT_CREDENTIAL_KEY} ${TEMPLATE_BOOT_SERVICE_KEY_FILE} ${TEMPLATE_BOOT_ACCESS_TOKEN_FILE} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${AUTH_PORT} ${AUTH_SECURE} ${ZITADEL_TLS_MODE} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION} ${AUTH_MODE} ${AUTH_PASSKEY_RP_ID} ${IMPORT_RP_ID} ${ZITADEL_IMPORT_ARGS} ${AUTH_HOST_PATH} ${AUTH_HOST_PATH_TYPE} ${AUTH_HOST_SERVICE} ${COLLAB_OIDC_ISSUERS} ${COLLAB_OIDC_AUDIENCE}' < "$1"; }
+render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_CREDENTIAL_SECRET} ${TEMPLATE_BOOT_CREDENTIAL_KEY} ${TEMPLATE_BOOT_SERVICE_KEY_FILE} ${TEMPLATE_BOOT_ACCESS_TOKEN_FILE} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION} ${AUTH_MODE} ${AUTH_PASSKEY_RP_ID} ${IMPORT_RP_ID} ${ZITADEL_IMPORT_ARGS} ${COLLAB_OIDC_ISSUERS} ${COLLAB_OIDC_AUDIENCE}' < "$1"; }
+
+# The old bundled Zitadel is not managed here. Leaving it running beside a deploy that does not use it
+# would keep the old sign-in reachable, so migrate first (a dry run only reads and is allowed).
+if [ "$NIX_IMPORT_ZITADEL" != dry-run ] && { [ "$NIX_IMPORT_ZITADEL" != run ] || [ "$AUTH_MODE" != local ]; }; then
+  zitadel_replicas="$(kubectl -n nix get deployment nix-zitadel -o jsonpath='{.spec.replicas}' --ignore-not-found 2>/dev/null || true)"
+  if [ -n "$zitadel_replicas" ] && [ "$zitadel_replicas" != 0 ]; then
+    echo "The old nix-zitadel Deployment is still running. This version no longer deploys or manages Zitadel: migrate first with NIX_AUTH_MODE=local and NIX_IMPORT_ZITADEL=run (dry-run reports without changing anything; see docs/install.md)." >&2
+    exit 1
+  fi
+fi
 
 if ! kubectl -n nix get secret nix-db >/dev/null 2>&1; then
   echo "secret nix-db not found in namespace nix - run deploy/k8s/create-secrets.sh first" >&2
@@ -193,13 +196,16 @@ if ! kubectl -n nix get secret nix-object-store >/dev/null 2>&1; then
   exit 1
 fi
 required_secrets="nix-sites nix-tls"
-{ [ "$AUTH_MODE" = oidc ] || [ -n "$NIX_IMPORT_ZITADEL" ]; } && required_secrets="$required_secrets nix-zitadel"
 for required_secret in $required_secrets; do
   if ! kubectl -n nix get secret "$required_secret" >/dev/null 2>&1; then
     echo "secret $required_secret not found in namespace nix - run deploy/k8s/create-secrets.sh --${required_secret#nix-}-only" >&2
     exit 1
   fi
 done
+if [ -n "$NIX_IMPORT_ZITADEL" ] && ! kubectl -n nix get secret nix-zitadel >/dev/null 2>&1; then
+  echo "NIX_IMPORT_ZITADEL needs the old secret nix-zitadel (masterkey and db-password), which this cluster does not have. There is no bundled Zitadel to import from." >&2
+  exit 1
+fi
 for object_store_key in endpoint public-origin region bucket access-key secret-key; do
   object_store_value="$(kubectl -n nix get secret nix-object-store -o "jsonpath={.data['$object_store_key']}")"
   if [ -z "$object_store_value" ]; then
@@ -290,15 +296,6 @@ kubectl -n nix delete job/nix-db-seed --ignore-not-found
 kubectl apply -f deploy/k8s/job-seed.yaml
 kubectl -n nix wait --for=condition=complete job/nix-db-seed --timeout=180s
 
-if [ "$AUTH_MODE" = oidc ]; then
-  echo "== Identity provider (database now; rollout waits with the workloads) =="
-  kubectl -n nix delete "job/nix-zitadel-db-$TAG" --ignore-not-found
-  render deploy/k8s/zitadel.yaml | kubectl apply -f -
-  # apply keeps a replica count that an earlier switch to local mode set to zero; this undoes that.
-  kubectl -n nix scale deployment/nix-zitadel --replicas=1
-  kubectl -n nix wait --for=condition=complete "job/nix-zitadel-db-$TAG" --timeout=180s
-fi
-
 echo "== Migrations (tag $TAG) =="
 render deploy/k8s/job-migrate.yaml | kubectl apply -f -
 kubectl -n nix wait --for=condition=complete "job/nix-migrate-$TAG" --timeout=300s
@@ -306,6 +303,10 @@ kubectl -n nix wait --for=condition=complete "job/nix-migrate-documents-$TAG" --
 
 if [ -n "$NIX_IMPORT_ZITADEL" ]; then
   echo "== Zitadel import ($NIX_IMPORT_ZITADEL) =="
+  if [ "$(kubectl -n nix exec statefulset/postgres -c postgres -- psql -X -tA -U postgres -d postgres -c "SELECT 1 FROM pg_database WHERE datname = 'zitadel'" </dev/null 2>/dev/null || true)" != 1 ]; then
+    echo "NIX_IMPORT_ZITADEL needs the zitadel database, which this cluster does not have. There is no bundled Zitadel to import from." >&2
+    exit 1
+  fi
   kubectl -n nix delete job/nix-import-zitadel --ignore-not-found
   render deploy/k8s/job-import-zitadel.yaml | kubectl apply -f -
   import_state=
@@ -369,8 +370,6 @@ kubectl -n nix rollout restart deployment/nix-node
 kubectl -n nix rollout status deployment/nix-api --timeout=180s
 kubectl -n nix rollout status deployment/nix-web --timeout=180s
 kubectl -n nix rollout status deployment/nix-sites-serve --timeout=180s
-# A first install runs Zitadel's instance setup before it listens; that can take several minutes.
-if [ "$AUTH_MODE" = oidc ]; then kubectl -n nix rollout status deployment/nix-zitadel --timeout=900s; fi
 
 # The node host's readiness probes the object store's public origin, which is this Ingress, and managed
 # templates upload through it too: on a first install nothing answers there until it is applied.
@@ -378,8 +377,8 @@ echo "== Ingress =="
 if [ "$NIX_INGRESS_CLOUDFLARE_ONLY" = true ]; then kubectl apply -f deploy/k8s/cloudflare-only.yaml; fi
 render deploy/k8s/ingress.yaml | kubectl apply -f -
 kubectl -n nix rollout status deployment/nix-node --timeout=180s
-# Leave Zitadel's data for a rollback (NIX_AUTH_MODE=oidc with OIDC_CLIENT_ID, then deploy again), but
-# do not leave the old sign-in reachable.
+# After a migration, do not leave the old sign-in reachable. Its objects and data stay; deleting them
+# is up to the operator (docs/install.md).
 if [ "$AUTH_MODE" = local ] && kubectl -n nix get deployment/nix-zitadel >/dev/null 2>&1; then
   kubectl -n nix scale deployment/nix-zitadel --replicas=0
 fi

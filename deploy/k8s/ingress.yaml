@@ -9,7 +9,7 @@
 #
 # Every other single-label subdomain goes to the anonymous sites server, which never reaches Core
 # or the app's cookies. That wildcard is a second Ingress at the lowest router priority, so a name
-# that must hit something else gets its own rule in the first: auth.$DOMAIN, the identity provider
+# that must hit something else gets its own rule in the first: auth.$DOMAIN, the passkey hostname
 # (infrastructure slugs such as auth and www are never claimable as sites).
 #
 # TLS terminates at Cloudflare (proxied DNS for $DOMAIN and *.$DOMAIN, SSL mode Full (strict)).
@@ -40,16 +40,16 @@ spec:
             backend:
               service: { name: nix-web, port: { number: 8090 } }
     # auth.$DOMAIN, matched before the lowest-priority sites Ingress below ("auth" is a reserved site
-    # slug). oidc: the bundled identity provider (deploy/k8s/zitadel.yaml). local: only
-    # /.well-known/webauthn, from Core, which lists the app origin for passkeys registered to this host
-    # (404 unless Nix__Auth__Passkeys__RpId is set); every other path here is the sites server's 404.
+    # slug): only /.well-known/webauthn, from Core, which lists the app origin for passkeys registered
+    # to this host (404 unless Nix__Auth__Passkeys__RpId is set); every other path here is the sites
+    # server's 404.
     - host: "auth.${DOMAIN}"
       http:
         paths:
-          - path: ${AUTH_HOST_PATH}
-            pathType: ${AUTH_HOST_PATH_TYPE}
+          - path: /.well-known/webauthn
+            pathType: Exact
             backend:
-              service: { name: ${AUTH_HOST_SERVICE}, port: { number: 8080 } }
+              service: { name: nix-api, port: { number: 8080 } }
 ---
 # The sites wildcard is its own Ingress at the lowest router priority. Traefik ranks routers by rule
 # length, and the regexp it builds for *.$DOMAIN is longer than Host(`auth.$DOMAIN`), so in one

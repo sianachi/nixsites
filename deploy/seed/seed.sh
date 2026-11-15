@@ -7,7 +7,6 @@
 #
 # Usage (from anywhere):
 #   deploy/seed/seed.sh
-#   NIX_TEMPLATE_BOOT_WORKSPACE_ID=<uuid> deploy/seed/seed.sh
 #
 # Requires the core profile to be up:
 #   docker compose -f deploy/compose.dev.yml --profile core up -d
@@ -70,39 +69,14 @@ psql_super -d "$db_name" -v db_name="$db_name" -f /nix-seed/seed_database.sql
 # ── Application data (only once the schema exists) ──────────────────────────
 # The migrator owns the schema and runs separately, so this step is conditional
 # rather than assumed: seeding rows into tables that do not exist yet would turn
-# a first run into an error for no reason.
-oidc_issuer=""
-oidc_client_id=""
-oidc_project_id=""
-dev_user_id=""
-template_boot_service_user_id=""
-template_boot_workspace_id="${NIX_TEMPLATE_BOOT_WORKSPACE_ID:-a1000000-0000-4000-8000-000000000001}"
-oidc_env="$(cd "$script_dir/.." && pwd)/.zitadel/oidc.generated.env"
-if [ -f "$oidc_env" ]; then
-  # shellcheck disable=SC1090
-  . "$oidc_env"
-  oidc_issuer="${NIX_OIDC_ISSUER:-}"
-  oidc_client_id="${NIX_OIDC_CLIENT_ID:-}"
-  oidc_project_id="${NIX_OIDC_PROJECT_ID:-}"
-  dev_user_id="${NIX_DEV_USER_ID:-}"
-  template_boot_service_user_id="${NIX_TEMPLATE_BOOT_SERVICE_USER_ID:-}"
-fi
-
-if [ "$(psql_super -d "$db_name" -tAc "SELECT to_regclass('public.tenant') IS NOT NULL")" = "t" ]; then
+# a first run into an error for no reason. The check is the newest table the seed writes to, so a
+# database one migration behind is skipped too and seeded on the pass after the migrator.
+if [ "$(psql_super -d "$db_name" -tAc "SELECT to_regclass('public.local_account') IS NOT NULL")" = "t" ]; then
   echo "seed: applying application data"
-  psql_super -d "$db_name" \
-    -v oidc_issuer="$oidc_issuer" \
-    -v oidc_client_id="$oidc_client_id" \
-    -v oidc_project_id="$oidc_project_id" \
-    -v dev_user_id="$dev_user_id" \
-    -v template_boot_service_user_id="$template_boot_service_user_id" \
-    -v template_boot_workspace_id="$template_boot_workspace_id" \
-    -f /nix-seed/seed_application_data.sql
+  psql_super -d "$db_name" -f /nix-seed/seed_application_data.sql
   echo "seed: provisioning shipped template presets"
   psql_super -d "$db_name" -f /nix-seed/seed_template_presets.sql
-  if [ -z "$oidc_issuer" ]; then
-    echo "seed: no OIDC issuer yet; run deploy/seed/zitadel-configure.sh then re-run this script"
-  fi
+  echo "seed: sign in as dev@nix.localhost with the development password nix-dev-password"
 else
   echo "seed: schema not present, skipping application data"
   echo "seed:   apply it with: dotnet run --project backend/src/Nix.Migrator"
@@ -112,6 +86,7 @@ fi
 echo
 echo "seed: complete."
 echo "  database : $db_name on localhost:${NIX_PG_PORT:-5433}"
+echo "  sign-in  : dev@nix.localhost / nix-dev-password (development only)"
 echo "  roles    : nix_migrator (BYPASSRLS, owns schema), nix_app (NOBYPASSRLS)"
 echo "  app DSN  : Host=localhost;Port=${NIX_PG_PORT:-5433};Database=$db_name;Username=nix_app;Password=$app_password"
 echo "seed: re-running this script is a no-op."

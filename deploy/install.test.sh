@@ -190,6 +190,9 @@ printf '%s\n' "\$*" >> "$dlog"
 case "\$*" in
   "info --format"*) echo 17179869184 ;;
   *"SELECT 1 FROM pg_database"*) echo 1 ;;
+  "ps -a"*"service=zitadel-db"*) echo nix-zitadel-db-1 ;;
+  "ps -a"*"service=zitadel-init"*) echo nix-zitadel-init-1 ;;
+  "ps -a"*"service=zitadel"*) echo nix-zitadel-1 ;;
 esac
 exit 0
 STUB
@@ -235,7 +238,7 @@ assert_ok
 assert_lacks "$(env_val NIX_AUTH_SETUP_CODE)"
 assert_has 'NIX_AUTH_SETUP_CODE'
 
-# An install that already uses the bundled Zitadel keeps it exactly as it is.
+# An install that still uses the bundled Zitadel is refused before anything changes.
 sdir=$fixture/old
 mkdir -p "$sdir"
 cat > "$sdir/nix.env" <<ENV
@@ -253,12 +256,10 @@ NIX_PG_COLLAB_PASSWORD=c
 ENV
 cp "$sdir/nix.env" "$fixture/old.env"
 run_install https://nix.example.org
-assert_ok
-assert_log_has compose.zitadel.yml
-assert_log_has 'up -d zitadel'
-assert_log_has nix-identity-bootstrap
-assert_has 'admin@nix.auth.nix.example.org'
-assert_has '--migrate-local-auth'
+assert_fail
+assert_has 'no longer includes Zitadel'
+assert_has '--migrate-local-auth --dry-run'
+! grep -Ev '^(info |compose version)' "$dlog"
 cmp -s "$sdir/nix.env" "$fixture/old.env"
 
 # Migration needs the flag, only for the Docker install, and a dry run changes nothing.
@@ -274,11 +275,19 @@ assert_log_has '-e NIX_ZITADEL_DATABASE_URL -e NIX_ZITADEL_MASTERKEY'
 assert_log_lacks NIX_ZITADEL_CONNECTION_STRING
 assert_log_lacks zdb-secret
 assert_log_lacks masterkey-value
-assert_log_lacks 'stop zitadel'
+# The existing database container is started (and put back, since it was not running); nothing Zitadel is created or pulled.
+assert_log_has 'start nix-zitadel-db-1'
+assert_log_has 'stop nix-zitadel-db-1'
+assert_log_lacks 'stop nix-zitadel-1'
+assert_log_lacks 'up -d zitadel'
+assert_log_lacks 'pull'
+assert_log_lacks 'ghcr.io/zitadel'
+! grep -Eq '^(rm|container rm|volume) ' "$dlog"
+assert_log_lacks compose.zitadel.yml
 cmp -s "$sdir/nix.env" "$fixture/old.env"
 [ ! -e "$sdir/nix.env.pre-local-auth" ]
 
-# The real run switches to local mode, keeps the old hostname for passkeys, stops Zitadel, keeps its data.
+# The real run switches to local mode, keeps the old hostname for passkeys, stops the leftovers and keeps them and their data.
 run_install --migrate-local-auth https://nix.example.org
 assert_ok
 assert_log_has 'nix-migrate account import-zitadel'
@@ -287,7 +296,13 @@ assert_log_has '-e NIX_ZITADEL_DATABASE_URL -e NIX_ZITADEL_MASTERKEY'
 assert_log_lacks NIX_ZITADEL_CONNECTION_STRING
 assert_log_lacks zdb-secret
 assert_log_lacks masterkey-value
-assert_log_has 'stop zitadel zitadel-db'
+assert_log_has 'start nix-zitadel-db-1'
+assert_log_has 'stop nix-zitadel-1 nix-zitadel-init-1 nix-zitadel-db-1'
+assert_log_lacks 'up -d zitadel'
+assert_log_lacks 'pull'
+assert_log_lacks 'ghcr.io/zitadel'
+! grep -Eq '^(rm|container rm|volume) ' "$dlog"
+assert_log_lacks compose.zitadel.yml
 cmp -s "$sdir/nix.env.pre-local-auth" "$fixture/old.env"
 [ "$(env_val NIX_AUTH_MODE)" = local ]
 [ "$(env_val NIX_AUTH_PASSKEY_RP_ID)" = auth.nix.example.org ]
@@ -295,7 +310,10 @@ cmp -s "$sdir/nix.env.pre-local-auth" "$fixture/old.env"
 grep -F -q 'https://auth.nix.example.org {' "$sdir/webauthn.caddy"
 grep -F -q '{"origins":["https://nix.example.org"]}' "$sdir/webauthn.caddy"
 ! grep -F -q 'down' "$dlog"
-assert_has 'To roll back'
+assert_has 'Left behind, stopped and not removed: nix-zitadel-1 nix-zitadel-init-1 nix-zitadel-db-1'
+assert_has 'docker rm nix-zitadel-1 nix-zitadel-init-1 nix-zitadel-db-1'
+assert_has 'docker volume rm nix-zitadel-data nix-zitadel-machinekey'
+assert_has 'cannot run Zitadel'
 assert_has "$sdir/nix.env.pre-local-auth"
 
 # Afterwards it is an ordinary local install; migrating again is refused.
@@ -306,20 +324,39 @@ run_install --migrate-local-auth https://nix.example.org
 assert_fail
 assert_has 'already signs people in with Nix itself'
 
+# An outside provider the operator runs (an issuer, no master key) keeps working, and has nothing to migrate.
+sdir=$fixture/own
+mkdir -p "$sdir"
+cat > "$sdir/nix.env" <<ENV
+NIX_PUBLIC_ORIGIN=https://nix.example.org
+NIX_PUBLIC_HOST=nix.example.org
+NIX_AUTH_MODE=oidc
+NIX_OIDC_ISSUER=https://sso.example.org
+NIX_OIDC_CLIENT_ID=abc
+NIX_PG_APP_PASSWORD=a
+NIX_PG_MIGRATOR_PASSWORD=b
+NIX_PG_COLLAB_PASSWORD=c
+ENV
+run_install https://nix.example.org
+assert_ok
+assert_has 'Sign in with your identity provider'
+assert_log_lacks 'zitadel'
+assert_log_lacks nix-identity-bootstrap
+run_install --migrate-local-auth https://nix.example.org
+assert_fail
+assert_has 'identity provider you run'
+
 # The compose files parse in both shapes, with the env files install.sh writes.
 if docker compose version >/dev/null 2>&1; then
   for shape in local oidc; do
     envf=$fixture/shape.env
     if [ "$shape" = local ]; then cp "$fixture/new/nix.env" "$envf"; else cp "$fixture/old.env" "$envf"; fi
     files=(-f deploy/compose.prod.yml -f deploy/compose.quickstart.yml)
-    [ "$shape" = local ] || files+=(-f deploy/compose.zitadel.yml)
     NIX_IMAGE_TAG=x NIX_WEB_IMAGE_TAG=x NIX_CORE_TOKEN_ISSUER=https://nix.example.org NIX_CORE_TOKEN_AUDIENCE=nix NIX_CORE_TOKEN_KEY_ID=k \
       NIX_CORE_TOKEN_SIGNING_KEY_FILE=/dev/null NIX_OBJECT_STORE_ENDPOINT=http://a NIX_OBJECT_STORE_PUBLIC_ORIGIN=http://a \
       NIX_OBJECT_STORE_BUCKET=a NIX_OBJECT_STORE_ACCESS_KEY=a NIX_OBJECT_STORE_SECRET_KEY=a NIX_PUBLIC_FORMS_SIGNING_KEY=a \
       NIX_INTERNAL_SECRET=a NIX_PG_SUPERUSER_PASSWORD=a NIX_PG_APP_PASSWORD=a NIX_PG_MIGRATOR_PASSWORD=a NIX_MIGRATOR_CONNECTION_STRING=a \
       NIX_CORE_DATABASE_URL=a NIX_COLLAB_DATABASE_URL=a NIX_COLLAB_MIGRATOR_CONNECTION_STRING=a CLOUDFLARE_TUNNEL_TOKEN=u \
-      NIX_ZITADEL_TLS_MODE=external NIX_ZITADEL_MASTERKEY=a NIX_ZITADEL_DB_PASSWORD=a NIX_ZITADEL_USER_PASSWORD=a NIX_AUTH_PORT=443 \
-      NIX_AUTH_SECURE=true NIX_ADMIN_USERNAME=a \
       docker compose -p t --env-file "$envf" "${files[@]}" --profile bootstrap config --quiet
   done
 fi

@@ -1,5 +1,0 @@
-# The bundled identity provider on its own hostname (compose.zitadel.yml). OIDC issuers cannot
-# live under a path.
-{$NIX_OIDC_ISSUER} {
-	reverse_proxy zitadel:8080
-}

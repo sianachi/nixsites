@@ -1,7 +1,7 @@
 # One-machine install (deploy/install.sh): layered over compose.prod.yml. Adds the public
 # Caddy listener a fresh host lacks and parks cloudflared behind a profile. Core signs people
-# in itself (NIX_AUTH_MODE=local), so nothing else is needed. An install that still uses the
-# bundled Zitadel adds compose.zitadel.yml. Values come from the env file install.sh writes.
+# in itself (NIX_AUTH_MODE=local), so nothing else is needed. Values come from the env file
+# install.sh writes.
 #
 #   docker compose -p nix --env-file <env> -f compose.prod.yml -f compose.quickstart.yml ...
 
@@ -22,7 +22,7 @@ services:
     volumes:
       - ./Caddyfile.quickstart:/etc/caddy/Caddyfile:ro
       - ./Caddyfile.prod:/etc/caddy/Caddyfile.prod:ro
-      # Extra site blocks: the legacy auth host after a migration (see install.sh), or Zitadel.
+      # Extra site blocks: the legacy auth host after a migration off the old bundled Zitadel (see install.sh).
       - ${NIX_WEBAUTHN_CADDY:-./Caddyfile.none}:/etc/caddy/auth.d/webauthn.caddy:ro
     networks:
       default:

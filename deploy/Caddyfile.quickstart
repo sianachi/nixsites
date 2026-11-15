@@ -1,8 +1,8 @@
 # Nix one-machine edge (deploy/install.sh). Caddy is the public listener: it terminates TLS
 # itself for an https origin (Let's Encrypt, ports 80 and 443) and serves plain http for a
 # .localhost try-out. The app routes are the production snippet. Core signs people in itself,
-# so one hostname is enough; auth.d holds extra site blocks (the bundled Zitadel's hostname,
-# or the old auth hostname serving only /.well-known/webauthn after a migration).
+# so one hostname is enough; auth.d holds extra site blocks (the old auth hostname serving only
+# /.well-known/webauthn after a migration off the bundled Zitadel).
 import /etc/caddy/Caddyfile.prod
 
 {$NIX_PUBLIC_ORIGIN} {

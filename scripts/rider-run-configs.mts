@@ -1,7 +1,6 @@
 // Writes Rider/JetBrains run configurations to .run (excluded locally via .git/info/exclude, per machine).
 // Each service's environment is captured from its scripts/dev-*.sh by sourcing the script with
-// `exec` stubbed, so the scripts stay the single source of truth. Re-run after
-// deploy/seed/zitadel-configure.sh regenerates the OIDC client.
+// `exec` stubbed, so the scripts stay the single source of truth.
 //
 // Usage: node --experimental-strip-types scripts/rider-run-configs.mts
 import { execFileSync } from 'node:child_process';

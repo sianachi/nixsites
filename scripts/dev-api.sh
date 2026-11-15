@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
-# Starts Core with the local Zitadel client, BFF session policy and Core signing key.
+# Starts Core in local sign-in mode (no identity provider) with the BFF session policy and Core signing key.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
 dev_state_dir="${NIX_DEV_STATE_DIR:-$repo_root/deploy}"
-oidc_env="$dev_state_dir/.zitadel/oidc.generated.env"
-if [ ! -f "$oidc_env" ]; then
-  echo "dev-api: $oidc_env not found - run scripts/dev-stack-up.sh first" >&2
-  exit 1
-fi
-# shellcheck disable=SC1090
-. "$oidc_env"
-
 signing_key="$dev_state_dir/.dev-access-token-key.pem"
 if [ ! -f "$signing_key" ]; then
   openssl ecparam -name prime256v1 -genkey -noout -out "$signing_key"
@@ -43,10 +35,8 @@ export NIX_WEB_ORIGIN="${NIX_WEB_ORIGIN:-http://localhost:${NIX_WEB_PORT}}"
 export NIX_COLLAB_PORT="${NIX_COLLAB_PORT:-8100}"
 export NIX_COLLAB_ORIGIN="${NIX_COLLAB_ORIGIN:-http://localhost:${NIX_COLLAB_PORT}}"
 export Nix__Collaboration__BaseUrl="${Nix__Collaboration__BaseUrl:-$NIX_COLLAB_ORIGIN}"
-export Nix__Bff__Authority="$NIX_OIDC_ISSUER"
-export Nix__Bff__ClientId="$NIX_OIDC_CLIENT_ID"
+export Nix__Auth__Mode=local
 export Nix__Bff__PublicOrigin="$NIX_WEB_ORIGIN"
-export Nix__Bff__AccountPage="${Nix__Bff__AccountPage:-$NIX_OIDC_ISSUER/ui/console/users/me?id=security}"
 export Nix__Bff__DataProtectionKeysPath="$dev_state_dir/.dev-data-protection"
 export Nix__AccessTokens__Issuer="$NIX_API_ORIGIN"
 export Nix__AccessTokens__Audience="nix"

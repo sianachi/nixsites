@@ -16,7 +16,6 @@ export RENDERED_WEB="$test_root/web.yaml"
 export RENDERED_SITES="$test_root/sites.yaml"
 export RENDERED_INGRESS="$test_root/ingress.yaml"
 export RENDERED_ALL="$test_root/all.yaml"
-export RENDERED_ZITADEL="$test_root/zitadel.yaml"
 export RENDERED_IMPORT="$test_root/import.yaml"
 export RENDERED_BACKUP="$test_root/backup.yaml"
 export OFFSITE_ENV_COPY="$test_root/offsite.env"
@@ -53,6 +52,16 @@ if [[ " $* " == *" patch statefulset nix-loki "* ]]; then
   printf 'kubectl:%s\n' "$*" >> "$KUBECTL_LOG"
   if [ "${FAIL_RETIRED_LOKI_PATCH:-}" = 1 ]; then exit 1; fi
   exit 0
+fi
+
+if [[ " $* " == *" get deployment nix-zitadel "* ]]; then
+  printf 'get:%s\n' "$*" >> "$KUBECTL_LOG"
+  printf '%s' "${ZITADEL_REPLICAS:-}"
+  exit 0
+fi
+
+if [[ " $* " == *" get secret nix-zitadel "* && "${NO_ZITADEL_SECRET:-}" = 1 ]]; then
+  exit 1
 fi
 
 if [[ " $* " == *" get job/nix-import-zitadel "* ]]; then
@@ -120,9 +129,6 @@ if [[ " $* " == *" apply -f - "* ]]; then
   if [[ "$payload" == *"name: nix-sites-serve"* && "$payload" == *"kind: Deployment"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_SITES"
   fi
-  if [[ "$payload" == *"name: nix-zitadel-env"* ]]; then
-    printf '%s\n' "$payload" > "$RENDERED_ZITADEL"
-  fi
   if [[ "$payload" == *"name: nix-backup, namespace"* && "$payload" == *"kind: CronJob"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_BACKUP"
   fi
@@ -138,6 +144,7 @@ fi
 if [[ " $* " == *" exec "* ]]; then
   printf 'exec:%s\n' "$*" >> "$KUBECTL_LOG"
   cat > "$EXEC_STDIN"
+  if [[ " $* " == *"pg_database"* && "${NO_ZITADEL_DB:-}" != 1 ]]; then echo 1; fi
   exit 0
 fi
 
@@ -182,11 +189,12 @@ TEMPLATE_BOOT_SERVICE_KEY_SECRET=template-service-key \
 NIX_DEPLOY_TARGET=kubernetes bash "$repo_root/deploy/k8s/deploy.sh" >/dev/null
 
 }
-# A first install has no template workspace, Zitadel project or service key yet.
+# A first install has no template workspace, identity-provider project or service key yet.
 run_first_install() {
 PATH="$fake_bin:$PATH" \
 REGISTRY=registry.example.test \
 TAG=render-order \
+OIDC_ISSUER=https://identity.example.test \
 OIDC_CLIENT_ID=web-client \
 DOMAIN=nix.example.test \
 NIX_TEMPLATE_BOOT_ENABLED=false \
@@ -333,18 +341,18 @@ grep -Fq 'name: NIX_OBJECT_STORE_BUCKET' "$RENDERED_WEB"
 # Site builds upload through the app origin, so the sites bucket needs the same route.
 grep -Fq 'handle /{$NIX_SITES_BUCKET}/*' "$repo_root/deploy/k8s/Caddyfile"
 grep -A1 -F 'name: NIX_SITES_BUCKET' "$RENDERED_WEB" | grep -Fq 'name: nix-sites, key: bucket'
-# Zitadel: own database created before it starts, invite-only, served at auth.$DOMAIN.
-assert_before "wait:-n nix wait --for=condition=complete job/nix-db-seed" "wait:-n nix wait --for=condition=complete job/nix-zitadel-db-render-order"
-grep -Fq 'ZITADEL_EXTERNALDOMAIN: "auth.nix.example.test"' "$RENDERED_ZITADEL"
-grep -Fq 'ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_ALLOWREGISTER: "false"' "$RENDERED_ZITADEL"
-grep -Fq 'key: masterkey' "$RENDERED_ZITADEL"
-if grep -Fq 'ZITADEL_DATABASE_POSTGRES_ADMIN' "$RENDERED_ZITADEL"; then
-  echo 'Zitadel received database administrator credentials.' >&2
+# Nothing deploys or waits for Zitadel; auth.$DOMAIN only sends the passkey document to Core.
+if grep -Eq '^(apply|rollout|delete|wait|kubectl).*zitadel' "$KUBECTL_LOG"; then
+  echo 'A deploy touched Zitadel.' >&2
   exit 1
 fi
 grep -Fq 'host: "auth.nix.example.test"' "$RENDERED_INGRESS"
-grep -Fq 'service: { name: nix-zitadel, port: { number: 8080 } }' "$RENDERED_INGRESS"
-grep -Fq 'rollout:-n nix rollout status deployment/nix-zitadel --timeout=900s' "$KUBECTL_LOG"
+grep -Fq 'path: /.well-known/webauthn' "$RENDERED_INGRESS"
+grep -Fq 'service: { name: nix-api, port: { number: 8080 } }' "$RENDERED_INGRESS"
+if grep -Fq 'nix-zitadel' "$RENDERED_INGRESS"; then
+  echo 'The Ingress points at the removed Zitadel Service.' >&2
+  exit 1
+fi
 grep -Fq 'apply-stdin:nix-backup,nix-backup' "$KUBECTL_LOG"
 # Third-party images are pinned to a version.
 if grep -E '^ *image: ' "$RENDERED_ALL" | grep -vE ':[A-Za-z0-9._-]+$|registry\.example\.test/' | grep -q .; then
@@ -361,9 +369,14 @@ if grep -Fq 'apply-stdin:' "$KUBECTL_LOG"; then
   exit 1
 fi
 run_deploy
-# Without OIDC_ISSUER, Core trusts the bundled Zitadel.
-OIDC_ISSUER= run_deploy
-grep -Fq 'value: "https://auth.nix.example.test"' "$RENDERED_API"
+# oidc mode needs both the issuer and the client id; no provider is assumed.
+: > "$KUBECTL_LOG"
+if OIDC_ISSUER= run_deploy 2>/dev/null; then
+  echo 'oidc mode ran without OIDC_ISSUER.' >&2
+  exit 1
+fi
+test ! -s "$KUBECTL_LOG"
+run_deploy
 
 if grep -Eq 'nix-indexer|OpenSearch|opensearch|index-password|index-url' "$RENDERED_WORKERS" "$RENDERED_API"; then
   echo 'Deployment still renders retired search components.' >&2
@@ -423,7 +436,7 @@ for failed_loki_step in FAIL_RETIRED_LOKI_LOOKUP FAIL_RETIRED_LOKI_PATCH; do
   fi
 done
 # Production sites and push settings come from the manifest, not hand edits.
-OIDC_ISSUER= run_deploy
+run_deploy
 grep -A1 -F 'name: Nix__Sites__RequireOperatorApproval' "$RENDERED_API" | grep -Fq 'value: "true"'
 grep -Fq 'key: api-token, optional: true' "$RENDERED_API"
 grep -Fq 'name: Nix__Sites__Cloudflare__ManagedZones__0__WorkspaceId' "$RENDERED_API"
@@ -455,10 +468,9 @@ if grep -Fq 'nix-template-boot' "$KUBECTL_LOG"; then
   echo 'A first install ran the managed-template step.' >&2
   exit 1
 fi
-assert_before "rollout:-n nix rollout status deployment/nix-zitadel --timeout=900s" "apply-file:deploy/k8s/cloudflare-only.yaml"
 test "$(grep -A1 -xF 'apply-file:deploy/k8s/cloudflare-only.yaml' "$KUBECTL_LOG" | tail -n 1)" = 'apply-stdin:nix,nix-sites,nix-sites-custom-hosts'
 grep -Fq 'host: "auth.nix.example.test"' "$RENDERED_INGRESS"
-if (PATH="$fake_bin:$PATH" REGISTRY=r TAG=t OIDC_CLIENT_ID=c DOMAIN=nix.example.test \
+if (PATH="$fake_bin:$PATH" REGISTRY=r TAG=t OIDC_ISSUER=https://i OIDC_CLIENT_ID=c DOMAIN=nix.example.test \
   NIX_DEPLOY_TARGET=kubernetes bash "$repo_root/deploy/k8s/deploy.sh" >/dev/null 2>&1); then
   echo 'Deployment ran without template configuration while managed templates are enabled.' >&2
   exit 1
@@ -681,15 +693,13 @@ fi
 # A generic cluster (deploy/install.sh --kubernetes): no Cloudflare origin lock, any ingress class.
 : > "$KUBECTL_LOG"
 INGRESS_CLASS=nginx NIX_INGRESS_CLOUDFLARE_ONLY=false STORAGE_CLASS=standard STORAGE_CLASS_RETAIN=standard \
-  AUTH_PORT=80 AUTH_SECURE=false run_first_install
+  run_first_install
 grep -Fq 'ingressClassName: nginx' "$RENDERED_INGRESS"
 grep -Fq 'ssl-redirect: "true"' "$RENDERED_INGRESS"
 grep -Fq 'value: "https://nix.example.test"' "$RENDERED_API"
 grep -Fq 'https://nix.example.test|http://nix-api:8080/public/v1/auth/jwks' "$RENDERED_ALL"
 grep -Fq 'router.middlewares: ""' "$RENDERED_INGRESS"
 grep -Fq 'value: "X-Forwarded-For"' "$RENDERED_WEB"
-grep -Fq 'ZITADEL_EXTERNALSECURE: "false"' "$RENDERED_ZITADEL"
-grep -Fq '"--tlsMode", "external"' "$RENDERED_ZITADEL"
 assert_before "delete:-n nix delete statefulset/nix-rabbitmq service/nix-rabbitmq networkpolicy/rabbitmq-ingress configmap/nix-rabbitmq-config secret/nix-rabbitmq --ignore-not-found" "kubectl:-n nix rollout restart deployment/nix-node"
 if grep -Fq 'cloudflare-only.yaml' "$KUBECTL_LOG"; then
   echo 'Deployment applied the Cloudflare origin lock on a generic cluster.' >&2
@@ -767,15 +777,46 @@ if grep -Fq 'delete:-n nix delete secret' "$KUBECTL_LOG" || grep -Fq 'persistent
   echo 'Switching to local mode touched Zitadel data.' >&2
   exit 1
 fi
-# oidc keeps Zitadel at auth.$DOMAIN and brings it back after a switch to local.
+# oidc applies no Zitadel object and scales nothing down.
 : > "$KUBECTL_LOG"; rm -f "$RENDERED_INGRESS"
 run_deploy
-grep -Fq 'service: { name: nix-zitadel, port: { number: 8080 } }' "$RENDERED_INGRESS"
-grep -Fq 'kubectl:-n nix scale deployment/nix-zitadel --replicas=1' "$KUBECTL_LOG"
-if grep -Fq 'replicas=0' "$KUBECTL_LOG"; then
-  echo 'An oidc install scaled Zitadel down.' >&2
+if grep -Eq '^(apply|rollout|delete|wait|kubectl).*zitadel' "$KUBECTL_LOG" || grep -Fq 'nix-zitadel' "$RENDERED_INGRESS"; then
+  echo 'An oidc install touched Zitadel.' >&2
   exit 1
 fi
+# The old Deployment still running refuses a deploy that is not migrating, before anything is applied.
+for refused in 'run_deploy' 'run_local'; do
+  : > "$KUBECTL_LOG"
+  if (export ZITADEL_REPLICAS=1; eval "$refused") 2>"$test_root/err"; then
+    echo "A deploy ran while the old Zitadel Deployment still had replicas: $refused" >&2
+    exit 1
+  fi
+  grep -Fq 'migrate first' "$test_root/err"
+  if grep -Eq '^(apply|delete|wait|rollout)' "$KUBECTL_LOG"; then
+    echo 'A refused deploy changed the cluster.' >&2
+    exit 1
+  fi
+done
+# Scaled to zero, or migrating in this run (also a dry run), is fine.
+ZITADEL_REPLICAS=0 run_local
+ZITADEL_REPLICAS=1 NIX_IMPORT_ZITADEL=run run_local
+ZITADEL_REPLICAS=1 NIX_IMPORT_ZITADEL=dry-run run_deploy
+# The import needs the old secret and database, and says so when they are gone.
+: > "$KUBECTL_LOG"
+if NO_ZITADEL_SECRET=1 NIX_IMPORT_ZITADEL=dry-run run_deploy 2>"$test_root/err"; then
+  echo 'The import ran without the nix-zitadel secret.' >&2
+  exit 1
+fi
+grep -Fq 'old secret nix-zitadel' "$test_root/err"
+if NO_ZITADEL_DB=1 NIX_IMPORT_ZITADEL=run run_local 2>"$test_root/err"; then
+  echo 'The import ran without the zitadel database.' >&2
+  exit 1
+fi
+grep -Fq 'needs the zitadel database' "$test_root/err"
+# The nightly dump takes the zitadel database only when it exists.
+run_deploy
+grep -B1 -F 'pg_dump -Fc -d zitadel' "$RENDERED_BACKUP" | head -n 1 | grep -Fq "datname = 'zitadel'"
+grep -Fq 'no zitadel database, skipped' "$RENDERED_BACKUP"
 # Managed templates in local mode take a Core access token instead of a machine key.
 : > "$KUBECTL_LOG"; rm -f "$RENDERED_TEMPLATE_SYNC"
 export TEMPLATE_BOOT_WORKSPACE_ID=11111111-1111-4111-8111-111111111111 TEMPLATE_BOOT_PVC=template-files

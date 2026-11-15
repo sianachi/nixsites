@@ -74,8 +74,10 @@ and can sign out of every device there. Scripts and tools use access tokens
 
 ### Moving an install off the bundled Zitadel
 
-Installs made before this change use Zitadel for sign-in and keep doing so; running the installer
-again changes nothing about that. To move one onto Nix's own sign-in:
+Earlier versions of the installer bundled Zitadel. This version signs people in itself and no longer
+includes, starts or upgrades Zitadel, so an install that still uses it must move before it can
+upgrade: the installer stops without changing anything until you run it with `--migrate-local-auth`.
+Run it with `--dry-run` first, then for real:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh \
@@ -95,8 +97,20 @@ Passkeys were registered for the old `auth.<host>` name, so that name stays the 
 The web server keeps answering on it, serving only `/.well-known/webauthn`, so keep its DNS record.
 Browsers that do not support related origins fall back to the password.
 
-Zitadel's volumes are left as they are. To roll back, copy `~/nix/nix.env.pre-local-auth` back over
-`~/nix/nix.env` and run the installer again; it starts the Zitadel containers again.
+The installer starts the old Zitadel database container that is already on the host (it creates and
+pulls nothing), reads from it, then stops the old Zitadel containers. It does not remove them or their
+volumes, and prints their names. When you are satisfied, delete them:
+
+```sh
+docker rm nix-zitadel-1 nix-zitadel-init-1 nix-zitadel-db-1   # the names the installer printed
+docker volume rm nix-zitadel-data nix-zitadel-machinekey
+```
+
+This version cannot run Zitadel, so to roll back copy `~/nix/nix.env.pre-local-auth` back over
+`~/nix/nix.env` and run the installer of the previous release with `--version <previous release>`.
+
+An install that signs in through an identity provider you run yourself (an issuer and client id in
+the env file, no Zitadel master key) is not affected and keeps working.
 
 ### Moving a Compose install off a Zitadel you run yourself
 
@@ -134,8 +148,8 @@ Not moved: Zitadel's own sessions, SMS and email codes, links to outside logins,
 (create access tokens instead). Backups keep working with no Zitadel container; `backup.sh` only
 warns unless `NIX_REQUIRE_ZITADEL=1`.
 
-To go back, restore the previous env file and release again. Zitadel's data is untouched, so start
-it again if you stopped it.
+To go back, restore the previous env file and release the previous version again. Zitadel's data is
+untouched, so start it again if you stopped it.
 
 ## Options
 
@@ -186,17 +200,20 @@ or list the tunnel or proxy addresses in the entrypoint's `forwardedHeaders.trus
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash -s -- --kubernetes https://nix.example.org
 ```
 
-A new Kubernetes install also signs in locally and deploys no Zitadel; the setup code is printed at
+A Kubernetes install signs in locally and deploys no identity provider; the setup code is printed at
 the end and kept as `setup-code` in the `nix-auth` secret. Managed template sync there is off by
 default: it needs a Core access token (`account service-token --name <name> --scopes read,write`,
 run with the migrator image) stored as key `token` in a secret you name in `TEMPLATE_BOOT_TOKEN_SECRET`.
-An existing cluster install that passes `OIDC_CLIENT_ID` to `deploy.sh` stays on OIDC.
+`NIX_AUTH_MODE=oidc` is for a provider you run yourself and needs both `OIDC_ISSUER` and
+`OIDC_CLIENT_ID`; nothing is deployed for it. A cluster that still has the old bundled Zitadel
+running is refused until you move it (below).
 
 ### Moving a cluster install off Zitadel
 
-An install that uses the bundled Zitadel can switch to Nix's own sign-in and keep its accounts,
-password hashes, authenticator apps and passkeys. Run `deploy/k8s/deploy.sh` as usual, with these
-extra settings:
+A cluster made by an earlier version has a `nix-zitadel` Deployment. This version does not deploy or
+manage it, and `deploy.sh` refuses to run while it still has replicas. Switch to Nix's own sign-in
+first; accounts, password hashes, authenticator apps and passkeys come across. Run `deploy/k8s/deploy.sh`
+as usual, with these extra settings:
 
 1. Dry run: add `NIX_IMPORT_ZITADEL=dry-run`. After the migrations it prints what would move, any
    clashes and anything that blocks the import, then stops. Nothing else changes. Fix what it reports
@@ -206,10 +223,22 @@ extra settings:
    registered for a host other than `auth.<host>`.
 3. The import job runs on the same node as Core, because it reads Core's key ring. Core must be running.
 
-Zitadel's database, secret and volume stay in place, and its Deployment is scaled to zero. Keep the
-DNS record for `auth.<host>`: browsers check migrated passkeys there, and Core answers only
-`/.well-known/webauthn` on that name. To go back, deploy again with `NIX_AUTH_MODE=oidc` and
-`OIDC_CLIENT_ID`.
+Both steps read the old `nix-zitadel` secret and the `zitadel` database and stop with a message if
+either is gone. Keep the DNS record for `auth.<host>`: browsers check migrated passkeys there, and Core
+answers only `/.well-known/webauthn` on that name.
+
+After a successful run the `nix-zitadel` Deployment is scaled to zero and everything else is left in
+place. `deploy.sh` never deletes it. When you are satisfied, remove the leftovers yourself:
+
+```sh
+kubectl -n nix delete deployment/nix-zitadel service/nix-zitadel configmap/nix-zitadel-env \
+  persistentvolumeclaim/<the Zitadel claim, see kubectl -n nix get pvc> secret/nix-zitadel --ignore-not-found
+kubectl -n nix exec statefulset/postgres -c postgres -- psql -U postgres -d postgres \
+  -c 'DROP DATABASE IF EXISTS zitadel' -c 'DROP ROLE IF EXISTS zitadel'
+```
+
+The nightly backup dumps the `zitadel` database only while it exists. There is no way back to Zitadel
+with this version; to return, restore a backup and deploy the previous release.
 
 The cluster needs an ingress controller listening on the origin's port and a default StorageClass.
 The installer reads the IngressClass, StorageClass and pod CIDR from the cluster (`--ingress-class`,

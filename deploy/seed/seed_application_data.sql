@@ -17,19 +17,6 @@
 
 \set ON_ERROR_STOP on
 
--- The issuer is machine-specific: deploy/seed/zitadel-configure.sh writes it to
--- deploy/.zitadel/oidc.generated.env after Zitadel has bootstrapped. seed.sh
--- passes it through when that file exists. Without it the tenants and their
--- people are still seeded - only the identity provider registration is skipped,
--- because inventing an issuer would produce a registration that accepts no real
--- token and looks like it should.
-\if :{?oidc_issuer} \else \set oidc_issuer '' \endif
-\if :{?oidc_client_id} \else \set oidc_client_id '' \endif
-\if :{?oidc_project_id} \else \set oidc_project_id '' \endif
-\if :{?dev_user_id} \else \set dev_user_id '' \endif
-\if :{?template_boot_service_user_id} \else \set template_boot_service_user_id '' \endif
-\if :{?template_boot_workspace_id} \else \set template_boot_workspace_id 'a1000000-0000-4000-8000-000000000001' \endif
-
 DO $$
 BEGIN
     IF to_regclass('public.tenant') IS NULL THEN
@@ -59,14 +46,12 @@ VALUES
 ON CONFLICT (workspace_id) DO NOTHING;
 
 -- ── Principals ─────────────────────────────────────────────────────────────
--- external_subject is the issuer's subject claim. These match the demo users
--- zitadel-configure.sh provisions; until a real sign-in happens they are simply
--- rows that the authentication goal will resolve tokens onto.
+-- external_subject only matters to an OIDC install; local sign-in resolves people by account.
 INSERT INTO principal
     (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
 VALUES
     ('a2000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001',
-     'acme-admin',  'user', 'Ada Admin',   'ada@acme.test',       'active', NULL),
+     'acme-admin',  'user', 'Ada Admin',   'dev@nix.localhost',   'active', NULL),
     ('a2000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001',
      'acme-editor', 'user', 'Eli Editor',  'eli@acme.test',       'active', NULL),
 
@@ -78,47 +63,6 @@ VALUES
     ('b2000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002',
      'umbrella-admin', 'user', 'Uma Admin', 'uma@umbrella.test',  'active', NULL)
 ON CONFLICT (principal_id) DO NOTHING;
-
--- The boot template reconciler mints short-lived JWT-profile access tokens. Its
--- subject is provisioned explicitly, because Core never creates a principal from
--- token claims. Keeping it a service principal makes audit records distinguish a
--- deployment reconciliation from an administrator's interactive changes.
-INSERT INTO principal
-    (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at,
-     can_manage_templates)
-SELECT
-    'a2000000-0000-4000-8000-000000000004'::uuid,
-    'a0000000-0000-4000-8000-000000000001'::uuid,
-    :'template_boot_service_user_id',
-    'service',
-    'Nix Template Boot',
-    NULL,
-    'active',
-    NULL,
-    true
-WHERE :'template_boot_service_user_id' <> ''
-ON CONFLICT (principal_id) DO UPDATE
-SET external_subject = EXCLUDED.external_subject,
-    status = 'active',
-    deprovisioned_at = NULL,
-    can_manage_templates = true;
-
--- Map the administrator onto the identity provider's real subject.
---
--- Core resolves a token's `sub` against principal.external_subject and refuses a
--- subject nobody provisioned - deliberately, because a valid token alone must
--- never be able to mint an identity. The placeholder above ('acme-admin') is
--- what the row carries before Zitadel exists; once zitadel-configure.sh has run
--- it writes the developer user's real id into oidc.generated.env, seed.sh passes
--- it here, and this statement points the administrator at it.
---
--- Without this, signing in through the browser succeeds at the identity provider
--- and is then refused by Core with "the token's subject is not provisioned in
--- this tenant" - which is correct behaviour reported against the wrong data.
-UPDATE principal
-SET external_subject = :'dev_user_id'
-WHERE principal_id = 'a2000000-0000-4000-8000-000000000001'
-  AND :'dev_user_id' <> '';
 
 -- ── Groups ─────────────────────────────────────────────────────────────────
 INSERT INTO principal_group (group_id, tenant_id, name, external_id) VALUES
@@ -190,92 +134,31 @@ SET role = 'owner',
     granted_at = EXCLUDED.granted_at
 WHERE workspace_member.role <> 'owner';
 
-INSERT INTO workspace_member
-    (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-SELECT workspace.workspace_id,
-       'principal',
-       'a2000000-0000-4000-8000-000000000004'::uuid,
-       workspace.tenant_id,
-       'editor',
-       'a2000000-0000-4000-8000-000000000001'::uuid,
-       now()
-  FROM workspace
- WHERE workspace.workspace_id = :'template_boot_workspace_id'::uuid
-   AND workspace.tenant_id = 'a0000000-0000-4000-8000-000000000001'::uuid
-   AND :'template_boot_service_user_id' <> ''
-ON CONFLICT (workspace_id, subject_type, subject_id) DO NOTHING;
-
--- ── Identity provider registration ─────────────────────────────────────────
--- Only when seed.sh supplied a real issuer. Registered against the first tenant,
--- which is the one the dev Zitadel instance is configured for.
--- A guarded INSERT ... SELECT rather than a DO block, because psql does not
--- substitute :variables inside dollar-quoted strings - the block would receive
--- the literal text and fail to parse.
-INSERT INTO identity_provider
-    (provider_id, tenant_id, issuer, audience, jwks_uri, allowed_algorithms, enabled,
-     jit_provisioning_enabled, userinfo_uri)
-SELECT
-    'a4000000-0000-4000-8000-000000000001'::uuid,
-    'a0000000-0000-4000-8000-000000000001'::uuid,
-    :'oidc_issuer',
-    :'oidc_client_id',
-    :'oidc_issuer' || '/oauth/v2/keys',
-    ARRAY['RS256']::text[],
-    true,
-    true,
-    :'oidc_issuer' || '/oidc/v1/userinfo'
-WHERE :'oidc_issuer' <> '' AND :'oidc_client_id' <> ''
-ON CONFLICT (provider_id) DO UPDATE
-SET issuer = EXCLUDED.issuer,
-    audience = EXCLUDED.audience,
-    jwks_uri = EXCLUDED.jwks_uri,
-    allowed_algorithms = EXCLUDED.allowed_algorithms,
-    enabled = true,
-    userinfo_uri = EXCLUDED.userinfo_uri;
-
--- Zitadel JWT-profile service-account tokens name the project as their API
--- audience rather than the SPA client. Registering it through the same exact
--- issuer/audience resolver keeps machine and browser authentication on one path.
-INSERT INTO identity_provider
-    (provider_id, tenant_id, issuer, audience, jwks_uri, allowed_algorithms, enabled,
-     jit_provisioning_enabled, userinfo_uri)
-SELECT
-    'a4000000-0000-4000-8000-000000000002'::uuid,
-    'a0000000-0000-4000-8000-000000000001'::uuid,
-    :'oidc_issuer',
-    :'oidc_project_id',
-    :'oidc_issuer' || '/oauth/v2/keys',
-    ARRAY['RS256']::text[],
-    true,
-    false,
-    :'oidc_issuer' || '/oidc/v1/userinfo'
-WHERE :'oidc_issuer' <> '' AND :'oidc_project_id' <> ''
-ON CONFLICT (provider_id) DO UPDATE
-SET issuer = EXCLUDED.issuer,
-    audience = EXCLUDED.audience,
-    jwks_uri = EXCLUDED.jwks_uri,
-    allowed_algorithms = EXCLUDED.allowed_algorithms,
-    enabled = true,
-    userinfo_uri = EXCLUDED.userinfo_uri;
-
--- External identities are issuer-qualified. These exact deployment-managed rows all belong to
--- the one issuer configured above; a tenant with no provider remains internal-only.
-UPDATE principal
-SET external_issuer = :'oidc_issuer'
-WHERE tenant_id = 'a0000000-0000-4000-8000-000000000001'::uuid
-  AND principal_id IN (
-      'a2000000-0000-4000-8000-000000000001'::uuid,
-      'a2000000-0000-4000-8000-000000000002'::uuid,
-      'a2000000-0000-4000-8000-000000000003'::uuid,
-      'a2000000-0000-4000-8000-000000000004'::uuid)
-  AND :'oidc_issuer' <> '';
-
 -- The populated administrator workspace is the administrator's personal workspace. This runs
 -- after both the principal and protected owner membership exist, satisfying both FKs.
 UPDATE workspace
 SET personal_owner_principal_id = 'a2000000-0000-4000-8000-000000000001'::uuid
 WHERE workspace_id = 'a1000000-0000-4000-8000-000000000001'::uuid
   AND tenant_id = 'a0000000-0000-4000-8000-000000000001'::uuid;
+
+-- ── Development sign-in ────────────────────────────────────────────────────
+-- Core runs in local mode in development, so people sign in with an account. The administrator is
+-- dev@nix.localhost; the password below is public and for development only, which is why this lives in
+-- the dev seed and nowhere a production database is ever seeded. Every other active person in these
+-- tenants gets the same password, so a database whose people were created through the old dev
+-- identity provider keeps its data and its sign-ins. Existing accounts are never touched.
+UPDATE principal
+SET email = 'dev@nix.localhost', email_normalized = 'dev@nix.localhost', email_verified = true
+WHERE principal_id = 'a2000000-0000-4000-8000-000000000001' AND email IS DISTINCT FROM 'dev@nix.localhost';
+
+-- Password: nix-dev-password (Argon2id, the parameters PasswordHasher writes).
+INSERT INTO local_account (principal_id, tenant_id, email_normalized, password_hash, password_changed_at)
+SELECT principal_id, tenant_id, lower(btrim(email)),
+       '$argon2id$v=19$m=19456,t=2,p=1$bml4LWRldi1zZWVkLXNhbHQ$8ji2dxLsDOwPSNKRKLMbA0LsSzcsVCOV3dg0ObRFV3A', now()
+FROM principal
+WHERE kind = 'user' AND status = 'active' AND email IS NOT NULL
+  AND tenant_id IN ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002')
+ON CONFLICT DO NOTHING;
 
 -- One pending row per tenant keeps manual development and RLS probes honest without implying
 -- delivery. The `.invalid` domain is reserved and cannot receive mail.
@@ -293,6 +176,6 @@ ON CONFLICT (invitation_id) DO NOTHING;
 
 DO $$
 BEGIN
-    RAISE NOTICE 'application data seeded: 2 tenants, 3 workspaces, 4 principals';
+    RAISE NOTICE 'application data seeded: 2 tenants, 3 workspaces, 3 principals';
 END
 $$;

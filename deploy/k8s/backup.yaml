@@ -1,6 +1,6 @@
 # Nightly on-node backup, applied by deploy/k8s/deploy.sh. Postgres holds everything durable for
-# Nix and Zitadel; derived data (closure, snapshots, search, links, embeddings) is rebuildable by
-# design, so logical dumps are sufficient. The object store volume is archived with its extended
+# Nix, plus the old Zitadel database while a cluster still has one; derived data (closure,
+# snapshots, search, links, embeddings) is rebuildable by design, so logical dumps are sufficient. The object store volume is archived with its extended
 # attributes (versitygw keeps object metadata there) and its IAM file.
 #
 # This lands on a second volume of the same node: it covers mistakes and bad migrations, not the
@@ -72,7 +72,11 @@ spec:
                   mkdir -p "$out.partial"
                   pg_dumpall --roles-only > "$out.partial/roles.sql"
                   pg_dump -Fc -d nix > "$out.partial/nix.dump"
-                  pg_dump -Fc -d zitadel > "$out.partial/zitadel.dump"
+                  if [ "$(psql -X -tA -d postgres -c "SELECT 1 FROM pg_database WHERE datname = 'zitadel'")" = 1 ]; then
+                    pg_dump -Fc -d zitadel > "$out.partial/zitadel.dump"
+                  else
+                    echo 'backup: no zitadel database, skipped'
+                  fi
                   tar --xattrs --xattrs-include='*' -C /objects -czf "$out.partial/objects.tar.gz" .
                   (cd "$out.partial" && sha256sum ./* > SHA256SUMS)
                   rm -rf "$out" && mv "$out.partial" "$out"

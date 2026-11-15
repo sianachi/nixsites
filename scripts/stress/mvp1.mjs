@@ -1,6 +1,6 @@
 /* global CSS, Event, PerformanceObserver, performance, document, HTMLElement, requestAnimationFrame */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
@@ -21,14 +21,8 @@ const outputPath = resolve(repository, 'scripts/stress/evidence/mvp1.json');
 const viewNames = ['List', 'Board', 'Gallery', 'Calendar', 'Timeline', 'Spreadsheet'];
 const applicationOnly = process.env.NIX_STRESS_APPLICATION_ONLY === '1';
 
-const generated = await readGeneratedEnvironment();
-const username = process.env.NIX_STRESS_USERNAME ?? generated.NIX_DEV_USERNAME;
-const password = process.env.NIX_STRESS_PASSWORD ?? generated.NIX_DEV_PASSWORD;
-if (username === undefined || password === undefined) {
-  throw new Error(
-    'Stress login credentials are absent. Run scripts/dev-stack-up.sh or set NIX_STRESS_USERNAME and NIX_STRESS_PASSWORD.',
-  );
-}
+const username = process.env.NIX_STRESS_USERNAME ?? 'dev@nix.localhost';
+const password = process.env.NIX_STRESS_PASSWORD ?? 'nix-dev-password';
 
 const browser = await chromium.launch({
   headless: process.env.NIX_STRESS_HEADED !== '1',
@@ -267,25 +261,12 @@ stressRun: try {
 }
 
 async function signIn(page, username, password) {
-  const signIn = page.getByRole('button', { name: /continue with sso|sign in/i });
-  await signIn.waitFor();
-  await signIn.click();
-  await page.waitForURL((url) => !url.href.startsWith(baseUrl), { timeout: 30_000 });
-
-  if (!page.url().startsWith(baseUrl)) {
-    const login = page
-      .locator('input[name="loginName"], input[name="username"], input[type="email"]')
-      .first();
-    await login.waitFor();
-    await login.fill(username);
-    await page.locator('button[type="submit"], input[type="submit"]').first().click();
-
-    const secret = page.locator('input[name="password"], input[type="password"]').first();
-    await secret.waitFor();
-    await secret.fill(password);
-    await page.locator('button[type="submit"], input[type="submit"]').first().click();
-  }
-
+  // Core's own sign-in form: email and password on the app's origin.
+  const email = page.getByLabel('Email');
+  await email.waitFor();
+  await email.fill(username);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.waitForURL(`${baseUrl}/**`, { timeout: 30_000 });
 }
 
@@ -780,25 +761,5 @@ function assertEvidence(evidence) {
   failures.push(...memoryEvidenceFailures(measurements.memory, budgets));
   if (failures.length > 0) {
     throw new Error(`MVP-1 stress budgets failed:\n- ${failures.join('\n- ')}`);
-  }
-}
-
-async function readGeneratedEnvironment() {
-  try {
-    const source = await readFile(
-      resolve(repository, 'deploy/.zitadel/oidc.generated.env'),
-      'utf8',
-    );
-    return Object.fromEntries(
-      source
-        .split(/\r?\n/u)
-        .filter((line) => line.includes('=') && !line.startsWith('#'))
-        .map((line) => {
-          const separator = line.indexOf('=');
-          return [line.slice(0, separator), line.slice(separator + 1)];
-        }),
-    );
-  } catch {
-    return {};
   }
 }

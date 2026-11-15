@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Bring up the whole local dev stack: infra, schema, Zitadel, seed data.
+# Bring up the whole local dev stack: infra, schema, seed data.
 #
 # The cold-start sequence described by the historical native docs/dev-signing-in.md
-# note, as one command. Every step here is independently idempotent (seed.sh and
-# zitadel-configure.sh say so in their own header comments; EF Core migrations
+# note, as one command. Every step here is independently idempotent (seed.sh says so in its
+# header comment; EF Core migrations
 # no-op on an up-to-date schema; `docker compose up -d` no-ops on running
 # containers), so this is safe to run before every "Full Stack" launch, not
 # only on a cold machine.
@@ -25,7 +25,7 @@ deploy/seed/seed.sh
 scripts/dev-migrate.sh
 scripts/fetch-embedding-model.sh   # pet retrieval's local model; full-text only without it
 scripts/fetch-pdf-fonts.sh         # CJK fallback fonts for PDF exports; "?" without them
-deploy/seed/zitadel-configure.sh
-deploy/seed/seed.sh   # second pass: the schema exists now, seeds tenants + identity_provider
+deploy/seed/seed.sh   # second pass: the schema exists now, seeds tenants and the dev@nix.localhost account
 
+echo "dev-stack-up: sign in as dev@nix.localhost / nix-dev-password"
 echo "dev-stack-up: start Core (scripts/dev-api.sh), the Node host with collaboration, the pet companion and the sites worker (scripts/dev-node.sh), the sites server (scripts/dev-sites-serve.sh), and web (pnpm --filter @nix/web dev)"

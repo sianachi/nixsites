@@ -1,4 +1,5 @@
-# Rendered with envsubst by deploy/k8s/deploy.sh when NIX_IMPORT_ZITADEL is set. Copies the bundled
+# Rendered with envsubst by deploy/k8s/deploy.sh when NIX_IMPORT_ZITADEL is set, for a cluster that still
+# holds the Zitadel objects an earlier release created. Copies the bundled
 # Zitadel's accounts, password hashes, authenticator secrets and passkeys into Nix's own sign-in
 # tables; Zitadel's database is only read. $ZITADEL_IMPORT_ARGS is empty or `, "--dry-run"`.
 # The name is fixed and deploy.sh deletes the Job before each run: a pod template is immutable.
@@ -31,7 +32,7 @@ spec:
               valueFrom: { secretKeyRef: { name: nix-connections, key: migrator } }
             - name: ZITADEL_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: nix-zitadel, key: db-password } }
-            # Same host, database and user as deploy/k8s/zitadel.yaml.
+            # Same host, database and user the earlier release's Zitadel used.
             - name: NIX_ZITADEL_DATABASE_URL
               value: "Host=postgres;Port=5432;Database=zitadel;Username=zitadel;Password=$(ZITADEL_DB_PASSWORD)"
             - name: NIX_ZITADEL_MASTERKEY

@@ -1,25 +1,12 @@
 #!/usr/bin/env bash
 # Starts the Node host for local development: collaboration (8100), the pet companion (8302) and
-# the sites build worker (8301) in one process, wired to whatever Zitadel client/project id this
-# machine's dev stack currently has. NIX_NODE_ROLES narrows it, e.g. NIX_NODE_ROLES=collab.
-#
-# Collab needs NIX_COLLAB_OIDC_AUDIENCE built from two values (NIX_OIDC_CLIENT_ID and
-# NIX_OIDC_PROJECT_ID) that zitadel-configure.sh writes under different names, so this script
-# remaps them and then hands off to the host's own dev script.
+# the sites build worker (8301) in one process. NIX_NODE_ROLES narrows it, e.g. NIX_NODE_ROLES=collab.
 #
 # Usage: scripts/dev-node.sh
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
-
-oidc_env="deploy/.zitadel/oidc.generated.env"
-if [ ! -f "$oidc_env" ]; then
-  echo "dev-node: $oidc_env not found - run scripts/dev-stack-up.sh first" >&2
-  exit 1
-fi
-# shellcheck disable=SC1090
-. "$oidc_env"
 
 export NIX_API_PORT="${NIX_API_PORT:-5014}"
 export NIX_API_ORIGIN="${NIX_API_ORIGIN:-http://localhost:${NIX_API_PORT}}"
@@ -32,8 +19,9 @@ export NIX_COLLAB_PORT="${NIX_COLLAB_PORT:-8100}"
 export NIX_COLLAB_ORIGIN="${NIX_COLLAB_ORIGIN:-http://localhost:${NIX_COLLAB_PORT}}"
 export NIX_COLLAB_CORE_BASE_URL="${NIX_COLLAB_CORE_BASE_URL:-$NIX_API_ORIGIN}"
 export NIX_COLLAB_INTERNAL_SECRET="${NIX_COLLAB_INTERNAL_SECRET:-$internal_secret}"
-export NIX_COLLAB_OIDC_ISSUERS="$NIX_OIDC_ISSUER,$NIX_API_ORIGIN|$NIX_API_ORIGIN/public/v1/auth/jwks"
-export NIX_COLLAB_OIDC_AUDIENCE="$NIX_OIDC_CLIENT_ID,$NIX_OIDC_PROJECT_ID,nix"
+# Local sign-in: Core is the only issuer, and its tokens carry the audience "nix".
+export NIX_COLLAB_OIDC_ISSUERS="$NIX_API_ORIGIN|$NIX_API_ORIGIN/public/v1/auth/jwks"
+export NIX_COLLAB_OIDC_AUDIENCE="nix"
 
 # Pet companion (wraps codex app-server).
 export NIX_COMPANION_API_URL="${NIX_COMPANION_API_URL:-$NIX_API_ORIGIN}"

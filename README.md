@@ -141,8 +141,8 @@ Nix signs people in itself.
 The script writes every secret into `~/nix/nix.env` and prints the setup code for the first account.
 Back that file up with the Docker volumes (`nix-*`); it cannot be regenerated. Add other people from
 the People page in the settings: each gets a one-time link, valid for an hour, to set a password or a
-passkey, and the same page issues a new link when someone is locked out. An install that already
-runs the bundled Zitadel keeps it, and `install.sh --migrate-local-auth` moves it over (see
+passkey, and the same page issues a new link when someone is locked out. An install made
+with the earlier bundled Zitadel must run `install.sh --migrate-local-auth` to upgrade (see
 [docs/install.md](docs/install.md)).
 
 Flags, what the installer starts, upgrades, Kubernetes and image tags are in
@@ -171,7 +171,7 @@ Run/Debug configurations for each service.
 ## Stack
 
 ASP.NET Core 10 and Postgres 16 (row-level security, pgvector) · React 19, TypeScript, Tailwind v4 ·
-Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Core · sign-in built in (or OIDC, Zitadel in development).
+Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Core · sign-in built in (or OIDC).
 
 ```
 apps/web         React app, installable as a PWA

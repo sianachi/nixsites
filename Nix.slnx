@@ -44,7 +44,6 @@
     <File Path="deploy/seed/seed.sql" />
     <File Path="deploy/seed/seed_application_data.sql" />
     <File Path="deploy/seed/seed_database.sql" />
-    <File Path="deploy/seed/zitadel-configure.sh" />
   </Folder>
 
   <Folder Name="/scripts/">

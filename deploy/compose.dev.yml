@@ -7,7 +7,7 @@
 #
 # Profiles:
 #   core   - the default developer set: app Postgres (pgvector), Versity S3
-#            gateway, Zitadel (with its own Postgres), Mailpit (Zitadel's outbox).
+#            gateway. Sign-in is Core's own (local mode); no identity provider.
 #   media  - clamd virus scanner (heavy: ~1-2 GB RAM for the signature DB).
 #
 # Combine profiles as needed:
@@ -22,8 +22,6 @@
 # Host ports (chosen to dodge common local conflicts; override in .env):
 #   5433  app Postgres        (5432 is usually taken by a local Postgres)
 #   7070  Versity S3 gateway  (versitygw native port; 9000 clashes with MinIO)
-#   8300  Zitadel             (8080 is too popular to claim)
-#   8325  Mailpit web UI      (Zitadel's password-reset and verification mail)
 #
 # Application processes are not in this file. Core (5014), the web app (5173)
 # and the collaboration service (8100) run on the host from source, because in
@@ -89,106 +87,6 @@ services:
       retries: 12
       start_period: 5s
 
-  # Zitadel's OWN database. Never share the app database with the IdP: it is
-  # a separate trust domain, migrates on its own schedule, and must never be
-  # reachable through the app roles. Not published to the host on purpose.
-  zitadel-db:
-    image: postgres:16-alpine
-    profiles: ["core"]
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${ZITADEL_DB_ADMIN_PASSWORD:-zitadel-dev-admin}
-    volumes:
-      - zitadel-pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-      start_period: 10s
-
-  # Docker creates a named volume owned by root, but the Zitadel image runs as
-  # uid 1000, so the first-instance bootstrap cannot write its PAT there and
-  # the whole migration fails. This one-shot container fixes the ownership
-  # before Zitadel starts.
-  zitadel-init:
-    image: busybox:1.37
-    profiles: ["core"]
-    command: ["sh", "-c", "mkdir -p /machinekey && chown -R 1000:1000 /machinekey"]
-    volumes:
-      - zitadel-machinekey:/machinekey
-
-  # OIDC identity provider (first IdP; the app is multi-issuer by design).
-  # First-instance bootstrap is declarative via ZITADEL_FIRSTINSTANCE_* env:
-  # a dev org, a human admin, and a machine user whose PAT is written to the
-  # zitadel-machinekey volume on the first start (best-effort bootstrap; no
-  # fragile API automation).
-  # Console: http://localhost:8300/ui/console
-  # Issuer / OIDC discovery: http://localhost:8300/.well-known/openid-configuration
-  zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.16.1
-    profiles: ["core"]
-    command:
-      [
-        "start-from-init",
-        "--masterkey", "${ZITADEL_MASTERKEY:-NixDevMasterkeyMustBe32BytesOk!!}",
-        "--tlsMode", "disabled",
-      ]
-    environment:
-      ZITADEL_DATABASE_POSTGRES_HOST: zitadel-db
-      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
-      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${ZITADEL_DB_USER_PASSWORD:-zitadel-dev-user}
-      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${ZITADEL_DB_ADMIN_PASSWORD:-zitadel-dev-admin}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      ZITADEL_EXTERNALDOMAIN: localhost
-      ZITADEL_EXTERNALPORT: ${ZITADEL_PORT:-8300}
-      ZITADEL_EXTERNALSECURE: "false"
-      # First-instance bootstrap (applies only on the very first init):
-      ZITADEL_FIRSTINSTANCE_ORG_NAME: ${ZITADEL_ORG_NAME:-nix-dev}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-nix-admin}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-NixDev-Password1!}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: ${ZITADEL_MACHINE_USERNAME:-nix-dev-machine}
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: nix-dev-automation
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2030-01-01T00:00:00Z"
-      ZITADEL_FIRSTINSTANCE_PATPATH: /machinekey/pat.txt
-    ports:
-      - "127.0.0.1:${ZITADEL_PORT:-8300}:8080"
-    volumes:
-      - zitadel-machinekey:/machinekey
-    depends_on:
-      zitadel-db:
-        condition: service_healthy
-      zitadel-init:
-        condition: service_completed_successfully
-    # No healthcheck on purpose. The image is distroless (no shell, no curl or
-    # wget to probe with), and its own `zitadel ready` subcommand reports "not
-    # ready" even once /debug/ready serves 200, so a container-level check
-    # would report a false failure forever. Readiness is instead waited on from
-    # the host by deploy/seed/zitadel-configure.sh, which polls the OIDC
-    # discovery document - the thing callers actually depend on.
-    #
-    # Verify by hand with:
-    #   curl -fsS http://localhost:8300/.well-known/openid-configuration
-
-  # Catches every mail Zitadel sends - password-reset codes, email verification,
-  # passkey registration links - so the self-service flows work end to end with
-  # no real mail provider. deploy/seed/zitadel-configure.sh points Zitadel's SMTP
-  # at mailpit:1025 on the compose network; only the web UI is published.
-  # Inbox: http://localhost:8325
-  mailpit:
-    image: axllent/mailpit:v1.29
-    profiles: ["core"]
-    ports:
-      # Loopback only: the inbox holds password-reset links for every dev account.
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8325}:8025"
-
 volumes:
   nix-pg-data:
   versity-data:
-  zitadel-pg-data:
-  zitadel-machinekey:

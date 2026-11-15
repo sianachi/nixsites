@@ -2,10 +2,10 @@
 
 // Run against a built local PWA with NIX_OFFLINE_WEB_URL, NIX_OFFLINE_PROFILE and
 // NIX_OFFLINE_WORKSPACE. Login uses NIX_OFFLINE_USERNAME/NIX_OFFLINE_PASSWORD or
-// NIX_DEV_STATE_DIR/.zitadel/oidc.generated.env. Failure preserves recovery data.
+// the development account (dev@nix.localhost). Failure preserves recovery data.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -75,23 +75,8 @@ async function nixctl(args, stdin) {
 const auth = await nixctl(['auth', 'status']);
 const callbackOrigin = localOrigin(auth.apiUrl);
 await nixctl(['item', 'ls', '--workspace', workspace]);
-const stateDirectory = process.env.NIX_DEV_STATE_DIR ?? resolve(repository, 'deploy');
-const generated = await readFile(
-  resolve(stateDirectory, '.zitadel/oidc.generated.env'),
-  'utf8',
-).catch(() => '');
-const configuration = Object.fromEntries(
-  generated
-    .split(/\r?\n/u)
-    .filter((line) => line.includes('=') && !line.startsWith('#'))
-    .map((line) => {
-      const separator = line.indexOf('=');
-      return [line.slice(0, separator), line.slice(separator + 1)];
-    }),
-);
-const username = process.env.NIX_OFFLINE_USERNAME ?? configuration.NIX_DEV_USERNAME;
-const password = process.env.NIX_OFFLINE_PASSWORD ?? configuration.NIX_DEV_PASSWORD;
-assert(username && password, 'Provide local browser login credentials or NIX_DEV_STATE_DIR.');
+const username = process.env.NIX_OFFLINE_USERNAME ?? 'dev@nix.localhost';
+const password = process.env.NIX_OFFLINE_PASSWORD ?? 'nix-dev-password';
 
 const directory = await mkdtemp(resolve(tmpdir(), 'nix-offline-acceptance-'));
 const userData = resolve(directory, 'browser');
@@ -253,18 +238,12 @@ function body(target) {
 
 async function signIn(target, url) {
   await target.goto(url, { waitUntil: 'domcontentloaded' });
-  const signInButton = target.getByRole('button', { name: /continue with sso|sign in/i });
-  await body(target).or(signInButton).first().waitFor();
-  if (await signInButton.isVisible()) {
-    await signInButton.click();
-    await target.waitForURL((value) => value.origin !== origin);
-    const login = target
-      .locator('input[name="loginName"], input[name="username"], input[type="email"]')
-      .first();
-    await login.fill(username);
-    await target.locator('button[type="submit"], input[type="submit"]').first().click();
-    await target.locator('input[name="password"], input[type="password"]').first().fill(password);
-    await target.locator('button[type="submit"], input[type="submit"]').first().click();
+  const email = target.getByLabel('Email');
+  await body(target).or(email).first().waitFor();
+  if (await email.isVisible()) {
+    await email.fill(username);
+    await target.getByLabel('Password').fill(password);
+    await target.getByRole('button', { name: 'Sign in', exact: true }).click();
     await target.waitForURL((value) => value.origin === origin || value.origin === callbackOrigin);
     await target.goto(url, { waitUntil: 'domcontentloaded' });
   }

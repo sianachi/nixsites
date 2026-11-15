@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- OAuth sign-in for remote MCP: hosted clients such as ChatGPT and claude.ai connect through discovery, dynamic
+  client registration and an authorization-code flow with PKCE; the token they receive is an ordinary personal
+  access token that expires after 90 days.
 - Ten animated companion appearances in the pet gallery: Origami Crane, Jumping Spider, Lantern
   Spirit, Hermit Crab, Kirin Fawn, Gecko, Pocket Whale, Crystal Golem, Fruit Bat and Dust Bunny.
   Each supports all companion states and reduced motion.
@@ -22,10 +25,11 @@ follows semantic versioning (`0.x` pre-1.0).
   rename and remove passkeys, add or remove an authenticator app, and sign out everywhere.
 - `install.sh --migrate-local-auth` moves an install off the bundled Zitadel onto Nix's own sign-in,
   keeping accounts, password hashes, authenticator apps and passkeys, with `--dry-run` to see what
-  would move first. Zitadel's data is left in place so you can roll back.
+  would move first. The old Zitadel containers are stopped, not removed, and their volumes are kept
+  until you delete them.
 - `deploy/compose/import-zitadel.sh` does the same for a Compose install whose Zitadel runs as its own
   project, with `--dry-run`, and the web service now passes `/.well-known/webauthn` to Core.
-- `deploy/k8s/deploy.sh` can move a Kubernetes install off the bundled Zitadel with
+- `deploy/k8s/deploy.sh` can move a Kubernetes install off the old Zitadel with
   `NIX_IMPORT_ZITADEL=dry-run` and then `run`, and managed template sync accepts a Core access token
   instead of a Zitadel machine key, so it works in local mode.
 - Host commands for the locked-out administrator and for scripts: `account reset-link`,
@@ -36,10 +40,19 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
-- New installs no longer include Zitadel and need one hostname instead of two. Installs that
-  already use it keep it until you migrate. `NIX_AUTH_MODE` (`local` or `oidc`) picks the mode;
-  when unset it is `oidc` if an issuer is configured, so existing installs behave as before. An
+- New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
+  (`local` or `oidc`) picks the mode; when unset it is `oidc` if an issuer is configured. An
   install in `local` mode refuses tokens from an outside identity provider.
+- The development stack signs in with Nix's own sign-in and no longer starts Zitadel.
+  `scripts/dev-stack-up.sh` seeds `dev@nix.localhost` with a development-only password, and people
+  already in a development database keep their data.
+- **Breaking:** the bundled Zitadel is gone. The installer and `deploy/k8s` no longer start,
+  configure or upgrade it. An install that still uses it must migrate when it upgrades: the Docker
+  installer stops until you run `--migrate-local-auth` (try `--dry-run` first), and `deploy.sh`
+  refuses while the old `nix-zitadel` Deployment runs until you deploy with `NIX_AUTH_MODE=local`
+  and `NIX_IMPORT_ZITADEL=run`. `NIX_AUTH_MODE=oidc` now needs a provider you run yourself, and on
+  Kubernetes both `OIDC_ISSUER` and `OIDC_CLIENT_ID`. The old Zitadel objects, volumes and data are
+  left for you to delete; docs/install.md has the commands.
 - The self-host images take about 4 GB less disk space in total: Core went from 1.6 GB to
   0.5 GB, the Node services image from 1.9 GB to 0.9 GB, the sites image from 1.5 GB to 0.4 GB
   and the release tools image from 1.6 GB to 0.6 GB. The migration job image shrinks the same

@@ -27,6 +27,12 @@ One file: `pnpm --filter @nix/web exec vitest run src/path/foo.test.ts`
 Dev server: `pnpm --filter @nix/web dev` (5173; proxies the API on 5014 and
 collab on 8100).
 
+Signing in locally: the dev stack runs Core in local sign-in mode, with no identity provider.
+`scripts/dev-stack-up.sh` seeds the administrator `dev@nix.localhost` with the development-only
+password `nix-dev-password` (the same password for the other seeded people). Mint a service
+token for scripts with
+`NIX_MIGRATOR_CONNECTION_STRING=... dotnet run --project backend/src/Nix.Migrator -- account service-token --name dev --scopes read,write --tenant a0000000-0000-4000-8000-000000000001`.
+
 Storybook: `pnpm --filter @nix/ui storybook` (6006);
 `pnpm --filter @nix/ui test-storybook` runs the axe pass.
 

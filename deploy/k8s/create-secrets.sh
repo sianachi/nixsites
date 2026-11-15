@@ -14,8 +14,8 @@
 #
 # Existing clusters can update an external service secret without touching database or signing
 # secrets by running this script with `--object-store-only`, `--sites-only`,
-# `--tls-only`, `--backup-offsite-only`, `--sites-cloudflare-only`, `--push-only` (creates the Web Push key pair only when
-# missing) or `--zitadel-only` (creates the identity provider's secret only when missing). Production values (keys, certificate paths) come from the operator's local,
+# `--tls-only`, `--backup-offsite-only`, `--sites-cloudflare-only`, or `--push-only` (creates the Web Push key pair only when
+# missing). Production values (keys, certificate paths) come from the operator's local,
 # uncommitted environment, never from this repository.
 #
 # Identity bootstrap values (NIX_BOOTSTRAP_TENANT_NAME, NIX_BOOTSTRAP_TENANT_ID,
@@ -188,23 +188,6 @@ create_tls_secret() {
     --dry-run=client -o yaml | kubectl apply -f -
 }
 
-# Zitadel (deploy/k8s/zitadel.yaml). Created once and never rotated here: the masterkey encrypts
-# Zitadel's stored secrets, so replacing it makes the instance unreadable. The first administrator's
-# password is generated unless NIX_ZITADEL_ADMIN_PASSWORD is set, and must be changed at first sign-in.
-create_zitadel_secret() {
-  if kubectl -n nix get secret nix-zitadel >/dev/null 2>&1; then
-    echo "secret nix-zitadel already exists - leaving it (its masterkey must never change)."
-    return 0
-  fi
-  local admin_password="${NIX_ZITADEL_ADMIN_PASSWORD:-$(openssl rand -hex 12)Aa1!}"
-  kubectl -n nix create secret generic nix-zitadel \
-    --from-literal=masterkey="$(openssl rand -hex 16)" \
-    --from-literal=db-password="$(openssl rand -hex 24)" \
-    --from-literal=admin-username="${NIX_ZITADEL_ADMIN_USERNAME:-admin}" \
-    --from-literal=admin-password="$admin_password"
-  echo "Zitadel administrator: kubectl -n nix get secret nix-zitadel -o jsonpath='{.data.admin-password}' | base64 -d"
-}
-
 # Off-node backup (deploy/k8s/backup.yaml): restic's own variables, the names Compose's
 # offsite.sh credentials file uses, read from the operator's environment. Values go to kubectl
 # through a mode-600 temporary env file, never argv or output. Re-running replaces the secret;
@@ -238,10 +221,6 @@ case "${1:-}" in
     echo "The next nightly backup pushes off the node. Deploy with NIX_BACKUP_OFFSITE=true to require it."
     exit 0
     ;;
-  --zitadel-only)
-    create_zitadel_secret
-    exit 0
-    ;;
   --object-store-only)
     create_object_store_secret true
     echo "Object-store configuration updated. Run deploy/k8s/deploy.sh to roll it out."
@@ -273,7 +252,7 @@ case "${1:-}" in
     ;;
   "") ;;
   *)
-    echo "usage: deploy/k8s/create-secrets.sh [--backup-offsite-only|--object-store-only|--calendar-only|--sites-only|--sites-cloudflare-only|--push-only|--tls-only|--zitadel-only]" >&2
+    echo "usage: deploy/k8s/create-secrets.sh [--backup-offsite-only|--object-store-only|--calendar-only|--sites-only|--sites-cloudflare-only|--push-only|--tls-only]" >&2
     exit 2
     ;;
 esac
@@ -305,8 +284,6 @@ create_sites_secret false
 create_sites_cloudflare_secret false
 create_push_secret
 create_tls_secret
-# Local sign-in needs no identity provider; install.sh --kubernetes sets NIX_AUTH_MODE=local.
-[ "${NIX_AUTH_MODE:-oidc}" = local ] || create_zitadel_secret
 
 auth_key_file="$(mktemp)"
 trap 'rm -f "$auth_key_file"' EXIT

@@ -50,13 +50,7 @@ fi
 if curl -fsS "https://$DOMAIN/auth/session" | grep -q '"mode":"local"'; then
   echo "== Sign-in (Nix Core, local mode) =="
 else
-  echo "== Identity provider (https://auth.$DOMAIN) =="
-  issuer="$(curl -fsS "https://auth.$DOMAIN/.well-known/openid-configuration" | sed -nE 's/.*"issuer":"([^"]+)".*/\1/p')"
-  echo "issuer $issuer"
-  if [ "$issuer" != "https://auth.$DOMAIN" ]; then
-    echo "Zitadel does not announce https://auth.$DOMAIN as its issuer." >&2
-    exit 1
-  fi
+  echo "== Sign-in (an identity provider you run; not checked here) =="
 fi
 
 echo "== Sites serve (health answers only a loopback Host) =="
