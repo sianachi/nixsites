@@ -2,7 +2,6 @@ import { Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { PetProfile } from '@nix/api-client';
 import atlas from './owl-atlas.json';
-import demiurgeAtlas from './demiurge-atlas.json';
 import foxAtlas from './fox-atlas.json';
 import nekoAtlas from './neko-atlas.json';
 import octopusAtlas from './octopus-atlas.json';
@@ -23,7 +22,6 @@ import fruitBatAtlas from './fruit-bat-atlas.json';
 import dustBunnyAtlas from './dust-bunny-atlas.json';
 
 export const petAtlases = {
-  demiurge: demiurgeAtlas,
   fox: foxAtlas,
   cat: nekoAtlas,
   octopus: octopusAtlas,

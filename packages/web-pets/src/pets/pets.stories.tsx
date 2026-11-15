@@ -165,7 +165,7 @@ export const DarkOpenRouterSettings = { ...OpenRouterSettings, globals: { ground
 export const DarkAnimationStates = { ...AnimationStates, globals: { ground: 'dark' } };
 
 export const AnimatedCompanion = {
-  args: { appearance: 'demiurge' as PetProfile['appearance'], state: 'idle' as PetAnimationState },
+  args: { appearance: 'fox' as PetProfile['appearance'], state: 'idle' as PetAnimationState },
   argTypes: {
     appearance: { control: 'select', options: petCatalog.map((pet) => pet.appearance) },
     state: { control: 'select', options: petAnimationStates },

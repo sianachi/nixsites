@@ -23,11 +23,6 @@ export const petCatalog = [
     description: 'A bright, inventive companion.',
   },
   {
-    appearance: 'demiurge',
-    name: 'Demiurge',
-    description: 'A lion-headed serpent companion.',
-  },
-  {
     appearance: 'octopus',
     name: 'Octopus',
     description: 'A curious lavender octopus with restless tentacles.',

@@ -16,7 +16,6 @@ public sealed class PetSettingsTests
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
     [Theory]
-    [InlineData("demiurge")]
     [InlineData("cat")]
     [InlineData("fox")]
     [InlineData("octopus")]
@@ -57,6 +56,7 @@ public sealed class PetSettingsTests
         Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "fox" }] }));
         Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "cat" }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "eye-of-ra" }] }));
+        Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "demiurge" }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Instructions = new string('a', 2001) }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { ActivePetId = Guid.NewGuid() }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Enabled = true, ActivePetId = null }));
@@ -65,15 +65,17 @@ public sealed class PetSettingsTests
     }
 
     [Theory]
-    [InlineData("Eye of Ra", "Owl")]
-    [InlineData("Pip", "Pip")]
-    public async Task Retired_appearance_is_replaced_on_read_and_on_legacy_save(string name, string expectedName)
+    [InlineData("eye-of-ra", "Eye of Ra", "Owl")]
+    [InlineData("eye-of-ra", "Pip", "Pip")]
+    [InlineData("demiurge", "Demiurge", "Owl")]
+    [InlineData("demiurge", "Pip", "Pip")]
+    public async Task Retired_appearance_is_replaced_on_read_and_on_legacy_save(string retired, string name, string expectedName)
     {
         var session = new ScopedNixSessionContextAccessor();
         var context = new NixSessionContext(TenantId.Create(), null, PrincipalId.Create());
         session.Set(context);
         var store = new MemoryStore();
-        var profile = Owl with { Appearance = "eye-of-ra", Name = name, Provider = "anthropic", ApplyWithoutAsking = true };
+        var profile = Owl with { Appearance = retired, Name = name, Provider = "anthropic", ApplyWithoutAsking = true };
         var legacy = Settings with { Enabled = true, Profiles = [profile] };
         await store.SaveAsync(new PetPreferences
         {
@@ -94,7 +96,7 @@ public sealed class PetSettingsTests
         Assert.True(saved.IsSuccess);
         Assert.Equal(Assert.Single(expected.Profiles), Assert.Single(saved.Value.Settings.Profiles));
         var stored = await store.FindAsync(context.TenantId, context.PrincipalId, Cancellation);
-        Assert.DoesNotContain("eye-of-ra", Assert.IsType<PetPreferences>(stored).SettingsJson, StringComparison.Ordinal);
+        Assert.DoesNotContain(retired, Assert.IsType<PetPreferences>(stored).SettingsJson, StringComparison.Ordinal);
         var reread = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
         Assert.Equal(2, reread.Revision);
         Assert.Equal(Assert.Single(expected.Profiles), Assert.Single(reread.Settings.Profiles));

@@ -48,17 +48,19 @@ public static class PetSettingsValidation
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, []);
 
-    /// <summary>Replaces the retired appearance while keeping the companion's identity and preferences.</summary>
+    /// <summary>Replaces a retired appearance while keeping the companion's identity and preferences.</summary>
     public static PetSettings? NormalizeRetiredAppearance(PetSettings? settings)
     {
-        if (settings?.Profiles is not { Count: 1 } profiles || profiles[0] is not { Appearance: "eye-of-ra" } profile)
+        if (settings?.Profiles is not { Count: 1 } profiles || profiles[0] is not { Appearance: "eye-of-ra" or "demiurge" } profile)
         {
             return settings;
         }
 
+        // A companion still carrying the retired design's own name takes Owl's.
+        var retiredName = profile.Appearance == "eye-of-ra" ? "Eye of Ra" : "Demiurge";
         return settings with
         {
-            Profiles = [profile with { Appearance = "owl", Name = profile.Name == "Eye of Ra" ? "Owl" : profile.Name }],
+            Profiles = [profile with { Appearance = "owl", Name = profile.Name == retiredName ? "Owl" : profile.Name }],
         };
     }
 
@@ -74,7 +76,7 @@ public static class PetSettingsValidation
         {
             if (profile is null || profile.Id == Guid.Empty
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
-                || profile.Appearance is not ("owl" or "cat" or "fox" or "demiurge"
+                || profile.Appearance is not ("owl" or "cat" or "fox"
                     or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite"
                     or "origami-crane" or "jumping-spider" or "lantern-spirit" or "hermit-crab" or "kirin-fawn"
                     or "gecko" or "pocket-whale" or "crystal-golem" or "fruit-bat" or "dust-bunny")

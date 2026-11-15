@@ -50,8 +50,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Removed
 
-- Eye of Ra is no longer a companion appearance. Existing profiles use Owl instead, preserving
-  their identity, custom name, instructions and conversation history.
+- Eye of Ra and Demiurge are no longer companion appearances. Existing profiles use Owl instead,
+  preserving their identity, custom name, instructions and conversation history.
 
 ### Fixed
 

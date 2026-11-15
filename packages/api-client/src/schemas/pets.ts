@@ -7,7 +7,6 @@ const petProfileFields = z.object({
     'owl',
     'cat',
     'fox',
-    'demiurge',
     'octopus',
     'axolotl',
     'moth',
@@ -37,12 +36,14 @@ const petProfileSchema = z.preprocess((value) => {
     value &&
     typeof value === 'object' &&
     'appearance' in value &&
-    value.appearance === 'eye-of-ra'
+    (value.appearance === 'eye-of-ra' || value.appearance === 'demiurge')
   ) {
+    // A retired design reads as Owl; a companion still carrying the design's own name takes Owl's.
+    const retiredName = value.appearance === 'eye-of-ra' ? 'Eye of Ra' : 'Demiurge';
     return {
       ...value,
       appearance: 'owl',
-      ...('name' in value && value.name === 'Eye of Ra' ? { name: 'Owl' } : {}),
+      ...('name' in value && value.name === retiredName ? { name: 'Owl' } : {}),
     };
   }
   return value;

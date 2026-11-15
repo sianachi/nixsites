@@ -149,6 +149,7 @@ describe('pet configuration', () => {
     await user.click(screen.getByRole('button', { name: 'Add pet' }));
     const gallery = within(screen.getByRole('dialog', { name: 'Choose a pet' }));
     expect(gallery.queryByRole('radio', { name: 'Eye of Ra' })).not.toBeInTheDocument();
+    expect(gallery.queryByRole('radio', { name: 'Demiurge' })).not.toBeInTheDocument();
     expect(gallery.getByRole('radio', { name: 'Owl' })).toBeInTheDocument();
   });
 
