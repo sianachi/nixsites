@@ -51,6 +51,9 @@ export function describeError(error: unknown): string {
     (error.name === 'NotAllowedError' || error.name === 'AbortError')
   )
     return 'The passkey prompt was cancelled or timed out. Try again.';
+  // The browser refused the passkey's address for this site (its related-origins check failed).
+  if (error instanceof DOMException && error.name === 'SecurityError')
+    return 'Passkeys are not available for this address yet. Use your password.';
   if (error instanceof LocalAuthError) {
     if (error.code === 'paused') {
       const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 300) / 60));
