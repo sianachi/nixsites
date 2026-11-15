@@ -17,6 +17,7 @@ export RENDERED_SITES="$test_root/sites.yaml"
 export RENDERED_INGRESS="$test_root/ingress.yaml"
 export RENDERED_ALL="$test_root/all.yaml"
 export RENDERED_ZITADEL="$test_root/zitadel.yaml"
+export RENDERED_IMPORT="$test_root/import.yaml"
 export RENDERED_BACKUP="$test_root/backup.yaml"
 export OFFSITE_ENV_COPY="$test_root/offsite.env"
 export EXEC_STDIN="$test_root/exec-stdin.sql"
@@ -51,6 +52,11 @@ fi
 if [[ " $* " == *" patch statefulset nix-loki "* ]]; then
   printf 'kubectl:%s\n' "$*" >> "$KUBECTL_LOG"
   if [ "${FAIL_RETIRED_LOKI_PATCH:-}" = 1 ]; then exit 1; fi
+  exit 0
+fi
+
+if [[ " $* " == *" get job/nix-import-zitadel "* ]]; then
+  printf '%s' "${IMPORT_JOB_RESULT:-Complete }"
   exit 0
 fi
 
@@ -98,6 +104,9 @@ if [[ " $* " == *" apply -f - "* ]]; then
   printf 'apply-stdin:%s\n' "$names" >> "$KUBECTL_LOG"
   if [[ "$payload" == *"nix-template-presets-"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_PRESET_JOB"
+  fi
+  if [[ "$payload" == *"name: nix-import-zitadel"* ]]; then
+    printf '%s\n' "$payload" > "$RENDERED_IMPORT"
   fi
   if [[ "$payload" == *"name: nix-api-data-protection"* ]]; then
     printf '%s\n' "$payload" > "$RENDERED_API"
@@ -704,4 +713,79 @@ if NIX_MCP_ENABLED=yes run_deploy 2>/dev/null; then
   echo 'Deployment accepted an invalid NIX_MCP_ENABLED.' >&2
   exit 1
 fi
+# Moving off Zitadel: NIX_IMPORT_ZITADEL=dry-run reports and stops after the migrations, even in oidc mode.
+: > "$KUBECTL_LOG"; rm -f "$RENDERED_API" "$RENDERED_IMPORT"
+NIX_IMPORT_ZITADEL=dry-run run_deploy
+assert_before "wait:-n nix wait --for=condition=complete job/nix-migrate-documents-render-order" "delete:-n nix delete job/nix-import-zitadel --ignore-not-found"
+grep -Fq 'kubectl:-n nix logs job/nix-import-zitadel' "$KUBECTL_LOG"
+grep -Fq 'args: ["account", "import-zitadel", "--dry-run"]' "$RENDERED_IMPORT"
+for import_variable in NIX_MIGRATOR_CONNECTION_STRING NIX_ZITADEL_DATABASE_URL NIX_ZITADEL_MASTERKEY Nix__Bff__DataProtectionKeysPath Nix__Auth__Passkeys__RpId; do
+  grep -Fq "name: $import_variable" "$RENDERED_IMPORT"
+done
+grep -A1 -F 'name: Nix__Auth__Passkeys__RpId' "$RENDERED_IMPORT" | grep -Fq 'value: "auth.nix.example.test"'
+grep -Fq 'claimName: nix-api-data-protection' "$RENDERED_IMPORT"
+if [ -e "$RENDERED_API" ] || grep -Fq 'create-configmap:nix-template-presets' "$KUBECTL_LOG"; then
+  echo 'A Zitadel dry run changed the install after the import.' >&2
+  exit 1
+fi
+# A refused or failed import prints the log and stops too.
+: > "$KUBECTL_LOG"; rm -f "$RENDERED_API"
+if IMPORT_JOB_RESULT='Failed ' NIX_IMPORT_ZITADEL=dry-run run_deploy 2>/dev/null; then
+  echo 'A failed Zitadel import was treated as success.' >&2
+  exit 1
+fi
+grep -Fq 'kubectl:-n nix logs job/nix-import-zitadel' "$KUBECTL_LOG"
+test ! -e "$RENDERED_API"
+# run needs local mode and touches nothing otherwise; unknown values are refused.
+: > "$KUBECTL_LOG"
+if NIX_IMPORT_ZITADEL=run run_deploy 2>/dev/null || NIX_IMPORT_ZITADEL=yes run_deploy 2>/dev/null; then
+  echo 'NIX_IMPORT_ZITADEL was accepted outside local mode or with a bad value.' >&2
+  exit 1
+fi
+test ! -s "$KUBECTL_LOG"
+run_local() {
+  PATH="$fake_bin:$PATH" REGISTRY=registry.example.test TAG=render-order DOMAIN=nix.example.test \
+    NIX_AUTH_MODE=local NIX_TEMPLATE_BOOT_ENABLED="${NIX_TEMPLATE_BOOT_ENABLED:-false}" NIX_DEPLOY_TARGET=kubernetes \
+    bash "$repo_root/deploy/k8s/deploy.sh" >/dev/null
+}
+# run imports before the workloads, hands Core the passkey host, scales Zitadel to zero and routes
+# only the related-origins document on auth.$DOMAIN to Core.
+: > "$KUBECTL_LOG"; rm -f "$RENDERED_API" "$RENDERED_IMPORT" "$RENDERED_INGRESS"
+NIX_IMPORT_ZITADEL=run run_local
+grep -Fq 'args: ["account", "import-zitadel"]' "$RENDERED_IMPORT"
+assert_before "delete:-n nix delete job/nix-import-zitadel --ignore-not-found" "apply-stdin:nix-api-data-protection,nix-api,nix-api"
+grep -A1 -F 'name: Nix__Auth__Passkeys__RpId' "$RENDERED_API" | grep -Fq 'value: "auth.nix.example.test"'
+assert_before "rollout:-n nix rollout status deployment/nix-node --timeout=180s" "kubectl:-n nix scale deployment/nix-zitadel --replicas=0"
+grep -Fq 'path: /.well-known/webauthn' "$RENDERED_INGRESS"
+grep -Fq 'pathType: Exact' "$RENDERED_INGRESS"
+grep -Fq 'service: { name: nix-api, port: { number: 8080 } }' "$RENDERED_INGRESS"
+if grep -Fq 'nix-zitadel' "$RENDERED_INGRESS"; then
+  echo 'The local-mode Ingress still points at the Zitadel Service.' >&2
+  exit 1
+fi
+if grep -Fq 'delete:-n nix delete secret' "$KUBECTL_LOG" || grep -Fq 'persistentvolumeclaim' "$KUBECTL_LOG"; then
+  echo 'Switching to local mode touched Zitadel data.' >&2
+  exit 1
+fi
+# oidc keeps Zitadel at auth.$DOMAIN and brings it back after a switch to local.
+: > "$KUBECTL_LOG"; rm -f "$RENDERED_INGRESS"
+run_deploy
+grep -Fq 'service: { name: nix-zitadel, port: { number: 8080 } }' "$RENDERED_INGRESS"
+grep -Fq 'kubectl:-n nix scale deployment/nix-zitadel --replicas=1' "$KUBECTL_LOG"
+if grep -Fq 'replicas=0' "$KUBECTL_LOG"; then
+  echo 'An oidc install scaled Zitadel down.' >&2
+  exit 1
+fi
+# Managed templates in local mode take a Core access token instead of a machine key.
+: > "$KUBECTL_LOG"; rm -f "$RENDERED_TEMPLATE_SYNC"
+export TEMPLATE_BOOT_WORKSPACE_ID=11111111-1111-4111-8111-111111111111 TEMPLATE_BOOT_PVC=template-files
+if NIX_TEMPLATE_BOOT_ENABLED=true run_local 2>/dev/null; then
+  echo 'Local mode ran managed templates without a token secret.' >&2
+  exit 1
+fi
+test ! -s "$KUBECTL_LOG"
+NIX_TEMPLATE_BOOT_ENABLED=true TEMPLATE_BOOT_TOKEN_SECRET=template-token run_local
+grep -A1 -F 'name: NIX_TEMPLATE_BOOT_ACCESS_TOKEN_FILE' "$RENDERED_TEMPLATE_SYNC" | grep -Fq '/var/run/secrets/nix/credential'
+grep -Fq 'secretName: "template-token"' "$RENDERED_TEMPLATE_SYNC"
+grep -Fq 'key: "token"' "$RENDERED_TEMPLATE_SYNC"
 echo "deployment render-order self-test passed"

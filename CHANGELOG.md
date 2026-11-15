@@ -19,6 +19,11 @@ follows semantic versioning (`0.x` pre-1.0).
 - `install.sh --migrate-local-auth` moves an install off the bundled Zitadel onto Nix's own sign-in,
   keeping accounts, password hashes, authenticator apps and passkeys, with `--dry-run` to see what
   would move first. Zitadel's data is left in place so you can roll back.
+- `deploy/compose/import-zitadel.sh` does the same for a Compose install whose Zitadel runs as its own
+  project, with `--dry-run`, and the web service now passes `/.well-known/webauthn` to Core.
+- `deploy/k8s/deploy.sh` can move a Kubernetes install off the bundled Zitadel with
+  `NIX_IMPORT_ZITADEL=dry-run` and then `run`, and managed template sync accepts a Core access token
+  instead of a Zitadel machine key, so it works in local mode.
 - Host commands for the locked-out administrator and for scripts: `account reset-link`,
   `account service-token` and `account import-zitadel`.
 - The landing page has a 45-second video tour between the view gallery and the views section: the

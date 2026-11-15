@@ -7,10 +7,13 @@ const builtInDirectory = required('NIX_TEMPLATE_BOOT_BUILTIN_DIRECTORY');
 const workspaceId = required('NIX_TEMPLATE_BOOT_WORKSPACE_ID');
 const coreBaseUrl = serviceOrigin(required('NIX_TEMPLATE_BOOT_CORE_URL'), 'NIX_TEMPLATE_BOOT_CORE_URL');
 const objectOrigins = configuredOrigins(required('NIX_TEMPLATE_BOOT_OBJECT_ORIGINS'));
-const issuer = serviceOrigin(required('NIX_TEMPLATE_BOOT_OIDC_ISSUER'), 'NIX_TEMPLATE_BOOT_OIDC_ISSUER');
-const audience = required('NIX_TEMPLATE_BOOT_OIDC_AUDIENCE');
-const scope = required('NIX_TEMPLATE_BOOT_OIDC_SCOPE');
-const serviceKeyFile = required('NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE');
+// A Core access token (migrator command "account service-token") replaces the identity provider's
+// machine key; the identity provider settings are only read when no token file is given.
+const accessTokenFile = process.env.NIX_TEMPLATE_BOOT_ACCESS_TOKEN_FILE || null;
+const issuer = accessTokenFile === null ? serviceOrigin(required('NIX_TEMPLATE_BOOT_OIDC_ISSUER'), 'NIX_TEMPLATE_BOOT_OIDC_ISSUER') : null;
+const audience = accessTokenFile === null ? required('NIX_TEMPLATE_BOOT_OIDC_AUDIENCE') : null;
+const scope = accessTokenFile === null ? required('NIX_TEMPLATE_BOOT_OIDC_SCOPE') : null;
+const serviceKeyFile = accessTokenFile === null ? required('NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE') : null;
 const syncRevision = required('NIX_TEMPLATE_BOOT_REVISION');
 const inspectOperationId = process.env.NIX_TEMPLATE_BOOT_INSPECT_OPERATION_ID ?? null;
 const healthUrls = required('NIX_TEMPLATE_BOOT_HEALTH_URLS')
@@ -51,18 +54,12 @@ if (syncRevision.length > 200 || [...syncRevision].some((character) => character
   throw new Error('NIX_TEMPLATE_BOOT_REVISION must be a bounded printable release identity.');
 }
 const audienceScope = `urn:zitadel:iam:org:project:id:${audience}:aud`;
-if (!scope.split(/\s+/u).includes(audienceScope)) {
+if (accessTokenFile === null && !scope.split(/\s+/u).includes(audienceScope)) {
   throw new Error('NIX_TEMPLATE_BOOT_OIDC_SCOPE must include the configured project audience.');
 }
 
 await waitForHealth(healthUrls, healthTimeoutMs);
-const discovery = await publicJson(`${issuer}/.well-known/openid-configuration`);
-if (!record(discovery) || typeof discovery.token_endpoint !== 'string') {
-  throw new Error('OIDC discovery did not publish a token_endpoint.');
-}
-const tokenEndpoint = oidcEndpoint(discovery.token_endpoint);
-const serviceKey = parseServiceKey(await readFile(serviceKeyFile, 'utf8'));
-const tokens = tokenProvider(tokenEndpoint, serviceKey);
+const tokens = accessTokenFile === null ? await oidcTokens() : exchangeTokenProvider((await readFile(accessTokenFile, 'utf8')).trim());
 if (inspectOperationId !== null) {
   const operation = parseOperation(
     await authorizedJson(`${coreBaseUrl}/api/v1/operations/${inspectOperationId}`, {
@@ -302,6 +299,46 @@ async function putCapability(address, bytes) {
   if (!response.ok) {
     throw new Error(`The object upload capability failed with HTTP ${String(response.status)}.`);
   }
+}
+
+async function oidcTokens() {
+  const discovery = await publicJson(`${issuer}/.well-known/openid-configuration`);
+  if (!record(discovery) || typeof discovery.token_endpoint !== 'string') {
+    throw new Error('OIDC discovery did not publish a token_endpoint.');
+  }
+  return tokenProvider(
+    oidcEndpoint(discovery.token_endpoint),
+    parseServiceKey(await readFile(serviceKeyFile, 'utf8')),
+  );
+}
+
+// Core's own exchange of an access token for a short-lived session token, as the CLI does.
+function exchangeTokenProvider(accessToken) {
+  let current = null;
+  return {
+    invalidate() {
+      current = null;
+    },
+    async get() {
+      if (current !== null && current.expiresAt - Date.now() >= 60_000) return current.value;
+      const response = await fetch(`${coreBaseUrl}/public/v1/auth/token`, {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({ token: accessToken }),
+        redirect: 'error',
+        signal: AbortSignal.timeout(15_000),
+      });
+      const answer = await boundedJson(response, MAX_OIDC_JSON_BYTES);
+      if (!response.ok || !record(answer) || typeof answer.accessToken !== 'string') {
+        throw new Error(`Core access token exchange failed with HTTP ${String(response.status)}.`);
+      }
+      current = {
+        value: answer.accessToken,
+        expiresAt: Date.now() + Number(answer.expiresInSeconds ?? 300) * 1000,
+      };
+      return current.value;
+    },
+  };
 }
 
 function tokenProvider(tokenEndpoint, key) {

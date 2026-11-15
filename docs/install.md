@@ -98,6 +98,45 @@ Browsers that do not support related origins fall back to the password.
 Zitadel's volumes are left as they are. To roll back, copy `~/nix/nix.env.pre-local-auth` back over
 `~/nix/nix.env` and run the installer again; it starts the Zitadel containers again.
 
+### Moving a Compose install off a Zitadel you run yourself
+
+This is for an install made with `deploy/compose/release.sh` whose Zitadel runs as its own Compose
+project next to it. Run the steps on the host. Zitadel must be v4.16.1; the import refuses any
+other version.
+
+1. Release a version that has local sign-in, as usual, so Nix's schema is current. Sign-in stays
+   on Zitadel until you change the env file.
+2. Set `NIX_DEPLOY_ENV` (the env file), `NIX_IMAGE_TAG` (the release you just made),
+   `NIX_AUTH_PASSKEY_RP_ID` (the identity provider's public hostname, for example
+   `auth.example.org`), and the Zitadel database password and master key as
+   `NIX_ZITADEL_DB_PASSWORD` and `NIX_ZITADEL_MASTERKEY`, or as files named by `..._FILE`.
+   The script finds the Zitadel database container as `backup.sh` does; set
+   `NIX_ZITADEL_DB_CONTAINER`, `NIX_ZITADEL_DB_NAME` or `NIX_ZITADEL_DB_USER` if yours differ.
+3. See what would move, then move it:
+
+   ```sh
+   bash deploy/compose/import-zitadel.sh --dry-run
+   bash deploy/compose/import-zitadel.sh
+   ```
+
+   It stops and lists the accounts when two share an email address. Zitadel is only read.
+4. In the env file, set `NIX_AUTH_MODE=local`, `NIX_AUTH_PASSKEY_RP_ID` to the same hostname,
+   empty `NIX_OIDC_ISSUER` and `NIX_OIDC_CLIENT_ID`, `NIX_COLLAB_OIDC_ISSUERS` to
+   `<NIX_CORE_TOKEN_ISSUER>|http://nix-api:8080/public/v1/auth/jwks`, and
+   `NIX_COLLAB_OIDC_AUDIENCE` to `NIX_CORE_TOKEN_AUDIENCE`. Run the release again.
+
+Passkeys were registered for the identity provider's hostname, so that name stays the passkey
+hostname. Point exactly `/.well-known/webauthn` on it at Nix's web service (any Host header is
+accepted there). You can retire the rest of that hostname's routes. Browsers that do not support
+related origins fall back to the password.
+
+Not moved: Zitadel's own sessions, SMS and email codes, links to outside logins, and machine users
+(create access tokens instead). Backups keep working with no Zitadel container; `backup.sh` only
+warns unless `NIX_REQUIRE_ZITADEL=1`.
+
+To go back, restore the previous env file and release again. Zitadel's data is untouched, so start
+it again if you stopped it.
+
 ## Options
 
 | Flag | Meaning |
@@ -148,10 +187,29 @@ curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/insta
 ```
 
 A new Kubernetes install also signs in locally and deploys no Zitadel; the setup code is printed at
-the end and kept as `setup-code` in the `nix-auth` secret. Managed template sync there needs a Core
-access token from `account service-token` instead of a Zitadel machine key, so it is off by default
-on the generic path. An existing cluster install that passes `OIDC_CLIENT_ID` to `deploy.sh` stays
-on OIDC.
+the end and kept as `setup-code` in the `nix-auth` secret. Managed template sync there is off by
+default: it needs a Core access token (`account service-token --name <name> --scopes read,write`,
+run with the migrator image) stored as key `token` in a secret you name in `TEMPLATE_BOOT_TOKEN_SECRET`.
+An existing cluster install that passes `OIDC_CLIENT_ID` to `deploy.sh` stays on OIDC.
+
+### Moving a cluster install off Zitadel
+
+An install that uses the bundled Zitadel can switch to Nix's own sign-in and keep its accounts,
+password hashes, authenticator apps and passkeys. Run `deploy/k8s/deploy.sh` as usual, with these
+extra settings:
+
+1. Dry run: add `NIX_IMPORT_ZITADEL=dry-run`. After the migrations it prints what would move, any
+   clashes and anything that blocks the import, then stops. Nothing else changes. Fix what it reports
+   and run it again until it is clean.
+2. Run it: add `NIX_AUTH_MODE=local` and `NIX_IMPORT_ZITADEL=run`. A failed import prints its log
+   and stops before anything is switched. Set `NIX_AUTH_PASSKEY_RP_ID` only if your passkeys were
+   registered for a host other than `auth.<host>`.
+3. The import job runs on the same node as Core, because it reads Core's key ring. Core must be running.
+
+Zitadel's database, secret and volume stay in place, and its Deployment is scaled to zero. Keep the
+DNS record for `auth.<host>`: browsers check migrated passkeys there, and Core answers only
+`/.well-known/webauthn` on that name. To go back, deploy again with `NIX_AUTH_MODE=oidc` and
+`OIDC_CLIENT_ID`.
 
 The cluster needs an ingress controller listening on the origin's port and a default StorageClass.
 The installer reads the IngressClass, StorageClass and pod CIDR from the cluster (`--ingress-class`,

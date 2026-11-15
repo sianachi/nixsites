@@ -48,6 +48,12 @@
 		}
 	}
 
+	# Passkeys migrated from an identity provider keep that hostname; browsers fetch this path on it.
+	# Its owner points the path at this listener, so it is answered for any Host header.
+	handle /.well-known/webauthn {
+		reverse_proxy nix-api:8080
+	}
+
 	handle /auth/* {
 		reverse_proxy nix-api:8080 {
 			header_up X-Forwarded-For {$NIX_CLIENT_IP}

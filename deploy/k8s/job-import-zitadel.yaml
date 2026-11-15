@@ -1,0 +1,53 @@
+# Rendered with envsubst by deploy/k8s/deploy.sh when NIX_IMPORT_ZITADEL is set. Copies the bundled
+# Zitadel's accounts, password hashes, authenticator secrets and passkeys into Nix's own sign-in
+# tables; Zitadel's database is only read. $ZITADEL_IMPORT_ARGS is empty or `, "--dry-run"`.
+# The name is fixed and deploy.sh deletes the Job before each run: a pod template is immutable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nix-import-zitadel
+  namespace: nix
+spec:
+  backoffLimit: 0
+  template:
+    metadata: { labels: { app: nix-import-zitadel } }
+    spec:
+      restartPolicy: Never
+      # The key ring is a ReadWriteOnce volume Core has mounted. Landing on Core's node is what lets
+      # a second pod mount it, so this needs Core running; without it the Job stays Pending.
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector: { matchLabels: { app: nix-api } }
+      # The ring's files belong to Core's user; the migrator image runs as the same one.
+      securityContext: { runAsNonRoot: true, runAsUser: 1654, runAsGroup: 1654, fsGroup: 1654, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: import
+          image: ${REGISTRY}/migrator:${TAG}
+          args: ["account", "import-zitadel"${ZITADEL_IMPORT_ARGS}]
+          env:
+            - name: NIX_MIGRATOR_CONNECTION_STRING
+              valueFrom: { secretKeyRef: { name: nix-connections, key: migrator } }
+            - name: ZITADEL_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: nix-zitadel, key: db-password } }
+            # Same host, database and user as deploy/k8s/zitadel.yaml.
+            - name: NIX_ZITADEL_DATABASE_URL
+              value: "Host=postgres;Port=5432;Database=zitadel;Username=zitadel;Password=$(ZITADEL_DB_PASSWORD)"
+            - name: NIX_ZITADEL_MASTERKEY
+              valueFrom: { secretKeyRef: { name: nix-zitadel, key: masterkey } }
+            # Core's key ring, so Core can decrypt the authenticator secrets written here.
+            - name: Nix__Bff__DataProtectionKeysPath
+              value: /var/lib/nix/data-protection
+            # The host the passkeys were registered for; Core gets the same value (api.yaml).
+            - name: Nix__Auth__Passkeys__RpId
+              value: "${IMPORT_RP_ID}"
+          volumeMounts:
+            - { name: data-protection, mountPath: /var/lib/nix/data-protection }
+          securityContext: { allowPrivilegeEscalation: false,capabilities: { drop: ["ALL"] } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: data-protection
+          persistentVolumeClaim: { claimName: nix-api-data-protection }

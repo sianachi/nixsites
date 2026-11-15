@@ -13,6 +13,19 @@ docker compose --env-file deploy/compose.prod.env.example -f deploy/compose.prod
 # The opt-in identity bootstrap reads its values from the env file (placeholders only).
 { cat deploy/compose.prod.env.example; printf '%s\n' 'NIX_BOOTSTRAP_TENANT_NAME=Example Tenant' NIX_BOOTSTRAP_OIDC_PROJECT_ID=project-id; } > "$fixture/bootstrap.env"
 docker compose --env-file "$fixture/bootstrap.env" -f deploy/compose.prod.yml --profile maintenance --profile bootstrap config --format json > "$fixture/compose-bootstrap.json"
+# A local-mode env file (no identity provider) renders and trusts only Core's own issuer.
+{ grep -vE '^NIX_OIDC_(ISSUER|CLIENT_ID)=' deploy/compose.prod.env.example
+  printf '%s\n' NIX_OIDC_ISSUER= NIX_OIDC_CLIENT_ID= NIX_AUTH_MODE=local NIX_AUTH_PASSKEY_RP_ID=auth.example.org \
+    'NIX_COLLAB_OIDC_ISSUERS=https://nix.example.org|http://nix-api:8080/public/v1/auth/jwks' NIX_COLLAB_OIDC_AUDIENCE=nix; } > "$fixture/local.env"
+docker compose --env-file "$fixture/local.env" -f deploy/compose.prod.yml --profile maintenance config --format json > "$fixture/compose-local.json"
+python3 - "$fixture/compose-local.json" <<'PY'
+import json,sys
+s=json.load(open(sys.argv[1]))['services']
+e=s['nix-api']['environment']
+assert e['Nix__Auth__Mode']=='local' and e['Nix__Bff__Authority']=='' and e['Nix__Auth__Passkeys__RpId']=='auth.example.org'
+n=s['nix-node']['environment']
+assert n['NIX_COLLAB_OIDC_ISSUERS'].startswith('https://nix.example.org|') and n['NIX_COLLAB_OIDC_AUDIENCE']=='nix'
+PY
 python3 - "$fixture/compose.json" "$fixture/compose-bootstrap.json" "$fixture/compose-bootstrap-missing.json" <<'PY'
 import json,sys
 assert 'nix-identity-bootstrap' not in json.load(open(sys.argv[1]))['services']
@@ -73,6 +86,7 @@ from pathlib import Path
 edge=Path('deploy/Caddyfile.prod').read_text()
 exchange=edge.split('handle /public/v1/auth/token {',1)[1].split('\n\thandle ',1)[0]
 assert 'reverse_proxy nix-api:8080' in exchange
+assert 'handle /.well-known/webauthn {\n\t\treverse_proxy nix-api:8080' in edge
 assert 'header_up X-Forwarded-For {$NIX_CLIENT_IP}' in exchange
 assert s['nix-web']['environment']['NIX_CLIENT_IP'] == '{http.request.header.CF-Connecting-IP}'
 # Sites on a shared domain: the label suffix reaches Core, serve and the edge; no wildcard is two levels deep.
@@ -321,4 +335,5 @@ bash deploy/compose/drift.test.sh
 bash deploy/compose/prune.test.sh
 bash deploy/compose/offsite.test.sh
 bash deploy/compose/nightly.test.sh
+bash deploy/compose/import-zitadel.test.sh
 echo 'Compose configuration, smoke success/failure cleanup, and default target checks passed.'

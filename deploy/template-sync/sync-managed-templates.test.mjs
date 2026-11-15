@@ -164,6 +164,22 @@ test('bounds identity provider JSON responses', async () => {
   assert.equal(fixture.events.some((event) => event.kind === 'begin'), false);
 });
 
+test('signs in with a Core access token and never contacts an identity provider', async () => {
+  const fixture = await bootFixture(
+    [{ name: 'alpha.nix', bytes: 'alpha', key: 'alpha', operationId: null }],
+    { accessToken: 'nix_pat_example' },
+  );
+
+  const result = await fixture.run();
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual(fixture.failures, []);
+  assert.equal(fixture.events.filter((event) => event.kind === 'exchange').length, 1);
+  assert.equal(fixture.events.some((event) => event.kind === 'discovery' || event.kind === 'token'), false);
+  assert.equal(fixture.events.filter((event) => event.kind === 'finalize').length, 1);
+  assert.doesNotMatch(result.stdout + result.stderr, /nix_pat_example|short-lived-token/u);
+});
+
 test('reacquires one token and retries one Core request after a 401', async () => {
   const fixture = await bootFixture(
     [{ name: 'alpha.nix', bytes: 'alpha', key: 'alpha', operationId: null }],
@@ -226,6 +242,9 @@ async function bootFixture(files, options = {}) {
     }),
   );
 
+  const tokenFile = resolve(directory, 'access-token');
+  await writeFile(tokenFile, `${options.accessToken ?? ''}\n`);
+
   const records = files.map((file) => ({
     ...file,
     importId: randomUUID(),
@@ -262,6 +281,13 @@ async function bootFixture(files, options = {}) {
       json(response, 200, { token_endpoint: options.tokenEndpoint ?? `${origin(server)}/token` });
       return;
     }
+    if (url.pathname === '/public/v1/auth/token' && request.method === 'POST') {
+      events.push({ kind: 'exchange' });
+      const { token } = JSON.parse((await body(request)).toString('utf8'));
+      if (token !== options.accessToken) return unexpected(response, failures, 'The access token was not sent.');
+      json(response, 200, { accessToken: 'short-lived-token', tokenType: 'Bearer', expiresInSeconds: 300 });
+      return;
+    }
     if (url.pathname === '/token') {
       events.push({ kind: 'token' });
       if (options.oversizedTokenResponse === true) {
@@ -285,7 +311,7 @@ async function bootFixture(files, options = {}) {
       if (request.headers.authorization !== undefined) {
         return unexpected(response, failures, 'The bearer token reached object storage.');
       }
-      if (request.headers['content-type'] !== 'application/x-nix-template') {
+      if (request.headers['content-type'] !== 'application/octet-stream') {
         return unexpected(response, failures, 'The object upload media type was not preserved.');
       }
       record.uploaded = await body(request);
@@ -451,10 +477,14 @@ async function bootFixture(files, options = {}) {
         NIX_TEMPLATE_BOOT_WORKSPACE_ID: WORKSPACE,
         NIX_TEMPLATE_BOOT_CORE_URL: origin(server),
         NIX_TEMPLATE_BOOT_OBJECT_ORIGINS: origin(server),
-        NIX_TEMPLATE_BOOT_OIDC_ISSUER: origin(server),
-        NIX_TEMPLATE_BOOT_OIDC_AUDIENCE: 'project-id',
-        NIX_TEMPLATE_BOOT_OIDC_SCOPE: 'openid urn:zitadel:iam:org:project:id:project-id:aud',
-        NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE: keyFile,
+        ...(options.accessToken === undefined
+          ? {
+              NIX_TEMPLATE_BOOT_OIDC_ISSUER: origin(server),
+              NIX_TEMPLATE_BOOT_OIDC_AUDIENCE: 'project-id',
+              NIX_TEMPLATE_BOOT_OIDC_SCOPE: 'openid urn:zitadel:iam:org:project:id:project-id:aud',
+              NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE: keyFile,
+            }
+          : { NIX_TEMPLATE_BOOT_ACCESS_TOKEN_FILE: tokenFile }),
         NIX_TEMPLATE_BOOT_REVISION: 'test-release',
         NIX_TEMPLATE_BOOT_HEALTH_URLS: [
           `${origin(server)}/health/core`,

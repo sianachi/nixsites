@@ -34,7 +34,9 @@ spec:
             - { name: NIX_TEMPLATE_BOOT_OIDC_ISSUER, value: "${OIDC_ISSUER}" }
             - { name: NIX_TEMPLATE_BOOT_OIDC_AUDIENCE, value: "${TEMPLATE_BOOT_OIDC_AUDIENCE}" }
             - { name: NIX_TEMPLATE_BOOT_OIDC_SCOPE, value: "${TEMPLATE_BOOT_OIDC_SCOPE}" }
-            - { name: NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE, value: /var/run/secrets/nix/service-account-key.json }
+            # One of these two paths is set (deploy/k8s/template-boot-config.sh); the other stays empty.
+            - { name: NIX_TEMPLATE_BOOT_SERVICE_KEY_FILE, value: "${TEMPLATE_BOOT_SERVICE_KEY_FILE}" }
+            - { name: NIX_TEMPLATE_BOOT_ACCESS_TOKEN_FILE, value: "${TEMPLATE_BOOT_ACCESS_TOKEN_FILE}" }
             - { name: NIX_TEMPLATE_BOOT_REVISION, value: "${TAG}" }
             # Core signs template uploads for the object store; the script PUTs only to these origins.
             - name: NIX_OBJECT_STORE_ENDPOINT
@@ -49,7 +51,7 @@ spec:
           volumeMounts:
             - { name: script, mountPath: /sync, readOnly: true }
             - { name: templates, mountPath: /templates, readOnly: true }
-            - { name: service-key, mountPath: /var/run/secrets/nix, readOnly: true }
+            - { name: credential, mountPath: /var/run/secrets/nix, readOnly: true }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -62,8 +64,8 @@ spec:
           configMap: { name: nix-template-boot-script }
         - name: templates
           persistentVolumeClaim: { claimName: "${TEMPLATE_BOOT_PVC}" }
-        - name: service-key
+        - name: credential
           secret:
-            secretName: "${TEMPLATE_BOOT_SERVICE_KEY_SECRET}"
+            secretName: "${TEMPLATE_BOOT_CREDENTIAL_SECRET}"
             items:
-              - { key: service-account-key.json, path: service-account-key.json, mode: 0440 }
+              - { key: "${TEMPLATE_BOOT_CREDENTIAL_KEY}", path: credential, mode: 0440 }

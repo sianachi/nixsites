@@ -140,18 +140,9 @@ zitadel_db=${NIX_ZITADEL_DB_NAME:-zitadel}
 zitadel_user=${NIX_ZITADEL_DB_USER:-postgres}
 [[ $zitadel_db =~ ^[a-z_][a-z0-9_]*$ && $zitadel_user =~ ^[a-z_][a-z0-9_]*$ ]] \
   || die 'NIX_ZITADEL_DB_NAME and NIX_ZITADEL_DB_USER must be plain lowercase identifiers'
-zitadel=''
-if [[ -n ${NIX_ZITADEL_DB_CONTAINER:-} ]]; then
-  [[ $(docker inspect --format '{{.State.Running}}' "$NIX_ZITADEL_DB_CONTAINER" 2>/dev/null) == true ]] \
-    || die "NIX_ZITADEL_DB_CONTAINER is not a running container: $NIX_ZITADEL_DB_CONTAINER"
-  zitadel=$NIX_ZITADEL_DB_CONTAINER
-else
-  zitadel=$(docker ps --filter label=com.docker.compose.project=zitadel \
-    --format '{{.ID}} {{.Label "com.docker.compose.service"}}' \
-    | awk '$2 ~ /(^|[-_])(db|postgres|postgresql|database)$/ { print $1 }')
-  [[ $zitadel != *$'\n'* ]] \
-    || die 'more than one zitadel database container is running; set NIX_ZITADEL_DB_CONTAINER'
-fi
+# shellcheck source=deploy/compose/zitadel-db.sh
+source "$root/deploy/compose/zitadel-db.sh"
+zitadel=$(find_zitadel_db)
 if [[ -n $zitadel ]]; then
   zitadel_image=${NIX_ZITADEL_VERIFY_IMAGE:-$(docker inspect --format '{{.Config.Image}}' "$zitadel")}
   [[ -n $zitadel_image ]] || die "could not read the image of zitadel database container $zitadel"

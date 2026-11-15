@@ -46,12 +46,17 @@ if [ "$bucket_status" != 403 ]; then
   exit 1
 fi
 
-echo "== Identity provider (https://auth.$DOMAIN) =="
-issuer="$(curl -fsS "https://auth.$DOMAIN/.well-known/openid-configuration" | sed -nE 's/.*"issuer":"([^"]+)".*/\1/p')"
-echo "issuer $issuer"
-if [ "$issuer" != "https://auth.$DOMAIN" ]; then
-  echo "Zitadel does not announce https://auth.$DOMAIN as its issuer." >&2
-  exit 1
+# The install's own answer decides which sign-in to check: Core itself, or the identity provider.
+if curl -fsS "https://$DOMAIN/auth/session" | grep -q '"mode":"local"'; then
+  echo "== Sign-in (Nix Core, local mode) =="
+else
+  echo "== Identity provider (https://auth.$DOMAIN) =="
+  issuer="$(curl -fsS "https://auth.$DOMAIN/.well-known/openid-configuration" | sed -nE 's/.*"issuer":"([^"]+)".*/\1/p')"
+  echo "issuer $issuer"
+  if [ "$issuer" != "https://auth.$DOMAIN" ]; then
+    echo "Zitadel does not announce https://auth.$DOMAIN as its issuer." >&2
+    exit 1
+  fi
 fi
 
 echo "== Sites serve (health answers only a loopback Host) =="
