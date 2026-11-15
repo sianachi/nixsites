@@ -38,10 +38,7 @@ export function OAuthAuthorizePage(): ReactNode {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (responseType !== 'code') {
-      setPreview({ kind: 'failed' });
-      return;
-    }
+    if (responseType !== 'code') return;
     let live = true;
     const previewRequest = { ...(JSON.parse(key) as typeof request), state: undefined };
     client.execute(oauth.previewConsent(previewRequest)).then(
@@ -57,7 +54,7 @@ export function OAuthAuthorizePage(): ReactNode {
     };
   }, [client, key, responseType]);
 
-  if (preview.kind === 'loading')
+  if (responseType === 'code' && preview.kind === 'loading')
     return (
       <LocalAuthCard title="Connect an app">
         <Text variant="note" tone="muted" role="status">
@@ -65,7 +62,7 @@ export function OAuthAuthorizePage(): ReactNode {
         </Text>
       </LocalAuthCard>
     );
-  if (preview.kind === 'failed')
+  if (preview.kind !== 'ok')
     return (
       <LocalAuthCard title="Request not valid">
         <Text variant="body" as="p" role="alert">
