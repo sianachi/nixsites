@@ -48,6 +48,20 @@ public static class PetSettingsValidation
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, []);
 
+    /// <summary>Replaces the retired appearance while keeping the companion's identity and preferences.</summary>
+    public static PetSettings? NormalizeRetiredAppearance(PetSettings? settings)
+    {
+        if (settings?.Profiles is not { Count: 1 } profiles || profiles[0] is not { Appearance: "eye-of-ra" } profile)
+        {
+            return settings;
+        }
+
+        return settings with
+        {
+            Profiles = [profile with { Appearance = "owl", Name = profile.Name == "Eye of Ra" ? "Owl" : profile.Name }],
+        };
+    }
+
     /// <summary>Refuses unknown presets, invalid active references, duplicate identities, and unbounded text.</summary>
     public static bool IsValid(PetSettings? settings)
     {
@@ -60,8 +74,10 @@ public static class PetSettingsValidation
         {
             if (profile is null || profile.Id == Guid.Empty
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
-                || profile.Appearance is not ("owl" or "cat" or "fox" or "eye-of-ra" or "demiurge"
-                    or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite")
+                || profile.Appearance is not ("owl" or "cat" or "fox" or "demiurge"
+                    or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite"
+                    or "origami-crane" or "jumping-spider" or "lantern-spirit" or "hermit-crab" or "kirin-fawn"
+                    or "gecko" or "pocket-whale" or "crystal-golem" or "fruit-bat" or "dust-bunny")
                 || profile.Instructions is null || profile.Instructions.Length > 2000
                 || !PetProviders.IsValid(profile.Provider))
             {
@@ -110,7 +126,7 @@ public sealed class GetPetSettingsHandler(IPetPreferencesStore store, INixSessio
             settings = settings with { ActivePetId = pet.Id, Profiles = [pet] };
         }
 
-        return new(row.Revision, settings);
+        return new(row.Revision, PetSettingsValidation.NormalizeRetiredAppearance(settings)!);
     }
 }
 
@@ -121,7 +137,7 @@ public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessi
     public async ValueTask<Result<PetSettingsResponse>> HandleAsync(SavePetSettings command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var settings = command.Settings;
+        var settings = PetSettingsValidation.NormalizeRetiredAppearance(command.Settings);
         if (settings is null || command.ExpectedRevision < 0 || command.ExpectedRevision >= 9007199254740991 || !PetSettingsValidation.IsValid(settings))
         {
             var detail = settings?.Profiles is { Count: > 1 } ? "An account can only have one companion."

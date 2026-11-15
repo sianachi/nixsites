@@ -25,6 +25,16 @@ public sealed class PetSettingsTests
     [InlineData("pangolin")]
     [InlineData("phoenix-chick")]
     [InlineData("mushroom-sprite")]
+    [InlineData("origami-crane")]
+    [InlineData("jumping-spider")]
+    [InlineData("lantern-spirit")]
+    [InlineData("hermit-crab")]
+    [InlineData("kirin-fawn")]
+    [InlineData("gecko")]
+    [InlineData("pocket-whale")]
+    [InlineData("crystal-golem")]
+    [InlineData("fruit-bat")]
+    [InlineData("dust-bunny")]
     public async Task New_appearances_can_be_saved_and_read(string appearance)
     {
         var session = new ScopedNixSessionContextAccessor();
@@ -46,12 +56,48 @@ public sealed class PetSettingsTests
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "unknown" }] }));
         Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "fox" }] }));
         Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "cat" }] }));
-        Assert.True(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "eye-of-ra" }] }));
+        Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Appearance = "eye-of-ra" }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Profiles = [Owl with { Instructions = new string('a', 2001) }] }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { ActivePetId = Guid.NewGuid() }));
         Assert.False(PetSettingsValidation.IsValid(Settings with { Enabled = true, ActivePetId = null }));
         Assert.True(PetSettingsValidation.IsValid(PetSettingsValidation.Empty));
         Assert.False(PetSettingsValidation.IsValid(null));
+    }
+
+    [Theory]
+    [InlineData("Eye of Ra", "Owl")]
+    [InlineData("Pip", "Pip")]
+    public async Task Retired_appearance_is_replaced_on_read_and_on_legacy_save(string name, string expectedName)
+    {
+        var session = new ScopedNixSessionContextAccessor();
+        var context = new NixSessionContext(TenantId.Create(), null, PrincipalId.Create());
+        session.Set(context);
+        var store = new MemoryStore();
+        var profile = Owl with { Appearance = "eye-of-ra", Name = name, Provider = "anthropic", ApplyWithoutAsking = true };
+        var legacy = Settings with { Enabled = true, Profiles = [profile] };
+        await store.SaveAsync(new PetPreferences
+        {
+            TenantId = context.TenantId,
+            PrincipalId = context.PrincipalId,
+            SettingsJson = JsonSerializer.Serialize(legacy, JsonSerializerOptions.Web),
+            Revision = 1,
+        }, 0, Cancellation);
+
+        var expected = legacy with { Profiles = [profile with { Appearance = "owl", Name = expectedName }] };
+        var read = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
+        Assert.Equal(1, read.Revision);
+        Assert.Equal(expected.ActivePetId, read.Settings.ActivePetId);
+        Assert.Equal(Assert.Single(expected.Profiles), Assert.Single(read.Settings.Profiles));
+        Assert.True(read.Settings.Enabled);
+
+        var saved = await new SavePetSettingsHandler(store, session).HandleAsync(new(read.Revision, legacy), Cancellation);
+        Assert.True(saved.IsSuccess);
+        Assert.Equal(Assert.Single(expected.Profiles), Assert.Single(saved.Value.Settings.Profiles));
+        var stored = await store.FindAsync(context.TenantId, context.PrincipalId, Cancellation);
+        Assert.DoesNotContain("eye-of-ra", Assert.IsType<PetPreferences>(stored).SettingsJson, StringComparison.Ordinal);
+        var reread = await new GetPetSettingsHandler(store, session).HandleAsync(new(), Cancellation);
+        Assert.Equal(2, reread.Revision);
+        Assert.Equal(Assert.Single(expected.Profiles), Assert.Single(reread.Settings.Profiles));
     }
 
     [Theory]

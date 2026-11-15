@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
-const petProfileSchema = z.object({
+const petProfileFields = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1).max(80),
   appearance: z.enum([
     'owl',
     'cat',
     'fox',
-    'eye-of-ra',
     'demiurge',
     'octopus',
     'axolotl',
@@ -15,6 +14,16 @@ const petProfileSchema = z.object({
     'pangolin',
     'phoenix-chick',
     'mushroom-sprite',
+    'origami-crane',
+    'jumping-spider',
+    'lantern-spirit',
+    'hermit-crab',
+    'kirin-fawn',
+    'gecko',
+    'pocket-whale',
+    'crystal-golem',
+    'fruit-bat',
+    'dust-bunny',
   ]),
   instructions: z.string().max(2000),
   /** Default for the conversation's "Apply without asking" switch; stored pets without it read as off. */
@@ -23,7 +32,23 @@ const petProfileSchema = z.object({
   provider: z.enum(['chatgpt', 'anthropic', 'openrouter']).default('chatgpt'),
 });
 
-export const petProviderSchema = petProfileSchema.shape.provider;
+const petProfileSchema = z.preprocess((value) => {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'appearance' in value &&
+    value.appearance === 'eye-of-ra'
+  ) {
+    return {
+      ...value,
+      appearance: 'owl',
+      ...('name' in value && value.name === 'Eye of Ra' ? { name: 'Owl' } : {}),
+    };
+  }
+  return value;
+}, petProfileFields);
+
+export const petProviderSchema = petProfileFields.shape.provider;
 
 /** One stored provider key as the owner may see it: never the key, only its last characters. */
 export const petProviderKeySchema = z.object({

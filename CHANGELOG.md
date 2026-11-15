@@ -7,6 +7,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Ten animated companion appearances in the pet gallery: Origami Crane, Jumping Spider, Lantern
+  Spirit, Hermit Crab, Kirin Fawn, Gecko, Pocket Whale, Crystal Golem, Fruit Bat and Dust Bunny.
+  Each supports all companion states and reduced motion.
+
 - Nix can sign people in itself, so a self-host no longer needs a separate identity provider. The
   first account is created on the setup page with a setup code, and an administrator adds people
   from a new People page: it lists accounts, adds a person (they get a one-time link, valid for an
@@ -43,6 +47,11 @@ follows semantic versioning (`0.x` pre-1.0).
   platforms.
 - The one-line install asks for about 4 GB of memory for Docker instead of 8 GB, and warns below
   3 GiB instead of 7 GiB. The running stack was measured at about 1 GB.
+
+### Removed
+
+- Eye of Ra is no longer a companion appearance. Existing profiles use Owl instead, preserving
+  their identity, custom name, instructions and conversation history.
 
 ### Fixed
 

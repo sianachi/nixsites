@@ -143,6 +143,15 @@ describe('pet configuration', () => {
     });
   });
 
+  it('omits the retired appearance from the gallery', async () => {
+    const user = userEvent.setup();
+    render(<PetSettingsEditor initial={initial} saving={false} onSave={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Add pet' }));
+    const gallery = within(screen.getByRole('dialog', { name: 'Choose a pet' }));
+    expect(gallery.queryByRole('radio', { name: 'Eye of Ra' })).not.toBeInTheDocument();
+    expect(gallery.getByRole('radio', { name: 'Owl' })).toBeInTheDocument();
+  });
+
   it('previews an appearance change, allows cancellation and saves only a confirmed choice', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
