@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#oauth">OAuth</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1586,6 +1586,30 @@
 
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
+</article></section>
+<section id="oauth"><h2>OAuth</h2><article id="decideoauthconsent" data-search="post /api/v1/oauth/consent decideoauthconsent approve or deny an oauth authorization request browser session only. returns the redirect carrying a one-time code, or access_denied. the token is minted when the client redeems the code. oauth">
+<h3><span class="verb">POST</span> <code>/api/v1/oauth/consent</code></h3>
+<p>Approve or deny an OAuth authorization request</p>
+<p class="id">Operation id: <code>DecideOAuthConsent</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Browser session only. Returns the redirect carrying a one-time code, or access_denied. The token is minted when the client redeems the code.</p>
+
+<p>Request body: <code>OAuthConsentRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="previewoauthconsent" data-search="post /api/v1/oauth/consent/preview previewoauthconsent check an oauth authorization request before asking the person browser session only. succeeds only for a registered client and one of its redirect uris, so the page never redirects anywhere else. oauth">
+<h3><span class="verb">POST</span> <code>/api/v1/oauth/consent/preview</code></h3>
+<p>Check an OAuth authorization request before asking the person</p>
+<p class="id">Operation id: <code>PreviewOAuthConsent</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+<p>Browser session only. Succeeds only for a registered client and one of its redirect URIs, so the page never redirects anywhere else.</p>
+
+<p>Request body: <code>OAuthConsentPreviewRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
 </article></section>
 <section id="operations"><h2>Operations</h2><article id="getoperation" data-search="get /api/v1/operations/{operationid} getoperation   operations">
 <h3><span class="verb">GET</span> <code>/api/v1/operations/{operationId}</code></h3>

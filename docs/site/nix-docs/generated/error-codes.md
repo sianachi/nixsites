@@ -331,6 +331,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `notifications.not_found`
 - `notifications.preferences_conflict`
 - `notifications.too_many_subscriptions`
+- `oauth.invalid_request`
 - `pets.invalid_key`
 - `pets.invalid_settings`
 - `pets.settings_conflict`

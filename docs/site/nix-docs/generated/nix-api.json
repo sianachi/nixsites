@@ -11583,6 +11583,70 @@
         }
       }
     },
+    "/api/v1/oauth/consent/preview": {
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Check an OAuth authorization request before asking the person",
+        "description": "Browser session only. Succeeds only for a registered client and one of its redirect URIs, so the page never redirects anywhere else.",
+        "operationId": "PreviewOAuthConsent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthConsentPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthConsentPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/oauth/consent": {
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Approve or deny an OAuth authorization request",
+        "description": "Browser session only. Returns the redirect carrying a one-time code, or access_denied. The token is minted when the client redeems the code.",
+        "operationId": "DecideOAuthConsent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthConsentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sites": {
       "post": {
         "tags": [
@@ -19500,6 +19564,158 @@
           }
         }
       },
+      "OAuthConsentPreviewRequest": {
+        "required": [
+          "clientId",
+          "redirectUri",
+          "codeChallenge",
+          "codeChallengeMethod",
+          "resource"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redirectUri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeChallenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeChallengeMethod": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resource": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OAuthConsentPreviewResponse": {
+        "required": [
+          "clientName",
+          "redirectHost"
+        ],
+        "type": "object",
+        "properties": {
+          "clientName": {
+            "type": "string"
+          },
+          "redirectHost": {
+            "type": "string"
+          }
+        }
+      },
+      "OAuthConsentRequest": {
+        "required": [
+          "clientId",
+          "redirectUri",
+          "codeChallenge",
+          "codeChallengeMethod",
+          "state",
+          "resource",
+          "decision",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redirectUri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeChallenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeChallengeMethod": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resource": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "token": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OAuthConsentTokenChoice"
+              }
+            ]
+          }
+        }
+      },
+      "OAuthConsentResponse": {
+        "required": [
+          "redirectTo"
+        ],
+        "type": "object",
+        "properties": {
+          "redirectTo": {
+            "type": "string"
+          }
+        }
+      },
+      "OAuthConsentTokenChoice": {
+        "required": [
+          "scopes"
+        ],
+        "type": "object",
+        "properties": {
+          "scopes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "OperationResponse": {
         "required": [
           "id",
@@ -26154,6 +26370,9 @@
     },
     {
       "name": "AccessTokens"
+    },
+    {
+      "name": "OAuth"
     },
     {
       "name": "Sync"

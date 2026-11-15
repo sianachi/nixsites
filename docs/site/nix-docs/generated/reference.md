@@ -32,6 +32,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Me](#me)
 - [NativeSync](#nativesync)
 - [Notifications](#notifications)
+- [OAuth](#oauth)
 - [Operations](#operations)
 - [People](#people)
 - [Pets](#pets)
@@ -2694,6 +2695,50 @@ Operation id: `GetPushPublicKey`.
 **Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
 
 Responses: `200`, `404`.
+
+## OAuth
+
+<a id="oauth"></a>
+
+### POST /api/v1/oauth/consent
+
+<a id="decideoauthconsent"></a>
+
+Approve or deny an OAuth authorization request
+
+Operation id: `DecideOAuthConsent`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Browser session only. Returns the redirect carrying a one-time code, or access_denied. The token is minted when the client redeems the code.
+
+Request body: `OAuthConsentRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/oauth/consent/preview
+
+<a id="previewoauthconsent"></a>
+
+Check an OAuth authorization request before asking the person
+
+Operation id: `PreviewOAuthConsent`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Browser session only. Succeeds only for a registered client and one of its redirect URIs, so the page never redirects anywhere else.
+
+Request body: `OAuthConsentPreviewRequest`.
+
+Responses: `200`.
 
 ## Operations
 
