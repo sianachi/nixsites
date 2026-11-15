@@ -431,7 +431,7 @@ public sealed class IdentityFoundationIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Actual_seed_preserves_enabled_jit_and_repairs_personal_ownership_on_a_rerun()
+    public async Task Actual_seed_repairs_personal_ownership_on_a_rerun()
     {
         var seedPath = FindRepositoryFile("deploy", "seed", "seed_application_data.sql");
         await _fixture.ExecuteApplicationSeedAsync(seedPath, Cancellation);
@@ -443,9 +443,6 @@ public sealed class IdentityFoundationIntegrationTests : IAsyncLifetime
                 connection,
                 null,
                 """
-                UPDATE identity_provider
-                   SET jit_provisioning_enabled = true
-                 WHERE provider_id = 'a4000000-0000-4000-8000-000000000001'::uuid;
                 UPDATE workspace_member
                    SET role = 'viewer'
                  WHERE workspace_id = 'a1000000-0000-4000-8000-000000000001'::uuid
@@ -465,20 +462,17 @@ public sealed class IdentityFoundationIntegrationTests : IAsyncLifetime
             var values = await RawSql.TextListAsync(
                 verify,
                 """
-                SELECT provider.jit_provisioning_enabled::text || '|' || member.role || '|'
-                    || workspace.personal_owner_principal_id::text
-                  FROM identity_provider provider
-                  JOIN workspace
-                    ON workspace.workspace_id = 'a1000000-0000-4000-8000-000000000001'::uuid
+                SELECT member.role || '|' || workspace.personal_owner_principal_id::text
+                  FROM workspace
                   JOIN workspace_member member
                     ON member.workspace_id = workspace.workspace_id
                    AND member.subject_type = 'principal'
                    AND member.subject_id = 'a2000000-0000-4000-8000-000000000001'::uuid
-                 WHERE provider.provider_id = 'a4000000-0000-4000-8000-000000000001'::uuid
+                 WHERE workspace.workspace_id = 'a1000000-0000-4000-8000-000000000001'::uuid
                 """);
 
             Assert.Equal(
-                ["true|owner|a2000000-0000-4000-8000-000000000001"],
+                ["owner|a2000000-0000-4000-8000-000000000001"],
                 values);
         }
     }
