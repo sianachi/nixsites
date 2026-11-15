@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One line installs or upgrades Nix. With no argument it is a try-out on this machine at
 # http://nix.localhost. It needs Docker with the Compose plugin, curl, openssl, jq, and about
-# 8 GB of memory for Docker (Chrome and Firefox resolve .localhost names themselves; Safari
+# 4 GB of memory for Docker (Chrome and Firefox resolve .localhost names themselves; Safari
 # needs them in /etc/hosts):
 #
 #   curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
@@ -76,12 +76,12 @@ require_tools() {
     die "cannot reach the Docker daemon. Start Docker and run this again."
   fi
   mem=${mem//[[:space:]]/}
-  # Bytes. Warn below 7 GiB: an 8 GB Docker Desktop VM reports a little under 8 GiB,
-  # and the common miss is a 2-4 GB default.
-  min_bytes=$((7 * 1024 * 1024 * 1024))
+  # Bytes. Warn below 3 GiB: a 4 GB Docker Desktop VM reports a little under 4 GiB,
+  # and the common miss is a 2 GB default. The stack was measured at about 1 GB in use.
+  min_bytes=$((3 * 1024 * 1024 * 1024))
   case "$mem" in
     ''|*[!0-9]*)
-      warn "could not read how much memory Docker has. Nix wants about 8 GB."
+      warn "could not read how much memory Docker has. Nix wants about 4 GB."
       return 0
       ;;
   esac
@@ -89,7 +89,7 @@ require_tools() {
     mb=$(( mem / 1024 / 1024 ))
     whole=$(( mb / 1024 ))
     frac=$(( (mb % 1024) * 10 / 1024 ))
-    warn "Docker has ${whole}.${frac} GiB available. Give it about 8 GB, or the stack thrashes."
+    warn "Docker has ${whole}.${frac} GiB available. Give it about 4 GB, or the stack can run out of memory."
   fi
 }
 

@@ -11,6 +11,16 @@ follows semantic versioning (`0.x` pre-1.0).
   desktop and the phone video side by side on a desktop or tablet, the phone video alone on a phone.
   Neither downloads or plays until you press Play.
 
+### Changed
+
+- The self-host images take about 4 GB less disk space in total: Core went from 1.6 GB to
+  0.5 GB, the Node services image from 1.9 GB to 0.9 GB, the sites image from 1.5 GB to 0.4 GB
+  and the release tools image from 1.6 GB to 0.6 GB. The migration job image shrinks the same
+  way as Core. They no longer carry development tools or the native libraries of other
+  platforms.
+- The one-line install asks for about 4 GB of memory for Docker instead of 8 GB, and warns below
+  3 GiB instead of 7 GiB. The running stack was measured at about 1 GB.
+
 ### Fixed
 
 - In Settings > Access tokens the Rotate and Revoke buttons no longer run into each other when a
