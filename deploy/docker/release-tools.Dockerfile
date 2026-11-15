@@ -24,6 +24,9 @@ COPY apps/collab/package.json apps/collab/
 
 # Installs the workspace and runs the root "prepare", which builds the packages nixctl imports.
 RUN pnpm install --frozen-lockfile
+# The packages are built; reinstall with only what runs. This drops the development tools.
+RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
+ && pnpm install --prod --frozen-lockfile --ignore-scripts --offline --filter "@nix/cli..."
 
 FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS release-tools
 # smoke.mjs runs verify-artifact.py (python3), which uses pdftotext for the PDF content check.

@@ -18,6 +18,12 @@ COPY apps/web/package.json apps/web/
 # Installs the workspace and runs the root "prepare", which builds every package
 # collaboration imports. Skipping it leaves those packages with empty dist/ folders.
 RUN pnpm install --frozen-lockfile
+# The packages are built; reinstall with only what the three services run on. This drops the
+# development tools and the web app's dependencies (about 600 MB).
+RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
+ && pnpm install --prod --frozen-lockfile --ignore-scripts --offline \
+      --filter "@nix/node-host..." --filter "@nix/collab..." \
+      --filter "@nix/companion-service..." --filter "@nix/sites..."
 
 FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS codex
 ARG CODEX_VERSION=0.153.4

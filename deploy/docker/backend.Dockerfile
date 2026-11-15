@@ -9,8 +9,11 @@ COPY backend/Directory.Build.props backend/Directory.Packages.props backend/
 COPY backend/src/Nix.Api/Nix.Api.csproj backend/src/Nix.Api/
 COPY backend/src/Nix.Workers/Nix.Workers.csproj backend/src/Nix.Workers/
 COPY backend/src/Nix.Migrator/Nix.Migrator.csproj backend/src/Nix.Migrator/
-RUN dotnet restore backend/src/Nix.Api/Nix.Api.csproj \
- && dotnet restore backend/src/Nix.Migrator/Nix.Migrator.csproj
+# Restore and publish for the image's own architecture only. Without it the output carries
+# the native libraries of every platform (Windows, iOS, Android), about 750 MB.
+ARG TARGETARCH
+RUN dotnet restore backend/src/Nix.Api/Nix.Api.csproj -a "$TARGETARCH" \
+ && dotnet restore backend/src/Nix.Migrator/Nix.Migrator.csproj -a "$TARGETARCH"
 
 # The local embedding model (about 35 MB) is fetched in its own cached layer, ahead of the source.
 COPY scripts/fetch-embedding-model.sh scripts/
@@ -23,9 +26,9 @@ COPY backend/ backend/
 # The build regenerates backend/openapi/nix-api.json as a side effect (see Nix.Api.csproj).
 # That is harmless here; the committed contract is what CI verifies, not this copy.
 RUN dotnet publish backend/src/Nix.Api/Nix.Api.csproj \
-      -c Release --no-restore -o /out/api \
+      -c Release --no-restore -a "$TARGETARCH" -o /out/api \
  && dotnet publish backend/src/Nix.Migrator/Nix.Migrator.csproj \
-      -c Release --no-restore -o /out/migrator
+      -c Release --no-restore -a "$TARGETARCH" -o /out/migrator
 
 # InvariantGlobalization is false in backend/Directory.Build.props, so the runtime needs ICU.
 # The "-extra" chiseled variant carries it; plain "-chiseled" does not and the process will

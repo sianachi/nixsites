@@ -12,6 +12,9 @@ COPY packages/ packages/
 COPY apps/sites/ apps/sites/
 
 RUN pnpm install --frozen-lockfile
+# The packages are built; reinstall with only what runs. This drops the development tools.
+RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
+ && pnpm install --prod --frozen-lockfile --ignore-scripts --offline --filter "@nix/sites..."
 
 FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS sites
 ENV NODE_ENV=production
