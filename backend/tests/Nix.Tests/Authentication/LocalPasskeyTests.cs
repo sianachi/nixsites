@@ -187,8 +187,8 @@ public sealed class LocalPasskeyTests
     [Fact]
     public async Task Garbage_where_a_credential_should_be_is_not_a_credential()
     {
-        Assert.Null(LocalPasskeyCeremony.ReadAssertion(JsonDocument.Parse("[1,2]").RootElement));
-        Assert.Null(LocalPasskeyCeremony.ReadAttestation(JsonDocument.Parse("\"x\"").RootElement));
+        Assert.Null(LocalPasskeyCeremony.ReadAssertion(JsonElement.Parse("[1,2]")));
+        Assert.Null(LocalPasskeyCeremony.ReadAttestation(JsonElement.Parse("\"x\"")));
         await Task.CompletedTask;
     }
 
@@ -349,8 +349,8 @@ public sealed class LocalPasskeyTests
             }
 
             var id = B64(CredentialId);
-            return JsonDocument.Parse(
-                $"{{\"id\":\"{id}\",\"rawId\":\"{id}\",\"type\":\"public-key\",\"response\":{{{response}}}}}").RootElement.Clone();
+            return JsonElement.Parse(
+                $"{{\"id\":\"{id}\",\"rawId\":\"{id}\",\"type\":\"public-key\",\"response\":{{{response}}}}}");
         }
     }
 }

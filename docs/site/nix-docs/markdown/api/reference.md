@@ -28,10 +28,12 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Imports](#imports)
 - [Item locks](#item-locks)
 - [Items](#items)
+- [LocalSecurity](#localsecurity)
 - [Me](#me)
 - [NativeSync](#nativesync)
 - [Notifications](#notifications)
 - [Operations](#operations)
+- [People](#people)
 - [Pets](#pets)
 - [PublicLinks](#publiclinks)
 - [Query](#query)
@@ -2258,6 +2260,212 @@ Parameters:
 
 Responses: `200`, `404`.
 
+## LocalSecurity
+
+<a id="localsecurity"></a>
+
+### GET /api/v1/me/security
+
+<a id="getlocalsecurity"></a>
+
+The caller's own sign-in methods
+
+Operation id: `GetLocalSecurity`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/passkeys/options
+
+<a id="startaddlocalpasskey"></a>
+
+Start adding a passkey; returns WebAuthn creation options
+
+Operation id: `StartAddLocalPasskey`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/passkeys/verify
+
+<a id="finishaddlocalpasskey"></a>
+
+Finish adding a passkey
+
+Operation id: `FinishAddLocalPasskey`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### PATCH /api/v1/me/security/passkeys/{id}
+
+<a id="renamelocalpasskey"></a>
+
+Rename a passkey
+
+Operation id: `RenameLocalPasskey`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `id` in path (required, string (uuid))
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### DELETE /api/v1/me/security/passkeys/{id}
+
+<a id="removelocalpasskey"></a>
+
+Remove a passkey; the last sign-in method cannot be removed
+
+Operation id: `RemoveLocalPasskey`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `id` in path (required, string (uuid))
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/password
+
+<a id="setlocalpassword"></a>
+
+Set or change the caller's password; other sessions are signed out
+
+Operation id: `SetLocalPassword`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### DELETE /api/v1/me/security/password
+
+<a id="removelocalpassword"></a>
+
+Remove the caller's password; only allowed while a passkey exists
+
+Operation id: `RemoveLocalPassword`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/sign-out-everywhere
+
+<a id="signouteverywhere"></a>
+
+Ends every browser session of the caller, this one included
+
+Operation id: `SignOutEverywhere`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/totp
+
+<a id="enrollocaltotp"></a>
+
+Start an authenticator app; returns a secret that does nothing until confirmed
+
+Operation id: `EnrolLocalTotp`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### DELETE /api/v1/me/security/totp
+
+<a id="removelocaltotp"></a>
+
+Remove the authenticator app
+
+Operation id: `RemoveLocalTotp`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### POST /api/v1/me/security/totp/confirm
+
+<a id="confirmlocaltotp"></a>
+
+Turn the authenticator app on with its first code
+
+Operation id: `ConfirmLocalTotp`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
 ## Me
 
 <a id="me"></a>
@@ -2526,6 +2734,106 @@ Parameters:
 - `operationId` in path (required, string (uuid))
 
 Responses: `204`, `404`.
+
+## People
+
+<a id="people"></a>
+
+### GET /api/v1/tenant/people
+
+<a id="listpeople"></a>
+
+The organization's local accounts. Needs a tenant administrator and a browser session.
+
+Operation id: `ListPeople`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Responses: `200`.
+
+### POST /api/v1/tenant/people
+
+<a id="addperson"></a>
+
+Adds a person and returns a one-hour setup link
+
+Operation id: `AddPerson`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
+
+### POST /api/v1/tenant/people/{id}/disable
+
+<a id="disableperson"></a>
+
+Blocks sign-in and signs the person out everywhere
+
+Operation id: `DisablePerson`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `id` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/tenant/people/{id}/enable
+
+<a id="enableperson"></a>
+
+Lets a disabled person sign in again
+
+Operation id: `EnablePerson`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `id` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/tenant/people/{id}/reset-link
+
+<a id="issuepersonresetlink"></a>
+
+Issues a one-hour reset link for another person; needs the administrator's current password
+
+Operation id: `IssuePersonResetLink`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `id` in path (required, string (uuid))
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
 
 ## Pets
 

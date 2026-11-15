@@ -102,7 +102,6 @@ export function AccountLinkPage(): ReactNode {
                 setPassword(event.target.value);
               }}
               autoComplete="new-password"
-              autoFocus
             />
           )}
         </Field>

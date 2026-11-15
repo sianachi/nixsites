@@ -220,7 +220,7 @@ public sealed class ZitadelImportTests
     private static ZitadelUser User(string id, string email, short state = 1) => new(id, state, email, true, id);
 
     private static ZitadelEvent Event(string user, string type, string payload) =>
-        new(user, type, DateTimeOffset.UnixEpoch, JsonDocument.Parse(payload).RootElement.Clone());
+        new(user, type, DateTimeOffset.UnixEpoch, JsonElement.Parse(payload));
 
     private static byte[] EncryptWith(byte[] key, byte[] plain)
     {

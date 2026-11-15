@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1299,6 +1299,138 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article></section>
+<section id="localsecurity"><h2>LocalSecurity</h2><article id="getlocalsecurity" data-search="get /api/v1/me/security getlocalsecurity the caller's own sign-in methods  localsecurity">
+<h3><span class="verb">GET</span> <code>/api/v1/me/security</code></h3>
+<p>The caller's own sign-in methods</p>
+<p class="id">Operation id: <code>GetLocalSecurity</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="startaddlocalpasskey" data-search="post /api/v1/me/security/passkeys/options startaddlocalpasskey start adding a passkey; returns webauthn creation options  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/passkeys/options</code></h3>
+<p>Start adding a passkey; returns WebAuthn creation options</p>
+<p class="id">Operation id: <code>StartAddLocalPasskey</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="finishaddlocalpasskey" data-search="post /api/v1/me/security/passkeys/verify finishaddlocalpasskey finish adding a passkey  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/passkeys/verify</code></h3>
+<p>Finish adding a passkey</p>
+<p class="id">Operation id: <code>FinishAddLocalPasskey</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="renamelocalpasskey" data-search="patch /api/v1/me/security/passkeys/{id} renamelocalpasskey rename a passkey  localsecurity">
+<h3><span class="verb">PATCH</span> <code>/api/v1/me/security/passkeys/{id}</code></h3>
+<p>Rename a passkey</p>
+<p class="id">Operation id: <code>RenameLocalPasskey</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>id</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="removelocalpasskey" data-search="delete /api/v1/me/security/passkeys/{id} removelocalpasskey remove a passkey; the last sign-in method cannot be removed  localsecurity">
+<h3><span class="verb">DELETE</span> <code>/api/v1/me/security/passkeys/{id}</code></h3>
+<p>Remove a passkey; the last sign-in method cannot be removed</p>
+<p class="id">Operation id: <code>RemoveLocalPasskey</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>id</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="setlocalpassword" data-search="post /api/v1/me/security/password setlocalpassword set or change the caller's password; other sessions are signed out  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/password</code></h3>
+<p>Set or change the caller's password; other sessions are signed out</p>
+<p class="id">Operation id: <code>SetLocalPassword</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="removelocalpassword" data-search="delete /api/v1/me/security/password removelocalpassword remove the caller's password; only allowed while a passkey exists  localsecurity">
+<h3><span class="verb">DELETE</span> <code>/api/v1/me/security/password</code></h3>
+<p>Remove the caller's password; only allowed while a passkey exists</p>
+<p class="id">Operation id: <code>RemoveLocalPassword</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="signouteverywhere" data-search="post /api/v1/me/security/sign-out-everywhere signouteverywhere ends every browser session of the caller, this one included  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/sign-out-everywhere</code></h3>
+<p>Ends every browser session of the caller, this one included</p>
+<p class="id">Operation id: <code>SignOutEverywhere</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="enrollocaltotp" data-search="post /api/v1/me/security/totp enrollocaltotp start an authenticator app; returns a secret that does nothing until confirmed  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/totp</code></h3>
+<p>Start an authenticator app; returns a secret that does nothing until confirmed</p>
+<p class="id">Operation id: <code>EnrolLocalTotp</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="removelocaltotp" data-search="delete /api/v1/me/security/totp removelocaltotp remove the authenticator app  localsecurity">
+<h3><span class="verb">DELETE</span> <code>/api/v1/me/security/totp</code></h3>
+<p>Remove the authenticator app</p>
+<p class="id">Operation id: <code>RemoveLocalTotp</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="confirmlocaltotp" data-search="post /api/v1/me/security/totp/confirm confirmlocaltotp turn the authenticator app on with its first code  localsecurity">
+<h3><span class="verb">POST</span> <code>/api/v1/me/security/totp/confirm</code></h3>
+<p>Turn the authenticator app on with its first code</p>
+<p class="id">Operation id: <code>ConfirmLocalTotp</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article></section>
 <section id="me"><h2>Me</h2><article id="getcurrentprincipal" data-search="get /api/v1/me getcurrentprincipal the signed-in caller returns the caller's identity and whether tenant-wide administrative surfaces apply to them. 'istenantadministrator' is a display hint for deciding what to offer, never a grant: every administrative endpoint checks the same fact against the database for itself. the flag is read from the database on each request rather than from a token claim, because a role inside a bearer token cannot be revoked before the token expires. me">
 <h3><span class="verb">GET</span> <code>/api/v1/me</code></h3>
 <p>The signed-in caller</p>
@@ -1478,6 +1610,66 @@
 <ul><li><code>operationId</code> in path (required, string (uuid))</li></ul>
 
 <p>Responses: <code>204</code>, <code>404</code>.</p>
+</article></section>
+<section id="people"><h2>People</h2><article id="listpeople" data-search="get /api/v1/tenant/people listpeople the organization's local accounts. needs a tenant administrator and a browser session.  people">
+<h3><span class="verb">GET</span> <code>/api/v1/tenant/people</code></h3>
+<p>The organization's local accounts. Needs a tenant administrator and a browser session.</p>
+<p class="id">Operation id: <code>ListPeople</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="addperson" data-search="post /api/v1/tenant/people addperson adds a person and returns a one-hour setup link  people">
+<h3><span class="verb">POST</span> <code>/api/v1/tenant/people</code></h3>
+<p>Adds a person and returns a one-hour setup link</p>
+<p class="id">Operation id: <code>AddPerson</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="disableperson" data-search="post /api/v1/tenant/people/{id}/disable disableperson blocks sign-in and signs the person out everywhere  people">
+<h3><span class="verb">POST</span> <code>/api/v1/tenant/people/{id}/disable</code></h3>
+<p>Blocks sign-in and signs the person out everywhere</p>
+<p class="id">Operation id: <code>DisablePerson</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>id</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="enableperson" data-search="post /api/v1/tenant/people/{id}/enable enableperson lets a disabled person sign in again  people">
+<h3><span class="verb">POST</span> <code>/api/v1/tenant/people/{id}/enable</code></h3>
+<p>Lets a disabled person sign in again</p>
+<p class="id">Operation id: <code>EnablePerson</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>id</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="issuepersonresetlink" data-search="post /api/v1/tenant/people/{id}/reset-link issuepersonresetlink issues a one-hour reset link for another person; needs the administrator's current password  people">
+<h3><span class="verb">POST</span> <code>/api/v1/tenant/people/{id}/reset-link</code></h3>
+<p>Issues a one-hour reset link for another person; needs the administrator's current password</p>
+<p class="id">Operation id: <code>IssuePersonResetLink</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>id</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
 </article></section>
 <section id="pets"><h2>Pets</h2><article id="getpetconnection" data-search="get /api/v1/me/pets/connection getpetconnection   pets">
 <h3><span class="verb">GET</span> <code>/api/v1/me/pets/connection</code></h3>

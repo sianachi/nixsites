@@ -48,7 +48,8 @@ export function PeopleSection(props: { readonly client?: SecurityClient }): Reac
     }
   }, [client]);
   useEffect(() => {
-    void load();
+    // Deferred a microtask: setting state synchronously in an effect body is a cascading render.
+    queueMicrotask(() => void load());
   }, [load]);
   useEffect(() => {
     client.getSecurity().then(

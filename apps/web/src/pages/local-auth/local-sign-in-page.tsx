@@ -84,7 +84,6 @@ export function LocalSignInPage(): ReactNode {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   pattern="[0-9 ]*"
-                  autoFocus
                 />
               )}
             </Field>
@@ -135,7 +134,6 @@ export function LocalSignInPage(): ReactNode {
                 setEmail(event.target.value);
               }}
               autoComplete="username webauthn"
-              autoFocus
             />
           )}
         </Field>

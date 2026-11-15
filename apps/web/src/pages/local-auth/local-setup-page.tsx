@@ -57,7 +57,6 @@ export function LocalSetupPage(): ReactNode {
                 setSetupCode(event.target.value);
               }}
               autoComplete="off"
-              autoFocus
             />
           )}
         </Field>

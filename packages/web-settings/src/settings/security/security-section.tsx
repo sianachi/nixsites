@@ -60,7 +60,8 @@ export function SecuritySection(props: { readonly client?: SecurityClient }): Re
     }
   }, [client]);
   useEffect(() => {
-    void load();
+    // Deferred a microtask: setting state synchronously in an effect body is a cascading render.
+    queueMicrotask(() => void load());
   }, [load]);
 
   /** Runs one action: clears the old message, shows the new one, reloads on success. */
