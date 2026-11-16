@@ -58,7 +58,7 @@ describe('offline conflicts', () => {
     expect(view.container).toBeEmptyDOMElement();
   });
 
-  it('lists a refused change with its code and lets the person dismiss it', async () => {
+  it('lists a refused change with its reason and lets the person dismiss it', async () => {
     const user = userEvent.setup();
     const store = mount([
       {
@@ -66,7 +66,7 @@ describe('offline conflicts', () => {
         workspaceId: WS,
         itemId: ITEM,
         kind: 'metadata',
-        code: 'revision_conflict',
+        code: 'sync.revision_conflict',
         operation: {
           kind: 'rename',
           operationId: '0199a000-0000-7000-8000-0000000000a1',
@@ -79,7 +79,9 @@ describe('offline conflicts', () => {
     ]);
     await user.click(await screen.findByRole('button', { name: '1 change needs attention' }));
     expect(await screen.findByText('Shopping')).toBeInTheDocument();
-    expect(screen.getByText(/Rename — revision_conflict/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Rename. It was changed on the server after you went offline.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy text' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(store.dismissConflict).toHaveBeenCalledWith(WS, 'op1');

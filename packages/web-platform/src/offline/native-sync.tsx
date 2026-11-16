@@ -1,5 +1,5 @@
 import { files, principal, workspaces } from '@nix/api-client';
-import { createFetchMirrorApi } from '@nix/sync-core/fetch-api';
+import { createFetchMirrorApi, MirrorUnreachableError } from '@nix/sync-core/fetch-api';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
 import {
   injectBodyCache,
@@ -101,14 +101,15 @@ export function NativeSync(): ReactNode {
         collabUrl: `${origin}/collab`,
         getToken: async () => {
           const token = await getAccessToken();
-          if (token === null) throw new Error('There is no session to sync with.');
+          // No token means the session could not be renewed (or just ended): not a sync failure.
+          if (token === null) throw new MirrorUnreachableError();
           return token;
         },
         isSessionClosed: () => useSessionStore.getState().status !== 'authenticated',
       });
       const ownerId = crypto.randomUUID();
       const scheduler = createSyncScheduler(async () => {
-        if (bootOffline || !navigator.onLine) return;
+        if (bootOffline || !navigator.onLine) return false;
         await mirror.keepAwake(true);
         try {
           const outcome = await runFullSync({
@@ -131,12 +132,25 @@ export function NativeSync(): ReactNode {
             capability: (itemId, versionId) =>
               client.query(files.downloadFile(itemId, versionId), { forceRefresh: true }),
           });
-          if (outcome === 'revoked') await discardNativeMirror();
-          else {
-            setOfflineState({ lastSyncedAt: Date.now() });
-            reportSyncProblem(mirror, outcome);
-            await warmRemembered(() => getAccessToken());
+          if (outcome === 'revoked') {
+            await discardNativeMirror();
+            return false;
           }
+          setOfflineState({ lastSyncedAt: Date.now() });
+          reportSyncProblem(mirror, outcome);
+          await warmRemembered(() => getAccessToken());
+          return outcome.more;
+        } catch (error) {
+          // The scheduler drops errors, so a pass that failed whole (the workspace list, the store)
+          // is said here. No answer from the network says nothing about the sync itself.
+          if (error instanceof MirrorUnreachableError || getOfflineState().networkDown)
+            return false;
+          // The shell rolled back a pass iOS suspended: run it again, there is nothing to report.
+          if (error instanceof Error && error.message.includes('Transaction is not open'))
+            return true;
+          console.error('Sync failed', error);
+          setOfflineState({ syncProblem: 'Nix could not sync. It will try again.' });
+          return false;
         } finally {
           await mirror.keepAwake(false);
         }
@@ -147,7 +161,8 @@ export function NativeSync(): ReactNode {
       let resyncAt = getOfflineState().resyncRequestedAt;
       const unsubscribe = subscribeOfflineState(() => {
         const { networkDown: down, resyncRequestedAt } = getOfflineState();
-        if ((wasDown && !down) || resyncRequestedAt !== resyncAt) void scheduler.trigger();
+        // A pass already running may be past the workspace this is about: one more follows it.
+        if ((wasDown && !down) || resyncRequestedAt !== resyncAt) void scheduler.trigger(true);
         wasDown = down;
         resyncAt = resyncRequestedAt;
       });

@@ -1,4 +1,5 @@
 import { runSyncPass } from '@nix/sync-core';
+import { MirrorHttpError, MirrorUnreachableError } from '@nix/sync-core/fetch-api';
 import type { MirrorApi } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
@@ -44,6 +45,8 @@ export interface SyncReport {
   readonly failedFiles: number;
   /** A pass got no answer from the network: the failures say nothing about the sync itself. */
   readonly unreachable: boolean;
+  /** A pass stopped at a batch limit with changes still queued: another pass should follow now. */
+  readonly more: boolean;
 }
 
 export type SyncOutcome = 'revoked' | SyncReport;
@@ -64,18 +67,31 @@ export function downloadable(url: string): boolean {
   }
 }
 
-/** Resolves with how many files could not be stored this time; each is retried on the next pass. */
-export async function syncFiles(deps: SyncDeps, workspaceIds: readonly string[]): Promise<number> {
+/**
+ * Resolves with how many files could not be stored this time; each is retried on the next pass.
+ * `unsettled` are workspaces whose pass did not finish this time (no answer, a failure, a rebuild
+ * cut short): their files are neither fetched nor removed, since what they should hold is unknown
+ * and removing them would mean downloading all of them again.
+ */
+export async function syncFiles(
+  deps: SyncDeps,
+  workspaceIds: readonly string[],
+  unsettled: readonly string[] = [],
+): Promise<number> {
   const wanted = new Map<string, { versionId: string; byteLength: number; sha256: string }>();
   for (const workspaceId of workspaceIds)
-    for (const item of await deps.store.listItems(workspaceId))
+    for (const item of await deps.store.listFileItems(workspaceId))
       if (item.file !== null && !item.locked && item.lifecycleState === 'active')
         wanted.set(item.id, item.file);
+  const kept = new Set<string>();
+  for (const workspaceId of unsettled)
+    for (const item of await deps.store.listFileItems(workspaceId).catch(() => []))
+      kept.add(item.id);
 
   const index: Record<string, string> = {};
   // Files of items that left the mirror, and versions that were replaced, go.
   for (const [itemId, versionId] of Object.entries(await deps.mirror.fileIndex())) {
-    if (wanted.get(itemId)?.versionId === versionId) index[itemId] = versionId;
+    if (wanted.get(itemId)?.versionId === versionId || kept.has(itemId)) index[itemId] = versionId;
     else await deps.mirror.fileDelete(itemId, versionId);
   }
   await deps.mirror.setFileIndex(index);
@@ -140,8 +156,12 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
   );
   const failedWorkspaces: string[] = [];
   let unreachable = false;
+  let more = false;
+  const settled: string[] = [];
+  const unsettled: string[] = [];
   for (const workspace of workspaces) {
-    if (deps.signal?.aborted === true) return { failedWorkspaces, failedFiles: 0, unreachable };
+    if (deps.signal?.aborted === true)
+      return { failedWorkspaces, failedFiles: 0, unreachable, more: false };
     // Closed, not revoked: no pass, so nothing is wiped. The next pass after an unlock picks it up.
     if (closedByPassword(workspace)) continue;
     // One workspace failing (a lost connection, a bad page) must not hold up the others.
@@ -151,12 +171,29 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
       store: deps.store,
       api: deps.api,
     }).catch((error: unknown) => {
-      // fetch rejects with a TypeError when no answer came back at all.
-      if (error instanceof TypeError) unreachable = true;
-      else failedWorkspaces.push(workspace.name);
+      // No answer came back at all; a TypeError from anywhere else is a fault and is reported.
+      if (error instanceof MirrorUnreachableError) unreachable = true;
+      // Two cases where nothing is wrong and the pass is simply run again: iOS suspended the page
+      // mid-pass and the shell rolled the open transaction back (its 30 s idle limit), or the
+      // server still rate limits after waiting (a long queue of offline changes; what was sent
+      // is kept).
+      else if (
+        (error instanceof Error && error.message.includes('Transaction is not open')) ||
+        (error instanceof MirrorHttpError && error.status === 429)
+      )
+        more = true;
+      else {
+        // The banner names the workspace; the reason (an HTTP status, a bad page) goes to the log.
+        console.error(`Sync of workspace ${workspace.id} failed`, error);
+        failedWorkspaces.push(workspace.name);
+      }
       return null;
     });
     if (result?.status === 'revoked' && result.scope === 'account') return 'revoked';
+    // A workspace the server took away is in neither list: its copy is gone, so its files go too.
+    if (result === null || result.status === 'busy') unsettled.push(workspace.id);
+    else if (result.status !== 'revoked') settled.push(workspace.id);
+    if (result !== null && 'more' in result && result.more) more = true;
     if (
       result !== null &&
       (result.status === 'complete' || result.status === 'partial') &&
@@ -166,11 +203,8 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
   }
   // Downloaded copies of a closed workspace's files go until it is unlocked: they are bytes of a
   // workspace this session may not read. Queued edits live in the outbox and are not touched.
-  const failedFiles = await syncFiles(
-    deps,
-    workspaces.filter((workspace) => !closedByPassword(workspace)).map((workspace) => workspace.id),
-  );
-  return { failedWorkspaces, failedFiles, unreachable };
+  const failedFiles = await syncFiles(deps, settled, unsettled);
+  return { failedWorkspaces, failedFiles, unreachable, more };
 }
 
 /** One line for the person, or null when the report has nothing to say. */
@@ -189,19 +223,31 @@ export function describeSyncProblem(report: SyncReport): string | null {
 
 /**
  * Runs `run` at start, when the app comes back to the foreground, when the network returns, and
- * every `intervalMs` while visible. A trigger during a run joins it rather than starting another.
+ * every `intervalMs` while visible. A trigger during a run joins it rather than starting another;
+ * `trigger(true)` (something changed that the running pass may already be past) and a run that
+ * resolves true (it left queued work) are followed by one more run, at most `maxFollowUps` in a row.
  */
 export function createSyncScheduler(
-  run: () => Promise<void>,
+  run: () => Promise<boolean | undefined>,
   intervalMs = 5 * 60_000,
-): { start: () => () => void; trigger: () => Promise<void> } {
+  maxFollowUps = 5,
+): { start: () => () => void; trigger: (followUp?: boolean) => Promise<void> } {
   let running: Promise<void> | null = null;
-  const trigger = (): Promise<void> => {
-    running ??= run()
-      .catch(() => undefined)
-      .finally(() => {
-        running = null;
-      });
+  let requested = 0;
+  const trigger = (followUp = false): Promise<void> => {
+    if (running !== null) {
+      if (followUp) requested++;
+      return running;
+    }
+    running = (async () => {
+      for (let runs = 0; runs <= maxFollowUps; runs++) {
+        const before = requested;
+        const more = await run().catch(() => false);
+        if (requested === before && more !== true) return;
+      }
+    })().finally(() => {
+      running = null;
+    });
     return running;
   };
   return {

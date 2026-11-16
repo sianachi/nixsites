@@ -1,7 +1,7 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
-import { computeView, type ViewAnswer, type ViewRequest } from '@nix/view-compute';
+import { computeView, isComputedView, type ViewAnswer, type ViewRequest } from '@nix/view-compute';
 
 import { planWrite, type PlannedWrite } from './mirror-writes';
 import { planViewWrite } from './view-writes';
@@ -44,6 +44,11 @@ export interface MirrorFetchDeps {
    * one credential), so this device rebuilds the workspace from a fresh snapshot to see under it.
    */
   readonly onUnlocked?: (itemId: string) => void;
+  /**
+   * Told when Core accepted a change to an item or workspace. The copy only learns of it from the
+   * next pass, so without one soon a connection lost in the meantime shows the old state offline.
+   */
+  readonly onWritten?: () => void;
 }
 
 type Json = Record<string, unknown>;
@@ -78,6 +83,7 @@ export const WORKSPACES_SETTING = 'offline.workspaces';
 export const PROTECTED_SETTING = 'offline.protected-workspaces';
 export const rememberKey = (path: string): string => `offline.cache:${path}`;
 const MAX_REMEMBERED_BYTES = 256 * 1024;
+const MAX_OFFLINE_OPEN_BYTES = 150 * 1024 * 1024;
 
 /** Core's inline rule: only these are ever served as themselves (never html, svg or script types). */
 const INLINE_TYPES =
@@ -182,13 +188,36 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
   const indexes = new Map<string, Promise<WorkspaceIndex>>();
   const watched = new WeakSet<object>();
 
-  function workspaceIndex(store: MirrorReader, workspaceId: string): Promise<WorkspaceIndex> {
-    if (!watched.has(store)) {
-      watched.add(store);
-      store.subscribe(() => {
-        indexes.clear();
-      });
+  const settings = new Map<string, Promise<string | null>>();
+
+  /** Everything derived from the store is dropped when the store says it changed. */
+  function watch(store: MirrorReader): void {
+    if (watched.has(store)) return;
+    watched.add(store);
+    store.subscribe(() => {
+      indexes.clear();
+      settings.clear();
+    });
+  }
+
+  /**
+   * A setting as last read, until the store changes. Which workspaces are closed is asked on
+   * every offline request, and each ask was two reads of the shell's store.
+   */
+  function setting(store: MirrorReader, key: string): Promise<string | null> {
+    watch(store);
+    let value = settings.get(key);
+    if (value === undefined) {
+      value = store.getSetting(key);
+      settings.set(key, value);
+      // A failed read is not kept: the next ask tries again.
+      value.catch(() => settings.delete(key));
     }
+    return value;
+  }
+
+  function workspaceIndex(store: MirrorReader, workspaceId: string): Promise<WorkspaceIndex> {
+    watch(store);
     let index = indexes.get(workspaceId);
     if (index === undefined) {
       index = store.listItems(workspaceId).then(indexOf);
@@ -234,7 +263,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     const closed = new Set<string>();
     const stated = new Set<string>();
     try {
-      const raw = await store.getSetting(WORKSPACES_SETTING);
+      const raw = await setting(store, WORKSPACES_SETTING);
       const parsed: unknown = raw === null ? [] : JSON.parse(raw);
       for (const entry of Array.isArray(parsed) ? parsed.filter(isRecord) : []) {
         const id = String(entry.id);
@@ -250,7 +279,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     } catch {
       /* An unreadable list states nothing; the recorded ids below decide. */
     }
-    const recorded = await store.getSetting(PROTECTED_SETTING).catch(() => null);
+    const recorded = await setting(store, PROTECTED_SETTING).catch(() => null);
     if (recorded === null) return closed;
     try {
       const ids: unknown = JSON.parse(recorded);
@@ -353,6 +382,9 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
 
   /** Core's computed reads (queries, charts, calendar, habits), recalculated offline. */
   async function computed(store: MirrorReader, request: ViewRequest): Promise<Response | null> {
+    // Checked first: every offline read comes through here, and the source below costs three
+    // reads of the shell's store before a single route is tried.
+    if (!isComputedView(request)) return null;
     const closed = await closedWorkspaceIds(store);
     const answered: ViewAnswer | null = await computeView(
       {
@@ -535,6 +567,15 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       !(file.mediaType.startsWith('image/') && isInlineType(file.mediaType))
     )
       return problem(404, 'file.not_found', 'This file has no thumbnail in the synced copy.');
+    // shortcut: the shell hands a file over as one base64 message, so opening it costs several
+    // times its size in memory and a large one would end the page. Serve it from the shell by URL
+    // (a scheme handler) to lift this.
+    if (file.byteLength > MAX_OFFLINE_OPEN_BYTES)
+      return problem(
+        503,
+        'offline.unavailable',
+        'This file is too large to open offline. Connect to open it.',
+      );
     const bytes = await deps.readFile(item.id, file.versionId);
     if (bytes === null)
       return problem(
@@ -738,6 +779,13 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
           const unlocked = /^\/api\/v1\/items\/([^/]+)\/unlock$/.exec(url.pathname)?.[1];
           if (method === 'POST' && response.ok && unlocked !== undefined)
             deps.onUnlocked?.(unlocked);
+          if (
+            method !== 'GET' &&
+            response.ok &&
+            /^\/api\/v1\/(items|workspaces)\//.test(url.pathname) &&
+            !/\/query(\/aggregate)?$/.test(url.pathname)
+          )
+            deps.onWritten?.();
           const store = deps.store();
           if (store !== null && method === 'GET') remember(store, url.pathname, response);
           // A screen still addressing an item by the temporary id it was created under, after the

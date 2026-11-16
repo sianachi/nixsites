@@ -6,6 +6,7 @@ import {
   bodySyncRequestSchema,
   bodySyncResponseSchema,
   MirrorAccessRevokedError,
+  MirrorHttpError,
   nativeChangesPageSchema,
   nativeReconcilePageSchema,
   nativeReplayResultSchema,
@@ -35,6 +36,8 @@ export type SyncPassResult =
   | { status: 'revoked'; scope: 'account' | 'workspace' }
   | {
       status: 'complete' | 'partial';
+      /** Queued changes or note edits were left for another pass (a batch limit, not a conflict). */
+      more: boolean;
       cursor: string;
       replayedOperations: number;
       syncedBodies: number;
@@ -144,7 +147,6 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
   const stats = { partial: false, replayedOperations: 0, syncedBodies: 0, conflicts: 0 };
   async function keepLease(): Promise<void> {
     if (!(await store.renewLease(lease()))) throw new LeaseLostError();
-    await store.purgeExpired(workspaceId, now());
   }
   async function request<T>(send: () => Promise<T>): Promise<T> {
     await keepLease();
@@ -265,7 +267,21 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
       const operation = await store.peekOutbox(workspaceId);
       if (operation === null) return;
       const result = nativeReplayResultSchema.parse(
-        await request(() => api.replay({ workspaceId, operation })),
+        await request(() => api.replay({ workspaceId, operation })).catch((error: unknown) => {
+          // The server will never take this operation as written (malformed, too large, its id
+          // reused). Left at the head of the queue it would block every change behind it, so it
+          // becomes a refusal the person can see, like one the server judged itself.
+          if (error instanceof MirrorHttpError && [400, 409, 413, 422].includes(error.status))
+            return {
+              operationId: operation.operationId,
+              status: 'refused',
+              itemId: operation.itemId,
+              revision: null,
+              item: null,
+              code: 'sync.replay_rejected',
+            };
+          throw error;
+        }),
       );
       if (
         result.operationId !== operation.operationId ||
@@ -399,6 +415,9 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
   }
 
   try {
+    // Once a pass, not around every request: the store also drops expired rows in each of its
+    // own transactions, so repeating it here only doubled the cost of keeping the lease.
+    await store.purgeExpired(workspaceId, now());
     const cursor = await pullChanges();
     await reconcileKnownItems();
     await store.unsealWorkspace(workspaceId);
@@ -406,6 +425,7 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
     await syncBodies();
     return {
       status: stats.partial || stats.conflicts > 0 ? 'partial' : 'complete',
+      more: stats.partial,
       cursor,
       replayedOperations: stats.replayedOperations,
       syncedBodies: stats.syncedBodies,

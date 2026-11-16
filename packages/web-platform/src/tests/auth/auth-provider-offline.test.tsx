@@ -193,6 +193,24 @@ describe('the recheck after an offline launch', () => {
     expect(getOfflineState().bootOffline).toBe(true);
     expect(screen.getByText('authenticated')).toBeTruthy();
   });
+
+  it('treats JSON that is not a session as still offline, and keeps the copy', async () => {
+    fakeMirror(stored);
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Load failed'))
+      .mockImplementation(() => Promise.resolve(Response.json({ portal: true })));
+    vi.stubGlobal('fetch', fetch);
+    mount();
+    await screen.findByText('authenticated');
+    window.dispatchEvent(new Event('online'));
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(getOfflineState().bootOffline).toBe(true);
+    expect(screen.getByText('authenticated')).toBeTruthy();
+  });
 });
 
 describe('signing out in the shell', () => {

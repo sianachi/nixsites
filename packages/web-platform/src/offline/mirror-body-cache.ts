@@ -65,27 +65,59 @@ export function createMirrorBodyCache(
 }
 
 /**
- * Queues a note edit made while the collaboration socket was not live, so the next sync pass
- * sends it. A note created offline is still under its temporary id here; the mirror carries the
- * pending update over to the server's id when the create replays. Locked bodies are never queued.
+ * Queues note edits made while the collaboration socket was not live, so the next sync pass sends
+ * them. A burst of typing is gathered for `delayMs` and queued as one update: queued one per
+ * keystroke, each would cost a read of the whole note over the shell's bridge and its own slot in
+ * the 64 updates a pass sends per note. The editor's draft journal holds every keystroke
+ * meanwhile, so a burst lost with the page is replayed when the note is reopened. A note created
+ * offline is addressed by its temporary id until the create replays; the mirror resolves it.
+ * Locked bodies are never queued.
  */
 export function createMirrorPendingSink(
-  store: () => Pick<SqliteMirrorStore, 'readBody' | 'enqueueBodyUpdate' | 'resolveItemId'> | null,
+  store: () => Pick<SqliteMirrorStore, 'readItems' | 'enqueueBodyUpdate'> | null,
   subject: () => string | undefined,
+  delayMs = 1000,
 ): (scope: string, update: Uint8Array) => Promise<boolean> {
+  const bursts = new Map<string, Uint8Array[]>();
+
+  async function flush(scope: string, workspaceId: string, itemId: string): Promise<void> {
+    const updates = bursts.get(scope) ?? [];
+    bursts.delete(scope);
+    const mirror = store();
+    // Re-read: the create may have replayed (a new id) or the body been locked during the burst.
+    const item = (await mirror?.readItems([itemId]))?.[0];
+    if (mirror === null || item === undefined || item.locked || updates.length === 0) return;
+    const queue = (update: Uint8Array): Promise<void> =>
+      mirror.enqueueBodyUpdate(workspaceId, item.id, { clientId: crypto.randomUUID(), update });
+    try {
+      await queue(Y.mergeUpdates(updates));
+    } catch {
+      // Too large as one update: each part is tried alone, and one failing does not stop the rest.
+      for (const update of updates) await queue(update).catch(() => undefined);
+    }
+  }
+
   return async (scope, update) => {
     const parsed = scopeSchema.safeParse(JSON.parse(scope));
     const mirror = store();
     if (!parsed.success || mirror === null) return false;
     const [who, workspaceId, itemId, kind] = parsed.data;
     if (kind !== 'note' || who !== subject()) return false;
-    const resolved = await mirror.resolveItemId(workspaceId, itemId);
-    const body = await mirror.readBody(workspaceId, resolved);
-    if (body === null || body.item.locked) return false;
-    await mirror.enqueueBodyUpdate(workspaceId, resolved, {
-      clientId: crypto.randomUUID(),
-      update,
-    });
+    const burst = bursts.get(scope);
+    if (burst !== undefined) {
+      burst.push(update);
+      return true;
+    }
+    // Held before the check below, so edits arriving while it runs join this burst.
+    bursts.set(scope, [update]);
+    const item = (await mirror.readItems([itemId]).catch(() => []))[0];
+    if (item === undefined || item.locked) {
+      bursts.delete(scope);
+      return false;
+    }
+    setTimeout(() => {
+      void flush(scope, workspaceId, itemId).catch(() => undefined);
+    }, delayMs);
     return true;
   };
 }

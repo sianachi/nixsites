@@ -1,5 +1,6 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
+import { MirrorHttpError, MirrorUnreachableError } from '@nix/sync-core/fetch-api';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -46,7 +47,7 @@ function setup(items: MirrorItem[], index: Record<string, string>) {
   );
   const deps = {
     mirror,
-    store: { listItems: () => Promise.resolve(items) } as unknown as SqliteMirrorStore,
+    store: { listFileItems: () => Promise.resolve(items) } as unknown as SqliteMirrorStore,
     capability,
   } as unknown as SyncDeps;
   return { deps, mirror, capability, stored };
@@ -64,6 +65,18 @@ describe('file sync', () => {
     expect(mirror.fileDownload).toHaveBeenCalledTimes(1);
     expect(mirror.fileDownload).toHaveBeenCalledWith('a', 'v2', 'https://files.example/a/v2');
     expect(stored).toEqual({ a: 'v2', b: 'v1' });
+  });
+
+  it('neither fetches nor removes the files of a workspace whose pass did not finish', async () => {
+    const { deps, mirror, stored } = setup([fileItem('a', 'v1'), fileItem('b', 'v2')], {
+      a: 'v1',
+      b: 'v1',
+      gone: 'v9',
+    });
+    await syncFiles(deps, [], ['ws']);
+    expect(mirror.fileDelete).toHaveBeenCalledExactlyOnceWith('gone', 'v9');
+    expect(mirror.fileDownload).not.toHaveBeenCalled();
+    expect(stored).toEqual({ a: 'v1', b: 'v1' });
   });
 
   it('skips a version that changed under it and removes a short download', async () => {
@@ -120,7 +133,14 @@ describe('file sync', () => {
 describe('sync scheduler', () => {
   it('runs one pass at a time', async () => {
     let release: () => void = () => undefined;
-    const run = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+    const run = vi.fn(
+      () =>
+        new Promise<undefined>((resolve) => {
+          release = () => {
+            resolve(undefined);
+          };
+        }),
+    );
     const scheduler = createSyncScheduler(run);
     const first = scheduler.trigger();
     const second = scheduler.trigger();
@@ -131,13 +151,39 @@ describe('sync scheduler', () => {
     await scheduler.trigger();
     expect(run).toHaveBeenCalledTimes(2);
   });
+
+  it('follows a run with another when asked to mid-run or when the run left work, up to the cap', async () => {
+    let release: () => void = () => undefined;
+    const run = vi.fn<() => Promise<boolean | undefined>>(
+      () =>
+        new Promise((resolve) => {
+          release = () => {
+            resolve(false);
+          };
+        }),
+    );
+    const scheduler = createSyncScheduler(run);
+    const first = scheduler.trigger();
+    void scheduler.trigger(true);
+    release();
+    await vi.waitFor(() => {
+      expect(run).toHaveBeenCalledTimes(2);
+    });
+    release();
+    await first;
+    expect(run).toHaveBeenCalledTimes(2);
+
+    const unfinished = vi.fn(() => Promise.resolve(true));
+    await createSyncScheduler(unfinished, 1000, 2).trigger();
+    expect(unfinished).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('full sync report', () => {
   it('names failed workspaces, and marks a pass that got no answer as unreachable', async () => {
     const { deps } = setup([], {});
     const store = {
-      listItems: () => Promise.resolve([]),
+      listFileItems: () => Promise.resolve([]),
       replaceWorkspaceList: vi.fn(() => Promise.resolve()),
       setSetting: vi.fn(() => Promise.resolve()),
     };
@@ -149,20 +195,54 @@ describe('full sync report', () => {
     runSyncPass
       .mockResolvedValueOnce({ status: 'complete', replayedOperations: 0, conflicts: 0 })
       .mockRejectedValueOnce(new Error('Snapshot response does not advance'))
-      .mockRejectedValueOnce(new TypeError('Load failed'));
+      .mockRejectedValueOnce(new MirrorUnreachableError());
     const report = await runFullSync({
       ...deps,
       store: store as unknown as SqliteMirrorStore,
       listWorkspaces: () => Promise.resolve(workspaces),
     });
-    expect(report).toEqual({ failedWorkspaces: ['Work'], failedFiles: 0, unreachable: true });
+    expect(report).toEqual({
+      failedWorkspaces: ['Work'],
+      failedFiles: 0,
+      unreachable: true,
+      more: false,
+    });
+  });
+
+  it.each([
+    [
+      'the shell rolled a suspended pass back',
+      new Error('nixStore execute: Transaction is not open (it may have timed out).'),
+    ],
+    ['the server still rate limits after waiting', new MirrorHttpError(429, '/sync/replay')],
+  ])('asks for another pass, and reports nothing, when %s', async (_, error) => {
+    runSyncPass.mockReset();
+    const { deps } = setup([], {});
+    const store = {
+      listFileItems: () => Promise.resolve([]),
+      replaceWorkspaceList: vi.fn(() => Promise.resolve()),
+      setSetting: vi.fn(() => Promise.resolve()),
+    };
+    runSyncPass.mockRejectedValueOnce(error);
+    const report = await runFullSync({
+      ...deps,
+      store: store as unknown as SqliteMirrorStore,
+      listWorkspaces: () =>
+        Promise.resolve([{ id: 'Home', name: 'Home', lifecycleState: 'active' }]),
+    });
+    expect(report).toEqual({
+      failedWorkspaces: [],
+      failedFiles: 0,
+      unreachable: false,
+      more: true,
+    });
   });
 
   it('keeps a workspace a password has closed in the mirror and makes no pass at it', async () => {
     runSyncPass.mockReset();
     const { deps } = setup([], {});
     const store = {
-      listItems: () => Promise.resolve([]),
+      listFileItems: () => Promise.resolve([]),
       replaceWorkspaceList: vi.fn(() => Promise.resolve()),
       setSetting: vi.fn(() => Promise.resolve()),
     };
@@ -213,11 +293,21 @@ describe('full sync report', () => {
   });
 
   it('says nothing when everything synced', () => {
-    expect(describeSyncProblem({ failedWorkspaces: [], failedFiles: 0, unreachable: false })).toBe(
-      null,
-    );
     expect(
-      describeSyncProblem({ failedWorkspaces: ['Work'], failedFiles: 2, unreachable: false }),
+      describeSyncProblem({
+        failedWorkspaces: [],
+        failedFiles: 0,
+        unreachable: false,
+        more: false,
+      }),
+    ).toBe(null);
+    expect(
+      describeSyncProblem({
+        failedWorkspaces: ['Work'],
+        failedFiles: 2,
+        unreachable: false,
+        more: false,
+      }),
     ).toBe('Work could not be synced; 2 files could not be downloaded.');
   });
 });

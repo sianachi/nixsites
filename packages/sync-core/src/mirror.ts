@@ -303,6 +303,16 @@ export interface MirrorApi {
   syncBodies(input: BodySyncRequest): Promise<unknown>;
 }
 
+/** The server answered a sync request with an error status. */
+export class MirrorHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly path: string,
+  ) {
+    super(`Sync request failed with HTTP ${status.toString()}: ${path}`);
+  }
+}
+
 export class MirrorAccessRevokedError extends Error {
   readonly scope: 'account' | 'workspace';
 

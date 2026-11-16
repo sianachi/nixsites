@@ -196,6 +196,59 @@ async function projectItems(
   });
 }
 
+async function upsertItem(tx: SqliteTransaction, item: MirrorItem, local: boolean): Promise<void> {
+  await tx.execute(
+    'INSERT INTO mirror_item(id, workspace_id, parent_id, title, snapshot, expires_at, local) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id, parent_id=excluded.parent_id, title=excluded.title, snapshot=excluded.snapshot, expires_at=excluded.expires_at, local=excluded.local',
+    [
+      item.id,
+      item.workspaceId,
+      item.parentId,
+      item.title,
+      JSON.stringify(item),
+      item.metadataExpiresAt === null ? null : Date.parse(item.metadataExpiresAt),
+      local ? 1 : 0,
+    ],
+  );
+}
+
+const heldRows = z.array(
+  z.object({ id: z.string(), snapshot: z.string(), local: z.number(), stale: z.number() }),
+);
+
+/**
+ * Saves a page of server items with one read for the page, not several statements per item (each
+ * is a round trip to the shell's store). An item the mirror already holds unchanged, with no body
+ * rows its snapshot would purge, is skipped; one it has never held has nothing to reconcile.
+ */
+async function saveItems(tx: SqliteTransaction, items: readonly MirrorItem[]): Promise<void> {
+  if (items.length === 0) return;
+  const persist = "json_extract(item.snapshot,'$.canPersistBody')=1";
+  const doc = "json_extract(item.snapshot,'$.bodyDocId')";
+  const held = new Map(
+    heldRows
+      .parse(
+        await tx.execute(
+          `SELECT item.id, item.snapshot, item.local, (EXISTS(SELECT 1 FROM mirror_body body WHERE body.item_id=item.id AND (NOT ${persist} OR body.doc_id IS NOT ${doc})) OR EXISTS(SELECT 1 FROM mirror_pending pending WHERE pending.item_id=item.id AND (NOT ${persist} OR pending.doc_id IS NOT ${doc}))) AS stale FROM mirror_item item WHERE item.id IN (SELECT value FROM json_each(?))`,
+          [JSON.stringify(items.map((item) => item.id))],
+        ),
+      )
+      .map((row) => [row.id, row]),
+  );
+  for (const item of items) {
+    const row = held.get(item.id);
+    if (row === undefined) {
+      await upsertItem(tx, item, false);
+      await tx.execute('INSERT INTO mirror_search(item_id,title,body_text) VALUES(?,?,?)', [
+        item.id,
+        item.title,
+        '',
+      ]);
+    } else if (row.local !== 0 || row.stale !== 0 || row.snapshot !== JSON.stringify(item)) {
+      await saveItem(tx, item);
+    }
+  }
+}
+
 async function saveItem(tx: SqliteTransaction, item: MirrorItem, local = false): Promise<void> {
   if (item.canPersistBody) {
     const old = bodyRows.parse(
@@ -226,18 +279,7 @@ async function saveItem(tx: SqliteTransaction, item: MirrorItem, local = false):
       );
     }
   }
-  await tx.execute(
-    'INSERT INTO mirror_item(id, workspace_id, parent_id, title, snapshot, expires_at, local) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id, parent_id=excluded.parent_id, title=excluded.title, snapshot=excluded.snapshot, expires_at=excluded.expires_at, local=excluded.local',
-    [
-      item.id,
-      item.workspaceId,
-      item.parentId,
-      item.title,
-      JSON.stringify(item),
-      item.metadataExpiresAt === null ? null : Date.parse(item.metadataExpiresAt),
-      local ? 1 : 0,
-    ],
-  );
+  await upsertItem(tx, item, local);
   if (!item.canPersistBody) {
     await purgeBody(tx, item.id);
   } else if (item.bodyDocId === null) {
@@ -452,14 +494,15 @@ export class SqliteMirrorStore implements MirrorStore {
         if (this.sealed) throw new MirrorAccessRevokedError();
         let expiredRows = false;
         if (expire) {
-          await tx.execute(
-            'WITH RECURSIVE expired(id) AS (SELECT id FROM mirror_item WHERE expires_at<=? UNION SELECT item.id FROM mirror_item item JOIN expired ON item.parent_id=expired.id) DELETE FROM mirror_item WHERE id IN (SELECT id FROM expired)',
-            [Date.now()],
-          );
+          // RETURNING, so this is one round trip to the shell's store on every transaction, not
+          // two (the delete, then a count of what it removed).
           expiredRows =
-            z
-              .tuple([z.object({ count: z.number() })])
-              .parse(await tx.execute('SELECT changes() AS count'))[0].count > 0;
+            (
+              await tx.execute(
+                'WITH RECURSIVE expired(id) AS (SELECT id FROM mirror_item WHERE expires_at<=? UNION SELECT item.id FROM mirror_item item JOIN expired ON item.parent_id=expired.id) DELETE FROM mirror_item WHERE id IN (SELECT id FROM expired) RETURNING id',
+                [Date.now()],
+              )
+            ).length > 0;
         }
         const value = await work(tx);
         this.assertAccountAdmission();
@@ -631,18 +674,21 @@ export class SqliteMirrorStore implements MirrorStore {
           throw new Error('Snapshot boundary changed without reset');
         if (!page.complete && page.nextCursor === null)
           throw new Error('Incomplete snapshot has no resume cursor');
-        for (const item of page.items)
-          await tx.execute(
-            'INSERT INTO mirror_stage(workspace_id,id,snapshot) VALUES(?,?,?) ON CONFLICT(workspace_id,id) DO UPDATE SET snapshot=excluded.snapshot',
-            [workspaceId, item.id, JSON.stringify(item)],
-          );
+        // One statement for the page: each execute is a round trip to the shell's store.
+        await tx.execute(
+          "INSERT INTO mirror_stage(workspace_id,id,snapshot) SELECT ?, json_extract(value,'$[0]'), json_extract(value,'$[1]') FROM json_each(?) WHERE true ON CONFLICT(workspace_id,id) DO UPDATE SET snapshot=excluded.snapshot",
+          [workspaceId, JSON.stringify(page.items.map((item) => [item.id, JSON.stringify(item)]))],
+        );
         if (page.complete) {
           const staged = itemRows.parse(
             await tx.execute('SELECT snapshot FROM mirror_stage WHERE workspace_id=? ORDER BY id', [
               workspaceId,
             ]),
           );
-          for (const item of staged) await saveItem(tx, parseItem(item.snapshot));
+          await saveItems(
+            tx,
+            staged.map((item) => parseItem(item.snapshot)),
+          );
           const missing = textRows.parse(
             await tx.execute(
               'SELECT id AS value FROM mirror_item WHERE workspace_id=? AND local=0 AND id NOT IN(SELECT id FROM mirror_stage WHERE workspace_id=?)',
@@ -673,7 +719,7 @@ export class SqliteMirrorStore implements MirrorStore {
     await this.forWorkspace(
       workspaceId,
       async (tx) => {
-        for (const item of page.items) await saveItem(tx, item);
+        await saveItems(tx, page.items);
         await tx.execute(
           'INSERT INTO mirror_checkpoint(workspace_id,cursor) VALUES(?,?) ON CONFLICT(workspace_id) DO UPDATE SET cursor=excluded.cursor',
           [workspaceId, page.cursor],
@@ -690,7 +736,7 @@ export class SqliteMirrorStore implements MirrorStore {
       workspaceId,
       async (tx) => {
         for (const removed of page.removed) await purgeItem(tx, workspaceId, removed.itemId);
-        for (const item of page.items) await saveItem(tx, item);
+        await saveItems(tx, page.items);
       },
       true,
     );
@@ -1028,6 +1074,24 @@ export class SqliteMirrorStore implements MirrorStore {
     );
   }
 
+  /**
+   * The workspace's items that have a file, as the server last sent them. Unlike `listItems` this
+   * also answers for a sealed workspace (one being rebuilt, or whose rebuild failed): its files
+   * are still on the device, and the file sync must know them to keep them.
+   */
+  listFileItems(workspaceId: string): Promise<MirrorItem[]> {
+    return this.forWorkspace(workspaceId, async (tx) =>
+      itemRows
+        .parse(
+          await tx.execute(
+            "SELECT snapshot FROM mirror_item WHERE workspace_id=? AND json_extract(snapshot,'$.file') IS NOT NULL",
+            [workspaceId],
+          ),
+        )
+        .map((row) => parseItem(row.snapshot)),
+    );
+  }
+
   listItems(workspaceId: string): Promise<MirrorItem[]> {
     return this.forWorkspace(workspaceId, async (tx) => {
       if (this.sealedWorkspaces.has(workspaceId)) return [];
@@ -1155,10 +1219,42 @@ export class SqliteMirrorStore implements MirrorStore {
               throw new Error('Destination is not admitted for offline writes');
           }
         }
-        await tx.execute(
-          'INSERT INTO mirror_outbox(operation_id,workspace_id,item_id,operation_json) VALUES(?,?,?,?)',
-          [operation.operationId, workspaceId, operation.itemId, JSON.stringify(operation)],
-        );
+        // A title or property edited again before the last edit was sent replaces it in the queue
+        // (a field that saves as you type would otherwise queue an entry per pause, and one
+        // conflict would become many). Never the oldest entry: a pass may be sending that one.
+        const queued =
+          operation.kind === 'rename' || operation.kind === 'properties'
+            ? z
+                .array(z.object({ seq: z.number(), value: z.string(), first: z.number() }))
+                .parse(
+                  await tx.execute(
+                    'SELECT seq, operation_json AS value, (SELECT min(seq) FROM mirror_outbox WHERE workspace_id=?) AS first FROM mirror_outbox WHERE workspace_id=? ORDER BY seq DESC LIMIT 1',
+                    [workspaceId, workspaceId],
+                  ),
+                )[0]
+            : undefined;
+        const last = queued && queued.seq !== queued.first ? parseOperation(queued.value) : null;
+        const merged =
+          last?.itemId !== operation.itemId
+            ? null
+            : last.kind === 'rename' && operation.kind === 'rename'
+              ? { ...last, payload: operation.payload }
+              : last.kind === 'properties' && operation.kind === 'properties'
+                ? {
+                    ...last,
+                    payload: { changes: { ...last.payload.changes, ...operation.payload.changes } },
+                  }
+                : null;
+        if (merged !== null && queued !== undefined)
+          await tx.execute('UPDATE mirror_outbox SET operation_json=? WHERE seq=?', [
+            JSON.stringify(merged),
+            queued.seq,
+          ]);
+        else
+          await tx.execute(
+            'INSERT INTO mirror_outbox(operation_id,workspace_id,item_id,operation_json) VALUES(?,?,?,?)',
+            [operation.operationId, workspaceId, operation.itemId, JSON.stringify(operation)],
+          );
         if (operation.kind === 'rename')
           await tx.execute('UPDATE mirror_search SET title=? WHERE item_id=?', [
             operation.payload.title,
@@ -1211,6 +1307,20 @@ export class SqliteMirrorStore implements MirrorStore {
         await refreshBodySearch(tx, item);
       },
       true,
+    );
+  }
+
+  /** Changes made on this device that the server has not taken yet: queued operations plus notes with unsent text. */
+  countUnsent(): Promise<number> {
+    return this.transact(
+      async (tx) =>
+        z
+          .tuple([z.object({ count: z.number() })])
+          .parse(
+            await tx.execute(
+              'SELECT (SELECT count(*) FROM mirror_outbox) + (SELECT count(DISTINCT item_id) FROM mirror_pending) AS count',
+            ),
+          )[0].count,
     );
   }
 

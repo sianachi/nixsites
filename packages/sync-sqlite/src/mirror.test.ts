@@ -474,4 +474,129 @@ describe('SQLite mirror with real SQLite', () => {
     expect(notifications).toEqual([]);
     unsubscribe();
   });
+
+  it('reads an unchanged page once and still saves a changed item', async () => {
+    const { store, driver } = await setup();
+    await snapshot(store, [item(), item({ id: secondId, bodyDocId: null, bodyHeadSeq: null })]);
+    let writes = 0;
+    const counted = await openSqliteMirror({
+      scope,
+      driver: {
+        open() {
+          const connection = driver.open();
+          return {
+            ...connection,
+            transaction: (work) =>
+              connection.transaction((tx) =>
+                work({
+                  execute(sql, parameters) {
+                    if (/^(INSERT|UPDATE|DELETE)/.test(sql)) writes++;
+                    return tx.execute(sql, parameters);
+                  },
+                }),
+              ),
+          };
+        },
+      },
+    });
+    stores.push(counted);
+    const page = (items: MirrorItem[]) => ({ items, removed: [], serverTime });
+    const second = item({ id: secondId, bodyDocId: null, bodyHeadSeq: null });
+
+    writes = 0;
+    await counted.applyReconcilePage(workspace, page([item(), second]));
+    expect(writes).toBe(0);
+
+    await counted.applyReconcilePage(workspace, page([item({ title: 'Renamed' }), second]));
+    expect(writes).toBeGreaterThan(0);
+    expect((await counted.listItems(workspace)).map((held) => held.title).sort()).toEqual([
+      'Original',
+      'Renamed',
+    ]);
+    expect((await counted.searchItems(workspace, 'Renamed')).map((held) => held.id)).toEqual([
+      itemId,
+    ]);
+  });
+
+  it('counts queued operations and notes with unsent text', async () => {
+    const { store } = await setup();
+    await snapshot(store, [item()]);
+    expect(await store.countUnsent()).toBe(0);
+    await store.enqueue(workspace, {
+      kind: 'rename',
+      operationId,
+      itemId,
+      expectedRevision: '1',
+      payload: { title: 'Renamed' },
+    });
+    const doc = new Y.Doc();
+    doc.getText('note').insert(0, 'typed');
+    for (const clientId of ['a', 'b'])
+      await store.enqueueBodyUpdate(workspace, itemId, {
+        clientId,
+        update: Y.encodeStateAsUpdate(doc),
+      });
+    expect(await store.countUnsent()).toBe(2);
+  });
+
+  it('lists items with a file even while the workspace is sealed for a rebuild', async () => {
+    const { store } = await setup();
+    const file = {
+      versionId: docId,
+      fileName: 'a.txt',
+      mediaType: 'text/plain',
+      byteLength: 3,
+      sha256: 'a'.repeat(64),
+    };
+    await snapshot(store, [
+      item(),
+      item({
+        id: secondId,
+        type: 'file',
+        canPersistBody: false,
+        bodyDocId: null,
+        bodyHeadSeq: null,
+        file,
+      }),
+    ]);
+    await store.sealWorkspace(workspace);
+    expect(await store.listItems(workspace)).toEqual([]);
+    expect((await store.listFileItems(workspace)).map((held) => held.id)).toEqual([secondId]);
+  });
+
+  it('replaces a queued title or property edit with the next one, except the oldest entry', async () => {
+    const { store } = await setup();
+    await snapshot(store, [item()]);
+    const id = (n: number): string =>
+      `00000000-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`;
+    const rename = (n: number, title: string) =>
+      store.enqueue(workspace, {
+        kind: 'rename',
+        operationId: id(n),
+        itemId,
+        expectedRevision: '1',
+        payload: { title },
+      });
+    const set = (n: number, changes: Record<string, string | null>) =>
+      store.enqueue(workspace, {
+        kind: 'properties',
+        operationId: id(n),
+        itemId,
+        expectedRevision: '1',
+        payload: { changes },
+      });
+    await rename(1, 'A');
+    await rename(2, 'B');
+    await rename(3, 'C');
+    await set(4, { status: 'open', owner: 'me' });
+    await set(5, { status: 'done', owner: null });
+    const queued = await store.listOutbox(workspace);
+    expect(queued.map((operation) => [operation.operationId, operation.payload])).toEqual([
+      [id(1), { title: 'A' }],
+      [id(2), { title: 'C' }],
+      [id(4), { changes: { status: 'done', owner: null } }],
+    ]);
+    expect((await store.readItems([itemId]))[0]?.title).toBe('C');
+    expect((await store.searchItems(workspace, 'C')).map((held) => held.id)).toEqual([itemId]);
+  });
 });

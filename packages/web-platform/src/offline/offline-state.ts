@@ -56,3 +56,15 @@ export function useOfflineState(): OfflineState {
 
 /** Whether requests must be answered from the synced copy without trying the network. */
 export const isBootOffline = (): boolean => state.bootOffline;
+
+/**
+ * `run` once, shortly after a burst of calls. The store tells its subscribers of every change, and
+ * a file sync changes it once per file: each screen that re-reads on a change does so once.
+ */
+export function coalesced(run: () => void, ms = 250): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return () => {
+    clearTimeout(timer);
+    timer = setTimeout(run, ms);
+  };
+}

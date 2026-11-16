@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   MirrorAccessRevokedError,
+  MirrorHttpError,
   runSyncPass,
   type BodySyncRequest,
   type BodySyncResponse,
@@ -399,6 +400,7 @@ describe('resumable sync engine with real SQLite', () => {
     const result = await sync(store, api);
     expect(result).toEqual({
       status: 'complete',
+      more: false,
       cursor: '1',
       replayedOperations: 0,
       syncedBodies: 41,
@@ -643,6 +645,37 @@ describe('resumable sync engine with real SQLite', () => {
     }
     for (const conflict of conflicts) await store.dismissConflict(workspaceId, conflict.id);
     expect(await store.readBody(workspaceId, localId)).toBeNull();
+  });
+
+  it('turns an operation the server will never take into a conflict and replays the rest', async () => {
+    const { store, api } = await setup(new FakeApi([item()]));
+    await sync(store, api);
+    const edit = (operationId: string, title: string) =>
+      store.enqueue(workspaceId, {
+        kind: 'rename',
+        operationId,
+        itemId: id(10),
+        expectedRevision: '1',
+        payload: { title },
+      });
+    await edit(id(100), 'Rejected');
+    await edit(id(101), 'Kept');
+    const realReplay = api.replay.bind(api);
+    api.replay = (input) =>
+      input.operation.operationId === id(100)
+        ? Promise.reject(new MirrorHttpError(400, '/sync/replay'))
+        : realReplay(input);
+    const result = await sync(store, api);
+    expect(result).toMatchObject({ replayedOperations: 1, conflicts: 1 });
+    expect(await store.peekOutbox(workspaceId)).toBeNull();
+    expect((await store.listConflicts(workspaceId)).map((conflict) => conflict.code)).toEqual([
+      'sync.replay_rejected',
+    ]);
+
+    await edit(id(102), 'Server down');
+    api.replay = () => Promise.reject(new MirrorHttpError(500, '/sync/replay'));
+    await expect(sync(store, api)).rejects.toBeInstanceOf(MirrorHttpError);
+    expect(await store.peekOutbox(workspaceId)).not.toBeNull();
   });
 
   it('replays FIFO edits with the revision returned by the previous operation', async () => {

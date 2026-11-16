@@ -487,6 +487,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           if (body === null) return;
           session = browserSessionSchema.safeParse(body.value);
         }
+        // JSON that is not Core's session shape (a portal, a proxy) is no answer either: closing
+        // here wipes the synced copy and every change still queued in it.
+        if (response.ok && session?.success !== true) return;
         if (
           session?.success !== true ||
           !session.data.authenticated ||
@@ -740,6 +743,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
             );
             if (!hasCurrentSession()) return null;
             if (!parsed?.success) {
+              // With a synced copy open, an answer that is not Core's is treated as no answer:
+              // closing the session would wipe the copy and every change still queued in it.
+              if (getNativeMirror()?.current() != null) throw new CoreUnreachable('server');
               closeSession(subject, 'Core returned an invalid session. Sign in again to continue.');
               return null;
             }

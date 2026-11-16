@@ -3,7 +3,7 @@ import { Button, Dialog, Text } from '@nix/ui';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { getNativeMirror } from './native-mirror';
-import { useOfflineState } from './offline-state';
+import { coalesced, useOfflineState } from './offline-state';
 import { recoveryText } from './recovery-text';
 
 /**
@@ -28,6 +28,24 @@ const WHAT: Record<string, string> = {
 
 export const describeConflict = (conflict: MirrorConflict): string =>
   conflict.kind === 'body' ? 'Note text' : (WHAT[conflict.operation?.kind ?? ''] ?? 'Change');
+
+const WHY: Record<string, string> = {
+  'sync.revision_conflict': 'It was changed on the server after you went offline.',
+  'items.lifecycle_conflict': 'It was moved to the trash or archived on the server.',
+  'items.not_found': 'It no longer exists on the server.',
+  'items.parent_not_found': 'The page it belongs under no longer exists on the server.',
+  'items.locked': 'It is locked.',
+  'items.move_would_create_cycle': 'It cannot be moved inside itself.',
+  'items.schema_violation': 'A property value is not allowed here.',
+  document_changed: 'The note was replaced on the server. Copy your text to keep it.',
+  document_read_only: 'You can no longer edit this note. Copy your text to keep it.',
+  invalid_local_update: 'The edit could not be read. Copy your text to keep it.',
+  response_too_large: 'The note is too large to sync from this device.',
+};
+
+/** Why the change was not applied, in plain words; an unlisted code gets the general reason. */
+export const explainConflict = (conflict: MirrorConflict): string =>
+  WHY[conflict.code] ?? 'The server did not accept it.';
 
 async function loadRows(): Promise<Row[]> {
   const store = getNativeMirror()?.current();
@@ -59,7 +77,7 @@ export function OfflineConflicts(): ReactNode {
   useEffect(() => {
     if (mirror === null) return;
     refresh();
-    return mirror.current()?.subscribe(refresh);
+    return mirror.current()?.subscribe(coalesced(refresh));
   }, [mirror, refresh, lastSyncedAt, bootOffline]);
 
   if (rows.length === 0) return null;
@@ -111,7 +129,7 @@ export function OfflineConflicts(): ReactNode {
             <li key={row.conflict.id} className="flex flex-col gap-1">
               <Text as="p">{row.title}</Text>
               <Text as="p" variant="note" tone="muted">
-                {describeConflict(row.conflict)} — {row.conflict.code}
+                {describeConflict(row.conflict)}. {explainConflict(row.conflict)}
               </Text>
               <div className="flex gap-2">
                 {row.conflict.kind === 'body' ? (

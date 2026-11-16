@@ -1,11 +1,12 @@
-import { MirrorAccessRevokedError, type MirrorApi } from './mirror.js';
+import { MirrorAccessRevokedError, MirrorHttpError, type MirrorApi } from './mirror.js';
 
-export class MirrorHttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly path: string,
-  ) {
-    super(`Sync request failed with HTTP ${status.toString()}: ${path}`);
+export { MirrorHttpError };
+
+/** No answer came back at all (offline, or the server is down): says nothing about the sync itself. */
+export class MirrorUnreachableError extends Error {
+  constructor(cause?: unknown) {
+    super('The server could not be reached', { cause });
+    this.name = 'MirrorUnreachableError';
   }
 }
 
@@ -15,6 +16,8 @@ export interface FetchMirrorApiOptions {
   /** Collab origin that serves `POST /documents/sync`. */
   collabUrl: string;
   getToken: () => Promise<string>;
+  /** Waits out a rate limit; tests pass one that does not sleep. */
+  wait?: (ms: number) => Promise<void>;
   /**
    * Called on a 401 after the caller had a chance to refresh the token. Return true only when the
    * session is definitively closed (the account is then wiped); false rethrows so a transient
@@ -27,6 +30,8 @@ export interface FetchMirrorApiOptions {
 /** Transport-agnostic MirrorApi over fetch: bearer token from `getToken`, no cookies. */
 export function createFetchMirrorApi(options: FetchMirrorApiOptions): MirrorApi {
   const doFetch = options.fetch ?? fetch;
+  const wait =
+    options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const trim = (url: string): string => url.replace(/\/+$/, '');
   const core = trim(options.coreUrl);
   const collab = trim(options.collabUrl);
@@ -42,16 +47,34 @@ export function createFetchMirrorApi(options: FetchMirrorApiOptions): MirrorApi 
       accept: 'application/json',
     };
     if (init.body !== undefined) headers['content-type'] = 'application/json';
-    const response = await doFetch(`${base}${path}`, {
-      method: init.method,
-      headers,
-      credentials: 'omit',
-      cache: 'no-store',
-      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-    });
+    let response: Response;
+    for (let attempt = 0; ; attempt++) {
+      response = await doFetch(`${base}${path}`, {
+        method: init.method,
+        headers,
+        credentials: 'omit',
+        cache: 'no-store',
+        ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      }).catch((error: unknown) => {
+        throw new MirrorUnreachableError(error);
+      });
+      if (response.status !== 429 || attempt === 2) break;
+      // Core's rate limit: wait as told (capped well inside the pass's 60 s lease), then try again.
+      const seconds = Number(response.headers.get('retry-after') ?? '');
+      await wait(Math.min(Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 2000, 15_000));
+    }
     if (response.status === 401 && options.isSessionClosed?.() === true)
       throw new MirrorAccessRevokedError('account');
-    if (workspace && (response.status === 403 || response.status === 404))
+    // Revocation wipes the workspace's copy and its queued edits, so only Core's own refusal (a
+    // problem with a `code`) counts: a proxy's, bot check's or mid-deploy 403/404 must not.
+    if (
+      workspace &&
+      (response.status === 403 || response.status === 404) &&
+      (await response.json().then(
+        (body: unknown) => typeof (body as { code?: unknown } | null)?.code === 'string',
+        () => false,
+      ))
+    )
       throw new MirrorAccessRevokedError('workspace');
     if (!response.ok) throw new MirrorHttpError(response.status, path.split('?')[0] ?? path);
     return response.json();

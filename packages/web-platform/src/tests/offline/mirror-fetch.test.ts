@@ -110,6 +110,7 @@ function setup(
 ) {
   const onReachability = vi.fn();
   const onUnlocked = vi.fn();
+  const onWritten = vi.fn();
   const inner = over.inner ?? vi.fn(() => Promise.reject(new TypeError('Load failed')));
   const store = over.store === undefined ? fakeStore() : over.store;
   const run = createMirrorFetch({
@@ -120,9 +121,10 @@ function setup(
     onReachability,
     createBlobUrl: () => `blob:${location.origin}/abc`,
     onUnlocked,
+    onWritten,
   });
   const get = async (path: string, init?: RequestInit) => run(`${location.origin}${path}`, init);
-  return { get, inner, onReachability, onUnlocked };
+  return { get, inner, onReachability, onUnlocked, onWritten };
 }
 
 describe('mirror fetch router', () => {
@@ -321,6 +323,57 @@ describe('mirror fetch router', () => {
     await get('/api/v1/items/abc/unlock', { method: 'POST' });
     await get('/api/v1/items/abc/unlock');
     expect(onUnlocked).not.toHaveBeenCalled();
+  });
+
+  it('reports an accepted item or workspace change, not reads, refusals or other routes', async () => {
+    const status = { value: 200 };
+    const inner = vi.fn(() => Promise.resolve(new Response('{}', { status: status.value })));
+    const { get, onWritten } = setup({ inner: inner as unknown as typeof fetch });
+    await get('/api/v1/items/abc', { method: 'PATCH', body: '{"title":"x"}' });
+    await get('/api/v1/workspaces/w/items', { method: 'POST', body: '{}' });
+    expect(onWritten).toHaveBeenCalledTimes(2);
+    onWritten.mockClear();
+    await get('/api/v1/items/abc');
+    await get('/api/v1/workspaces/w/query', { method: 'POST', body: '{}' });
+    await get('/api/v1/me/preferences', { method: 'PUT', body: '{}' });
+    status.value = 409;
+    await get('/api/v1/items/abc', { method: 'PATCH', body: '{"title":"x"}' });
+    expect(onWritten).not.toHaveBeenCalled();
+  });
+
+  it('reads the lock settings once across requests, and again after the store changes', async () => {
+    const store = fakeStore();
+    let changed: () => void = () => undefined;
+    store.subscribe = (listener) => {
+      changed = listener;
+      return () => undefined;
+    };
+    const getSetting = vi.spyOn(store, 'getSetting');
+    const { get } = setup({ store });
+    await get(`/api/v1/items/${ROOT}`);
+    await get(`/api/v1/items/${CHILD}`);
+    const lockReads = (): number =>
+      getSetting.mock.calls.filter(([key]) => key.startsWith('offline.') && !key.includes('cache'))
+        .length;
+    expect(lockReads()).toBe(2);
+    changed();
+    await get(`/api/v1/items/${ROOT}`);
+    expect(lockReads()).toBe(4);
+  });
+
+  it('does not load a very large file into memory offline', async () => {
+    const big = items.find((entry) => entry.id === FILE);
+    const file = big?.file;
+    if (big === undefined || file == null) throw new Error('fixture');
+    big.file = { ...file, byteLength: 200 * 1024 * 1024 };
+    try {
+      const { get } = setup();
+      const response = await get(`/api/v1/items/${FILE}/file/download`);
+      expect(response.status).toBe(503);
+      expect(((await response.json()) as { detail: string }).detail).toMatch(/too large/);
+    } finally {
+      big.file = file;
+    }
   });
 
   it('does not intercept other origins', async () => {
