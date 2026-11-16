@@ -120,12 +120,15 @@ public class NixShellPlugin: CAPPlugin, CAPBridgedPlugin {
         return URL(string: "\(origin)/auth/login?native=\(challenge)&returnTo=\(encoded)")
     }
 
-    /// The code from `app.nix.shell://auth?code=...&iss=...`, only for exactly that shape and only from
-    /// the server sign-in started on (RFC 9207). Otherwise a malicious saved server could redirect the
-    /// sheet to another server's login and be handed the code and the verifier for it.
+    /// The code from `app.nix.shell://auth?code=...&iss=...`, only from the server sign-in started on
+    /// (RFC 9207). Otherwise a malicious saved server could redirect the sheet to another server's
+    /// login and be handed the code and the verifier for it. `code` and `iss` must each appear once;
+    /// a parameter this build does not know is ignored, so a newer server that adds one does not
+    /// lock every installed app out of sign-in (which the arrival of `iss` itself did).
     static func handoffCode(_ url: URL?, issuer: String) -> String? {
         guard let url, url.scheme?.lowercased() == callbackScheme, url.host?.lowercased() == "auth",
-              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems, items.count == 2,
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              items.filter({ $0.name == "code" }).count == 1, items.filter({ $0.name == "iss" }).count == 1,
               let code = items.first(where: { $0.name == "code" })?.value, !code.isEmpty,
               let iss = items.first(where: { $0.name == "iss" })?.value,
               origin(URL(string: iss)) == issuer else { return nil }

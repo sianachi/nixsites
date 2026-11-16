@@ -41,6 +41,7 @@ public actor Store {
 
     private var activeTx: String?
     private var txGeneration = 0
+    private var idleTimer: Task<Void, Never>?
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
     init(origin: String, baseDir: URL, idleTimeout: TimeInterval = 30, downloads: Downloads? = nil) {
@@ -158,6 +159,8 @@ public actor Store {
 
     private func releaseGate() {
         activeTx = nil
+        idleTimer?.cancel()
+        idleTimer = nil
         txGeneration += 1
         let pending = waiters
         waiters = []
@@ -178,8 +181,10 @@ public actor Store {
         txGeneration += 1
         let generation = txGeneration
         let nanos = UInt64(idleTimeout * 1_000_000_000)
-        Task { [weak self] in
-            try? await Task.sleep(nanoseconds: nanos)
+        // One timer, not one sleeping task per statement: a first sync runs tens of thousands.
+        idleTimer?.cancel()
+        idleTimer = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: nanos) } catch { return }
             await self?.expire(generation)
         }
     }

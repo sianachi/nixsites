@@ -32,6 +32,25 @@ final class NixStoreTests: XCTestCase {
         XCTAssertEqual((rows[0]["e"] as? [String: String])?["$b64"], blob.base64EncodedString())
     }
 
+    /// The page's sync statements that lean on newer SQLite: JSON table functions and RETURNING.
+    func testJsonPageStatementsAndDeleteReturning() async throws {
+        let s = Store(origin: "https://a.example", baseDir: dir)
+        _ = try await s.execute("CREATE TABLE stage(workspace_id TEXT, id TEXT, snapshot TEXT, PRIMARY KEY(workspace_id, id))")
+        let tx = try await s.begin()
+        let page = #"[["a","{\"id\":\"a\",\"title\":\"é\\n\"}"],["b","{\"id\":\"b\"}"]]"#
+        _ = try await s.execute(
+            "INSERT INTO stage(workspace_id,id,snapshot) SELECT ?, json_extract(value,'$[0]'), json_extract(value,'$[1]') FROM json_each(?) WHERE true ON CONFLICT(workspace_id,id) DO UPDATE SET snapshot=excluded.snapshot",
+            [.text("w"), .text(page)], tx: tx)
+        let held = try await s.execute("SELECT id, snapshot FROM stage WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id", [.text(#"["a","b","c"]"#)], tx: tx)
+        XCTAssertEqual(held.map { $0["id"] }, [.text("a"), .text("b")])
+        XCTAssertEqual(held[0]["snapshot"], .text(#"{"id":"a","title":"é\n"}"#))
+        let gone = try await s.execute("DELETE FROM stage WHERE id=? RETURNING id", [.text("a")], tx: tx)
+        XCTAssertEqual(gone.map { $0["id"] }, [.text("a")])
+        let none = try await s.execute("DELETE FROM stage WHERE id=? RETURNING id", [.text("zz")], tx: tx)
+        XCTAssertTrue(none.isEmpty)
+        try await s.commit(tx)
+    }
+
     func testTransactionCommitRollbackAndWrongId() async throws {
         let s = Store(origin: "https://a.example", baseDir: dir)
         _ = try await s.execute("CREATE TABLE t(a)")
