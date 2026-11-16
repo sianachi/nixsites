@@ -82,8 +82,8 @@ const MAX_POLL_MS = 2_000;
 const ROLLBACK_WATCH_MS = 60_000;
 const CHILD_PAGE = 100;
 
-function settling(site: Site): boolean {
-  const status = site.latestBuild?.status;
+function settling(site: Site | null): boolean {
+  const status = site?.latestBuild?.status;
   return status === 'queued' || status === 'building' || status === 'sealed';
 }
 
@@ -143,7 +143,10 @@ export function useItemSite(
 
   const siteId = site?.id ?? null;
   const latest = site?.latestBuild ?? null;
-  const latestKey = latest === null ? '' : `${latest.id}:${latest.status}`;
+  // One key for every pending state of a build: the poll already carries its progress, so the
+  // history is read again when a build appears and when it ends, not at each step between.
+  const latestKey =
+    latest === null ? '' : `${latest.id}:${settling(site) ? 'pending' : latest.status}`;
   const liveId = site?.liveBuild?.id ?? null;
 
   // The builds, re-read whenever the latest or live build changes.
