@@ -38,6 +38,10 @@ follows semantic versioning (`0.x` pre-1.0).
   desktop and the phone video side by side on a desktop or tablet, the phone video alone on a phone.
   Neither downloads or plays until you press Play.
 
+- The phone and desktop apps show how many offline changes are still waiting to sync, say in plain
+  words why a change was not applied, and Settings > About shows when the offline copy last synced
+  with a Sync now button.
+
 ### Changed
 
 - New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
@@ -68,6 +72,32 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- The phone and desktop apps no longer delete a workspace's offline copy, queued edits included,
+  when a proxy or bot check in front of the server answers a sync request with 403 or 404. Only a
+  refusal from Nix itself removes the copy.
+- Offline sync is faster: a pass no longer rewrites every item it already holds unchanged, and a
+  first sync stores each page of items in one step.
+- Offline sync waits out a rate limit and tries again instead of failing the workspace, and says so
+  when a whole pass fails.
+- A queued offline change the server will never accept no longer blocks every change behind it: it
+  is listed with the changes that need attention and the rest are sent.
+- Returning to the phone app mid-sync no longer shows "could not be synced": an interrupted pass
+  is run again. A long queue of offline changes is sent in consecutive passes, not one every five
+  minutes.
+- Changes made while connected reach the offline copy within about a minute, not at the next
+  five-minute pass, so going offline soon afterwards no longer shows the older state.
+- Downloaded files are kept when a workspace's sync is cut short, where they were deleted and
+  downloaded again.
+- Typing in a note offline is queued in bursts, not one entry per keystroke, so long offline
+  writing stays responsive and syncs in fewer passes.
+- An answer that is not from Nix (a sign-in portal, a proxy page) during a session check no longer
+  wipes the offline copy.
+- The iOS app no longer closes when you choose to take a photo or video for an upload: it now asks
+  for the camera and microphone.
+- First-run setup started from the phone or desktop app returns to the app when it finishes.
+- A title or property edited several times offline is sent as one change, and a file too large to
+  open offline says so and no longer ends the app.
+- The Android app is excluded from device backup and transfer, which carried its signed-in session.
 - In Settings > Access tokens the Rotate and Revoke buttons no longer run into each other when a
   token has a long name. They read Rotate and Revoke; the token's name stays in the row.
 
