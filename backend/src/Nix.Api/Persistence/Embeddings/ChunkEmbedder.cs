@@ -33,9 +33,10 @@ public sealed class ChunkEmbedder(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Off the startup path: loading the model takes a moment and must not delay readiness.
         await Task.Yield();
-        if (!embedder.Available)
+        // Only whether the files are there: the model itself loads when the first chunk needs it, so
+        // an install with nothing to embed never holds it.
+        if (!embedder.Installed)
         {
             return;
         }

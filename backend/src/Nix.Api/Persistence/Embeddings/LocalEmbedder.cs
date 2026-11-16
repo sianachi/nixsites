@@ -32,20 +32,65 @@ public sealed class LocalEmbedder : IDisposable
 
     private const int MaxTokens = 510;
 
-    private readonly Lazy<(InferenceSession Session, BertTokenizer Tokenizer)?> _model;
+    /// <summary>How long the model stays loaded after its last use.</summary>
+    public static readonly TimeSpan DefaultIdleRelease = TimeSpan.FromMinutes(10);
 
-    /// <summary>Loads lazily from <paramref name="directory"/>, the folder holding <c>model.onnx</c> and <c>vocab.txt</c>.</summary>
-    public LocalEmbedder(string directory, ILogger<LocalEmbedder>? logger = null)
+    private readonly string _directory;
+    private readonly ILogger _log;
+    private readonly TimeSpan _idleRelease;
+    private readonly Lock _gate = new();
+    private readonly Timer _idleTimer;
+    private (InferenceSession Session, BertTokenizer Tokenizer)? _loaded;
+    private bool _failed;
+    private int _inUse;
+    private long _lastUsed;
+    private bool _disposed;
+
+    /// <summary>
+    /// Reads <c>model.onnx</c> and <c>vocab.txt</c> from <paramref name="directory"/> on first use, and
+    /// lets them go again after <paramref name="idleRelease"/> without one: the model is about 100 MB
+    /// that an install nobody is searching or editing in has no reason to hold.
+    /// </summary>
+    public LocalEmbedder(string directory, ILogger<LocalEmbedder>? logger = null, TimeSpan? idleRelease = null)
     {
-        var log = logger ?? NullLogger<LocalEmbedder>.Instance;
-        _model = new(() => Load(directory, log), LazyThreadSafetyMode.ExecutionAndPublication);
+        _directory = directory;
+        _log = logger ?? NullLogger<LocalEmbedder>.Instance;
+        _idleRelease = idleRelease ?? DefaultIdleRelease;
+        _idleTimer = new Timer(_ => ReleaseIfIdle(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>The default location: <c>models/bge-small-en-v1.5</c> beside the application.</summary>
     public static string DefaultDirectory => Path.Combine(AppContext.BaseDirectory, "models", "bge-small-en-v1.5");
 
-    /// <summary>Whether the model loaded; false means retrieval is full-text only.</summary>
-    public bool Available => _model.Value is not null;
+    /// <summary>Whether the model's files are present. Does not load them.</summary>
+    public bool Installed =>
+        File.Exists(Path.Combine(_directory, "model.onnx")) && File.Exists(Path.Combine(_directory, "vocab.txt"));
+
+    /// <summary>Whether the model is in memory right now.</summary>
+    public bool Loaded
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _loaded is not null;
+            }
+        }
+    }
+
+    /// <summary>Whether the model loads (loading it if need be); false means retrieval is full-text only.</summary>
+    public bool Available
+    {
+        get
+        {
+            if (Acquire() is null)
+            {
+                return false;
+            }
+            Release();
+            return true;
+        }
+    }
 
     /// <summary>Embeds a search query, or returns null when the model is unavailable.</summary>
     public float[]? EmbedQuery(string query) => Embed([QueryInstruction + query])?[0];
@@ -54,12 +99,75 @@ public sealed class LocalEmbedder : IDisposable
     public float[][]? Embed(IReadOnlyList<string> texts)
     {
         ArgumentNullException.ThrowIfNull(texts);
-        if (_model.Value is not { } model || texts.Count == 0)
+        if (texts.Count == 0 || Acquire() is not { } model)
         {
             return null;
         }
-        var (session, tokenizer) = model;
+        try
+        {
+            return Run(model.Session, model.Tokenizer, texts);
+        }
+        finally
+        {
+            Release();
+        }
+    }
 
+    /// <summary>The loaded model, counted as in use until <see cref="Release"/>; null when it cannot load.</summary>
+    private (InferenceSession Session, BertTokenizer Tokenizer)? Acquire()
+    {
+        lock (_gate)
+        {
+            if (_disposed || _failed)
+            {
+                return null;
+            }
+            // A load that fails is not tried again: the reason is in the log once, not once per request.
+            _loaded ??= Load(_directory, _log);
+            if (_loaded is null)
+            {
+                _failed = true;
+                return null;
+            }
+            _inUse++;
+            return _loaded;
+        }
+    }
+
+    private void Release()
+    {
+        lock (_gate)
+        {
+            _inUse--;
+            _lastUsed = Environment.TickCount64;
+            if (!_disposed)
+            {
+                _idleTimer.Change(_idleRelease, Timeout.InfiniteTimeSpan);
+            }
+        }
+    }
+
+    private void ReleaseIfIdle()
+    {
+        lock (_gate)
+        {
+            if (_disposed || _loaded is not { } model || _inUse > 0)
+            {
+                return;
+            }
+            var idle = TimeSpan.FromMilliseconds(Environment.TickCount64 - _lastUsed);
+            if (idle < _idleRelease)
+            {
+                _idleTimer.Change(_idleRelease - idle, Timeout.InfiniteTimeSpan);
+                return;
+            }
+            model.Session.Dispose();
+            _loaded = null;
+        }
+    }
+
+    private static float[][] Run(InferenceSession session, BertTokenizer tokenizer, IReadOnlyList<string> texts)
+    {
         var encoded = texts.Select(text => tokenizer.EncodeToIds(text, MaxTokens, true, out _, out _)).ToArray();
         var length = encoded.Max(ids => ids.Count);
         var ids = new DenseTensor<long>([texts.Count, length]);
@@ -122,10 +230,17 @@ public sealed class LocalEmbedder : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_model.IsValueCreated && _model.Value is { } model)
+        lock (_gate)
         {
-            model.Session.Dispose();
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            _loaded?.Session.Dispose();
+            _loaded = null;
         }
+        _idleTimer.Dispose();
     }
 
     private static (InferenceSession, BertTokenizer)? Load(string directory, ILogger log)

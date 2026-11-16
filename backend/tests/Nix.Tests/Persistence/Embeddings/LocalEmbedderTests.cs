@@ -24,10 +24,36 @@ public sealed class LocalEmbedderTests
     }
 
     [Fact]
+    public async Task The_model_loads_on_first_use_and_is_released_after_sitting_idle()
+    {
+        using var embedder = new LocalEmbedder(LocalEmbedder.DefaultDirectory, idleRelease: TimeSpan.FromMilliseconds(150));
+        Assert.SkipUnless(embedder.Installed, "The local embedding model is not fetched (scripts/fetch-embedding-model.sh).");
+
+        // Knowing the files are there loads nothing.
+        Assert.False(embedder.Loaded);
+
+        var first = embedder.EmbedQuery("How much notice is needed to cancel the contract?")!;
+        Assert.True(embedder.Loaded);
+
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (embedder.Loaded && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+        Assert.False(embedder.Loaded);
+
+        // The next use loads it again and answers the same.
+        var again = embedder.EmbedQuery("How much notice is needed to cancel the contract?")!;
+        Assert.True(embedder.Loaded);
+        Assert.Equal(first, again);
+    }
+
+    [Fact]
     public void A_missing_model_is_unavailable_rather_than_an_error()
     {
         using var embedder = new LocalEmbedder(Path.Combine(Path.GetTempPath(), "no-such-model"));
 
+        Assert.False(embedder.Installed);
         Assert.False(embedder.Available);
         Assert.Null(embedder.EmbedQuery("anything"));
     }

@@ -65,6 +65,10 @@ follows semantic versioning (`0.x` pre-1.0).
 - The one-line install asks for about 4 GB of memory for Docker instead of 8 GB, and warns below
   3 GiB instead of 7 GiB. The running stack was measured at about 1 GB.
 
+- Core uses about 85 MiB less memory when nobody is searching or editing notes: the embedding model
+  behind passage search loads on first use and is released after ten idle minutes, where it loaded
+  at every start. In a 768 MiB container Core went from about 180 MiB to about 96 MiB at start.
+
 ### Removed
 
 - Eye of Ra and Demiurge are no longer companion appearances. Existing profiles use Owl instead,
