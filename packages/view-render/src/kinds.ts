@@ -351,7 +351,10 @@ export function drawCalendar(request: RenderRequest): Drawing {
     const day = Number(stamp.slice(8, 10));
 
     if (Number.isFinite(day) && day > 0) {
-      byDay.set(day, [...(byDay.get(day) ?? []), row]);
+      // Appended in place: copying the day's rows for each new one grows with their square.
+      const held = byDay.get(day);
+      if (held === undefined) byDay.set(day, [row]);
+      else held.push(row);
     }
   }
 
@@ -574,7 +577,9 @@ function groupRows(
 
   for (const row of rows) {
     const key = rawOf(row, groupBy) ?? '';
-    buckets.set(key, [...(buckets.get(key) ?? []), row]);
+    const held = buckets.get(key);
+    if (held === undefined) buckets.set(key, [row]);
+    else held.push(row);
   }
 
   const ordered = groupOrder.filter((value) => buckets.has(value));
