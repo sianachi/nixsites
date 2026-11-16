@@ -599,4 +599,16 @@ describe('SQLite mirror with real SQLite', () => {
     expect((await store.readItems([itemId]))[0]?.title).toBe('C');
     expect((await store.searchItems(workspace, 'C')).map((held) => held.id)).toEqual([itemId]);
   });
+
+  it('reads pending updates through an index on the item', async () => {
+    const { store, driver } = await setup();
+    await snapshot(store, [item()]);
+    const plan = await driver
+      .open()
+      .execute(
+        'EXPLAIN QUERY PLAN SELECT client_id FROM mirror_pending WHERE item_id=? ORDER BY seq',
+        [itemId],
+      );
+    expect(JSON.stringify(plan)).toContain('mirror_pending_item');
+  });
 });

@@ -67,6 +67,8 @@ const schema = [
   'CREATE TABLE IF NOT EXISTS mirror_body (item_id TEXT PRIMARY KEY REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, doc_id TEXT NOT NULL, confirmed_update BLOB NOT NULL, state_vector BLOB NOT NULL, head_seq TEXT, schema_version INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS mirror_body_request (item_id TEXT PRIMARY KEY REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE)',
   'CREATE TABLE IF NOT EXISTS mirror_pending (seq INTEGER PRIMARY KEY AUTOINCREMENT, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, doc_id TEXT, client_id TEXT NOT NULL UNIQUE, update_blob BLOB NOT NULL)',
+  // Pending updates are read per item in sequence order, and body candidates ask whether an item has any.
+  'CREATE INDEX IF NOT EXISTS mirror_pending_item ON mirror_pending (item_id, seq)',
   'CREATE TABLE IF NOT EXISTS mirror_outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, operation_id TEXT NOT NULL UNIQUE, workspace_id TEXT NOT NULL, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, operation_json TEXT NOT NULL)',
   'CREATE INDEX IF NOT EXISTS mirror_outbox_item ON mirror_outbox (workspace_id,item_id)',
   'CREATE TABLE IF NOT EXISTS mirror_conflict (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, kind TEXT NOT NULL, code TEXT NOT NULL, operation_json TEXT, created_at TEXT NOT NULL)',
