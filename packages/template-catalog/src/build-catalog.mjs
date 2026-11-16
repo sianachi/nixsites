@@ -167,6 +167,13 @@ async function makeTemplate(definition) {
       body: prose(definition.description),
     }),
   );
+  // One pass, in record order, in place of a scan of every record for each record's children.
+  const childrenOf = new Map();
+  for (const record of records) {
+    const siblings = childrenOf.get(record.parentId);
+    if (siblings === undefined) childrenOf.set(record.parentId, [record]);
+    else siblings.push(record);
+  }
   for (const item of records) {
     const isTaskContainer = item.kind === 'task-container';
     const isContentContainer = item.kind === 'content-container';
@@ -181,7 +188,7 @@ async function makeTemplate(definition) {
         : item.kind === 'form'
           ? ['interactive_form', 'list']
           : [];
-    const children = records.filter((candidate) => candidate.parentId === item.id);
+    const children = childrenOf.get(item.id) ?? [];
     const bodyLinks =
       definition.key === 'nix.onboarding-plan' && item.key === 'welcome'
         ? [
