@@ -68,6 +68,8 @@ follows semantic versioning (`0.x` pre-1.0).
 - Core uses about 85 MiB less memory when nobody is searching or editing notes: the embedding model
   behind passage search loads on first use and is released after ten idle minutes, where it loaded
   at every start. In a 768 MiB container Core went from about 180 MiB to about 96 MiB at start.
+- The MCP service idles at about 51 MiB where it held about 84 MiB: `nixctl mcp --listen` starts
+  without loading the rest of the CLI, and loads the tools with the first request.
 
 ### Removed
 

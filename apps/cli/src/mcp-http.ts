@@ -3,7 +3,6 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createNixClient, NixApiError, principal } from '@nix/api-client';
-import { createWorkspaceMcpServer } from './mcp.ts';
 import { openSession, type FetchImpl, type Session } from './session.ts';
 
 /**
@@ -132,8 +131,10 @@ export function createMcpHttpHandler(
 
   const build =
     options.createServer ??
-    ((session: () => Promise<Session>) =>
-      createWorkspaceMcpServer({ resolve: session, transport: 'http' }));
+    // The tools are loaded with the first request that reaches them: the service runs on every
+    // install, and one nobody connects an agent to should not hold the whole tool set in memory.
+    (async (session: () => Promise<Session>) =>
+      (await import('./mcp.ts')).createWorkspaceMcpServer({ resolve: session, transport: 'http' }));
 
   return async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost');

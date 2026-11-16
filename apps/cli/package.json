@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Nix CLI (nixctl): the scriptable, machine-readable way into a workspace without a browser",
   "bin": {
-    "nixctl": "src/index.ts"
+    "nixctl": "src/bin.ts"
   },
   "scripts": {
     "dev": "node --experimental-strip-types src/index.ts",
