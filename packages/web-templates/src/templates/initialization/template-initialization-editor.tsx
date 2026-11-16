@@ -50,8 +50,15 @@ export function TemplateInitializationEditor({
   );
   const targets = collectTargets(root);
 
+  // Keyed by the distinct ids, not the array: an edit elsewhere in the form recreates the array
+  // with the same items, and their titles must not be requested again for it.
+  const referenceIds = [
+    ...new Set(initialization.references.map((reference) => reference.sourceItemId)),
+  ]
+    .sort()
+    .join(',');
   useEffect(() => {
-    const ids = [...new Set(initialization.references.map((reference) => reference.sourceItemId))];
+    const ids = referenceIds === '' ? [] : referenceIds.split(',');
     const active = new AbortController();
     const labels: Record<string, string> = {};
     let cursor = 0;
@@ -77,7 +84,7 @@ export function TemplateInitializationEditor({
     return () => {
       active.abort();
     };
-  }, [client, initialization.references]);
+  }, [client, referenceIds]);
 
   function updateInput(index: number, next: TemplateInput): void {
     const previous = initialization.inputs[index];
