@@ -16,6 +16,7 @@ import {
 import { argumentRefusalCode } from '../tools/flatten.ts';
 import {
   boot,
+  completed,
   eventually,
   fakeCodexBinary,
   harness,
@@ -123,12 +124,42 @@ describe('the shared log', () => {
       'effort',
       'status',
       'total_ms',
+      'first_text_ms',
       'first_tool_ms',
       'tool_calls',
       'pending_ms',
     ]);
     expect(conversationTag(key)).toMatch(/^[0-9a-f]{8}$/);
     expect(conversationTag('')).toBe('account');
+  });
+
+  it('records when reply text first arrived, once, and -1 for a turn that showed none', async () => {
+    const timing = (h: ReturnType<typeof harness>): Record<string, unknown> =>
+      h.logger.lines.find((l) => l.message === 'companion turn completed')?.attrs ?? {};
+    // No text delta before the turn ended (tools only).
+    const silent = harness();
+    await run(silent);
+    expect(timing(silent).first_text_ms).toBe(-1);
+
+    const spoken = harness();
+    await spoken.account.handle(spoken.signal, request());
+    const delta = (text: string): void => {
+      spoken.notify('item/agentMessage/delta', {
+        threadId: 'provider-thread',
+        itemId: 'm1',
+        delta: text,
+      });
+    };
+    delta('');
+    expect(spoken.account.conversations.values().next().value?.timing.firstTextAt).toBe(0);
+    delta('Hel');
+    const first = spoken.account.conversations.values().next().value?.timing.firstTextAt;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    delta('lo');
+    expect(spoken.account.conversations.values().next().value?.timing.firstTextAt).toBe(first);
+    for (const [method, params] of completed()) spoken.notify(method, params);
+    expect(timing(spoken).first_text_ms).toBeGreaterThanOrEqual(0);
+    expect(JSON.stringify(timing(spoken))).not.toContain('Hel');
   });
 
   it('logs refused and rejected tool calls with a reason but never the arguments', async () => {

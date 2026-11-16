@@ -13,6 +13,8 @@ export class TurnTiming {
   model = '';
   effort = '';
   firstToolAt = 0;
+  /** When the first nonempty reply text arrived; 0 for a turn that showed none. */
+  firstTextAt = 0;
   toolCount = 0;
   pendingMs = 0;
   usage: ProviderUsage | undefined;
@@ -22,9 +24,15 @@ export class TurnTiming {
     this.model = model;
     this.effort = effort;
     this.firstToolAt = 0;
+    this.firstTextAt = 0;
     this.toolCount = 0;
     this.pendingMs = 0;
     this.usage = undefined;
+  }
+
+  /** Once per turn: separates a slow provider start from a delay after text begins. */
+  textArrived(): void {
+    if (this.firstTextAt === 0) this.firstTextAt = Date.now();
   }
 
   toolRecorded(): void {
@@ -45,6 +53,7 @@ export class TurnTiming {
       effort: this.effort,
       status,
       total_ms: Date.now() - this.started,
+      first_text_ms: this.firstTextAt === 0 ? -1 : this.firstTextAt - this.started,
       first_tool_ms: this.firstToolAt === 0 ? -1 : this.firstToolAt - this.started,
       tool_calls: this.toolCount,
       pending_ms: this.pendingMs,

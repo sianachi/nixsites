@@ -1005,6 +1005,7 @@ export class Account {
         c.state === 'thinking' &&
         applyDelta(c.messages, c.requestId, str(p.itemId), str(p.delta))
       ) {
+        if (str(p.delta) !== '') c.timing.textArrived();
         this.bump(c);
       }
       this.recordNotification(
