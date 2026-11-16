@@ -88,13 +88,18 @@ function buildBodyRequest(body: MirrorBody): BodySyncRequest['documents'][number
   }
 }
 
-function requestBytes(request: BodySyncRequest): number {
-  // Client IDs can be non-ASCII; reserve their maximum additional UTF-8 bytes.
-  const unicodeAllowance = request.documents.reduce(
-    (sum, document) => sum + (document.updates?.length ?? 0) * 400,
-    0,
+/** One document's share of a request: its JSON, plus room for non-ASCII client IDs in UTF-8. */
+function documentBytes(document: BodySyncRequest['documents'][number]): number {
+  return JSON.stringify(document).length + (document.updates?.length ?? 0) * 400;
+}
+
+/** `{"documents":[` and `]}` around the documents, with a comma between each pair. */
+export function requestBytes(request: BodySyncRequest): number {
+  return (
+    16 +
+    Math.max(0, request.documents.length - 1) +
+    request.documents.reduce((sum, document) => sum + documentBytes(document), 0)
   );
-  return JSON.stringify(request).length + unicodeAllowance;
 }
 
 function validateBodyResponse(response: BodySyncResponse, request: BodySyncRequest): void {
@@ -365,6 +370,7 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
       afterItemId = last.item.id;
       let batch: MirrorBody[] = [];
       let documents: BodySyncRequest['documents'] = [];
+      let batchBytes = 16;
       const initialized: string[] = [];
       for (const body of candidates) {
         if (body.item.workspaceId !== workspaceId)
@@ -387,14 +393,15 @@ export async function runSyncPass(input: SyncPassInput): Promise<SyncPassResult>
           stats.conflicts++;
           continue;
         }
-        if (
-          documents.length > 0 &&
-          requestBytes({ documents: [...documents, document] }) > BODY_SYNC_LIMITS.requestBytes
-        ) {
+        // A running size: serializing the whole batch again for each candidate grew with its square.
+        const bytes = documentBytes(document);
+        if (documents.length > 0 && batchBytes + 1 + bytes > BODY_SYNC_LIMITS.requestBytes) {
           initialized.push(...(await syncBatch(batch, documents)));
           batch = [];
           documents = [];
+          batchBytes = 16;
         }
+        batchBytes += bytes + (documents.length > 0 ? 1 : 0);
         batch.push(body);
         documents.push(document);
       }
