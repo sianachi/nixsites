@@ -83,16 +83,43 @@ export async function serveWatchStream(
     });
     res.flushHeaders();
     let lastWrite = Date.now();
-    const send = (event: string, id: number | undefined, payload: unknown): void => {
+    // False once a write filled the stream's buffer: nothing more is written until it drains, so
+    // a slow reader holds one update's worth of bytes, not every delta since it fell behind.
+    let writable = true;
+    const write = (text: string): void => {
       if (res.destroyed || res.writableEnded) return;
-      res.write(
-        `${id === undefined ? '' : `id: ${String(id)}\n`}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`,
-      );
+      writable = res.write(text);
       lastWrite = Date.now();
     };
+    const send = (event: string, id: number | undefined, payload: unknown): void => {
+      write(
+        `${id === undefined ? '' : `id: ${String(id)}\n`}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`,
+      );
+    };
+    /** Resolves when the buffer drains, the connection closes, the client leaves or the lifetime ends. */
+    const drained = (ms: number): Promise<void> =>
+      new Promise((resolve) => {
+        const done = (): void => {
+          clearTimeout(timer);
+          res.off('drain', done);
+          res.off('close', done);
+          client.removeEventListener('abort', done);
+          resolve();
+        };
+        const timer = setTimeout(done, Math.max(0, ms));
+        res.once('drain', done);
+        res.once('close', done);
+        client.addEventListener('abort', done, { once: true });
+      });
     send('snapshot', last.revision, last);
     const until = Date.now() + limits.lifetimeMs;
     while (!aborted(client) && !res.destroyed && Date.now() < until) {
+      if (!writable) {
+        await drained(until - Date.now());
+        // Still full at the deadline or after a close: the loop's own conditions end the stream.
+        writable = !res.writableNeedDrain;
+        continue;
+      }
       await a.awaitChange(
         client,
         key,
@@ -112,8 +139,7 @@ export async function serveWatchStream(
         else send('delta', next.revision, delta);
         last = next;
       } else if (Date.now() - lastWrite >= limits.keepAliveMs) {
-        res.write(': keep-alive\n\n');
-        lastWrite = Date.now();
+        write(': keep-alive\n\n');
       }
       a.last = Date.now();
     }

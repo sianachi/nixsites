@@ -1,4 +1,5 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type Server, type ServerResponse } from 'node:http';
+import { EventEmitter } from 'node:events';
 import type { AddressInfo } from 'node:net';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -56,6 +57,54 @@ async function readUntil(r: Response, stop: (text: string) => boolean): Promise<
 
 const events = (text: string): string[] =>
   [...text.matchAll(/^event: (\w+)$/gm)].map((m) => m[1] ?? '');
+
+describe('a slow reader', () => {
+  it('gets nothing more until its buffer drains, then one update holding all that changed', async () => {
+    const h = harness();
+    await h.account.handle(h.signal, request());
+    const writes: string[] = [];
+    let full = true;
+    const res = Object.assign(new EventEmitter(), {
+      destroyed: false,
+      writableEnded: false,
+      writeHead: () => undefined,
+      flushHeaders: () => undefined,
+      write: (text: string) => {
+        writes.push(text);
+        return !full;
+      },
+      end() {
+        this.writableEnded = true;
+      },
+    });
+    // Defined, not assigned: Object.assign would copy the getter's first answer as a fixed value.
+    Object.defineProperty(res, 'writableNeedDrain', { get: () => full });
+    const client = new AbortController();
+    const serving = serveWatchStream(
+      () => Promise.resolve(h.account),
+      res as unknown as ServerResponse,
+      request({ operation: 'watch_stream' }),
+      client.signal,
+      { lifetimeMs: 2000, keepAliveMs: 40 },
+    );
+    await eventually(() => writes.length === 1);
+    for (const delta of ['Hel', 'lo', ' there']) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      h.notify('item/agentMessage/delta', { threadId: 'provider-thread', itemId: 'm1', delta });
+    }
+    // Several changes and several keep-alive periods pass with the buffer full.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(writes).toHaveLength(1);
+
+    full = false;
+    res.emit('drain');
+    await eventually(() => writes.length === 2);
+    expect(writes[1]).toContain('Hello there');
+    client.abort();
+    await serving;
+    expect(h.account.tryAcquireWatcher()).toBe(true);
+  });
+});
 
 describe('watch stream', () => {
   it('sends a snapshot, then a delta for text growth and a snapshot for a tool change', async () => {
