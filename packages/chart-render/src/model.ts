@@ -145,6 +145,23 @@ export function formatMeasure(value: number | null): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+// Setting a formatter up costs far more than using it, and a chart labels every bucket twice with
+// the same few option sets. The keys are a locale and a handful of fixed shapes, so this stays small.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormatter(
+  locale: string | undefined,
+  parts: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${locale ?? ''}|${JSON.stringify(parts)}`;
+  let formatter = formatters.get(key);
+  if (formatter === undefined) {
+    formatter = new Intl.DateTimeFormat(locale, { ...parts, timeZone: 'UTC' });
+    formatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 /**
  * A period's start date as the person reads it, long or short.
  *
@@ -171,8 +188,7 @@ export function bucketLabel(
     return value;
   }
 
-  const options = (parts: Intl.DateTimeFormatOptions) =>
-    date.toLocaleDateString(locale, { ...parts, timeZone: 'UTC' });
+  const options = (parts: Intl.DateTimeFormatOptions) => dateFormatter(locale, parts).format(date);
 
   switch (period) {
     case 'day':
