@@ -26,19 +26,41 @@ export function describeUnresolvedFieldRef(
  * own field-compilation step (a direct unit test, for instance) can still resolve by label against
  * everything it is given.
  */
+interface RefScope {
+  readonly existing: readonly StructureProperty[];
+  readonly added: readonly ResolvedField[];
+}
+
+// A compilation resolves every reference of a view or form against the same schema and the same
+// added keys, so the scope is prepared once for that pair, not once per reference. Held weakly:
+// it lasts as long as the caller's own schema array.
+const scopes = new WeakMap<
+  readonly StructureProperty[],
+  Map<ReadonlySet<string> | undefined, RefScope>
+>();
+
 function refScope(
   effective: readonly StructureProperty[],
   addedKeys?: ReadonlySet<string>,
-): { existing: readonly StructureProperty[]; added: readonly ResolvedField[] } {
-  const isAdded = (property: StructureProperty): boolean =>
-    addedKeys === undefined || addedKeys.has(property.key);
-
-  return {
-    existing: effective.filter((property) => !isAdded(property)),
-    added: effective
-      .filter(isAdded)
-      .map((property) => ({ key: property.key, label: property.label })),
-  };
+): RefScope {
+  let prepared = scopes.get(effective);
+  if (prepared === undefined) {
+    prepared = new Map();
+    scopes.set(effective, prepared);
+  }
+  let scope = prepared.get(addedKeys);
+  if (scope === undefined) {
+    const isAdded = (property: StructureProperty): boolean =>
+      addedKeys === undefined || addedKeys.has(property.key);
+    scope = {
+      existing: effective.filter((property) => !isAdded(property)),
+      added: effective
+        .filter(isAdded)
+        .map((property) => ({ key: property.key, label: property.label })),
+    };
+    prepared.set(addedKeys, scope);
+  }
+  return scope;
 }
 
 /**
