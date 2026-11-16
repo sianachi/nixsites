@@ -6,6 +6,11 @@ export interface ViewSource {
   readonly item: (id: string) => Promise<MirrorItem | undefined>;
   /** Every active item of one workspace, siblings in Core's order. */
   readonly workspaceItems: (workspaceId: string) => Promise<readonly MirrorItem[]>;
+  /**
+   * One parent's active children, in the same order. Optional: a source that already keeps a
+   * lookup by parent answers without the caller scanning the whole workspace.
+   */
+  readonly children?: (workspaceId: string, parentId: string) => Promise<readonly MirrorItem[]>;
   /** Now, as Core's clock would read it; fixtures pin it. */
   readonly now: () => Date;
   /** The acting principal's id; undefined when unknown (reads that need it return null). */
@@ -42,4 +47,16 @@ export interface ViewRoute {
   readonly method: ViewRequest['method'];
   readonly pattern: RegExp;
   readonly compute: ViewCompute;
+}
+
+/** One parent's active children, through the source's own lookup when it has one. */
+export async function childrenOf(
+  source: ViewSource,
+  workspaceId: string,
+  parentId: string,
+): Promise<readonly MirrorItem[]> {
+  return (
+    (await source.children?.(workspaceId, parentId)) ??
+    (await source.workspaceItems(workspaceId)).filter((item) => item.parentId === parentId)
+  );
 }

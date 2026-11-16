@@ -1,6 +1,6 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 
-import type { ViewAnswer, ViewCompute, ViewSource } from '../types';
+import { childrenOf, type ViewAnswer, type ViewCompute, type ViewSource } from '../types';
 import * as dates from './dates';
 import type { Period } from './dates';
 import * as fold from './fold';
@@ -185,8 +185,8 @@ export const computeChart: ViewCompute = async (source, request, match) => {
   let kind = options.kind ?? 'bar';
   const splitBy = options.splitBy;
 
-  const children = (await source.workspaceItems(item.workspaceId)).filter(
-    (child) => child.parentId === itemId && child.lifecycleState === 'active',
+  const children = (await childrenOf(source, item.workspaceId, itemId)).filter(
+    (child) => child.lifecycleState === 'active',
   );
   if (children.some((child) => child.locked)) return null;
   const rows = children.map((child) => child.properties);

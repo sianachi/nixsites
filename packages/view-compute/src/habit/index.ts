@@ -1,6 +1,6 @@
 import { dayNumber, dayText, localDay, validZone, weekday } from '../shared/dates';
 import { type Dec, ZERO, must, decOf, num, sum } from '../shared/dec';
-import type { ViewAnswer, ViewCompute } from '../types';
+import { childrenOf, type ViewAnswer, type ViewCompute } from '../types';
 
 /** GET /items/{id}/habit?from&to, ported from HabitTracker.cs and Domain/Habits. */
 
@@ -230,9 +230,7 @@ export const computeHabit: ViewCompute = async (source, request, match) => {
   if (end < start || end - start >= 366)
     return refuse('habits.invalid_range', 'Choose an ordered date range of no more than 366 days.');
   if (parent.locked) return null;
-  const children = (await source.workspaceItems(parent.workspaceId)).filter(
-    (item) => item.parentId === parent.id,
-  );
+  const children = await childrenOf(source, parent.workspaceId, parent.id);
   if (children.length > MAXIMUM_CHILDREN)
     return refuse(
       'habits.history_limit',

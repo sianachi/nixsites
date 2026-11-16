@@ -396,6 +396,10 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
           closed.has(workspaceId)
             ? []
             : [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
+        children: async (workspaceId, parentId) =>
+          closed.has(workspaceId)
+            ? []
+            : ((await workspaceIndex(store, workspaceId)).byParent.get(parentId) ?? []),
         now: () => new Date(),
         ...withDefined('principalId', deps.principalId?.() ?? undefined),
         ...withDefined('timeZone', await cachedTimeZone(store)),
