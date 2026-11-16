@@ -11,6 +11,7 @@ import {
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
 import {
   arrangeWorkspaces,
+  assignManyToGroup,
   assignToGroup,
   removeGroup,
   togglePin,
@@ -196,5 +197,40 @@ describe('the workspaces page', () => {
       await screen.findByRole('heading', { name: 'Workspace groups', level: 1 }),
     ).toBeVisible();
     expect(await screen.findByRole('textbox', { name: 'New group name' })).toBeVisible();
+  });
+});
+
+describe('filing several workspaces at once', () => {
+  it('gives the arrangement that filing them one after another gives', () => {
+    const arrangement = {
+      pinnedWorkspaceIds: ['a'],
+      groups: [
+        { id: 'g1', name: 'One', workspaceIds: ['a', 'b', 'c'] },
+        { id: 'g2', name: 'Two', workspaceIds: ['d'] },
+        { id: 'g3', name: 'Three', workspaceIds: [] },
+      ],
+    };
+    const cases: [string, string | null][][] = [
+      [
+        ['c', 'g2'],
+        ['a', 'g2'],
+        ['e', 'g2'],
+      ],
+      [
+        ['d', null],
+        ['b', null],
+      ],
+      [
+        ['a', 'g3'],
+        ['d', 'g1'],
+        ['b', null],
+        ['f', 'missing'],
+      ],
+      [],
+    ];
+    for (const assignments of cases)
+      expect(assignManyToGroup(arrangement, new Map(assignments))).toEqual(
+        assignments.reduce((acc, [id, group]) => assignToGroup(acc, id, group), arrangement),
+      );
   });
 });

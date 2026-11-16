@@ -74,6 +74,34 @@ export function assignToGroup(
   };
 }
 
+/**
+ * `assignToGroup` for several workspaces at once, with the same result as assigning them one after
+ * another in the map's order: each group keeps the workspaces that are not moving, then gains the
+ * ones filed into it. One pass over the groups, where one per workspace rebuilt every list.
+ */
+export function assignManyToGroup(
+  arrangement: WorkspaceArrangementInput,
+  assignments: ReadonlyMap<string, string | null>,
+): WorkspaceArrangementInput {
+  const arriving = new Map<string, string[]>();
+  for (const [workspaceId, groupId] of assignments) {
+    if (groupId === null) continue;
+    const list = arriving.get(groupId);
+    if (list === undefined) arriving.set(groupId, [workspaceId]);
+    else list.push(workspaceId);
+  }
+  return {
+    ...arrangement,
+    groups: arrangement.groups.map((group) => ({
+      ...group,
+      workspaceIds: [
+        ...group.workspaceIds.filter((id) => !assignments.has(id)),
+        ...(arriving.get(group.id) ?? []),
+      ],
+    })),
+  };
+}
+
 export function addGroup(
   arrangement: WorkspaceArrangementInput,
   name: string,

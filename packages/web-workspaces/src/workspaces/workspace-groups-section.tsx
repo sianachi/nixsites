@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   addGroup,
   arrangeWorkspaces,
-  assignToGroup,
+  assignManyToGroup,
   moveGroup,
   removeGroup,
   renameGroup,
@@ -78,7 +78,7 @@ export function WorkspaceGroupsSection({
       into = base.groups[base.groups.length - 1]?.id ?? null;
     }
     const name = base.groups.find((group) => group.id === into)?.name;
-    const next = moving.reduce((acc, entry) => assignToGroup(acc, entry.id, into), base);
+    const next = assignManyToGroup(base, new Map(moving.map((entry) => [entry.id, into])));
     const from = before.get(moving[0]?.id ?? '');
     const oldName = arrangement.groups.find((group) => group.id === from)?.name;
     const label =
@@ -89,10 +89,15 @@ export function WorkspaceGroupsSection({
           : `Filed ${what(moving)} in ${name}`;
     setSelected(new Set());
     void apply(next, label, (current) => {
-      const restored = [...before].reduce(
-        (acc, [id, group]) =>
-          assignToGroup(acc, id, acc.groups.some((g) => g.id === group) ? group : null),
+      const groups = new Set(current.groups.map((group) => group.id));
+      const restored = assignManyToGroup(
         current,
+        new Map(
+          [...before].map(([id, group]) => [
+            id,
+            group !== null && groups.has(group) ? group : null,
+          ]),
+        ),
       );
       return makeGroup && into !== null ? removeGroup(restored, into) : restored;
     }).then((ok) => {
