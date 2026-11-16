@@ -80,15 +80,14 @@ export class Poller {
       const ran = await this.poll(signal);
       if (ran || stopped()) continue;
       await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, this.options.pollSeconds * 1000);
-        signal.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
+        // The listener goes on both paths: left attached, one would pile up per idle poll.
+        const wake = (): void => {
+          clearTimeout(timer);
+          signal.removeEventListener('abort', wake);
+          resolve();
+        };
+        const timer = setTimeout(wake, this.options.pollSeconds * 1000);
+        signal.addEventListener('abort', wake, { once: true });
       });
     }
   }

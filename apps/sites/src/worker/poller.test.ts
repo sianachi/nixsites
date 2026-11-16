@@ -72,4 +72,33 @@ describe('Poller', () => {
     stopping.abort();
     await running;
   });
+
+  it('releases its abort listener after each idle wait, and abort ends the wait at once', async () => {
+    const poller = new Poller({
+      core: { lease: () => Promise.resolve([]) },
+      runner: { run: () => Promise.resolve('completed') },
+      kinds: ['site.build'],
+      workerId: 'sites-test',
+      leaseSeconds: 60,
+      pollSeconds: 5,
+      concurrency: 1,
+    });
+    const stopping = new AbortController();
+    let attached = 0;
+    const add = stopping.signal.addEventListener.bind(stopping.signal);
+    const remove = stopping.signal.removeEventListener.bind(stopping.signal);
+    stopping.signal.addEventListener = (...args: Parameters<typeof add>) => {
+      attached += 1;
+      add(...args);
+    };
+    stopping.signal.removeEventListener = (...args: Parameters<typeof remove>) => {
+      attached -= 1;
+      remove(...args);
+    };
+    const running = poller.run(stopping.signal);
+    await vi.advanceTimersByTimeAsync(30 * 5000);
+    expect(attached).toBe(1);
+    stopping.abort();
+    await running;
+  });
 });
