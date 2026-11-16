@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { request, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -48,6 +49,7 @@ function memory(objects: Record<string, string>): ObjectReader {
           range === undefined
             ? null
             : `bytes ${String(start)}-${String(start + part.length - 1)}/${String(bytes.length)}`,
+        etag: `"${createHash('sha256').update(bytes).digest('hex').slice(0, 16)}"`,
         body: method === 'HEAD' ? null : new Blob([part]).stream(),
       };
     },
@@ -221,6 +223,39 @@ describe('the sites server', () => {
     const page = await get(port, '/', 'docs.sites.test');
     expect(page.headers['content-security-policy']).toBe(SITE_CSP);
     expect(page.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('answers 304 for a page the browser already holds, and the new bytes after they change', async () => {
+    const objects = { ...published };
+    const port = await start(objects);
+    const first = await get(port, '/', 'docs.sites.test');
+    const tag = first.headers.etag;
+    expect(typeof tag).toBe('string');
+
+    const same = await get(port, '/', 'docs.sites.test', 'GET', { 'if-none-match': String(tag) });
+    expect(same.status).toBe(304);
+    expect(same.body).toBe('');
+    expect(same.headers.etag).toBe(tag);
+    expect(same.headers['cache-control']).toBe(first.headers['cache-control']);
+    expect(same.headers['set-cookie']).toBeUndefined();
+    // A weak form of the tag, and a list holding it, match as well.
+    const weak = await get(port, '/', 'docs.sites.test', 'GET', {
+      'if-none-match': `"other", W/${String(tag)}`,
+    });
+    expect(weak.status).toBe(304);
+
+    // New bytes under the same address are served, not called unchanged.
+    objects[`${BUILD_PREFIX}index.html`] = '<h1>new home</h1>';
+    const changed = await get(port, '/', 'docs.sites.test', 'GET', {
+      'if-none-match': String(tag),
+    });
+    expect(changed.status).toBe(200);
+    expect(changed.body).toBe('<h1>new home</h1>');
+
+    // A page that is gone is a 404 whatever tag the browser sends.
+    Reflect.deleteProperty(objects, `${BUILD_PREFIX}guide/index.html`);
+    const gone = await get(port, '/guide/', 'docs.sites.test', 'GET', { 'if-none-match': '*' });
+    expect(gone.status).toBe(404);
   });
 
   it('serves a page with the site headers and no cookie', async () => {

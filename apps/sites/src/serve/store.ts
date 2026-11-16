@@ -7,6 +7,8 @@ export interface StoredObject {
   /** 206 for a satisfied range, 416 for one outside the object, otherwise 200. */
   readonly status: 200 | 206 | 416;
   readonly contentRange: string | null;
+  /** Storage's entity tag for the object, quoted as it sent it; null when it sent none. */
+  readonly etag?: string | null;
   /** Absent for a HEAD. */
   readonly body: ReadableStream<Uint8Array> | null;
 }
@@ -76,6 +78,7 @@ export function createS3Reader(
         length: Number.isFinite(length) ? length : null,
         status: response.status === 206 ? 206 : 200,
         contentRange: response.headers.get('content-range'),
+        etag: response.headers.get('etag'),
         body: method === 'HEAD' ? null : response.body,
       };
     },

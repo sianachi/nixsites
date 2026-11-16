@@ -452,6 +452,20 @@ export function createSiteServer(options: SiteServerOptions): Server {
         : undefined;
     const object = await options.reader.open(key, head ? 'HEAD' : 'GET', range);
     if (object === null) return notFound();
+    // A browser revalidating bytes it already holds gets 304, not the body again. Only here, after
+    // the host, the live build and its allowlist have been resolved: a withdrawn page never reaches
+    // this line, so it cannot be answered "unchanged". A key belongs to one build, so a new build
+    // with different bytes has a different tag.
+    const etag = object.etag ?? null;
+    if (
+      etag !== null &&
+      object.status === 200 &&
+      matchesEtag(request.headers['if-none-match'], etag)
+    ) {
+      await object.body?.cancel();
+      send(response, 304, { ...sandbox, etag, 'cache-control': cacheControl }, null);
+      return;
+    }
     send(
       response,
       object.status,
@@ -465,6 +479,7 @@ export function createSiteServer(options: SiteServerOptions): Server {
         ...(type === 'image/svg+xml' ? { 'content-security-policy': SVG_CSP } : {}),
         ...download,
         'cache-control': cacheControl,
+        ...(etag === null ? {} : { etag }),
         ...(object.length === null ? {} : { 'content-length': String(object.length) }),
       },
       object,
@@ -485,4 +500,13 @@ export function createSiteServer(options: SiteServerOptions): Server {
       response.end();
     });
   });
+}
+
+/** Whether an If-None-Match header names this entity tag (weak comparison, RFC 9110 13.1.2). */
+export function matchesEtag(header: string | undefined, etag: string): boolean {
+  if (header === undefined) return false;
+  const bare = (tag: string): string => tag.trim().replace(/^W\//, '');
+  return header
+    .split(',')
+    .some((candidate) => candidate.trim() === '*' || bare(candidate) === bare(etag));
 }
