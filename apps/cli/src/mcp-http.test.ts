@@ -373,4 +373,27 @@ describe('nixctl mcp over HTTP', () => {
     expect((await toolsList(url)).status).toBe(403);
     expect(meCalls()).toHaveLength(3);
   });
+
+  it('shares one switch lookup between requests that miss together, and asks again after a failure', async () => {
+    const url = await listen();
+    const answers = await Promise.all([toolsList(url), toolsList(url), toolsList(url)]);
+    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200]);
+    expect(meCalls()).toHaveLength(1);
+    // Another credential misses on its own.
+    await Promise.all([
+      toolsList(url, 'nixpat_remote_other'),
+      toolsList(url, 'nixpat_remote_other'),
+    ]);
+    expect(meCalls()).toHaveLength(2);
+
+    // A lookup that fails is not remembered: the next request asks Core again.
+    revoked = true;
+    const refused = await Promise.all([
+      toolsList(url, 'nixpat_remote_third'),
+      toolsList(url, 'nixpat_remote_third'),
+    ]);
+    expect(refused.every((answer) => answer.status !== 200)).toBe(true);
+    revoked = false;
+    expect((await toolsList(url, 'nixpat_remote_third')).status).toBe(200);
+  });
 });

@@ -68,19 +68,33 @@ export function createMcpHttpHandler(
       : '');
   const switches = new Map<string, { readonly enabled: boolean; readonly until: number }>();
 
+  // Requests for one credential that arrive together just after its answer expired share one read
+  // of Core. Cleared when it settles, so a failed lookup is asked again by the next request.
+  const lookups = new Map<string, Promise<boolean>>();
+
   /** Whether the caller's organisation allows MCP; throws only when Core cannot say. */
-  const mcpEnabled = async (key: string, session: Session): Promise<boolean> => {
+  const mcpEnabled = (key: string, session: Session): Promise<boolean> => {
     const known = switches.get(key);
-    if (known !== undefined && known.until > now()) return known.enabled;
-    const me = await session.client.query(principal.currentPrincipal(), { forceRefresh: true });
-    const enabled = me.features.mcpEnabled;
-    switches.delete(key);
-    switches.set(key, { enabled, until: now() + MCP_SWITCH_TTL_MS });
-    if (switches.size > cacheSize) {
-      const oldest = switches.keys().next().value;
-      if (oldest !== undefined) switches.delete(oldest);
-    }
-    return enabled;
+    if (known !== undefined && known.until > now()) return Promise.resolve(known.enabled);
+    const pending = lookups.get(key);
+    if (pending !== undefined) return pending;
+    const lookup = session.client
+      .query(principal.currentPrincipal(), { forceRefresh: true })
+      .then((me) => {
+        const enabled = me.features.mcpEnabled;
+        switches.delete(key);
+        switches.set(key, { enabled, until: now() + MCP_SWITCH_TTL_MS });
+        if (switches.size > cacheSize) {
+          const oldest = switches.keys().next().value;
+          if (oldest !== undefined) switches.delete(oldest);
+        }
+        return enabled;
+      })
+      .finally(() => {
+        lookups.delete(key);
+      });
+    lookups.set(key, lookup);
+    return lookup;
   };
 
   const sessionFor = (token: string): Session => {
