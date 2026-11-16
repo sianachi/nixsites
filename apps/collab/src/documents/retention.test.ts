@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { startRetentionSweep } from './retention.ts';
 
@@ -59,4 +59,44 @@ describe('startRetentionSweep', () => {
       handle.stop();
     }).not.toThrow();
   });
+
+  it('does not start a sweep while the last one still runs, and sweeps again once it has ended', async () => {
+    vi.useFakeTimers();
+    let connects = 0;
+    let fail: (error: Error) => void = () => undefined;
+    const slowPool = {
+      connect: () => {
+        connects += 1;
+        return new Promise((_, reject) => {
+          fail = reject;
+        });
+      },
+    } as unknown as Pool;
+    const handle = startRetentionSweep({
+      pool: slowPool,
+      activeScopes: () => [
+        {
+          tenantId: '10000000-0000-4000-8000-000000000001',
+          principalId: '10000000-0000-4000-8000-000000000002',
+        },
+      ],
+      intervalMs: 1000,
+    });
+
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(connects).toBe(1);
+
+    // The sweep ends (here by failing, which costs that tenant's turn only); the next tick runs.
+    fail(new Error('connection lost'));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(connects).toBe(2);
+
+    handle.stop();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(connects).toBe(2);
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });

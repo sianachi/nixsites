@@ -184,8 +184,19 @@ export function startRetentionSweep(deps: RetentionSweepDeps): RetentionSweepHan
     );
   }
 
+  // One sweep at a time: a sweep that outlasts the interval would otherwise be joined by a second
+  // over the same tenants, each materializing every eligible document.
+  let sweeping = false;
   const timer = setInterval(() => {
-    void tick();
+    if (sweeping) return;
+    sweeping = true;
+    void tick()
+      .catch((error: unknown) => {
+        log(`retention sweep: failed: ${describeError(error)}`);
+      })
+      .finally(() => {
+        sweeping = false;
+      });
   }, deps.intervalMs);
   // A sweep timer must never be the reason the process does not exit - it has a clean `stop()`
   // for the ordinary shutdown path, but nothing else should depend on this firing again.
