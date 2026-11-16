@@ -490,9 +490,14 @@ export async function writeSnapshotNow(
     seq: bigint;
     state: Y.Doc;
     strategy?: BodyKindStrategy;
+    /**
+     * `state` as a full-state update, when the caller already holds those bytes (the session
+     * encodes the live document to freeze it): stored as they are, not encoded a second time.
+     */
+    encoded?: Uint8Array;
   },
 ): Promise<boolean> {
-  const encoded = Y.encodeStateAsUpdate(input.state);
+  const encoded = input.encoded ?? Y.encodeStateAsUpdate(input.state);
   if (encoded.byteLength > LIMITS.snapshotBytes) {
     // The update itself was accepted and is in the log, which is the source of truth. A
     // snapshot too large to store costs replay time and nothing else, so this is a missed

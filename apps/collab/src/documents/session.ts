@@ -1112,8 +1112,10 @@ export class DocumentSession {
     }
 
     const seq = this.#headSeq;
+    // Encoded once: these bytes both build the frozen copy and are what the snapshot stores.
+    const captured = Y.encodeStateAsUpdate(this.#doc);
     const frozen = new Y.Doc();
-    Y.applyUpdate(frozen, Y.encodeStateAsUpdate(this.#doc));
+    Y.applyUpdate(frozen, captured);
     let written: boolean;
     try {
       written = await withTenantScope(
@@ -1126,6 +1128,7 @@ export class DocumentSession {
             itemId: this.docRow.item_id,
             seq,
             state: frozen,
+            encoded: captured,
             strategy: this.strategy,
           }),
       );
