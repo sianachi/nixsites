@@ -64,6 +64,8 @@ export interface QueryEndpoint<TResult> {
   readonly staleAfterMs: number | undefined;
   /** Budget for a deliberately long poll; ordinary reads use the client default. */
   readonly timeoutMs?: number | undefined;
+  /** False for reads whose key rarely repeats (search terms, watch cursors): shared while pending, never kept. */
+  readonly retain?: false | undefined;
 }
 
 export interface QuerySpec<TResult> {
@@ -74,6 +76,7 @@ export interface QuerySpec<TResult> {
   readonly cacheKey?: CacheKey | undefined;
   readonly staleAfterMs?: number | undefined;
   readonly timeoutMs?: number | undefined;
+  readonly retain?: false | undefined;
 }
 
 export function defineQuery<TResult>(spec: QuerySpec<TResult>): QueryEndpoint<TResult> {
@@ -86,6 +89,7 @@ export function defineQuery<TResult>(spec: QuerySpec<TResult>): QueryEndpoint<TR
     cacheKey: spec.cacheKey,
     staleAfterMs: spec.staleAfterMs,
     ...(spec.timeoutMs === undefined ? {} : { timeoutMs: spec.timeoutMs }),
+    ...(spec.retain === undefined ? {} : { retain: spec.retain }),
   };
 }
 

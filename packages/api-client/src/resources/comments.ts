@@ -51,6 +51,7 @@ export const list = (itemId: string): QueryEndpoint<CommentsResponse> =>
 export const watch = (itemId: string, revision: number): QueryEndpoint<CommentsResponse> =>
   defineQuery({
     operation: 'comments.watch',
+    retain: false,
     path: `${commentsPath(itemId)}/watch`,
     schema: commentsResponseSchema,
     query: { revision },

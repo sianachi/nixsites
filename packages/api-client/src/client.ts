@@ -214,6 +214,7 @@ export function createNixClient(config: NixClientConfig): NixClient {
         signal: options.signal,
         forceRefresh: options.forceRefresh,
         staleAfterMs: endpoint.staleAfterMs,
+        retain: endpoint.retain,
       },
     );
   }

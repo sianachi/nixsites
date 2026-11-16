@@ -74,6 +74,48 @@ describe('request deduplication', () => {
   });
 });
 
+describe('reads that are not retained', () => {
+  it('keeps none of many distinct keys, and still shares one load between overlapping callers', async () => {
+    const cache = createServerCache();
+    for (let term = 0; term < 500; term++)
+      await cache.read(['search', String(term)], () => Promise.resolve(term), { retain: false });
+    for (let term = 0; term < 500; term++)
+      expect(cache.peek(['search', String(term)])).toBeUndefined();
+
+    const pending = deferred<string>();
+    const load = vi.fn<CacheLoader<string>>(() => pending.promise);
+    const first = cache.read(['search', 'same'], load, { retain: false });
+    const second = cache.read(['search', 'same'], load, { retain: false });
+    pending.resolve('hits');
+    expect((await first).data).toBe('hits');
+    expect((await second).data).toBe('hits');
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(cache.peek(['search', 'same'])).toBeUndefined();
+
+    await cache.read(['search', 'same'], load, { retain: false });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels the request when its only caller leaves', async () => {
+    const cache = createServerCache();
+    const controller = new AbortController();
+    let aborted = false;
+    const reading = cache.read(
+      ['watch', '7'],
+      (signal) =>
+        new Promise<never>(() => {
+          signal.addEventListener('abort', () => {
+            aborted = true;
+          });
+        }),
+      { retain: false, signal: controller.signal },
+    );
+    controller.abort();
+    await expect(reading).rejects.toMatchObject({ kind: NixErrorKind.Canceled });
+    expect(aborted).toBe(true);
+  });
+});
+
 describe('stale while revalidate', () => {
   it('serves a fresh cached value without going back to the loader', async () => {
     const { cache, advance } = cacheWithClock(1_000);

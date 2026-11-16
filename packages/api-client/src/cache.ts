@@ -77,6 +77,11 @@ interface CacheReadOptions {
   /** Skip the cached value and go to the network, still de-duplicated. */
   readonly forceRefresh?: boolean | undefined;
   readonly staleAfterMs?: number | undefined;
+  /**
+   * False for a read whose key hardly ever repeats (a search term, a watch cursor): concurrent
+   * callers still share one request, but the result is not kept, so such keys cannot pile up.
+   */
+  readonly retain?: boolean | undefined;
 }
 
 interface CacheReadResult<TData> {
@@ -149,12 +154,12 @@ export function createServerCache(options: ServerCacheOptions = {}): ServerCache
     for (const listener of listeners) listener(key);
   }
 
-  function start<TData>(id: string, load: CacheLoader<TData>): Flight {
+  function start<TData>(id: string, load: CacheLoader<TData>, retain = true): Flight {
     const controller = new AbortController();
     const promise = load(controller.signal).then(
       (data) => {
         if (flights.get(id) === flight) flights.delete(id);
-        if (flight.state !== 'removed') {
+        if (flight.state !== 'removed' && retain) {
           store.write(id, { data, storedAt: now(), stale: flight.state === 'stale' });
           notify(id);
         }
@@ -196,11 +201,12 @@ export function createServerCache(options: ServerCacheOptions = {}): ServerCache
     id: string,
     load: CacheLoader<TData>,
     signal: AbortSignal | undefined,
+    retain = true,
   ): Promise<TData> {
     const existing = flights.get(id);
     // A post-write read must not join the response that began before that write.
     if (existing !== undefined && existing.state !== 'fresh') existing.state = 'removed';
-    const flight = existing?.state === 'fresh' ? existing : start(id, load);
+    const flight = existing?.state === 'fresh' ? existing : start(id, load, retain);
     flight.waiters += 1;
     const shared = flight.promise as Promise<TData>;
     if (signal === undefined) return shared;
@@ -256,6 +262,12 @@ export function createServerCache(options: ServerCacheOptions = {}): ServerCache
       readOptions: CacheReadOptions = {},
     ): Promise<CacheReadResult<TData>> {
       const id = cacheKeyToString(key);
+      if (readOptions.retain === false)
+        return {
+          data: await share(id, load, readOptions.signal, false),
+          servedFromCache: false,
+          revalidation: null,
+        };
       const entry = store.read(id) as CacheEntry<TData> | undefined;
       const staleAfterMs = readOptions.staleAfterMs ?? defaultStaleAfterMs;
 

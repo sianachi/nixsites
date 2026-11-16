@@ -17,6 +17,7 @@ import {
 export const searchItems = (query: string, limit?: number): QueryEndpoint<SearchResults> =>
   defineQuery<SearchResults>({
     operation: 'search.run',
+    retain: false,
     path: '/api/v1/search',
     schema: searchResultsSchema,
     query: { q: query, limit },
@@ -33,6 +34,7 @@ export const workspacePassages = (
 ): QueryEndpoint<NotePassages> =>
   defineQuery<NotePassages>({
     operation: 'search.workspacePassages',
+    retain: false,
     path: '/api/v1/search/passages',
     schema: notePassagesSchema,
     query: { q: query, workspaceId, limit },
@@ -47,6 +49,7 @@ export const notePassages = (
 ): QueryEndpoint<NotePassages> =>
   defineQuery<NotePassages>({
     operation: 'search.passages',
+    retain: false,
     path: `/api/v1/items/${itemId}/passages`,
     schema: notePassagesSchema,
     query: { q: query, limit },

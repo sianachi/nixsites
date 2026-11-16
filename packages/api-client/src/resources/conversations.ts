@@ -59,6 +59,7 @@ export const messages = (
 export const watch = (itemId: string, after: number): QueryEndpoint<Conversation> =>
   defineQuery({
     operation: 'conversations.watch',
+    retain: false,
     path: `${path(itemId)}/watch`,
     query: { after },
     schema: conversationSchema,

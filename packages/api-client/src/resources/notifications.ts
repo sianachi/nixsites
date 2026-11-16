@@ -100,6 +100,7 @@ export const watch = (
 ): QueryEndpoint<NotificationsPageResponse> =>
   defineQuery({
     operation: 'notifications.watch',
+    retain: false,
     path: '/api/v1/me/notifications/watch',
     schema: notificationsPageResponseSchema,
     query: {
